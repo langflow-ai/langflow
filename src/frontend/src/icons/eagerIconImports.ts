@@ -39,11 +39,7 @@ import { GleanIcon } from "@/icons/Glean";
 import { GoogleIcon } from "@/icons/Google";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { GoogleGenerativeAIIcon } from "@/icons/GoogleGenerativeAI";
-import {
-  GradientInfinity,
-  GradientSave,
-  GradientUngroup,
-} from "@/icons/GradientSparkles";
+import { GradientInfinity, GradientUngroup } from "@/icons/GradientSparkles";
 import { GridHorizontalIcon } from "@/icons/GridHorizontal";
 import { GroqIcon } from "@/icons/Groq";
 import { GlobeOkIcon } from "@/icons/globe-ok";
@@ -52,7 +48,7 @@ import { HCDIcon } from "@/icons/HCD";
 import { HomeAssistantIcon } from "@/icons/HomeAssistant";
 import { HuggingFaceIcon } from "@/icons/HuggingFace";
 import { HackerNewsIcon } from "@/icons/hackerNews";
-import { IBMIcon, WatsonxAiIcon } from "@/icons/IBM";
+import { IBMIcon, WatsonxAiIcon, WatsonxOrchestrateIcon } from "@/icons/IBM";
 import { IcosaIcon } from "@/icons/Icosa";
 import { IFixIcon } from "@/icons/IFixIt";
 import { JSIcon } from "@/icons/JSicon";
@@ -167,7 +163,6 @@ export const eagerIconsMapping = {
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   Gmail: GmailIcon,
   GradientInfinity: GradientInfinity,
-  GradientSave: GradientSave,
   GradientUngroup: GradientUngroup,
   GridHorizontal: GridHorizontalIcon,
   Groq: GroqIcon,
@@ -235,6 +230,7 @@ export const eagerIconsMapping = {
   VertexAI: VertexAIIcon,
   vLLM: VllmIcon,
   WatsonxAI: WatsonxAiIcon,
+  WatsonxOrchestrate: WatsonxOrchestrateIcon,
   Weaviate: WeaviateIcon,
   Wikipedia: WikipediaIcon,
   Windsurf: WindsurfIcon,

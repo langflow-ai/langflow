@@ -34,10 +34,23 @@ import pytest
 from httpx import AsyncClient
 from langflow.exceptions.api import WorkflowValidationError
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.jobs.model import JobType
+from langflow.services.database.models.jobs.model import Job, JobType
 from lfx.schema.workflow import JobStatus
 from lfx.services.deps import session_scope
 from sqlalchemy.exc import OperationalError
+
+
+def _mock_empty_graph() -> MagicMock:
+    graph = MagicMock()
+    graph.vertices = []
+    graph.get_terminal_nodes.return_value = []
+    graph.run_id = None
+
+    def set_run_id(job_id):
+        graph.run_id = str(job_id)
+
+    graph.set_run_id.side_effect = set_run_id
+    return graph
 
 
 class TestWorkflowDeveloperAPIProtection:
@@ -869,6 +882,171 @@ class TestWorkflowSyncExecution:
                 if flow:
                     await session.delete(flow)
 
+    async def test_sync_execution_uses_body_globals_with_unicode(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """V2 workflow globals are accepted from the JSON body and passed to graph context."""
+        flow_id = uuid4()
+        body_globals = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Unicode Globals Flow",
+                description="Flow for body globals testing",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+            await session.refresh(flow)
+
+        try:
+            request_data = {
+                "flow_id": str(flow_id),
+                "background": False,
+                "stream": False,
+                "inputs": {"ChatInput-abc.input_value": "what is 2+2"},
+                "globals": body_globals,
+            }
+            graph = _mock_empty_graph()
+            mock_job_service = MagicMock()
+            mock_job_service.create_job = AsyncMock()
+            mock_job_service.execute_with_status = AsyncMock(return_value=([], "session-unicode"))
+            mock_task_service = MagicMock()
+            mock_task_service.fire_and_forget_task = AsyncMock()
+
+            with (
+                patch("langflow.api.v2.workflow.Graph.from_payload", return_value=graph) as mock_from_payload,
+                patch("langflow.api.v2.workflow.get_job_service", return_value=mock_job_service),
+                patch("langflow.api.v2.workflow.get_task_service", return_value=mock_task_service),
+            ):
+                headers = {"x-api-key": created_api_key.api_key}
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["globals"] == body_globals
+            assert mock_from_payload.call_args.kwargs["context"] == {"request_variables": body_globals}
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
+    async def test_sync_execution_honors_legacy_global_variable_headers_with_deprecation(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """V2 workflows still read X-LANGFLOW-GLOBAL-VAR-* headers for one release.
+
+        Legacy headers are honored so existing callers don't silently lose their
+        global variables, but a deprecation warning is emitted. Body globals
+        win over header globals on key conflicts.
+        """
+        flow_id = uuid4()
+        body_globals = {"FILENAME": "body-wins.pdf"}
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Legacy Header Globals Flow",
+                description="Flow for header globals testing",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+            await session.refresh(flow)
+
+        try:
+            request_data = {
+                "flow_id": str(flow_id),
+                "background": False,
+                "stream": False,
+                "inputs": {"ChatInput-abc.input_value": "what is 2+2"},
+                "globals": body_globals,
+            }
+            graph = _mock_empty_graph()
+            mock_job_service = MagicMock()
+            mock_job_service.create_job = AsyncMock()
+            mock_job_service.execute_with_status = AsyncMock(return_value=([], "session-header"))
+            mock_task_service = MagicMock()
+            mock_task_service.fire_and_forget_task = AsyncMock()
+
+            with (
+                patch("langflow.api.v2.workflow.Graph.from_payload", return_value=graph) as mock_from_payload,
+                patch("langflow.api.v2.workflow.get_job_service", return_value=mock_job_service),
+                patch("langflow.api.v2.workflow.get_task_service", return_value=mock_task_service),
+                patch("langflow.api.v2.workflow.logger.warning") as mock_warning,
+            ):
+                headers = {
+                    "x-api-key": created_api_key.api_key,
+                    "X-LANGFLOW-GLOBAL-VAR-FILENAME": "header-loses.pdf",
+                    "X-LANGFLOW-GLOBAL-VAR-OWNER_NAME": "header-only",
+                }
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            expected_globals = {"FILENAME": "body-wins.pdf", "OWNER_NAME": "header-only"}
+            assert result["globals"] == expected_globals
+            assert mock_from_payload.call_args.kwargs["context"] == {"request_variables": expected_globals}
+            mock_warning.assert_called_once()
+            assert "deprecated" in mock_warning.call_args.args[0].lower()
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
+    async def test_sync_execution_rejects_oversized_globals_value(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Body globals values are bounded; oversized values are rejected at validation."""
+        from lfx.schema.workflow import GLOBAL_VALUE_MAX_LEN
+
+        flow_id = uuid4()
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Oversized Globals Flow",
+                description="Flow for oversized globals testing",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+            await session.refresh(flow)
+
+        try:
+            request_data = {
+                "flow_id": str(flow_id),
+                "background": False,
+                "stream": False,
+                "globals": {"BIG_VAR": "x" * (GLOBAL_VALUE_MAX_LEN + 1)},
+            }
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+            assert response.status_code == 422
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
     async def test_sync_execution_with_llm_output(
         self,
         client: AsyncClient,
@@ -1215,6 +1393,62 @@ class TestWorkflowBackgroundQueueing:
                 if flow:
                     await session.delete(flow)
 
+    async def test_background_execution_uses_body_globals_with_unicode(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Background V2 workflow submissions pass body globals to graph context."""
+        flow_id = uuid4()
+        body_globals = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Background Unicode Globals Flow",
+                description="Flow for background body globals testing",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+            await session.refresh(flow)
+
+        try:
+            request_data = {
+                "flow_id": str(flow_id),
+                "background": True,
+                "inputs": {"ChatInput-abc.input_value": "what is 2+2"},
+                "globals": body_globals,
+            }
+            headers = {"x-api-key": created_api_key.api_key}
+            graph = _mock_empty_graph()
+            mock_job_service = MagicMock()
+            mock_job_service.create_job = AsyncMock()
+            mock_job_service.execute_with_status = AsyncMock()
+            mock_task_service = MagicMock()
+            mock_task_service.fire_and_forget_task = AsyncMock()
+
+            with (
+                patch("langflow.api.v2.workflow.Graph.from_payload", return_value=graph) as mock_from_payload,
+                patch("langflow.api.v2.workflow.get_job_service", return_value=mock_job_service),
+                patch("langflow.api.v2.workflow.get_task_service", return_value=mock_task_service),
+            ):
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["globals"] == body_globals
+            assert result["status"] == "queued"
+            assert mock_from_payload.call_args.kwargs["context"] == {"request_variables": body_globals}
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
     async def test_background_execution_invalid_flow(
         self,
         client: AsyncClient,
@@ -1339,6 +1573,7 @@ class TestWorkflowStatus:
         mock_job.flow_id = flow_id
         mock_job.status = JobStatus.QUEUED
         mock_job.type = JobType.WORKFLOW
+        mock_job.user_id = None
         mock_job.created_timestamp = datetime.now(timezone.utc)
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
@@ -1389,6 +1624,7 @@ class TestWorkflowStatus:
         mock_job.job_id = job_id
         mock_job.status = JobStatus.FAILED
         mock_job.type = JobType.WORKFLOW
+        mock_job.user_id = None
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
@@ -1418,6 +1654,7 @@ class TestWorkflowStatus:
         mock_job.flow_id = flow_id
         mock_job.status = JobStatus.COMPLETED
         mock_job.type = JobType.WORKFLOW
+        mock_job.user_id = None
 
         with (
             patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
@@ -1457,6 +1694,7 @@ class TestWorkflowStatus:
         mock_job.flow_id = flow_id
         mock_job.status = JobStatus.TIMED_OUT
         mock_job.type = JobType.WORKFLOW
+        mock_job.user_id = None
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
@@ -1500,6 +1738,8 @@ class TestWorkflowStop:
         mock_job = MagicMock()
         mock_job.job_id = job_id
         mock_job.status = JobStatus.IN_PROGRESS
+        mock_job.type = JobType.WORKFLOW
+        mock_job.user_id = None
 
         with (
             patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
@@ -1557,6 +1797,8 @@ class TestWorkflowStop:
         mock_job = MagicMock()
         mock_job.job_id = job_id
         mock_job.status = JobStatus.CANCELLED
+        mock_job.type = JobType.WORKFLOW
+        mock_job.user_id = None
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
@@ -1570,3 +1812,415 @@ class TestWorkflowStop:
             result = response.json()
             assert result["job_id"] == job_id
             assert "already cancelled" in result["message"]
+
+
+@pytest.mark.security
+class TestWorkflowIDORProtection:
+    """Security regression tests for IDOR on workflow job endpoints.
+
+    Covers GHSA-qfw4-cjhf-3g3q: background workflow jobs are queryable and
+    cancellable cross-user unless an ownership check is enforced.
+    """
+
+    @pytest.fixture
+    def mock_settings_dev_api_enabled(self):
+        with patch("langflow.api.v2.workflow.get_settings_service") as mock_get_settings:
+            mock_service = MagicMock()
+            mock_settings = MagicMock()
+            mock_settings.developer_api_enabled = True
+            mock_service.settings = mock_settings
+            mock_get_settings.return_value = mock_service
+            yield mock_settings
+
+    @pytest.mark.security
+    async def test_get_workflow_status_forbidden_for_other_user_job(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        created_user_two_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """GET /api/v2/workflows returns 404 when the job belongs to a different user.
+
+        GHSA-qfw4-cjhf-3g3q: job status must not be visible cross-user.
+        Ownership is enforced at the SQL level — unauthorized access returns 404.
+        """
+        job_id = uuid4()
+        other_user_id = created_user_two_api_key.user_id
+
+        async with session_scope() as session:
+            job = Job(
+                job_id=job_id,
+                flow_id=uuid4(),
+                status=JobStatus.QUEUED,
+                type=JobType.WORKFLOW,
+                user_id=other_user_id,
+            )
+            session.add(job)
+            await session.flush()
+
+        try:
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+            assert response.status_code == 404
+            result = response.json()
+            assert result["detail"]["code"] == "JOB_NOT_FOUND"
+            assert str(job_id) in result["detail"]["job_id"]
+        finally:
+            async with session_scope() as session:
+                db_job = await session.get(Job, job_id)
+                if db_job:
+                    await session.delete(db_job)
+
+    @pytest.mark.security
+    async def test_get_workflow_status_allowed_for_own_job(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """GET /api/v2/workflows returns 200 when the job belongs to the requesting user."""
+        job_id = uuid4()
+        owner_user_id = created_api_key.user_id
+
+        async with session_scope() as session:
+            job = Job(
+                job_id=job_id,
+                flow_id=uuid4(),
+                status=JobStatus.QUEUED,
+                type=JobType.WORKFLOW,
+                user_id=owner_user_id,
+            )
+            session.add(job)
+            await session.flush()
+
+        try:
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert str(job_id) in result["job_id"]
+        finally:
+            async with session_scope() as session:
+                db_job = await session.get(Job, job_id)
+                if db_job:
+                    await session.delete(db_job)
+
+    @pytest.mark.security
+    async def test_stop_workflow_forbidden_for_other_user_job(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        created_user_two_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """POST /api/v2/workflows/stop returns 404 when the job belongs to a different user.
+
+        GHSA-qfw4-cjhf-3g3q: job cancellation must not be allowed cross-user.
+        Ownership is enforced at the SQL level — unauthorized access returns 404.
+        """
+        job_id = uuid4()
+        other_user_id = created_user_two_api_key.user_id
+
+        async with session_scope() as session:
+            job = Job(
+                job_id=job_id,
+                flow_id=uuid4(),
+                status=JobStatus.IN_PROGRESS,
+                type=JobType.WORKFLOW,
+                user_id=other_user_id,
+            )
+            session.add(job)
+            await session.flush()
+
+        try:
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.post(
+                "api/v2/workflows/stop",
+                json={"job_id": str(job_id)},
+                headers=headers,
+            )
+
+            assert response.status_code == 404
+            result = response.json()
+            assert result["detail"]["code"] == "JOB_NOT_FOUND"
+            assert str(job_id) in result["detail"]["job_id"]
+        finally:
+            async with session_scope() as session:
+                db_job = await session.get(Job, job_id)
+                if db_job:
+                    await session.delete(db_job)
+
+    @pytest.mark.security
+    async def test_stop_workflow_allowed_for_own_job(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """POST /api/v2/workflows/stop succeeds when the job belongs to the requesting user."""
+        job_id = uuid4()
+        owner_user_id = created_api_key.user_id
+
+        async with session_scope() as session:
+            job = Job(
+                job_id=job_id,
+                flow_id=uuid4(),
+                status=JobStatus.CANCELLED,
+                type=JobType.WORKFLOW,
+                user_id=owner_user_id,
+            )
+            session.add(job)
+            await session.flush()
+
+        try:
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.post(
+                "api/v2/workflows/stop",
+                json={"job_id": str(job_id)},
+                headers=headers,
+            )
+
+            assert response.status_code == 200
+        finally:
+            async with session_scope() as session:
+                db_job = await session.get(Job, job_id)
+                if db_job:
+                    await session.delete(db_job)
+
+    @pytest.mark.security
+    async def test_get_workflow_status_allowed_for_legacy_job_with_no_user_id(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """GET /api/v2/workflows does NOT block legacy jobs where user_id is NULL.
+
+        Jobs created before the fix have user_id=None and must not be broken.
+        """
+        job_id = uuid4()
+
+        async with session_scope() as session:
+            job = Job(
+                job_id=job_id,
+                flow_id=uuid4(),
+                status=JobStatus.QUEUED,
+                type=JobType.WORKFLOW,
+                user_id=None,
+            )
+            session.add(job)
+            await session.flush()
+
+        try:
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["job_id"] == str(job_id)
+        finally:
+            async with session_scope() as session:
+                db_job = await session.get(Job, job_id)
+                if db_job:
+                    await session.delete(db_job)
+
+    @pytest.mark.security
+    async def test_stop_workflow_allowed_for_legacy_job_with_no_user_id(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """POST /api/v2/workflows/stop does NOT block legacy jobs where user_id is NULL.
+
+        Jobs created before the ownership fix have user_id=None and must not be
+        broken by the ownership check (parity with the equivalent GET test).
+        """
+        job_id = uuid4()
+
+        async with session_scope() as session:
+            job = Job(
+                job_id=job_id,
+                flow_id=uuid4(),
+                status=JobStatus.IN_PROGRESS,
+                type=JobType.WORKFLOW,
+                user_id=None,
+            )
+            session.add(job)
+            await session.flush()
+
+        try:
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.post(
+                "api/v2/workflows/stop",
+                json={"job_id": str(job_id)},
+                headers=headers,
+            )
+
+            assert response.status_code == 200, (
+                "Legacy jobs with user_id=None must not be blocked by the ownership check"
+            )
+        finally:
+            async with session_scope() as session:
+                db_job = await session.get(Job, job_id)
+                if db_job:
+                    await session.delete(db_job)
+
+    @pytest.mark.security
+    async def test_stop_workflow_returns_404_for_non_workflow_job_type(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """POST /api/v2/workflows/stop returns 404 for non-WORKFLOW job types.
+
+        Prevents stop endpoint from cancelling ingestion or evaluation jobs.
+        """
+        job_id = uuid4()
+
+        async with session_scope() as session:
+            job = Job(
+                job_id=job_id,
+                flow_id=uuid4(),
+                status=JobStatus.IN_PROGRESS,
+                type=JobType.INGESTION,
+                user_id=None,
+            )
+            session.add(job)
+            await session.flush()
+
+        try:
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.post(
+                "api/v2/workflows/stop",
+                json={"job_id": str(job_id)},
+                headers=headers,
+            )
+
+            assert response.status_code == 404
+            result = response.json()
+            assert result["detail"]["code"] == "JOB_NOT_FOUND"
+        finally:
+            async with session_scope() as session:
+                db_job = await session.get(Job, job_id)
+                if db_job:
+                    await session.delete(db_job)
+
+    @pytest.mark.security
+    async def test_get_workflow_status_returns_404_for_non_workflow_job_type(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """GET /api/v2/workflows returns 404 for non-WORKFLOW job types.
+
+        Prevents status endpoint from exposing ingestion or evaluation jobs.
+        """
+        job_id = uuid4()
+
+        async with session_scope() as session:
+            job = Job(
+                job_id=job_id,
+                flow_id=uuid4(),
+                status=JobStatus.IN_PROGRESS,
+                type=JobType.INGESTION,
+                user_id=None,
+            )
+            session.add(job)
+            await session.flush()
+
+        try:
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+            assert response.status_code == 404
+            result = response.json()
+            assert result["detail"]["code"] == "JOB_NOT_FOUND"
+        finally:
+            async with session_scope() as session:
+                db_job = await session.get(Job, job_id)
+                if db_job:
+                    await session.delete(db_job)
+
+    @pytest.mark.security
+    async def test_background_job_stores_user_id_and_blocks_cross_user_access(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        created_user_two_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """End-to-end: POST /workflows (background=true) stores user_id and blocks cross-user GET.
+
+        This test exercises the real create_job code path to catch regressions
+        where user_id is not passed to create_job (causing user_id=NULL and
+        bypassing the ownership check — the exact bug found in Postman).
+
+        Steps:
+          1. Alice creates a background job via the real endpoint (no mock on create_job)
+          2. Bob queries the job_id returned — must get 404 (ownership enforced at SQL level)
+        """
+        flow_id = uuid4()
+        job_id_str = None
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Alice End-to-End Flow",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+
+        try:
+            # Mock only the task service to prevent real background execution
+            with patch("langflow.api.v2.workflow.get_task_service") as mock_task_svc:
+                mock_task_service = MagicMock()
+                mock_task_service.fire_and_forget_task = AsyncMock()
+                mock_task_svc.return_value = mock_task_service
+
+                alice_headers = {"x-api-key": created_api_key.api_key}
+                response = await client.post(
+                    "api/v2/workflows",
+                    json={
+                        "flow_id": str(flow_id),
+                        "background": True,
+                        "stream": False,
+                        "inputs": {},
+                    },
+                    headers=alice_headers,
+                )
+
+            assert response.status_code in (200, 202), (
+                f"Expected 200/202 from Alice's background job creation, got {response.status_code}: {response.text}"
+            )
+            job_id_str = response.json()["job_id"]
+
+            # Bob queries Alice's job — must be 404 (ownership enforced at SQL level)
+            bob_headers = {"x-api-key": created_user_two_api_key.api_key}
+            response = await client.get(
+                f"api/v2/workflows?job_id={job_id_str}",
+                headers=bob_headers,
+            )
+
+            assert response.status_code == 404, (
+                f"Expected 404 Not Found but got {response.status_code}. "
+                "user_id is not being persisted in create_job — Bob can access Alice's job."
+            )
+            assert response.json()["detail"]["code"] == "JOB_NOT_FOUND"
+
+        finally:
+            async with session_scope() as session:
+                if job_id_str:
+                    db_job = await session.get(Job, UUID(job_id_str))
+                    if db_job:
+                        await session.delete(db_job)
+                db_flow = await session.get(Flow, flow_id)
+                if db_flow:
+                    await session.delete(db_flow)

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useBlocker, useParams } from "react-router-dom";
+import { AssistantPanel } from "@/components/core/assistantPanel";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import {
@@ -16,7 +19,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useWebhookEvents } from "@/hooks/use-webhook-events";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
+import { useShortcutsStore } from "@/stores/shortcuts";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
@@ -26,6 +32,7 @@ import {
   FlowSearchProvider,
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
+import MemoriesMainContent from "./components/MemoriesMainContent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
 
@@ -38,6 +45,7 @@ function FlowPageMainContent({
 }): JSX.Element {
   const { activeSection } = useSidebar();
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
+  const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
 
   if (showTraces) {
     return (
@@ -54,6 +62,10 @@ function FlowPageMainContent({
     );
   }
 
+  if (showMemories) {
+    return <MemoriesMainContent />;
+  }
+
   return <Page setIsLoading={setIsLoading} />;
 }
 
@@ -68,6 +80,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
 
   const changesNotSaved =
@@ -103,7 +116,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       if (proceed) {
         blocker.proceed && blocker.proceed();
         setSuccessData({
-          title: "Flow saved successfully!",
+          title: t("flow.savedSuccessfully"),
         });
       }
     }, 1200);
@@ -111,7 +124,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       if (!autoSaving || saving === false) {
         blocker.proceed && blocker.proceed();
         setSuccessData({
-          title: "Flow saved successfully!",
+          title: t("flow.savedSuccessfully"),
         });
       }
       proceed = true;
@@ -201,6 +214,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   };
 
   const isMobile = useIsMobile();
+  // When the welcome overlay is open, the FlowSidebarComponent should be
+  // completely hidden — the welcome paints its own faux rail and any flash
+  // of the real expanded sidebar is jarring on first paint.
+  const isWelcomeOpen = useFlowBuilderWelcomeStore((state) => state.isOpen);
   const isSlidingContainerOpen = usePlaygroundStore((state) => state.isOpen);
   const setSlidingContainerOpen = usePlaygroundStore(
     (state) => state.setIsOpen,
@@ -209,6 +226,38 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setIsFullscreen = usePlaygroundStore((state) => state.setIsFullscreen);
   const inputs = useFlowStore((state) => state.inputs);
   const outputs = useFlowStore((state) => state.outputs);
+
+  // Assistant state
+  const assistantOpen = useAssistantManagerStore(
+    (state) => state.assistantSidebarOpen,
+  );
+  const setAssistantOpen = useAssistantManagerStore(
+    (state) => state.setAssistantSidebarOpen,
+  );
+
+  // Toggle assistant with configurable shortcut (only when not typing in an input)
+  const aiAssistantShortcut = useShortcutsStore((state) => state.aiAssistant);
+  useHotkeys(
+    aiAssistantShortcut,
+    () => setAssistantOpen(!assistantOpen),
+    {
+      preventDefault: true,
+      enableOnFormTags: false,
+    },
+    [assistantOpen, aiAssistantShortcut],
+  );
+
+  // Close assistant with Escape
+  useHotkeys(
+    "escape",
+    () => {
+      if (assistantOpen) setAssistantOpen(false);
+    },
+    {
+      enableOnFormTags: true,
+    },
+    [assistantOpen],
+  );
 
   // Auto-close playground when all chat components are removed
   useEffect(() => {
@@ -231,58 +280,58 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   return (
     <>
-      {/* TODO: will be revert - original main layout without playground panel */}
-      {/*
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
-            <SidebarProvider
-              width="17.5rem"
-              defaultOpen={!isMobile}
-              segmentedSidebar={ENABLE_NEW_SIDEBAR}
+            {/* Main content + Playground Sidebar (right) */}
+            <SimpleSidebarProvider
+              width="326px"
+              minWidth={0.15}
+              maxWidth={0.6}
+              open={isSlidingContainerOpen}
+              onOpenChange={(open) => {
+                const wasOpen = isSlidingContainerOpen;
+                setSlidingContainerOpen(open);
+                if (open && !wasOpen) {
+                  setIsFullscreen(true);
+                }
+              }}
+              fullscreen={isFullscreen}
+              onMaxWidth={() => {
+                setIsFullscreen(true);
+                setSlidingContainerOpen(true);
+              }}
             >
-              <FlowSearchProvider>
-                {!view && <FlowSidebarComponent isLoading={isLoading} />}
-                <main className="flex w-full overflow-hidden">
-                  <div className="h-full w/full">
-                    <Page setIsLoading={setIsLoading} />
-                  </div>
-                </main>
-              </FlowSearchProvider>
-            </SidebarProvider>
-          </div>
-        )}
-      </div>
-      */}
-
-      <SimpleSidebarProvider
-        width="326px"
-        minWidth={0.15}
-        maxWidth={0.6}
-        open={isSlidingContainerOpen}
-        onOpenChange={(open) => {
-          const wasOpen = isSlidingContainerOpen;
-          setSlidingContainerOpen(open);
-          if (open && !wasOpen) {
-            setIsFullscreen(true);
-          }
-        }}
-        fullscreen={isFullscreen}
-        onMaxWidth={() => {
-          setIsFullscreen(true);
-          setSlidingContainerOpen(true);
-        }}
-      >
-        <div className="flow-page-positioning">
-          {currentFlow && (
-            <div className="flex h-full overflow-hidden">
               <SidebarProvider
                 width="17.5rem"
                 defaultOpen={!isMobile}
                 segmentedSidebar={ENABLE_NEW_SIDEBAR}
               >
+                {/* Assistant Panel — single instance, mounted INSIDE the
+                    SidebarProvider so it can read sidebar open state via
+                    ``useSidebar`` and shift its horizontal position when the
+                    sidebar slides off-canvas. */}
+                <AssistantPanel
+                  isOpen={assistantOpen}
+                  onClose={() => setAssistantOpen(false)}
+                />
                 <FlowSearchProvider>
-                  {!view && <FlowSidebarComponent isLoading={isLoading} />}
+                  {/* FlowSidebarComponent - stays in place. Wrapped in a
+                      ``display: none`` container while the welcome is open
+                      so it never paints on first render (and never flashes
+                      while the welcome's open-effect catches up). The
+                      wrapper uses ``display: contents`` when visible so it
+                      doesn't break the parent flex layout. */}
+                  {!view && (
+                    <div
+                      style={{
+                        display: isWelcomeOpen ? "none" : "contents",
+                      }}
+                    >
+                      <FlowSidebarComponent isLoading={isLoading} />
+                    </div>
+                  )}
+
                   <main
                     className={cn(
                       "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
@@ -306,10 +355,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                   setIsFullscreen={setIsFullscreen}
                 />
               </SimpleSidebar>
-            </div>
-          )}
-        </div>
-      </SimpleSidebarProvider>
+            </SimpleSidebarProvider>
+          </div>
+        )}
+      </div>
       {blocker.state === "blocked" && (
         <>
           {!isBuilding && currentSavedFlow && (

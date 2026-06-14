@@ -7,6 +7,17 @@ from langflow.io import Output
 from lfx.components.files_and_knowledge.file import FileComponent
 
 
+class TestFileComponentFrontendMetadata:
+    def test_file_types_are_serialized_for_frontend(self):
+        component = FileComponent()
+
+        frontend_node = component.to_frontend_node()
+        path_template = frontend_node["data"]["node"]["template"]["path"]
+
+        assert path_template["fileTypes"][:3] == ["csv", "json", "pdf"]
+        assert "zip" in path_template["fileTypes"]
+
+
 class TestFileComponentDynamicOutputs:
     def test_update_outputs_single_csv_file(self):
         """Test single CSV file shows structured + raw outputs."""
@@ -116,8 +127,8 @@ class TestFileComponentDynamicOutputs:
         assert result["advanced_mode"]["show"] is False
         assert result["advanced_mode"]["value"] is False
 
-    @patch("subprocess.run")
-    def test_process_docling_subprocess_success(self, mock_subprocess):
+    @patch("subprocess.Popen")
+    def test_process_docling_subprocess_success(self, mock_popen):
         """Test successful Docling subprocess execution."""
         component = FileComponent()
         component.markdown = False
@@ -132,10 +143,17 @@ class TestFileComponentDynamicOutputs:
             ],
             "meta": {"file_path": "test.pdf"},
         }
-        mock_subprocess.return_value = MagicMock(
-            stdout=json.dumps(mock_result).encode("utf-8"),
-            stderr=b"",
-        )
+        stdout_bytes = json.dumps(mock_result).encode("utf-8")
+
+        # Simulate Popen: poll() returns None once (in-progress), then 0 (done)
+        mock_proc = MagicMock()
+        mock_proc.poll.side_effect = [0]  # immediately done
+        mock_proc.stdin = MagicMock()
+        mock_proc.stdout = MagicMock()
+        mock_proc.stdout.read.return_value = stdout_bytes
+        mock_proc.stderr = MagicMock()
+        mock_proc.stderr.read.return_value = b""
+        mock_popen.return_value = mock_proc
 
         result = component._process_docling_in_subprocess("test.pdf")
 

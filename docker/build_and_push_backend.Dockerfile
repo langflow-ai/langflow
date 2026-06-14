@@ -8,7 +8,7 @@
 ################################
 # BUILDER
 ################################
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
 
 WORKDIR /app
 
@@ -29,6 +29,7 @@ RUN apt-get update \
 # Copy only backend source (excludes frontend)
 COPY ./src/backend ./src/backend
 COPY ./src/lfx ./src/lfx
+COPY ./src/sdk ./src/sdk
 
 # Create venv and install langflow-base with dependencies
 # Using uv pip instead of uv sync to avoid workspace complexities
@@ -36,13 +37,22 @@ RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
+# Install langflow-base with all extras except dev (which includes Playwright).
+# This image ships the langflow-base core only.  Extension bundles
+# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling) are intentionally NOT
+# installed here -- they belong to the full ``langflow`` distribution, not
+# the lean core.  Use the ``langflow`` image, or ``pip install`` the bundle
+# alongside this image, to add those components.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install ./src/lfx "./src/backend/base[complete,postgresql]"
+    uv pip install \
+        ./src/sdk \
+        ./src/lfx \
+        "./src/backend/base[complete,postgresql]"
 
 ################################
 # RUNTIME
 ################################
-FROM python:3.12.12-slim-trixie AS runtime
+FROM python:3.14-slim-trixie AS runtime
 
 # Install minimal runtime dependencies
 RUN apt-get update \
@@ -63,12 +73,11 @@ RUN ARCH=$(dpkg --print-architecture) \
        elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
-                    | grep -oP "node-v\K[0-9]+\.[0-9]+\.[0-9]+(?=-linux-${NODE_ARCH}\.tar\.xz)" \
+                    | sed -nE "s/.*node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-${NODE_ARCH}\.tar\.xz.*/\1/p" \
                     | head -1) \
+    && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
-    | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest \
-    && npm cache clean --force
+    | tar -xJ -C /usr/local --strip-components=1
 
 # Create non-root user
 RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
@@ -78,9 +87,18 @@ COPY --from=builder --chown=1000:0 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Create home directory and ensure proper ownership
-# The user needs write access to /app/data (home) and /app (workdir)
+# The user needs write access to /app/data (home) and /app (workdir).
+# Also pre-create /app/langflow (LANGFLOW_CONFIG_DIR used by the docker_example
+# compose file) with the non-root user as owner, so a fresh named volume mounted
+# at /app/langflow inherits the correct ownership/permissions and the in-container
+# uid=1000 user can write secret_key, profile_pictures, etc. Without this, the
+# volume would be initialized as root:root and Langflow would crash with
+# PermissionError on /app/langflow/secret_key (issue #10437).
 # Note: .venv is already owned by 1000:0 via COPY --chown above, so no recursive chown needed
-RUN mkdir -p /app/data && chown -R 1000:0 /app/data && chown 1000:0 /app
+RUN mkdir -p /app/data /app/langflow \
+    && chown -R 1000:0 /app/data /app/langflow \
+    && chmod -R g+rwX /app/langflow \
+    && chown 1000:0 /app
 
 LABEL org.opencontainers.image.title=langflow-backend
 LABEL org.opencontainers.image.authors=['Langflow']

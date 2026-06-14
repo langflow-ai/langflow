@@ -6,9 +6,84 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import types as sa_types
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
 from langflow.serialization.serialization import serialize
+
+
+def _enum_values(enum_cls: type[Enum]) -> list[str]:
+    """Return the enum's string values so SQLAlchemy serializes them instead of the enum NAMEs.
+
+    The trace/span PostgreSQL enums (``spanstatus``, ``spantype``, ``spankind``) are defined
+    in migration ``3478f0bd6ccb`` using the enum *values*. Without this callable, SQLAlchemy
+    sends the enum *names* (e.g. ``"OK"`` instead of ``"ok"``) on insert, which PostgreSQL
+    rejects with ``invalid input value for enum spanstatus: "OK"``.
+    """
+    return [member.value for member in enum_cls]
+
+
+class _LegacyCaseEnum(sa_types.TypeDecorator):
+    """SQLAlchemy column type that normalises legacy uppercase enum names on read.
+
+    Before ``values_callable=_enum_values`` was added, SQLAlchemy stored enum
+    *names* (e.g. ``'OK'``) rather than enum *values* (e.g. ``'ok'``).
+    The result_processor introduced by that fix validates the raw DB string
+    against the values list, so old rows with uppercase names raise
+    ``LookupError``.
+
+    This decorator intercepts the raw DB string and tries a case-insensitive
+    match against both enum values and enum names so old and new rows both
+    round-trip cleanly.
+
+    ``result_processor`` is overridden so the impl (``SQLEnum``) processor
+    does not run first. A plain :class:`TypeDecorator` runs the impl's
+    ``result_processor`` *before* ``process_result_value``, and the
+    impl's processor raises ``LookupError`` on legacy uppercase strings
+    before our normalisation gets a chance to run. See
+    https://github.com/langflow-ai/langflow/issues/13318.
+    """
+
+    impl = SQLEnum
+    cache_ok = True
+
+    def __init__(self, enum_cls: type[Enum], *, name: str) -> None:
+        self._enum_cls = enum_cls
+        self._by_value: dict[str, Enum] = {m.value: m for m in enum_cls}
+        self._by_name: dict[str, Enum] = {m.name: m for m in enum_cls}
+        super().__init__(enum_cls, name=name, values_callable=_enum_values)
+
+    def result_processor(self, dialect, _coltype):
+        """Skip the impl's strict ``result_processor`` so legacy rows can be normalised.
+
+        The default ``TypeDecorator.result_processor`` chains
+        ``impl.result_processor`` → ``process_result_value``. The impl is
+        ``SQLEnum`` whose processor calls ``_object_value_for_elem`` and raises
+        ``LookupError`` on any string not in the lowercase values list. Pre-v1.9.2
+        rows persist the enum *names* (e.g. ``'OK'``) which fail that check
+        before ``process_result_value`` can normalise them. We bypass the impl
+        here and run only our own normalisation against the raw DB value.
+        """
+
+        def process(value):
+            return self.process_result_value(value, dialect)
+
+        return process
+
+    def process_result_value(self, value: str | None, _dialect) -> Enum | None:
+        if value is None:
+            return None
+        if isinstance(value, self._enum_cls):
+            return value
+        member = self._by_value.get(value) or self._by_name.get(value)
+        if member is None:
+            lower = value.lower()
+            member = self._by_value.get(lower) or self._by_name.get(lower)
+        if member is None:
+            msg = f"{value!r} is not a valid {self._enum_cls.__name__} value"
+            raise LookupError(msg)
+        return member
 
 
 class SpanKind(str, Enum):
@@ -60,7 +135,14 @@ class TraceBase(SQLModel):
     """Base model for traces."""
 
     name: str = Field(nullable=False, description="Name of the trace (usually flow name)")
-    status: SpanStatus = Field(default=SpanStatus.UNSET, description="Overall trace status")
+    status: SpanStatus = Field(
+        default=SpanStatus.UNSET,
+        sa_column=Column(
+            _LegacyCaseEnum(SpanStatus, name="spanstatus"),
+            nullable=False,
+        ),
+        description="Overall trace status",
+    )
     start_time: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="When the trace started",
@@ -154,8 +236,8 @@ class TraceRead(BaseModel):
     total_tokens: int
     flow_id: UUID
     session_id: str
-    input: dict[str, Any] | None = None
-    output: dict[str, Any] | None = None
+    input: dict[str, Any] | str | None = None
+    output: dict[str, Any] | str | None = None
     spans: list[SpanReadResponse] = PydanticField(default_factory=list)
 
 
@@ -179,8 +261,8 @@ class TraceSummaryRead(BaseModel):
     total_tokens: int
     flow_id: UUID
     session_id: str
-    input: dict[str, Any] | None = None
-    output: dict[str, Any] | None = None
+    input: dict[str, Any] | str | None = None
+    output: dict[str, Any] | str | None = None
 
 
 class TraceListResponse(BaseModel):
@@ -203,8 +285,22 @@ class SpanBase(SQLModel):
     """Base model for spans (individual execution steps)."""
 
     name: str = Field(nullable=False, description="Name of the span following OTel convention: '{operation} {model}'")
-    span_type: SpanType = Field(default=SpanType.CHAIN, description="Type of operation")
-    status: SpanStatus = Field(default=SpanStatus.UNSET, description="Execution status")
+    span_type: SpanType = Field(
+        default=SpanType.CHAIN,
+        sa_column=Column(
+            _LegacyCaseEnum(SpanType, name="spantype"),
+            nullable=False,
+        ),
+        description="Type of operation",
+    )
+    status: SpanStatus = Field(
+        default=SpanStatus.UNSET,
+        sa_column=Column(
+            _LegacyCaseEnum(SpanStatus, name="spanstatus"),
+            nullable=False,
+        ),
+        description="Execution status",
+    )
     start_time: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="When the span started",
@@ -216,6 +312,10 @@ class SpanBase(SQLModel):
     error: str | None = Field(default=None, sa_column=Column(Text), description="Error message if failed")
     span_kind: SpanKind = Field(
         default=SpanKind.INTERNAL,
+        sa_column=Column(
+            SQLEnum(SpanKind, name="spankind", values_callable=_enum_values),
+            nullable=False,
+        ),
         description="OpenTelemetry SpanKind",
     )
     # OTel-compliant extensible attributes

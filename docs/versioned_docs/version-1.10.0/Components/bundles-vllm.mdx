@@ -1,0 +1,63 @@
+---
+title: vLLM
+slug: /bundles-vllm
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **vLLM** bundle.
+
+For more information about vLLM features and functionality used by vLLM components, see the [vLLM documentation](https://docs.vllm.ai/).
+
+## vLLM text generation
+
+The **vLLM** component generates text using [vLLM models](https://docs.vllm.ai/en/latest/models/supported_models.html) via an OpenAI-compatible API.
+
+vLLM is a fast and easy-to-use library for LLM inference and serving. It provides high-throughput serving with efficient attention and PagedAttention, making it ideal for self-hosted model deployments.
+
+The component connects to a vLLM server running locally or remotely and uses the OpenAI-compatible API endpoint to generate text responses.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a vLLM model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### vLLM text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. The API Key to use for the vLLM model (optional for local servers). |
+| model_name | String | Input parameter. The name of the vLLM model to use (e.g., 'ibm-granite/granite-3.3-8b-instruct'). |
+| api_base | String | Input parameter. The base URL of the vLLM API server. Defaults to http://localhost:8000/v1 for local vLLM server. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.1. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| seed | Integer | Input parameter. The seed controls the reproducibility of the job. Default: 1. |
+| max_retries | Integer | Input parameter. The maximum number of retries to make when generating. Default: 5. |
+| timeout | Integer | Input parameter. The timeout for requests to vLLM completion API. Default: 700. |
+| model_kwargs | Dict | Input parameter. Additional keyword arguments to pass to the model. |
+| json_mode | Boolean | Input parameter. If True, it will output JSON regardless of passing a schema. |
+
+## Setting up vLLM
+
+To use the vLLM component, you need to have a vLLM server running. Here are the basic steps:
+
+1. **Install vLLM**: `pip install vllm`
+2. **Start a vLLM server**:
+   ```bash
+   python -m vllm.entrypoints.openai.api_server --model <model_name> --port 8000
+   ```
+3. **Configure the component**: Set the `api_base` to your vLLM server URL (e.g., `http://localhost:8000/v1`)
+
+For more detailed setup instructions, see the [vLLM documentation](https://docs.vllm.ai/en/latest/getting_started/quickstart.html).
+
+## See also
+
+* [**Agent** component](/components-agents)
+* [**Language Model** component](/components-models)
+* [vLLM GitHub repository](https://github.com/vllm-project/vllm)

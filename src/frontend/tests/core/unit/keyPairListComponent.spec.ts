@@ -1,6 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -12,12 +12,9 @@ test(
   "KeypairListComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
+    await openBlankFlow(page);
 
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await disableInspectPanel(page);
 
     // Allow for legacy components
     await page.getByTestId("sidebar-options-trigger").click();
@@ -34,8 +31,6 @@ test(
       .getByTestId("amazonAmazon Bedrock")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-    await adjustScreenView(page);
-
     await disableInspectPanel(page);
 
     await page.getByTestId("div-generic-node").click();
@@ -43,8 +38,12 @@ test(
     await openAdvancedOptions(page);
 
     await page.getByTestId("showmodel_kwargs").click();
-    expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
+    await expect(page.getByTestId("showmodel_kwargs")).toBeChecked();
     await closeAdvancedOptions(page);
+
+    await adjustScreenView(page, {
+      numberOfZoomOut: 2,
+    });
 
     await page.locator('//*[@id="keypair0"]').click();
     await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");

@@ -19,6 +19,7 @@ import pkgutil
 
 import pytest
 from langflow import components
+from lfx.interface.components import _warm_circular_imports
 
 
 class TestAllModulesImportable:
@@ -44,6 +45,19 @@ class TestAllModulesImportable:
 
     def test_all_components_in_categories_importable(self):
         """Test that all components in each category's __all__ can be imported."""
+        import sys
+
+        # Components whose underlying packages are gated to python_version<'3.14'
+        # in pyproject.toml because upstream pins exclude 3.14. These are expected
+        # to fail import on 3.14 until the upstreams adapt.
+        # NOTE: ibm.* moved to the lfx-ibm bundle (src/bundles/ibm) and is no
+        # longer iterated through ``langflow.components``; the watsonx
+        # 3.14-gating moved with them.
+        gated_on_py314 = {
+            "altk.ALTKAgentComponent",
+        }
+        on_py314 = sys.version_info >= (3, 14)
+
         failed_imports = []
         successful_imports = 0
 
@@ -58,6 +72,7 @@ class TestAllModulesImportable:
                     print(f"Testing {category_components} components in {category_name}")  # noqa: T201
 
                     for component_name in category_module.__all__:
+                        qualified = f"{category_name}.{component_name}"
                         try:
                             component = getattr(category_module, component_name)
                             assert component is not None, f"Component {component_name} is None"
@@ -65,8 +80,11 @@ class TestAllModulesImportable:
                             successful_imports += 1
 
                         except Exception as e:
-                            failed_imports.append(f"{category_name}.{component_name}: {e!s}")
-                            print(f"FAILED: {category_name}.{component_name}: {e!s}")  # noqa: T201
+                            if on_py314 and qualified in gated_on_py314:
+                                print(f"SKIPPED on 3.14: {qualified}: {e!s}")  # noqa: T201
+                                continue
+                            failed_imports.append(f"{qualified}: {e!s}")
+                            print(f"FAILED: {qualified}: {e!s}")  # noqa: T201
                 else:
                     # Category doesn't have __all__, skip
                     print(f"Skipping {category_name} (no __all__ attribute)")  # noqa: T201
@@ -387,6 +405,11 @@ class TestDirectModuleImports:
                         "redis",
                         "elasticsearch",
                         "langchain_community",
+                        # Gated to python_version<'3.14' in pyproject.toml until
+                        # upstream caps lift.
+                        "altk",
+                        "langchain_ibm",
+                        "ibm_watsonx_ai",
                     ]
                 ):
                     return ("skipped", modname, "missing optional dependency")
@@ -395,6 +418,13 @@ class TestDirectModuleImports:
                 return ("failed", modname, f"{type(e).__name__}: {e}")
             else:
                 return ("success", modname, None)
+
+        # Pre-import third-party modules with internal circular imports single-threaded
+        # before the concurrent fan-out below. This reuses the exact warm-up the
+        # production loader (``_load_components_dynamically``) runs, so the test and
+        # production stay in lockstep -- see ``_warm_circular_imports`` for the full
+        # deadlock explanation.
+        _warm_circular_imports()
 
         # Import all modules in parallel
         results = await asyncio.gather(*[import_module_async(modname) for modname in module_names])
@@ -572,7 +602,7 @@ class TestDirectModuleImports:
             assert QdrantVectorStoreComponent.display_name == "Qdrant"
 
         except ImportError as e:
-            if "qdrant_client" in str(e) or "langchain_community" in str(e):
+            if "qdrant_client" in str(e) or "langchain_qdrant" in str(e):
                 pytest.skip("Qdrant dependencies not installed (expected in test environment)")
             pytest.fail(f"Failed to import QdrantVectorStoreComponent: {e}")
         except AttributeError as e:

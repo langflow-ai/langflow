@@ -1,4 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
+import { useTranslation } from "react-i18next";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
@@ -8,6 +9,7 @@ import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
 
 const useSaveFlow = () => {
+  const { t } = useTranslation();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
@@ -94,20 +96,29 @@ const useSaveFlow = () => {
                       return flow;
                     }),
                   );
-                  setCurrentFlow(updatedFlow);
+                  // Only update useFlowStore.currentFlow when on the flow page.
+                  // When saving from the list page (e.g., renaming via settings modal),
+                  // setting this would leave stale unprocessed flow data in the store,
+                  // causing a crash when the user later navigates to the flow page.
+                  if (useFlowStore.getState().onFlowPage) {
+                    setCurrentFlow(updatedFlow);
+                  }
                   resolve();
                 } else {
                   setErrorData({
-                    title: "Failed to save flow",
-                    list: ["Flows variable undefined"],
+                    title: t("errors.failedToSaveFlow"),
+                    list: [t("errors.flowsVariableUndefined")],
                   });
                   reject(new Error("Flows variable undefined"));
                 }
               },
-              onError: (e) => {
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
+              onError: (e: any) => {
+                const detail =
+                  e.response?.data?.detail || e.message || "Unknown error";
                 setErrorData({
-                  title: "Failed to save flow",
-                  list: [e.message],
+                  title: t("errors.failedToSaveFlow"),
+                  list: [detail],
                 });
                 setSaveLoading(false);
                 reject(e);
@@ -116,8 +127,8 @@ const useSaveFlow = () => {
           );
         } else {
           setErrorData({
-            title: "Failed to save flow",
-            list: ["Flow not found"],
+            title: t("errors.failedToSaveFlow"),
+            list: [t("errors.flowNotFound")],
           });
           reject(new Error("Flow not found"));
         }

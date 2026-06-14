@@ -1,24 +1,19 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { expect, test } from "../../fixtures";
+import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { unselectNodes } from "../../utils/unselect-nodes";
+import { uploadFile } from "../../utils/upload-file";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "user should be able to analyze text sentiment",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -27,18 +22,7 @@ withEventDeliveryModes(
       .click();
     await initialGPTsetup(page);
 
-    await page.getByTestId("input-file-component").last().click();
-    const fileChooserPromise = page.waitForEvent("filechooser");
-    await page.getByTestId("drag-files-component").last().click();
-
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(
-      path.join(__dirname, "../../assets/test_file.txt"),
-    );
-    await page.getByText("test_file.txt").last().isVisible();
-
-    await page.waitForTimeout(500);
-    await page.getByTestId("select-files-modal-button").click();
+    await uploadFile(page, "test_file.txt");
 
     await page.waitForSelector('[data-testid="title-Chat Output"]', {
       timeout: 3000,
@@ -49,9 +33,13 @@ withEventDeliveryModes(
     await page.getByText("Expand").click();
     await unselectNodes(page);
     await page.getByTestId("button_run_chat output").last().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 120000,
+    });
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page
       .getByText("Add a Chat Input component to your flow to send messages.", {
         exact: true,

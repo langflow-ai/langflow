@@ -13,16 +13,22 @@ from langflow.api.v1.mcp_projects import (
     _args_reference_urls,
     get_project_mcp_server,
     get_project_sse,
+    get_project_streamable_http_url,
     init_mcp_servers,
     project_mcp_servers,
     project_sse_transports,
 )
+from langflow.api.v2.mcp import is_mcp_servers_locked
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.services.deps import session_scope
+from lfx.services.mcp_composer.service import COMPOSER_BACKEND_AUTH_HEADER
+from lfx.services.settings.base import Settings
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
@@ -30,6 +36,24 @@ from tests.unit.utils.mcp import project_session_manager_lifespan
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
+
+
+def _set_startup_mcp_settings(
+    monkeypatch,
+    *,
+    auto_login: bool,
+    mcp_composer_enabled: bool,
+    add_projects_to_mcp_servers: bool,
+) -> None:
+    """Configure the runtime settings used by init_mcp_servers for a test."""
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.auth_settings, "AUTO_LOGIN", auto_login)
+    monkeypatch.setattr(settings_service.settings, "mcp_composer_enabled", mcp_composer_enabled)
+    monkeypatch.setattr(
+        settings_service.settings,
+        "add_projects_to_mcp_servers",
+        add_projects_to_mcp_servers,
+    )
 
 
 @pytest.mark.parametrize(
@@ -239,6 +263,148 @@ async def test_handle_project_streamable_messages_success(
     assert response.status_code == status.HTTP_200_OK
     # With StreamableHTTPSessionManager, it calls handle_request, not handle_post_message
     mock_streamable_http_manager.handle_request.assert_called_once()
+
+
+async def _set_project_auth_type(project_id, auth_type: str) -> None:
+    """Persist an auth_settings value for the given project."""
+    from langflow.services.auth.mcp_encryption import encrypt_auth_settings
+
+    async with session_scope() as session:
+        project = await session.get(Folder, project_id)
+        assert project is not None
+        project.auth_settings = encrypt_auth_settings({"auth_type": auth_type})
+        session.add(project)
+
+
+async def test_streamable_rejects_unauthenticated_oauth_project(
+    client: AsyncClient,
+    user_test_project,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """OAuth projects must reject any unauthenticated /streamable request.
+
+    Network-level trust (loopback / same-host proxy) is intentionally NOT used here: a
+    same-host reverse proxy or sidecar would make every external request appear to be
+    loopback, which would reopen the original unauthenticated bypass. Requests must
+    present a valid x-api-key regardless of source.
+    """
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}/streamable",
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "OAuth" in response.json()["detail"]
+    mock_streamable_http_manager.handle_request.assert_not_called()
+
+
+async def test_streamable_rejects_unauthenticated_oauth_project_trailing_slash(
+    client: AsyncClient,
+    user_test_project,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """Trailing-slash variant of /streamable must also enforce OAuth auth."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}/streamable/",
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    mock_streamable_http_manager.handle_request.assert_not_called()
+
+
+async def test_sse_rejects_unauthenticated_oauth_project(
+    client: AsyncClient,
+    user_test_project,
+    mock_sse_transport,
+    enable_mcp_composer,
+):
+    """SSE endpoint must also reject unauthenticated OAuth-project requests."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    response = await client.get(f"api/v1/mcp/project/{user_test_project.id}/sse")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    mock_sse_transport.connect_sse.assert_not_called()
+
+
+async def test_streamable_oauth_project_accepts_valid_api_key(
+    client: AsyncClient,
+    user_test_project,
+    created_api_key,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """Valid API keys must be accepted for OAuth-configured projects."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}/streamable",
+        headers={"x-api-key": created_api_key.api_key},
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_streamable_http_manager.handle_request.assert_called_once()
+
+
+async def test_streamable_oauth_project_accepts_valid_composer_backend_token(
+    client: AsyncClient,
+    user_test_project,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """The in-process MCP Composer token must authenticate Composer's backend hop."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    composer_service = MagicMock()
+    composer_service.validate_backend_auth_token.return_value = True
+
+    with patch("langflow.api.v1.mcp_projects.get_service", return_value=composer_service):
+        response = await client.post(
+            f"api/v1/mcp/project/{user_test_project.id}/streamable",
+            headers={COMPOSER_BACKEND_AUTH_HEADER: "valid-composer-token"},
+            json={"type": "test", "content": "message"},
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    composer_service.validate_backend_auth_token.assert_called_once_with(
+        str(user_test_project.id),
+        "valid-composer-token",
+    )
+    mock_streamable_http_manager.handle_request.assert_called_once()
+
+
+async def test_streamable_oauth_project_rejects_invalid_api_key(
+    client: AsyncClient,
+    user_test_project,
+    mock_streamable_http_manager,
+    enable_mcp_composer,
+):
+    """Invalid API keys must be rejected for OAuth-configured projects."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(user_test_project.id, "oauth")
+
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}/streamable",
+        headers={"x-api-key": "not-a-real-api-key"},
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json()["detail"] == "Invalid API key"
+    mock_streamable_http_manager.handle_request.assert_not_called()
 
 
 async def test_handle_project_messages_success(
@@ -725,6 +891,97 @@ def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
     return config_path
 
 
+async def test_is_mcp_servers_locked_does_not_fire_for_magicmock_settings():
+    settings = MagicMock()
+    # Simulate test fixtures where unknown attrs return truthy MagicMock placeholders.
+    assert is_mcp_servers_locked(settings) is False
+
+
+async def test_is_mcp_servers_locked_respects_explicit_true_flag():
+    settings = SimpleNamespace(mcp_servers_locked=True)
+    assert is_mcp_servers_locked(settings) is True
+
+
+async def test_settings_model_declares_mcp_servers_locked_field(monkeypatch):
+    """Regression guard: mcp lock must be configurable via Settings/env vars."""
+    assert "mcp_servers_locked" in Settings.model_fields
+    monkeypatch.setenv("LANGFLOW_MCP_SERVERS_LOCKED", "true")
+    assert Settings().mcp_servers_locked is True
+
+
+async def test_v2_mcp_servers_locked_blocks_non_superuser_add_patch_delete(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: True)
+
+    server_name = f"lf-lock-test-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=server_config, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_v2_mcp_servers_locked_allows_superuser_add_patch_delete(
+    client: AsyncClient,
+    monkeypatch,
+):
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: True)
+
+    username = f"super_lock_{uuid4().hex[:8]}"
+    login_password = f"lfx-{uuid4().hex[:12]}"
+    async with session_scope() as session:
+        super_user = User(
+            username=username,
+            password=get_password_hash(login_password),
+            is_active=True,
+            is_superuser=True,
+        )
+        session.add(super_user)
+
+    login_response = await client.post("api/v1/login", data={"username": username, "password": login_password})
+    assert login_response.status_code == status.HTTP_200_OK
+    access_token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    server_name = f"lf-lock-super-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(
+        f"/api/v2/mcp/servers/{server_name}",
+        json=server_config,
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
 async def test_install_mcp_config_defaults_to_sse_transport(
     client: AsyncClient,
     user_test_project,
@@ -844,6 +1101,204 @@ async def test_init_mcp_servers_error_handling_streamable():
     with patch("langflow.api.v1.mcp_projects.get_project_mcp_server", side_effect=mock_get_project_mcp_server):
         # This should not raise any exception, as the error should be caught
         await init_mcp_servers()
+
+
+async def test_init_mcp_servers_reconciles_project_server_auth_when_oauth_falls_back(
+    user_test_project,
+):
+    """Startup should refresh MCP server config after OAuth falls back to API key auth."""
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = {"auth_type": "oauth"}
+        session.add(project)
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_project_sse"),
+        patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+        patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings,
+        patch(
+            "langflow.api.v1.projects_mcp_helpers.register_mcp_servers_for_project",
+            new=AsyncMock(return_value=True),
+        ),
+    ):
+        mock_service = MagicMock()
+        mock_service.settings = SimpleNamespace(mcp_composer_enabled=False, add_projects_to_mcp_servers=True)
+        mock_service.auth_settings = SimpleNamespace(AUTO_LOGIN=False)
+        mock_get_settings.return_value = mock_service
+        await init_mcp_servers()
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        assert project.auth_settings is not None
+        assert project.auth_settings["auth_type"] == "apikey"
+
+
+async def test_init_mcp_servers_reconciles_existing_apikey_project_server_config(
+    client: AsyncClient,
+    user_test_project,
+    created_api_key,
+    monkeypatch,
+):
+    """Startup should repair stale MCP server config even when auth was already persisted earlier."""
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = {"auth_type": "apikey"}
+        session.add(project)
+
+    server_name = f"lf-{sanitize_mcp_name(user_test_project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    streamable_http_url = await get_project_streamable_http_url(user_test_project.id)
+    stale_server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "streamablehttp", streamable_http_url],
+    }
+    headers = {"x-api-key": created_api_key.api_key}
+
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=stale_server_config, headers=headers)
+    assert response.status_code == 200
+
+    try:
+        with (
+            patch("langflow.api.v1.mcp_projects.get_project_sse"),
+            patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+            patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        ):
+            await init_mcp_servers()
+
+        response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+        assert response.status_code == 200
+        server_config = response.json()
+        server_args = server_config["args"]
+        assert "mcp-proxy" in server_args
+        assert "--transport" in server_args
+        assert "streamablehttp" in server_args
+        assert "--headers" in server_args
+        assert "x-api-key" in server_args
+        assert streamable_http_url in server_args
+    finally:
+        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+
+
+async def test_patch_project_mcp_settings_syncs_server_config_for_apikey(
+    client: AsyncClient,
+    user_test_project,
+    created_api_key,
+    logged_in_headers,
+    monkeypatch,
+):
+    """PATCH /api/v1/mcp/project/{id} with auth_type=apikey must propagate x-api-key to MCP server args.
+
+    Regression test for the PATCH-path gap where auth_settings was updated in the DB but the
+    corresponding MCP server config was never reconciled, leaving args without --headers x-api-key
+    and causing subsequent startup reconciliation to generate duplicate Langflow API keys.
+    """
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    server_name = f"lf-{sanitize_mcp_name(user_test_project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    streamable_http_url = await get_project_streamable_http_url(user_test_project.id)
+    # Seed the server registry with a config that does NOT yet include the apikey header.
+    stale_server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "streamablehttp", streamable_http_url],
+    }
+    api_headers = {"x-api-key": created_api_key.api_key}
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=stale_server_config, headers=api_headers)
+    assert response.status_code == 200
+
+    try:
+        patch_payload = {
+            "settings": [],
+            "auth_settings": {"auth_type": "apikey"},
+        }
+        response = await client.patch(
+            f"/api/v1/mcp/project/{user_test_project.id}",
+            headers=logged_in_headers,
+            json=patch_payload,
+        )
+        assert response.status_code == 200
+
+        # Server config should now reflect apikey auth (--headers x-api-key injected).
+        response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=api_headers)
+        assert response.status_code == 200
+        server_args = response.json()["args"]
+        assert "--headers" in server_args
+        assert "x-api-key" in server_args
+        assert streamable_http_url in server_args
+
+        # PATCHing again with the same auth should be a no-op — no duplicate key creation.
+        with patch("langflow.api.v1.projects_mcp_helpers.create_api_key") as mock_create_api_key:
+            response = await client.patch(
+                f"/api/v1/mcp/project/{user_test_project.id}",
+                headers=logged_in_headers,
+                json=patch_payload,
+            )
+            assert response.status_code == 200
+            mock_create_api_key.assert_not_called()
+    finally:
+        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=api_headers)
+
+
+async def test_init_mcp_servers_rolls_back_auth_update_when_reconciliation_fails(
+    user_test_project,
+    monkeypatch,
+):
+    """Startup should not persist auth changes if MCP server reconciliation fails."""
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = None
+        session.add(project)
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_project_sse"),
+        patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+        patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        patch(
+            "langflow.api.v1.projects_mcp_helpers.create_api_key",
+            new=AsyncMock(return_value=SimpleNamespace(api_key="generated-key")),
+        ),
+        patch(
+            "langflow.api.v1.projects_mcp_helpers.update_server",
+            new=AsyncMock(side_effect=RuntimeError("server sync failed")),
+        ),
+    ):
+        await init_mcp_servers()
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        assert project.auth_settings is None
 
 
 async def test_list_project_tools_with_mcp_enabled_filter(
@@ -1189,3 +1644,143 @@ async def test_should_report_available_true_when_config_file_has_corrupt_json(
     for entry in results:
         assert entry["available"] is True, f"{entry['name']} should be available (directory exists)"
         assert entry["installed"] is False, f"{entry['name']} should not be installed (JSON is corrupt)"
+
+
+async def test_handle_list_tools_filters_by_user_id_for_defense_in_depth(
+    user_test_project,
+    other_test_project,
+    other_test_user,
+    active_user,
+):
+    """Test that handle_list_tools filters by BOTH folder_id AND user_id for defense-in-depth.
+
+    This test verifies the query-level ownership validation in handle_list_tools() when
+    project_id is provided. While the endpoint-level authentication (verify_project_auth_conditional)
+    already ensures the user owns the project, the database query should ALSO filter by user_id
+    for consistency with other MCP handlers (handle_list_resources, handle_read_resource).
+
+    GIVEN: Two projects owned by different users, each with flows
+    WHEN:  handle_list_tools is called with a project_id and a specific user context
+    THEN:  Only flows from that project AND owned by that user are returned
+    """
+    from langflow.api.v1.mcp_utils import current_user_ctx, handle_list_tools
+
+    # Create flows for both users in their respective projects
+    user_flow_id = uuid4()
+    other_user_flow_id = uuid4()
+
+    async with session_scope() as session:
+        # Create flow for active_user in user_test_project
+        # Include minimal valid data structure to pass json_schema_from_flow validation
+        user_flow = Flow(
+            id=user_flow_id,
+            name="User Flow",
+            description="Flow owned by active user",
+            data={"nodes": [], "edges": []},  # Minimal valid flow structure
+            mcp_enabled=True,
+            action_name="user_action",
+            action_description="User action",
+            folder_id=user_test_project.id,
+            user_id=active_user.id,
+            is_component=False,
+        )
+        session.add(user_flow)
+
+        # Create flow for other_test_user in other_test_project
+        other_user_flow = Flow(
+            id=other_user_flow_id,
+            name="Other User Flow",
+            description="Flow owned by other user",
+            data={"nodes": [], "edges": []},  # Minimal valid flow structure
+            mcp_enabled=True,
+            action_name="other_action",
+            action_description="Other action",
+            folder_id=other_test_project.id,
+            user_id=other_test_user.id,
+            is_component=False,
+        )
+        session.add(other_user_flow)
+        await session.commit()
+
+    try:
+        # Test 1: Active user queries their own project - should see their flow
+        token = current_user_ctx.set(active_user)
+        try:
+            tools = await handle_list_tools(project_id=user_test_project.id, mcp_enabled_only=True)
+            assert len(tools) == 1, "Active user should see exactly 1 tool in their project"
+            assert tools[0].name == "user_action", "Should see the user's own flow"
+        finally:
+            current_user_ctx.reset(token)
+
+        # Test 2: Other user queries their own project - should see their flow
+        token = current_user_ctx.set(other_test_user)
+        try:
+            tools = await handle_list_tools(project_id=other_test_project.id, mcp_enabled_only=True)
+            assert len(tools) == 1, "Other user should see exactly 1 tool in their project"
+            assert tools[0].name == "other_action", "Should see the other user's flow"
+        finally:
+            current_user_ctx.reset(token)
+
+        # Test 3: Defense-in-depth verification - Active user context with other user's project_id
+        # This simulates a hypothetical scenario where endpoint auth is bypassed (shouldn't happen,
+        # but the query-level filter should still protect against it)
+        token = current_user_ctx.set(active_user)
+        try:
+            tools = await handle_list_tools(project_id=other_test_project.id, mcp_enabled_only=True)
+            assert len(tools) == 0, (
+                "Active user should see NO tools when querying other user's project_id. "
+                "The query-level user_id filter provides defense-in-depth protection."
+            )
+        finally:
+            current_user_ctx.reset(token)
+
+        # Test 4: Verify the same defense-in-depth for the other user
+        token = current_user_ctx.set(other_test_user)
+        try:
+            tools = await handle_list_tools(project_id=user_test_project.id, mcp_enabled_only=True)
+            assert len(tools) == 0, (
+                "Other user should see NO tools when querying active user's project_id. "
+                "The query-level user_id filter provides defense-in-depth protection."
+            )
+        finally:
+            current_user_ctx.reset(token)
+
+    finally:
+        # Cleanup
+        async with session_scope() as session:
+            user_flow = await session.get(Flow, user_flow_id)
+            if user_flow:
+                await session.delete(user_flow)
+            other_user_flow = await session.get(Flow, other_user_flow_id)
+            if other_user_flow:
+                await session.delete(other_user_flow)
+            await session.commit()
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_v2_mcp_servers_unlocked_allows_non_superuser_add_patch_delete(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    """When is_mcp_servers_locked returns False the gate must not block normal users."""
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: False)
+
+    server_name = f"lf-unlock-test-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=server_config, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK

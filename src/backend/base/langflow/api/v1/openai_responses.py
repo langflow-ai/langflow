@@ -5,10 +5,11 @@ import uuid
 from collections.abc import AsyncGenerator
 from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
 from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.v1.endpoints import consume_and_yield, run_flow_generator, simple_run_flow
@@ -23,6 +24,7 @@ from langflow.schema import (
 )
 from langflow.schema.content_types import ToolContent
 from langflow.services.auth.utils import api_key_security
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_telemetry_service
@@ -74,7 +76,7 @@ async def run_flow_for_openai_responses(
     context = {}
     if variables:
         context["request_variables"] = variables
-        await logger.adebug(f"Added request variables to context: {variables}")
+        await logger.adebug(f"Added request variables to context: {list(variables.keys())}")
 
     # Convert OpenAI request to SimplifiedAPIRequest
     # Note: We're moving away from tweaks to a context-based approach
@@ -88,7 +90,7 @@ async def run_flow_for_openai_responses(
 
     # Context will be passed separately to simple_run_flow
 
-    await logger.adebug(f"SimplifiedAPIRequest created with context: {context}")
+    await logger.adebug(f"SimplifiedAPIRequest created with context keys: {list(context.keys())}")
 
     # Use session_id as response_id for OpenAI compatibility
     response_id = session_id
@@ -619,7 +621,6 @@ async def create_response(
 
     await logger.adebug(f"All headers received: {list(http_request.headers.keys())}")
     await logger.adebug(f"Extracted global variables from headers: {list(variables.keys())}")
-    await logger.adebug(f"Variables dict: {variables}")
 
     # Validate tools parameter - error out if tools are provided
     if request.tools is not None:
@@ -630,9 +631,16 @@ async def create_response(
         )
         return OpenAIErrorResponse(error=error_response["error"])
 
-    # Get flow using the model field (which contains flow_id)
+    # Get flow using the model field (which contains flow_id). The lookup
+    # becomes share-aware when an authorization plugin is registered, so we
+    # also enforce ``flow:execute`` explicitly — otherwise an API key with
+    # cross-user fetch enabled would skip policy here.
     try:
-        flow = await get_flow_by_id_or_endpoint_name(request.model, str(api_key_user.id))
+        flow = await get_flow_by_id_or_endpoint_name(
+            request.model,
+            str(api_key_user.id),
+            widen_for_shares=True,
+        )
     except HTTPException:
         flow = None
 
@@ -645,6 +653,25 @@ async def create_response(
         return OpenAIErrorResponse(error=error_response["error"])
 
     try:
+        await ensure_flow_permission(
+            api_key_user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=getattr(flow, "workspace_id", None),
+            folder_id=getattr(flow, "folder_id", None),
+        )
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_403_FORBIDDEN:
+            error_response = create_openai_error(
+                message=f"Insufficient permissions to execute flow '{request.model}'",
+                type_="invalid_request_error",
+                code="flow_execute_forbidden",
+            )
+            return OpenAIErrorResponse(error=error_response["error"])
+        raise
+
+    try:
         # Process the request
         result = await run_flow_for_openai_responses(
             flow=flow,
@@ -654,19 +681,21 @@ async def create_response(
             variables=variables,
         )
 
-        # Log telemetry for successful completion
-        if not request.stream:  # Only log for non-streaming responses
-            end_time = time.perf_counter()
-            background_tasks.add_task(
-                telemetry_service.log_package_run,
-                RunPayload(
-                    run_is_webhook=False,
-                    run_seconds=int(end_time - start_time),
-                    run_success=True,
-                    run_error_message="",
-                    run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
-                ),
-            )
+    except CustomComponentValidationError as exc:
+        error_response = create_openai_error(
+            message=str(exc),
+            type_="invalid_request_error",
+            code="custom_components_blocked",
+        )
+        return OpenAIErrorResponse(error=error_response["error"])
+
+    except ValueError as exc:
+        error_response = create_openai_error(
+            message=str(exc),
+            type_="invalid_request_error",
+            code="invalid_flow_request",
+        )
+        return OpenAIErrorResponse(error=error_response["error"])
 
     except Exception as exc:  # noqa: BLE001
         logger.error(f"Error processing OpenAI Responses request: {exc}")
@@ -689,4 +718,19 @@ async def create_response(
             type_="processing_error",
         )
         return OpenAIErrorResponse(error=error_response["error"])
+
+    # Log telemetry for successful completion
+    if not request.stream:  # Only log for non-streaming responses
+        end_time = time.perf_counter()
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(end_time - start_time),
+                run_success=True,
+                run_error_message="",
+                run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
+            ),
+        )
+
     return result

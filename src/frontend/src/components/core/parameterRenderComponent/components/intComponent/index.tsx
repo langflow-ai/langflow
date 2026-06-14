@@ -7,6 +7,7 @@ import {
 } from "@chakra-ui/number-input";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { cn } from "@/utils/utils";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
@@ -23,6 +24,7 @@ export default function IntComponent({
   readonly,
   showParameter = true,
 }: InputProps<number, IntComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const min = -Infinity;
   // Clear component state when disabled
   useEffect(() => {
@@ -124,7 +126,9 @@ export default function IntComponent({
   };
 
   const handleInputChange = (event: React.FormEvent<HTMLInputElement>) => {
-    const inputValue = Number((event.target as HTMLInputElement).value);
+    const raw = (event.target as HTMLInputElement).value;
+    if (raw === "") return; // Allow clearing the field (empty = no limit)
+    const inputValue = Number(raw);
     if (Number.isFinite(inputValue) && inputValue < getMinValue()) {
       (event.target as HTMLInputElement).value = getMinValue().toString();
     }
@@ -166,7 +170,11 @@ export default function IntComponent({
           onKeyDown={(event) => handleKeyDown(event, value, "")}
           onInput={handleInputChange}
           disabled={disabled || readonly}
-          placeholder={editNode ? "Integer number" : "Type an integer number"}
+          placeholder={
+            editNode
+              ? t("editNode.integerPlaceholder")
+              : t("editNode.integerPlaceholderFull")
+          }
           data-testid={id}
           ref={inputRef}
         />

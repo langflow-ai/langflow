@@ -260,10 +260,6 @@ export const lazyIconsMapping = {
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientUngroup,
     })),
-  GradientSave: () =>
-    import("@/icons/GradientSparkles").then((mod) => ({
-      default: mod.GradientSave,
-    })),
   GridHorizontal: () =>
     import("@/icons/GridHorizontal").then((mod) => ({
       default: mod.GridHorizontalIcon,
@@ -286,9 +282,17 @@ export const lazyIconsMapping = {
     import("@/icons/IBM").then((mod) => ({
       default: mod.IBMIcon,
     })),
+  DB2: () =>
+    import("@/icons/IBM").then((mod) => ({
+      default: mod.DB2Icon,
+    })),
   WatsonxAI: () =>
     import("@/icons/IBM").then((mod) => ({
       default: mod.WatsonxAiIcon,
+    })),
+  WatsonxOrchestrate: () =>
+    import("@/icons/IBM").then((mod) => ({
+      default: mod.WatsonxOrchestrateIcon,
     })),
   Icosa: () =>
     import("@/icons/Icosa").then((mod) => ({ default: mod.IcosaIcon })),

@@ -1,0 +1,97 @@
+/* Geist Mono (and other ligature-enabled fonts) merge ~= into one glyph in inline code */
+code,
+pre code {
+  font-variant-ligatures: none;
+}
+
+.docusaurus-highlight-code-line {
+  background-color: rgba(0, 0, 0, 0.1);
+  display: block;
+  margin: 0 calc(-1 * var(--ifm-pre-padding));
+  padding: 0 var(--ifm-pre-padding);
+}
+
+.ch-scrollycoding-content {
+  max-width: 55% !important;
+  min-width: 40% !important;
+}
+
+.ch-scrollycoding-sticker {
+  max-width: 60% !important;
+  min-width: 45% !important;
+}
+
+.ch-scrollycoding-step-content {
+  min-height: 70px;
+}
+
+/* ========================================
+   Code Blocks - Enhanced (Langfuse style)
+   ======================================== */
+
+/* Code block title/filename label */
+.theme-code-block div[class*="codeBlockTitle"] {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--ifm-color-emphasis-100);
+  border-radius: var(--ifm-global-radius) var(--ifm-global-radius) 0 0;
+}
+
+[data-theme="dark"] .theme-code-block div[class*="codeBlockTitle"] {
+  background: #232328;
+  border-bottom-color: #303038;
+}
+
+/* Code block container */
+.theme-code-block {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--ifm-global-radius);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+[data-theme="dark"] .theme-code-block {
+  border-color: #303038;
+}
+
+/* Line highlighting in code blocks */
+.theme-code-block-highlighted-line {
+  background-color: rgba(var(--ifm-color-primary-rgb, 200, 100, 150), 0.1);
+  display: block;
+  margin: 0 calc(-1 * var(--ifm-pre-padding));
+  padding: 0 var(--ifm-pre-padding);
+  border-left: 3px solid var(--ifm-color-primary);
+}
+
+/* Code Hike + CodeSnippet: Code Hike uses height:100% on .ch-codeblock > * and omits overflow on the
+   wrapper when measured; we shrink-wrap the block (fixes <details>/Collapsible height) and put
+   overflow on <code> only so the copy button stays in the corner while scrolling long lines. */
+.markdown .ch-codeblock {
+  min-width: 0;
+  max-width: 100%;
+  height: fit-content;
+  align-self: flex-start;
+}
+
+.markdown .ch-codeblock .ch-code-wrapper {
+  min-width: 0;
+  box-sizing: border-box;
+  height: fit-content !important;
+  max-height: none !important;
+  min-height: 0;
+}
+
+.markdown .ch-codeblock .ch-code-wrapper > .ch-code-scroll-parent {
+  display: block;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.markdown .ch-codeblock .ch-code-button {
+  right: calc(10px + 0.75rem);
+  z-index: 2;
+}

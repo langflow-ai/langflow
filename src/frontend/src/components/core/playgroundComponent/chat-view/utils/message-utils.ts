@@ -85,6 +85,21 @@ export const updateMessage = (updatedMessage: Message) => {
         existingMessage.sender_name || newMessage.sender_name;
       newMessage.timestamp = existingMessage.timestamp || newMessage.timestamp;
       newMessage.files = existingMessage.files || newMessage.files;
+      // Preserve agent-step tool blocks (and any other content blocks /
+      // category / properties.source) attached by prior `add_message` events.
+      // Token-event payloads from the backend don't carry these — without
+      // this preservation the first streamed chunk clobbers the cached
+      // content_blocks and the Playground "Agent Steps" panel goes blank.
+      // (QA UI-014.)
+      newMessage.content_blocks =
+        newMessage.content_blocks ?? existingMessage.content_blocks;
+      newMessage.category = newMessage.category ?? existingMessage.category;
+      if (existingMessage.properties || newMessage.properties) {
+        newMessage.properties = {
+          ...(existingMessage.properties ?? {}),
+          ...(newMessage.properties ?? {}),
+        };
+      }
     } else if (isStreamingToken && !existingMessage) {
       // First token - ensure we have all required fields
       if (!newMessage.id) {
@@ -141,6 +156,21 @@ export const updateMessage = (updatedMessage: Message) => {
   });
 
   // setQueryData automatically notifies observers - no need to invalidate
+};
+
+export const removePlaceholderUserMessage = (
+  sessionId: string,
+  flowId: string,
+) => {
+  const cacheKey = [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }];
+
+  queryClient.setQueryData(cacheKey, (old: Message[] = []) => {
+    const placeholderIndex = old.findIndex(
+      (msg) => msg.id === null && msg.sender === "User",
+    );
+    if (placeholderIndex === -1) return old;
+    return old.filter((_, idx) => idx !== placeholderIndex);
+  });
 };
 
 export const addUserMessage = (updatedMessage: Message) => {

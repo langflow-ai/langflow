@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "custom component code button should be pink when adding custom component",
   { tag: ["@release", "@components"] },
@@ -61,9 +63,9 @@ class CustomComponent(Component):
 
     await page.locator(".ace_content").click();
     await page.keyboard.press(`ControlOrMeta+A`);
-    await page.locator("textarea").fill(waitTimeoutCode);
+    await page.locator("textarea").last().fill(waitTimeoutCode);
 
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     await expect(page.getByTestId("code-button-modal").last()).not.toHaveClass(
       /animate-pulse-pink/,

@@ -9,8 +9,7 @@ import {
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
-import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
-import { BROKEN_EDGES_WARNING } from "@/constants/constants";
+import { queryClient } from "@/contexts";
 import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_INSPECTION_PANEL,
@@ -22,6 +21,7 @@ import {
 } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
+import i18n from "../i18n";
 import type { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import type { ChatInputType, ChatOutputType } from "../types/chat";
 import type {
@@ -37,10 +37,9 @@ import type {
   VertexLayerElementType,
 } from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
+import { filterPlaceableSelection } from "../utils/componentConstraints";
 import {
   buildPositionDictionary,
-  checkChatInput,
-  checkWebhookInput,
   cleanEdges,
   getConnectedSubgraph,
   getHandleId,
@@ -57,9 +56,60 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
-import { filterSingletonComponent } from "./helpers/filter-singleton-component";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
+import { useUtilityStore } from "./utilityStore";
+
+// Tracks in-progress node update operations (e.g. validateComponentCode calls).
+// buildFlow awaits these so "Run" doesn't race against a pending "Update".
+const pendingNodeUpdates = new Map<
+  string,
+  { promise: Promise<void>; resolve: () => void }
+>();
+
+export function registerNodeUpdate(nodeId: string): void {
+  // If there's already a pending update for this node, leave it
+  if (pendingNodeUpdates.has(nodeId)) return;
+  let resolveRef: () => void;
+  const promise = new Promise<void>((r) => {
+    resolveRef = r;
+  });
+  pendingNodeUpdates.set(nodeId, { promise, resolve: resolveRef! });
+}
+
+export function completeNodeUpdate(nodeId: string): void {
+  const entry = pendingNodeUpdates.get(nodeId);
+  if (entry) {
+    entry.resolve();
+    pendingNodeUpdates.delete(nodeId);
+  }
+}
+
+export async function waitForNodeUpdates(
+  timeoutMs: number = 10_000,
+): Promise<void> {
+  if (pendingNodeUpdates.size === 0) return;
+  const pendingIds = Array.from(pendingNodeUpdates.keys());
+  const promises = Array.from(pendingNodeUpdates.values()).map(
+    (e) => e.promise,
+  );
+  let timedOut = false;
+  await Promise.race([
+    Promise.all(promises),
+    new Promise<void>((resolve) =>
+      setTimeout(() => {
+        timedOut = true;
+        resolve();
+      }, timeoutMs),
+    ),
+  ]);
+  if (timedOut) {
+    console.warn(
+      `waitForNodeUpdates timed out after ${timeoutMs}ms. ` +
+        `${pendingNodeUpdates.size} updates still pending: ${pendingIds.join(", ")}`,
+    );
+  }
+}
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -95,15 +145,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateComponentsToUpdate: (nodes) => {
     const outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
     nodes.forEach((node) => {
       if (node.type === "genericNode") {
-        const codeValidity = checkCodeValidity(node.data, templates);
-        if (codeValidity && codeValidity.outdated)
+        const codeValidity = checkCodeValidity(
+          node.data,
+          templates,
+          allowCustomComponents,
+        );
+        if (codeValidity && (codeValidity.outdated || codeValidity.blocked))
           outdatedNodes.push({
             id: node.id,
             icon: node.data.node?.icon,
             display_name: node.data.node?.display_name,
             outdated: codeValidity.outdated,
+            blocked: codeValidity.blocked,
             breakingChange: codeValidity.breakingChange,
             userEdited: codeValidity.userEdited,
           });
@@ -131,7 +188,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
     useAlertStore.getState().setErrorData({
-      title: "Build stopped",
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      title: (i18n as any).t("alerts.buildStopped"),
     });
   },
   isPending: true,
@@ -182,6 +240,51 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     };
     get().setFlowPool(newFlowPool);
   },
+  appendLogToFlowPool: (
+    nodeId: string,
+    outputName: string,
+    log: LogsLogType,
+  ) => {
+    const prevPool = get().flowPool;
+    const prevEntries = prevPool[nodeId];
+    if (!prevEntries || prevEntries.length === 0) {
+      const newEntry: VertexBuildTypeAPI = {
+        id: nodeId,
+        inactivated_vertices: null,
+        next_vertices_ids: [],
+        top_level_vertices: [],
+        valid: true,
+        data: {
+          results: {},
+          outputs: {},
+          logs: { [outputName]: [log] },
+          messages: [],
+        },
+        timestamp: new Date().toISOString(),
+        params: null,
+        messages: [],
+        artifacts: null,
+      };
+      get().setFlowPool({ ...prevPool, [nodeId]: [newEntry] });
+    } else {
+      const latest = prevEntries[prevEntries.length - 1];
+      const existingLogs: LogsLogType[] = latest.data.logs[outputName] ?? [];
+      const updatedEntry: VertexBuildTypeAPI = {
+        ...latest,
+        data: {
+          ...latest.data,
+          logs: {
+            ...latest.data.logs,
+            [outputName]: [...existingLogs, log],
+          },
+        },
+      };
+      get().setFlowPool({
+        ...prevPool,
+        [nodeId]: [...prevEntries.slice(0, -1), updatedEntry],
+      });
+    }
+  },
   getNodePosition: (nodeId: string) => {
     const node = get().nodes.find((node) => node.id === nodeId);
     return node?.position || { x: 0, y: 0 };
@@ -225,7 +328,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
-        title: BROKEN_EDGES_WARNING,
+        title: i18n.t("flow.brokenEdgesWarning"),
         list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
       });
     }
@@ -256,6 +359,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       positionDictionary: {},
       rightClickedNodeId: null,
     });
+    // Patch translatable fields if types are already loaded in the new language
+    syncNodeTranslations();
   },
   setIsBuilding: (isBuilding) => {
     const current = get();
@@ -450,19 +555,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       selection.edges = selection.edges.concat(existingEdgesToCopy);
     }
 
-    filterSingletonComponent(
-      selection,
-      "ChatInput",
-      checkChatInput(get().nodes),
-      "You can only have one Chat Input component in a flow.",
-    );
-
-    filterSingletonComponent(
-      selection,
-      "Webhook",
-      checkWebhookInput(get().nodes),
-      "You can only have one Webhook component in a flow.",
-    );
+    // Enforce component placement constraints (singleton + mutual exclusivity)
+    // on paste so they cannot be bypassed by copy/paste, matching the sidebar.
+    // The filter is side-effect free; surfacing the notice is the caller's job.
+    const placeable = filterPlaceableSelection(selection, get().nodes);
+    selection.nodes = placeable.nodes;
+    selection.edges = placeable.edges;
+    if (placeable.violations.length > 0) {
+      const messages: string[] = [];
+      if (placeable.violations.some((v) => v.reason === "singleton")) {
+        messages.push(i18n.t("flow.duplicateComponentsNotPasted"));
+      }
+      if (placeable.violations.some((v) => v.reason === "exclusivity")) {
+        messages.push(i18n.t("flow.exclusiveComponentsNotPasted"));
+      }
+      useAlertStore.getState().setNoticeData({ title: messages.join(" ") });
+    }
 
     let minimumX = Infinity;
     let minimumY = Infinity;
@@ -759,7 +867,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     errors = errors.concat(errorsObjs.flatMap((obj) => obj.errors));
     if (errors.length > 0) {
       setErrorData({
-        title: MISSED_ERROR_ALERT,
+        title: i18n.t("errors.missedFields"),
         list: errors,
       });
       const ids = errorsObjs.flatMap((obj) => obj.id);
@@ -767,6 +875,56 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       get().setIsBuilding(false);
       throw new Error("Invalid components");
+    }
+
+    // Wait for any in-progress component updates (e.g. user clicked "Update"
+    // then immediately clicked "Run") before checking outdated state.
+    await waitForNodeUpdates();
+
+    // Block build when custom components are disabled and there are outdated components
+    // Recalculate from current nodes to avoid stale componentsToUpdate
+    // (setNode does not trigger updateComponentsToUpdate, only setNodes does)
+    get().updateComponentsToUpdate(get().nodes);
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
+    if (!allowCustomComponents && get().componentsToUpdate.length > 0) {
+      const blockedComponents = get().componentsToUpdate.filter(
+        (component) => component.blocked,
+      );
+      const outdatedComponents = get().componentsToUpdate.filter(
+        (component) => component.outdated,
+      );
+      const errorList: string[] = [];
+
+      if (blockedComponents.length > 0) {
+        errorList.push(
+          `The following custom components cannot run while custom components are disabled: ${blockedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ")}`,
+        );
+      }
+
+      if (outdatedComponents.length > 0) {
+        errorList.push(
+          `The following components are outdated and must be updated: ${outdatedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ")}`,
+        );
+      }
+
+      setErrorData({
+        title:
+          blockedComponents.length > 0
+            ? "Custom components are blocked while custom components are disabled"
+            : "Outdated components must be updated before building",
+        list: errorList,
+      });
+      get().setIsBuilding(false);
+      throw new Error(
+        blockedComponents.length > 0
+          ? "Custom components are blocked while custom components are disabled"
+          : "Outdated components must be updated",
+      );
     }
 
     function validateSubgraph() {}
@@ -891,6 +1049,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           false,
         );
         get().setIsBuilding(false);
+        // Invalidate KB-related caches so any KnowledgeIngestion node
+        // that ran inside this build surfaces its updated stats / runs
+        // the next time the user opens the assets/knowledge-bases tab.
+        // Cheap when no subscribers are mounted; the queries only
+        // refetch if a component is actively reading them.
+        queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBases"] });
+        queryClient.invalidateQueries({ queryKey: ["useGetIngestionRuns"] });
+        queryClient.invalidateQueries({
+          queryKey: ["useGetKnowledgeBaseChunks"],
+        });
         trackFlowBuild(get().currentFlow?.name ?? "Unknown", false, {
           flowId: get().currentFlow?.id,
         });
@@ -902,10 +1070,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        if (get().componentsToUpdate.length > 0)
+        const isCustomComponentBlocked = list.some((msg) =>
+          msg.toLowerCase().includes("custom components are not allowed"),
+        );
+        if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
           setErrorData({
-            title:
-              "There are outdated components in the flow. The error could be related to them.",
+            title: i18n.t("errors.blockedComponents"),
           });
         get().updateEdgesRunningByNodes(
           get().nodes.map((n) => n.id),
@@ -1177,5 +1347,170 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ stopNodeId: nodeId });
   },
 }));
+
+export function recomputeComponentsToUpdateIfNeeded(): void {
+  const { nodes, updateComponentsToUpdate } = useFlowStore.getState();
+  if (nodes.length > 0) {
+    updateComponentsToUpdate(nodes);
+  }
+}
+
+/** Normalize a component key: strip spaces, lowercase. Mirrors backend normalize_component_key(). */
+function normalizeComponentKey(name: string): string {
+  return name.replace(/\s+/g, "").toLowerCase();
+}
+
+export function syncNodeTranslations(): void {
+  const { nodes } = useFlowStore.getState();
+  if (nodes.length === 0) return;
+
+  const {
+    data: typesData,
+    types,
+    templates,
+    componentDisplayNames,
+  } = useTypesStore.getState();
+
+  // Build normalized lookup: normalize(registryKey) → registryKey
+  // This lets us find "Prompt Template" in the registry when nodeType is "PromptTemplate".
+  const normalizedToRegistryKey: Record<string, string> = {};
+  for (const category of Object.values(typesData)) {
+    for (const registryKey of Object.keys(
+      category as Record<string, unknown>,
+    )) {
+      normalizedToRegistryKey[normalizeComponentKey(registryKey)] = registryKey;
+    }
+  }
+
+  let _noteIndex = 0;
+  const updatedNodes = nodes.map((node) => {
+    const nodeType = node.data.type;
+
+    // Skip note nodes — translations are handled by useGetNoteTranslationsQuery
+    if (node.type === "noteNode") {
+      _noteIndex += 1;
+      return node;
+    }
+
+    // Resolve category: try exact match first, then normalized match
+    const category =
+      types[nodeType] ??
+      types[normalizedToRegistryKey[normalizeComponentKey(nodeType)] ?? ""];
+
+    // Resolve registry key: exact match first, then normalized match
+    const registryKey =
+      typesData[category]?.[nodeType] !== undefined
+        ? nodeType
+        : (normalizedToRegistryKey[normalizeComponentKey(nodeType)] ??
+          nodeType);
+
+    // Resolve definition: normal path first, then fall back to templates which
+    // has legacy aliases pre-resolved (e.g. "Prompt" → Prompt Template definition,
+    // "parser" → ParserComponent definition).
+    const freshDef =
+      category && typesData[category]?.[registryKey]
+        ? typesData[category][registryKey]
+        : templates[nodeType];
+
+    if (!freshDef) return node;
+
+    // Determine whether display_name / description are default (safe to translate)
+    // or user-customized (leave alone). A value is "default" if it appears in the
+    // known-translations set for this component type across any supported locale.
+    const normKey = normalizeComponentKey(nodeType);
+    const knownNames = componentDisplayNames[normKey]?.display_name ?? [];
+    const knownDescs = componentDisplayNames[normKey]?.description ?? [];
+    const shouldTranslateName = knownNames.includes(
+      node.data.node!.display_name,
+    );
+    const shouldTranslateDesc = knownDescs.includes(
+      node.data.node!.description,
+    );
+
+    // Update input field display_names, info (tooltips), and placeholders.
+    // Before overwriting a field's display_name, verify that the currently
+    // saved value is a known translatable string for that field (i.e. it
+    // matches one of the locale translations we collected at startup).
+    // If the saved value is not in the known set it was user-customized in
+    // the component code and must not be overwritten.
+    const updatedTemplate = { ...node.data.node!.template };
+    const knownFields = componentDisplayNames[normKey]?.fields ?? {};
+    for (const fieldName of Object.keys(updatedTemplate)) {
+      const freshField = freshDef.template?.[fieldName];
+      if (freshField?.display_name !== undefined) {
+        const currentDisplayName = updatedTemplate[fieldName]?.display_name;
+        const knownFieldDisplayNames =
+          knownFields[fieldName]?.display_name ?? [];
+        const isKnownTranslation =
+          knownFieldDisplayNames.length === 0 ||
+          knownFieldDisplayNames.includes(currentDisplayName);
+        if (isKnownTranslation) {
+          updatedTemplate[fieldName] = {
+            ...updatedTemplate[fieldName],
+            display_name: freshField.display_name,
+            ...(freshField.info !== undefined && { info: freshField.info }),
+            ...(freshField.placeholder !== undefined && {
+              placeholder: freshField.placeholder,
+            }),
+          };
+        }
+      }
+    }
+
+    // Update output display_names and info
+    const updatedOutputs = node.data.node!.outputs?.map((output, i) => {
+      const freshOut = freshDef.outputs?.[i];
+      return freshOut
+        ? {
+            ...output,
+            ...(freshOut.display_name !== undefined && {
+              display_name: freshOut.display_name,
+            }),
+            ...(freshOut.info !== undefined && { info: freshOut.info }),
+          }
+        : output;
+    });
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        node: {
+          ...node.data.node!,
+          ...(shouldTranslateName && { display_name: freshDef.display_name }),
+          ...(shouldTranslateDesc && { description: freshDef.description }),
+          template: updatedTemplate,
+          ...(updatedOutputs && { outputs: updatedOutputs }),
+        },
+      },
+    };
+  });
+
+  useFlowStore.setState({ nodes: updatedNodes });
+}
+
+/**
+ * Apply translated note node descriptions to the canvas.
+ * Called from NoteNode when note_translations endpoint data arrives.
+ * translations is a map of node_id → translated markdown text.
+ */
+export function syncNoteTranslations(
+  translations: Record<string, string>,
+): void {
+  const { nodes } = useFlowStore.getState();
+  const updatedNodes = nodes.map((node) => {
+    if (node.type !== "noteNode") return node;
+    const translated = translations[node.id];
+    if (!translated) return node;
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        node: { ...node.data.node!, description: translated },
+      },
+    };
+  });
+  useFlowStore.setState({ nodes: updatedNodes });
+}
 
 export default useFlowStore;

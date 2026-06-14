@@ -1,12 +1,14 @@
+import contextvars
 from collections import deque
 
 import pytest
 from ag_ui.core import RunFinishedEvent, RunStartedEvent
-from lfx.components.input_output import ChatInput, ChatOutput, TextOutputComponent
+from lfx.components.input_output import ChatInput, ChatOutput, TextInputComponent, TextOutputComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.components.processing.combine_text import CombineTextComponent
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
+from lfx.schema.schema import INPUT_FIELD_NAME
 
 
 @pytest.mark.asyncio
@@ -73,6 +75,42 @@ async def test_graph_functional_async_start():
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
+
+
+@pytest.mark.asyncio
+async def test_graph_arun_sets_chat_input_with_custom_id():
+    chat_input = ChatInput(_id="input_1")
+    chat_output = ChatOutput(_id="output_1")
+    chat_output.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, chat_output)
+
+    result = await graph.arun(inputs=[{INPUT_FIELD_NAME: "hello"}])
+
+    assert result[0].outputs[0].results["message"].data["text"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_graph_arun_sets_text_input_with_custom_id():
+    text_input = TextInputComponent(_id="input_1")
+    text_output = TextOutputComponent(_id="output_1")
+    text_output.set(input_value=text_input.text_response)
+    graph = Graph(text_input, text_output)
+
+    result = await graph.arun(inputs=[{INPUT_FIELD_NAME: "hello"}], types=["text"])
+
+    assert result[0].outputs[0].results["text"].data["text"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_graph_arun_sets_custom_id_when_input_component_is_explicit():
+    chat_input = ChatInput(_id="input_1")
+    chat_output = ChatOutput(_id="output_1")
+    chat_output.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, chat_output)
+
+    result = await graph.arun(inputs=[{INPUT_FIELD_NAME: "hello"}], inputs_components=[["input_1"]])
+
+    assert result[0].outputs[0].results["message"].data["text"] == "hello"
 
 
 def test_graph_functional_start_end():
@@ -362,3 +400,34 @@ def test_graph_raw_event_metrics_no_optional_fields():
 
     # Assert only timestamp is present (no optional fields)
     assert len(metrics) == 1
+
+
+@pytest.mark.asyncio
+async def test_end_all_traces_in_context_runs_on_python_3_10():
+    """end_all_traces_in_context must work on Python 3.10.
+
+    Regression: the original implementation called
+    ``asyncio.create_task(coro, context=context)``, but the ``context=`` kwarg
+    was added in Python 3.11. On 3.10 it raised ``TypeError``. The fix routes
+    the create_task call through ``context.run`` on 3.10 so the new Task copies
+    the captured context as its current context.
+    """
+    graph = Graph()
+    captured_marker = contextvars.ContextVar("test_marker", default="default")
+
+    seen: dict[str, str] = {}
+
+    async def fake_end_all_traces(outputs=None, error=None):  # noqa: ARG001
+        seen["marker"] = captured_marker.get()
+
+    graph.end_all_traces = fake_end_all_traces  # type: ignore[assignment]
+
+    # Set the contextvar before capturing so the captured context carries it.
+    captured_marker.set("captured_value")
+    callable_ = graph.end_all_traces_in_context()
+
+    # Move to a different value to prove end_all_traces sees the captured one.
+    captured_marker.set("other_value")
+    await callable_()
+
+    assert seen["marker"] == "captured_value"

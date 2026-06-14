@@ -16,7 +16,9 @@ from lfx.cli.script_loader import (
 )
 from lfx.cli.validation import validate_global_variables_for_env
 from lfx.log.logger import logger
+from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
 from lfx.schema.schema import InputValueRequest
+from lfx.utils.flow_envelope import split_flow_envelope
 
 if TYPE_CHECKING:
     from lfx.events.event_manager import EventManager
@@ -54,6 +56,93 @@ def output_error(error_message: str, *, verbose: bool, exception: Exception | No
     return error_response
 
 
+def _materialize_flow_dict(
+    *,
+    flow_json: str | None,
+    stdin: bool,
+    script_path: Path | None,
+    upgrade_flow: str | None,
+    verbosity: int,
+    verbose: bool,
+) -> dict | None:
+    """Parse inline JSON / stdin / (for --upgrade-flow) a .json file into a flow dict.
+
+    Returns the unwrapped inner graph (any outer ``{"data": ...}`` envelope removed), or None
+    when there is no JSON source to materialize. A plain script path without ``--upgrade-flow``
+    is loaded later by file path, not here.
+
+    Raises:
+        RunError: on malformed JSON, a non-object payload, an unreadable upgrade target, a
+            non-JSON ``--upgrade-flow`` target, or a missing JSON source when ``--upgrade-flow``
+            was requested.
+    """
+    flow_dict: dict | None = None
+
+    if flow_json is not None:
+        if verbosity > 0:
+            sys.stderr.write("Processing inline JSON content...\n")
+        try:
+            raw = json.loads(flow_json)
+            _, flow_dict = split_flow_envelope(raw)
+            if verbosity > 0:
+                sys.stderr.write("JSON content is valid\n")
+        except json.JSONDecodeError as e:
+            error_msg = f"Invalid JSON content: {e}"
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, e) from e
+        except Exception as e:
+            error_msg = f"Error processing JSON content: {e}"
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, e) from e
+    elif stdin:
+        if verbosity > 0:
+            sys.stderr.write("Reading JSON content from stdin...\n")
+        try:
+            stdin_content = sys.stdin.read().strip()
+            if not stdin_content:
+                error_msg = "No content received from stdin"
+                output_error(error_msg, verbose=verbose)
+                raise RunError(error_msg, None)
+            raw = json.loads(stdin_content)
+            _, flow_dict = split_flow_envelope(raw)
+            if verbosity > 0:
+                sys.stderr.write("JSON content from stdin is valid\n")
+        except json.JSONDecodeError as e:
+            error_msg = f"Invalid JSON content from stdin: {e}"
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, e) from e
+        except Exception as e:
+            error_msg = f"Error reading from stdin: {e}"
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, e) from e
+
+    # For JSON file paths with --upgrade-flow: read into flow_dict so the gate fires and any
+    # applied upgrades are used when loading the graph (instead of the original file).
+    # .py scripts are not JSON flows and cannot be upgraded.
+    if upgrade_flow and flow_dict is None and script_path is not None:
+        if script_path.suffix.lower() == ".json":
+            try:
+                raw = json.loads(script_path.read_text(encoding="utf-8"))
+                _, flow_dict = split_flow_envelope(raw)
+            except Exception as e:
+                error_msg = f"--upgrade-flow: could not read flow file '{script_path}': {e}"
+                output_error(error_msg, verbose=verbose)
+                raise RunError(error_msg, e) from e
+        else:
+            error_msg = f"--upgrade-flow is only supported for JSON flows, not '{script_path.suffix}' files."
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, None)
+
+    # Fail fast if upgrade_flow was requested but we still have nothing to check.
+    # This guards against unexpected code paths that leave flow_dict None.
+    if upgrade_flow and flow_dict is None:
+        error_msg = "--upgrade-flow requires a JSON flow source (--flow-json, --stdin, or a .json file path)."
+        output_error(error_msg, verbose=verbose)
+        raise RunError(error_msg, None)
+
+    return flow_dict
+
+
 async def run_flow(
     script_path: Path | None = None,
     input_value: str | None = None,
@@ -71,6 +160,7 @@ async def run_flow(
     user_id: str | None = None,
     session_id: str | None = None,
     event_manager: "EventManager | None" = None,
+    upgrade_flow: str | None = None,
 ) -> dict:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -93,6 +183,9 @@ async def run_flow(
         user_id: Optional user ID for tracking purposes
         session_id: Optional session ID for memory isolation
         event_manager: Optional EventManager for streaming token events
+        upgrade_flow: Component compatibility mode. ``'check'`` refuses to run if any
+            component is outdated or blocked. ``'safe'`` auto-applies safe upgrades and
+            aborts on breaking or blocked components.
 
     Returns:
         dict: Result data containing the execution results, logs, and optionally timing info
@@ -116,6 +209,18 @@ async def run_flow(
         configure(log_level="CRITICAL", output_file=sys.stderr)
         verbosity = 0
 
+    # Validate caller-supplied IDs up-front so users get a clear error before any
+    # graph loading work happens. None means "auto-generate later"; "" / whitespace
+    # is rejected so a typo or empty env var doesn't silently produce a fresh
+    # session and break Memory continuity.
+    try:
+        validate_provided_id("session_id", session_id)
+        validate_provided_id("user_id", user_id)
+    except ValueError as e:
+        error_msg = str(e)
+        output_error(error_msg, verbose=verbose, exception=e)
+        raise RunError(error_msg, e) from e
+
     start_time = time.time() if timing else None
 
     # Use either positional input_value or --input-value option
@@ -134,44 +239,32 @@ async def run_flow(
         output_error(error_msg, verbose=verbose)
         raise RunError(error_msg, None)
 
-    # Store parsed JSON dict for direct loading (avoids temp file round-trip)
-    flow_dict: dict | None = None
+    # Materialize a flow dict from inline JSON / stdin / (for --upgrade-flow) a .json file.
+    # Plain script paths without --upgrade-flow stay None and are loaded by path below.
+    flow_dict = _materialize_flow_dict(
+        flow_json=flow_json,
+        stdin=stdin,
+        script_path=script_path,
+        upgrade_flow=upgrade_flow,
+        verbosity=verbosity,
+        verbose=verbose,
+    )
 
-    if flow_json is not None:
-        if verbosity > 0:
-            sys.stderr.write("Processing inline JSON content...\n")
+    # --- upgrade compatibility gate (shared with `lfx serve`) ---
+    if upgrade_flow and flow_dict is not None:
+        from lfx.upgrade.cli_gate import UpgradeFlowError, apply_upgrade_gate
+
+        # Pass no registry: the gate loads the bundled component index (the same source
+        # `lfx upgrade` uses). component_cache.all_types_dict is empty here because it is
+        # populated lazily after services start, so using it would block every component.
         try:
-            flow_dict = json.loads(flow_json)
-            if verbosity > 0:
-                sys.stderr.write("JSON content is valid\n")
-        except json.JSONDecodeError as e:
-            error_msg = f"Invalid JSON content: {e}"
-            output_error(error_msg, verbose=verbose)
-            raise RunError(error_msg, e) from e
-        except Exception as e:
-            error_msg = f"Error processing JSON content: {e}"
-            output_error(error_msg, verbose=verbose)
-            raise RunError(error_msg, e) from e
-    elif stdin:
-        if verbosity > 0:
-            sys.stderr.write("Reading JSON content from stdin...\n")
-        try:
-            stdin_content = sys.stdin.read().strip()
-            if not stdin_content:
-                error_msg = "No content received from stdin"
-                output_error(error_msg, verbose=verbose)
-                raise RunError(error_msg, None)
-            flow_dict = json.loads(stdin_content)
-            if verbosity > 0:
-                sys.stderr.write("JSON content from stdin is valid\n")
-        except json.JSONDecodeError as e:
-            error_msg = f"Invalid JSON content from stdin: {e}"
-            output_error(error_msg, verbose=verbose)
-            raise RunError(error_msg, e) from e
-        except Exception as e:
-            error_msg = f"Error reading from stdin: {e}"
-            output_error(error_msg, verbose=verbose)
-            raise RunError(error_msg, e) from e
+            flow_dict, applied = apply_upgrade_gate(flow_dict, mode=upgrade_flow)
+        except UpgradeFlowError as e:
+            output_error(str(e), verbose=verbose)
+            raise RunError(str(e), e) from e
+        if applied and verbose:
+            sys.stderr.write(f"Applied {applied} safe component upgrade(s).\n")
+    # --- end upgrade gate ---
 
     try:
         # Handle direct JSON dict (from stdin or --flow-json)
@@ -180,7 +273,7 @@ async def run_flow(
                 sys.stderr.write("Loading graph from JSON content...\n")
             from lfx.load import aload_flow_from_json
 
-            graph = await aload_flow_from_json(flow_dict, disable_logs=not verbose)
+            graph = await aload_flow_from_json({"data": flow_dict}, disable_logs=not verbose)
         # Handle file path
         elif script_path is not None:
             if not script_path.exists():
@@ -221,17 +314,14 @@ async def run_flow(
             error_msg = "No input source provided"
             raise ValueError(error_msg)
 
-        # Set user_id on graph if provided (required for some components like AgentComponent)
-        if user_id:
-            graph.user_id = user_id
-            if verbosity > 0:
-                logger.info(f"Set graph user_id: {user_id}")
-
-        # Set session_id on graph if provided (isolates memory between requests)
-        if session_id:
-            graph.session_id = session_id
-            if verbosity > 0:
-                logger.info(f"Set graph session_id: {session_id}")
+        # Apply session_id, user_id, and Memory-vertex propagation defaults. Both
+        # are auto-generated when not supplied so component prechecks (custom_component
+        # .get_variable for user_id) and astore_message validation (for session_id)
+        # don't fail. See lfx.run._defaults.apply_run_defaults for the full rationale.
+        session_id, user_id = apply_run_defaults(graph, session_id=session_id, user_id=user_id)
+        if verbosity > 0:
+            logger.info(f"Set graph user_id: {user_id}")
+            logger.info(f"Set graph session_id: {session_id}")
 
         # Inject global variables into graph context
         if global_variables:
@@ -348,7 +438,14 @@ async def run_flow(
 
         logger.info("Starting graph execution...", level="DEBUG")
 
-        async for result in graph.async_start(inputs, event_manager=event_manager):
+        # See lfx.run._defaults.resolve_fallback_to_env_vars for why this flag is
+        # plumbed through (mirrors langflow's API path so load_from_db variables
+        # fall through to os.environ on miss instead of erroring the build).
+        fallback_to_env_vars = resolve_fallback_to_env_vars()
+
+        async for result in graph.async_start(
+            inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars
+        ):
             result_count += 1
             if verbosity > 0:
                 logger.debug(f"Processing result #{result_count}")

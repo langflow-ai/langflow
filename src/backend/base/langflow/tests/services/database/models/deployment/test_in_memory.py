@@ -1,7 +1,7 @@
 """Deployment and DeploymentProviderAccount tests against in-memory SQLite.
 
 Uses a real database with foreign keys enabled to verify CASCADE deletes,
-unique constraints, relationships, and CRUD operations.
+identity constraints, relationships, and CRUD operations.
 """
 
 from __future__ import annotations
@@ -28,9 +28,13 @@ from langflow.services.database.models.deployment_provider_account.crud import (
     list_provider_accounts,
     update_provider_account,
 )
-from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+from langflow.services.database.models.deployment_provider_account.model import (
+    DeploymentProviderAccount,
+    DeploymentProviderKey,
+)
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
+from lfx.services.adapters.deployment.schema import DeploymentType
 from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -97,8 +101,9 @@ async def folder(db: AsyncSession, user: User) -> Folder:
 async def provider_account(db: AsyncSession, user: User) -> DeploymentProviderAccount:
     acct = DeploymentProviderAccount(
         user_id=user.id,
+        name="provider-account-1",
         provider_tenant_id="tenant-1",
-        provider_key="test-provider",
+        provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
         provider_url="https://provider.example.com",
         api_key="encrypted-value",  # pragma: allowlist secret
     )
@@ -120,7 +125,8 @@ async def deployment(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-1",
-        name="my-deployment",
+        display_name="my-deployment",
+        deployment_type=DeploymentType.AGENT,
     )
     db.add(d)
     await db.commit()
@@ -138,7 +144,7 @@ class TestProviderAccountModel:
     async def test_create_and_read(self, db: AsyncSession, provider_account: DeploymentProviderAccount):
         stmt = select(DeploymentProviderAccount).where(DeploymentProviderAccount.id == provider_account.id)
         row = (await db.exec(stmt)).one()
-        assert row.provider_key == "test-provider"
+        assert row.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
         assert row.provider_url == "https://provider.example.com"
         assert row.provider_tenant_id == "tenant-1"
         assert row.created_at is not None
@@ -149,8 +155,9 @@ class TestProviderAccountModel:
     ):
         dup = DeploymentProviderAccount(
             user_id=user.id,
+            name="provider-account-duplicate",
             provider_tenant_id=provider_account.provider_tenant_id,
-            provider_key="another-key",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url=provider_account.provider_url,
             api_key="other-encrypted",  # pragma: allowlist secret
         )
@@ -163,8 +170,9 @@ class TestProviderAccountModel:
         for i in range(2):
             acct = DeploymentProviderAccount(
                 user_id=user.id,
+                name=f"null-tenant-{i}",
                 provider_tenant_id=None,
-                provider_key=f"key-{i}",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
                 provider_url="https://same-url.example.com",
                 api_key=f"enc-{i}",
             )
@@ -204,12 +212,12 @@ class TestDeploymentModel:
     async def test_create_and_read(self, db: AsyncSession, deployment: Deployment):
         stmt = select(Deployment).where(Deployment.id == deployment.id)
         row = (await db.exec(stmt)).one()
-        assert row.name == "my-deployment"
+        assert row.display_name == "my-deployment"
         assert row.resource_key == "rk-1"
         assert row.created_at is not None
         assert row.updated_at is not None
 
-    async def test_unique_name_per_provider(
+    async def test_duplicate_display_name_allowed_per_provider(
         self,
         db: AsyncSession,
         user: User,
@@ -222,11 +230,13 @@ class TestDeploymentModel:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-different",
-            name=deployment.name,
+            display_name=deployment.display_name,
+            deployment_type=DeploymentType.AGENT,
         )
         db.add(dup)
-        with pytest.raises(IntegrityError):
-            await db.commit()
+        await db.commit()
+        await db.refresh(dup)
+        assert dup.display_name == deployment.display_name
 
     async def test_unique_resource_key_per_provider(
         self,
@@ -241,18 +251,20 @@ class TestDeploymentModel:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key=deployment.resource_key,
-            name="different-name",
+            display_name="different-name",
+            deployment_type=DeploymentType.AGENT,
         )
         db.add(dup)
         with pytest.raises(IntegrityError):
             await db.commit()
 
-    async def test_same_name_allowed_across_providers(
+    async def test_same_display_name_allowed_across_providers(
         self, db: AsyncSession, user: User, folder: Folder, deployment: Deployment
     ):
         other_acct = DeploymentProviderAccount(
             user_id=user.id,
-            provider_key="other-provider",
+            name="provider-account-2",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://other.example.com",
             api_key="enc-other",  # pragma: allowlist secret
         )
@@ -265,7 +277,8 @@ class TestDeploymentModel:
             project_id=folder.id,
             deployment_provider_account_id=other_acct.id,
             resource_key=deployment.resource_key,
-            name=deployment.name,
+            display_name=deployment.display_name,
+            deployment_type=DeploymentType.AGENT,
         )
         db.add(d2)
         await db.commit()
@@ -302,7 +315,7 @@ class TestDeploymentModel:
         await db.refresh(deployment, attribute_names=["user", "folder", "deployment_provider_account"])
         assert deployment.user.username == "testuser"
         assert deployment.folder.name == "test-project"
-        assert deployment.deployment_provider_account.provider_key == "test-provider"
+        assert deployment.deployment_provider_account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
 
     async def test_fk_rejects_nonexistent_folder(self, db: AsyncSession, user: User, provider_account):
         d = Deployment(
@@ -310,7 +323,8 @@ class TestDeploymentModel:
             project_id=uuid4(),
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-orphan",
-            name="orphan",
+            display_name="orphan",
+            deployment_type=DeploymentType.AGENT,
         )
         db.add(d)
         with pytest.raises(IntegrityError):
@@ -330,8 +344,9 @@ class TestProviderAccountCRUD:
             acct = await create_provider_account(
                 db,
                 user_id=user.id,
+                name="acct-1",
                 provider_tenant_id="t1",
-                provider_key="watsonx",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                 provider_url="https://api.example.com",
                 api_key="raw-key",  # pragma: allowlist secret
             )
@@ -342,7 +357,7 @@ class TestProviderAccountCRUD:
 
         fetched = await get_provider_account_by_id(db, provider_id=acct.id, user_id=user.id)
         assert fetched is not None
-        assert fetched.provider_key == "watsonx"
+        assert fetched.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
 
     async def test_list(self, db: AsyncSession, user: User):
         with patch(_ENCRYPT_TARGET) as mock_auth:
@@ -351,8 +366,9 @@ class TestProviderAccountCRUD:
                 await create_provider_account(
                     db,
                     user_id=user.id,
+                    name=f"acct-{i}",
                     provider_tenant_id=f"t-{i}",
-                    provider_key="k",
+                    provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                     provider_url=f"https://p{i}.example.com",
                     api_key="key",  # pragma: allowlist secret
                 )
@@ -361,29 +377,32 @@ class TestProviderAccountCRUD:
         accounts = await list_provider_accounts(db, user_id=user.id)
         assert len(accounts) == 3
 
-    async def test_update(self, db: AsyncSession, user: User):
+    async def test_update_api_key(self, db: AsyncSession, user: User):
         with patch(_ENCRYPT_TARGET) as mock_auth:
-            mock_auth.encrypt_api_key.return_value = "enc"
+            mock_auth.encrypt_api_key.return_value = "enc-initial"
             acct = await create_provider_account(
                 db,
                 user_id=user.id,
+                name="acct-update",
                 provider_tenant_id=None,
-                provider_key="k1",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                 provider_url="https://p.example.com",
                 api_key="key",  # pragma: allowlist secret
             )
             await db.commit()
 
-        updated = await update_provider_account(
-            db,
-            provider_account=acct,
-            provider_key="k2",
-            provider_tenant_id="new-tenant",
-        )
-        await db.commit()
+        with patch(_ENCRYPT_TARGET) as mock_auth:
+            mock_auth.encrypt_api_key.return_value = "enc-rotated"
+            updated = await update_provider_account(
+                db,
+                provider_account=acct,
+                api_key="rotated-key",  # pragma: allowlist secret
+            )
+            await db.commit()
 
-        assert updated.provider_key == "k2"
-        assert updated.provider_tenant_id == "new-tenant"
+        assert updated.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
+        assert updated.provider_tenant_id is None
+        assert updated.api_key == "enc-rotated"  # pragma: allowlist secret
 
     async def test_delete(self, db: AsyncSession, user: User):
         with patch(_ENCRYPT_TARGET) as mock_auth:
@@ -391,8 +410,9 @@ class TestProviderAccountCRUD:
             acct = await create_provider_account(
                 db,
                 user_id=user.id,
+                name="acct-delete",
                 provider_tenant_id=None,
-                provider_key="k",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                 provider_url="https://p.example.com",
                 api_key="key",  # pragma: allowlist secret
             )
@@ -411,8 +431,9 @@ class TestProviderAccountCRUD:
             await create_provider_account(
                 db,
                 user_id=user.id,
+                name="acct-dupe-1",
                 provider_tenant_id="t1",
-                provider_key="k",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                 provider_url="https://p.example.com",
                 api_key="key",  # pragma: allowlist secret
             )
@@ -422,8 +443,9 @@ class TestProviderAccountCRUD:
                 await create_provider_account(
                     db,
                     user_id=user.id,
+                    name="acct-dupe-2",
                     provider_tenant_id="t1",
-                    provider_key="other",
+                    provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                     provider_url="https://p.example.com",
                     api_key="key2",  # pragma: allowlist secret
                 )
@@ -452,14 +474,15 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-crud",
-            name="crud-deploy",
+            display_name="crud-deploy",
+            deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
 
         assert dep.id is not None
         fetched = await get_deployment(db, user_id=user.id, deployment_id=dep.id)
         assert fetched is not None
-        assert fetched.name == "crud-deploy"
+        assert fetched.display_name == "crud-deploy"
 
     async def test_get_by_resource_key(
         self,
@@ -477,7 +500,8 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-lookup",
-            name="lookup-deploy",
+            display_name="lookup-deploy",
+            deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
 
@@ -488,7 +512,7 @@ class TestDeploymentCRUD:
             resource_key="rk-lookup",
         )
         assert found is not None
-        assert found.name == "lookup-deploy"
+        assert found.display_name == "lookup-deploy"
 
     async def test_list_page_and_count(
         self,
@@ -507,7 +531,8 @@ class TestDeploymentCRUD:
                 project_id=folder.id,
                 deployment_provider_account_id=provider_account.id,
                 resource_key=f"rk-{i}",
-                name=f"deploy-{i}",
+                display_name=f"deploy-{i}",
+                deployment_type=DeploymentType.AGENT,
             )
         await db.commit()
 
@@ -550,19 +575,20 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-upd",
-            name="original",
+            display_name="original",
+            deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
 
-        updated = await update_deployment(db, deployment=dep, name="renamed")
+        updated = await update_deployment(db, deployment=dep, display_name="renamed")
         await db.commit()
 
-        assert updated.name == "renamed"
+        assert updated.display_name == "renamed"
 
         assert dep.id is not None
         fetched = await get_deployment(db, user_id=user.id, deployment_id=dep.id)
         assert fetched is not None
-        assert fetched.name == "renamed"
+        assert fetched.display_name == "renamed"
 
     async def test_delete_by_id(
         self,
@@ -580,7 +606,8 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-del",
-            name="to-delete",
+            display_name="to-delete",
+            deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
 
@@ -607,7 +634,8 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-delrk",
-            name="to-delete-rk",
+            display_name="to-delete-rk",
+            deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
 
@@ -620,7 +648,7 @@ class TestDeploymentCRUD:
         await db.commit()
         assert count == 1
 
-    async def test_create_duplicate_name_raises(
+    async def test_create_duplicate_display_name_allowed(
         self,
         db: AsyncSession,
         user: User,
@@ -636,19 +664,22 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-a",
-            name="same-name",
+            display_name="same-name",
+            deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
 
-        with pytest.raises(ValueError, match="conflicts with an existing record"):
-            await create_deployment(
-                db,
-                user_id=user.id,
-                project_id=folder.id,
-                deployment_provider_account_id=provider_account.id,
-                resource_key="rk-b",
-                name="same-name",
-            )
+        duplicate = await create_deployment(
+            db,
+            user_id=user.id,
+            project_id=folder.id,
+            deployment_provider_account_id=provider_account.id,
+            resource_key="rk-b",
+            display_name="same-name",
+            deployment_type=DeploymentType.AGENT,
+        )
+        await db.commit()
+        assert duplicate.display_name == "same-name"
 
     async def test_create_duplicate_resource_key_raises(
         self,
@@ -666,7 +697,8 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-dup",
-            name="name-a",
+            display_name="name-a",
+            deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
 
@@ -677,7 +709,8 @@ class TestDeploymentCRUD:
                 project_id=folder.id,
                 deployment_provider_account_id=provider_account.id,
                 resource_key="rk-dup",
-                name="name-b",
+                display_name="name-b",
+                deployment_type=DeploymentType.AGENT,
             )
 
     async def test_user_scoping(
@@ -697,7 +730,8 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-scoped",
-            name="scoped",
+            display_name="scoped",
+            deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
 
@@ -726,7 +760,8 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-cascade",
-            name="cascade-test",
+            display_name="cascade-test",
+            deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
         dep_id = dep.id

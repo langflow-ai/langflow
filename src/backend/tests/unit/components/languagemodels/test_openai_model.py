@@ -50,6 +50,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
             max_retries=5,
             timeout=700,
             temperature=0.1,
+            stream_usage=True,
         )
         assert model == mock_instance
 
@@ -70,6 +71,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
             base_url="https://api.openai.com/v1",
             max_retries=5,
             timeout=700,
+            stream_usage=True,
         )
         assert model == mock_instance
 
@@ -152,6 +154,69 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         with patch("openai.BadRequestError", MockBadRequestError):
             message = component._get_exception_message(regular_exception)
             assert message is None
+
+    async def test_should_return_helpful_message_when_openai_returns_model_not_found(
+        self, component_class, default_kwargs
+    ):
+        """Bug: NotFoundError(model_not_found) falls through _get_exception_message and returns None.
+
+        Before fix: only BadRequestError was handled, so NotFoundError (HTTP 404) with
+        code=model_not_found left the raw verbose OpenAI error to bubble up as
+        ComponentBuildError without actionable context.
+
+        Expected: _get_exception_message recognizes openai.NotFoundError with
+        code=model_not_found and returns a helpful message that references the model
+        name and directs the user to check account/tier access.
+        """
+        import httpx
+        from openai import NotFoundError
+
+        default_kwargs["model_name"] = "gpt-nonexistent"
+        component = component_class(**default_kwargs)
+
+        request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+        response = httpx.Response(status_code=404, request=request)
+        error = NotFoundError(
+            message="The model `gpt-nonexistent` does not exist or you do not have access to it.",
+            response=response,
+            body={
+                "code": "model_not_found",
+                "message": "The model `gpt-nonexistent` does not exist or you do not have access to it.",
+                "type": "invalid_request_error",
+                "param": None,
+            },
+        )
+
+        message = component._get_exception_message(error)
+
+        assert message is not None, "Expected a helpful message for NotFoundError(model_not_found), got None"
+        assert "gpt-nonexistent" in message, f"Expected model name in message, got: {message!r}"
+        assert any(keyword in message.lower() for keyword in ("tier", "access")), (
+            f"Expected message to mention tier/access, got: {message!r}"
+        )
+
+    async def test_should_not_expose_fictional_gpt53_ids_in_openai_model_name_options(self):
+        """Bug: fictional gpt-5.3 ids in the OpenAI dropdown cause 404 at runtime.
+
+        gpt-5.3 and gpt-5.3-instant were listed as selectable model options but do
+        not exist as OpenAI API model IDs. Only gpt-5.3-chat-latest and gpt-5.3-codex
+        exist in the OpenAI API for the 5.3 family. The bare gpt-5.3 id and
+        gpt-5.3-instant (a ChatGPT product name, not an API model id) must not be
+        exposed as selectable options.
+        """
+        from lfx.base.models.openai_constants import (
+            OPENAI_CHAT_MODEL_NAMES,
+            OPENAI_REASONING_MODEL_NAMES,
+        )
+
+        selectable_ids = set(OPENAI_CHAT_MODEL_NAMES) | set(OPENAI_REASONING_MODEL_NAMES)
+        fictional_ids = {"gpt-5.3", "gpt-5.3-instant"}
+        leaked = fictional_ids & selectable_ids
+
+        assert not leaked, (
+            f"Fictional OpenAI model IDs exposed in the OpenAI component dropdown: {sorted(leaked)}. "
+            f"These IDs are not real OpenAI API models and trigger 404 model_not_found at runtime."
+        )
 
     async def test_update_build_config_reasoning_model(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import shutil
 
 # we need to import tmpdir
@@ -24,7 +25,7 @@ from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowR
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
-from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
+from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id_unchecked
 from langflow.services.deps import get_auth_service, get_db_service, session_scope
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
@@ -39,6 +40,29 @@ from typer.testing import CliRunner
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_rate_limiting():
+    """Disable rate limiting for all tests to prevent 429 errors during test execution."""
+    os.environ["LANGFLOW_RATE_LIMIT_ENABLED"] = "false"
+    yield
+    os.environ.pop("LANGFLOW_RATE_LIMIT_ENABLED", None)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_models_dev_refresh():
+    """Keep the models.dev background refresh out of tests.
+
+    Every app boot otherwise launches a lifespan task that fetches
+    https://models.dev/api.json mid-test, which both hits the network and
+    trips event-loop-block detectors (pyleak) in whatever test happens to be
+    running when the request lands. The bundled static model lists are used
+    instead, which is also deterministic.
+    """
+    os.environ["LANGFLOW_MODELS_DEV_REFRESH"] = "false"
+    yield
+    os.environ.pop("LANGFLOW_MODELS_DEV_REFRESH", None)
 
 
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
@@ -197,7 +221,7 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
                 await session.delete(job)
             await session.flush()
 
-            await delete_vertex_builds_by_flow_id(session, flow_id)
+            await delete_vertex_builds_by_flow_id_unchecked(session, flow_id)
         except Exception as e:
             logger.debug(f"Error deleting jobs/vertex builds for flow {flow_id}: {e}")
         try:
@@ -409,6 +433,16 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture(autouse=True)
+def disable_telemetry_writer(monkeypatch):
+    # Tests assert on freshly-written transactions / vertex_builds rows. The
+    # batched writer is a production optimization; in tests we want the
+    # synchronous legacy DB path so reads-after-writes are visible.
+    monkeypatch.setenv("LANGFLOW_TELEMETRY_WRITER_ENABLED", "false")
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture
 def use_noop_session(monkeypatch):
     monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
@@ -436,6 +470,7 @@ async def client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("DO_NOT_TRACK", "true")
             if "load_flows" in request.keywords:
                 shutil.copyfile(
                     pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
@@ -577,7 +612,7 @@ async def flow(
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
 
-    flow = Flow.model_validate(flow_data)
+    flow = Flow.model_validate(flow_data.model_dump(exclude={"id"}))
     async with session_scope() as session:
         session.add(flow)
         await session.flush()

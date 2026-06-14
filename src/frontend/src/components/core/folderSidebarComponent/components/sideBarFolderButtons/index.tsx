@@ -1,5 +1,6 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
@@ -13,7 +14,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { UPLOAD_ERROR_ALERT } from "@/constants/alerts_constants";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   usePatchFolders,
@@ -37,6 +37,7 @@ import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAuthStore from "@/stores/authStore";
+import type { FlowType } from "@/types/flow";
 import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
@@ -55,6 +56,9 @@ type SideBarFoldersButtonsComponentProps = {
   handleDeleteFolder?: (item: FolderType) => void;
   handleFilesClick?: () => void;
 };
+
+type UploadedFlowFile = FlowType | { flows: FlowType[] };
+
 const SideBarFoldersButtonsComponent = ({
   handleChangeFolder,
   handleDeleteFolder,
@@ -80,6 +84,7 @@ const SideBarFoldersButtonsComponent = ({
     return currentFolder.includes(itemId);
   };
 
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const isMobile = useIsMobile({ maxWidth: 1024 });
@@ -134,18 +139,18 @@ const SideBarFoldersButtonsComponent = ({
         return;
       }
 
-      getObjectsFromFilelist<any>(files)
+      getObjectsFromFilelist<UploadedFlowFile>(files)
         .then((objects) => {
           if (objects.every((flow) => flow.data?.nodes)) {
             uploadFlow({ files })
               .then(() => {
                 setSuccessData({
-                  title: "Uploaded successfully",
+                  title: t("sidebar.uploadSuccess"),
                 });
               })
               .catch((error) => {
                 setErrorData({
-                  title: UPLOAD_ERROR_ALERT,
+                  title: t("errors.upload"),
                   list: [
                     error instanceof Error ? error.message : String(error),
                   ],
@@ -160,14 +165,17 @@ const SideBarFoldersButtonsComponent = ({
                 {
                   onSuccess: () => {
                     setSuccessData({
-                      title: "Project uploaded successfully.",
+                      title: t("sidebar.projectUploadSuccess"),
                     });
                   },
                   onError: (err) => {
                     console.error(err);
                     setErrorData({
-                      title: `Error on uploading your project, try dragging it into an existing project.`,
-                      list: [err["response"]["data"]["message"]],
+                      title: t("sidebar.projectUploadError"),
+                      list: [
+                        err?.response?.data?.detail ??
+                          (err instanceof Error ? err.message : String(err)),
+                      ],
                     });
                   },
                 },
@@ -177,7 +185,7 @@ const SideBarFoldersButtonsComponent = ({
         })
         .catch((error) => {
           setErrorData({
-            title: UPLOAD_ERROR_ALERT,
+            title: t("errors.upload"),
             list: [error instanceof Error ? error.message : String(error)],
           });
         });
@@ -195,7 +203,7 @@ const SideBarFoldersButtonsComponent = ({
         },
         onError: (e) => {
           setErrorData({
-            title: `An error occurred while downloading your project.`,
+            title: t("sidebar.downloadError"),
           });
         },
       },
@@ -395,7 +403,7 @@ const SideBarFoldersButtonsComponent = ({
               {!loading ? (
                 folders.length === 0 ? (
                   <div className="px-2 py-5 text-center text-sm text-muted-foreground">
-                    Start creating a project or flow
+                    {t("sidebar.emptyMessage")}
                   </div>
                 ) : (
                   folders.map((item, index) => {
@@ -503,7 +511,7 @@ const SideBarFoldersButtonsComponent = ({
                 className="text-sm"
               >
                 <ForwardedIconComponent name="Library" className="h-4 w-4" />
-                Knowledge
+                {t("sidebar.knowledge")}
               </SidebarMenuButton>
             )}
             <SidebarMenuButton
@@ -512,7 +520,7 @@ const SideBarFoldersButtonsComponent = ({
               className="text-sm"
             >
               <ForwardedIconComponent name="File" className="h-4 w-4" />
-              My Files
+              {t("sidebar.myFiles")}
             </SidebarMenuButton>
           </div>
         </SidebarFooter>

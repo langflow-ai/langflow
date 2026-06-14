@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 import pytest
 from langflow.services.database.models.traces.model import SpanStatus, SpanType
 from langflow.services.tracing.native import NativeTracer
+from langflow.services.tracing.span_sorting import resolve_span_uuids, topological_sort_spans
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -604,3 +605,252 @@ class TestGetLangchainCallback:
         assert callback is not None
         assert isinstance(callback, NativeCallbackHandler)
         assert callback.parent_span_id is None
+
+
+# ---------------------------------------------------------------------------
+# _topological_sort_spans
+# ---------------------------------------------------------------------------
+
+
+class TestTopologicalSortSpans:
+    """Verify that spans are sorted so parents appear before children.
+
+    This is critical for PostgreSQL which enforces FK constraints at INSERT time.
+    """
+
+    @staticmethod
+    def _make_span(span_id, parent_id=None) -> tuple[dict, UUID, UUID | None]:
+        """Helper to create a resolved (span_data, span_uuid, parent_uuid) tuple."""
+        span_data = {"id": str(span_id), "name": f"span-{span_id}"}
+        return (span_data, span_id, parent_id)
+
+    def test_no_parents(self):
+        a, b, c = uuid4(), uuid4(), uuid4()
+        items = [self._make_span(a), self._make_span(b), self._make_span(c)]
+        result = topological_sort_spans(items)
+        assert [r[1] for r in result] == [a, b, c]
+
+    def test_child_after_parent(self):
+        parent_id = uuid4()
+        child_id = uuid4()
+        # Child comes first in the input list
+        items = [self._make_span(child_id, parent_id), self._make_span(parent_id)]
+        result = topological_sort_spans(items)
+        uuids = [r[1] for r in result]
+        assert uuids.index(parent_id) < uuids.index(child_id)
+
+    def test_deep_nesting(self):
+        root = uuid4()
+        mid = uuid4()
+        leaf = uuid4()
+        # Reverse order: leaf, mid, root
+        items = [
+            self._make_span(leaf, mid),
+            self._make_span(mid, root),
+            self._make_span(root),
+        ]
+        result = topological_sort_spans(items)
+        uuids = [r[1] for r in result]
+        assert uuids.index(root) < uuids.index(mid) < uuids.index(leaf)
+
+    def test_parent_outside_batch(self):
+        """Spans referencing a parent not in the batch are treated as roots."""
+        external_parent = uuid4()
+        child_id = uuid4()
+        items = [self._make_span(child_id, external_parent)]
+        result = topological_sort_spans(items)
+        assert len(result) == 1
+        assert result[0][1] == child_id
+
+    def test_mixed_roots_and_children(self):
+        root_a = uuid4()
+        child_a = uuid4()
+        root_b = uuid4()
+        items = [
+            self._make_span(child_a, root_a),
+            self._make_span(root_b),
+            self._make_span(root_a),
+        ]
+        result = topological_sort_spans(items)
+        uuids = [r[1] for r in result]
+        assert uuids.index(root_a) < uuids.index(child_a)
+
+    def test_cycle_two_node(self):
+        """Spans forming a 2-node cycle should not cause errors or drop spans."""
+        a = uuid4()
+        b = uuid4()
+        items = [
+            self._make_span(a, b),
+            self._make_span(b, a),
+        ]
+        result = topological_sort_spans(items)
+        # Ensure all spans are present and no infinite loop / exception occurs.
+        uuids = [r[1] for r in result]
+        assert len(uuids) == 2
+        assert set(uuids) == {a, b}
+
+    def test_self_parent_span(self):
+        """A span that lists itself as its own parent should still be returned."""
+        span_id = uuid4()
+        items = [
+            self._make_span(span_id, span_id),
+        ]
+        result = topological_sort_spans(items)
+        uuids = [r[1] for r in result]
+        assert len(uuids) == 1
+        assert uuids[0] == span_id
+
+    def test_empty_input(self):
+        result = topological_sort_spans([])
+        assert result == []
+
+    def test_cycle_does_not_mutate_original_span_data(self):
+        """Verify cycle resolution doesn't mutate the original span dicts."""
+        a = uuid4()
+        b = uuid4()
+        span_a = {"id": str(a), "name": "span-a", "parent_span_id": b}
+        span_b = {"id": str(b), "name": "span-b", "parent_span_id": a}
+        items = [(span_a, a, b), (span_b, b, a)]
+        topological_sort_spans(items)
+        # Original dicts should retain their parent_span_id values
+        assert span_a["parent_span_id"] == b
+        assert span_b["parent_span_id"] == a
+
+
+# ---------------------------------------------------------------------------
+# resolve_span_uuids
+# ---------------------------------------------------------------------------
+
+
+class TestResolveSpanUuids:
+    """Verify UUID resolution for span IDs and parent IDs."""
+
+    def test_valid_uuid_string_id(self):
+        trace_id = uuid4()
+        span_id = uuid4()
+        spans = [{"id": str(span_id), "name": "span"}]
+        result = resolve_span_uuids(spans, trace_id)
+        assert len(result) == 1
+        assert result[0][1] == span_id
+        assert result[0][2] is None
+
+    def test_non_uuid_string_id_uses_uuid5(self):
+        from uuid import uuid5 as _uuid5
+
+        from langflow.services.tracing.span_sorting import LANGFLOW_SPAN_NAMESPACE
+
+        trace_id = uuid4()
+        spans = [{"id": "not-a-uuid", "name": "span"}]
+        result = resolve_span_uuids(spans, trace_id)
+        expected = _uuid5(LANGFLOW_SPAN_NAMESPACE, f"{trace_id}-not-a-uuid")
+        assert result[0][1] == expected
+
+    def test_parent_as_uuid_instance(self):
+        trace_id = uuid4()
+        span_id = uuid4()
+        parent_id = uuid4()
+        spans = [{"id": str(span_id), "name": "span", "parent_span_id": parent_id}]
+        result = resolve_span_uuids(spans, trace_id)
+        assert result[0][2] == parent_id
+
+    def test_parent_as_valid_uuid_string(self):
+        trace_id = uuid4()
+        span_id = uuid4()
+        parent_id = uuid4()
+        spans = [{"id": str(span_id), "name": "span", "parent_span_id": str(parent_id)}]
+        result = resolve_span_uuids(spans, trace_id)
+        assert result[0][2] == parent_id
+
+    def test_parent_as_non_uuid_string(self):
+        from uuid import uuid5 as _uuid5
+
+        from langflow.services.tracing.span_sorting import LANGFLOW_SPAN_NAMESPACE
+
+        trace_id = uuid4()
+        span_id = uuid4()
+        spans = [{"id": str(span_id), "name": "span", "parent_span_id": "invalid-parent"}]
+        result = resolve_span_uuids(spans, trace_id)
+        expected_parent = _uuid5(LANGFLOW_SPAN_NAMESPACE, f"{trace_id}-invalid-parent")
+        assert result[0][2] == expected_parent
+
+    def test_no_parent_span_id_key(self):
+        trace_id = uuid4()
+        span_id = uuid4()
+        spans = [{"id": str(span_id), "name": "span"}]
+        result = resolve_span_uuids(spans, trace_id)
+        assert result[0][2] is None
+
+    def test_empty_input(self):
+        result = resolve_span_uuids([], uuid4())
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# _flush_to_database with parent/child spans
+# ---------------------------------------------------------------------------
+
+
+class TestFlushParentChildOrder:
+    @pytest.mark.asyncio
+    async def test_flush_inserts_parent_before_child(self):
+        """Verify that the DB merge order respects parent -> child ordering."""
+        flow_id = str(uuid4())
+        tracer = _make_tracer(flow_id=flow_id)
+
+        parent_uuid = uuid4()
+        child_uuid = uuid4()
+
+        # Deliberately add child first to simulate the problematic ordering
+        tracer.completed_spans = [
+            {
+                "id": str(child_uuid),
+                "name": "Child Span",
+                "span_type": SpanType.CHAIN,
+                "inputs": {},
+                "outputs": None,
+                "start_time": datetime.now(tz=timezone.utc),
+                "end_time": datetime.now(tz=timezone.utc),
+                "latency_ms": 5,
+                "status": SpanStatus.OK,
+                "error": None,
+                "attributes": {},
+                "span_source": "component",
+                "parent_span_id": parent_uuid,
+            },
+            {
+                "id": str(parent_uuid),
+                "name": "Parent Span",
+                "span_type": SpanType.CHAIN,
+                "inputs": {},
+                "outputs": None,
+                "start_time": datetime.now(tz=timezone.utc),
+                "end_time": datetime.now(tz=timezone.utc),
+                "latency_ms": 10,
+                "status": SpanStatus.OK,
+                "error": None,
+                "attributes": {},
+                "span_source": "component",
+            },
+        ]
+
+        merged_objects = []
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+
+        async def capture_merge(obj):
+            merged_objects.append(obj)
+
+        mock_session.merge = capture_merge
+
+        with patch("lfx.services.deps.session_scope", return_value=mock_session):
+            await tracer._flush_to_database()
+
+        from langflow.services.database.models.traces.model import SpanTable
+
+        span_objects = [o for o in merged_objects if isinstance(o, SpanTable)]
+        assert len(span_objects) == 2
+        # Parent (no parent_span_id) must come before child
+        assert span_objects[0].id == parent_uuid
+        assert span_objects[1].id == child_uuid
+        assert span_objects[1].parent_span_id == parent_uuid

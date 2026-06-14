@@ -1,7 +1,8 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { expect } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
@@ -9,19 +10,9 @@ withEventDeliveryModes(
   "Blog Writer",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Blog Writer" }).click();
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
+    await openStarterProject(page, "Blog Writer");
 
     await initialGPTsetup(page);
 
@@ -41,21 +32,23 @@ withEventDeliveryModes(
       .nth(0)
       .fill("https://www.originaldiving.com/blog/top-ten-turtle-facts");
 
-    await page.getByText("Instructions", { exact: true }).last().click();
-
+    // "Instructions" was a separate Text Input node; it is now an inlined
+    // field on the Prompt component (Text Input is legacy).
     await page
-      .getByTestId("textarea_str_input_value")
+      .getByTestId("textarea_str_instructions")
       .fill(
         "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
       );
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 30000 * 3,
     });
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page
       .getByPlaceholder(
         "No chat input variables found. Click to run your flow.",
@@ -64,8 +57,8 @@ withEventDeliveryModes(
       .last()
       .isVisible();
 
-    await page.getByText("turtles").last().isVisible();
-    await page.getByText("sea").last().isVisible();
-    await page.getByText("survival").last().isVisible();
+    await expect(page.getByText("turtles").last()).toBeVisible();
+    await expect(page.getByText("sea").last()).toBeVisible();
+    await expect(page.getByText("survival").last()).toBeVisible();
   },
 );

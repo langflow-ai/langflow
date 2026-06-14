@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,11 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetKnowledgeBaseChunks } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-base-chunks";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import ChunkCard from "./components/ChunkCard";
+import { ChunksMetadataFilter } from "./components/ChunksMetadataFilter";
 import { CHUNKS_PER_PAGE, PAGE_SIZE_OPTIONS } from "./constants";
 
 export const SourceChunksPage = () => {
+  const { t } = useTranslation();
   const { sourceId } = useParams<{ sourceId: string }>();
   const navigate = useCustomNavigate();
   const [currentPage, setCurrentPage] = useState(1);
@@ -25,7 +28,23 @@ export const SourceChunksPage = () => {
   const [pageSize, setPageSize] = useState<number>(CHUNKS_PER_PAGE);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<string>("all");
+  const [metadataFilter, setMetadataFilter] = useState<
+    Record<string, string[]>
+  >({});
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const removeMetadataChip = useCallback((key: string, value: string) => {
+    setMetadataFilter((prev) => {
+      const remaining = (prev[key] ?? []).filter((entry) => entry !== value);
+      if (remaining.length === 0) {
+        const { [key]: _drop, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [key]: remaining };
+    });
+    setCurrentPage(1);
+  }, []);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
@@ -34,6 +53,11 @@ export const SourceChunksPage = () => {
       setDebouncedSearch(value);
       setCurrentPage(1);
     }, 300);
+  }, []);
+
+  const handleSourceTypeChange = useCallback((value: string) => {
+    setSourceTypeFilter(value);
+    setCurrentPage(1);
   }, []);
 
   useEffect(() => {
@@ -51,6 +75,9 @@ export const SourceChunksPage = () => {
     page: currentPage,
     limit: pageSize,
     search: debouncedSearch || undefined,
+    source_type: sourceTypeFilter === "all" ? undefined : sourceTypeFilter,
+    metadata_filter:
+      Object.keys(metadataFilter).length > 0 ? metadataFilter : undefined,
   });
 
   const handleBack = () => {
@@ -132,18 +159,81 @@ export const SourceChunksPage = () => {
 
         <div className="flex shrink-0 items-center pb-4">
           <div className="xl:container">
-            <div className="relative w-full xl:w-5/12">
-              <ForwardedIconComponent
-                name="Search"
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              />
-              <Input
-                placeholder="Search chunks..."
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                data-testid="chunks-search-input"
+            <div className="flex w-full items-center gap-2 xl:w-7/12">
+              <div className="relative flex-1">
+                <ForwardedIconComponent
+                  name="Search"
+                  className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  placeholder={t("knowledge.searchChunks")}
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  data-testid="chunks-search-input"
+                />
+              </div>
+
+              <Select
+                value={sourceTypeFilter}
+                onValueChange={handleSourceTypeChange}
+              >
+                <SelectTrigger
+                  className="w-44 shrink-0"
+                  data-testid="chunks-source-type-filter"
+                >
+                  <SelectValue placeholder={t("knowledge.allSources")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {t("knowledge.allSources")}
+                  </SelectItem>
+                  <SelectItem value="file_upload">
+                    {t("knowledge.fileUpload")}
+                  </SelectItem>
+                  <SelectItem value="folder">Folder</SelectItem>
+                  <SelectItem value="template">
+                    {t("knowledge.flowTemplate")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <ChunksMetadataFilter
+                kbName={sourceId || ""}
+                onAdd={(key, value) =>
+                  setMetadataFilter((prev) => {
+                    const existing = prev[key] ?? [];
+                    if (existing.includes(value)) return prev;
+                    return { ...prev, [key]: [...existing, value] };
+                  })
+                }
               />
             </div>
+            {Object.keys(metadataFilter).length > 0 && (
+              <div
+                className="mt-2 flex flex-wrap gap-1.5 xl:w-7/12"
+                data-testid="chunks-metadata-filter-chips"
+              >
+                {Object.entries(metadataFilter).flatMap(([key, values]) =>
+                  values.map((value) => (
+                    <button
+                      key={`${key}=${value}`}
+                      type="button"
+                      onClick={() => removeMetadataChip(key, value)}
+                      className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs hover:bg-muted-foreground/10"
+                      data-testid={`chunks-metadata-chip-${key}-${value}`}
+                    >
+                      <span className="font-medium text-muted-foreground">
+                        {key}:
+                      </span>
+                      <span>{value}</span>
+                      <ForwardedIconComponent
+                        name="X"
+                        className="h-3 w-3 text-muted-foreground"
+                      />
+                    </button>
+                  )),
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -152,16 +242,16 @@ export const SourceChunksPage = () => {
             <div className="flex flex-1 w-full flex-col items-center justify-center gap-3">
               <Loading size={36} />
               <span className="text-sm text-muted-foreground pt-3">
-                Loading Chunks...
+                {t("knowledge.loadingChunks")}
               </span>
             </div>
           ) : error ? (
             <div className="flex flex-1 items-center justify-center text-muted-foreground">
-              Failed to load chunks
+              {t("knowledge.failedToLoadChunks")}
             </div>
           ) : chunks.length === 0 ? (
             <div className="flex flex-1 items-center justify-center text-muted-foreground">
-              No chunks found
+              {t("knowledge.noChunksFound")}
             </div>
           ) : (
             <div className="flex flex-1 flex-col overflow-hidden">
@@ -187,7 +277,7 @@ export const SourceChunksPage = () => {
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground whitespace-nowrap">
-                            Per page:
+                            {t("knowledge.perPage")}
                           </span>
                           <Select
                             value={String(pageSize)}
@@ -211,9 +301,11 @@ export const SourceChunksPage = () => {
                           </Select>
                         </div>
                         <span className="text-sm text-muted-foreground">
-                          Showing {startIndex + 1}-
-                          {Math.min(startIndex + pageSize, total)} of {total}{" "}
-                          chunks
+                          {t("knowledge.showing", {
+                            start: startIndex + 1,
+                            end: Math.min(startIndex + pageSize, total),
+                            total,
+                          })}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -249,7 +341,7 @@ export const SourceChunksPage = () => {
                           />
                         </Button>
                         <div className="flex items-center gap-1.5 px-2 text-sm">
-                          <span>Page</span>
+                          <span>{t("knowledge.page")}</span>
                           <input
                             type="number"
                             min={1}
@@ -262,7 +354,9 @@ export const SourceChunksPage = () => {
                             onKeyDown={handlePageInputKeyDown}
                             className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-inner-spin-button]:[filter:invert(1)] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:[filter:invert(1)]"
                           />
-                          <span>of {totalPages}</span>
+                          <span>
+                            {t("knowledge.ofTotal", { total: totalPages })}
+                          </span>
                         </div>
                         <Button
                           variant="outline"

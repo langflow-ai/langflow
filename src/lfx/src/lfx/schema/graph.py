@@ -16,7 +16,7 @@ class InputValue(BaseModel):
 
 
 class Tweaks(RootModel):
-    root: dict[str, str | dict[str, Any]] = Field(
+    root: dict[str, bool | int | float | str | dict[str, Any]] = Field(
         description="A dictionary of tweaks to adjust the flow's execution. "
         "Allows customizing flow behavior dynamically. "
         "All tweaks are overridden by the input values.",
@@ -26,6 +26,8 @@ class Tweaks(RootModel):
             "examples": [
                 {
                     "parameter_name": "value",
+                    "stream": False,
+                    "temperature": 0.7,
                     "Component Name": {"parameter_name": "value"},
                     "component_id": {"parameter_name": "value"},
                 }

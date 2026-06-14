@@ -3,8 +3,10 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+import logging
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
+from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 from uuid import UUID
@@ -35,11 +37,13 @@ from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
 from lfx.schema.log import Log
 from lfx.schema.message import ErrorMessage, Message
-from lfx.schema.properties import Source
+from lfx.schema.properties import Source, Usage
+from lfx.schema.token_usage import accumulate_usage, extract_usage_from_chunk
 from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.secrets import is_secret_value, unwrap_secret_value
 from lfx.utils.util import find_closest_match
 
 from .custom_component import CustomComponent
@@ -55,6 +59,8 @@ if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
     from lfx.schema.log import LoggableType
 
+
+logger = logging.getLogger(__name__)
 
 _ComponentToolkit = None
 
@@ -72,6 +78,36 @@ BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metadata"]
 
 
+def _wrap_if_secret(input_obj: Any, value: Any) -> Any:
+    """Return the runtime value for an input, preserving string compatibility.
+
+    Credential variables arrive as SecretStr and non-password inputs reject them
+    during validation. Password inputs keep their runtime string contract, so
+    existing component code can pass self.api_key to provider clients without
+    unwrapping every call site.
+    """
+    if input_obj is not None and getattr(input_obj, "password", False):
+        return unwrap_secret_value(value)
+    return value
+
+
+def _mask_secret_value(value: Any) -> Any:
+    if is_secret_value(value):
+        return str(value)
+    return value
+
+
+def _get_secret_text(input_obj: Any, value: Any) -> str | None:
+    if input_obj is None or not getattr(input_obj, "password", False):
+        return None
+    value = unwrap_secret_value(value)
+    return value if isinstance(value, str) and value else None
+
+
+def _copy_component_template(items: list[Any]) -> list[Any]:
+    return [item.model_copy(deep=True) if isinstance(item, BaseModel) else deepcopy(item) for item in items]
+
+
 class PlaceholderGraph(NamedTuple):
     """A placeholder graph structure for components, providing backwards compatibility.
 
@@ -84,6 +120,7 @@ class PlaceholderGraph(NamedTuple):
         flow_id (str | None): Unique identifier for the flow, if applicable.
         user_id (str | None): Identifier of the user associated with the flow, if any.
         session_id (str | None): Identifier for the current session, if applicable.
+        run_id (str | None): Identifier for the current graph run, if applicable.
         context (dict): Additional contextual information for the component's execution.
         flow_name (str | None): Name of the flow, if available.
     """
@@ -91,6 +128,7 @@ class PlaceholderGraph(NamedTuple):
     flow_id: str | None
     user_id: str | None
     session_id: str | None
+    run_id: str | None
     context: dict
     flow_name: str | None
 
@@ -116,6 +154,9 @@ class Component(CustomComponent):
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **kwargs) -> None:
+        self.inputs = _copy_component_template(getattr(self.__class__, "inputs", []))
+        self.outputs = _copy_component_template(getattr(self.__class__, "outputs", []))
+
         # Initialize instance-specific attributes first
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
             msg = f"Inputs and outputs have overlapping names: {overlap}"
@@ -132,9 +173,11 @@ class Component(CustomComponent):
         self._outputs_map: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
+        self._secret_values: set[str] = set()
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
         self._event_manager: EventManager | None = None
+        self._token_usage: Usage | None = None
         self._state_model = None
         self._telemetry_input_values: dict[str, Any] | None = None
 
@@ -220,6 +263,10 @@ class Component(CustomComponent):
 
     def get_output_logs(self) -> dict[str, Any]:
         return self._output_logs
+
+    def get_logs(self) -> list[Log]:
+        """Return the current list of logs for this component."""
+        return self._logs
 
     def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
@@ -346,6 +393,9 @@ class Component(CustomComponent):
     def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
 
+    def set_current_output(self, output_name: str) -> None:
+        self._current_output = output_name
+
     def reset_all_output_values(self) -> None:
         """Reset all output values to UNDEFINED."""
         if isinstance(self._outputs_map, dict):
@@ -380,19 +430,65 @@ class Component(CustomComponent):
             return memo[id(self)]
         # Shallow-copy config/inputs: they may contain non-picklable services
         # (e.g. _tracing_service holds ServiceManager with threading.RLock).
-        kwargs = dict(self.__config)
-        kwargs["inputs"] = dict(self.__inputs)
+        # use the mangled names to access the private attributes
+        config = getattr(self, "_Component__config", {})
+        inputs_raw = getattr(self, "_Component__inputs", {})
+
+        kwargs = dict(config)
+        kwargs.update(inputs_raw)
         new_component = type(self)(**kwargs)
+        # Register in memo before the recursive deepcopy calls below so reference
+        # cycles (e.g. components linked through _components) resolve to this same
+        # copy instead of producing a duplicate.
+        memo[id(self)] = new_component
         new_component._code = self._code
-        new_component._outputs_map = self._outputs_map
-        new_component._inputs = deepcopy(self._inputs, memo)
-        new_component._edges = self._edges
-        new_component._components = self._components
+        # Must deep-copy so each graph_copy has independent Output objects.
+        # Output.cache=True by default, and output.value is set during execution.
+        # A shallow copy causes all concurrent requests to share the same Output objects,
+        # so the first request's cached output.value is returned to all subsequent requests.
+        new_component._outputs_map = deepcopy(self._outputs_map, memo)
+
+        # Safe deepcopy of inputs
+        new_inputs = {}
+        for k, v in self._inputs.items():
+            try:
+                # Attempt to deepcopy the entire input object
+                new_inputs[k] = deepcopy(v, memo)
+            except Exception:  # noqa: BLE001
+                # If deepcopy fails (e.g. due to RLock), handle the value carefully.
+                # Pydantic's model_copy(deep=False) creates a shallow copy.
+                logger.warning(
+                    "deepcopy failed for input '%s' on %s — falling back to shallow copy",
+                    k,
+                    type(self).__name__,
+                    exc_info=True,
+                )
+                input_copy = v.model_copy()
+                try:
+                    input_copy.value = deepcopy(v.value, memo)
+                except Exception:  # noqa: BLE001
+                    # Keep the original value (shallow copy) if it can't be deepcopied.
+                    # WARNING: this shares a mutable reference between original and copy.
+                    logger.warning(
+                        "deepcopy failed for input '%s'.value on %s — sharing mutable reference",
+                        k,
+                        type(self).__name__,
+                        exc_info=True,
+                    )
+                    input_copy.value = v.value
+                new_inputs[k] = input_copy
+
+        new_component._inputs = new_inputs
+        # Must deep-copy so each graph_copy has independent component instances.
+        # Shallow copies here caused all concurrent requests to share the same
+        # intermediate component objects (e.g. the LLM node), producing identical
+        # responses for different inputs under concurrent load.
+        new_component._edges = deepcopy(self._edges, memo)
+        new_component._components = deepcopy(self._components, memo)
         new_component._parameters = dict(self._parameters)
         new_component._attributes = dict(self._attributes)
         new_component._output_logs = self._output_logs
         new_component._logs = self._logs  # type: ignore[attr-defined]
-        memo[id(self)] = new_component
         return new_component
 
     def set_class_code(self) -> None:
@@ -402,10 +498,19 @@ class Component(CustomComponent):
         try:
             module = inspect.getmodule(self.__class__)
             if module is None:
-                msg = "Could not find module for class"
-                raise ValueError(msg)
-
-            class_code = inspect.getsource(module)
+                # Fallback: ``inspect.getmodule`` returns None when
+                # ``cls.__module__`` points to a ``sys.modules`` key that has
+                # been swapped or dropped (e.g. mid-reload, when the staging
+                # namespace was just collapsed back into the production
+                # namespace).  Read the file directly so cache rebuilds and
+                # template construction survive a transient inconsistency.
+                try:
+                    class_code = Path(inspect.getfile(self.__class__)).read_text(encoding="utf-8")
+                except (OSError, TypeError) as inner:
+                    msg = f"Could not find module for class {self.__class__.__name__!r}"
+                    raise ValueError(msg) from inner
+            else:
+                class_code = inspect.getsource(module)
             self._code = class_code
         except (OSError, TypeError) as e:
             msg = f"Could not find source code for {self.__class__.__name__}"
@@ -843,7 +948,8 @@ class Component(CustomComponent):
         # if value is a list of components, we need to process each component
         # Note this update make sure it is not a list str | int | float | bool | type(None)
         if isinstance(value, list) and not any(
-            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool) for val in value
+            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool | dict)
+            for val in value
         ):
             for val in value:
                 self._process_connection_or_parameter(key, val)
@@ -856,6 +962,14 @@ class Component(CustomComponent):
         except KeyError:
             input_ = self._get_fallback_input(name=key, display_name=key)
             self._inputs[key] = input_
+            # ``self.inputs`` resolves to the class attribute when the instance
+            # has not shadowed it yet. Appending in that case mutates the
+            # class-level list and leaks fallback values (e.g. a live LLM
+            # client) into every future instance — which then crashes during
+            # ``map_inputs`` deepcopy on the next ``Component()``. Promote to
+            # an instance-local copy before mutating.
+            if "inputs" not in self.__dict__:
+                self.inputs = list(self.inputs) if self.inputs else []
             self.inputs.append(input_)
             return input_
 
@@ -894,7 +1008,10 @@ class Component(CustomComponent):
             raise TypeError(msg)
         self.set_input_value(key, value)
         self._parameters[key] = value
-        self._attributes[key] = value
+        input_obj = self._inputs.get(key)
+        if secret_text := _get_secret_text(input_obj, value):
+            self._secret_values.add(secret_text)
+        self._attributes[key] = _wrap_if_secret(input_obj, value)
 
     def __call__(self, **kwargs):
         self.set(**kwargs)
@@ -931,8 +1048,14 @@ class Component(CustomComponent):
             user_id = self._user_id if hasattr(self, "_user_id") else None
             flow_name = self._flow_name if hasattr(self, "_flow_name") else None
             flow_id = self._flow_id if hasattr(self, "_flow_id") else None
+            run_id = self._run_id if hasattr(self, "_run_id") else None
             return PlaceholderGraph(
-                flow_id=flow_id, user_id=str(user_id), session_id=session_id, context={}, flow_name=flow_name
+                flow_id=flow_id,
+                user_id=str(user_id),
+                session_id=session_id,
+                run_id=run_id,
+                context={},
+                flow_name=flow_name,
             )
         msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
@@ -973,11 +1096,17 @@ class Component(CustomComponent):
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
             frontend_node.set_field_value_in_template(name, value)
+            input_obj = self._inputs.get(name)
+            if input_obj is not None and hasattr(input_obj, "load_from_db"):
+                frontend_node.set_field_load_from_db_in_template(name, bool(input_obj.load_from_db))
 
     def _map_parameters_on_template(self, template: dict) -> None:
         for name, value in self._parameters.items():
             try:
                 template[name]["value"] = value
+                input_obj = self._inputs.get(name)
+                if input_obj is not None and "load_from_db" in template[name] and hasattr(input_obj, "load_from_db"):
+                    template[name]["load_from_db"] = bool(input_obj.load_from_db)
             except KeyError as e:
                 close_match = find_closest_match(name, list(template.keys()))
                 if close_match:
@@ -988,7 +1117,10 @@ class Component(CustomComponent):
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
-        return_type = get_type_hints(method).get("return")
+        try:
+            return_type = get_type_hints(method).get("return")
+        except TypeError:
+            return []
         if return_type is None:
             return []
         extracted_return_types = self._extract_return_type(return_type)
@@ -1083,10 +1215,15 @@ class Component(CustomComponent):
                     f"that is a reserved word and cannot be used."
                 )
                 raise ValueError(msg)
-            attributes[key] = value
+            input_obj = self._inputs.get(key)
+            if secret_text := _get_secret_text(input_obj, value):
+                self._secret_values.add(secret_text)
+            attributes[key] = _wrap_if_secret(input_obj, value)
         for key, input_obj in self._inputs.items():
             if key not in attributes and key not in self._attributes:
-                attributes[key] = input_obj.value or None
+                if secret_text := _get_secret_text(input_obj, input_obj.value):
+                    self._secret_values.add(secret_text)
+                attributes[key] = _wrap_if_secret(input_obj, input_obj.value or None)
 
         self._attributes.update(attributes)
 
@@ -1250,6 +1387,7 @@ class Component(CustomComponent):
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
+        result = self._sanitize_secret_values(result)
         output.value = result
 
         return result
@@ -1280,13 +1418,44 @@ class Component(CustomComponent):
         custom_repr = self.custom_repr()
         if custom_repr is None and isinstance(result, dict | Data | str):
             custom_repr = result
+        custom_repr = self._sanitize_secret_values(custom_repr)
         if not isinstance(custom_repr, str):
             custom_repr = str(custom_repr)
 
         raw = self._process_raw_result(result)
+        raw = self._sanitize_secret_values(raw)
         artifact_type = get_artifact_type(self.status or raw, result)
         raw, artifact_type = post_process_raw(raw, artifact_type)
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
+
+    def _sanitize_secret_string(self, value: str) -> str:
+        for secret in sorted(self._secret_values, key=len, reverse=True):
+            value = value.replace(secret, "**********")
+        return value
+
+    def _sanitize_secret_values(self, value):
+        if not self._secret_values:
+            return _mask_secret_value(value)
+        value = _mask_secret_value(value)
+        if isinstance(value, str):
+            return self._sanitize_secret_string(value)
+        if isinstance(value, Message):
+            if isinstance(value.text, str):
+                value.text = self._sanitize_secret_string(value.text)
+            value.data = self._sanitize_secret_values(value.data)
+            return value
+        if isinstance(value, Data):
+            value.data = self._sanitize_secret_values(value.data)
+            if isinstance(value.default_value, str):
+                value.default_value = self._sanitize_secret_string(value.default_value)
+            return value
+        if isinstance(value, dict):
+            return {key: self._sanitize_secret_values(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._sanitize_secret_values(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(self._sanitize_secret_values(item) for item in value)
+        return value
 
     def _process_raw_result(self, result):
         return self.extract_data(result)
@@ -1298,6 +1467,11 @@ class Component(CustomComponent):
             return (
                 self.status if self.status is not None else "No text available"
             )  # Provide a default message if .text_key is missing
+        # IMPORTANT: keep this before the generic `hasattr(result, "data")` branch.
+        # pandas objects expose a `.data` attribute, but for DataFrame/Series we must
+        # preserve the object rather than returning its underlying array/manager.
+        if isinstance(result, pd.DataFrame | pd.Series):
+            return result
         if hasattr(result, "data"):
             return result.data
         if hasattr(result, "model_dump"):
@@ -1315,6 +1489,8 @@ class Component(CustomComponent):
         self._current_output = ""
 
     def _finalize_results(self, results, artifacts):
+        self.status = self._sanitize_secret_values(self.status)
+        self.repr_value = self._sanitize_secret_values(self.repr_value)
         self._artifacts = artifacts
         self._results = results
         if self.tracing_service:
@@ -1496,11 +1672,27 @@ class Component(CustomComponent):
                         item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
                 self.tools_metadata = tool_data
             else:
-                # Preserve existing status values
-                existing_status = {item["name"]: item.get("status", True) for item in self.tools_metadata}
+                # Merge: preserve user-editable fields from old metadata,
+                # update code-derived fields (args) from new tool data.
+                # For description: only preserve if the user actually edited it
+                # (detected by comparing description to display_description).
+                old_by_tag = {}
+                for item in self.tools_metadata:
+                    tags = item.get("tags", [])
+                    if tags:
+                        old_by_tag[tags[0]] = item
                 for item in tool_data:
-                    item["status"] = existing_status.get(item["name"], True)
-                tool_data = self.tools_metadata
+                    tags = item.get("tags", [])
+                    old = old_by_tag.get(tags[0]) if tags else None
+                    if old:
+                        item["status"] = old.get("status", True)
+                        item["name"] = old.get("name", item["name"])
+                        # Preserve description only if user customized it
+                        old_desc = old.get("description", "")
+                        old_display = old.get("display_description", "")
+                        if old_desc and old_desc != old_display:
+                            item["description"] = old_desc
+                self.tools_metadata = tool_data
         else:
             # If enabled tools are set, update status based on them
             enabled = self.enabled_tools
@@ -1531,10 +1723,21 @@ class Component(CustomComponent):
         """
         if name is None:
             name = f"Log {len(self._logs) + 1}"
+        message = self._sanitize_secret_values(message)
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
         if self.tracing_service and self._vertex:
-            self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+            try:
+                self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+            except RuntimeError as e:
+                # No component context available (e.g., when called as a tool outside normal execution)
+                # Logs are still stored in self._logs for later retrieval
+                from lfx.log.logger import logger
+
+                logger.warning(
+                    f"Component '{self.display_name}' logging outside execution context: {e}. "
+                    "Log stored locally but not sent to tracing service."
+                )
         if self._event_manager is not None and self._current_output:
             data = log.model_dump()
             data["output"] = self._current_output
@@ -1700,9 +1903,7 @@ class Component(CustomComponent):
                         stored_message.properties.state = "complete"
                     # Set usage data if captured from streaming
                     if usage_data:
-                        from lfx.schema.properties import Usage
-
-                        stored_message.properties.usage = Usage(**usage_data)
+                        stored_message.properties.usage = usage_data
                     stored_message = await self._update_stored_message(stored_message)
                     # Send a final add_message event with state="complete" and usage data
                     # This is needed for OpenAI Responses API to capture usage in streaming mode
@@ -1722,10 +1923,25 @@ class Component(CustomComponent):
 
     async def _store_message(self, message: Message) -> Message:
         flow_id: str | None = None
+        run_id: str | None = None
+        session_metadata = dict(message.session_metadata or {})
         if hasattr(self, "graph"):
             # Convert UUID to str if needed
             flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
-        stored_messages = await astore_message(message, flow_id=flow_id)
+            graph_run_id = str(self.graph.run_id) if self.graph.run_id else None
+            run_id = graph_run_id
+            if self.tracing_service:
+                langfuse_tracer = self.tracing_service.get_tracer("langfuse")
+                langfuse_trace_id = getattr(langfuse_tracer, "langfuse_trace_id", None)
+                if langfuse_trace_id:
+                    session_metadata["langfuse_trace_id"] = langfuse_trace_id
+                if graph_run_id:
+                    session_metadata["graph_run_id"] = graph_run_id
+        if session_metadata:
+            message.session_metadata = session_metadata
+        if run_id and not getattr(message, "run_id", None):
+            message.run_id = run_id
+        stored_messages = await astore_message(message, flow_id=flow_id, run_id=run_id)
         if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
@@ -1789,11 +2005,11 @@ class Component(CustomComponent):
         message_table = message_tables[0]
         return await Message.create(**message_table.model_dump())
 
-    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> tuple[str, dict | None]:
+    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> tuple[str, Usage | None]:
         """Stream message content from an iterator and capture usage metadata.
 
         Returns:
-            tuple: (complete_message_text, usage_data_dict_or_none)
+            tuple: (complete_message_text, Usage_or_none)
         """
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
@@ -1810,35 +2026,14 @@ class Component(CustomComponent):
         try:
             complete_message = ""
             first_chunk = True
-            usage_data = None
+            usage_data: Usage | None = None
             for chunk in iterator:
                 complete_message = await self._process_chunk(
                     chunk.content, complete_message, message_id, message, first_chunk=first_chunk
                 )
                 first_chunk = False
-                # Capture usage metadata from chunks (usually on the last chunk)
-                if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                    usage_data = {
-                        "input_tokens": getattr(chunk.usage_metadata, "input_tokens", None),
-                        "output_tokens": getattr(chunk.usage_metadata, "output_tokens", None),
-                        "total_tokens": getattr(chunk.usage_metadata, "total_tokens", None),
-                    }
-                elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
-                    metadata = chunk.response_metadata
-                    if "token_usage" in metadata:
-                        usage_data = {
-                            "input_tokens": metadata["token_usage"].get("prompt_tokens"),
-                            "output_tokens": metadata["token_usage"].get("completion_tokens"),
-                            "total_tokens": metadata["token_usage"].get("total_tokens"),
-                        }
-                    elif "usage" in metadata:
-                        usage_data = {
-                            "input_tokens": metadata["usage"].get("input_tokens"),
-                            "output_tokens": metadata["usage"].get("output_tokens"),
-                            "total_tokens": None,
-                        }
-                        if usage_data["input_tokens"] and usage_data["output_tokens"]:
-                            usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
+                chunk_usage = extract_usage_from_chunk(chunk)
+                usage_data = accumulate_usage(usage_data, chunk_usage)
         except Exception as e:
             raise StreamingError(cause=e, source=message.properties.source) from e
         else:
@@ -1846,49 +2041,18 @@ class Component(CustomComponent):
 
     async def _handle_async_iterator(
         self, iterator: AsyncIterator, message_id: str, message: Message
-    ) -> tuple[str, dict | None]:
+    ) -> tuple[str, Usage | None]:
         complete_message = ""
         first_chunk = True
-        usage_data = None
+        usage_data: Usage | None = None
         async for chunk in iterator:
             complete_message = await self._process_chunk(
                 chunk.content, complete_message, message_id, message, first_chunk=first_chunk
             )
             first_chunk = False
-            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                usage_data = self._extract_usage_metadata(chunk.usage_metadata)
-            elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
-                metadata = chunk.response_metadata
-                if "token_usage" in metadata:
-                    usage_data = {
-                        "input_tokens": metadata["token_usage"].get("prompt_tokens"),
-                        "output_tokens": metadata["token_usage"].get("completion_tokens"),
-                        "total_tokens": metadata["token_usage"].get("total_tokens"),
-                    }
-                elif "usage" in metadata:
-                    usage_data = {
-                        "input_tokens": metadata["usage"].get("input_tokens"),
-                        "output_tokens": metadata["usage"].get("output_tokens"),
-                        "total_tokens": None,
-                    }
-                    if usage_data["input_tokens"] and usage_data["output_tokens"]:
-                        usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
+            chunk_usage = extract_usage_from_chunk(chunk)
+            usage_data = accumulate_usage(usage_data, chunk_usage)
         return complete_message, usage_data
-
-    @staticmethod
-    def _extract_usage_metadata(um) -> dict:
-        """Extract usage from usage_metadata, handling both dict (TypedDict) and object forms."""
-        if isinstance(um, dict):
-            return {
-                "input_tokens": um.get("input_tokens"),
-                "output_tokens": um.get("output_tokens"),
-                "total_tokens": um.get("total_tokens"),
-            }
-        return {
-            "input_tokens": getattr(um, "input_tokens", None),
-            "output_tokens": getattr(um, "output_tokens", None),
-            "total_tokens": getattr(um, "total_tokens", None),
-        }
 
     async def _process_chunk(
         self, chunk: str, complete_message: str, message_id: str, message: Message, *, first_chunk: bool = False

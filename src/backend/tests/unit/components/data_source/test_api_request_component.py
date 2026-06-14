@@ -1,4 +1,6 @@
+import ipaddress
 import os
+import socket
 from pathlib import Path
 from unittest.mock import patch
 
@@ -363,7 +365,15 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
 
 
 class TestAPIRequestSSRFProtection:
-    """Test SSRF protection in API Request component."""
+    """Rewritten SSRF Protection Tests for API Request Component.
+
+    These tests properly test the actual SSRF protection implementation without mocking
+    the core security functions. They verify:
+    1. Real SSRF blocking with actual private IPs
+    2. DNS pinning actually prevents rebinding
+    3. Allowlist functionality works correctly
+    4. Custom transport is used when protection is enabled.
+    """
 
     @pytest.fixture
     def component_class(self):
@@ -376,10 +386,10 @@ class TestAPIRequestSSRFProtection:
         return {
             "url_input": "https://example.com/api/test",
             "method": "GET",
-            "headers": [{"key": "User-Agent", "value": "test-agent"}],
+            "headers": [],
             "body": [],
             "timeout": 30,
-            "follow_redirects": False,  # Changed default for SSRF security
+            "follow_redirects": False,
             "save_to_file": False,
             "include_httpx_metadata": False,
             "mode": "URL",
@@ -392,73 +402,93 @@ class TestAPIRequestSSRFProtection:
         """Return a component instance."""
         return component_class(**default_kwargs)
 
-    async def test_ssrf_protection_disabled_by_default(self, component):
-        """Test that SSRF protection is disabled by default (warn-only mode)."""
-        # Even with protection disabled, this should not raise
+    async def test_ssrf_protection_disabled_allows_all_urls(self, component):
+        """Test that when SSRF protection is disabled, all URLs are allowed."""
         component.url_input = "http://127.0.0.1:8080"
 
-        with respx.mock:
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
             respx.get("http://127.0.0.1:8080").mock(return_value=Response(200, json={"status": "ok"}))
 
-            # Should not raise (protection is off by default)
             result = await component.make_api_request()
             assert isinstance(result, Data)
+            assert result.data["result"]["status"] == "ok"
 
-    async def test_ssrf_protection_enabled_blocks_localhost(self, component):
-        """Test that SSRF protection blocks localhost when enabled."""
+    async def test_ssrf_protection_blocks_localhost_127_0_0_1(self, component):
+        """Test that SSRF protection blocks 127.0.0.1 (localhost)."""
         component.url_input = "http://127.0.0.1:8080/admin"
 
-        # Enable SSRF protection in enforcement mode
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("lfx.components.data_source.api_request.validate_url_for_ssrf") as mock_validate,
+            pytest.raises(ValueError, match="SSRF Protection"),
         ):
-            from lfx.utils.ssrf_protection import SSRFProtectionError
+            await component.make_api_request()
 
-            # Make it raise in enforcement mode
-            mock_validate.side_effect = SSRFProtectionError("Access to 127.0.0.1 blocked")
+    async def test_ssrf_protection_blocks_localhost_0_0_0_0(self, component):
+        """Test that SSRF protection blocks 0.0.0.0."""
+        component.url_input = "http://0.0.0.0:8080/admin"
 
-            with pytest.raises(ValueError, match="SSRF Protection"):
-                await component.make_api_request()
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
 
-    async def test_ssrf_protection_enabled_blocks_private_networks(self, component):
-        """Test that SSRF protection blocks private network IPs when enabled."""
-        private_ips = [
-            "http://192.168.1.1/config",
-            "http://10.0.0.1/admin",
-            "http://172.16.0.1/internal",
-        ]
+    async def test_ssrf_protection_blocks_private_network_192_168(self, component):
+        """Test that SSRF protection blocks 192.168.x.x private network."""
+        component.url_input = "http://192.168.1.1/config"
 
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
-            for url in private_ips:
-                component.url_input = url
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
 
-                with patch("lfx.components.data_source.api_request.validate_url_for_ssrf") as mock_validate:
-                    from lfx.utils.ssrf_protection import SSRFProtectionError
+    async def test_ssrf_protection_blocks_private_network_10_0(self, component):
+        """Test that SSRF protection blocks 10.x.x.x private network."""
+        component.url_input = "http://10.0.0.1/admin"
 
-                    mock_validate.side_effect = SSRFProtectionError(f"Access to {url} blocked")
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
 
-                    with pytest.raises(ValueError, match="SSRF Protection"):
-                        await component.make_api_request()
+    async def test_ssrf_protection_blocks_private_network_172_16(self, component):
+        """Test that SSRF protection blocks 172.16.x.x private network."""
+        component.url_input = "http://172.16.0.1/internal"
 
-    async def test_ssrf_protection_enabled_blocks_metadata_endpoint(self, component):
-        """Test that SSRF protection blocks cloud metadata endpoints when enabled."""
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
+
+    async def test_ssrf_protection_blocks_cloud_metadata_endpoint(self, component):
+        """Test that SSRF protection blocks AWS/GCP metadata endpoint."""
         component.url_input = "http://169.254.169.254/latest/meta-data/"
 
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("lfx.components.data_source.api_request.validate_url_for_ssrf") as mock_validate,
+            pytest.raises(ValueError, match="SSRF Protection"),
         ):
-            from lfx.utils.ssrf_protection import SSRFProtectionError
+            await component.make_api_request()
 
-            mock_validate.side_effect = SSRFProtectionError("Access to 169.254.169.254 blocked")
+    async def test_ssrf_protection_blocks_link_local_169_254(self, component):
+        """Test that SSRF protection blocks link-local addresses."""
+        component.url_input = "http://169.254.1.1/api"
 
-            with pytest.raises(ValueError, match="SSRF Protection"):
-                await component.make_api_request()
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="SSRF Protection"),
+        ):
+            await component.make_api_request()
 
     @respx.mock
     async def test_ssrf_protection_allows_public_urls(self, component):
-        """Test that SSRF protection allows public URLs."""
+        """Test that SSRF protection allows legitimate public URLs."""
         public_urls = [
             "https://api.openai.com/v1/chat/completions",
             "https://api.github.com/repos/langflow-ai/langflow",
@@ -470,56 +500,133 @@ class TestAPIRequestSSRFProtection:
                 component.url_input = url
                 respx.get(url).mock(return_value=Response(200, json={"status": "ok"}))
 
-                # Should not raise - these are public URLs
                 result = await component.make_api_request()
                 assert isinstance(result, Data)
+                assert result.data["result"]["status"] == "ok"
 
-    async def test_ssrf_protection_allowlist_bypass(self, component):
-        """Test that allowlisted hosts bypass SSRF protection."""
+    async def test_ssrf_allowlist_hostname(self, component):
+        """Test that allowlisted hostnames bypass SSRF protection."""
         component.url_input = "http://internal.company.local/api"
 
         with (
             patch.dict(
                 os.environ,
-                {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.company.local"},
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.company.local",
+                },
             ),
             respx.mock,
         ):
             respx.get("http://internal.company.local/api").mock(return_value=Response(200, json={"status": "ok"}))
 
-            # Should not raise - host is in allowlist
             result = await component.make_api_request()
             assert isinstance(result, Data)
+            assert result.data["result"]["status"] == "ok"
 
-    async def test_ssrf_protection_allowlist_cidr(self, component):
+    async def test_ssrf_allowlist_ip_address(self, component):
+        """Test that allowlisted IP addresses bypass SSRF protection."""
+        component.url_input = "http://192.168.1.100/api"
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.100",
+                },
+            ),
+            respx.mock,
+        ):
+            respx.get("http://192.168.1.100/api").mock(return_value=Response(200, json={"status": "ok"}))
+
+            result = await component.make_api_request()
+            assert isinstance(result, Data)
+            assert result.data["result"]["status"] == "ok"
+
+    async def test_ssrf_allowlist_cidr_range(self, component):
         """Test that CIDR ranges in allowlist work correctly."""
         component.url_input = "http://192.168.1.5/api"
 
         with (
             patch.dict(
                 os.environ,
-                {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.0/24"},
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.0/24",
+                },
             ),
             respx.mock,
         ):
             respx.get("http://192.168.1.5/api").mock(return_value=Response(200, json={"status": "ok"}))
 
-            # Should not raise - IP is in allowlisted CIDR range
+            result = await component.make_api_request()
+            assert isinstance(result, Data)
+            assert result.data["result"]["status"] == "ok"
+
+    async def test_ssrf_allowlist_multiple_entries(self, component):
+        """Test that multiple allowlist entries work correctly."""
+        component.url_input = "http://192.168.1.5/api"
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "localhost,192.168.1.0/24,internal.local",
+                },
+            ),
+            respx.mock,
+        ):
+            respx.get("http://192.168.1.5/api").mock(return_value=Response(200, json={"status": "ok"}))
+
             result = await component.make_api_request()
             assert isinstance(result, Data)
 
-    async def test_ssrf_protection_warn_only_mode(self, component):
-        """Test that warn_only mode logs warnings instead of blocking."""
-        component.url_input = "http://127.0.0.1:8080/admin"
+    async def test_dns_pinning_is_used_when_protection_enabled(self, component):
+        """Test that DNS pinning (custom transport) is used when SSRF protection is enabled."""
+        from unittest.mock import AsyncMock
 
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}), respx.mock:
-            respx.get("http://127.0.0.1:8080/admin").mock(return_value=Response(200, json={"status": "ok"}))
+        component.url_input = "https://example.com/api"
 
-            # In warn_only mode (default), should not raise but should log
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("lfx.components.data_source.api_request.create_ssrf_protected_client") as mock_create_client,
+            respx.mock,
+        ):
+            # Mock the context manager returned by create_ssrf_protected_client
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_create_client.return_value = mock_client
+
+            # Mock the make_request to return a Data object
+            component.make_request = AsyncMock(return_value=Data(data={"status": "ok"}))
+
+            await component.make_api_request()
+
+            # Verify that create_ssrf_protected_client was called (DNS pinning is used)
+            mock_create_client.assert_called_once()
+            call_kwargs = mock_create_client.call_args[1]
+            assert call_kwargs["hostname"] == "example.com"
+            assert len(call_kwargs["validated_ips"]) > 0  # Should have validated IPs
+
+    async def test_normal_client_used_when_protection_disabled(self, component):
+        """Test that normal httpx client is used when SSRF protection is disabled."""
+        component.url_input = "https://example.com/api"
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            patch("lfx.components.data_source.api_request.create_ssrf_protected_client") as mock_create_client,
+            respx.mock,
+        ):
+            respx.get("https://example.com/api").mock(return_value=Response(200, json={"status": "ok"}))
+
             result = await component.make_api_request()
-            assert isinstance(result, Data)
 
-            # TODO: In next major version, this should raise instead of just warning
+            # Verify that create_ssrf_protected_client was NOT called
+            mock_create_client.assert_not_called()
+            assert isinstance(result, Data)
 
     async def test_follow_redirects_security_warning(self, component):
         """Test that enabling follow_redirects logs a security warning."""
@@ -527,58 +634,261 @@ class TestAPIRequestSSRFProtection:
 
         component.url_input = "https://example.com/api"
         component.follow_redirects = True
-
-        # Mock the log method to capture what's being logged
         component.log = MagicMock()
 
-        with respx.mock:
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
             respx.get("https://example.com/api").mock(return_value=Response(200, json={"status": "ok"}))
 
-            result = await component.make_api_request()
-            assert isinstance(result, Data)
+            await component.make_api_request()
 
-            # Verify log was called with security warning
+            # Verify security warning was logged
             component.log.assert_called()
-            log_call_args = component.log.call_args[0][0]
-            assert "Security Warning" in log_call_args
-            assert "SSRF bypass" in log_call_args
-            assert "redirects are enabled" in log_call_args
+            all_log_messages = [call[0][0] for call in component.log.call_args_list]
+            security_warning_found = any("Security Warning" in msg and "SSRF bypass" in msg for msg in all_log_messages)
+            assert security_warning_found, f"Security warning not found in: {all_log_messages}"
 
-    async def test_follow_redirects_disabled_by_default(self, component):
-        """Test that follow_redirects is disabled by default."""
-        # Verify the default value is False
-        assert component.follow_redirects is False
-
-    async def test_url_normalization(self, component):
+    async def test_url_normalization_adds_https(self, component):
         """Test that URLs without protocol get normalized to https://."""
-        # Test URL without protocol
         component.url_input = "example.com"
 
-        with respx.mock:
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
             respx.get("https://example.com").mock(return_value=Response(200, json={"status": "ok"}))
 
             result = await component.make_api_request()
-            assert isinstance(result, Data)
             assert result.data["source"] == "https://example.com"
 
-    async def test_url_normalization_preserves_protocol(self, component):
-        """Test that URLs with protocol are not modified."""
-        # Test http:// is preserved
+    async def test_url_normalization_preserves_http(self, component):
+        """Test that http:// protocol is preserved."""
         component.url_input = "http://example.com"
 
-        with respx.mock:
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
             respx.get("http://example.com").mock(return_value=Response(200, json={"status": "ok"}))
 
             result = await component.make_api_request()
-            assert isinstance(result, Data)
             assert result.data["source"] == "http://example.com"
 
-        # Test https:// is preserved
-        component.url_input = "https://example.com"
+    async def test_invalid_url_raises_error(self, component):
+        """Test that invalid URLs raise ValueError."""
+        component.url_input = "not_a_valid_url"
 
-        with respx.mock:
-            respx.get("https://example.com").mock(return_value=Response(200, json={"status": "ok"}))
+        with pytest.raises(ValueError, match="Invalid URL provided"):
+            await component.make_api_request()
 
+    async def test_follow_redirects_disabled_by_default(self, component):
+        """Test that follow_redirects is disabled by default for security."""
+        assert component.follow_redirects is False
+
+
+def _resolve_public(host, *_args, **_kwargs):
+    """socket.getaddrinfo stub: hostnames resolve to a public IP, literal IPs to themselves.
+
+    Mirrors real DNS: the public redirector hostnames map to a public address, while a
+    literal IP (e.g. an internal 127.0.0.1 / 192.168.x redirect target) resolves to
+    itself so SSRF validation still classifies it as internal.
+    """
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        ip = "93.184.216.34"  # hostname -> public IP
+    else:
+        ip = host  # literal IP -> itself
+    family = socket.AF_INET6 if ":" in ip else socket.AF_INET
+    return [(family, socket.SOCK_STREAM, 6, "", (ip, 0))]
+
+
+class TestAPIRequestRedirectSSRFProtection:
+    """Regression tests for the SSRF redirect-following bypass.
+
+    When SSRF protection is enabled, a validated public URL must not be able to reach
+    internal services by redirecting to them. The component follows redirects manually
+    and re-validates every hop with the same denylist + DNS pinning used for the
+    initial request, instead of trusting httpx to auto-follow unvalidated redirects.
+    """
+
+    @pytest.fixture
+    def component(self):
+        """Return a component configured to follow redirects."""
+        return APIRequestComponent(
+            url_input="http://public.example.com/start",
+            method="GET",
+            headers=[],
+            body=[],
+            timeout=30,
+            follow_redirects=True,
+            save_to_file=False,
+            include_httpx_metadata=True,
+            mode="URL",
+            curl_input="",
+            query_params={},
+        )
+
+    @respx.mock
+    @pytest.mark.parametrize(
+        ("internal_url", "description"),
+        [
+            ("http://127.0.0.1:9999/secret", "loopback"),
+            ("http://192.168.0.10/admin", "rfc1918-192"),
+            ("http://10.0.0.5/internal", "rfc1918-10"),
+            ("http://172.16.0.9/internal", "rfc1918-172"),
+            ("http://169.254.169.254/latest/meta-data/", "link-local-metadata"),
+            ("http://0.0.0.0:8080/admin", "unspecified"),
+        ],
+    )
+    async def test_redirect_to_internal_address_is_blocked(self, component, internal_url, description):
+        """A public URL that redirects to an internal address must be blocked, not followed."""
+        marker = "INTERNAL_REDIRECT_SECRET_7a51f4"
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": internal_url})
+        )
+        # If the fix regresses, the component would follow the redirect and serve this marker.
+        internal_route = respx.get(internal_url).mock(return_value=Response(200, text=marker))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="blocked redirect"),
+        ):
+            await component.make_api_request()
+
+        assert not internal_route.called, f"Redirect to {description} ({internal_url}) must not be followed"
+
+    @respx.mock
+    async def test_redirect_scheme_change_is_blocked(self, component):
+        """A redirect that switches to a non-http(s) scheme (e.g. file://) must be blocked."""
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "file:///etc/passwd"})
+        )
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="blocked redirect"),
+        ):
+            await component.make_api_request()
+
+    @respx.mock
+    async def test_redirect_to_hostname_resolving_internal_is_blocked(self, component):
+        """A redirect to a hostname that resolves to an internal IP must be blocked.
+
+        Covers the DNS-rebinding-across-hops vector at the validation layer: the redirect
+        target host resolves to a blocked address and is rejected before any connection.
+        """
+
+        def resolve(host, *_args, **_kwargs):
+            ip = "127.0.0.1" if host == "internal.example.com" else "93.184.216.34"
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 0))]
+
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "http://internal.example.com/secret"})
+        )
+        internal_route = respx.get("http://internal.example.com/secret").mock(return_value=Response(200, text="SECRET"))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=resolve),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="blocked redirect"),
+        ):
+            await component.make_api_request()
+
+        assert not internal_route.called
+
+    @respx.mock
+    async def test_chained_public_redirects_are_followed(self, component):
+        """Legitimate public-to-public redirect chains still work (redirects are not disabled)."""
+        component.url_input = "http://hop1.example.com/a"
+        respx.get("http://hop1.example.com/a").mock(
+            return_value=Response(302, headers={"Location": "http://hop2.example.com/b"})
+        )
+        respx.get("http://hop2.example.com/b").mock(
+            return_value=Response(307, headers={"Location": "http://hop3.example.com/c"})
+        )
+        respx.get("http://hop3.example.com/c").mock(return_value=Response(200, json={"status": "ok"}))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
             result = await component.make_api_request()
-            assert isinstance(result, Data)
-            assert result.data["source"] == "https://example.com"
+
+        assert isinstance(result, Data)
+        assert result.data["status_code"] == 200
+        assert result.data["result"]["status"] == "ok"
+        assert result.data["redirection_history"] == [
+            {"url": "http://hop2.example.com/b", "status_code": 302},
+            {"url": "http://hop3.example.com/c", "status_code": 307},
+        ]
+
+    @respx.mock
+    async def test_too_many_redirects_raises(self, component):
+        """A redirect loop is bounded and raises instead of looping forever."""
+        component.url_input = "http://loop.example.com/a"
+        respx.get("http://loop.example.com/a").mock(
+            return_value=Response(302, headers={"Location": "http://loop.example.com/b"})
+        )
+        respx.get("http://loop.example.com/b").mock(
+            return_value=Response(302, headers={"Location": "http://loop.example.com/a"})
+        )
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="exceeded the maximum"),
+        ):
+            await component.make_api_request()
+
+    @respx.mock
+    async def test_redirect_to_internal_allowed_when_protection_disabled(self, component):
+        """With SSRF protection disabled, redirect behavior is unchanged (user opted out)."""
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "http://127.0.0.1:9999/ok"})
+        )
+        respx.get("http://127.0.0.1:9999/ok").mock(return_value=Response(200, json={"status": "reached"}))
+
+        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}):
+            result = await component.make_api_request()
+
+        assert result.data["status_code"] == 200
+        assert result.data["result"]["status"] == "reached"
+
+    @respx.mock
+    async def test_sensitive_headers_dropped_on_cross_host_redirect(self, component):
+        """Authorization/Cookie must not be forwarded to a different host on redirect."""
+        component.headers = [
+            {"key": "Authorization", "value": "Bearer secret-token"},
+            {"key": "X-Custom", "value": "keep-me"},
+        ]
+
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "http://other.example.com/next"})
+        )
+        final_route = respx.get("http://other.example.com/next").mock(return_value=Response(200, json={"ok": True}))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        assert final_route.called
+        forwarded = final_route.calls.last.request.headers
+        assert "authorization" not in {k.lower() for k in forwarded}, "Authorization must be stripped cross-host"
+        assert forwarded.get("X-Custom") == "keep-me", "Non-sensitive headers should be preserved"
+
+    def test_method_for_redirect_semantics(self):
+        """301/302/303 downgrade POST to GET; 307/308 preserve the method."""
+        assert APIRequestComponent._method_for_redirect("POST", 301) == "GET"
+        assert APIRequestComponent._method_for_redirect("POST", 302) == "GET"
+        assert APIRequestComponent._method_for_redirect("POST", 303) == "GET"
+        assert APIRequestComponent._method_for_redirect("POST", 307) == "POST"
+        assert APIRequestComponent._method_for_redirect("POST", 308) == "POST"
+        assert APIRequestComponent._method_for_redirect("GET", 302) == "GET"

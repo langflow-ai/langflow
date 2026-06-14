@@ -1,8 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -10,8 +10,7 @@ test(
   "should process loop with update data correctly",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await addLegacyComponents(page);
 
@@ -24,7 +23,7 @@ test(
 
     // Add URL component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchUrl);
     await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 1000,
     });
@@ -99,7 +98,7 @@ test(
 
     // Add Chat Output component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
 
     await page.locator(".react-flow__renderer").click();
 
@@ -182,6 +181,11 @@ test(
 
     await page.getByTestId("list_item_append_or_update").click();
 
+    // Wait for keypair fields to render after update_build_config round-trip
+    await page.waitForSelector('[data-testid="keypair0"]', {
+      timeout: 30000,
+    });
+
     await page.getByTestId("keypair0").fill("text");
     await page.getByTestId("keypair100").fill("modified_value");
 
@@ -190,7 +194,9 @@ test(
     // Build and run, expect the wrong loop message
     await page.getByTestId("button_run_read file").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     // Delete the second parse data used to test
 
@@ -198,7 +204,7 @@ test(
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.getByText("Delete").first().click();
+    await page.getByText(TEXTS.delete).first().click();
 
     // Update Data -> Loop Item (left side)
 
@@ -215,21 +221,18 @@ test(
     await page.getByTestId("title-Chat Output").click();
     await page.keyboard.press(`ControlOrMeta+.`);
     await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     // Verify output
-    await page.waitForSelector(
-      '[data-testid="output-inspection-output message-chatoutput"]',
-      {
-        timeout: 1000,
-      },
-    );
-    await page
+    const chatOutputInspectionButton = page
       .getByTestId("output-inspection-output message-chatoutput")
-      .first()
-      .click();
+      .first();
+    await expect(chatOutputInspectionButton).toBeVisible({ timeout: 30000 });
+    await expect(chatOutputInspectionButton).toBeEnabled({ timeout: 60000 });
+    await chatOutputInspectionButton.click();
 
-    const output = await page.getByPlaceholder("Empty").textContent();
+    const output = await page
+      .getByPlaceholder(TEXTS.placeholderEmpty)
+      .textContent();
     expect(output).toContain("modified_value");
 
     // Count occurrences of modified_value in output

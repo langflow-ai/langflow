@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from lfx.services.adapters.deployment.schema import (
+    BaseDeploymentData,
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
@@ -25,6 +26,7 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    ItemResult,
     RedeployResult,
     SnapshotDeploymentBindingUpdate,
     SnapshotItem,
@@ -38,10 +40,35 @@ from lfx.services.adapters.deployment.schema import (
 from pydantic import ValidationError
 
 
-def test_snapshot_items_requires_raw_payloads() -> None:
-    with pytest.raises(ValidationError, match="Field required"):
+def test_snapshot_items_requires_at_least_one_source() -> None:
+    with pytest.raises(ValidationError, match="At least one of 'raw_payloads' or 'ids'"):
         SnapshotItems()
 
+
+def test_snapshot_items_accepts_ids_only() -> None:
+    snap_uuid = uuid4()
+    payload = SnapshotItems(ids=[snap_uuid, f"  {snap_uuid}  ", "snap_1", "snap_1"])
+    assert payload.raw_payloads is None
+    assert payload.ids == [str(snap_uuid), "snap_1"]
+
+
+def test_snapshot_items_accepts_raw_payloads_and_ids() -> None:
+    snap_uuid = uuid4()
+    payload = SnapshotItems(
+        raw_payloads=[
+            {
+                "id": uuid4(),
+                "name": "Flow",
+                "data": {"nodes": [], "edges": []},
+            }
+        ],
+        ids=[snap_uuid],
+    )
+    assert payload.raw_payloads is not None
+    assert payload.ids == [str(snap_uuid)]
+
+
+def test_snapshot_items_rejects_unknown_fields() -> None:
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         SnapshotItems(
             raw_payloads=[
@@ -114,6 +141,30 @@ def test_deployment_list_params_dedupes_types_preserving_order() -> None:
 def test_deployment_list_params_rejects_blank_filter_ids() -> None:
     with pytest.raises(ValidationError):
         DeploymentListParams(deployment_ids=["   "])
+
+
+def test_deployment_list_params_validates_entity_filter_ids() -> None:
+    params = DeploymentListParams(snapshot_ids=[" snap-1 ", "snap-1"], config_ids=[" cfg-1 "])
+    assert params.snapshot_ids == ["snap-1"]
+    assert params.config_ids == ["cfg-1"]
+
+    with pytest.raises(ValidationError):
+        DeploymentListParams(snapshot_ids=["snap-1", "  "])
+
+
+def test_item_result_normalizes_name() -> None:
+    item = ItemResult(id="dep_1", name=" Deployment 1 ", type=DeploymentType.AGENT)
+    assert item.name == "Deployment 1"
+
+
+def test_item_result_rejects_blank_name() -> None:
+    with pytest.raises(ValidationError):
+        ItemResult(id="dep_1", name="   ", type=DeploymentType.AGENT)
+
+
+def test_item_result_rejects_blank_id() -> None:
+    with pytest.raises(ValidationError):
+        ItemResult(id="   ", name="Deployment 1", type=DeploymentType.AGENT)
 
 
 def test_snapshot_binding_update_add_ids_dedupes() -> None:
@@ -278,6 +329,11 @@ def test_snapshot_items_rejects_empty_raw_payload_list() -> None:
         SnapshotItems(raw_payloads=[])
 
 
+def test_snapshot_items_rejects_empty_ids_without_raw_payloads() -> None:
+    with pytest.raises(ValidationError, match="At least one of 'raw_payloads' or 'ids'"):
+        SnapshotItems(ids=[])
+
+
 def test_base_flow_artifact_allows_extra_fields() -> None:
     flow = BaseFlowArtifact(
         id=uuid4(),
@@ -372,6 +428,16 @@ def test_execution_create_accepts_uuid_deployment_id() -> None:
     assert payload.deployment_id == dep_uuid
 
 
+def test_execution_create_accepts_deployment_type() -> None:
+    payload = ExecutionCreate(deployment_id="dep_1", deployment_type=DeploymentType.AGENT)
+    assert payload.deployment_type == DeploymentType.AGENT
+
+
+def test_execution_create_rejects_invalid_deployment_type() -> None:
+    with pytest.raises(ValidationError, match="deployment_type"):
+        ExecutionCreate(deployment_id="dep_1", deployment_type="invalid-type")
+
+
 def test_execution_create_rejects_blank_deployment_id() -> None:
     with pytest.raises(ValidationError):
         ExecutionCreate(deployment_id="   ")
@@ -406,14 +472,10 @@ def test_execution_create_and_status_results_have_same_shape() -> None:
     assert create_result.model_dump() == status_result.model_dump()
 
 
-def test_deployment_update_result_snapshot_ids_defaults_empty() -> None:
+def test_deployment_update_result_uses_base_operation_shape() -> None:
     result = DeploymentUpdateResult(id="dep_1")
-    assert result.snapshot_ids == []
-
-
-def test_deployment_update_result_carries_snapshot_ids() -> None:
-    result = DeploymentUpdateResult(id="dep_1", snapshot_ids=["snap_1", "snap_2"])
-    assert result.snapshot_ids == ["snap_1", "snap_2"]
+    assert result.id == "dep_1"
+    assert result.provider_result is None
 
 
 def test_operation_results_share_provider_result_contract() -> None:
@@ -431,6 +493,43 @@ def test_operation_results_share_provider_result_contract() -> None:
 def test_base_deployment_data_update_requires_at_least_one_field() -> None:
     with pytest.raises(ValidationError, match="At least one of 'name' or 'description'"):
         BaseDeploymentDataUpdate()
+
+
+def test_base_deployment_data_update_accepts_explicit_null_description() -> None:
+    payload = BaseDeploymentDataUpdate(description=None)
+
+    assert payload.description is None
+    assert "description" in payload.model_fields_set
+
+
+def test_base_deployment_data_normalizes_name() -> None:
+    payload = BaseDeploymentData(name=" My Deployment ", type=DeploymentType.AGENT)
+    assert payload.name == "My Deployment"
+
+
+def test_base_deployment_data_allows_omitted_name() -> None:
+    payload = BaseDeploymentData(type=DeploymentType.AGENT)
+    assert payload.name is None
+
+
+def test_base_deployment_data_rejects_blank_name() -> None:
+    with pytest.raises(ValidationError):
+        BaseDeploymentData(name="   ", type=DeploymentType.AGENT)
+
+
+def test_base_deployment_data_update_normalizes_name() -> None:
+    payload = BaseDeploymentDataUpdate(name=" My Deployment ")
+    assert payload.name == "My Deployment"
+
+
+def test_base_deployment_data_update_rejects_blank_name() -> None:
+    with pytest.raises(ValidationError):
+        BaseDeploymentDataUpdate(name="   ")
+
+
+def test_base_deployment_data_update_rejects_explicit_null_name() -> None:
+    with pytest.raises(ValidationError, match="'name' cannot be set to null"):
+        BaseDeploymentDataUpdate(name=None)
 
 
 def test_deployment_update_requires_at_least_one_section() -> None:
@@ -513,12 +612,22 @@ def test_deployment_create_happy_path_with_snapshot_and_config() -> None:
 def test_deployment_create_result_defaults() -> None:
     result = DeploymentCreateResult(
         id="dep_1",
-        name="deployment",
-        description="",
         type=DeploymentType.AGENT,
     )
-    assert result.snapshot_ids == []
-    assert result.config_id is None
+    assert result.name is None
+    assert result.description is None
+
+
+def test_deployment_create_result_allows_long_provider_description() -> None:
+    description = "x" * 501
+
+    result = DeploymentCreateResult(
+        id="dep_1",
+        type=DeploymentType.AGENT,
+        description=description,
+    )
+
+    assert result.description == description
 
 
 def test_get_deployment_create_schema_returns_valid_json() -> None:
@@ -567,7 +676,6 @@ def test_config_list_item_accepts_minimal_fields() -> None:
     assert item.name == "Config"
     assert item.created_at is None
     assert item.updated_at is None
-    assert item.provider_data is None
 
 
 def test_config_list_item_accepts_uuid_id() -> None:
@@ -589,11 +697,9 @@ def test_config_list_item_accepts_all_fields() -> None:
         name="Config",
         created_at=now,
         updated_at=now,
-        provider_data={"region": "us-east-1"},
     )
     assert item.created_at == now
     assert item.updated_at == now
-    assert item.provider_data == {"region": "us-east-1"}
 
 
 # ---------------------------------------------------------------------------

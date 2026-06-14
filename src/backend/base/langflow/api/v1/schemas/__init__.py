@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from enum import Enum
-from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
@@ -179,7 +178,7 @@ class UploadFileResponse(BaseModel):
     """Upload file response schema."""
 
     flow_id: str = Field(serialization_alias="flowId")
-    file_path: Path
+    file_path: str
 
 
 class StreamData(BaseModel):
@@ -272,6 +271,14 @@ class ResultDataResponse(BaseModel):
     timedelta: float | None = None
     duration: str | None = None
     used_frozen_result: bool | None = False
+    token_usage: dict | None = None
+
+    @field_validator("token_usage", mode="before")
+    @classmethod
+    def validate_token_usage(cls, v):
+        if v is not None and not isinstance(v, dict) and hasattr(v, "model_dump"):
+            return v.model_dump()
+        return v
 
     @field_serializer("results")
     @classmethod
@@ -301,6 +308,7 @@ class ResultDataResponse(BaseModel):
             "timedelta": self.timedelta,
             "duration": self.duration,
             "used_frozen_result": self.used_frozen_result,
+            "token_usage": self.token_usage,
         }
 
 
@@ -345,6 +353,14 @@ class SimplifiedAPIRequest(BaseModel):
     )
     tweaks: Tweaks | None = Field(default=None, description="The tweaks")
     session_id: str | None = Field(default=None, description="The session id")
+    user_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional end-user identifier forwarded to tracing providers (e.g. Langfuse) "
+            "as the trace's user_id. Does not affect authentication or authorization — the "
+            "API key owner remains the effective Langflow user."
+        ),
+    )
 
 
 # (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {
@@ -366,10 +382,22 @@ class BaseConfigResponse(BaseModel):
     for basic functionality (file uploads, event delivery, voice mode, timeouts).
     """
 
+    feature_flags: FeatureFlags
     max_file_size_upload: int
     event_delivery: Literal["polling", "streaming", "direct"]
     voice_mode_available: bool
     frontend_timeout: int
+    mcp_base_url: str
+    # Mode A only: gates the palette Bundle-header Reload action.  Surfaced
+    # at runtime so the packaged frontend (built once with the env var
+    # default) can still light up the button when an operator turns the
+    # backend reload route on -- the build-time Vite flag gates first-paint,
+    # but ``lfx extension dev`` and ``--env-file LANGFLOW_ENABLE_EXTENSION_RELOAD=true``
+    # opt in after the build is frozen, so the UI consults this field too.
+    enable_extension_reload: bool
+    # Mirrors ``LANGFLOW_AUTHZ_ENABLED``. EE/custom frontends gate the Access
+    # Control settings entry on this flag; OSS UI ignores it until wired.
+    authz_enabled: bool = False
 
 
 class PublicConfigResponse(BaseConfigResponse):
@@ -380,22 +408,29 @@ class PublicConfigResponse(BaseConfigResponse):
     """
 
     type: Literal["public"] = "public"
+    allow_custom_components: bool
 
     @classmethod
-    def from_settings(cls, settings: Settings) -> "PublicConfigResponse":
+    def from_settings(cls, settings: Settings, auth_settings) -> "PublicConfigResponse":
         """Create a PublicConfigResponse instance using values from a Settings object.
 
         Parameters:
             settings (Settings): The Settings object containing configuration values.
+            auth_settings: Auth settings (for ``authz_enabled``).
 
         Returns:
             PublicConfigResponse: An instance populated with public-safe configuration values.
         """
         return cls(
+            feature_flags=FEATURE_FLAGS,
             max_file_size_upload=settings.max_file_size_upload,
             event_delivery=settings.event_delivery,
             voice_mode_available=settings.voice_mode_available,
             frontend_timeout=settings.frontend_timeout,
+            mcp_base_url=settings.mcp_base_url,
+            enable_extension_reload=settings.enable_extension_reload,
+            allow_custom_components=settings.allow_custom_components,
+            authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
         )
 
 
@@ -406,7 +441,6 @@ class ConfigResponse(BaseConfigResponse):
     """
 
     type: Literal["full"] = "full"
-    feature_flags: FeatureFlags
     serialization_max_items_length: int
     serialization_max_text_length: int
     auto_saving: bool
@@ -418,6 +452,15 @@ class ConfigResponse(BaseConfigResponse):
     webhook_auth_enable: bool
     default_folder_name: str
     hide_getting_started_progress: bool
+    allow_custom_components: bool
+    # Embedded mode feature flags
+    embedded_mode: bool
+    hide_logout_button: bool
+    hide_new_project_button: bool
+    hide_new_flow_button: bool
+    hide_starter_projects: bool
+    mcp_servers_locked: bool
+    custom_component_admin_only: bool
 
     @classmethod
     def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
@@ -430,8 +473,6 @@ class ConfigResponse(BaseConfigResponse):
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
         """
-        import os
-
         from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 
         return cls(
@@ -448,9 +489,20 @@ class ConfigResponse(BaseConfigResponse):
             public_flow_expiration=settings.public_flow_expiration,
             event_delivery=settings.event_delivery,
             voice_mode_available=settings.voice_mode_available,
+            mcp_base_url=settings.mcp_base_url,
+            enable_extension_reload=settings.enable_extension_reload,
             webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
             default_folder_name=DEFAULT_FOLDER_NAME,
-            hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",
+            hide_getting_started_progress=settings.hide_getting_started_progress,
+            allow_custom_components=settings.allow_custom_components,
+            authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
+            embedded_mode=settings.embedded_mode,
+            hide_logout_button=settings.hide_logout_button or settings.embedded_mode,
+            hide_new_project_button=settings.hide_new_project_button or settings.embedded_mode,
+            hide_new_flow_button=settings.hide_new_flow_button or settings.embedded_mode,
+            hide_starter_projects=settings.hide_starter_projects or settings.embedded_mode,
+            mcp_servers_locked=settings.mcp_servers_locked,
+            custom_component_admin_only=settings.custom_component_admin_only,
         )
 
 

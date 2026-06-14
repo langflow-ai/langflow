@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING, cast
 
 from fastapi import HTTPException
-from sqlalchemy.exc import InvalidRequestError
 
 from lfx.log.logger import logger
 from lfx.services.config_discovery import resolve_config_dir
@@ -108,6 +107,18 @@ def get_shared_component_cache_service() -> CacheServiceProtocol | None:
     from lfx.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
 
     return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())
+
+
+def get_extension_events_service():
+    """Retrieves the ExtensionEventsService instance.
+
+    Returns None if the service manager is not initialised (e.g. in unit-test
+    environments that don't boot the full service stack).  Callers must guard
+    against None and fall back to structured logging.
+    """
+    from lfx.services.extension_events.factory import ExtensionEventsServiceFactory
+
+    return get_service(ServiceType.EXTENSION_EVENTS_SERVICE, ExtensionEventsServiceFactory())
 
 
 def get_chat_service() -> ChatServiceProtocol | None:
@@ -228,6 +239,8 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             # not actual errors. Don't log them - FastAPI's exception handlers will
             # take care of the HTTP response. Just rollback any uncommitted changes.
             if session.is_active:
+                from sqlalchemy.exc import InvalidRequestError
+
                 with suppress(InvalidRequestError):
                     await session.rollback()
             raise
@@ -237,6 +250,8 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
 
             # Only rollback if session is still in a valid state
             if session.is_active:
+                from sqlalchemy.exc import InvalidRequestError
+
                 with suppress(InvalidRequestError):
                     # Session was already rolled back by SQLAlchemy
                     await session.rollback()

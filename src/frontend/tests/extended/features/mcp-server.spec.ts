@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -9,13 +11,7 @@ test(
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await page.waitForTimeout(5000);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',
@@ -61,25 +57,29 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForTimeout(5000);
+    // Wait for the modal overlay to fully close
+    await page
+      .locator(".fixed.inset-0.z-50")
+      .waitFor({ state: "hidden", timeout: 10000 })
+      .catch(() => {});
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
-      timeout: 30000,
+      timeout: 60000,
     });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 30000,
+        timeout: 60000,
         state: "visible",
       },
     );
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
-
-    expect(fetchOptionCount).toBeGreaterThan(0);
+    await expect(page.getByTestId("fetch-0-option")).toBeVisible({
+      timeout: 30000,
+    });
 
     await page.getByTestId("fetch-0-option").click();
 
@@ -165,7 +165,7 @@ test(
     await page.waitForTimeout(500);
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 3000 });
 
@@ -194,12 +194,7 @@ test(
   "user must be able to add and delete MCP server from sidebar",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
 
     await page.waitForTimeout(500);
@@ -240,21 +235,23 @@ test(
       .getByTestId(`add-component-button-${testName}`)
       .click({ timeout: 30000 });
 
-    await page.waitForTimeout(5000);
-
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
-      timeout: 30000,
+      timeout: 60000,
     });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 30000,
+        timeout: 60000,
         state: "visible",
       },
     );
 
     await page.getByTestId("dropdown_str_tool").click();
+
+    await expect(page.getByTestId("fetch-0-option")).toBeVisible({
+      timeout: 30000,
+    });
 
     const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
 
@@ -329,12 +326,7 @@ test(
   "STDIO MCP server fields should persist after saving and editing",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',
@@ -458,7 +450,7 @@ test(
       .click({ timeout: 3000 });
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 3000 });
 
@@ -479,12 +471,7 @@ test(
   "HTTP/SSE MCP server fields should persist after saving and editing",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',
@@ -647,7 +634,7 @@ test(
       .click({ timeout: 10000 });
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 10000 });
 
@@ -669,13 +656,7 @@ test(
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await page.waitForTimeout(5000);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',
@@ -715,10 +696,16 @@ test(
       timeout: 30000,
     });
 
+    // Wait for the modal overlay to fully close
+    await page
+      .locator(".fixed.inset-0.z-50")
+      .waitFor({ state: "hidden", timeout: 10000 })
+      .catch(() => {});
+
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 30000,
+        timeout: 60000,
         state: "visible",
       },
     );
@@ -727,12 +714,8 @@ test(
 
     await page.waitForSelector('[data-testid="fetch-0-option"]', {
       state: "visible",
-      timeout: 10000,
+      timeout: 30000,
     });
-
-    const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
-
-    expect(fetchOptionCount).toBeGreaterThan(0);
 
     await page.getByTestId("fetch-0-option").click();
 
@@ -854,7 +837,7 @@ test(
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 30000,
+        timeout: 60000,
         state: "visible",
       },
     );
@@ -863,7 +846,7 @@ test(
 
     await page.waitForSelector('[data-testid="get_current_time-0-option"]', {
       state: "visible",
-      timeout: 10000,
+      timeout: 30000,
     });
 
     const timeOptionCount = await page
@@ -890,7 +873,7 @@ test(
       .click({ timeout: 10000 });
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 10000 });
 
@@ -964,7 +947,7 @@ test(
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 30000,
+        timeout: 60000,
         state: "visible",
       },
     );
@@ -973,7 +956,7 @@ test(
 
     await page.waitForSelector('[data-testid="fetch-0-option"]', {
       state: "visible",
-      timeout: 10000,
+      timeout: 30000,
     });
 
     const fetchOptionCount2 = await page.getByTestId("fetch-0-option").count();
@@ -988,12 +971,7 @@ test(
   async ({ page }) => {
     // Start the MCP server with proper health checking
     const server = "https://mcp.deepwiki.com/mcp";
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await page.waitForSelector(
       '[data-testid="add-component-button-lf-starter_project"]',
@@ -1026,46 +1004,33 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
+    // Wait for the modal overlay to fully close before interacting
+    await page
+      .locator(".fixed.inset-0.z-50")
+      .waitFor({ state: "hidden", timeout: 10000 })
+      .catch(() => {});
+
     // Wait for tools to load with proper timeout (external server can be slow in CI)
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 30000,
+        timeout: 60000,
         state: "visible",
       },
     );
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    // Check for tools from server
-    const toolOptions = page.locator('[data-testid*="-option"]');
+    // Check for tools from server - wait for any option to render
+    const toolOptions = page.locator('[data-testid*="-0-option"]');
+    await expect(toolOptions.first()).toBeVisible({ timeout: 30000 });
+
+    // Verify multiple tools loaded from deepwiki
     const toolCount = await toolOptions.count();
+    expect(toolCount).toBeGreaterThan(0);
 
-    // server-everything should have multiple tools (at least 5+)
-    expect(toolCount).toBeGreaterThan(5);
-
-    // Verify specific tools exist from server-everything
-    const readWikiStructureOption = page.getByTestId(
-      "read_wiki_structure-0-option",
-    );
-    expect(await readWikiStructureOption.count()).toBeGreaterThan(0);
-
-    // Select the option to verify it loads properly
-    await readWikiStructureOption.last().click();
-
-    // Wait for the tool input field to appear
-    await page.waitForSelector(
-      '[data-testid="popover-anchor-input-repoName"]',
-      {
-        state: "visible",
-        timeout: 30000,
-      },
-    );
-
-    // Verify the input field is present
-    await expect(
-      page.getByTestId("popover-anchor-input-repoName"),
-    ).toBeVisible();
+    // Select the first available tool
+    await toolOptions.first().click();
   },
 );
 

@@ -1,0 +1,86 @@
+name: Extension Migration Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, auto_merge_enabled]
+    paths:
+      - "BUNDLE_API.md"
+      - "scripts/migrate/**"
+      - "src/lfx/src/lfx/extension/**"
+      - "src/lfx/src/lfx/components/**"
+      - "src/bundles/**"
+      - "src/backend/base/langflow/api/**.py"
+      - ".github/workflows/extension-migration-checks.yml"
+
+jobs:
+  bare-names:
+    name: Migration table - bare-name uniqueness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run check_bare_names.py
+        run: python scripts/migrate/check_bare_names.py
+
+  append-only:
+    name: Migration table - append-only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run check_migration_append_only.py
+        run: |
+          base_ref="origin/${GITHUB_BASE_REF:-main}"
+          python scripts/migrate/check_migration_append_only.py --base "$base_ref"
+
+  bundle-api-changelog:
+    name: BUNDLE_API.md changelog gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run check_bundle_api_changelog.py
+        run: |
+          base_ref="origin/${GITHUB_BASE_REF:-main}"
+          python scripts/migrate/check_bundle_api_changelog.py --base "$base_ref"
+
+  router-trust:
+    name: Router trust - no install/uninstall under /api/v1/extensions
+    runs-on: ubuntu-latest
+    # Trigger on any change to API modules so the guard catches a new
+    # router file that mounts /extensions, not just edits to the existing
+    # extensions.py.  The guard itself filters down to in-scope files.
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run check_router_trust.py
+        run: python scripts/migrate/check_router_trust.py

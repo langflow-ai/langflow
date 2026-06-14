@@ -2,14 +2,14 @@ import re
 from typing import Any
 
 from lfx.base.models.unified_models import (
-    get_language_model_options,
     get_llm,
-    update_model_options_in_build_config,
+    handle_model_input_update,
 )
 from lfx.custom import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, ModelInput, MultilineInput, MultiselectInput, Output, SecretStrInput, SliderInput
-from lfx.schema import Data
+from lfx.schema import Data, Message
+from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
 
 guardrail_descriptions = {
     "PII": (
@@ -51,7 +51,7 @@ class GuardrailsComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Model Provider API key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
             real_time_refresh=True,
             advanced=True,
         ),
@@ -119,8 +119,11 @@ class GuardrailsComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Pass", name="pass_result", method="process_check", group_outputs=True),
-        Output(display_name="Fail", name="failed_result", method="process_check", group_outputs=True),
+        Output(display_name="Pass", name="pass_result", method="pass_message", group_outputs=True, types=["Message"]),
+        Output(display_name="Fail", name="failed_result", method="fail_message", group_outputs=True, types=["Message"]),
+        Output(
+            display_name="Result Data", name="data_result", method="result_data", group_outputs=True, types=["Data"]
+        ),
     ]
 
     def __init__(self, **kwargs):
@@ -130,14 +133,7 @@ class GuardrailsComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return update_model_options_in_build_config(
-            component=self,
-            build_config=build_config,
-            cache_key_prefix="language_model_options",
-            get_options_func=get_language_model_options,
-            field_name=field_name,
-            field_value=field_value,
-        )
+        return handle_model_input_update(self, build_config, field_value, field_name)
 
     def _pre_run_setup(self):
         """Reset validation state before each run."""
@@ -330,6 +326,7 @@ Now analyze the user input above and respond according to the instructions:"""
             # Use the LLM to check
             if hasattr(llm, "invoke"):
                 response = llm.invoke(prompt)
+                self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
                 result = response.content.strip() if hasattr(response, "content") else str(response).strip()
             else:
                 result = str(llm(prompt)).strip()
@@ -584,9 +581,8 @@ Now analyze the user input above and respond according to the instructions:"""
 
         return all_passed
 
-    def process_check(self) -> Data:
-        """Process the Check output - returns validation result and justifications."""
-        # Run validation once
+    def _process_validation(self) -> tuple[bool, dict[str, str]]:
+        """Run validation once and return the active branch payload."""
         validation_passed = self._run_validation()
 
         if validation_passed:
@@ -600,4 +596,23 @@ Now analyze the user input above and respond according to the instructions:"""
                 "justification": "\n".join(self._failed_checks),
             }
 
-        return Data(data=payload)
+        return validation_passed, payload
+
+    def pass_message(self) -> Message:
+        """Return the raw input text as a Message when validation passes."""
+        validation_passed, payload = self._process_validation()
+        if not validation_passed:
+            return Message(text="")
+        return Message(text=payload["text"])
+
+    def fail_message(self) -> Message:
+        """Return the failure justification as a Message when validation fails."""
+        validation_passed, payload = self._process_validation()
+        if validation_passed:
+            return Message(text="")
+        return Message(text=payload.get("justification", ""), error=True)
+
+    def result_data(self) -> Data:
+        """Return structured result data for both pass and fail outcomes."""
+        _validation_passed, payload = self._process_validation()
+        return Data(data=payload, default_value=None)

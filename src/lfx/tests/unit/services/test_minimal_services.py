@@ -87,36 +87,85 @@ class TestLocalStorageService:
 
 
 class TestTelemetryService:
-    """Tests for minimal TelemetryService."""
+    """Tests for TelemetryService."""
 
     @pytest.fixture
     def telemetry(self):
-        """Create a telemetry service."""
-        return TelemetryService()
+        """Create a telemetry service with do_not_track so it doesn't hit the network."""
+        return TelemetryService(do_not_track=True)
 
     def test_service_ready(self, telemetry):
         """Test that service is ready."""
         assert telemetry.ready is True
         assert telemetry.name == "telemetry_service"
 
+    def test_do_not_track_from_env(self):
+        """Test DO_NOT_TRACK env var is respected."""
+        os.environ["DO_NOT_TRACK"] = "1"
+        try:
+            svc = TelemetryService()
+            assert svc.do_not_track is True
+        finally:
+            del os.environ["DO_NOT_TRACK"]
+
+    def test_start_skipped_when_do_not_track(self, telemetry):
+        """Start is a no-op when do_not_track is set."""
+        telemetry.start()
+        assert telemetry._running is False
+        assert telemetry._worker_task is None
+        assert telemetry._client is None
+
+    @pytest.mark.asyncio
+    async def test_start_and_stop_lifecycle(self):
+        """Test that start creates worker/client and stop cleans them up."""
+        svc = TelemetryService(base_url="http://localhost:0")
+        svc.start()
+        assert svc._running is True
+        assert svc._worker_task is not None
+        assert svc._client is not None
+
+        await svc.stop()
+        assert svc._running is False
+        assert svc._client is None
+
+    @pytest.mark.asyncio
+    async def test_enqueue_skipped_when_do_not_track(self, telemetry):
+        """Enqueue is a no-op when do_not_track is set."""
+        from lfx.services.telemetry.schema import MCPToolPayload
+
+        await telemetry.log_mcp_tool(MCPToolPayload(tool="test", success=True, ms=5))
+        assert telemetry._queue.empty()
+
+    @pytest.mark.asyncio
+    async def test_flush_when_do_not_track(self, telemetry):
+        """Flush should not raise when do_not_track is set."""
+        await telemetry.flush()
+
     @pytest.mark.asyncio
     async def test_log_exception(self, telemetry):
-        """Test logging an exception (noop)."""
-        # Should not raise
+        """Test logging an exception."""
         exc = ValueError("test error")
         await telemetry.log_exception(exc, "test_context")
 
     @pytest.mark.asyncio
     async def test_log_package_version(self, telemetry):
-        """Test logging package version (noop)."""
-        # Should not raise
+        """Test logging package version."""
         await telemetry.log_package_version()
 
     @pytest.mark.asyncio
     async def test_teardown(self, telemetry):
         """Test service teardown."""
         await telemetry.teardown()
-        # Should not raise
+
+    @pytest.mark.asyncio
+    async def test_teardown_after_start(self):
+        """Test that teardown properly stops a started service."""
+        svc = TelemetryService(base_url="http://localhost:0")
+        svc.start()
+        assert svc._running is True
+        await svc.teardown()
+        assert svc._running is False
+        assert svc._client is None
 
 
 class TestTracingService:
@@ -157,31 +206,35 @@ class TestVariableService:
         assert variables.ready is True
         assert variables.name == "variable_service"
 
-    def test_set_and_get_variable(self, variables):
+    @pytest.mark.asyncio
+    async def test_set_and_get_variable(self, variables):
         """Test setting and getting a variable."""
         variables.set_variable("test_key", "test_value")
-        value = variables.get_variable("test_key")
+        value = await variables.get_variable("test_key")
         assert value == "test_value"
 
-    def test_get_from_environment(self, variables):
+    @pytest.mark.asyncio
+    async def test_get_from_environment(self, variables):
         """Test getting variable from environment."""
         os.environ["TEST_ENV_VAR"] = "env_value"
         try:
-            value = variables.get_variable("TEST_ENV_VAR")
+            value = await variables.get_variable("TEST_ENV_VAR")
             assert value == "env_value"
         finally:
             del os.environ["TEST_ENV_VAR"]
 
-    def test_get_nonexistent_variable(self, variables):
+    @pytest.mark.asyncio
+    async def test_get_nonexistent_variable(self, variables):
         """Test getting a variable that doesn't exist."""
-        value = variables.get_variable("nonexistent_key")
+        value = await variables.get_variable("nonexistent_key")
         assert value is None
 
-    def test_delete_variable(self, variables):
+    @pytest.mark.asyncio
+    async def test_delete_variable(self, variables):
         """Test deleting a variable."""
         variables.set_variable("test_key", "test_value")
         variables.delete_variable("test_key")
-        value = variables.get_variable("test_key")
+        value = await variables.get_variable("test_key")
         assert value is None
 
     def test_list_variables(self, variables):
@@ -193,15 +246,177 @@ class TestVariableService:
         assert "key1" in vars_list
         assert "key2" in vars_list
 
-    def test_in_memory_overrides_env(self, variables):
+    @pytest.mark.asyncio
+    async def test_in_memory_overrides_env(self, variables):
         """Test that in-memory variables override environment."""
         os.environ["TEST_VAR"] = "env_value"
         try:
             variables.set_variable("TEST_VAR", "memory_value")
-            value = variables.get_variable("TEST_VAR")
+            value = await variables.get_variable("TEST_VAR")
             assert value == "memory_value"
         finally:
             del os.environ["TEST_VAR"]
+
+    @pytest.mark.asyncio
+    async def test_get_variable_is_coroutine(self, variables):
+        """get_variable is async to match custom component call sites."""
+        import inspect
+
+        assert inspect.iscoroutinefunction(variables.get_variable)
+        coro = variables.get_variable("anything")
+        assert inspect.iscoroutine(coro)
+        await coro
+
+    @pytest.mark.asyncio
+    async def test_get_variable_absorbs_extra_kwargs(self, variables):
+        """Extra kwargs are accepted for compatibility with langflow call signature."""
+        os.environ["LFX_KWARG_TEST"] = "value-from-env"
+        try:
+            value = await variables.get_variable(
+                user_id="random-uuid", name="LFX_KWARG_TEST", field="value", session=None
+            )
+            assert value == "value-from-env"
+        finally:
+            del os.environ["LFX_KWARG_TEST"]
+
+    @pytest.mark.asyncio
+    async def test_strict_no_bearer_token_from_access_token_env(self, variables):
+        """*_bearer_token is not synthesized from *_access_token; exact env keys only."""
+        os.environ["WXO_DEMO_ACCESS_TOKEN"] = "token-123"  # noqa: S105
+        try:
+            assert await variables.get_variable("wxo_demo_bearer_token") is None
+            assert await variables.get_variable("WXO_DEMO_ACCESS_TOKEN") == "token-123"
+        finally:
+            del os.environ["WXO_DEMO_ACCESS_TOKEN"]
+
+    @pytest.mark.asyncio
+    async def test_get_variable_from_langflow_request_variables(self, variables):
+        """Test request-scoped variables are read from LANGFLOW_REQUEST_VARIABLES."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"runtime_token":"abc123","normal_key":"value1"}'
+        try:
+            assert await variables.get_variable("runtime_token") == "abc123"
+            assert await variables.get_variable("normal_key") == "value1"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+
+    async def test_global_alias_from_request_scope(self, variables):
+        """x-langflow-global-var-* aliases resolve from request-scoped variables."""
+        from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables
+
+        token = activate_request_variables({"x-langflow-global-var-access-token": "alias-token"})
+        try:
+            assert await variables.get_variable("access_token") == "alias-token"
+        finally:
+            reset_request_variables(token)
+
+    async def test_request_scope_overrides_env(self, variables):
+        """A request-scoped variable wins over an env var of the same name (core feature)."""
+        from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables
+
+        os.environ["SHARED_VAR"] = "env-value"
+        token = activate_request_variables({"SHARED_VAR": "request-value"})
+        try:
+            assert await variables.get_variable("SHARED_VAR") == "request-value"
+        finally:
+            reset_request_variables(token)
+            del os.environ["SHARED_VAR"]
+
+    async def test_request_scope_alias_overrides_env(self, variables):
+        """A request-scoped x-langflow-global-var-* alias wins over an env var of the same name.
+
+        Ensures a caller's per-request credential is never shadowed by an ambient process
+        credential, regardless of which form (exact name or alias) the caller supplied.
+        """
+        from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables
+
+        os.environ["ACCESS_TOKEN"] = "env-token"  # noqa: S105
+        token = activate_request_variables({"x-langflow-global-var-access-token": "alias-token"})
+        try:
+            assert await variables.get_variable("ACCESS_TOKEN") == "alias-token"
+        finally:
+            reset_request_variables(token)
+            del os.environ["ACCESS_TOKEN"]
+
+    async def test_in_memory_overrides_request_scope(self, variables):
+        """An in-memory variable wins over a request-scoped variable of the same name."""
+        from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables
+
+        variables.set_variable("SHARED_VAR", "memory-value")
+        token = activate_request_variables({"SHARED_VAR": "request-value"})
+        try:
+            assert await variables.get_variable("SHARED_VAR") == "memory-value"
+        finally:
+            reset_request_variables(token)
+
+    @pytest.mark.asyncio
+    async def test_langflow_request_variables_invalid_json_falls_back(self, variables):
+        """Test invalid request variable JSON does not break env fallback."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = "{not-json"
+        os.environ["FALLBACK_ENV_KEY"] = "fallback-value"
+        try:
+            assert await variables.get_variable("FALLBACK_ENV_KEY") == "fallback-value"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+            del os.environ["FALLBACK_ENV_KEY"]
+
+    @pytest.mark.asyncio
+    async def test_strict_no_bearer_token_from_request_access_token(self, variables):
+        """Request-scoped *_access_token does not satisfy *_bearer_token name."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"wxo_github_access_token":"request-token"}'
+        try:
+            assert await variables.get_variable("wxo_github_bearer_token") is None
+            assert await variables.get_variable("wxo_github_access_token") == "request-token"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+
+    @pytest.mark.asyncio
+    async def test_non_wxo_access_token_does_not_create_bearer_alias(self, variables):
+        """Test generic non-WXO token variables are read by exact key."""
+        os.environ["DEMO_ACCESS_TOKEN"] = "token-456"  # noqa: S105
+        try:
+            assert await variables.get_variable("DEMO_ACCESS_TOKEN") == "token-456"
+        finally:
+            del os.environ["DEMO_ACCESS_TOKEN"]
+
+    @pytest.mark.asyncio
+    async def test_explicit_bearer_token_env_not_listed_in_memory(self, variables):
+        """Env-backed reads do not add names to the in-memory variable list."""
+        os.environ["WXO_DEMO_BEARER_TOKEN"] = "Bearer explicit-789"  # noqa: S105
+        try:
+            assert await variables.get_variable("WXO_DEMO_BEARER_TOKEN") == "Bearer explicit-789"
+            assert "WXO_DEMO_BEARER_TOKEN" not in variables.list_variables()
+        finally:
+            del os.environ["WXO_DEMO_BEARER_TOKEN"]
+
+    @pytest.mark.asyncio
+    async def test_strict_no_token_access_token_alias_resolution(self, variables):
+        """Strict matching: token and access_token are not interchangeable."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"access_token":"request-access"}'
+        try:
+            assert await variables.get_variable("token") is None
+            assert await variables.get_variable("access_token") == "request-access"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+
+    @pytest.mark.asyncio
+    async def test_strict_no_prefixed_token_alias_resolution(self, variables):
+        """Strict matching for prefixed token/access_token variables."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"my_app_access_token":"prefixed-token"}'
+        try:
+            assert await variables.get_variable("my_app_token") is None
+            assert await variables.get_variable("my_app_access_token") == "prefixed-token"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+
+    @pytest.mark.asyncio
+    async def test_global_var_alias_resolution(self, variables):
+        """Test x-langflow-global-var-* alias lookup."""
+        os.environ["x-langflow-global-var-access-token"] = "global-token"  # noqa: SIM112
+        try:
+            assert await variables.get_variable("access_token") == "global-token"
+            assert await variables.get_variable("token") is None
+        finally:
+            del os.environ["x-langflow-global-var-access-token"]  # noqa: SIM112
 
     @pytest.mark.asyncio
     async def test_teardown(self, variables):
@@ -210,7 +425,7 @@ class TestVariableService:
         await variables.teardown()
         # Variables should be cleared (verify via public API)
         assert variables.list_variables() == []
-        assert variables.get_variable("test_key") is None
+        assert await variables.get_variable("test_key") is None
 
 
 class TestMinimalServicesIntegration:

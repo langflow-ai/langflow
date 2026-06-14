@@ -122,7 +122,12 @@ def test_component_inputs_toolkit():
     component = AllInputsComponent()
     component_toolkit = ComponentToolkit(component=component)
     component_tool = component_toolkit.get_tools()[0]
-    assert component_tool.name == "build_output"
+    # The single output's method is ``build_output`` — a generic name carrying
+    # no semantic signal — so ``_derive_tool_name`` falls back to the snake_cased
+    # class name (``AllInputsComponent`` → ``all_inputs_component``). This makes
+    # the LLM-facing tool name informative. See ``_GENERIC_OUTPUT_METHOD_NAMES``
+    # and ``_class_name_to_tool_name`` in component_tool.py.
+    assert component_tool.name == "all_inputs_component"
     assert issubclass(component_tool.args_schema, BaseModel)
     properties = component_tool.args_schema.model_json_schema()["properties"]
 
@@ -153,3 +158,24 @@ def test_component_inputs_toolkit():
         assert properties[input_name]["description"] == expected["description"], (
             f"Description mismatch for {input_name}."
         )
+
+
+def test_table_input_preserves_list_dict():
+    """Test that TableInput with tool_mode=True preserves all dicts in a list.
+
+    Regression test for: https://github.com/langflow-ai/langflow/issues/12062
+    """
+    component = AllInputsComponent()
+
+    # Simulate passing a list of dicts
+    test_data = [
+        {"field": "age", "value": "5"},
+        {"field": "status", "value": "active"},
+        {"field": "weight", "value": "500"},
+    ]
+
+    component.set(table_input=test_data)
+
+    # Verify all items are preserved (not just the last one)
+    assert component.table_input == test_data
+    assert len(component.table_input) == 3

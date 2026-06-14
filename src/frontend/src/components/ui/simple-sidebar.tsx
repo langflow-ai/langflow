@@ -4,9 +4,9 @@ import { motion } from "framer-motion";
 import { Play } from "lucide-react";
 import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import { cn } from "../../utils/utils";
-import { AnimatedConditional } from "./animated-close";
 import { Button } from "./button";
 
 const SIMPLE_SIDEBAR_WIDTH = "400px";
@@ -245,6 +245,7 @@ const SimpleSidebarResizeHandle = React.forwardRef<
     side?: "left" | "right";
   }
 >(({ side = "right", className, ...props }, ref) => {
+  const { t } = useTranslation();
   const { setWidth, width, setIsResizing, isResizing } = useSimpleSidebar();
   const [dragStartX, setDragStartX] = React.useState(0);
   const [dragStartWidth, setDragStartWidth] = React.useState(0);
@@ -324,7 +325,7 @@ const SimpleSidebarResizeHandle = React.forwardRef<
       )}
       onMouseDown={handleMouseDown}
       onKeyDown={handleKeyDown}
-      aria-label="Resize sidebar (use arrow keys or drag to resize)"
+      aria-label={t("ui.resizeSidebar")}
       {...props}
     >
       {/* Visual indicator */}
@@ -445,7 +446,7 @@ const SimpleSidebarTrigger = React.forwardRef<
       variant="ghost"
       size="md"
       className={cn(
-        "!px-2 !font-normal !justify-start !gap-1.5 !w-[7.2rem]",
+        "!px-2 !font-normal !justify-start !gap-1.5 w-auto",
         className,
       )}
       onClick={handleClick}

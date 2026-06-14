@@ -1,17 +1,20 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "should be able to see error when something goes wrong on Code Modal",
   { tag: ["@release"] },
-  async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+  async ({ page }, testInfo) => {
+    // On Windows, missing C-extension modules (like pytorch) are silently
+    // skipped by prepare_global_scope so that built-in components with
+    // platform-specific deps (e.g. jq) can still render. This means the
+    // Code Modal won't show an import error for the test's fake module.
+    test.skip(
+      testInfo.project.name.includes("win") || process.platform === "win32",
+      "Import error detection differs on Windows due to C-extension handling",
+    );
+    await openBlankFlow(page);
 
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
@@ -56,7 +59,7 @@ class CustomComponent(Component):
     await page.locator("textarea").press("Control+a");
     await page.locator("textarea").fill(customCodeWithError);
 
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     // Wait for the error message to appear and have sufficient length
     await page.waitForFunction(

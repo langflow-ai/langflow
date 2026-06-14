@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import base64
-import random
+import hashlib
 import warnings
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
@@ -42,8 +41,6 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.api_key.model import ApiKey
-
-MINIMUM_KEY_LENGTH = 32
 
 
 class AuthService(BaseAuthService):
@@ -127,6 +124,33 @@ class AuthService(BaseAuthService):
                 logger.error(f"Unexpected error during API key authentication: {e}")
                 msg = "API key authentication failed"
                 raise InvalidCredentialsError(msg) from e
+
+        # AUTO_LOGIN parity with _api_key_security_impl: when AUTO_LOGIN is
+        # enabled and the operator has explicitly opted in via
+        # skip_auth_auto_login, fall back to the superuser instead of
+        # rejecting the request. Without this, ``get_current_user``-protected
+        # endpoints reject unauthenticated requests even though API-key
+        # endpoints accept them, breaking ADK/dev integrations that rely on
+        # AUTO_LOGIN.
+        auth_settings = self.settings.auth_settings
+        if auth_settings.AUTO_LOGIN and auth_settings.skip_auth_auto_login:
+            if not auth_settings.SUPERUSER:
+                msg = "Missing first superuser credentials"
+                raise InvalidCredentialsError(msg)
+            superuser = await get_user_by_username(db, auth_settings.SUPERUSER)
+            if superuser is None:
+                msg = "Superuser not found"
+                raise InvalidCredentialsError(msg)
+            # Mirror the active-user enforcement that token and API-key
+            # auth paths apply. ``CurrentActiveUser`` re-checks this for HTTP
+            # routes, but ``get_current_user_for_sse``/websocket dependencies
+            # call ``authenticate_with_credentials`` directly, so we must
+            # reject inactive superusers here too.
+            if not superuser.is_active:
+                msg = "User account is inactive"
+                raise InactiveUserError(msg)
+            logger.warning(AUTO_LOGIN_WARNING)
+            return superuser
 
         # No credentials provided
         msg = "No authentication credentials provided"
@@ -241,6 +265,16 @@ class AuthService(BaseAuthService):
             if not query_param and not header_param:
                 if settings_service.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                    if result is None:
+                        raise HTTPException(
+                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Superuser not found in database",
+                        )
+                    if not result.is_active:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="User account is inactive",
+                        )
                     logger.warning(AUTO_LOGIN_WARNING)
                     return UserRead.model_validate(result, from_attributes=True)
                 raise HTTPException(
@@ -290,6 +324,16 @@ class AuthService(BaseAuthService):
                 if not api_key:
                     if settings.auth_settings.skip_auth_auto_login:
                         result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
+                        if result is None:
+                            raise WebSocketException(
+                                code=status.WS_1011_INTERNAL_ERROR,
+                                reason="Superuser not found",
+                            )
+                        if not result.is_active:
+                            raise WebSocketException(
+                                code=status.WS_1008_POLICY_VIOLATION,
+                                reason="User account is inactive",
+                            )
                         logger.warning(AUTO_LOGIN_WARNING)
                     else:
                         raise WebSocketException(
@@ -432,20 +476,8 @@ class AuthService(BaseAuthService):
             logger.error(f"Webhook API key validation error: {exc}")
             raise HTTPException(status_code=403, detail="API key authentication failed") from exc
 
-        try:
-            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
-            if flow_owner is None:
-                raise HTTPException(status_code=404, detail="Flow not found")
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=404, detail="Flow not found") from exc
-
-        if flow_owner.id != authenticated_user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied: You can only execute webhooks for flows you own",
-            )
+        # The helper already enforces ownership and raises 404 if not found or not owned
+        await get_user_by_flow_id_or_endpoint_name(flow_id, user_id=authenticated_user.id)
 
         return authenticated_user
 
@@ -631,36 +663,63 @@ class AuthService(BaseAuthService):
                 detail="Invalid refresh token",
             ) from e
 
-    async def authenticate_user(self, username: str, password: str, db: AsyncSession) -> User | None:
+    async def authenticate_user(
+        self, username: str, password: str, db: AsyncSession, request: Request | None = None
+    ) -> User | None:
         user = await get_user_by_username(db, username)
 
         if not user:
+            if request and request.client:
+                # Hash username for correlation without exposing PII
+                username_hash = hashlib.sha256(username.lower().encode()).hexdigest()[:16]
+                logger.warning(
+                    "Login failed: user not found",
+                    auth_event="login_failed",
+                    reason="user_not_found",
+                    username_hash=username_hash,
+                    client_ip=request.client.host,
+                )
             return None
 
         if not user.is_active:
+            if request and request.client:
+                logger.warning(
+                    "Login failed: inactive user",
+                    auth_event="login_failed",
+                    reason="user_inactive",
+                    auth_id=str(user.id),
+                    client_ip=request.client.host,
+                )
             if not user.last_login_at:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting for approval")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
 
-        return user if self.verify_password(password, user.password) else None
+        if not self.verify_password(password, user.password):
+            if request and request.client:
+                logger.warning(
+                    "Login failed: incorrect password",
+                    auth_event="login_failed",
+                    reason="incorrect_password",
+                    auth_id=str(user.id),
+                    client_ip=request.client.host,
+                )
+            return None
 
-    def _add_padding(self, value: str) -> str:
-        padding_needed = 4 - len(value) % 4
-        return value + "=" * padding_needed
-
-    def _ensure_valid_key(self, raw_key: str) -> bytes:
-        if len(raw_key) < MINIMUM_KEY_LENGTH:
-            random.seed(raw_key)
-            key = bytes(random.getrandbits(8) for _ in range(32))
-            key = base64.urlsafe_b64encode(key)
-        else:
-            key = self._add_padding(raw_key).encode()
-        return key
+        # Successful login
+        if request and request.client:
+            logger.info(
+                "Login successful",
+                auth_event="login_success",
+                auth_id=str(user.id),
+                client_ip=request.client.host,
+            )
+        return user
 
     def _get_fernet(self) -> Fernet:
+        from langflow.services.auth.utils import ensure_fernet_key
+
         secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
-        valid_key = self._ensure_valid_key(secret_key)
-        return Fernet(valid_key)
+        return Fernet(ensure_fernet_key(secret_key))
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()
@@ -694,7 +753,7 @@ class AuthService(BaseAuthService):
             return fernet.decrypt(encrypted_api_key.encode()).decode()
         except Exception as primary_exception:  # noqa: BLE001
             logger.debug(
-                "Decryption using UTF-8 encoded API key failed. Error: %s. "
+                "Decryption using UTF-8 encoded API key failed. Error: %r. "
                 "Retrying decryption using the raw string input.",
                 primary_exception,
             )
@@ -704,7 +763,7 @@ class AuthService(BaseAuthService):
                 # Decryption failed completely - log warning and return empty string
                 logger.warning(
                     "API key decryption failed after retry. This may indicate a corrupted key or "
-                    "SECRET_KEY mismatch. Primary error: %s, Secondary error: %s",
+                    "SECRET_KEY mismatch. Primary error: %r, Secondary error: %r",
                     primary_exception,
                     secondary_exception,
                 )

@@ -6,6 +6,7 @@ import contextvars
 import copy
 import json
 import queue
+import sys
 import threading
 import traceback
 import uuid
@@ -42,6 +43,11 @@ from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
+
+INPUT_TYPE_COMPONENT_TYPES = {
+    "chat": {InterfaceComponentTypes.ChatInput.value},
+    "text": {InterfaceComponentTypes.TextInput.value},
+}
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable, Generator, Iterable
@@ -90,6 +96,11 @@ class Graph:
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
+        # Optional caller-supplied label forwarded to tracing providers. Kept
+        # distinct from ``self.user_id`` so request-supplied identifiers can be
+        # surfaced in external traces (e.g. Langfuse trace metadata) without
+        # leaking into authn/authz paths.
+        self.tracing_user_id: str | None = None
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []
         self._is_state_vertices: list[str] | None = None
@@ -261,12 +272,16 @@ class Graph:
         for vertex in self._vertices:
             if vertex_id := vertex.get("id"):
                 self.top_level_vertices.append(vertex_id)
-            if vertex_id in self.cycle_vertices:
-                self.run_manager.add_to_cycle_vertices(vertex_id)
+
+        self._cycle_vertices = None
+        self._is_cyclic = None
         self._graph_data = process_flow(self.raw_graph_data)
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
+        self._cycle_vertices = None
+        self._is_cyclic = None
+        self.run_manager.cycle_vertices.clear()
         self.initialize()
 
     def add_component(self, component: Component, component_id: str | None = None) -> str:
@@ -360,12 +375,15 @@ class Graph:
         event_manager: EventManager | None = None,
         *,
         reset_output_values: bool = True,
+        fallback_to_env_vars: bool = False,
     ):
         # Preserve start_component_id from constructor if available
         start_component_id = self._start.get_id() if self._start else None
         self.prepare(start_component_id=start_component_id)
         if reset_output_values:
             self._reset_all_output_values()
+
+        await self.initialize_run()
 
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
@@ -376,7 +394,9 @@ class Graph:
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager, inputs=inputs)
+            result = await self.astep(
+                event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+            )
             yield result
             if isinstance(result, Finish):
                 return
@@ -669,6 +689,7 @@ class Graph:
                 user_id=self.user_id,
                 session_id=self.session_id,
                 flow_id=self.flow_id,
+                tracing_user_id=self.tracing_user_id,
             )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
@@ -688,7 +709,15 @@ class Graph:
         context = contextvars.copy_context()
 
         async def async_end_traces_func():
-            await asyncio.create_task(self.end_all_traces(outputs, error), context=context)
+            coro = self.end_all_traces(outputs, error)
+            if sys.version_info >= (3, 11):
+                await asyncio.create_task(coro, context=context)
+            else:
+                # Python 3.10's asyncio.create_task does not accept context=.
+                # Invoke create_task inside the captured context so the new
+                # Task copies it as its current context.
+                task = context.run(asyncio.create_task, coro)
+                await task
 
         return async_end_traces_func
 
@@ -733,22 +762,24 @@ class Graph:
     def _set_inputs(self, input_components: list[str], inputs: dict[str, str], input_type: InputType | None) -> None:
         """Updates input vertices' parameters with the provided inputs, filtering by component list and input type.
 
-        Only vertices whose IDs or display names match the specified input components and whose IDs contain
+        Only vertices whose IDs or display names match the specified input components and whose component type matches
         the input type (unless input type is 'any' or None) are updated. Raises a ValueError if a specified
         vertex is not found.
         """
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
-            # If the vertex is not in the input_components list
-            if input_components and (vertex_id not in input_components and vertex.display_name not in input_components):
-                continue
-            # If the input_type is not any and the input_type is not in the vertex id
-            # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
-            if input_type is not None and input_type != "any" and input_type not in vertex.id.lower():
-                continue
             if vertex is None:
                 msg = f"Vertex {vertex_id} not found"
                 raise ValueError(msg)
+            # If the vertex is not in the input_components list
+            if input_components and (vertex_id not in input_components and vertex.display_name not in input_components):
+                continue
+            if (
+                input_type is not None
+                and input_type != "any"
+                and vertex.data.get("type") not in INPUT_TYPE_COMPONENT_TYPES.get(input_type, set())
+            ):
+                continue
             vertex.update_raw_params(inputs, overwrite=True)
 
     async def _run(
@@ -1163,8 +1194,78 @@ class Graph:
         Returns:
             Graph: The created graph.
         """
+        from lfx.extension.migration import migrate_flow_payload
+        from lfx.utils.flow_validation import validate_flow_for_current_settings
+
         if "data" in payload:
             payload = payload["data"]
+        # Rewrite legacy component references in place against the append-only
+        # extension migration table.  Best-effort: a corrupt table or unmapped
+        # reference produces typed errors on the report but never raises, so
+        # flow load remains as forgiving as it was pre-Phase-A.
+        migration_report = migrate_flow_payload(payload)
+        # Surface every typed error from the report through the standard
+        # logger so unmapped or ambiguous component references are not
+        # silently dropped.  We log rather than raise because the
+        # rewriter is intentionally tolerant -- a partially-broken flow
+        # still loads, and the frontend renders missing nodes as red
+        # placeholders.  The structured ``code``/``hint`` come from
+        # ``ExtensionError`` so log scrapers can parse the payload.
+        for migration_error in migration_report.errors:
+            # Use %s-style positional formatting consistent with the rest of
+            # the extension subsystem so the rendered message is readable
+            # without relying on structlog's keyword-binding behavior.
+            logger.warning(
+                "extension migration: code=%s flow_id=%s location=%s hint=%s message=%s",
+                migration_error.code,
+                flow_id,
+                migration_error.location,
+                migration_error.hint,
+                migration_error.message,
+            )
+        # Emit extension events so the frontend can surface migration results.
+        try:
+            from lfx.services.deps import get_extension_events_service
+
+            _svc = get_extension_events_service()
+            if _svc is not None:
+                # Per-user keyspace so flow_id / migration error details only
+                # reach the user that loaded the flow; fall back to "global"
+                # for unauthenticated paths (CLI, tests, single-user dev).
+                _keyspace = f"user:{user_id}" if user_id else "global"
+                if migration_report.any_rewritten:
+                    _svc.emit(
+                        "flow_migrated",
+                        {
+                            "flow_id": str(flow_id) if flow_id else None,
+                            "rewritten_count": migration_report.rewritten_count,
+                        },
+                        keyspace=_keyspace,
+                    )
+                for migration_error in migration_report.errors:
+                    _svc.emit(
+                        "extension_error",
+                        {
+                            "flow_id": str(flow_id) if flow_id else None,
+                            "code": migration_error.code,
+                            "message": migration_error.message,
+                            "hint": migration_error.hint,
+                            "location": migration_error.location,
+                        },
+                        keyspace=_keyspace,
+                    )
+        except Exception:  # noqa: BLE001 -- best-effort emit; never break flow load on an event-bus failure
+            logger.warning(
+                "extension.event_emit_failed: failed to emit migration events in from_payload.",
+                exc_info=True,
+            )
+        # Defense-in-depth: validate here so that no code path can construct
+        # a graph with blocked/custom components, even if an API endpoint
+        # forgets its own pre-check. Ideally this would live only at the API
+        # boundary (middleware or endpoint dependency) so from_payload stays
+        # pure deserialization, but a missed endpoint means arbitrary code
+        # execution, so we keep this as a safety net.
+        validate_flow_for_current_settings(payload)
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
@@ -1421,6 +1522,8 @@ class Graph:
         files: list[str] | None = None,
         user_id: str | None = None,
         event_manager: EventManager | None = None,
+        *,
+        fallback_to_env_vars: bool = False,
     ):
         if not self._prepared:
             msg = "Graph not prepared. Call prepare() first."
@@ -1446,7 +1549,7 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
@@ -1459,6 +1562,7 @@ class Graph:
             get_cache=get_cache_func,
             set_cache=set_cache_func,
             event_manager=event_manager,
+            fallback_to_env_vars=fallback_to_env_vars,
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(
@@ -1671,10 +1775,10 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
-            async def set_cache_func(*args, **kwargs):
-                pass
+            async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
+                return True
 
         await self.initialize_run()
         lock = asyncio.Lock()

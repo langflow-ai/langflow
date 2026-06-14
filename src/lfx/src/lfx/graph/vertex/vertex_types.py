@@ -187,6 +187,7 @@ class ComponentVertex(Vertex):
         # We need to set the artifacts to pass information
         # to the frontend
         messages = self.extract_messages_from_artifacts(result_dict)
+        token_usage = self._extract_token_usage()
         result_dict = ResultData(
             results=result_dict,
             artifacts=self.artifacts,
@@ -195,6 +196,7 @@ class ComponentVertex(Vertex):
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,
+            token_usage=token_usage,
         )
         self.set_result(result_dict)
 

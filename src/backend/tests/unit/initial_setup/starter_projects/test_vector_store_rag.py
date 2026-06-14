@@ -18,6 +18,12 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 
 
+@pytest.fixture(autouse=True)
+def _fake_openai_api_key_for_graph_build(monkeypatch):
+    """OpenAIEmbeddings validates api_key at construction; graphs only mock downstream I/O."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-unit-vector-store-rag")
+
+
 @pytest.fixture
 def ingestion_graph():
     # Ingestion Graph

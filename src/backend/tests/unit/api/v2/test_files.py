@@ -149,6 +149,77 @@ async def test_upload_file(files_client, files_created_api_key):
     assert "id" in response_json
 
 
+async def test_should_not_persist_in_my_files_when_upload_is_ephemeral(files_client, files_created_api_key):
+    """Ephemeral uploads save the file to storage but do NOT create a UserFile DB record.
+
+    This is the expected behavior for chat playground uploads in Desktop,
+    where the file must be servable (for chat history) but should not
+    appear in the user's 'My Files' list.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    # Upload with ephemeral=true
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": ("playground_image.png", b"fake image content")},
+        params={"ephemeral": "true"},
+        headers=headers,
+    )
+    assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.text}"
+
+    upload_response = response.json()
+    assert "path" in upload_response
+
+    # The file must NOT appear in the user's file list
+    list_response = await files_client.get("api/v2/files", headers=headers)
+    assert list_response.status_code == 200
+    file_names = [f["name"] for f in list_response.json()]
+    assert "playground_image" not in file_names, (
+        f"Ephemeral file should not appear in My Files, but found: {file_names}"
+    )
+
+    # The file is saved in storage and the response includes a valid path
+    file_path = upload_response["path"]
+    assert file_path, "Ephemeral upload should return a non-empty path"
+    # Path format: {user_id}/{stored_file_name}
+    parts = file_path.split("/")
+    assert len(parts) == 2, f"Expected path format 'user_id/filename', got: {file_path}"
+
+
+async def test_should_return_path_with_forward_slashes_when_uploading_file(files_client, files_created_api_key):
+    """Upload response path must use forward slashes on all platforms.
+
+    On Windows, pathlib.Path serializes with backslashes, but the GET list
+    endpoint returns the raw DB string with forward slashes. If the POST
+    response uses backslashes, the frontend cannot match them with
+    selectedFiles.includes(file.path), leaving checkboxes unchecked.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": ("test_path.txt", b"path test content")},
+        headers=headers,
+    )
+    assert response.status_code == 201
+
+    upload_path = response.json()["path"]
+    assert "\\" not in upload_path, (
+        f"Upload response path contains backslashes: '{upload_path}'. "
+        "Path must use forward slashes on all platforms for frontend compatibility."
+    )
+
+    # Verify the upload path matches what GET /files returns
+    list_response = await files_client.get("api/v2/files", headers=headers)
+    assert list_response.status_code == 200
+
+    listed_paths = [f["path"] for f in list_response.json()]
+    assert upload_path in listed_paths, (
+        f"Upload path '{upload_path}' not found in listed paths {listed_paths}. "
+        "POST and GET must return identical path strings."
+    )
+
+
 async def test_download_file(files_client, files_created_api_key):
     headers = {"x-api-key": files_created_api_key.api_key}
 
@@ -549,6 +620,76 @@ async def test_unique_filename_path_storage(files_client, files_created_api_key)
     download2 = await files_client.get(f"api/v2/files/{file2['id']}", headers=headers)
     assert download2.status_code == 200
     assert download2.content == b"path content 2"
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected_rfc5987"),
+    [
+        ("龙.txt", "%E9%BE%99.txt"),
+        ("测试文件.txt", "%E6%B5%8B%E8%AF%95%E6%96%87%E4%BB%B6.txt"),
+        ("日本語ファイル.txt", "%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.txt"),
+        ("naïve_résumé.txt", "na%C3%AFve_r%C3%A9sum%C3%A9.txt"),
+        ("normal_file.txt", "normal_file.txt"),
+    ],
+)
+async def test_download_file_non_ascii_content_disposition(
+    files_client, files_created_api_key, filename, expected_rfc5987
+):
+    """Non-ASCII filenames must be RFC 5987 encoded in Content-Disposition for single file download."""
+    from urllib.parse import unquote
+
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    upload_response = await files_client.post(
+        "api/v2/files",
+        files={"file": (filename, b"content")},
+        headers=headers,
+    )
+    assert upload_response.status_code == 201
+    upload_json = upload_response.json()
+    file_id = upload_json["id"]
+    stored_name = upload_json["path"].split("/")[-1]
+
+    download_response = await files_client.get(f"api/v2/files/{file_id}", headers=headers)
+    assert download_response.status_code == 200
+
+    content_disposition = download_response.headers["content-disposition"]
+    assert "attachment" in content_disposition
+    assert "filename*=UTF-8''" in content_disposition
+    assert expected_rfc5987 in content_disposition
+    rfc5987_value = content_disposition.split("filename*=UTF-8''")[-1].split(";")[0].strip()
+    assert unquote(rfc5987_value) == stored_name
+
+
+async def test_batch_download_files_non_ascii_content_disposition(files_client, files_created_api_key):
+    """Batch download ZIP must have ASCII-safe Content-Disposition (timestamp-based filename)."""
+    import re
+
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    file_ids = []
+    for name in ("龙.txt", "测试.txt"):
+        resp = await files_client.post(
+            "api/v2/files",
+            files={"file": (name, b"data")},
+            headers=headers,
+        )
+        assert resp.status_code == 201
+        file_ids.append(resp.json()["id"])
+
+    batch_response = await files_client.post(
+        "api/v2/files/batch/",
+        json=file_ids,
+        headers=headers,
+    )
+    assert batch_response.status_code == 200
+    assert batch_response.headers["content-type"] == "application/x-zip-compressed"
+
+    content_disposition = batch_response.headers["content-disposition"]
+    assert "attachment" in content_disposition
+    # Batch ZIP filename is timestamp-based (pure ASCII) — verify RFC 5987 encoding is present
+    assert "filename*=UTF-8''" in content_disposition
+    assert re.search(r"\d{8}_\d{6}_langflow_files\.zip", content_disposition)
 
 
 # ==================== S3 STORAGE TESTS ====================

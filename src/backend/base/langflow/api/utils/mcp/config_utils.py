@@ -382,8 +382,8 @@ async def auto_configure_starter_projects_mcp(session):
                 # Set up THIS USER'S starter folder authentication (same as new projects)
                 # If AUTO_LOGIN is false, automatically enable API key authentication
                 default_auth = {"auth_type": "none"}
-                await logger.adebug(f"Settings service auth settings: {settings_service.auth_settings}")
-                await logger.adebug(f"User starter folder auth settings: {user_starter_folder.auth_settings}")
+                await logger.adebug("Settings service auth settings: [REDACTED]")
+                await logger.adebug("User starter folder auth settings: [REDACTED]")
                 if (
                     not user_starter_folder.auth_settings
                     and settings_service.auth_settings.AUTO_LOGIN

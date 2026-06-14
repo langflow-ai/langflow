@@ -49,7 +49,7 @@ def _check_langchain_version_compatibility(error_message: str) -> str | None:
 
 @partial(syncify, raise_sync_error=False)
 async def run(
-    script_path: Path | None = typer.Argument(  # noqa: B008
+    script_path: Path | None = typer.Argument(
         None, help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
     ),
     input_value: str | None = typer.Argument(None, help="Input value to pass to the graph"),
@@ -102,6 +102,14 @@ async def run(
         show_default=True,
         help="Include detailed timing information in output",
     ),
+    session_id: str | None = typer.Option(
+        None,
+        "--session-id",
+        help=(
+            "Session ID to attach to the run. Agent and Memory Components will use this to track conversation history."
+        ),
+    ),
+    upgrade_flow: str | None = None,
 ) -> None:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -121,6 +129,8 @@ async def run(
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
         timing: Include detailed timing information in output
+        session_id: Optional session ID; auto-generated if not supplied
+        upgrade_flow: Component compatibility mode ('check' or 'safe')
     """
     # Determine verbosity for output formatting
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
@@ -139,6 +149,8 @@ async def run(
             verbose_full=verbose_full,
             timing=timing,
             global_variables=None,
+            session_id=session_id,
+            upgrade_flow=upgrade_flow,
         )
 
         # Output based on format

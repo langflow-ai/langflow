@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
@@ -61,6 +62,7 @@ export function useAudioRecording({
   onTranscriptionComplete,
   onError,
 }: UseAudioRecordingOptions): UseAudioRecordingReturn {
+  const { t } = useTranslation();
   const [state, setState] = useState<AudioRecordingState>("idle");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef<string>("");
@@ -71,9 +73,7 @@ export function useAudioRecording({
 
   const startRecording = useCallback(() => {
     if (!SpeechRecognitionClass) {
-      onError?.(
-        "Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.",
-      );
+      onError?.(t("chat.speechRecognitionNotSupported"));
       return;
     }
 
@@ -115,28 +115,22 @@ export function useAudioRecording({
 
         switch (event.error) {
           case "not-allowed":
-            onError?.(
-              "Microphone access denied. Please allow microphone access in your browser settings.",
-            );
+            onError?.(t("chat.microphoneAccessDenied"));
             break;
           case "no-speech":
             // Don't show error for no-speech, just reset
             break;
           case "audio-capture":
-            onError?.(
-              "No microphone found. Please connect a microphone and try again.",
-            );
+            onError?.(t("chat.noMicrophoneFound"));
             break;
           case "network":
-            onError?.(
-              "Network error occurred during speech recognition. Please check your connection.",
-            );
+            onError?.(t("chat.speechRecognitionNetworkError"));
             break;
           case "aborted":
             // User cancelled, no error needed
             break;
           default:
-            onError?.(`Speech recognition error: ${event.error}`);
+            onError?.(t("chat.speechRecognitionError", { error: event.error }));
         }
       };
 
@@ -150,7 +144,7 @@ export function useAudioRecording({
           if (finalText) {
             onTranscriptionComplete(finalText);
           } else {
-            onError?.("No speech was detected. Please try again.");
+            onError?.(t("chat.noSpeechDetected"));
           }
         }
 
@@ -161,7 +155,7 @@ export function useAudioRecording({
     } catch (error) {
       isActiveRef.current = false;
       setState("idle");
-      onError?.("Failed to start speech recognition. Please try again.");
+      onError?.(t("chat.failedToStartSpeechRecognition"));
     }
   }, [SpeechRecognitionClass, onTranscriptionComplete, onError]);
 

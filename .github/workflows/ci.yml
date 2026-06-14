@@ -11,7 +11,7 @@ on:
         description: "Python Versions"
         required: false
         type: string
-        default: "['3.10']"
+        default: "['3.10', '3.14']"
       frontend-tests-folder:
         description: "Frontend Tests Folder"
         required: false
@@ -50,7 +50,7 @@ on:
         description: "Python Versions"
         required: false
         type: string
-        default: "['3.10']"
+        default: "['3.10', '3.14']"
       runs-on:
         description: "Runner to use for the tests"
         required: false
@@ -88,6 +88,22 @@ jobs:
           echo "  run-all-tests: ${{ inputs.run-all-tests }}"
           echo "  runs-on: ${{ inputs.runs-on }}"
 
+  validate-pr-title:
+    name: Validate PR Title
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    env:
+      PR_TITLE: ${{ github.event.pull_request.title }}
+    steps:
+      - name: Reject titles ending in ellipsis
+        run: |
+          echo "PR title: $PR_TITLE"
+          if [[ "$PR_TITLE" == *"..." || "$PR_TITLE" == *"…" ]]; then
+            echo "❌ PR title ends with ellipsis. Please write a complete, descriptive title."
+            exit 1
+          fi
+          echo "✅ PR title is complete."
+
   check-nightly-status:
     name: Check PyPI Version Update
     runs-on: ubuntu-latest
@@ -101,8 +117,11 @@ jobs:
           TODAY=$(date -u +"%Y-%m-%d")
           echo "Today's date: $TODAY"
 
-          # Query PyPI API for the langflow package
-          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" https://pypi.org/pypi/langflow-nightly/json)
+          # Query PyPI for the canonical langflow project. The nightly now publishes as a `.devN`
+          # pre-release of `langflow` (not a separate `langflow-nightly` distribution), so inspect
+          # the most recent dev release rather than `.info.version` (which is the latest stable).
+          # See src/bundles/NIGHTLY.md.
+          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" https://pypi.org/pypi/langflow/json)
 
           # Check HTTP status code first
           if [ "$HTTP_STATUS" -ne 200 ]; then
@@ -120,16 +139,16 @@ jobs:
             exit 0
           fi
 
-          # Extract the latest version
-          LATEST_VERSION=$(jq -r '.info.version // empty' response.json)
+          # Extract the most recent nightly (.devN pre-release), highest by version sort
+          LATEST_VERSION=$(jq -r '.releases | keys[]' response.json | grep -E '\.dev[0-9]+$' | sort -V | tail -n1)
 
           if [ -z "$LATEST_VERSION" ]; then
-            echo "Could not extract latest version"
+            echo "Could not find a nightly (.devN) release"
             echo "success=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # Extract the release date of the latest version
+          # Extract the release date of that nightly version
           RELEASE_DATE=$(jq -r --arg ver "$LATEST_VERSION" '.releases[$ver][0].upload_time_iso_8601 // empty' response.json | cut -d'T' -f1)
 
           if [ -z "$RELEASE_DATE" ]; then
@@ -186,6 +205,7 @@ jobs:
       api: ${{ steps.filter.outputs.api }}
       database: ${{ steps.filter.outputs.database }}
       docker: ${{ steps.filter.outputs.docker }}
+      design-md: ${{ steps.filter.outputs.design-md }}
       docs-only: ${{
         steps.filter.outputs.docs == 'true' &&
         steps.filter.outputs.python != 'true' &&
@@ -244,13 +264,29 @@ jobs:
       )
     uses: ./.github/workflows/python_test.yml
     with:
-      python-versions: ${{ inputs.python-versions || '["3.10"]' }}
+      python-versions: ${{ inputs.python-versions || '["3.10", "3.14"]' }}
       runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
       ref: ${{ inputs.ref || github.ref }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
+  lint-frontend:
+    needs: [path-filter, set-ci-condition]
+    name: Lint Frontend
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-ci == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.frontend == 'true')
+      )
+    uses: ./.github/workflows/lint-js.yml
+    with:
+      allow-failure: ${{ inputs.release == true }}
 
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
@@ -293,15 +329,6 @@ jobs:
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
       TAVILY_API_KEY: "${{ secrets.TAVILY_API_KEY }}"
-
-  lint-backend:
-    needs: path-filter
-    if: |
-      always() &&
-      !cancelled() &&
-      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
-    name: Lint Backend
-    uses: ./.github/workflows/lint-py.yml
 
   test-docs-build:
     needs: path-filter
@@ -354,21 +381,105 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
+  lint-design-md:
+    needs: path-filter
+    name: Lint DESIGN.md
+    if: ${{ inputs.run-all-tests || needs.path-filter.outputs.design-md == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      DESIGN_MD_CLI_VERSION: "0.1.1"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Lint DESIGN.md
+        run: npx --yes @google/design.md@${{ env.DESIGN_MD_CLI_VERSION }} lint DESIGN.md
+
+  merge-frontend-coverage:
+    name: Merge Frontend Jest + Playwright Coverage Reports
+    needs: [path-filter, set-ci-condition, test-frontend-unit, test-frontend]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download Jest Coverage
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: jest-coverage
+          path: coverage/jest
+
+      - name: Download Playwright Coverage
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: playwright-coverage-*
+          path: coverage/playwright
+          merge-multiple: true
+
+      - name: Merge Coverage
+        run: |
+          mkdir -p coverage/combined
+          npx nyc merge coverage/playwright/individual-test coverage/combined/playwright.json || echo "Failed to merge Playwright coverage"
+          npx nyc merge coverage/jest coverage/combined/jest.json || echo "Failed to merge Jest coverage"
+          npx nyc merge coverage/combined coverage/combined/total-frontend-coverage.json || echo "Failed to combine Playwright + Jest coverage"
+
+      - name: Generate Combined Report
+        run: |
+          npx nyc report \
+            --reporter=html \
+            --reporter=text \
+            --temp-dir coverage/combined \
+            --report-dir coverage/final
+
+      - name: Upload Merged Frontend Coverage to Codecov
+        if: env.CODECOV_TOKEN != ''
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+          files: coverage/combined/total-frontend-coverage.json
+          flags: frontend
+          fail_ci_if_error: false
+
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
+    # Note: `lint-frontend` is intentionally NOT in this list — the Biome
+    # check runs on every PR and shows up in the checks list, but its failure
+    # does NOT block merge (informational only).
     needs:
       [
+        validate-pr-title,
         test-backend,
         test-frontend-unit,
         test-frontend,
-        lint-backend,
         test-docs-build,
         test-templates,
         test-docker,
+        lint-design-md,
         set-ci-condition,
         path-filter,
         check-nightly-status,
+        merge-frontend-coverage,
       ]
 
     if: ${{ always() }}
@@ -380,7 +491,7 @@ jobs:
       DOCS_ONLY: ${{ needs.path-filter.outputs.docs-only }}
       EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
         contains(needs.*.result, 'cancelled') ||
-        (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && needs.path-filter.outputs.docs-only != 'true'))
+        (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && github.event_name != 'merge_group' && needs.path-filter.outputs.docs-only != 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-nightly-check')))
         && '1' || '0' }}
     steps:
       - name: "CI Success"
@@ -407,20 +518,22 @@ jobs:
               to_entries[]
               | select(.value.result=="failure")
               | .key as $job
-              | if $job == "test-backend" then
+              | if $job == "validate-pr-title" then
+                  "  - PR Title Validation: Title ends with ellipsis (...). Use a complete, descriptive title."
+                elif $job == "test-backend" then
                   "  - Backend Tests: Check Python code, tests, and dependencies"
                 elif $job == "test-frontend-unit" then
                   "  - Frontend Unit Tests: Check React components and unit test logic"
                 elif $job == "test-frontend" then
                   "  - Frontend E2E Tests: Check integration tests and UI functionality"
-                elif $job == "lint-backend" then
-                  "  - Backend Linting: Run '\''make format_backend'\'' then '\''make lint'\'' to fix code style issues"
                 elif $job == "test-docs-build" then
                   "  - Documentation Build: Check documentation syntax and build process"
                 elif $job == "test-templates" then
                   "  - Template Tests: Check starter project templates"
                 elif $job == "test-docker" then
                   "  - Docker Tests: Check Docker image builds and version verification"
+                elif $job == "lint-design-md" then
+                  "  - DESIGN.md Lint: Check token references, WCAG contrast, and spec compliance"
                 elif $job == "path-filter" then
                   "  - Path Filter: File path filtering failed"
                 elif $job == "set-ci-condition" then

@@ -92,7 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -276,7 +276,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: [release-lfx, build-docker]
+    needs: [validate-version, release-lfx, build-docker]
     if: always() && github.event.inputs.create_github_release == 'true' && needs.release-lfx.result == 'success'
     runs-on: ubuntu-latest
     steps:
@@ -337,6 +337,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: lfx-v${{ github.event.inputs.version }}
+          # Pin the minted tag to the commit this release was built from;
+          # without it GitHub creates the tag at the default-branch HEAD.
+          target_commitish: ${{ github.sha }}
           name: LFX ${{ github.event.inputs.version }}
           body_path: release_notes.md
           draft: false

@@ -6,6 +6,7 @@ import re
 import traceback
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
@@ -28,9 +29,31 @@ from lfx.schema.validators import timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 from lfx.utils.mustache_security import safe_mustache_render
+from lfx.utils.secrets import is_secret_value
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
+
+MAX_ATTACHMENT_SIZE_BYTES: int = 50 * 1024 * 1024
+
+
+def _is_text_like_extension(file_path: Any) -> bool:
+    """Return True for files whose extension we recognize as plain text / structured text.
+
+    Used as a guard before falling back to latin-1 decoding in
+    ``get_file_content_dicts`` — see ``read_text_file`` for the encoding chain.
+    Files with no extension are treated as text-like so callers passing CLI-style
+    stdin captures or extension-less plain text continue to work.
+    """
+    from lfx.base.data.utils import TEXT_FILE_TYPES
+
+    try:
+        suffix = Path(file_path).suffix.lstrip(".").lower()
+    except (OSError, TypeError, ValueError):
+        return False
+    if not suffix:
+        return True
+    return suffix in TEXT_FILE_TYPES
 
 
 class Message(Data):
@@ -63,8 +86,9 @@ class Message(Data):
     files: list[str | Image] | None = Field(default=[])
     session_id: str | UUID | None = Field(default="")
     context_id: str | UUID | None = Field(default="")
+    run_id: str | UUID | None = Field(default=None)
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
     )
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
@@ -74,12 +98,27 @@ class Message(Data):
     category: Literal["message", "error", "warning", "info"] | None = "message"
     content_blocks: list[ContentBlock] = Field(default_factory=list)
     duration: int | None = None
+    session_metadata: dict | None = None
 
     @field_validator("flow_id", mode="before")
     @classmethod
     def validate_flow_id(cls, value):
         if isinstance(value, UUID):
             value = str(value)
+        return value
+
+    @field_validator("run_id", mode="before")
+    @classmethod
+    def validate_run_id(cls, value):
+        if isinstance(value, UUID):
+            value = str(value)
+        return value
+
+    @field_validator("text", mode="before")
+    @classmethod
+    def validate_text(cls, value):
+        if is_secret_value(value):
+            return str(value)
         return value
 
     @field_validator("content_blocks", mode="before")
@@ -110,14 +149,15 @@ class Message(Data):
             return str(value)
         return value
 
+    @field_serializer("run_id")
+    def serialize_run_id(self, value):
+        if isinstance(value, UUID):
+            return str(value)
+        return value
+
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
-        try:
-            # Try parsing with timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
-        except ValueError:
-            # Try parsing without timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        return timestamp_to_str(value)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -227,10 +267,12 @@ class Message(Data):
             files=data.files,
             session_id=data.session_id,
             context_id=data.context_id,
+            run_id=data.run_id,
             timestamp=data.timestamp,
             flow_id=data.flow_id,
             error=data.error,
             edit=data.edit,
+            session_metadata=getattr(data, "session_metadata", None),
         )
 
     @field_serializer("text", mode="plain")
@@ -241,19 +283,103 @@ class Message(Data):
 
     # Keep this async method for backwards compatibility
     def get_file_content_dicts(self, model_name: str | None = None):
+        def _safe_attachment_name(value: Any) -> str | None:
+            if isinstance(value, Image):
+                if not value.path:
+                    return None
+                try:
+                    return Path(value.path).name
+                except (OSError, TypeError, ValueError):
+                    return None
+            try:
+                return Path(value).name
+            except (OSError, TypeError, ValueError):
+                return None
+
         content_dicts = []
         try:
             files = get_file_paths(self.files)
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Error getting file paths: {e}")
+        except (OSError, TypeError, ValueError) as exc:
+            logger.error(
+                "Error getting file paths",
+                error_type=type(exc).__name__,
+                exc_info=True,
+            )
             return content_dicts
 
         for file in files:
             if isinstance(file, Image):
-                # Pass the message's flow_id to the Image for proper path resolution
                 content_dicts.append(file.to_content_dict(flow_id=self.flow_id))
-            else:
-                content_dicts.append(create_image_content_dict(file, None, model_name))
+                continue
+
+            try:
+                if is_image_file(file):
+                    content_dicts.append(create_image_content_dict(file, None, model_name))
+                    continue
+
+                # Refuse to text-decode files whose extension is not in
+                # TEXT_FILE_TYPES (and that didn't pass is_image_file above).
+                # `read_text_file` falls back to latin-1 which ALWAYS succeeds,
+                # so binary payloads (e.g. a PNG that PIL refused to verify)
+                # used to slip through and get injected into the HumanMessage
+                # as a long latin-1-garbled string (QA API-010).
+                if not _is_text_like_extension(file):
+                    logger.debug(
+                        "Skipping attachment during message conversion: unsupported binary extension",
+                        file_name=_safe_attachment_name(file),
+                    )
+                    continue
+
+                try:
+                    file_size_bytes = Path(file).stat().st_size
+                except (OSError, ValueError) as exc:
+                    logger.warning(
+                        "Skipping attachment during message conversion: could not stat file",
+                        error_type=type(exc).__name__,
+                        file_name=_safe_attachment_name(file),
+                    )
+                    continue
+
+                if file_size_bytes > MAX_ATTACHMENT_SIZE_BYTES:
+                    continue
+
+                from lfx.base.data.utils import parse_text_file_to_data
+
+                parsed_file = parse_text_file_to_data(file, silent_errors=True)
+                parsed_data = parsed_file.data if parsed_file else {}
+                parsed_text = parsed_data.get("text") if isinstance(parsed_data, dict) else None
+                if not parsed_text:
+                    continue
+
+                parsed_text_str = parsed_text if isinstance(parsed_text, str) else json.dumps(parsed_text)
+                file_name = _safe_attachment_name(file) or "attachment"
+                # Avoid the literal "Attachment:" framing — Gemini 2.5 Flash
+                # (and likely related models) treats it as a multimodal-attach
+                # request and refuses with "I cannot process attachments in
+                # this environment" (QA GAP-M-3). A neutral "File … contents"
+                # header keeps the same context for the LLM without tripping
+                # provider refusal heuristics.
+                content_dicts.append(
+                    {
+                        "type": "text",
+                        "text": f"File '{file_name}' contents:\n{parsed_text_str}",
+                    }
+                )
+            except PermissionError as exc:
+                logger.error(
+                    "Skipping attachment during message conversion: permission denied",
+                    error_type=type(exc).__name__,
+                    file_name=_safe_attachment_name(file),
+                    exc_info=True,
+                )
+                continue
+            except (FileNotFoundError, UnicodeDecodeError, ValueError, OSError) as exc:
+                logger.warning(
+                    "Skipping unsupported attachment during message conversion",
+                    error_type=type(exc).__name__,
+                    file_name=_safe_attachment_name(file),
+                )
+                continue
         return content_dicts
 
     def load_lc_prompt(self):
@@ -430,6 +556,7 @@ class MessageResponse(DefaultModel):
     properties: Properties | None = None
     category: str | None = None
     content_blocks: list[ContentBlock] | None = None
+    session_metadata: dict | None = None
 
     @field_validator("content_blocks", mode="before")
     @classmethod
@@ -483,6 +610,7 @@ class MessageResponse(DefaultModel):
             files=message.files or [],
             timestamp=message.timestamp,
             flow_id=flow_id,
+            session_metadata=getattr(message, "session_metadata", None),
         )
 
 
@@ -534,6 +662,7 @@ class ErrorMessage(Message):
         source: Source | None = None,
         trace_name: str | None = None,
         flow_id: UUID | str | None = None,
+        session_metadata: dict | None = None,
     ) -> None:
         # This is done to avoid circular imports
         if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
@@ -580,7 +709,15 @@ class ErrorMessage(Message):
                 )
             ],
             flow_id=flow_id,
+            session_metadata=session_metadata,
         )
 
 
-__all__ = ["ContentBlock", "DefaultModel", "ErrorMessage", "Message", "MessageResponse"]
+__all__ = [
+    "MAX_ATTACHMENT_SIZE_BYTES",
+    "ContentBlock",
+    "DefaultModel",
+    "ErrorMessage",
+    "Message",
+    "MessageResponse",
+]

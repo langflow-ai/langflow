@@ -209,15 +209,25 @@ class TestComponentDynamicImports:
         """Test that TYPE_CHECKING imports work correctly with dynamic loading."""
         # This test ensures that imports in TYPE_CHECKING blocks
         # work correctly with the dynamic import system
+        import importlib.util
+
         import lfx.components.searchapi as searchapi_components
 
         # Components should be available for dynamic loading
         assert "SearchComponent" in searchapi_components.__all__
         assert "SearchComponent" in searchapi_components._dynamic_imports
 
-        # Accessing should trigger dynamic import - may fail due to missing dependencies
-        with pytest.raises(AttributeError, match=r"Could not import.*SearchComponent"):
-            _ = searchapi_components.SearchComponent
+        # SearchComponent imports from langchain_community at module-import time.
+        # If that package is present in this environment (e.g. transitively via
+        # OpenDsStar), the dynamic import should succeed; otherwise it should
+        # raise AttributeError wrapping the ImportError.
+        if importlib.util.find_spec("langchain_community") is not None:
+            component = searchapi_components.SearchComponent
+            assert component is not None
+            assert hasattr(component, "__init__")
+        else:
+            with pytest.raises(AttributeError, match=r"Could not import.*SearchComponent"):
+                _ = searchapi_components.SearchComponent
 
 
 class TestPerformanceCharacteristics:
@@ -270,11 +280,12 @@ class TestSpecialCases:
         """Test platform-specific component handling (like NVIDIA Windows components)."""
         import lfx.components.nvidia as nvidia_components
 
-        # NVIDIAModelComponent should raise AttributeError due to missing langchain-nvidia-ai-endpoints dependency
-        with pytest.raises(AttributeError, match=r"Could not import.*NVIDIAModelComponent"):
-            _ = nvidia_components.NVIDIAModelComponent
+        # NVIDIAModelComponent defers its heavy dependency (langchain-nvidia-ai-endpoints)
+        # to runtime methods, so the class itself should import successfully.
+        component = nvidia_components.NVIDIAModelComponent
+        assert component is not None
 
-        # Test that __all__ still works correctly despite import failures
+        # Test that __all__ still lists the component correctly
         assert "NVIDIAModelComponent" in nvidia_components.__all__
 
     def test_import_structure_integrity(self):

@@ -242,10 +242,10 @@ class TestDynamicImportIntegration:
         components_accessed = []
         component_names = [
             "AstraDBVectorStoreComponent",
-            "AstraDBChatComponent",
+            "AstraDBChatMemory",
             "AstraDBToolComponent",
             "AstraDBCQLToolComponent",
-            "AstraAssistantManager",
+            "GraphRAGComponent",
         ]
 
         for name in component_names:
@@ -253,8 +253,8 @@ class TestDynamicImportIntegration:
                 component = getattr(datastax, name)
                 components_accessed.append(component)
 
-        # Should have accessed multiple components without issues
-        assert len(components_accessed) > 0
+        # Should have accessed all listed components
+        assert len(components_accessed) == len(component_names)
 
         # All should be different classes
         assert len(set(components_accessed)) == len(components_accessed)
@@ -293,6 +293,99 @@ class TestDynamicImportIntegration:
         assert openai_mod.OpenAIModelComponent is not None
         assert helpers_mod.CalculatorComponent is not None
         assert nested_component is direct_component
+
+    def test_deprecated_astra_assistants_removed(self):
+        """Test that deprecated Astra Assistants components are no longer importable."""
+        from langflow.components import datastax
+
+        removed_components = [
+            "AssistantsCreateAssistant",
+            "AssistantsCreateThread",
+            "AssistantsGetAssistantName",
+            "AssistantsListAssistants",
+            "AssistantsRun",
+            "AstraAssistantManager",
+        ]
+
+        for name in removed_components:
+            assert not hasattr(datastax, name), f"Deprecated component {name} should have been removed"
+
+    def test_datastax_remaining_components_accessible(self):
+        """Test that all non-deprecated datastax components are still accessible."""
+        from langflow.components import datastax
+
+        expected_components = [
+            "AstraDBVectorStoreComponent",
+            "AstraDBChatMemory",
+            "AstraDBToolComponent",
+            "AstraDBCQLToolComponent",
+            "AstraDBGraphVectorStoreComponent",
+            "AstraVectorizeComponent",
+            "GraphRAGComponent",
+            "Dotenv",
+        ]
+
+        for name in expected_components:
+            assert hasattr(datastax, name), f"Component {name} should still be accessible"
+            component = getattr(datastax, name)
+            assert component is not None, f"Component {name} should not be None"
+
+    def test_getenvvar_component_removed(self):
+        """Test that the removed GetEnvVar component cannot be imported from lfx datastax."""
+        import importlib
+
+        import lfx.components.datastax as lfx_datastax
+
+        with pytest.raises(AttributeError):
+            _ = lfx_datastax.GetEnvVar
+
+        assert not hasattr(lfx_datastax, "GetEnvVar"), "GetEnvVar should have been removed from lfx.components.datastax"
+
+        with pytest.raises((ImportError, ModuleNotFoundError)):
+            importlib.import_module("lfx.components.datastax.getenvvar")
+
+    def test_python_code_structured_tool_removed(self):
+        """Test that the removed PythonCodeStructuredTool component cannot be imported from lfx tools.
+
+        Security follow-up to report H1-3754930: this legacy component ``exec()``'d
+        attacker-controlled ``tool_code`` at flow-build time and was reachable as an
+        unauthenticated RCE through public flows. It was first neutered to a
+        non-executable stub (#13538) and is now fully removed. The node ``type`` is
+        still blocked on the unauthenticated public path (see
+        ``lfx.utils.flow_validation.CODE_EXECUTION_COMPONENT_TYPES``) so stored code in
+        any saved flow that still references it cannot execute on that path.
+        """
+        import importlib
+
+        import lfx.components.tools as lfx_tools
+
+        with pytest.raises(AttributeError):
+            _ = lfx_tools.PythonCodeStructuredTool
+
+        assert not hasattr(lfx_tools, "PythonCodeStructuredTool"), (
+            "PythonCodeStructuredTool should have been removed from lfx.components.tools"
+        )
+
+        with pytest.raises((ImportError, ModuleNotFoundError)):
+            importlib.import_module("lfx.components.tools.python_code_structured_tool")
+
+    def test_datastax_dir_excludes_deprecated(self):
+        """Test that dir(datastax) does not list deprecated components."""
+        from langflow.components import datastax
+
+        exported = dir(datastax)
+        deprecated = {
+            "AssistantsCreateAssistant",
+            "AssistantsCreateThread",
+            "AssistantsGetAssistantName",
+            "AssistantsListAssistants",
+            "AssistantsRun",
+            "AstraAssistantManager",
+        }
+
+        assert not deprecated.intersection(exported), (
+            f"Deprecated components still appear in dir(): {deprecated.intersection(exported)}"
+        )
 
 
 if __name__ == "__main__":
