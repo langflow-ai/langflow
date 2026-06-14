@@ -9,6 +9,8 @@ from uuid import UUID, uuid4
 import jwt
 import pytest
 from fastapi import HTTPException, WebSocketException, status
+from pydantic import SecretStr
+
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.exceptions import (
     InactiveUserError,
@@ -19,7 +21,6 @@ from langflow.services.auth.exceptions import (
 from langflow.services.auth.service import AuthService
 from langflow.services.database.models.user.model import User
 from lfx.services.settings.auth import AuthSettings
-from pydantic import SecretStr
 
 
 @pytest.fixture
@@ -397,7 +398,7 @@ def test_ensure_fernet_key_pbkdf2_different_secrets():
     assert key1 != key2
 
 
-def test_legacy_fernet_backward_compatibility(auth_service: AuthService, tmp_path):
+def test_legacy_fernet_backward_compatibility(auth_service: AuthService):
     """Ensure MultiFernet can decrypt data encrypted with the legacy, insecure PRNG key."""
     from cryptography.fernet import Fernet
     from langflow.services.auth.utils import get_legacy_fernet_key

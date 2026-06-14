@@ -5,6 +5,8 @@ import hashlib
 import random
 from typing import TYPE_CHECKING, Annotated, Final
 
+MINIMUM_KEY_LENGTH = 32
+
 from cryptography.fernet import Fernet, MultiFernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
@@ -334,7 +336,6 @@ def ensure_fernet_key(secret_key: str) -> bytes:
     deterministic 32-byte key suitable for cryptographic operations.
     For longer keys, adds base64 padding.
     """
-    MINIMUM_KEY_LENGTH = 32  # noqa: N806
     if len(secret_key) < MINIMUM_KEY_LENGTH:
         key = base64.urlsafe_b64encode(
             hashlib.pbkdf2_hmac(
@@ -352,8 +353,8 @@ def ensure_fernet_key(secret_key: str) -> bytes:
 
 def get_legacy_fernet_key(secret_key: str) -> bytes:
     """Generate the legacy insecure fernet key for backward compatibility."""
-    random.seed(secret_key)
-    key = bytes(random.getrandbits(8) for _ in range(32))
+    rng = random.Random(secret_key)
+    key = bytes(rng.getrandbits(8) for _ in range(32))
     return base64.urlsafe_b64encode(key)
 
 
@@ -369,11 +370,11 @@ def get_fernet(settings_service: SettingsService) -> Fernet | MultiFernet:
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
     primary_key = ensure_fernet_key(secret_key)
 
-    MINIMUM_KEY_LENGTH = 32  # noqa: N806
     if len(secret_key) < MINIMUM_KEY_LENGTH:
-        # For short keys, we use MultiFernet to rotate keys automatically.
-        # It encrypts with the new primary key (PBKDF2) but can decrypt
-        # tokens that were encrypted with the legacy insecure random key.
+        # For short keys, we use MultiFernet for backward compatibility fallback.
+        # It encrypts new data with the new primary key (PBKDF2) but can decrypt
+        # legacy ciphertext that was encrypted with the legacy insecure random key.
+        # NOTE: Automatic re-encryption/rotation is not performed on read.
         legacy_key = get_legacy_fernet_key(secret_key)
         return MultiFernet([Fernet(primary_key), Fernet(legacy_key)])
 
