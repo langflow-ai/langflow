@@ -13,6 +13,11 @@ type SortableListComponentProps = {
   name?: string;
   helperText?: string;
   helperMetadata?: any;
+  buttonMetadata?: {
+    variant?: "default" | "destructive";
+    icon?: string;
+    mode?: string;
+  };
   options?: any[];
   searchCategory?: string[];
   icon?: string;
@@ -83,6 +88,7 @@ const SortableListComponent = ({
   editNode = false,
   helperText = "",
   helperMetadata = { icon: undefined, variant: "muted-foreground" },
+  buttonMetadata,
   options = [],
   searchCategory = [],
   limit,
@@ -137,6 +143,12 @@ const SortableListComponent = ({
 
   const [showHelperText, setShowHelperText] = useState(false);
 
+  const handleButtonClick = useCallback(() => {
+    const option = options[0];
+    if (!option) return;
+    handleOnNewValue({ value: [option] });
+  }, [handleOnNewValue, options]);
+
   useEffect(() => {
     if (!helperText) {
       setShowHelperText(false);
@@ -148,6 +160,44 @@ const SortableListComponent = ({
 
   if (!showParameter) {
     return null;
+  }
+
+  if (buttonMetadata?.mode === "button") {
+    const option = options[0];
+
+    return (
+      <div className="flex w-full flex-col">
+        <div className="flex w-full justify-start">
+          <Button
+            variant={buttonMetadata.variant ?? "default"}
+            size="xs"
+            onClick={handleButtonClick}
+            disabled={!option}
+            className="w-fit"
+            data-testid={
+              id ? `button_sortable_action_${id}` : "button_sortable_action"
+            }
+          >
+            {buttonMetadata.icon && (
+              <ForwardedIconComponent
+                name={buttonMetadata.icon}
+                className="h-4 w-4"
+              />
+            )}
+            {option?.name || placeholder}
+          </Button>
+        </div>
+
+        {helperText && (
+          <div className="pt-2">
+            <HelperTextComponent
+              helperText={helperText}
+              helperMetadata={helperMetadata}
+            />
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (

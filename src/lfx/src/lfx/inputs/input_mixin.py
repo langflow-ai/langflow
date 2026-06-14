@@ -327,6 +327,8 @@ class SortableListMixin(BaseModel):
     """Adds a helper text to the field. Defaults to an empty string."""
     helper_text_metadata: dict[str, Any] | None = None
     """Dictionary of metadata for the helper text."""
+    button_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for rendering the field as a button."""
     search_category: list[str] = Field(default=[])
     """Specifies the category of the field. Defaults to an empty list."""
     options: list[dict[str, Any]] = Field(default_factory=list)
