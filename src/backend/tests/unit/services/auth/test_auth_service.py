@@ -370,7 +370,6 @@ def test_ensure_fernet_key_with_44_char_key():
 def test_ensure_fernet_key_pbkdf2_deterministic():
     """ensure_fernet_key must use PBKDF2 to deterministically derive a 44-char base64 key for short secrets."""
     from cryptography.fernet import Fernet
-
     from langflow.services.auth.utils import ensure_fernet_key
 
     short_key = "short-secret-123"
@@ -401,19 +400,18 @@ def test_ensure_fernet_key_pbkdf2_different_secrets():
 def test_legacy_fernet_backward_compatibility(auth_service: AuthService, tmp_path):
     """Ensure MultiFernet can decrypt data encrypted with the legacy, insecure PRNG key."""
     from cryptography.fernet import Fernet
-
     from langflow.services.auth.utils import get_legacy_fernet_key
 
     # Initialize a legacy encryption context exactly as it used to be
     secret = auth_service.settings.auth_settings.SECRET_KEY.get_secret_value()
     legacy_key = get_legacy_fernet_key(secret)
     legacy_fernet = Fernet(legacy_key)
-    
+
     # Encrypt some test data
     plaintext = "super-secret-api-key"
     legacy_ciphertext = legacy_fernet.encrypt(plaintext.encode()).decode()
 
-    # The auth_service uses MultiFernet under the hood which uses the new PBKDF2 key for 
+    # The auth_service uses MultiFernet under the hood which uses the new PBKDF2 key for
     # writing, but seamlessly handles decrypting the legacy ciphertext
     decrypted = auth_service.decrypt_api_key(legacy_ciphertext)
     assert decrypted == plaintext
