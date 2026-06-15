@@ -1,7 +1,7 @@
 """Per-user identity forwarding for ``lfx serve``.
 
- This module lets ``lfx serve`` *consume* an upstream identity and thread it
- into flow execution as ``user_id``.
+This module lets ``lfx serve`` *consume* an upstream identity and thread it
+into flow execution as ``user_id``.
 
 Two modes carry identity, plus an off switch:
 
@@ -68,6 +68,7 @@ ENV_JWT_JWKS_URL = "LFX_SERVE_IDENTITY_JWT_JWKS_URL"
 ENV_CLAIM = "LFX_SERVE_IDENTITY_CLAIM"
 ENV_JWT_HEADER = "LFX_SERVE_IDENTITY_JWT_HEADER"
 ENV_TRUSTED_HEADER = "LFX_SERVE_IDENTITY_HEADER"
+ENV_ALLOW_INSECURE_HTTP = "LFX_SERVE_IDENTITY_ALLOW_INSECURE_HTTP"
 
 # Every identity env key — used by the parent to clean up after uvicorn.run().
 IDENTITY_ENV_KEYS: tuple[str, ...] = (
@@ -78,6 +79,7 @@ IDENTITY_ENV_KEYS: tuple[str, ...] = (
     ENV_CLAIM,
     ENV_JWT_HEADER,
     ENV_TRUSTED_HEADER,
+    ENV_ALLOW_INSECURE_HTTP,
 )
 
 
@@ -112,6 +114,22 @@ class IdentityConfig:
     jwt_header: str = "Authorization"
     # Header trusted verbatim in ``header`` mode.
     trusted_header: str = "X-Consumer-Username"
+    # Allow plaintext http:// for the JWKS/issuer (dev/test only). Off by default:
+    # a MITM of a plaintext JWKS response forges identities, so HTTPS is required.
+    allow_insecure_http: bool = False
+
+    def _require_fetch_scheme(self, label: str, url: str) -> None:
+        """Reject a fetched URL whose scheme violates the transport policy.
+
+        HTTPS is required by default; ``http://`` is permitted only when
+        ``allow_insecure_http`` is set. Non-http(s) schemes are always refused.
+        """
+        allowed = ("http://", "https://") if self.allow_insecure_http else ("https://",)
+        if not url.lower().startswith(allowed):
+            scheme = "an http(s)" if self.allow_insecure_http else "an https"
+            hint = "" if self.allow_insecure_http else " Pass --identity-jwt-allow-insecure-http for local/dev http://."
+            msg = f"{label} must be {scheme} URL, got {url!r}.{hint}"
+            raise IdentityConfigError(msg)
 
     def __post_init__(self) -> None:
         if self.mode not in ("off", "jwt", "header"):
@@ -127,12 +145,14 @@ class IdentityConfig:
             if not self.claim:
                 msg = "--identity-claim must be non-empty when --identity-mode=jwt."
                 raise IdentityConfigError(msg)
-            # Validate the JWKS URL scheme offline so a typo (e.g. file://) fails
-            # at startup rather than masquerading as a transient fetch error later.
-            # (A None jwks_url is fine — it's resolved via OIDC discovery from iss.)
-            if self.jwt_jwks_url and not self.jwt_jwks_url.lower().startswith(("http://", "https://")):
-                msg = f"--identity-jwt-jwks-url must be an http(s) URL, got {self.jwt_jwks_url!r}."
-                raise IdentityConfigError(msg)
+            # Validate the fetched URL scheme offline so a bad scheme (e.g. file://)
+            # or an insecure http:// fails at startup rather than masquerading as a
+            # transient fetch error later. An explicit jwks_url is fetched directly;
+            # otherwise the issuer is fetched for OIDC discovery, so it must comply too.
+            if self.jwt_jwks_url:
+                self._require_fetch_scheme("--identity-jwt-jwks-url", self.jwt_jwks_url)
+            else:
+                self._require_fetch_scheme("--identity-jwt-issuer (used for OIDC discovery)", self.jwt_issuer)
         if self.mode == "header" and not self.trusted_header:
             msg = "--identity-header must be non-empty when --identity-mode=header."
             raise IdentityConfigError(msg)
@@ -159,6 +179,8 @@ class IdentityConfig:
         env[ENV_CLAIM] = self.claim
         env[ENV_JWT_HEADER] = self.jwt_header
         env[ENV_TRUSTED_HEADER] = self.trusted_header
+        if self.allow_insecure_http:
+            env[ENV_ALLOW_INSECURE_HTTP] = "1"
         return env
 
     @classmethod
@@ -176,6 +198,7 @@ class IdentityConfig:
             claim=environ.get(ENV_CLAIM, defaults.claim),
             jwt_header=environ.get(ENV_JWT_HEADER, defaults.jwt_header),
             trusted_header=environ.get(ENV_TRUSTED_HEADER, defaults.trusted_header),
+            allow_insecure_http=environ.get(ENV_ALLOW_INSECURE_HTTP) == "1",
         )
 
 
@@ -222,6 +245,12 @@ class _JwksCache:
         """
         try:
             data = self.fetch_jwks()
+            # Guard the shape before PyJWKSet.from_dict: a non-object JWKS (e.g. a
+            # JSON array) makes from_dict raise an uncaught AttributeError that
+            # would abort startup or 500 a request instead of failing closed.
+            if not isinstance(data, dict):
+                msg = f"{self.source_label} returned a non-object JSON document (expected a JWKS)."
+                raise IdentityConfigError(msg)
             self._jwk_set = jwt.PyJWKSet.from_dict(data)
             self._fetched_at = time.monotonic()
         except IdentityConfigError as exc:
@@ -336,10 +365,17 @@ class IdentityVerifier:
             raise IdentityConfigError(msg)
         discovery_url = self._config.jwt_issuer.rstrip("/") + "/.well-known/openid-configuration"
         document = self._openid_fetch(discovery_url)
-        jwks_uri = document.get("jwks_uri")
-        if not jwks_uri:
-            msg = f"OIDC discovery at {discovery_url} did not return a jwks_uri."
+        # A well-behaved discovery doc is a JSON object with a string jwks_uri.
+        # Guard the shape so a malformed response (e.g. a JSON array) fails closed
+        # as a config error instead of an uncaught AttributeError at request time.
+        if not isinstance(document, dict):
+            msg = f"OIDC discovery at {discovery_url} returned a non-object document."
             raise IdentityConfigError(msg)
+        jwks_uri = document.get("jwks_uri")
+        if not isinstance(jwks_uri, str) or not jwks_uri:
+            msg = f"OIDC discovery at {discovery_url} did not return a string jwks_uri."
+            raise IdentityConfigError(msg)
+        self._config._require_fetch_scheme("OIDC discovery jwks_uri", jwks_uri)  # noqa: SLF001
         self._resolved_jwks_url = jwks_uri
         return jwks_uri
 

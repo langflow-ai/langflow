@@ -319,6 +319,10 @@ def serve_command(
         "--identity-header",
         help="Plain header trusted as identity in header mode. Defaults to X-Consumer-Username.",
     ),
+    # Plain bool (not typer.Option): the CLI option lives on serve_command_wrapper,
+    # which passes this through. A plain False default keeps the secure default even
+    # if a direct caller omits it (a typer.Option default would leak a truthy object).
+    identity_jwt_allow_insecure_http: bool = False,
     upgrade_flow: str | None = None,
 ) -> None:
     """Serve LFX flows as a web API.
@@ -376,6 +380,7 @@ def serve_command(
             claim=identity_claim,
             jwt_header=identity_jwt_header,
             trusted_header=identity_header,
+            allow_insecure_http=identity_jwt_allow_insecure_http,
         )
     except IdentityConfigError as e:
         typer.echo(f"Error: {e}", err=True)

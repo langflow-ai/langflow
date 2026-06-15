@@ -217,6 +217,11 @@ def register(app: typer.Typer) -> None:
             "--identity-header",
             help="Plain header trusted as identity in header mode. Defaults to X-Consumer-Username.",
         ),
+        identity_jwt_allow_insecure_http: bool = typer.Option(
+            False,
+            "--identity-jwt-allow-insecure-http",
+            help="Allow plaintext http:// for the JWKS/issuer (dev/test only). HTTPS is required by default.",
+        ),
     ) -> None:
         """Serve LFX flows as a web API (lazy-loaded)."""
         from pathlib import Path
@@ -247,4 +252,5 @@ def register(app: typer.Typer) -> None:
             identity_claim=identity_claim,
             identity_jwt_header=identity_jwt_header,
             identity_header=identity_header,
+            identity_jwt_allow_insecure_http=identity_jwt_allow_insecure_http,
         )

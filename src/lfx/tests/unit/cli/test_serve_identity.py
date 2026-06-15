@@ -1,7 +1,7 @@
 """Tests for per-user identity forwarding in ``lfx serve`` (verified JWT / header).
 
-Crypto is exercised with a locally generated RSA keypair and an in-memory fake
-JWKS endpoint — no network. See ``lfx.cli.serve_identity``.
+Crypto is exercised with locally generated RSA and EC P-256 keypairs and an
+in-memory fake JWKS endpoint — no network. See ``lfx.cli.serve_identity``.
 """
 
 from __future__ import annotations
@@ -15,10 +15,10 @@ from unittest.mock import MagicMock, patch
 
 import jwt
 import pytest
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from jwt.algorithms import RSAAlgorithm
+from jwt.algorithms import ECAlgorithm, RSAAlgorithm
 from lfx.cli.common import execute_graph_with_capture
 from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app, create_serve_app
 from lfx.cli.serve_identity import (
@@ -33,6 +33,7 @@ from lfx.graph import Graph
 ISSUER = "https://accounts.example.com"
 AUDIENCE = "my-oauth-client-id"
 KID = "test-key-1"
+EC_KID = "test-key-ec"
 
 
 # ---------------------------------------------------------------------------
@@ -45,9 +46,20 @@ def _make_keypair() -> rsa.RSAPrivateKey:
 
 
 def _jwks_for(public_key, kid: str = KID) -> dict:
-    """Build a JWKS document exposing ``public_key`` under ``kid``."""
+    """Build a JWKS document exposing an RSA ``public_key`` under ``kid``."""
     jwk = json.loads(RSAAlgorithm.to_jwk(public_key))
     jwk.update({"kid": kid, "use": "sig", "alg": "RS256"})
+    return {"keys": [jwk]}
+
+
+def _make_ec_keypair() -> ec.EllipticCurvePrivateKey:
+    return ec.generate_private_key(ec.SECP256R1())
+
+
+def _ec_jwks_for(public_key, kid: str = EC_KID) -> dict:
+    """Build a JWKS document exposing an EC P-256 ``public_key`` under ``kid``."""
+    jwk = json.loads(ECAlgorithm.to_jwk(public_key))
+    jwk.update({"kid": kid, "use": "sig", "alg": "ES256"})
     return {"keys": [jwk]}
 
 
@@ -142,6 +154,61 @@ class TestIdentityConfig:
         # A bad scheme must fail fast at config construction, not at first fetch.
         with pytest.raises(IdentityConfigError):
             IdentityConfig(mode="jwt", jwt_issuer=ISSUER, jwt_audience=AUDIENCE, jwt_jwks_url="file:///etc/passwd")
+
+    def test_http_jwks_url_rejected_by_default(self):
+        # Plaintext http:// is MITM-able (forged JWKS), so HTTPS is required by default.
+        with pytest.raises(IdentityConfigError):
+            IdentityConfig(
+                mode="jwt", jwt_issuer=ISSUER, jwt_audience=AUDIENCE, jwt_jwks_url="http://issuer.test/jwks.json"
+            )
+
+    def test_http_jwks_url_allowed_with_insecure_flag(self):
+        cfg = IdentityConfig(
+            mode="jwt",
+            jwt_issuer=ISSUER,
+            jwt_audience=AUDIENCE,
+            jwt_jwks_url="http://issuer.test/jwks.json",
+            allow_insecure_http=True,
+        )
+        assert cfg.jwt_jwks_url == "http://issuer.test/jwks.json"
+
+    def test_http_issuer_for_discovery_rejected_by_default(self):
+        # No explicit jwks_url → the issuer is fetched for OIDC discovery, so its
+        # scheme is subject to the same HTTPS policy.
+        with pytest.raises(IdentityConfigError):
+            IdentityConfig(mode="jwt", jwt_issuer="http://accounts.example.com", jwt_audience=AUDIENCE, claim="email")
+
+    def test_http_issuer_for_discovery_allowed_with_insecure_flag(self):
+        cfg = IdentityConfig(
+            mode="jwt",
+            jwt_issuer="http://accounts.example.com",
+            jwt_audience=AUDIENCE,
+            claim="email",
+            allow_insecure_http=True,
+        )
+        assert cfg.jwt_issuer == "http://accounts.example.com"
+
+    def test_insecure_http_flag_still_rejects_non_http_schemes(self):
+        # The escape hatch widens to http:// only — it must not re-open file://.
+        with pytest.raises(IdentityConfigError):
+            IdentityConfig(
+                mode="jwt",
+                jwt_issuer=ISSUER,
+                jwt_audience=AUDIENCE,
+                jwt_jwks_url="file:///etc/passwd",
+                allow_insecure_http=True,
+            )
+
+    def test_allow_insecure_http_env_round_trip(self):
+        cfg = IdentityConfig(
+            mode="jwt",
+            jwt_issuer=ISSUER,
+            jwt_audience=AUDIENCE,
+            jwt_jwks_url="http://issuer.test/jwks.json",
+            claim="email",
+            allow_insecure_http=True,
+        )
+        assert IdentityConfig.from_env(cfg.to_env()) == cfg
 
     def test_env_round_trip_preserves_all_fields(self):
         cfg = IdentityConfig(
@@ -331,6 +398,66 @@ class TestIdentityVerifierJwt:
 
 
 # ---------------------------------------------------------------------------
+# IdentityVerifier — ES256 (the second accepted algorithm)
+# ---------------------------------------------------------------------------
+
+
+class TestIdentityVerifierEs256:
+    """ES256 (ECDSA P-256) is accepted alongside RS256; keys are matched by ``kid``."""
+
+    def _verifier(self, jwks_doc: dict) -> IdentityVerifier:
+        cfg = IdentityConfig(
+            mode="jwt",
+            jwt_issuer=ISSUER,
+            jwt_audience=AUDIENCE,
+            jwt_jwks_url="https://accounts.example.com/jwks",
+            claim="email",
+        )
+        v = IdentityVerifier(cfg, jwks_fetcher=lambda _u: jwks_doc)
+        v.prefetch()
+        return v
+
+    def test_valid_es256_token_returns_identity_claim(self):
+        ec_key = _make_ec_keypair()
+        v = self._verifier(_ec_jwks_for(ec_key.public_key()))
+        token = _sign(ec_key, {"email": "ec-alice@example.com"}, kid=EC_KID, alg="ES256")
+        assert v.authenticate({"Authorization": f"Bearer {token}"}) == "ec-alice@example.com"
+
+    def test_es256_bad_signature_rejected(self):
+        ec_key = _make_ec_keypair()
+        other = _make_ec_keypair()  # advertised key differs from the signer
+        v = self._verifier(_ec_jwks_for(ec_key.public_key()))
+        token = _sign(other, {"email": "mallory@example.com"}, kid=EC_KID, alg="ES256")
+        with pytest.raises(HTTPException) as exc:
+            v.authenticate({"Authorization": f"Bearer {token}"})
+        assert exc.value.status_code == 401
+
+    def test_es256_wrong_audience_rejected(self):
+        ec_key = _make_ec_keypair()
+        v = self._verifier(_ec_jwks_for(ec_key.public_key()))
+        token = jwt.encode(
+            {"iss": ISSUER, "aud": "some-other-client", "exp": int(time.time()) + 3600, "email": "a@b.c"},
+            ec_key,
+            algorithm="ES256",
+            headers={"kid": EC_KID},
+        )
+        with pytest.raises(HTTPException) as exc:
+            v.authenticate({"Authorization": f"Bearer {token}"})
+        assert exc.value.status_code == 401
+
+    def test_mixed_jwks_verifies_both_rs256_and_es256_by_kid(self):
+        # A single JWKS carrying one RSA and one EC key; the verifier picks by kid.
+        rsa_key = _make_keypair()
+        ec_key = _make_ec_keypair()
+        jwks_doc = {"keys": _jwks_for(rsa_key.public_key())["keys"] + _ec_jwks_for(ec_key.public_key())["keys"]}
+        v = self._verifier(jwks_doc)
+        rs_token = _sign(rsa_key, {"email": "rs@example.com"})  # RS256, kid=test-key-1
+        es_token = _sign(ec_key, {"email": "es@example.com"}, kid=EC_KID, alg="ES256")
+        assert v.authenticate({"Authorization": f"Bearer {rs_token}"}) == "rs@example.com"
+        assert v.authenticate({"Authorization": f"Bearer {es_token}"}) == "es@example.com"
+
+
+# ---------------------------------------------------------------------------
 # Startup prefetch
 # ---------------------------------------------------------------------------
 
@@ -375,6 +502,48 @@ class TestJwksSourceResolution:
         # The SSRF guard: a file:// (or other non-http) URL must be refused.
         with pytest.raises(IdentityConfigError):
             _fetch_json("file:///etc/passwd")
+
+    def _assert_fails_closed(self, verifier, keypair):
+        """A malformed external shape must not raise out of prefetch/auth — 401."""
+        assert verifier.prefetch() is False  # empty cache, no AttributeError/500
+        token = _sign(keypair, {"email": "a@b.c"})
+        with pytest.raises(HTTPException) as exc:
+            verifier.authenticate({"Authorization": f"Bearer {token}"})
+        assert exc.value.status_code == 401
+
+    def test_jwks_non_object_fails_closed(self, keypair):
+        # A JWKS endpoint returning a JSON array (not an object) must fail closed,
+        # not raise AttributeError out of PyJWKSet.from_dict.
+        cfg = IdentityConfig(
+            mode="jwt", jwt_issuer=ISSUER, jwt_audience=AUDIENCE, jwt_jwks_url="https://x/jwks", claim="email"
+        )
+        v = IdentityVerifier(cfg, jwks_fetcher=lambda _u: [])
+        self._assert_fails_closed(v, keypair)
+
+    def test_oidc_discovery_non_object_fails_closed(self, keypair):
+        # Discovery doc that is a JSON array (no .get) must fail closed, not raise.
+        v = IdentityVerifier(self._disco_config(), jwks_fetcher=lambda _u: {"keys": []}, openid_fetcher=lambda _u: [])
+        self._assert_fails_closed(v, keypair)
+
+    def test_oidc_discovery_non_string_jwks_uri_fails_closed(self, keypair):
+        # jwks_uri present but not a string must fail closed, not slip through to
+        # a later AttributeError when the non-string is fetched.
+        v = IdentityVerifier(
+            self._disco_config(),
+            jwks_fetcher=lambda _u: {"keys": []},
+            openid_fetcher=lambda _u: {"jwks_uri": 123},
+        )
+        self._assert_fails_closed(v, keypair)
+
+    def test_oidc_discovery_http_jwks_uri_rejected_by_default(self, keypair):
+        # A discovered jwks_uri over plaintext http:// is refused under the default
+        # HTTPS policy (defense-in-depth even when the issuer itself was https).
+        v = IdentityVerifier(
+            self._disco_config(),
+            jwks_fetcher=lambda _u: {"keys": []},
+            openid_fetcher=lambda _u: {"jwks_uri": "http://accounts.example.com/jwks"},
+        )
+        self._assert_fails_closed(v, keypair)
 
 
 class TestStartupPrefetch:
