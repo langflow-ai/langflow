@@ -11,6 +11,7 @@ import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
 import { SourcesStrip } from "./SourcesStrip";
 import { looksPreformatted, unwrapToolMessage } from "./toolOutput";
+import { safeUrl } from "./url";
 
 export default function ContentDisplay({
   content,
@@ -265,14 +266,18 @@ export default function ContentDisplay({
     case "image":
       contentData = (
         <div className="flex flex-col gap-2">
-          {content.urls?.map((url, index) => (
-            <img
-              key={index}
-              src={url}
-              alt={content.caption || `Image ${index + 1}`}
-              className="max-w-full rounded"
-            />
-          ))}
+          {content.urls?.map((url, index) => {
+            const src = safeUrl(url);
+            if (!src) return null;
+            return (
+              <img
+                key={index}
+                src={src}
+                alt={content.caption || `Image ${index + 1}`}
+                className="max-w-full rounded"
+              />
+            );
+          })}
           {/* base64 is a fallback for when no usable URL is provided.
               `some(Boolean)` so urls=[""] or urls=[null] don't suppress the
               fallback while rendering a broken <img src=""> above. */}
@@ -293,11 +298,15 @@ export default function ContentDisplay({
     case "audio":
       contentData = (
         <div className="flex flex-col gap-2">
-          {content.urls?.map((url, index) => (
-            <audio key={index} controls className="w-full">
-              <source src={url} type={content.mime_type} />
-            </audio>
-          ))}
+          {content.urls?.map((url, index) => {
+            const src = safeUrl(url);
+            if (!src) return null;
+            return (
+              <audio key={index} controls className="w-full">
+                <source src={src} type={content.mime_type} />
+              </audio>
+            );
+          })}
           {!content.urls?.some(Boolean) && content.base64 && (
             <audio controls className="w-full">
               <source
@@ -318,11 +327,15 @@ export default function ContentDisplay({
     case "video":
       contentData = (
         <div className="flex flex-col gap-2">
-          {content.urls?.map((url, index) => (
-            <video key={index} controls className="max-w-full rounded">
-              <source src={url} type={content.mime_type} />
-            </video>
-          ))}
+          {content.urls?.map((url, index) => {
+            const src = safeUrl(url);
+            if (!src) return null;
+            return (
+              <video key={index} controls className="max-w-full rounded">
+                <source src={src} type={content.mime_type} />
+              </video>
+            );
+          })}
           {!content.urls?.some(Boolean) && content.base64 && (
             <video controls className="max-w-full rounded">
               <source
@@ -342,18 +355,32 @@ export default function ContentDisplay({
             name="File"
             className="h-4 w-4 text-muted-foreground"
           />
-          {content.urls?.map((url, index) => (
-            <a
-              key={index}
-              href={url}
-              download={content.filename}
-              className="text-sm underline text-primary hover:text-primary/80"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {content.filename || `Download file ${index + 1}`}
-            </a>
-          ))}
+          {content.urls?.map((url, index) => {
+            const label = content.filename || `Download file ${index + 1}`;
+            const href = safeUrl(url);
+            // URLs come from untrusted tool/model output; an unsafe scheme
+            // (javascript:, data:, ...) degrades to a non-clickable label
+            // rather than an anchor that runs script on click.
+            if (!href) {
+              return (
+                <span key={index} className="text-sm text-muted-foreground">
+                  {label}
+                </span>
+              );
+            }
+            return (
+              <a
+                key={index}
+                href={href}
+                download={content.filename}
+                className="text-sm underline text-primary hover:text-primary/80"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {label}
+              </a>
+            );
+          })}
         </div>
       );
       break;

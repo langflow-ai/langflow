@@ -372,6 +372,32 @@ describe("ContentDisplay", () => {
     });
   });
 
+  describe("file", () => {
+    it("renders a download anchor for http(s) URLs", () => {
+      const file = {
+        type: "file",
+        urls: ["https://example.com/report.pdf"],
+        filename: "report.pdf",
+      } as unknown as ContentBlockItem;
+      render(<ContentDisplay content={file} chatId="t-f1" />);
+      const link = screen.getByRole("link", { name: "report.pdf" });
+      expect(link).toHaveAttribute("href", "https://example.com/report.pdf");
+    });
+
+    it("does not render an anchor for non-http URLs (sanitization)", () => {
+      // urls come from untrusted tool/model output; a javascript: scheme must
+      // degrade to a plain label instead of a clickable anchor.
+      const file = {
+        type: "file",
+        urls: ["javascript:alert(document.cookie)"],
+        filename: "evil.pdf",
+      } as unknown as ContentBlockItem;
+      render(<ContentDisplay content={file} chatId="t-f2" />);
+      expect(screen.queryByRole("link")).not.toBeInTheDocument();
+      expect(screen.getByText("evil.pdf")).toBeInTheDocument();
+    });
+  });
+
   describe("group", () => {
     it("renders the title and recurses through nested contents", () => {
       // Nested ContentBlock inside another container: previously fell

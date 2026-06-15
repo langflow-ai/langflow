@@ -1,19 +1,5 @@
 import type { CitationContent } from "@/types/chat";
-
-/** Returns the URL if its scheme is http(s), otherwise null. Guards against
- * `javascript:` / `data:` / `vbscript:` and other unsafe schemes that
- * React would otherwise pass through to a clickable anchor in production. */
-function safeUrl(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === "http:" || parsed.protocol === "https:"
-      ? raw
-      : null;
-  } catch {
-    return null;
-  }
-}
+import { safeUrl } from "./url";
 
 /** Best-effort host extraction. Returns null for unparseable inputs so the
  * caller can decide whether to fall back to the raw URL or hide the chip. */
