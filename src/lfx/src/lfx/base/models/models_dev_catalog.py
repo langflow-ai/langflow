@@ -333,6 +333,26 @@ def _provider_model_dicts(provider_block: dict[str, Any]) -> list[dict[str, Any]
     return []
 
 
+def _model_catalog_key(entry: dict[str, Any], *, provider: str | None = None) -> tuple[Any, Any, Any]:
+    """Return the identity used to deduplicate catalog rows."""
+    return (entry.get("provider") or provider, entry.get("name"), entry.get("model_type", "llm"))
+
+
+def _append_custom_static_entries(
+    override_models: list[dict[str, Any]], static_group: list[dict[str, Any]], *, provider: str
+) -> None:
+    """Add static rows that models.dev does not cover to an override list."""
+    override_keys = {_model_catalog_key(m, provider=provider) for m in override_models if isinstance(m, dict)}
+    for entry in static_group:
+        if not isinstance(entry, dict):
+            continue
+        key = _model_catalog_key(entry, provider=provider)
+        if key in override_keys:
+            continue
+        override_models.append(entry)
+        override_keys.add(key)
+
+
 def apply_models_dev_overrides(
     static_lists: list[list[dict[str, Any]]],
     snapshot: dict[str, Any],
@@ -400,12 +420,13 @@ def apply_models_dev_overrides(
         if len(provider_names) == 1:
             (provider,) = provider_names
             if provider in overrides:
+                _append_custom_static_entries(overrides[provider], group, provider=provider)
                 if provider in consumed_providers:
                     # A second (or later) static group for the same provider
                     # — e.g. OPENAI_EMBEDDING_MODELS_DETAILED appears after
                     # OPENAI_MODELS_DETAILED. The override already contains
-                    # both LLMs and embeddings from that provider, so
-                    # appending this static group would duplicate the rows.
+                    # known models from that provider, so only custom static
+                    # rows that models.dev does not cover are merged above.
                     continue
                 replaced.append(overrides[provider])
                 consumed_providers.add(provider)

@@ -196,10 +196,14 @@ def test_apply_overrides_replaces_covered_provider():
 
     result = apply_models_dev_overrides([_anthropic_group(), _watsonx_group()], snapshot)
 
-    # Anthropic group must be replaced with 2 new entries; WatsonX preserved.
+    # Anthropic known models come from models.dev; static-only rows are preserved.
     assert len(result) == 2
     anthropic_models = result[0]
-    assert {m["name"] for m in anthropic_models} == {"claude-opus-4-1-20250805", "claude-sonnet-4-5"}
+    assert {m["name"] for m in anthropic_models} == {
+        "claude-old-1",
+        "claude-opus-4-1-20250805",
+        "claude-sonnet-4-5",
+    }
 
     opus = next(m for m in anthropic_models if m["name"] == "claude-opus-4-1-20250805")
     assert opus["provider"] == "Anthropic"
@@ -568,6 +572,46 @@ def test_apply_overrides_drops_subsequent_static_groups_for_overridden_provider(
     assert seen.get("text-embedding-3-small") == 1
 
 
+def test_apply_overrides_preserves_same_name_custom_entries_by_model_type():
+    """Custom chat and embedding entries with the same name are distinct.
+
+    OpenAI-compatible gateways can expose a user-defined model id behind both
+    chat and embeddings endpoints. If models.dev knows the provider but not
+    the custom id, both static entries must survive the override.
+    """
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    static_openai_llms = [
+        {"provider": "OpenAI", "name": "gpt-4o", "model_type": "llm"},
+        {"provider": "OpenAI", "name": "koni", "model_type": "llm"},
+    ]
+    static_openai_embeddings = [
+        {"provider": "OpenAI", "name": "text-embedding-3-large", "model_type": "embeddings"},
+        {"provider": "OpenAI", "name": "koni", "model_type": "embeddings"},
+    ]
+    snapshot = {
+        "openai": {
+            "id": "openai",
+            "models": {
+                "gpt-4o": {"id": "gpt-4o", "family": "gpt", "tool_call": True},
+                "text-embedding-3-large": {
+                    "id": "text-embedding-3-large",
+                    "family": "text-embedding",
+                },
+            },
+        }
+    }
+
+    fixed_now = datetime(2026, 5, 18, tzinfo=timezone.utc)
+    result = apply_models_dev_overrides([static_openai_llms, static_openai_embeddings], snapshot, now=fixed_now)
+    seen = [(entry["name"], entry.get("model_type", "llm")) for group in result for entry in group]
+
+    assert seen.count(("gpt-4o", "llm")) == 1
+    assert seen.count(("text-embedding-3-large", "embeddings")) == 1
+    assert seen.count(("koni", "llm")) == 1
+    assert seen.count(("koni", "embeddings")) == 1
+
+
 def test_apply_overrides_appends_new_provider_when_no_static_group():
     """Append override groups for covered providers with no static group.
 
@@ -643,15 +687,17 @@ def test_get_unified_models_detailed_sorts_provider_lists():
         anthropic = next(p for p in unified if p["provider"] == "Anthropic")
         names = [m["model_name"] for m in anthropic["models"]]
 
-        # Non-deprecated dated rows first (newest first), then undated rows
-        # in their original order, then deprecated last.
-        assert names == [
+        # Non-deprecated dated rows sort newest first; undated synthetic rows keep
+        # their relative order; the deprecated synthetic row falls below them.
+        expected_order = [
             "claude-newest",
             "claude-mid",
             "claude-undated-a",
             "claude-undated-b",
             "claude-old-deprecated",
         ]
+        positions = [names.index(name) for name in expected_order]
+        assert positions == sorted(positions)
     finally:
         models_dev_catalog.set_active_snapshot(prior)
         models_dev_catalog.invalidate_catalog_cache()
@@ -684,7 +730,7 @@ def test_install_snapshot_invalidates_get_models_detailed_cache():
         anthropic_groups = [g for g in live_view if any(m.get("provider") == "Anthropic" for m in g)]
         assert anthropic_groups, "Anthropic group missing after override install"
         names = {m["name"] for m in anthropic_groups[0]}
-        assert names == {"synthetic-claude"}
+        assert "synthetic-claude" in names
     finally:
         # Restore prior state so subsequent tests aren't polluted.
         models_dev_catalog.set_active_snapshot(prior)
