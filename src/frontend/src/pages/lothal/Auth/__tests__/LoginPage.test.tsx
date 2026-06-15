@@ -41,9 +41,12 @@ function renderAt(path: string) {
   );
 }
 
+const REDIRECT_SESSION_KEY = "langflow_login_redirect";
+
 describe("Lothal LoginPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    sessionStorage.clear();
   });
 
   it("renders the dockyard sign-in card", () => {
@@ -68,6 +71,18 @@ describe("Lothal LoginPage", () => {
     expect(
       screen.getByRole("link", { name: "Create an account" }),
     ).toHaveAttribute("href", "/signup");
+  });
+
+  it("defaults the post-login destination to the projects page", () => {
+    renderAt("/login");
+    // No ?redirect → the guard's consumeRedirectUrl() should yield /lothal.
+    expect(sessionStorage.getItem(REDIRECT_SESSION_KEY)).toBe("/lothal");
+  });
+
+  it("does not override an explicit redirect with the default", () => {
+    renderAt("/login?redirect=/lothal/abc");
+    // useSanitizeRedirectUrl stashes the explicit target; default must not win.
+    expect(sessionStorage.getItem(REDIRECT_SESSION_KEY)).toBe("/lothal/abc");
   });
 
   it("logs in on submit and carries the access token into the session", () => {

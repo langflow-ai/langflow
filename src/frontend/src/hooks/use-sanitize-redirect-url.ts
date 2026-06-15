@@ -25,3 +25,12 @@ export function consumeRedirectUrl(): string | null {
   }
   return redirectPath;
 }
+
+/**
+ * Stash a post-login destination so the auth guards' `consumeRedirectUrl()`
+ * picks it up after sign-in. Used by the Lothal login page to default to the
+ * projects page instead of the shared `/flows` fallback.
+ */
+export function setRedirectUrl(redirectPath: string): void {
+  sessionStorage.setItem(REDIRECT_SESSION_KEY, redirectPath);
+}

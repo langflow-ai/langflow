@@ -9,13 +9,17 @@ import {
   type CSSProperties,
   type ReactNode,
   useContext,
+  useEffect,
   useState,
 } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AuthContext } from "@/contexts/authContext";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
-import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
+import {
+  setRedirectUrl,
+  useSanitizeRedirectUrl,
+} from "@/hooks/use-sanitize-redirect-url";
 import useAlertStore from "@/stores/alertStore";
 import type { LoginType } from "@/types/api";
 import { Button, LothalMark } from "../components";
@@ -63,6 +67,14 @@ function LoginView() {
   const [redirect] = useState(() => searchParams.get("redirect"));
 
   useSanitizeRedirectUrl();
+
+  // Lothal's home is the projects page. With no explicit ?redirect, default the
+  // post-login destination to /lothal (the auth guard otherwise falls back to
+  // Langflow's /flows). An explicit redirect — e.g. the landing CTA's
+  // ?redirect=/lothal — is left untouched, having been stashed above.
+  useEffect(() => {
+    if (!redirect) setRedirectUrl("/lothal");
+  }, [redirect]);
 
   const { login, clearAuthSession } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
