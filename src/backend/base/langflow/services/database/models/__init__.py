@@ -19,7 +19,7 @@ from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .ingestion_run import IngestionRun, IngestionRunStatus
-from .jobs import ExecutionSignal, Job, JobEvent, SignalType
+from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, SignalType
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
@@ -49,6 +49,7 @@ __all__ = [
     "IngestionRun",
     "IngestionRunStatus",
     "Job",
+    "JobCheckpoint",
     "JobEvent",
     "KnowledgeBaseRecord",
     "KnowledgeBaseStatus",

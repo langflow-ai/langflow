@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Column, DateTime, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, Column, DateTime, Integer, String, Text, UniqueConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -159,4 +159,30 @@ class ExecutionSignal(SQLModel, table=True):  # type: ignore[call-arg]
     consumed_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+
+
+class JobCheckpoint(SQLModel, table=True):  # type: ignore[call-arg]
+    """A durable suspend/resume checkpoint blob for a job.
+
+    ``blob`` is opaque, already-serialized text the persistence layer never
+    parses: graph checkpoints store JSON, the agent saver (LE-1447) stores
+    base64(msgpack). ``kind`` discriminates them; UNIQUE(job_id, kind) keeps a
+    single live checkpoint per job per kind (save upserts).
+    """
+
+    __tablename__ = "job_checkpoints"
+    __table_args__ = (UniqueConstraint("job_id", "kind", name="uq_job_checkpoints_job_id_kind"),)
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    job_id: UUID = Field(index=True, nullable=False)
+    kind: str = Field(sa_column=Column(String, nullable=False))
+    blob: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )

@@ -21,6 +21,7 @@ from langflow.services.database.models.jobs.crud import (
 from langflow.services.database.models.jobs.model import (
     ExecutionSignal,
     Job,
+    JobCheckpoint,
     JobEvent,
     JobStatus,
     JobType,
@@ -256,6 +257,54 @@ class JobService(Service):
             session.add(job)
             await session.flush()
             return job
+
+    async def save_checkpoint(self, job_id: UUID, kind: str, blob: str) -> None:
+        """Upsert the durable checkpoint blob for ``(job_id, kind)``.
+
+        ``blob`` is already-serialized text persisted verbatim — the helper never
+        parses it, so the graph producer (JSON) and the agent saver (base64 of
+        msgpack, LE-1447) share one API. UNIQUE(job_id, kind) keeps a single live
+        checkpoint per kind: a second save replaces the first.
+        """
+        now = datetime.now(timezone.utc)
+        async with session_scope() as session:
+            stmt = select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).where(JobCheckpoint.kind == kind)
+            existing = (await session.exec(stmt)).first()
+            if existing is None:
+                session.add(JobCheckpoint(job_id=job_id, kind=kind, blob=blob, created_at=now, updated_at=now))
+            else:
+                existing.blob = blob
+                existing.updated_at = now
+                session.add(existing)
+            await session.flush()
+
+    async def load_checkpoint(self, job_id: UUID, kind: str) -> str | None:
+        """Return the stored checkpoint blob for ``(job_id, kind)``, or None if absent."""
+        async with session_scope() as session:
+            stmt = select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).where(JobCheckpoint.kind == kind)
+            row = (await session.exec(stmt)).first()
+            return row.blob if row is not None else None
+
+    async def delete_checkpoint(self, job_id: UUID, kind: str) -> None:
+        """Delete the checkpoint for ``(job_id, kind)``; no-op when none exists."""
+        async with session_scope() as session:
+            stmt = select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).where(JobCheckpoint.kind == kind)
+            row = (await session.exec(stmt)).first()
+            if row is not None:
+                await session.delete(row)
+                await session.flush()
+
+    async def all_checkpoints(self, kind: str) -> list[tuple[UUID, str]]:
+        """Return ``(job_id, blob)`` for every stored checkpoint of ``kind``.
+
+        Lets a checkpoint store resolve the cross-row ABC lookups (by checkpoint
+        id, run id, session id) it can't express through the job-keyed helper. The
+        set is bounded: one row per actively-suspended job, dropped on completion.
+        """
+        async with session_scope() as session:
+            stmt = select(JobCheckpoint).where(JobCheckpoint.kind == kind)
+            rows = (await session.exec(stmt)).all()
+            return [(row.job_id, row.blob) for row in rows]
 
     async def append_event(self, job_id: UUID, event_type: str, payload: dict) -> int:
         """Append a durable event for a job and return its per-job seq.
