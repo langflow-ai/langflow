@@ -68,6 +68,9 @@ class StreamAdapter(Protocol):
     def error_events(self, error: BaseException) -> Iterable[StreamEvent]:
         """Events to emit when the run errors mid-stream."""
 
+    def cancel_events(self, reason: str) -> Iterable[StreamEvent]:
+        """Events to emit when the run is cancelled by the user."""
+
     @property
     def terminal_error_type(self) -> str | None:
         """Event-type the buffer task watches to flip a background job to FAILED.
