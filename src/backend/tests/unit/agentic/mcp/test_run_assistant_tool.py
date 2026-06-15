@@ -276,6 +276,38 @@ class TestRunAssistantAndPersist:
 
         assert exc_info.value.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_should_drive_the_stream_with_apply_edits_immediately(self):
+        # Wiring guard (Bug #13641): the runner must tell the streaming service it
+        # is headless so the propose tools apply edits live and narrate them as
+        # done instead of "(pending user approval)".
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        user_id = uuid4()
+        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+
+        captured_kwargs: dict = {}
+
+        def _capturing_stream(*_args, **kwargs):
+            captured_kwargs.update(kwargs)
+            return _stream_of(EVENTS_TEXT_ONLY)()
+
+        with (
+            patch(f"{RUNNER_MODULE}._resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()),
+            patch(f"{RUNNER_MODULE}.execute_flow_with_validation_streaming", side_effect=_capturing_stream),
+            patch(f"{RUNNER_MODULE}._save_flow_to_fs", new_callable=AsyncMock),
+            patch(f"{RUNNER_MODULE}.get_storage_service", MagicMock()),
+        ):
+            await run_assistant_and_persist(
+                session=session, user_id=user_id, instruction="Set the prompt to 'X'.", flow_id=str(flow.id)
+            )
+
+        assert captured_kwargs.get("apply_edits_immediately") is True, (
+            f"headless runner must request immediate edit apply; got {captured_kwargs!r}"
+        )
+
 
 class TestRunAssistantAppliesProposedFieldEdits:
     """Bug #13641: headless MCP must persist proposed text edits.

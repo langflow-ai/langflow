@@ -18,6 +18,7 @@ from lfx.mcp.flow_builder_tools import (
     get_working_flow,
     init_working_flow,
     reset_working_flow,
+    set_apply_edits_live,
     set_propose_existing_edits,
 )
 from lfx.mcp.tool_cache import reset_tool_cache
@@ -520,6 +521,7 @@ async def execute_flow_with_validation_streaming(
     model_name: str | None = None,
     api_key_var: str | None = None,
     is_disconnected: Callable[[], Coroutine[Any, Any, bool]] | None = None,
+    apply_edits_immediately: bool = False,
 ) -> AsyncGenerator[str, None]:
     """Execute flow with validation, yielding SSE progress and token events.
 
@@ -697,6 +699,15 @@ async def execute_flow_with_validation_streaming(
             f"{'; '.join(_model_parts)}]\n\n{current_input}"
         )
 
+    # Headless callers (MCP) have no review UI, so steer the agent away from a
+    # "proposed/pending approval" narration the user can never act on (#13641).
+    if apply_edits_immediately:
+        current_input = (
+            "[Headless session: there is NO canvas UI and NO review step. Every field edit you make "
+            "is applied IMMEDIATELY and live. Do NOT say a change is 'proposed', 'pending approval', or "
+            "'for review' — report edits as already APPLIED/DONE.]\n\n" + current_input
+        )
+
     # Capture the original user prompt BEFORE history/canvas injection so we
     # can record it verbatim in the buffer at end-of-turn. The wrapped
     # input is what the LLM sees; the recorded user message is what the
@@ -739,6 +750,7 @@ async def execute_flow_with_validation_streaming(
             and not is_continuation_signal
         )
     )
+    set_apply_edits_live(enabled=apply_edits_immediately)
 
     current_input = inject_conversation_history(user_id=user_id, session_id=session_id, input_value=current_input)
 

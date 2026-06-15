@@ -200,6 +200,7 @@ async def run_assistant_and_persist(
         provider=ctx.provider,
         model_name=ctx.model_name,
         api_key_var=ctx.api_key_name,
+        apply_edits_immediately=True,
     )
     canvas, working_snapshot, result_text, error_text, field_edits = await _consume_stream(stream, flow.data)
 
