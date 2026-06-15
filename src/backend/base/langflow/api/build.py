@@ -757,16 +757,21 @@ async def generate_flow_events(
     # generate_flow_events runs as an asyncio task; by the time the flow
     # finishes, FastAPI has already drained the background_tasks queue and any
     # tasks added after that point are silently dropped.
-    try:
-        _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
-        await get_task_service().fire_and_forget_task(
-            get_memory_base_service().on_flow_output,
-            flow_id=flow_id,
-            session_id=graph.session_id or str(flow_id),
-            job_id=_run_id_uuid,
-        )
-    except (RuntimeError, ValueError, OSError):
-        await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
+    # Gated on ``track_job_status`` for the same reason as the job row above:
+    # when a caller owns the run's lifecycle (the v2 durable background path
+    # passes ``track_job_status=False`` and fires this hook itself with the
+    # durable job_id), firing here too would double-capture the flow output.
+    if track_job_status:
+        try:
+            _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow_id,
+                session_id=graph.session_id or str(flow_id),
+                job_id=_run_id_uuid,
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
 
     await event_manager.queue.put((None, None, time.time()))
 
