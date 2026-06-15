@@ -23,10 +23,9 @@ describe("Checkbox accessibility", () => {
 
 describe("CheckBoxDiv accessibility", () => {
   // Known gap (a11y-action-plan 1.3): CheckBoxDiv is a visual-only <div>
-  // with no checkbox role, state, or keyboard support. This flips to a
-  // regular test once the fix lands — jest will then report it as failing
-  // because the inner expectation starts passing.
-  it.failing("should_expose_checkbox_role_and_checked_state", () => {
+  // with no checkbox role, state, or keyboard support. Fails until the
+  // fix lands.
+  it("should_expose_checkbox_role_and_checked_state", () => {
     render(<CheckBoxDiv checked />);
 
     const checkbox = screen.getByRole("checkbox");

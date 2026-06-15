@@ -1,0 +1,58 @@
+name: Run Frontend A11y Unit Tests
+
+on:
+  pull_request:
+    paths:
+      - "src/frontend/**"
+      - ".github/workflows/a11y-unit-tests.yml"
+      - "Makefile.frontend"
+  workflow_call:
+    inputs:
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  a11y-unit-tests:
+    name: Frontend A11y Unit Tests (jest-axe)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./src/frontend/package-lock.json
+
+      # These are regression locks: every a11y unit test passes as of the
+      # component fixes in feat/a11y-unit-tests, so a failure here means a
+      # real a11y regression and blocks the PR.
+      - name: Run Frontend A11y Unit Tests
+        run: make test_frontend_a11y_ci
+
+      - name: Publish A11y Test Results
+        uses: mikepenz/action-junit-report@v5
+        if: always()
+        with:
+          report_paths: "src/frontend/test-results/junit.xml"
+          check_name: "Frontend A11y Unit Test Results"
+          fail_on_failure: true
+          require_tests: true
