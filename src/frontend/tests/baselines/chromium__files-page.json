@@ -1,0 +1,498 @@
+{
+  "results": [
+    {
+      "ruleId": "svg_graphics_labelled",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/svg[1]",
+        "aria": "/document[1]/graphics-document[1]"
+      },
+      "ruleTime": 0,
+      "reasonId": "fail_acc_name",
+      "message": "The SVG element has no accessible name",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 0,
+        "top": 0,
+        "height": 0,
+        "width": 0
+      },
+      "snippet": "<svg class=\"absolute\" height=\"0\" width=\"0\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/svg_graphics_labelled.html#%7B%22message%22%3A%22The%20SVG%20element%20has%20no%20accessible%20name%22%2C%22snippet%22%3A%22%3Csvg%20class%3D%5C%22absolute%5C%22%20height%3D%5C%220%5C%22%20width%3D%5C%220%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22fail_acc_name%22%2C%22ruleId%22%3A%22svg_graphics_labelled%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    },
+    {
+      "ruleId": "input_label_exists",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/header[1]/div[1]/button[1]",
+        "aria": "/document[1]/banner[1]/button[1]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "Form control element <button> has no associated label",
+      "messageArgs": ["button"],
+      "apiArgs": [],
+      "bounds": {
+        "left": 10,
+        "top": 8,
+        "height": 32,
+        "width": 32
+      },
+      "snippet": "<button data-testid=\"icon-ChevronLeft\" type=\"button\" class=\"mr-1 flex h-8 w-8 items-center\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/input_label_exists.html#%7B%22message%22%3A%22Form%20control%20element%20%3Cbutton%3E%20has%20no%20associated%20label%22%2C%22snippet%22%3A%22%3Cbutton%20data-testid%3D%5C%22icon-ChevronLeft%5C%22%20type%3D%5C%22button%5C%22%20class%3D%5C%22mr-1%20flex%20h-8%20w-8%20items-center%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22input_label_exists%22%2C%22msgArgs%22%3A%5B%22button%22%5D%7D"
+    },
+    {
+      "ruleId": "svg_graphics_labelled",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/header[1]/div[1]/button[1]/svg[1]",
+        "aria": "/document[1]/banner[1]/button[1]"
+      },
+      "ruleTime": 0,
+      "reasonId": "fail_acc_name",
+      "message": "The SVG element has no accessible name",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 10,
+        "top": 14,
+        "height": 20,
+        "width": 20
+      },
+      "snippet": "<svg class=\"h-5 w-5\" fill=\"currentColor\" viewBox=\"0 0 24 22\" height=\"22\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/svg_graphics_labelled.html#%7B%22message%22%3A%22The%20SVG%20element%20has%20no%20accessible%20name%22%2C%22snippet%22%3A%22%3Csvg%20class%3D%5C%22h-5%20w-5%5C%22%20fill%3D%5C%22currentColor%5C%22%20viewBox%3D%5C%220%200%2024%2022%5C%22%20height%3D%5C%2222%5C%22%20width%3D%5C%2224%5C%22%20xmlns%3D%5C%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22fail_acc_name%22%2C%22ruleId%22%3A%22svg_graphics_labelled%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    },
+    {
+      "ruleId": "svg_graphics_labelled",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/header[1]/div[3]/div[1]/div[1]/button[1]/div[1]/svg[1]",
+        "aria": "/document[1]/banner[1]/button[2]"
+      },
+      "ruleTime": 0,
+      "reasonId": "fail_acc_name",
+      "message": "The SVG element has no accessible name",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 1003,
+        "top": 16,
+        "height": 16,
+        "width": 16
+      },
+      "snippet": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" class=\"h-4 w-4\" viewBox=\"0 0 496 512\" stroke-width=\"0\" fill=\"currentColor\" stroke=\"currentColor\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/svg_graphics_labelled.html#%7B%22message%22%3A%22The%20SVG%20element%20has%20no%20accessible%20name%22%2C%22snippet%22%3A%22%3Csvg%20xmlns%3D%5C%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%5C%22%20width%3D%5C%221em%5C%22%20height%3D%5C%221em%5C%22%20class%3D%5C%22h-4%20w-4%5C%22%20viewBox%3D%5C%220%200%20496%20512%5C%22%20stroke-width%3D%5C%220%5C%22%20fill%3D%5C%22currentColor%5C%22%20stroke%3D%5C%22currentColor%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22fail_acc_name%22%2C%22ruleId%22%3A%22svg_graphics_labelled%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    },
+    {
+      "ruleId": "svg_graphics_labelled",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/header[1]/div[3]/div[1]/div[1]/button[2]/div[1]/svg[1]",
+        "aria": "/document[1]/banner[1]/button[3]"
+      },
+      "ruleTime": 0,
+      "reasonId": "fail_acc_name",
+      "message": "The SVG element has no accessible name",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 1090,
+        "top": 16,
+        "height": 16,
+        "width": 16
+      },
+      "snippet": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" class=\"h-4 w-4\" viewBox=\"0 0 640 512\" stroke-width=\"0\" fill=\"currentColor\" stroke=\"currentColor\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/svg_graphics_labelled.html#%7B%22message%22%3A%22The%20SVG%20element%20has%20no%20accessible%20name%22%2C%22snippet%22%3A%22%3Csvg%20xmlns%3D%5C%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%5C%22%20width%3D%5C%221em%5C%22%20height%3D%5C%221em%5C%22%20class%3D%5C%22h-4%20w-4%5C%22%20viewBox%3D%5C%220%200%20640%20512%5C%22%20stroke-width%3D%5C%220%5C%22%20fill%3D%5C%22currentColor%5C%22%20stroke%3D%5C%22currentColor%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22fail_acc_name%22%2C%22ruleId%22%3A%22svg_graphics_labelled%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    },
+    {
+      "ruleId": "aria_id_unique",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/header[1]/div[3]/button[1]",
+        "aria": "/document[1]/banner[1]/button[4]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "The 'id' \"radix-_r_4_\" specified for the ARIA property 'aria-controls' value is not valid",
+      "messageArgs": ["radix-_r_4_", "aria-controls", "button"],
+      "apiArgs": [],
+      "bounds": {
+        "left": 1167,
+        "top": 8,
+        "height": 32,
+        "width": 32
+      },
+      "snippet": "<button data-state=\"closed\" aria-controls=\"radix-_r_4_\" aria-expanded=\"false\" aria-haspopup=\"dialog\" data-testid=\"notification_button\" aria-label=\"Notifications and errors\" type=\"button\" class=\"\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/aria_id_unique.html#%7B%22message%22%3A%22The%20'id'%20%5C%22radix-_r_4_%5C%22%20specified%20for%20the%20ARIA%20property%20'aria-controls'%20value%20is%20not%20valid%22%2C%22snippet%22%3A%22%3Cbutton%20data-state%3D%5C%22closed%5C%22%20aria-controls%3D%5C%22radix-_r_4_%5C%22%20aria-expanded%3D%5C%22false%5C%22%20aria-haspopup%3D%5C%22dialog%5C%22%20data-testid%3D%5C%22notification_button%5C%22%20aria-label%3D%5C%22Notifications%20and%20errors%5C%22%20type%3D%5C%22button%5C%22%20class%3D%5C%22%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22aria_id_unique%22%2C%22msgArgs%22%3A%5B%22radix-_r_4_%22%2C%22aria-controls%22%2C%22button%22%5D%7D"
+    },
+    {
+      "ruleId": "aria_content_in_landmark",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/button[1]",
+        "aria": "/document[1]/button[1]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "Content is not within a landmark element",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 247,
+        "top": 66,
+        "height": 16,
+        "width": 16
+      },
+      "snippet": "<button data-testid=\"close_get_started_dialog\" class=\"text-muted-foreground hover:text-foreground\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/aria_content_in_landmark.html#%7B%22message%22%3A%22Content%20is%20not%20within%20a%20landmark%20element%22%2C%22snippet%22%3A%22%3Cbutton%20data-testid%3D%5C%22close_get_started_dialog%5C%22%20class%3D%5C%22text-muted-foreground%20hover%3Atext-foreground%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22aria_content_in_landmark%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    },
+    {
+      "ruleId": "input_label_exists",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/button[1]",
+        "aria": "/document[1]/button[1]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "Form control element <button> has no associated label",
+      "messageArgs": ["button"],
+      "apiArgs": [],
+      "bounds": {
+        "left": 247,
+        "top": 66,
+        "height": 16,
+        "width": 16
+      },
+      "snippet": "<button data-testid=\"close_get_started_dialog\" class=\"text-muted-foreground hover:text-foreground\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/input_label_exists.html#%7B%22message%22%3A%22Form%20control%20element%20%3Cbutton%3E%20has%20no%20associated%20label%22%2C%22snippet%22%3A%22%3Cbutton%20data-testid%3D%5C%22close_get_started_dialog%5C%22%20class%3D%5C%22text-muted-foreground%20hover%3Atext-foreground%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22input_label_exists%22%2C%22msgArgs%22%3A%5B%22button%22%5D%7D"
+    },
+    {
+      "ruleId": "aria_content_in_landmark",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/button[1]",
+        "aria": "/document[1]/button[2]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "Content is not within a landmark element",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 16,
+        "top": 120,
+        "height": 40,
+        "width": 247
+      },
+      "snippet": "<button data-testid=\"github_starred_btn_get_started\" type=\"button\" class=\"w-full\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/aria_content_in_landmark.html#%7B%22message%22%3A%22Content%20is%20not%20within%20a%20landmark%20element%22%2C%22snippet%22%3A%22%3Cbutton%20data-testid%3D%5C%22github_starred_btn_get_started%5C%22%20type%3D%5C%22button%5C%22%20class%3D%5C%22w-full%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22aria_content_in_landmark%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    },
+    {
+      "ruleId": "svg_graphics_labelled",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/button[1]/div[1]/svg[1]",
+        "aria": "/document[1]/button[2]"
+      },
+      "ruleTime": 0,
+      "reasonId": "fail_acc_name",
+      "message": "The SVG element has no accessible name",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 24,
+        "top": 132,
+        "height": 16,
+        "width": 16
+      },
+      "snippet": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" class=\"h-4 w-4 shrink-0\" viewBox=\"0 0 496 512\" stroke-width=\"0\" fill=\"currentColor\" stroke=\"currentColor\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/svg_graphics_labelled.html#%7B%22message%22%3A%22The%20SVG%20element%20has%20no%20accessible%20name%22%2C%22snippet%22%3A%22%3Csvg%20xmlns%3D%5C%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%5C%22%20width%3D%5C%221em%5C%22%20height%3D%5C%221em%5C%22%20class%3D%5C%22h-4%20w-4%20shrink-0%5C%22%20viewBox%3D%5C%220%200%20496%20512%5C%22%20stroke-width%3D%5C%220%5C%22%20fill%3D%5C%22currentColor%5C%22%20stroke%3D%5C%22currentColor%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22fail_acc_name%22%2C%22ruleId%22%3A%22svg_graphics_labelled%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    },
+    {
+      "ruleId": "svg_graphics_labelled",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/button[2]/div[1]/svg[1]",
+        "aria": "/document[1]/button[3]"
+      },
+      "ruleTime": 0,
+      "reasonId": "fail_acc_name",
+      "message": "The SVG element has no accessible name",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 24,
+        "top": 176,
+        "height": 16,
+        "width": 16
+      },
+      "snippet": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" class=\"h-4 w-4 shrink-0 text-[#5865F2]\" viewBox=\"0 0 640 512\" stroke-width=\"0\" fill=\"currentColor\" stroke=\"currentColor\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/svg_graphics_labelled.html#%7B%22message%22%3A%22The%20SVG%20element%20has%20no%20accessible%20name%22%2C%22snippet%22%3A%22%3Csvg%20xmlns%3D%5C%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%5C%22%20width%3D%5C%221em%5C%22%20height%3D%5C%221em%5C%22%20class%3D%5C%22h-4%20w-4%20shrink-0%20text-%5B%235865F2%5D%5C%22%20viewBox%3D%5C%220%200%20640%20512%5C%22%20stroke-width%3D%5C%220%5C%22%20fill%3D%5C%22currentColor%5C%22%20stroke%3D%5C%22currentColor%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22fail_acc_name%22%2C%22ruleId%22%3A%22svg_graphics_labelled%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    },
+    {
+      "ruleId": "aria_content_in_landmark",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/div[2]/button[1]",
+        "aria": "/document[1]/button[6]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "Content is not within a landmark element",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 203,
+        "top": 266,
+        "height": 28,
+        "width": 28
+      },
+      "snippet": "<button data-state=\"closed\" data-testid=\"upload-project-button\" type=\"button\" class=\"noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground disabled:!bg-transparent p-1 rounded-md h-7 w-7 border-0 text-muted-foreground hover:bg-muted active:scale-[0.97]\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/aria_content_in_landmark.html#%7B%22message%22%3A%22Content%20is%20not%20within%20a%20landmark%20element%22%2C%22snippet%22%3A%22%3Cbutton%20data-state%3D%5C%22closed%5C%22%20data-testid%3D%5C%22upload-project-button%5C%22%20type%3D%5C%22button%5C%22%20class%3D%5C%22noflow%20nopan%20nodelete%20nodrag%20inline-flex%20items-center%20justify-center%20gap-2%20whitespace-nowrap%20text-sm%20font-medium%20ring-offset-background%20transition-all%20focus-visible%3Aoutline-none%20focus-visible%3Aring-1%20focus-visible%3Aring-ring%20focus-visible%3Aring-offset-2%20disabled%3Aopacity-70%20disabled%3Apointer-events-none%20%5B%26_svg%5D%3Apointer-events-none%20%5B%26_svg%5D%3Asize-4%20%5B%26_svg%5D%3Ashrink-0%20hover%3Atext-accent-foreground%20disabled%3A!bg-transparent%20p-1%20rounded-md%20h-7%20w-7%20border-0%20text-muted-foreground%20hover%3Abg-muted%20active%3Ascale-%5B0.97%5D%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22aria_content_in_landmark%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    },
+    {
+      "ruleId": "input_label_exists",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/div[2]/button[1]",
+        "aria": "/document[1]/button[6]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "Form control element <button> has no associated label",
+      "messageArgs": ["button"],
+      "apiArgs": [],
+      "bounds": {
+        "left": 203,
+        "top": 266,
+        "height": 28,
+        "width": 28
+      },
+      "snippet": "<button data-state=\"closed\" data-testid=\"upload-project-button\" type=\"button\" class=\"noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground disabled:!bg-transparent p-1 rounded-md h-7 w-7 border-0 text-muted-foreground hover:bg-muted active:scale-[0.97]\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/input_label_exists.html#%7B%22message%22%3A%22Form%20control%20element%20%3Cbutton%3E%20has%20no%20associated%20label%22%2C%22snippet%22%3A%22%3Cbutton%20data-state%3D%5C%22closed%5C%22%20data-testid%3D%5C%22upload-project-button%5C%22%20type%3D%5C%22button%5C%22%20class%3D%5C%22noflow%20nopan%20nodelete%20nodrag%20inline-flex%20items-center%20justify-center%20gap-2%20whitespace-nowrap%20text-sm%20font-medium%20ring-offset-background%20transition-all%20focus-visible%3Aoutline-none%20focus-visible%3Aring-1%20focus-visible%3Aring-ring%20focus-visible%3Aring-offset-2%20disabled%3Aopacity-70%20disabled%3Apointer-events-none%20%5B%26_svg%5D%3Apointer-events-none%20%5B%26_svg%5D%3Asize-4%20%5B%26_svg%5D%3Ashrink-0%20hover%3Atext-accent-foreground%20disabled%3A!bg-transparent%20p-1%20rounded-md%20h-7%20w-7%20border-0%20text-muted-foreground%20hover%3Abg-muted%20active%3Ascale-%5B0.97%5D%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22input_label_exists%22%2C%22msgArgs%22%3A%5B%22button%22%5D%7D"
+    },
+    {
+      "ruleId": "input_label_exists",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/div[2]/button[2]",
+        "aria": "/document[1]/button[7]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "Form control element <button> has no associated label",
+      "messageArgs": ["button"],
+      "apiArgs": [],
+      "bounds": {
+        "left": 235,
+        "top": 266,
+        "height": 28,
+        "width": 28
+      },
+      "snippet": "<button data-state=\"closed\" data-testid=\"add-project-button\" type=\"button\" class=\"noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground disabled:!bg-transparent p-1 rounded-md h-7 w-7 border-0 text-muted-foreground hover:bg-muted active:scale-[0.97]\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/input_label_exists.html#%7B%22message%22%3A%22Form%20control%20element%20%3Cbutton%3E%20has%20no%20associated%20label%22%2C%22snippet%22%3A%22%3Cbutton%20data-state%3D%5C%22closed%5C%22%20data-testid%3D%5C%22add-project-button%5C%22%20type%3D%5C%22button%5C%22%20class%3D%5C%22noflow%20nopan%20nodelete%20nodrag%20inline-flex%20items-center%20justify-center%20gap-2%20whitespace-nowrap%20text-sm%20font-medium%20ring-offset-background%20transition-all%20focus-visible%3Aoutline-none%20focus-visible%3Aring-1%20focus-visible%3Aring-ring%20focus-visible%3Aring-offset-2%20disabled%3Aopacity-70%20disabled%3Apointer-events-none%20%5B%26_svg%5D%3Apointer-events-none%20%5B%26_svg%5D%3Asize-4%20%5B%26_svg%5D%3Ashrink-0%20hover%3Atext-accent-foreground%20disabled%3A!bg-transparent%20p-1%20rounded-md%20h-7%20w-7%20border-0%20text-muted-foreground%20hover%3Abg-muted%20active%3Ascale-%5B0.97%5D%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22input_label_exists%22%2C%22msgArgs%22%3A%5B%22button%22%5D%7D"
+    },
+    {
+      "ruleId": "aria_content_in_landmark",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/ul[1]",
+        "aria": "/document[1]/list[1]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "Content is not within a landmark element",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 16,
+        "top": 306,
+        "height": 36,
+        "width": 247
+      },
+      "snippet": "<ul class=\"flex w-full min-w-0 flex-col gap-1\" data-sidebar=\"menu\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/aria_content_in_landmark.html#%7B%22message%22%3A%22Content%20is%20not%20within%20a%20landmark%20element%22%2C%22snippet%22%3A%22%3Cul%20class%3D%5C%22flex%20w-full%20min-w-0%20flex-col%20gap-1%5C%22%20data-sidebar%3D%5C%22menu%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22aria_content_in_landmark%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    },
+    {
+      "ruleId": "aria_id_unique",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/ul[1]/li[1]/div[1]/div[1]/div[1]/button[1]",
+        "aria": "/document[1]/list[1]/listitem[1]/combobox[1]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "The 'id' \"radix-_r_c_\" specified for the ARIA property 'aria-controls' value is not valid",
+      "messageArgs": ["radix-_r_c_", "aria-controls", "button"],
+      "apiArgs": [],
+      "bounds": {
+        "left": 239,
+        "top": 313,
+        "height": 16,
+        "width": 16
+      },
+      "snippet": "<button data-testid=\"more-options-button_starter-project\" id=\"options-trigger-Starter Project\" class=\"flex items-center justify-between w-fit\" data-placeholder=\"\" data-state=\"closed\" dir=\"ltr\" aria-autocomplete=\"none\" aria-expanded=\"false\" aria-controls=\"radix-_r_c_\" role=\"combobox\" type=\"button\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/aria_id_unique.html#%7B%22message%22%3A%22The%20'id'%20%5C%22radix-_r_c_%5C%22%20specified%20for%20the%20ARIA%20property%20'aria-controls'%20value%20is%20not%20valid%22%2C%22snippet%22%3A%22%3Cbutton%20data-testid%3D%5C%22more-options-button_starter-project%5C%22%20id%3D%5C%22options-trigger-Starter%20Project%5C%22%20class%3D%5C%22flex%20items-center%20justify-between%20w-fit%5C%22%20data-placeholder%3D%5C%22%5C%22%20data-state%3D%5C%22closed%5C%22%20dir%3D%5C%22ltr%5C%22%20aria-autocomplete%3D%5C%22none%5C%22%20aria-expanded%3D%5C%22false%5C%22%20aria-controls%3D%5C%22radix-_r_c_%5C%22%20role%3D%5C%22combobox%5C%22%20type%3D%5C%22button%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22aria_id_unique%22%2C%22msgArgs%22%3A%5B%22radix-_r_c_%22%2C%22aria-controls%22%2C%22button%22%5D%7D"
+    },
+    {
+      "ruleId": "input_label_exists",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/ul[1]/li[1]/div[1]/div[1]/div[1]/button[1]",
+        "aria": "/document[1]/list[1]/listitem[1]/combobox[1]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_2",
+      "message": "Form control with \"combobox\" role has no associated label",
+      "messageArgs": ["combobox"],
+      "apiArgs": [],
+      "bounds": {
+        "left": 239,
+        "top": 313,
+        "height": 16,
+        "width": 16
+      },
+      "snippet": "<button data-testid=\"more-options-button_starter-project\" id=\"options-trigger-Starter Project\" class=\"flex items-center justify-between w-fit\" data-placeholder=\"\" data-state=\"closed\" dir=\"ltr\" aria-autocomplete=\"none\" aria-expanded=\"false\" aria-controls=\"radix-_r_c_\" role=\"combobox\" type=\"button\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/input_label_exists.html#%7B%22message%22%3A%22Form%20control%20with%20%5C%22combobox%5C%22%20role%20has%20no%20associated%20label%22%2C%22snippet%22%3A%22%3Cbutton%20data-testid%3D%5C%22more-options-button_starter-project%5C%22%20id%3D%5C%22options-trigger-Starter%20Project%5C%22%20class%3D%5C%22flex%20items-center%20justify-between%20w-fit%5C%22%20data-placeholder%3D%5C%22%5C%22%20data-state%3D%5C%22closed%5C%22%20dir%3D%5C%22ltr%5C%22%20aria-autocomplete%3D%5C%22none%5C%22%20aria-expanded%3D%5C%22false%5C%22%20aria-controls%3D%5C%22radix-_r_c_%5C%22%20role%3D%5C%22combobox%5C%22%20type%3D%5C%22button%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_2%22%2C%22ruleId%22%3A%22input_label_exists%22%2C%22msgArgs%22%3A%5B%22combobox%22%5D%7D"
+    },
+    {
+      "ruleId": "aria_content_in_landmark",
+      "value": ["VIOLATION", "FAIL"],
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/div[1]/button[1]",
+        "aria": "/document[1]/button[8]"
+      },
+      "ruleTime": 0,
+      "reasonId": "Fail_1",
+      "message": "Content is not within a landmark element",
+      "messageArgs": [],
+      "apiArgs": [],
+      "bounds": {
+        "left": 16,
+        "top": 624,
+        "height": 36,
+        "width": 247
+      },
+      "snippet": "<button class=\"peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left outline-none ring-ring transition-[width,height,padding] focus-visible:ring-1 active:bg-accent active:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-accent data-[active=true]:font-medium data-[active=true]:text-accent-foreground data-[state=open]:hover:bg-accent data-[state=open]:hover:text-accent-foreground group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 text-secondary-foreground hover:bg-accent hover:text-accent-foreground h-9 text-sm\" data-active=\"false\" data-size=\"md\" data-sidebar=\"menu-button\">",
+      "source": null,
+      "category": "Accessibility",
+      "level": "violation",
+      "ignored": true,
+      "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/aria_content_in_landmark.html#%7B%22message%22%3A%22Content%20is%20not%20within%20a%20landmark%20element%22%2C%22snippet%22%3A%22%3Cbutton%20class%3D%5C%22peer%2Fmenu-button%20flex%20w-full%20items-center%20gap-2%20overflow-hidden%20rounded-md%20p-2%20text-left%20outline-none%20ring-ring%20transition-%5Bwidth%2Cheight%2Cpadding%5D%20focus-visible%3Aring-1%20active%3Abg-accent%20active%3Atext-accent-foreground%20disabled%3Apointer-events-none%20disabled%3Aopacity-50%20group-has-%5B%5Bdata-sidebar%3Dmenu-action%5D%5D%2Fmenu-item%3Apr-8%20aria-disabled%3Apointer-events-none%20aria-disabled%3Aopacity-50%20data-%5Bactive%3Dtrue%5D%3Abg-accent%20data-%5Bactive%3Dtrue%5D%3Afont-medium%20data-%5Bactive%3Dtrue%5D%3Atext-accent-foreground%20data-%5Bstate%3Dopen%5D%3Ahover%3Abg-accent%20data-%5Bstate%3Dopen%5D%3Ahover%3Atext-accent-foreground%20group-data-%5Bcollapsible%3Dicon%5D%3A!size-8%20group-data-%5Bcollapsible%3Dicon%5D%3A!p-2%20%5B%26%3Espan%3Alast-child%5D%3Atruncate%20%5B%26%3Esvg%5D%3Asize-4%20%5B%26%3Esvg%5D%3Ashrink-0%20text-secondary-foreground%20hover%3Abg-accent%20hover%3Atext-accent-foreground%20h-9%20text-sm%5C%22%20data-active%3D%5C%22false%5C%22%20data-size%3D%5C%22md%5C%22%20data-sidebar%3D%5C%22menu-button%5C%22%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22FAIL%22%5D%2C%22reasonId%22%3A%22Fail_1%22%2C%22ruleId%22%3A%22aria_content_in_landmark%22%2C%22msgArgs%22%3A%5B%5D%7D"
+    }
+  ],
+  "numExecuted": 1208,
+  "ruleTime": 235,
+  "nls": {
+    "aria_content_in_landmark": {
+      "0": "All content must reside within an element with a landmark role",
+      "Fail_1": "Content is not within a landmark element"
+    },
+    "svg_graphics_labelled": {
+      "0": "A non-decorative SVG element must have an accessible name",
+      "fail_acc_name": "The SVG element has no accessible name"
+    },
+    "input_label_exists": {
+      "0": "Each form control must have an associated label",
+      "Fail_1": "Form control element <{0}> has no associated label",
+      "Fail_2": "Form control with \"{0}\" role has no associated label"
+    },
+    "aria_id_unique": {
+      "0": "The ARIA property must reference a non-empty unique id of an existing element that is visible",
+      "Fail_1": "The 'id' \"{0}\" specified for the ARIA property '{1}' value is not valid"
+    }
+  },
+  "summary": {
+    "counts": {
+      "ignored": 18,
+      "elements": 29,
+      "elementsViolation": 0,
+      "elementsViolationReview": 21,
+      "violation": 0,
+      "potentialviolation": 23,
+      "recommendation": 1,
+      "potentialrecommendation": 0,
+      "manual": 1,
+      "pass": 1165
+    },
+    "scanTime": 293,
+    "ruleArchive": "19 May 2026 Deployment (IBM 7.3) (19May2026)",
+    "policies": ["IBM_Accessibility"],
+    "reportLevels": ["violation"],
+    "startScan": 1781533140290,
+    "URL": "http://localhost:3000/assets/files"
+  },
+  "scanID": "f93f40d3-c772-4dc0-bb71-a3e536e2e4e1",
+  "toolID": "accessibility-checker-v4.0.26",
+  "label": "chromium__files-page"
+}

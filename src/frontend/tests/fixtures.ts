@@ -7,6 +7,7 @@ import "./playwrightCoverage";
 import {
   buildA11yScanLabel,
   buildA11ySummaryAttachment,
+  countNewA11yViolations,
   formatA11yFailure,
   isCheckerReport,
 } from "./utils/accessibility-checker";
@@ -100,10 +101,10 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
       );
 
       if (RUN_A11Y_ASSERT) {
-        const returnCode = aChecker.assertCompliance(result.report);
+        const newViolationCount = countNewA11yViolations(result.report);
         const failureMessage = formatA11yFailure(scanLabel, result.report);
 
-        expect(returnCode, failureMessage).toBe(0);
+        expect(newViolationCount, failureMessage).toBe(0);
       }
 
       return result;

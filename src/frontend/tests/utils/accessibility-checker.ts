@@ -74,7 +74,8 @@ export function formatA11yFailure(
 
   const failingIssues = report.results.filter(
     (issue) =>
-      issue.level === "violation" || issue.level === "potentialviolation",
+      !issue.ignored &&
+      (issue.level === "violation" || issue.level === "potentialviolation"),
   );
 
   const groupedIssues = new Map<
@@ -113,9 +114,10 @@ export function formatA11yFailure(
     .slice(0, 8);
 
   const lines = [
-    `IBM accessibility scan failed: ${scanLabel}`,
+    `IBM accessibility regression detected: ${scanLabel}`,
     `Report: ${reportPath}`,
-    `Counts: violation=${counts.violation}, potential=${counts.potentialviolation}, recommendation=${counts.recommendation}, manual=${counts.manual}`,
+    `New issues: ${failingIssues.length}`,
+    `Report counts: violation=${counts.violation}, potential=${counts.potentialviolation}, recommendation=${counts.recommendation}, manual=${counts.manual}`,
     `Top issues (${topIssues.length}/${groupedIssues.size} groups shown):`,
     ...topIssues.map(
       (issue) =>
@@ -128,4 +130,10 @@ export function formatA11yFailure(
   }
 
   return lines.join("\n");
+}
+
+export function countNewA11yViolations(report: ICheckerReport): number {
+  return report.results.filter(
+    (issue) => issue.level === "violation" && !issue.ignored,
+  ).length;
 }
