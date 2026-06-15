@@ -2,7 +2,7 @@
 title: Get started with the Langflow API
 slug: /api-reference-api-examples
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleApiReferenceApiExamplesFormLangflowApiRequests from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/form-langflow-api-requests.sh';
 import exampleApiReferenceApiExamplesSetEnvironmentVariables from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/set-environment-variables.sh';
 import exampleApiReferenceApiExamplesHealthCheck from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/health-check.sh';
@@ -53,17 +53,17 @@ As an example of a Langflow API request, the following curl command calls the `/
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiReferenceApiExamplesFormLangflowApiRequests} language="python" />
+<CodeBlock language="python">{examplePythonApiReferenceApiExamplesFormLangflowApiRequests}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiReferenceApiExamplesFormLangflowApiRequests} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiReferenceApiExamplesFormLangflowApiRequests}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiReferenceApiExamplesFormLangflowApiRequests} language="bash" />
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesFormLangflowApiRequests}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -112,7 +112,7 @@ You can use any method you prefer to set environment variables, such as `export`
 Then, reference those environment variables in your API requests.
 For example:
 
-<CodeSnippet source={exampleApiReferenceApiExamplesSetEnvironmentVariables} language="bash" />
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesSetEnvironmentVariables}</CodeBlock>
 
 Commonly used values in Langflow API requests include your [Langflow server URL](#base-url), [Langflow API keys](#authentication), flow IDs, and [project IDs](/api-projects#read-projects).
 
@@ -129,17 +129,17 @@ Returns the health status of the Langflow database and chat services:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiReferenceApiExamplesHealthCheck} language="python" />
+<CodeBlock language="python">{examplePythonApiReferenceApiExamplesHealthCheck}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiReferenceApiExamplesHealthCheck} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiReferenceApiExamplesHealthCheck}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiReferenceApiExamplesHealthCheck} language="bash" />
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesHealthCheck}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -147,7 +147,7 @@ Returns the health status of the Langflow database and chat services:
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiReferenceApiExamplesResultHealthCheck} language="json" />
+<CodeBlock language="json">{resultApiReferenceApiExamplesResultHealthCheck}</CodeBlock>
 
 </details>
 
@@ -161,17 +161,17 @@ Returns the current Langflow API version:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiReferenceApiExamplesGetVersion} language="python" />
+<CodeBlock language="python">{examplePythonApiReferenceApiExamplesGetVersion}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiReferenceApiExamplesGetVersion} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiReferenceApiExamplesGetVersion}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiReferenceApiExamplesGetVersion} language="bash" />
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesGetVersion}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -179,7 +179,7 @@ Returns the current Langflow API version:
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiReferenceApiExamplesResultGetVersion} language="text" />
+<CodeBlock language="text">{resultApiReferenceApiExamplesResultGetVersion}</CodeBlock>
 
 </details>
 
@@ -191,17 +191,17 @@ Requires a [Langflow API key](/api-keys-and-authentication).
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiReferenceApiExamplesGetConfiguration} language="python" />
+<CodeBlock language="python">{examplePythonApiReferenceApiExamplesGetConfiguration}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiReferenceApiExamplesGetConfiguration} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiReferenceApiExamplesGetConfiguration}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiReferenceApiExamplesGetConfiguration} language="bash" />
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesGetConfiguration}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -209,7 +209,7 @@ Requires a [Langflow API key](/api-keys-and-authentication).
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiReferenceApiExamplesResultGetConfiguration} language="json" />
+<CodeBlock language="json">{resultApiReferenceApiExamplesResultGetConfiguration}</CodeBlock>
 
 </details>
 
@@ -221,17 +221,17 @@ Requires a [Langflow API key](/api-keys-and-authentication).
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiReferenceApiExamplesGetAllComponents} language="python" />
+<CodeBlock language="python">{examplePythonApiReferenceApiExamplesGetAllComponents}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiReferenceApiExamplesGetAllComponents} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiReferenceApiExamplesGetAllComponents}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiReferenceApiExamplesGetAllComponents} language="bash" />
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesGetAllComponents}</CodeBlock>
 
 </TabItem>
 </Tabs>

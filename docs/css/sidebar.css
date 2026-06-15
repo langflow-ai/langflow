@@ -437,11 +437,6 @@ html[data-theme="light"] .sidebar-group-label {
   -webkit-text-fill-color: unset;
 }
 
-[data-theme="dark"] .sidebar-ad-text-gradient {
-  /* Brighter pink for WCAG contrast on dark background */
-  color: #ff6ad0;
-}
-
 /* Active item - subtle left border indicator */
 .menu__link--active:not(.menu__link--sublist) {
   border-left: 2px solid var(--ifm-color-primary);
@@ -501,11 +496,6 @@ html[data-theme="light"] .menu__link--active:not(.menu__link--sublist) {
 .table-of-contents__link--active {
   color: var(--ifm-color-primary) !important;
   text-shadow: 0 0 0.4px var(--ifm-color-primary);
-}
-
-[data-theme="dark"] .table-of-contents__link--active {
-  color: hsla(329, 55%, 68%, 1) !important;
-  text-shadow: 0 0 0.4px hsla(329, 55%, 68%, 1);
 }
 
 [data-theme="dark"] .table-of-contents {
