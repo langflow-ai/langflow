@@ -177,6 +177,46 @@ def register(app: typer.Typer) -> None:
                 "instead of reading from the process environment."
             ),
         ),
+        identity_mode: str = typer.Option(
+            "off",
+            "--identity-mode",
+            help=(
+                "Per-user identity forwarding mode. 'off' (default) ignores caller identity. "
+                "'jwt' verifies a signed JWT (Authorization: Bearer or --identity-jwt-header) and "
+                "threads its claim as user_id. 'header' trusts a plain gateway header verbatim "
+                "(weaker; safe only when network policy guarantees the gateway is the sole caller)."
+            ),
+        ),
+        identity_jwt_issuer: str | None = typer.Option(
+            None,
+            "--identity-jwt-issuer",
+            help="Expected JWT 'iss' (exact match). Required when --identity-mode=jwt.",
+        ),
+        identity_jwt_audience: str | None = typer.Option(
+            None,
+            "--identity-jwt-audience",
+            help="Expected JWT 'aud' (the token's audience must contain it). Required when --identity-mode=jwt.",
+        ),
+        identity_jwt_jwks_url: str | None = typer.Option(
+            None,
+            "--identity-jwt-jwks-url",
+            help="JWKS URL for signing keys. Optional; defaults to OIDC discovery from the issuer.",
+        ),
+        identity_claim: str = typer.Option(
+            "sub",
+            "--identity-claim",
+            help="JWT claim used as the caller identity (user_id). Defaults to 'sub'.",
+        ),
+        identity_jwt_header: str = typer.Option(
+            "Authorization",
+            "--identity-jwt-header",
+            help="Header the JWT is read from in jwt mode (a 'Bearer ' prefix is stripped). Defaults to Authorization.",
+        ),
+        identity_header: str = typer.Option(
+            "X-Consumer-Username",
+            "--identity-header",
+            help="Plain header trusted as identity in header mode. Defaults to X-Consumer-Username.",
+        ),
     ) -> None:
         """Serve LFX flows as a web API (lazy-loaded)."""
         from pathlib import Path
@@ -200,4 +240,11 @@ def register(app: typer.Typer) -> None:
             check_variables=check_variables,
             upgrade_flow=upgrade_flow,
             no_env_fallback=no_env_fallback,
+            identity_mode=identity_mode,
+            identity_jwt_issuer=identity_jwt_issuer,
+            identity_jwt_audience=identity_jwt_audience,
+            identity_jwt_jwks_url=identity_jwt_jwks_url,
+            identity_claim=identity_claim,
+            identity_jwt_header=identity_jwt_header,
+            identity_header=identity_header,
         )
