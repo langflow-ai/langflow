@@ -120,6 +120,29 @@ class TestErrorEventsFallback:
         assert len(events) == 1
         assert events[0].type == "RUN_ERROR"
 
+    def test_error_events_closes_open_text_message_before_run_error(self):
+        """Fallback errors must still leave the AG-UI text lifecycle well-formed."""
+        adapter = get_stream_adapter("agui", _ctx())
+        list(adapter.initial_events())
+        list(adapter.translate("token", {"id": "m1", "chunk": "partial"}))
+
+        events = list(adapter.error_events(RuntimeError("boom")))
+
+        assert [event.type for event in events] == ["TEXT_MESSAGE_END", "RUN_ERROR"]
+        assert json.loads(events[0].data_json)["messageId"] == "m1"
+
+    def test_cancel_events_close_open_text_message_before_run_error(self):
+        """Cancellation uses adapter-owned framing and preserves AG-UI lifecycle."""
+        adapter = get_stream_adapter("agui", _ctx())
+        list(adapter.initial_events())
+        list(adapter.translate("token", {"id": "m1", "chunk": "partial"}))
+
+        events = list(adapter.cancel_events("cancelled"))
+
+        assert [event.type for event in events] == ["TEXT_MESSAGE_END", "RUN_ERROR"]
+        assert json.loads(events[0].data_json)["messageId"] == "m1"
+        assert json.loads(events[1].data_json)["message"] == "cancelled"
+
 
 class TestTerminalErrorType:
     """Buffer task watches for AG-UI RUN_ERROR to flip the job to FAILED."""

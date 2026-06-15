@@ -55,6 +55,9 @@ class _NoopAdapter:
     def error_events(self, _error):
         return []
 
+    def cancel_events(self, _reason):
+        return []
+
     @property
     def terminal_error_type(self):
         return None

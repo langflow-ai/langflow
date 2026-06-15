@@ -284,6 +284,26 @@ def test_error_drains_buffered_messages_before_run_error():
     assert deltas["m3"] == "second waiting"
 
 
+def test_partial_add_message_before_token_does_not_burn_streamed_text_id():
+    """A partial snapshot before token streaming must not complete the id."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    partial = t.translate("add_message", {"id": "m1", "text": "Hel", "properties": {"state": "partial"}})
+    first = t.translate("token", {"id": "m1", "chunk": "Hel"})
+    second = t.translate("token", {"id": "m1", "chunk": "lo"})
+    finalizer = t.translate("add_message", {"id": "m1", "text": "Hello", "properties": {"state": "complete"}})
+
+    text_lifecycle_types = (TextMessageStartEvent, TextMessageContentEvent, TextMessageEndEvent)
+    assert all(not isinstance(e, text_lifecycle_types) for e in partial)
+    assert [type(e) for e in first] == [TextMessageStartEvent, TextMessageContentEvent]
+    assert first[1].delta == "Hel"
+    assert len(second) == 1
+    assert isinstance(second[0], TextMessageContentEvent)
+    assert second[0].delta == "lo"
+    assert [type(e) for e in finalizer] == [TextMessageEndEvent]
+
+
 def test_partial_add_message_does_not_finalize_open_message():
     """A partial ``add_message`` re-fire must not close the streaming message.
 
@@ -465,6 +485,85 @@ def test_end_vertex_failure_sets_error_status():
 
     op = out[1].delta[0]
     assert op["value"]["status"] == "error"
+
+
+def test_end_vertex_marks_inactivated_vertices_inactive():
+    """A branch component's not-taken vertices must be marked ``inactive``.
+
+    Without this the canvas leaves them on the ``pending`` status seeded by
+    ``vertices_sorted`` (they are skipped, so no build_start/end_vertex follows),
+    and the frontend never renders the inactive/skipped state for conditional
+    routing (If-Else, Conditional Router).
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "end_vertex",
+        {
+            "build_data": {
+                "id": "branch",
+                "valid": True,
+                "data": None,
+                "inactivated_vertices": ["node-a", "node-b"],
+            }
+        },
+    )
+
+    ops = out[1].delta
+    assert ops[0]["path"] == "/nodes/branch"
+    assert ops[0]["value"]["status"] == "success"
+    inactive = {op["path"]: op["value"]["status"] for op in ops[1:]}
+    assert inactive == {
+        "/nodes/node-a": "inactive",
+        "/nodes/node-b": "inactive",
+    }
+
+
+def test_inactivated_vertex_is_emitted_once_across_end_vertices():
+    """``build.py`` keeps reporting the persisted excluded set on later end_vertex.
+
+    The translator must emit each node's ``inactive`` delta only once so the first
+    run of the feature doesn't put the same redundant op on the wire repeatedly.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    first = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    # The next vertex still carries node-b in the persisted excluded set.
+    second = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "node-a", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+
+    def inactive_paths(out):
+        return [op["path"] for op in out[1].delta if op["value"]["status"] == "inactive"]
+
+    assert inactive_paths(first) == ["/nodes/node-b"]
+    assert inactive_paths(second) == []  # already emitted, not repeated
+
+
+def test_reactivated_vertex_can_emit_inactive_again():
+    """A vertex that runs after being excluded (loop re-activation) may go inactive again."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    excluded = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    assert [op["path"] for op in excluded[1].delta if op["value"]["status"] == "inactive"] == ["/nodes/node-b"]
+
+    # node-b actually runs on a later pass, then gets excluded again.
+    t.translate("build_start", {"id": "node-b"})
+    again = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    assert [op["path"] for op in again[1].delta if op["value"]["status"] == "inactive"] == ["/nodes/node-b"]
 
 
 def test_node_state_deltas_use_add_so_they_apply_without_vertices_sorted():

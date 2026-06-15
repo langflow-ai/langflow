@@ -355,6 +355,49 @@ async def test_public_endpoint_sanitizes_component_validation_error(client: Asyn
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_public_endpoint_rejects_code_execution_components(
+    client: AsyncClient, json_memory_chatbot_no_llm, logged_in_headers
+):
+    """Report H1-3754930: unauthenticated public v2 runs must reject code-execution components.
+
+    Mirrors v1 ``test_build_public_tmp_rejects_code_execution_components``. A public
+    flow containing a Python interpreter/REPL would otherwise let any anonymous
+    visitor trigger server-side code execution through ``/api/v2/workflows/public``.
+    """
+    import json
+
+    from tests.unit.build_utils import create_flow
+
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "PythonREPLComponent-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "PythonREPLComponent-pub1",
+                "type": "PythonREPLComponent",
+                "display_name": "Python Interpreter",
+                "node": {"display_name": "Python Interpreter", "template": {}},
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+    await _make_flow_public(client, flow_id, logged_in_headers)
+
+    _send_unauthenticated(client, "test-code-exec-client")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_public_endpoint_surfaces_value_error_as_400(client: AsyncClient, public_flow_id, monkeypatch):
     """Other ``ValueError``s from the gate sequence become 400 with the message preserved.
 
