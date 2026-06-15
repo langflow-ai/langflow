@@ -1,4 +1,4 @@
-name: Run Accessibility Scans (IBM Equal Access)
+name: A11y / Playwright Scans
 
 on:
   # TEMP: remove before merging — allows testing the workflow from this
@@ -32,7 +32,7 @@ env:
 
 jobs:
   a11y-scan:
-    name: IBM Accessibility Scans
+    name: IBM Equal Access
     runs-on: ubuntu-latest
     permissions:
       contents: read
