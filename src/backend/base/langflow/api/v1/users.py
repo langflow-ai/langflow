@@ -10,7 +10,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import get_current_active_superuser
+from langflow.services.auth.utils import get_current_active_superuser, get_optional_user
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_auth_service, get_settings_service
@@ -22,13 +22,19 @@ router = APIRouter(tags=["Users"], prefix="/users")
 async def add_user(
     user: UserCreate,
     session: DbSession,
+    current_user: Annotated[User | None, Depends(get_optional_user)] = None,
 ) -> User:
     """Add a new user to the database.
 
-    This endpoint allows public user registration (sign up).
-    User activation is controlled by the NEW_USER_IS_ACTIVE setting.
+    Public self-service registration (sign up) is gated by the ENABLE_SIGNUP
+    setting. When it is False, only authenticated superusers may create users
+    (e.g. admin provisioning). User activation is controlled by the
+    NEW_USER_IS_ACTIVE setting.
     """
     settings_service = get_settings_service()
+
+    if not settings_service.auth_settings.ENABLE_SIGNUP and not (current_user and current_user.is_superuser):
+        raise HTTPException(status_code=403, detail="Sign up is currently disabled.")
 
     new_user = User.model_validate(user, from_attributes=True)
     try:

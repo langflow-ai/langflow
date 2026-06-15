@@ -49,11 +49,10 @@ const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
 const LothalLanding = lazy(() => import("./pages/lothal/Landing"));
 const LothalLogin = lazy(() => import("./pages/lothal/Auth/LoginPage"));
+const LothalSignUp = lazy(() => import("./pages/lothal/Auth/SignUpPage"));
 const LothalDashboard = lazy(() => import("./pages/lothal/Dashboard"));
 const LothalWorkspace = lazy(() => import("./pages/lothal/Workspace"));
 const LothalDesignSystem = lazy(() => import("./pages/lothal/DesignSystem"));
-
-const SignUp = lazy(() => import("./pages/SignUpPage"));
 
 const router = createBrowserRouter(
   createRoutesFromElements([
@@ -218,7 +217,7 @@ const router = createBrowserRouter(
             path="signup"
             element={
               <ProtectedLoginRoute>
-                <SignUp />
+                <LothalSignUp />
               </ProtectedLoginRoute>
             }
           />
