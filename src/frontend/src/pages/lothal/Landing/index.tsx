@@ -17,6 +17,7 @@ import useAuthStore from "@/stores/authStore";
 import {
   Button,
   DiagramCanvas,
+  LOTHAL_VERSION,
   LothalMark,
   type LothalPhaseId,
   PHASES,
@@ -1152,6 +1153,7 @@ function LandingView() {
               }}
             >
               <span>© 2026 Lothal</span>
+              <span className="mono">v{LOTHAL_VERSION}</span>
               <span className="mono">built on langflow</span>
             </div>
           </div>

@@ -41,3 +41,4 @@ export {
   type TokenType,
 } from "./syntax";
 export { TopBar } from "./TopBar";
+export { LOTHAL_VERSION } from "./version";

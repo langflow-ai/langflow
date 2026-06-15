@@ -57,6 +57,14 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED": JSON.stringify(
         envLangflow.LANGFLOW_MCP_COMPOSER_ENABLED ?? "true",
       ),
+      // Lothal product version (badge). Injected at build time: the Docker
+      // frontend build passes it as a build-arg → process.env (the image build
+      // has no root .env); local dev can set it in ../../.env; default "dev".
+      "import.meta.env.LOTHAL_VERSION": JSON.stringify(
+        process.env.LOTHAL_VERSION?.trim() ||
+          envLangflow.LOTHAL_VERSION?.trim() ||
+          "dev",
+      ),
     },
     plugins: [
       react(),

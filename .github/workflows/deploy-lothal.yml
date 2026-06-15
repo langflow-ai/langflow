@@ -20,6 +20,11 @@ on:
         required: true
         type: string
         default: dev
+      version:
+        description: "Optional product version (e.g. 0.4) — also tags images :v0.4. Blank = SHA tag only."
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   group: deploy-lothal
@@ -45,6 +50,9 @@ jobs:
       sha: ${{ steps.refs.outputs.sha }}
       backend_image: ${{ steps.refs.outputs.backend_image }}
       frontend_image: ${{ steps.refs.outputs.frontend_image }}
+      backend_version_image: ${{ steps.refs.outputs.backend_version_image }}
+      frontend_version_image: ${{ steps.refs.outputs.frontend_version_image }}
+      build_version: ${{ steps.refs.outputs.build_version }}
     steps:
       - name: Check out ${{ inputs.ref }}
         uses: actions/checkout@v6
@@ -53,6 +61,10 @@ jobs:
 
       - name: Compute image refs
         id: refs
+        env:
+          # Pass the dispatch input through env, never interpolate it directly
+          # into the shell body (template injection). Validated below before use.
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
           full_sha="$(git rev-parse HEAD)"
           sha="$(git rev-parse --short=12 HEAD)"
@@ -61,6 +73,27 @@ jobs:
           echo "backend_image=${REGISTRY}/${BACKEND_IMAGE_NAME}:${sha}" >> "$GITHUB_OUTPUT"
           echo "frontend_image=${REGISTRY}/${FRONTEND_IMAGE_NAME}:${sha}" >> "$GITHUB_OUTPUT"
           echo "Building from ${full_sha} -> sha tag ${sha}"
+
+          # Product version (the badge + an optional :v0.X image tag). The bare
+          # value (no leading "v") is baked into the frontend bundle as the badge;
+          # default "dev" for un-stamped builds. When a version is given we also
+          # tag the images :v0.X (build-push skips the blank line otherwise).
+          version_in="${VERSION_INPUT}"
+          if [ -n "$version_in" ] && ! printf '%s' "$version_in" | grep -Eq '^v?[0-9]+(\.[0-9]+)*$'; then
+            echo "::error::Invalid version '$version_in'. Expected forms like 0.4 or v0.4"
+            exit 1
+          fi
+          bare="${version_in#v}"
+          echo "build_version=${bare:-dev}" >> "$GITHUB_OUTPUT"
+          if [ -n "$version_in" ]; then
+            echo "backend_version_image=${REGISTRY}/${BACKEND_IMAGE_NAME}:v${bare}" >> "$GITHUB_OUTPUT"
+            echo "frontend_version_image=${REGISTRY}/${FRONTEND_IMAGE_NAME}:v${bare}" >> "$GITHUB_OUTPUT"
+            echo "Stamping badge v${bare} and tagging images :v${bare}"
+          else
+            echo "backend_version_image=" >> "$GITHUB_OUTPUT"
+            echo "frontend_version_image=" >> "$GITHUB_OUTPUT"
+            echo "No version given -> badge 'vdev', SHA tag only"
+          fi
 
   # The RackNerd box is x86_64 and ubuntu-latest runners are amd64, so a single
   # linux/amd64 build is all that's needed — no QEMU, no multi-arch manifest.
@@ -98,6 +131,7 @@ jobs:
           provenance: false
           tags: |
             ${{ needs.refs.outputs.backend_image }}
+            ${{ needs.refs.outputs.backend_version_image }}
             ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
           cache-from: type=gha,scope=lothal-backend
           cache-to: type=gha,mode=max,scope=lothal-backend
@@ -133,8 +167,12 @@ jobs:
           push: true
           platforms: linux/amd64
           provenance: false
+          # Stamp the badge into the bundle (bare version, default "dev").
+          build-args: |
+            LOTHAL_VERSION=${{ needs.refs.outputs.build_version }}
           tags: |
             ${{ needs.refs.outputs.frontend_image }}
+            ${{ needs.refs.outputs.frontend_version_image }}
             ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
           cache-from: type=gha,scope=lothal-frontend
           cache-to: type=gha,mode=max,scope=lothal-frontend
