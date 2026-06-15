@@ -78,13 +78,13 @@ else
 endif
 
 test_frontend_a11y_e2e: frontend_deps_check ## run non-blocking Playwright a11y scans and reports
-	@cd $(FRONTEND_DIR) && RUN_A11Y=true RUN_A11Y_ASSERT=false npx playwright test --grep @a11y --project=chromium --workers=1
+	@cd $(FRONTEND_DIR) && SCAN_SPECS="$$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)" && echo "Specs with a11y scans:" && echo "$$SCAN_SPECS" && test -n "$$SCAN_SPECS" && RUN_A11Y=true RUN_A11Y_ASSERT=false npx playwright test $$SCAN_SPECS --project=chromium --workers=1
 
 test_frontend_a11y_e2e_blocking: frontend_deps_check ## run blocking Playwright a11y scans against baselines
-	@cd $(FRONTEND_DIR) && RUN_A11Y=true RUN_A11Y_ASSERT=true npx playwright test --grep @a11y --project=chromium --workers=1
+	@cd $(FRONTEND_DIR) && SCAN_SPECS="$$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)" && echo "Specs with a11y scans:" && echo "$$SCAN_SPECS" && test -n "$$SCAN_SPECS" && RUN_A11Y=true RUN_A11Y_ASSERT=true npx playwright test $$SCAN_SPECS --project=chromium --workers=1
 
 test_frontend_a11y_e2e_update: frontend_deps_check ## refresh Playwright a11y reports used as baselines
-	@cd $(FRONTEND_DIR) && rm -rf coverage/accessibility-reports && RUN_A11Y=true RUN_A11Y_ASSERT=false npx playwright test --grep @a11y --project=chromium --workers=1
+	@cd $(FRONTEND_DIR) && rm -rf coverage/accessibility-reports && SCAN_SPECS="$$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)" && echo "Specs with a11y scans:" && echo "$$SCAN_SPECS" && test -n "$$SCAN_SPECS" && RUN_A11Y=true RUN_A11Y_ASSERT=false npx playwright test $$SCAN_SPECS --project=chromium --workers=1
 	@mkdir -p $(FRONTEND_DIR)/tests/baselines
 	@cp $(FRONTEND_DIR)/coverage/accessibility-reports/chromium__*.json $(FRONTEND_DIR)/tests/baselines/
 

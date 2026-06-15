@@ -126,7 +126,13 @@ jobs:
           LANGFLOW_DEACTIVATE_TRACING: "true"
         run: |
           cd src/frontend
-          npx playwright test --grep @a11y --project=chromium --workers=1 --retries=2
+          # Only specs that call runA11yScan produce reports; discover them
+          # so new scan hosts are picked up without editing this workflow.
+          SCAN_SPECS=$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)
+          echo "Specs with a11y scans:"
+          echo "$SCAN_SPECS"
+          test -n "$SCAN_SPECS"
+          npx playwright test $SCAN_SPECS --project=chromium --workers=1 --retries=2
 
       - name: Build Aggregated A11y Summary
         if: always()
