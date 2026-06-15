@@ -115,6 +115,18 @@ describe("Lothal LoginPage", () => {
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
+  it("does not submit when fields are whitespace-only", () => {
+    renderAt("/login");
+    fireEvent.change(screen.getByLabelText("Username"), {
+      target: { value: "  " },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
   it("surfaces a backend error through the alert store", () => {
     renderAt("/login");
     fireEvent.change(screen.getByLabelText("Username"), {

@@ -145,7 +145,7 @@ function LoginView() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (!username.trim() || !password) return;
+          if (!username.trim() || !password.trim()) return;
           signIn();
         }}
         style={{
