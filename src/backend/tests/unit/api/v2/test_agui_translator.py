@@ -520,6 +520,52 @@ def test_end_vertex_marks_inactivated_vertices_inactive():
     }
 
 
+def test_inactivated_vertex_is_emitted_once_across_end_vertices():
+    """``build.py`` keeps reporting the persisted excluded set on later end_vertex.
+
+    The translator must emit each node's ``inactive`` delta only once so the first
+    run of the feature doesn't put the same redundant op on the wire repeatedly.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    first = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    # The next vertex still carries node-b in the persisted excluded set.
+    second = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "node-a", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+
+    def inactive_paths(out):
+        return [op["path"] for op in out[1].delta if op["value"]["status"] == "inactive"]
+
+    assert inactive_paths(first) == ["/nodes/node-b"]
+    assert inactive_paths(second) == []  # already emitted, not repeated
+
+
+def test_reactivated_vertex_can_emit_inactive_again():
+    """A vertex that runs after being excluded (loop re-activation) may go inactive again."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    excluded = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    assert [op["path"] for op in excluded[1].delta if op["value"]["status"] == "inactive"] == ["/nodes/node-b"]
+
+    # node-b actually runs on a later pass, then gets excluded again.
+    t.translate("build_start", {"id": "node-b"})
+    again = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    assert [op["path"] for op in again[1].delta if op["value"]["status"] == "inactive"] == ["/nodes/node-b"]
+
+
 def test_node_state_deltas_use_add_so_they_apply_without_vertices_sorted():
     """build_start/end_vertex must not depend on vertices_sorted seeding the node.
 
