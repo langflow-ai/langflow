@@ -25,7 +25,6 @@ import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
 import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import FlowPage from "./pages/FlowPage";
-import LoginPage from "./pages/LoginPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
@@ -49,6 +48,7 @@ const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
 const LothalLanding = lazy(() => import("./pages/lothal/Landing"));
+const LothalLogin = lazy(() => import("./pages/lothal/Auth/LoginPage"));
 const LothalDashboard = lazy(() => import("./pages/lothal/Dashboard"));
 const LothalWorkspace = lazy(() => import("./pages/lothal/Workspace"));
 const LothalDesignSystem = lazy(() => import("./pages/lothal/DesignSystem"));
@@ -210,7 +210,7 @@ const router = createBrowserRouter(
             path="login"
             element={
               <ProtectedLoginRoute>
-                <LoginPage />
+                <LothalLogin />
               </ProtectedLoginRoute>
             }
           />
