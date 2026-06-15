@@ -221,24 +221,17 @@ To build only the LFX executor CLI image instead of the full Langflow applicatio
 make lfx_docker_build
 ```
 
-:::note
-`DOCKER=docker` passed on the command line does not propagate to `make lfx_docker_build` — the root target calls into `src/lfx/Makefile` without forwarding the variable, so it falls back to Podman. Export the variable before running the target instead:
-
-```shell
-export DOCKER=docker
-make lfx_docker_build
-```
-:::
-
 This builds `src/lfx/docker/Dockerfile` and tags the result `lfx:latest`.
 It produces a lightweight Alpine-based image that contains only the `lfx` CLI tool, with no frontend or Langflow UI.
 
-The build context is the repo root, not `src/lfx/`. The Dockerfile copies from `pyproject.toml`, `uv.lock`, and `src/sdk/`, so the full workspace is sent to the daemon (~55 MB of tracked files). A root `.dockerignore` file partially mitigates this, but the first build will be slower than you might expect for a small CLI image.
+The build context is the repo root, not `src/lfx/`. The Dockerfile copies from `pyproject.toml`, `uv.lock`, `src/lfx/`, and `src/sdk/`, so the full workspace is sent to the daemon. A root `.dockerignore` file partially mitigates this, but the first build will be slower than you might expect for a small CLI image.
 
 ### Write a custom source-based Dockerfile
 
-When writing a source-based Dockerfile, you must copy the manifest files (`pyproject.toml`, `README.md`, and `uv.lock` where present) for every workspace member before running `uv sync`.
+When writing a source-based Dockerfile, you must copy the manifest files (`pyproject.toml`, `README.md`, and `uv.lock` where present) for the workspace members that `uv sync` needs to resolve dependencies before source is available.
 The workspace members are defined in `[tool.uv.workspace]` in the root `pyproject.toml`.
+You do not need to copy manifests for members like `src/langflow-stepflow` that are not required for the initial dependency-only sync.
+The full source is copied later with `COPY ./src`, which brings those omitted members into the image before the second `uv sync`.
 
 1. To copy all manifest files to your Dockerfile, include the following:
 
@@ -247,7 +240,6 @@ The workspace members are defined in `[tool.uv.workspace]` in the root `pyprojec
     COPY ./README.md /app/README.md
     COPY ./pyproject.toml /app/pyproject.toml
     COPY ./src/backend/base/README.md /app/src/backend/base/README.md
-    COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
     COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
     COPY ./src/lfx/README.md /app/src/lfx/README.md
     COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
