@@ -135,6 +135,82 @@ class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
         await self._backend.sleep(seconds)
 
 
+class DNSPinningSyncNetworkBackend(httpcore.NetworkBackend):
+    """Synchronous network backend that pins DNS resolution to validated IP addresses."""
+
+    def __init__(self, pinned_ips: dict[str, list[str]], backend: httpcore.NetworkBackend | None = None):
+        self.pinned_ips = pinned_ips
+        if backend is None:
+            backend = httpcore.SyncBackend()
+        self._backend = backend
+        logger.debug(f"Created sync DNS pinning network backend with pinned IPs: {pinned_ips}")
+
+    def connect_tcp(
+        self,
+        host: str,
+        port: int,
+        timeout: float | None = None,
+        local_address: str | None = None,
+        socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
+    ) -> httpcore.NetworkStream:
+        """Connect to TCP socket, using pinned IPs for hosts that were validated."""
+        if host in self.pinned_ips:
+            pinned_ips = self.pinned_ips[host]
+
+            if not pinned_ips:
+                msg = f"DNS pinning: Host {host} is marked for pinning but has no pinned IPs"
+                logger.error(msg)
+                raise RuntimeError(msg)
+
+            logger.debug(f"DNS pinning: Connecting to pinned IPs {pinned_ips} for hostname {host}")
+
+            last_error = None
+            for pinned_ip in pinned_ips:
+                try:
+                    logger.debug(f"DNS pinning: Attempting connection to {pinned_ip}")
+                    return self._backend.connect_tcp(
+                        host=pinned_ip,
+                        port=port,
+                        timeout=timeout,
+                        local_address=local_address,
+                        socket_options=socket_options,
+                    )
+                except (OSError, TimeoutError) as e:
+                    last_error = e
+                    logger.debug(f"DNS pinning: Failed to connect to {pinned_ip}: {e}")
+                    continue
+
+            if last_error is None:
+                msg = f"DNS pinning: All pinned IPs failed for {host} but no error was captured"
+                raise RuntimeError(msg)
+            raise last_error
+
+        return self._backend.connect_tcp(
+            host=host,
+            port=port,
+            timeout=timeout,
+            local_address=local_address,
+            socket_options=socket_options,
+        )
+
+    def connect_unix_socket(
+        self,
+        path: str,
+        timeout: float | None = None,
+        socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
+    ) -> httpcore.NetworkStream:
+        """Connect to Unix socket (pass through to underlying backend)."""
+        return self._backend.connect_unix_socket(
+            path=path,
+            timeout=timeout,
+            socket_options=socket_options,
+        )
+
+    def sleep(self, seconds: float) -> None:
+        """Sleep for specified duration (pass through to underlying backend)."""
+        self._backend.sleep(seconds)
+
+
 class SSRFProtectedTransport(httpx.AsyncHTTPTransport):
     """HTTP transport that pins DNS resolution to validated IPs.
 
@@ -222,6 +298,52 @@ class SSRFProtectedTransport(httpx.AsyncHTTPTransport):
         logger.debug(f"Created SSRF protected transport with pinned IPs: {pinned_ips}")
 
 
+class SSRFProtectedSyncTransport(httpx.HTTPTransport):
+    """Synchronous HTTP transport that pins DNS resolution to validated IPs."""
+
+    def __init__(
+        self,
+        pinned_ips: dict[str, list[str]],
+        verify: bool | str | ssl.SSLContext = True,  # noqa: FBT001, FBT002
+        cert: tuple[str, str] | tuple[str, str, str] | str | None = None,
+        trust_env: bool = True,  # noqa: FBT001, FBT002
+        http1: bool = True,  # noqa: FBT001, FBT002
+        http2: bool = False,  # noqa: FBT001, FBT002
+        limits: httpx.Limits = httpx.Limits(),  # noqa: B008
+        proxy: httpx._types.ProxyTypes | None = None,
+        uds: str | None = None,
+        local_address: str | None = None,
+        retries: int = 0,
+        socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
+    ):
+        network_backend = DNSPinningSyncNetworkBackend(pinned_ips=pinned_ips)
+        ssl_context = create_ssl_context(verify=verify, cert=cert, trust_env=trust_env)
+
+        if proxy is not None:
+            proxy = Proxy(url=proxy) if isinstance(proxy, (str, URL)) else proxy
+
+        if proxy is None:
+            self._pool = httpcore.ConnectionPool(
+                ssl_context=ssl_context,
+                max_connections=limits.max_connections,
+                max_keepalive_connections=limits.max_keepalive_connections,
+                keepalive_expiry=limits.keepalive_expiry,
+                http1=http1,
+                http2=http2,
+                uds=uds,
+                local_address=local_address,
+                retries=retries,
+                socket_options=socket_options,
+                network_backend=network_backend,
+            )
+        else:
+            msg = "DNS pinning with proxies is not currently supported"
+            raise NotImplementedError(msg)
+
+        self.pinned_ips = pinned_ips
+        logger.debug(f"Created synchronous SSRF protected transport with pinned IPs: {pinned_ips}")
+
+
 def create_ssrf_protected_client(
     hostname: str, validated_ips: list[str] | tuple[str, ...], **client_kwargs
 ) -> httpx.AsyncClient:
@@ -240,3 +362,12 @@ def create_ssrf_protected_client(
     ip_list = list(validated_ips) if isinstance(validated_ips, tuple) else validated_ips
     transport = SSRFProtectedTransport(pinned_ips={hostname: ip_list})
     return httpx.AsyncClient(transport=transport, **client_kwargs)
+
+
+def create_ssrf_protected_sync_client(
+    hostname: str, validated_ips: list[str] | tuple[str, ...], **client_kwargs
+) -> httpx.Client:
+    """Create a synchronous httpx client with DNS pinning for SSRF protection."""
+    ip_list = list(validated_ips) if isinstance(validated_ips, tuple) else validated_ips
+    transport = SSRFProtectedSyncTransport(pinned_ips={hostname: ip_list})
+    return httpx.Client(transport=transport, **client_kwargs)
