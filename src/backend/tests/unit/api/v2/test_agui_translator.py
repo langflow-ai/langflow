@@ -487,6 +487,39 @@ def test_end_vertex_failure_sets_error_status():
     assert op["value"]["status"] == "error"
 
 
+def test_end_vertex_marks_inactivated_vertices_inactive():
+    """A branch component's not-taken vertices must be marked ``inactive``.
+
+    Without this the canvas leaves them on the ``pending`` status seeded by
+    ``vertices_sorted`` (they are skipped, so no build_start/end_vertex follows),
+    and the frontend never renders the inactive/skipped state for conditional
+    routing (If-Else, Conditional Router).
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "end_vertex",
+        {
+            "build_data": {
+                "id": "branch",
+                "valid": True,
+                "data": None,
+                "inactivated_vertices": ["node-a", "node-b"],
+            }
+        },
+    )
+
+    ops = out[1].delta
+    assert ops[0]["path"] == "/nodes/branch"
+    assert ops[0]["value"]["status"] == "success"
+    inactive = {op["path"]: op["value"]["status"] for op in ops[1:]}
+    assert inactive == {
+        "/nodes/node-a": "inactive",
+        "/nodes/node-b": "inactive",
+    }
+
+
 def test_node_state_deltas_use_add_so_they_apply_without_vertices_sorted():
     """build_start/end_vertex must not depend on vertices_sorted seeding the node.
 

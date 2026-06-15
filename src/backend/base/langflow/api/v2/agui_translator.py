@@ -209,9 +209,20 @@ class AGUITranslator:
         if not node_id:
             return []
         status = "success" if build_data.get("valid") else "error"
+        delta = [self._set_node(node_id, status, build_data.get("data"))]
+        # A branch component (If-Else, Conditional Router) reports the vertices on
+        # the not-taken branch in ``inactivated_vertices`` (already unioned with the
+        # transitively excluded set in ``build.py``). The canvas seeds those nodes as
+        # ``pending`` from ``vertices_sorted`` and never builds them, so without this
+        # they stay stuck on ``pending`` instead of rendering as inactive. Mark each
+        # one ``inactive`` so the frontend maps it to ``BuildStatus.INACTIVE``.
+        delta.extend(
+            self._set_node(inactive_id, "inactive", None)
+            for inactive_id in build_data.get("inactivated_vertices") or []
+        )
         return [
             StepFinishedEvent(step_name=node_id),
-            StateDeltaEvent(delta=[self._set_node(node_id, status, build_data.get("data"))]),
+            StateDeltaEvent(delta=delta),
         ]
 
     def _translate_add_message(self, data: dict) -> list[BaseEvent]:

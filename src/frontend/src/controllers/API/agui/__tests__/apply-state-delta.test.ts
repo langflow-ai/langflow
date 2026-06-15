@@ -165,6 +165,27 @@ describe("applyStateDelta", () => {
     expect(touched.has("node-a")).toBe(true);
   });
 
+  it("maps inactive status to BuildStatus.INACTIVE and skips the flow pool", () => {
+    const touched = new Set<string>();
+
+    applyStateDelta(
+      [
+        {
+          op: "add",
+          path: "/nodes/node-a",
+          value: { status: "inactive", output: null },
+        },
+      ],
+      "run-1",
+      touched,
+    );
+
+    const state = useFlowStore.getState();
+    expect(state.flowBuildStatus["node-a"]?.status).toBe(BuildStatus.INACTIVE);
+    expect(state.flowPool["node-a"]).toBeUndefined();
+    expect(touched.has("node-a")).toBe(true);
+  });
+
   it("falls back to BuildStatus.BUILDING when the status is unknown", () => {
     const touched = new Set<string>();
 
