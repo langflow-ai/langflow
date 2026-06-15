@@ -152,7 +152,7 @@ This example replaces the built-in **Message History** component, but the same p
 2. Create the directory structure that mirrors the component path:
 
     ```bash
-    mkdir -p src/lfx/src/lfx/components/helpers
+    mkdir -p src/lfx/src/lfx/components/models_and_agents
     ```
 
 3. Place your modified `memory.py` file in that directory.
@@ -164,13 +164,13 @@ This example replaces the built-in **Message History** component, but the same p
 
     WORKDIR /app
 
-    COPY src/lfx/src/lfx/components/helpers/memory.py /tmp/memory.py
+    COPY src/lfx/src/lfx/components/models_and_agents/memory.py /tmp/memory.py
 
     RUN python -c "import site; print(site.getsitepackages()[0])" > /tmp/site_packages.txt
 
     RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
-        mkdir -p "$SITE_PACKAGES/langflow/components/helpers" && \
-        cp /tmp/memory.py "$SITE_PACKAGES/langflow/components/helpers/"
+        mkdir -p "$SITE_PACKAGES/lfx/components/models_and_agents" && \
+        cp /tmp/memory.py "$SITE_PACKAGES/lfx/components/models_and_agents/"
 
     RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
         find "$SITE_PACKAGES" -name "*.pyc" -delete && \
@@ -302,7 +302,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
     ```yaml
     services:
       langflow:
-        image: langflowai/langflow:1.8.0
+        image: langflowai/langflow:1.11.0
         environment:
           - LANGFLOW_CONFIG_DIR=/app/langflow
         volumes:
@@ -323,7 +323,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
 
 2. Pull the new image and update the image tag in your `docker-compose.yml` or `docker run` command.
 
-    With Docker Compose, set the image in your compose file, such as `image: langflowai/langflow:1.8.0`, and then pull:
+    With Docker Compose, set the image in your compose file, such as `image: langflowai/langflow:1.11.0`, and then pull:
 
     ```bash
     docker compose pull
@@ -332,7 +332,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
     With `docker run`, pull the image:
 
     ```bash
-    docker pull langflowai/langflow:1.8.0
+    docker pull langflowai/langflow:1.11.0
     ```
 
 3. Restart the container. The same volumes will be reattached, so your database and flows are preserved.
@@ -346,7 +346,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
     With `docker run`, use the same volume mount and the new image tag:
 
     ```bash
-    docker run -p 7860:7860 -v langflow-data:/app/langflow langflowai/langflow:1.8.0
+    docker run -p 7860:7860 -v langflow-data:/app/langflow langflowai/langflow:1.11.0
     ```
 
 This approach keeps the persistent volumes separate from the Langflow container, so you can upgrade the Langflow application without losing data.
