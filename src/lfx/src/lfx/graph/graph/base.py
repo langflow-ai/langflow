@@ -1072,6 +1072,19 @@ class Graph:
             vertices_to_run=self.vertices_to_run,
         )
 
+    def _replace_conditional_exclusions(self, vertex_id: str, excluded: set[str]) -> None:
+        """Replace ``vertex_id``'s conditional exclusions with ``excluded``.
+
+        Any vertices this source previously excluded are cleared first so the routing
+        decision can be re-evaluated (e.g. on later cycle iterations where the condition
+        may change) before the new set is applied and recorded against the source.
+        """
+        if vertex_id in self.conditional_exclusion_sources:
+            self.conditionally_excluded_vertices -= self.conditional_exclusion_sources.pop(vertex_id)
+        self.conditionally_excluded_vertices.update(excluded)
+        if excluded:
+            self.conditional_exclusion_sources[vertex_id] = excluded
+
     def exclude_branch_conditionally(self, vertex_id: str, output_name: str | None = None) -> None:
         """Marks a branch as conditionally excluded (for conditional routing).
 
@@ -1085,23 +1098,19 @@ class Graph:
 
         Args:
             vertex_id: The source vertex making the exclusion decision
-            output_name: The output name to follow when excluding downstream vertices
+            output_name: The output name to follow when excluding downstream vertices. A falsy
+                value (``None`` or an empty string) excludes the entire downstream branch
+                (every output), matching the historical behavior.
         """
-        # Clear any previous exclusions from this source vertex
-        if vertex_id in self.conditional_exclusion_sources:
-            previous_exclusions = self.conditional_exclusion_sources[vertex_id]
-            self.conditionally_excluded_vertices -= previous_exclusions
-            del self.conditional_exclusion_sources[vertex_id]
-
-        # Now exclude the new branch, except vertices still reachable from a sibling output.
-        excluded = self._collect_branch_vertices(vertex_id, {output_name} if output_name else None)
         if output_name:
-            excluded -= self._get_vertices_reachable_from_other_outputs(vertex_id, {output_name})
-        self.conditionally_excluded_vertices.update(excluded)
+            # A single named output is the multi-branch case with one branch; delegating
+            # keeps the "keep shared downstream nodes reachable from a sibling output" logic
+            # (e.g. a merge node fed by both branches of an If-Else) in one place.
+            self.exclude_branches_conditionally(vertex_id, [output_name])
+            return
 
-        # Track which vertices this source excluded
-        if excluded:
-            self.conditional_exclusion_sources[vertex_id] = excluded
+        # Whole-branch exclusion (no output filter): exclude every descendant.
+        self._replace_conditional_exclusions(vertex_id, self._collect_branch_vertices(vertex_id))
 
     def exclude_branches_conditionally(self, vertex_id: str, output_names: list[str]) -> None:
         """Conditionally exclude several output branches of a single source vertex at once.
@@ -1118,12 +1127,6 @@ class Graph:
             vertex_id: The source vertex making the exclusion decision.
             output_names: The output names whose downstream branches should be excluded.
         """
-        # Clear any previous exclusions from this source vertex
-        if vertex_id in self.conditional_exclusion_sources:
-            previous_exclusions = self.conditional_exclusion_sources[vertex_id]
-            self.conditionally_excluded_vertices -= previous_exclusions
-            del self.conditional_exclusion_sources[vertex_id]
-
         # Exclude each requested branch, then keep shared descendants that are still
         # reachable from a non-excluded output (for example, a merge node downstream
         # of both a selected and an unselected branch).
@@ -1132,11 +1135,7 @@ class Graph:
         for output_name in output_names:
             excluded.update(self._collect_branch_vertices(vertex_id, {output_name}))
         excluded -= self._get_vertices_reachable_from_other_outputs(vertex_id, output_names_set)
-        self.conditionally_excluded_vertices.update(excluded)
-
-        # Track which vertices this source excluded so they can be cleared on re-evaluation
-        if excluded:
-            self.conditional_exclusion_sources[vertex_id] = excluded
+        self._replace_conditional_exclusions(vertex_id, excluded)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""

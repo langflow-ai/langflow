@@ -9,17 +9,23 @@ records a *persistent* conditional exclusion (like the If-Else router).
 
 These tests drive the real graph engine and the real ``process_case`` / ``default_response``
 routing logic; only the LLM categorization is stubbed so the assertions are deterministic.
+
+The persistent-exclusion mechanism lives in ``Graph.exclude_branch_conditionally`` and is
+shared with the If-Else router (``ConditionalRouterComponent``). The final test guards that
+shared path with the same reconvergence scenario: it would have failed before this fix
+because the merge node was excluded along with the unselected branch and never ran.
 """
 
 import pytest
 
 try:
+    from lfx.components.flow_controls.conditional_router import ConditionalRouterComponent
     from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
     from lfx.custom.custom_component.component import Component
     from lfx.graph.graph.base import Graph
     from lfx.io import MessageTextInput, Output
     from lfx.schema.message import Message
-except Exception as e:
+except ImportError as e:
     pytest.skip(f"Failed to import components in tests. Exception: {e}", allow_module_level=True)
 
 
@@ -149,6 +155,47 @@ async def test_unselected_branch_does_not_run_when_branches_reconverge():
     assert selected.did_run is True
     assert unselected.did_run is False, "Unselected branch executed despite not being routed to"
     assert merge.did_run is True, "Merge node should execute from selected branch"
+    assert "unselected" not in yielded
+    assert "merge" in yielded
+
+
+def _make_if_else_router():
+    """If-Else router whose condition evaluates True, so it routes to ``true_result``."""
+    router = ConditionalRouterComponent(_id="router")
+    router.set(input_text="go", match_text="go", operator="equals")
+    return router
+
+
+async def test_if_else_unselected_branch_does_not_run_when_branches_reconverge():
+    """Reconvergence regression for the shared If-Else routing path.
+
+    ``ConditionalRouterComponent`` (If-Else) drives the same persistent
+    ``Graph.exclude_branch_conditionally`` mechanism as Smart Router. When its branches
+    reconverge on a shared downstream node, the unselected branch must stay excluded while
+    the shared node still runs from the selected branch. Before the exclusion logic learned
+    to keep a sibling output's shared descendants, the merge node was excluded too and never
+    ran -- so this guards a real (and previously latent) If-Else behavior, not only the new
+    Smart Router code.
+    """
+    router = _make_if_else_router()  # condition True -> routes to ``true_result``
+    selected, unselected = RecordingSink(_id="selected"), RecordingSink(_id="unselected")
+    merge = MergeSink(_id="merge")
+
+    graph = Graph()
+    graph.add_component(router, "router")
+    graph.add_component(selected, "selected")
+    graph.add_component(unselected, "unselected")
+    graph.add_component(merge, "merge")
+    graph.add_component_edge("router", ("true_result", "input_value"), "selected")
+    graph.add_component_edge("router", ("false_result", "input_value"), "unselected")
+    graph.add_component_edge("selected", ("out", "in1"), "merge")
+    graph.add_component_edge("unselected", ("out", "in2"), "merge")
+
+    yielded = await _run(graph)
+
+    assert selected.did_run is True
+    assert unselected.did_run is False, "Unselected If-Else branch executed despite the condition routing elsewhere"
+    assert merge.did_run is True, "Merge node should execute from the selected branch"
     assert "unselected" not in yielded
     assert "merge" in yielded
 
