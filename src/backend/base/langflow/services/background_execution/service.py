@@ -266,6 +266,33 @@ class BackgroundExecutionService(Service):
         await job_service.write_signal(job_id, SignalType.STOP)
         await self._executor.cancel(str(job_id))
 
+    async def resume_job(self, job_id: UUID, user: UserRead, *, request_id: str, decision: Any) -> bool:
+        """Carry a human decision back into a SUSPENDED run and re-enqueue it.
+
+        Returns True when the run was accepted for resume, False on a conflict
+        (not suspended, stale request_id, or lost the single-flight flip) — the
+        route maps False to 409. Ownership is enforced by ``_validate``.
+        """
+        job = await self._validate(job_id, user)
+        if job.status != JobStatus.SUSPENDED:
+            return False
+        pending = (job.job_metadata or {}).get("pending_request_id")
+        if pending is not None and request_id != pending:
+            return False
+        job_service = get_job_service()
+        # Win the single-flight flip BEFORE writing the RESUME signal, so exactly one
+        # RESUME row exists per suspend and a loser never strands a stray decision.
+        if not await job_service.claim_suspended_for_resume(job_id, owner=self._owner):
+            return False
+        await job_service.write_signal(job_id, SignalType.RESUME, {"decision": decision, "request_id": request_id})
+        await self._enqueue(
+            job_id=job_id,
+            flow_id=job.flow_id,
+            request=self._reconstruct_request(job),
+            user=self._user_stub(job.user_id),
+        )
+        return True
+
     async def _cancel_suspended(self, job_id: UUID, job_service) -> None:
         await job_service.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
         with contextlib.suppress(Exception):

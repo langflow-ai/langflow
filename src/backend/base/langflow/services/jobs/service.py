@@ -563,6 +563,33 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
+    async def claim_suspended_for_resume(self, job_id: UUID, *, owner: str | None = None) -> bool:
+        """Atomically flip SUSPENDED->IN_PROGRESS for resume; True iff this caller won.
+
+        The single conditional ``UPDATE ... WHERE status = SUSPENDED`` is the single-use
+        primitive: only one concurrent resume gets ``rowcount == 1``. Going straight to
+        IN_PROGRESS (with a fresh heartbeat) means a racing startup sweep sees a non-QUEUED,
+        live row and cannot double-enqueue it.
+        """
+        from sqlmodel import update
+
+        now = datetime.now(timezone.utc).isoformat()
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return False
+            merged = {**(job.job_metadata or {})}
+            if owner is not None:
+                merged.update({"owner": owner, "heartbeat_at": now})
+            stmt = (
+                update(Job)
+                .where(Job.job_id == job_id, Job.status == JobStatus.SUSPENDED)
+                .values(status=JobStatus.IN_PROGRESS, job_metadata=merged)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
     async def queued_workflow_job_ids(self) -> list[UUID]:
         """Return the ids of every QUEUED workflow job (for strand recovery)."""
         async with session_scope() as session:

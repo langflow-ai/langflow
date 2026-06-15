@@ -364,6 +364,7 @@ async def generate_flow_events(
     current_user: CurrentActiveUser,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
+    job_id: uuid.UUID | str | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -381,7 +382,9 @@ async def generate_flow_events(
         start_time = time.perf_counter()
         components_count = 0
         graph = None
-        run_id = str(uuid.uuid4())
+        # On the durable background path the run_id MUST equal job_id so the HITL
+        # checkpoint (keyed by job_id) is found on resume; foreground runs keep a uuid4.
+        run_id = str(job_id) if job_id is not None else str(uuid.uuid4())
         try:
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
