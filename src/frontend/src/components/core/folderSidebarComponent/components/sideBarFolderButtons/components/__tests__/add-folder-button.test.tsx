@@ -7,7 +7,9 @@ jest.mock("react-i18next", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name }: { name: string }) => <span data-testid={`icon-${name}`}>{name}</span>,
+  default: ({ name }: { name: string }) => (
+    <span data-testid={`icon-${name}`}>{name}</span>
+  ),
 }));
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({
@@ -16,8 +18,19 @@ jest.mock("@/components/common/shadTooltipComponent", () => ({
 }));
 
 jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, "aria-label": ariaLabel, disabled, loading, ...props }: any) => (
-    <button aria-label={ariaLabel} disabled={disabled} data-loading={loading} {...props}>
+  Button: ({
+    children,
+    "aria-label": ariaLabel,
+    disabled,
+    loading,
+    ...props
+  }: any) => (
+    <button
+      aria-label={ariaLabel}
+      disabled={disabled}
+      data-loading={loading}
+      {...props}
+    >
       {children}
     </button>
   ),

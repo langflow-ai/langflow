@@ -227,7 +227,11 @@ const HeaderComponent = ({
                           : "text-muted-foreground hover:bg-muted"
                       }`}
                       onClick={() => setView(viewType as "list" | "grid")}
-                      aria-label={t(viewType === "list" ? "flows.viewList" : "flows.viewGrid")}
+                      aria-label={t(
+                        viewType === "list"
+                          ? "flows.viewList"
+                          : "flows.viewGrid",
+                      )}
                       aria-pressed={view === viewType}
                     >
                       <ForwardedIconComponent

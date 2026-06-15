@@ -2,7 +2,6 @@ import { act, render, screen } from "@testing-library/react";
 import { useUtilityStore } from "@/stores/utilityStore";
 import HeaderComponent from "../index";
 
-
 interface IconProps {
   name: string;
   className?: string;
@@ -240,7 +239,11 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
       const labelled = container.querySelectorAll("button[aria-label]");
       const viewBtns = Array.from(labelled).filter((b) => {
         const label = b.getAttribute("aria-label") ?? "";
-        return label.toLowerCase().includes("view") || label.toLowerCase().includes("list") || label.toLowerCase().includes("grid");
+        return (
+          label.toLowerCase().includes("view") ||
+          label.toLowerCase().includes("list") ||
+          label.toLowerCase().includes("grid")
+        );
       });
       expect(viewBtns.length).toBeGreaterThanOrEqual(2);
     });
@@ -250,8 +253,12 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
         <HeaderComponent {...defaultProps} view="list" />,
       );
       // Find the two view toggle buttons by aria-pressed attribute presence
-      const pressedTrue = container.querySelector('button[aria-pressed="true"]');
-      const pressedFalse = container.querySelector('button[aria-pressed="false"]');
+      const pressedTrue = container.querySelector(
+        'button[aria-pressed="true"]',
+      );
+      const pressedFalse = container.querySelector(
+        'button[aria-pressed="false"]',
+      );
       expect(pressedTrue).toBeInTheDocument();
       expect(pressedFalse).toBeInTheDocument();
     });
@@ -260,7 +267,7 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
       const { container } = render(
         <HeaderComponent {...defaultProps} view="grid" />,
       );
-      const allPressed = container.querySelectorAll('button[aria-pressed]');
+      const allPressed = container.querySelectorAll("button[aria-pressed]");
       const trueCount = Array.from(allPressed).filter(
         (b) => b.getAttribute("aria-pressed") === "true",
       ).length;

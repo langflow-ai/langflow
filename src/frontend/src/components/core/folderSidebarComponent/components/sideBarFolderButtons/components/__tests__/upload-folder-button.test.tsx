@@ -7,7 +7,9 @@ jest.mock("react-i18next", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name }: { name: string }) => <span data-testid={`icon-${name}`}>{name}</span>,
+  default: ({ name }: { name: string }) => (
+    <span data-testid={`icon-${name}`}>{name}</span>
+  ),
 }));
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({

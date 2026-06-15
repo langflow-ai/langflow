@@ -8,12 +8,22 @@ jest.mock("react-i18next", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name }: { name: string }) => <span data-testid={`icon-${name}`}>{name}</span>,
+  default: ({ name }: { name: string }) => (
+    <span data-testid={`icon-${name}`}>{name}</span>
+  ),
 }));
 
 jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, "aria-label": ariaLabel, "data-testid": testId, unstyled, ...props }: any) => (
-    <button aria-label={ariaLabel} data-testid={testId} {...props}>{children}</button>
+  Button: ({
+    children,
+    "aria-label": ariaLabel,
+    "data-testid": testId,
+    unstyled,
+    ...props
+  }: any) => (
+    <button aria-label={ariaLabel} data-testid={testId} {...props}>
+      {children}
+    </button>
   ),
 }));
 
@@ -66,10 +76,15 @@ jest.mock("@/customization/hooks/use-custom-theme", () => ({
 
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
-  default: () => ({ notificationCenter: false, setNotificationCenter: jest.fn() }),
+  default: () => ({
+    notificationCenter: false,
+    setNotificationCenter: jest.fn(),
+  }),
 }));
 
-jest.mock("./components/FlowMenu", () => ({ FlowMenu: () => null }), { virtual: true });
+jest.mock("./components/FlowMenu", () => ({ FlowMenu: () => null }), {
+  virtual: true,
+});
 jest.mock("../components/FlowMenu", () => ({
   __esModule: true,
   default: () => null,
