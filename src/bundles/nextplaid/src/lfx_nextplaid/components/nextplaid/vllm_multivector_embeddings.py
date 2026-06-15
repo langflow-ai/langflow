@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.components.vllm.vllm_multivector_impl import VllmMultivectorEmbeddings
-from lfx.field_typing import Embeddings  # noqa: TC001
+
+# Kept as a runtime import (not under TYPE_CHECKING): the framework resolves
+# build_embeddings()'s ``-> Embeddings`` return hint via get_type_hints() at runtime.
+from lfx.field_typing import Embeddings  # noqa: TC002
 from lfx.io import FloatInput, IntInput, MessageTextInput, SecretStrInput
+from lfx_nextplaid.components.nextplaid.vllm_multivector_impl import VllmMultivectorEmbeddings
 
 
 class VllmMultivectorEmbeddingsComponent(LCEmbeddingsModel):

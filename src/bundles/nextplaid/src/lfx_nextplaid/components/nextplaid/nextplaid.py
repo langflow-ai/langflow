@@ -13,6 +13,7 @@ from lfx.io import (
     FloatInput,
     HandleInput,
     IntInput,
+    Output,
     StrInput,
 )
 from lfx.schema.data import Data
@@ -98,6 +99,23 @@ class NextPlaidVectorStoreComponent(LCVectorStoreComponent):
             info="Number of results to return from similarity search.",
             value=4,
             advanced=True,
+        ),
+    ]
+
+    # Declared explicitly (rather than inherited from LCVectorStoreComponent) so the
+    # static extension validator can resolve the component's output methods; mirrors
+    # the base outputs and keeps the search output usable as an agent tool.
+    outputs = [
+        Output(
+            display_name="Search Results",
+            name="search_results",
+            method="search_documents",
+            tool_mode=True,
+        ),
+        Output(
+            display_name="Table",
+            name="dataframe",
+            method="as_dataframe",
         ),
     ]
 
