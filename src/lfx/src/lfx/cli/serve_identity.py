@@ -1,6 +1,6 @@
 """Per-user identity forwarding for ``lfx serve``.
 
- This module lets ``lfx serve`` *consume* an upstream identity and thread it 
+ This module lets ``lfx serve`` *consume* an upstream identity and thread it
  into flow execution as ``user_id``.
 
 Two modes carry identity, plus an off switch:
