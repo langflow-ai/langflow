@@ -2,6 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import { useUtilityStore } from "@/stores/utilityStore";
 import HeaderComponent from "../index";
 
+
 interface IconProps {
   name: string;
   className?: string;
@@ -119,7 +120,6 @@ jest.mock("@/modals/deleteConfirmationModal", () => ({
     children,
     onConfirm,
     description,
-    note,
     "data-testid": testId,
   }: DeleteModalProps) => (
     <div
@@ -219,6 +219,56 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
       const downloadBtn = screen.getByTestId("download-bulk-btn");
       expect(downloadBtn).toBeInTheDocument();
       expect(downloadBtn).toHaveAttribute("tabindex", "0");
+    });
+  });
+
+  describe("Accessibility - aria-label on icon-only buttons", () => {
+    it("download button has a non-empty aria-label when flows are selected", () => {
+      const { container } = render(
+        <HeaderComponent {...defaultProps} selectedFlows={["flow1"]} />,
+      );
+      const downloadBtn = container.querySelector(
+        '[data-testid="download-bulk-btn"]',
+      );
+      expect(downloadBtn).toHaveAttribute("aria-label");
+      expect(downloadBtn?.getAttribute("aria-label")).toBeTruthy();
+    });
+
+    it("view toggle buttons have aria-label attributes", () => {
+      const { container } = render(<HeaderComponent {...defaultProps} />);
+      // Both view toggle buttons must carry an aria-label (actual text depends on loaded locale)
+      const labelled = container.querySelectorAll("button[aria-label]");
+      const viewBtns = Array.from(labelled).filter((b) => {
+        const label = b.getAttribute("aria-label") ?? "";
+        return label.toLowerCase().includes("view") || label.toLowerCase().includes("list") || label.toLowerCase().includes("grid");
+      });
+      expect(viewBtns.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("view toggle buttons expose aria-pressed reflecting active view", () => {
+      const { container } = render(
+        <HeaderComponent {...defaultProps} view="list" />,
+      );
+      // Find the two view toggle buttons by aria-pressed attribute presence
+      const pressedTrue = container.querySelector('button[aria-pressed="true"]');
+      const pressedFalse = container.querySelector('button[aria-pressed="false"]');
+      expect(pressedTrue).toBeInTheDocument();
+      expect(pressedFalse).toBeInTheDocument();
+    });
+
+    it("exactly one view toggle is aria-pressed=true and one is false", () => {
+      const { container } = render(
+        <HeaderComponent {...defaultProps} view="grid" />,
+      );
+      const allPressed = container.querySelectorAll('button[aria-pressed]');
+      const trueCount = Array.from(allPressed).filter(
+        (b) => b.getAttribute("aria-pressed") === "true",
+      ).length;
+      const falseCount = Array.from(allPressed).filter(
+        (b) => b.getAttribute("aria-pressed") === "false",
+      ).length;
+      expect(trueCount).toBeGreaterThanOrEqual(1);
+      expect(falseCount).toBeGreaterThanOrEqual(1);
     });
   });
 

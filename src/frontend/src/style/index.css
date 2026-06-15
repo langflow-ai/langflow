@@ -33,7 +33,7 @@
     --ring: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --primary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --secondary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
-    --placeholder-foreground: 240 5% 65%; /* hsl(240, 5%, 65%) */
+    --placeholder-foreground: 240 5% 40%; /* hsl(240, 5%, 40%) — darkened for WCAG 1.4.3 contrast ≥4.5:1 on white */
     --canvas: 240 5% 96%; /* hsl(240, 5%, 96%) */
     --canvas-dot: 240 5% 65%; /* hsl(240, 5%, 65%) */
     --accent-emerald: 149 80% 90%; /* hsl(149, 80%, 90%) */
