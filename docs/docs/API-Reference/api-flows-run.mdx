@@ -2,7 +2,7 @@
 title: Flow trigger endpoints
 slug: /api-flows-run
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleApiFlowsRunRunFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows-run/run-flow.sh';
 import exampleApiFlowsRunStreamLlmTokenResponses from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows-run/stream-llm-token-responses.sh';
 import exampleApiFlowsRunRequestExampleWithAllHeadersAndParameters from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows-run/request-example-with-all-headers-and-parameters.sh';
@@ -46,17 +46,17 @@ This flow requires a chat input string (`input_value`), and uses default values 
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsRunRunFlow} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsRunRunFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsRunRunFlow} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsRunRunFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsRunRunFlow} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsRunRunFlow}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -113,17 +113,17 @@ To stream LLM token responses, append the `?stream=true` query parameter to the 
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsRunStreamLlmTokenResponses} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsRunStreamLlmTokenResponses}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsRunStreamLlmTokenResponses} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsRunStreamLlmTokenResponses}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsRunStreamLlmTokenResponses} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsRunStreamLlmTokenResponses}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -186,17 +186,17 @@ The following example is truncated to illustrate a series of `token` events as w
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsRunRequestExampleWithAllHeadersAndParameters} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsRunRequestExampleWithAllHeadersAndParameters}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsRunRequestExampleWithAllHeadersAndParameters} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsRunRequestExampleWithAllHeadersAndParameters}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsRunRequestExampleWithAllHeadersAndParameters} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsRunRequestExampleWithAllHeadersAndParameters}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -214,17 +214,17 @@ You don't need to create these variables in Langflow's Global Variables section 
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsRunPassGlobalVariablesInRequestHeaders} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsRunPassGlobalVariablesInRequestHeaders}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsRunPassGlobalVariablesInRequestHeaders} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsRunPassGlobalVariablesInRequestHeaders}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsRunPassGlobalVariablesInRequestHeaders} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsRunPassGlobalVariablesInRequestHeaders}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -244,17 +244,17 @@ For more information, see [Trigger flows with webhooks](/webhook).
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsRunWebhookRunFlow} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsRunWebhookRunFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsRunWebhookRunFlow} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsRunWebhookRunFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsRunWebhookRunFlow} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsRunWebhookRunFlow}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -262,7 +262,7 @@ For more information, see [Trigger flows with webhooks](/webhook).
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFlowsRunResultWebhookRunFlow} language="json" />
+<CodeBlock language="json">{resultApiFlowsRunResultWebhookRunFlow}</CodeBlock>
 
 </details>
 
