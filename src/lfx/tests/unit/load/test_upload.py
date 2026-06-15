@@ -75,6 +75,30 @@ def test_upload_sends_no_headers_when_no_api_key(tmp_path, monkeypatch):
     assert kwargs["headers"] == {}
 
 
+def test_upload_uses_bounded_http_timeout(tmp_path):
+    file_path = tmp_path / "x.txt"
+    file_path.write_bytes(b"contents")
+
+    with patch("lfx.load.utils.httpx.post", return_value=_ok_response()) as mock_post:
+        upload(str(file_path), "http://host", "flow-1")
+
+    _args, kwargs = mock_post.call_args
+    assert kwargs["timeout"] == 30.0
+
+
+def test_upload_wraps_timeout_as_upload_error(tmp_path):
+    file_path = tmp_path / "x.txt"
+    file_path.write_bytes(b"contents")
+
+    with (
+        patch("lfx.load.utils.httpx.post", side_effect=httpx.TimeoutException("connect stalled")),
+        pytest.raises(UploadError) as exc_info,
+    ):
+        upload(str(file_path), "http://host", "flow-1")
+
+    assert "timed out after 30.0s" in str(exc_info.value)
+
+
 def test_upload_file_forwards_api_key(tmp_path):
     """``upload_file`` must pass the api_key through to ``upload``."""
     file_path = tmp_path / "x.txt"
@@ -106,5 +130,10 @@ def test_upload_raises_upload_error_on_auth_failure(tmp_path, monkeypatch):
 
     response = MagicMock()
     response.status_code = httpx.codes.UNAUTHORIZED
-    with patch("lfx.load.utils.httpx.post", return_value=response), pytest.raises(UploadError):
+    response.text = "missing api key"
+    with patch("lfx.load.utils.httpx.post", return_value=response), pytest.raises(UploadError) as exc_info:
         upload(str(file_path), "http://host", "flow-1")
+
+    message = str(exc_info.value)
+    assert "401" in message
+    assert "missing api key" in message
