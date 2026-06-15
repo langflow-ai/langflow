@@ -9,9 +9,14 @@ import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
+import {
+  AudioContentDisplay,
+  FileContentDisplay,
+  ImageContentDisplay,
+  VideoContentDisplay,
+} from "./MediaContentDisplay";
 import { SourcesStrip } from "./SourcesStrip";
 import { looksPreformatted, unwrapToolMessage } from "./toolOutput";
-import { safeUrl } from "./url";
 
 export default function ContentDisplay({
   content,
@@ -139,15 +144,9 @@ export default function ContentDisplay({
       break;
 
     case "tool_use": {
-      // Tool output rendering routes by the *unwrapped* payload shape:
-      //   - markdown-y string  -> Markdown renderer (prose, no chrome)
-      //   - pre-formatted text -> code tab with language=text
-      //                           (monospace, contained horizontal scroll,
-      //                           built-in copy button)
-      //   - object / array     -> code tab with language=json (same)
-      // The LangChain ToolMessage envelope is unwrapped first so the
-      // readable `content` field becomes the body and the plumbing
-      // metadata (already shown by the accordion trigger) stays hidden.
+      // Unwrap the LangChain ToolMessage envelope first so the readable
+      // `content` field becomes the body and the plumbing metadata (already
+      // shown by the accordion trigger) stays hidden.
       const formatToolOutput = (raw: JSONValue) => {
         const output = unwrapToolMessage(raw);
         if (output === null || output === undefined) return null;
@@ -264,125 +263,19 @@ export default function ContentDisplay({
       break;
 
     case "image":
-      contentData = (
-        <div className="flex flex-col gap-2">
-          {content.urls?.map((url, index) => {
-            const src = safeUrl(url);
-            if (!src) return null;
-            return (
-              <img
-                key={index}
-                src={src}
-                alt={content.caption || `Image ${index + 1}`}
-                className="max-w-full rounded"
-              />
-            );
-          })}
-          {/* base64 is a fallback for when no usable URL is provided.
-              `some(Boolean)` so urls=[""] or urls=[null] don't suppress the
-              fallback while rendering a broken <img src=""> above. */}
-          {!content.urls?.some(Boolean) && content.base64 && (
-            <img
-              src={`data:${content.mime_type || "image/png"};base64,${content.base64}`}
-              alt={content.caption || "Image"}
-              className="max-w-full rounded"
-            />
-          )}
-          {content.caption && (
-            <p className="text-xs text-muted-foreground">{content.caption}</p>
-          )}
-        </div>
-      );
+      contentData = <ImageContentDisplay content={content} />;
       break;
 
     case "audio":
-      contentData = (
-        <div className="flex flex-col gap-2">
-          {content.urls?.map((url, index) => {
-            const src = safeUrl(url);
-            if (!src) return null;
-            return (
-              <audio key={index} controls className="w-full">
-                <source src={src} type={content.mime_type} />
-              </audio>
-            );
-          })}
-          {!content.urls?.some(Boolean) && content.base64 && (
-            <audio controls className="w-full">
-              <source
-                src={`data:${content.mime_type || "audio/mpeg"};base64,${content.base64}`}
-                type={content.mime_type || "audio/mpeg"}
-              />
-            </audio>
-          )}
-          {content.transcript && (
-            <p className="text-xs text-muted-foreground italic">
-              {content.transcript}
-            </p>
-          )}
-        </div>
-      );
+      contentData = <AudioContentDisplay content={content} />;
       break;
 
     case "video":
-      contentData = (
-        <div className="flex flex-col gap-2">
-          {content.urls?.map((url, index) => {
-            const src = safeUrl(url);
-            if (!src) return null;
-            return (
-              <video key={index} controls className="max-w-full rounded">
-                <source src={src} type={content.mime_type} />
-              </video>
-            );
-          })}
-          {!content.urls?.some(Boolean) && content.base64 && (
-            <video controls className="max-w-full rounded">
-              <source
-                src={`data:${content.mime_type || "video/mp4"};base64,${content.base64}`}
-                type={content.mime_type || "video/mp4"}
-              />
-            </video>
-          )}
-        </div>
-      );
+      contentData = <VideoContentDisplay content={content} />;
       break;
 
     case "file":
-      contentData = (
-        <div className="flex items-center gap-2">
-          <ForwardedIconComponent
-            name="File"
-            className="h-4 w-4 text-muted-foreground"
-          />
-          {content.urls?.map((url, index) => {
-            const label = content.filename || `Download file ${index + 1}`;
-            const href = safeUrl(url);
-            // URLs come from untrusted tool/model output; an unsafe scheme
-            // (javascript:, data:, ...) degrades to a non-clickable label
-            // rather than an anchor that runs script on click.
-            if (!href) {
-              return (
-                <span key={index} className="text-sm text-muted-foreground">
-                  {label}
-                </span>
-              );
-            }
-            return (
-              <a
-                key={index}
-                href={href}
-                download={content.filename}
-                className="text-sm underline text-primary hover:text-primary/80"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {label}
-              </a>
-            );
-          })}
-        </div>
-      );
+      contentData = <FileContentDisplay content={content} />;
       break;
 
     case "reasoning":
