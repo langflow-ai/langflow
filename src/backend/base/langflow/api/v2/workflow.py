@@ -575,6 +575,7 @@ async def _stream_event_frames(
     parsed: ParsedWorkflowRun,
     current_user: UserRead,
     source_flow_id: UUID | None = None,
+    track_job_status: bool = True,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -635,6 +636,7 @@ async def _stream_event_frames(
                 current_user=current_user,
                 flow_name=flow_name,
                 source_flow_id=source_flow_id,
+                track_job_status=track_job_status,
             )
         except asyncio.CancelledError:
             raise
@@ -772,6 +774,11 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 background_tasks=fresh_background_tasks,
                 parsed=parsed,
                 current_user=user,
+                # The durable runner already owns this run's WORKFLOW job row
+                # (keyed by the durable job_id) and fires the memory-base hook
+                # below with that id. Letting the build pipeline mint its own
+                # run_id-keyed WORKFLOW row + hook would double both per run.
+                track_job_status=False,
             ):
                 if terminal_error_type is not None and event_type == terminal_error_type:
                     errored = True
