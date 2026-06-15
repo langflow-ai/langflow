@@ -20,7 +20,6 @@ import contextlib
 import json
 import os
 import tempfile
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -37,7 +36,7 @@ from langflow.services.deps import get_job_service
 from langflow.services.jobs.exceptions import DuplicateJobError
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable
     from uuid import UUID
 
     from lfx.services.settings.service import SettingsService
@@ -45,10 +44,16 @@ if TYPE_CHECKING:
     from langflow.services.database.models.jobs.model import Job, JobEvent
     from langflow.services.database.models.user.model import UserRead
 
-# A frame-source factory returns the async-generator callable the runner drives.
-# Default wiring (Task 2.7) returns ``_stream_event_frames`` bound to the run's
-# adapter + flow; tests inject a scripted generator.
-FrameSourceFactory = Callable[..., Any]
+    # A frame-source factory returns the async-generator callable the runner drives.
+    # Default wiring (Task 2.7) returns ``_stream_event_frames`` bound to the run's
+    # adapter + flow; tests inject a scripted generator.
+    #
+    # Defined under TYPE_CHECKING on purpose: as a module-level runtime value,
+    # ``Callable[..., Any]`` is a GenericAlias that passes ``isinstance(obj, type)``
+    # but makes ``issubclass(obj, Service)`` raise on Python 3.10/3.14. The service
+    # factory scans this module for ``Service`` subclasses (services/factory.py), so a
+    # runtime alias here crashes service initialization on those interpreters.
+    FrameSourceFactory = Callable[..., Any]
 
 # Durable statuses that mean the run is over. ``events()`` keys off these (not the
 # process-local live bus) so a reattach to a finished job replays and returns
