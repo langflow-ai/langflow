@@ -275,3 +275,96 @@ class TestRunAssistantAndPersist:
             )
 
         assert exc_info.value.status_code == 404
+
+
+class TestRunAssistantPersistsAuthoritativeWorkingFlow:
+    """E1 (Eric): persist the authoritative working-flow snapshot so configure/remove/tool-mode survive."""
+
+    AUTHORITATIVE_FLOW = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "Agent-1",
+                    "data": {
+                        "id": "Agent-1",
+                        "type": "Agent",
+                        "node": {"template": {"system_prompt": {"value": "baker"}}},
+                    },
+                }
+            ],
+            "edges": [],
+        }
+    }
+
+    @pytest.mark.asyncio
+    async def test_should_persist_working_flow_snapshot_when_agent_configured_and_removed(self):
+        from langflow.agentic.utils import assistant_runner
+
+        user_id = uuid4()
+        flow = SimpleNamespace(
+            id=uuid4(),
+            name="My Flow",
+            data={"nodes": [{"id": "Agent-1"}, {"id": "Old-1"}], "edges": []},
+            user_id=user_id,
+        )
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+
+        events = [
+            {
+                "event": "flow_update",
+                "action": "configure",
+                "component_id": "Agent-1",
+                "params": {"system_prompt": "baker"},
+            },
+            {"event": "flow_update", "action": "remove_component", "component_id": "Old-1"},
+            {"event": "complete", "data": {"result": "Configured the agent and removed a node."}},
+        ]
+        with (
+            patch.object(
+                assistant_runner, "_resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()
+            ),
+            patch.object(assistant_runner, "execute_flow_with_validation_streaming", side_effect=_stream_of(events)),
+            patch.object(assistant_runner, "get_working_flow", return_value=self.AUTHORITATIVE_FLOW),
+            patch.object(assistant_runner, "_save_flow_to_fs", new_callable=AsyncMock),
+            patch.object(assistant_runner, "get_storage_service", MagicMock()),
+        ):
+            result = await assistant_runner.run_assistant_and_persist(
+                session=session, user_id=user_id, instruction="configure the agent", flow_id=str(flow.id)
+            )
+
+        assert result["flow_changed"] is True
+        # The authoritative working flow wins: configure applied, Old-1 gone.
+        assert [n["id"] for n in flow.data["nodes"]] == ["Agent-1"]
+        agent = flow.data["nodes"][0]
+        assert agent["data"]["node"]["template"]["system_prompt"]["value"] == "baker"
+
+    @pytest.mark.asyncio
+    async def test_should_fall_back_to_event_replay_when_working_flow_is_empty(self):
+        from langflow.agentic.utils import assistant_runner
+
+        user_id = uuid4()
+        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+
+        node = {"id": "ChatInput-x", "data": {"id": "ChatInput-x", "type": "ChatInput"}}
+        events = [
+            {"event": "flow_update", "action": "add_component", "node": node},
+            {"event": "complete", "data": {"result": "Added it."}},
+        ]
+        with (
+            patch.object(
+                assistant_runner, "_resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()
+            ),
+            patch.object(assistant_runner, "execute_flow_with_validation_streaming", side_effect=_stream_of(events)),
+            patch.object(assistant_runner, "get_working_flow", return_value=None),
+            patch.object(assistant_runner, "_save_flow_to_fs", new_callable=AsyncMock),
+            patch.object(assistant_runner, "get_storage_service", MagicMock()),
+        ):
+            result = await assistant_runner.run_assistant_and_persist(
+                session=session, user_id=user_id, instruction="add input", flow_id=str(flow.id)
+            )
+
+        assert result["flow_changed"] is True
+        assert [n["id"] for n in flow.data["nodes"]] == ["ChatInput-x"]

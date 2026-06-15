@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from fastapi import HTTPException
+from lfx.mcp.flow_builder_tools import get_working_flow
 
 from langflow.agentic.api.router import _resolve_assistant_context
 from langflow.agentic.api.schemas import AssistantRequest
@@ -61,11 +62,13 @@ async def _ensure_flow(session: AsyncSession, user_id: UUID, flow_id: str | None
 
 
 class _CanvasState:
-    """Replays ``flow_update`` events the way the frontend reconciler does.
+    """Fallback event replay for headless runs when no working-flow snapshot exists.
 
-    The agent emits either a whole-flow ``set_flow`` or incremental
-    ``add_component``/``connect`` events depending on which tool it picks;
-    a headless client must apply both kinds or builds are silently lost.
+    Handles ``set_flow`` / ``add_component`` / ``connect``. The authoritative
+    source is the server-side working flow (it captures configure/remove/
+    tool-mode/select-output too); this replay only runs when that snapshot is
+    unavailable. ``changed`` flips on ANY ``flow_update`` so persistence is
+    gated on "the agent mutated the canvas", not on the subset replayed here.
     """
 
     def __init__(self, initial_data: dict[str, Any] | None) -> None:
@@ -76,6 +79,9 @@ class _CanvasState:
         self.changed = False
 
     def apply(self, event: dict[str, Any]) -> None:
+        # Any flow_update is a canvas mutation, including actions only the
+        # authoritative working-flow snapshot captures (configure/remove/etc.).
+        self.changed = True
         action = event.get("action")
         if action == "set_flow":
             payload = event.get("flow")
@@ -95,9 +101,17 @@ class _CanvasState:
             self.changed = True
 
 
-async def _consume_stream(stream, initial_data: dict[str, Any] | None) -> tuple[_CanvasState, str | None, str | None]:
-    """Drain the assistant SSE stream into (canvas_state, result_text, error_text)."""
+async def _consume_stream(
+    stream, initial_data: dict[str, Any] | None
+) -> tuple[_CanvasState, dict[str, Any] | None, str | None, str | None]:
+    """Drain the SSE stream into (canvas_state, working_snapshot, result_text, error_text).
+
+    ``working_snapshot`` is captured at the ``complete`` event, where the
+    working flow is still alive — the generator's ``finally`` only resets it
+    after iteration ends.
+    """
     canvas = _CanvasState(initial_data)
+    working_snapshot: dict[str, Any] | None = None
     result_text: str | None = None
     error_text: str | None = None
     async for chunk in stream:
@@ -114,9 +128,12 @@ async def _consume_stream(stream, initial_data: dict[str, Any] | None) -> tuple[
             elif event_type == "complete":
                 data = event.get("data") or {}
                 result_text = data.get("result")
+                working = get_working_flow()
+                if isinstance(working, dict) and working.get("data", {}).get("nodes"):
+                    working_snapshot = copy.deepcopy(working)
             elif event_type == "error":
                 error_text = event.get("message")
-    return canvas, result_text, error_text
+    return canvas, working_snapshot, result_text, error_text
 
 
 async def run_assistant_and_persist(
@@ -158,10 +175,10 @@ async def run_assistant_and_persist(
         model_name=ctx.model_name,
         api_key_var=ctx.api_key_name,
     )
-    canvas, result_text, error_text = await _consume_stream(stream, flow.data)
+    canvas, working_snapshot, result_text, error_text = await _consume_stream(stream, flow.data)
 
     if canvas.changed:
-        flow.data = canvas.data
+        flow.data = working_snapshot["data"] if working_snapshot else canvas.data
         if created_new and canvas.name:
             flow.name = canvas.name
         session.add(flow)

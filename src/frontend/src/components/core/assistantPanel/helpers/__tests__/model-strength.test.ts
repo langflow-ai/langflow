@@ -99,7 +99,7 @@ describe("classifyModelStrength", () => {
     });
   });
 
-  describe("strong — tags that carry a large parameter count override", () => {
+  describe("strong — large models and flagships", () => {
     it.each([
       "qwen2.5-coder:32b",
       "llama3.2-vision:90b",

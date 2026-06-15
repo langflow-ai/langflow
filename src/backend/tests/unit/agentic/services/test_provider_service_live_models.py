@@ -208,3 +208,32 @@ class TestCloudModelOrdering:
             default = get_default_model("Ollama", user_id="00000000-0000-0000-0000-000000000001")
 
         assert default == "glm-5:cloud"
+
+
+class TestLiveFetchFailOpen:
+    """C2/C9: any exception from the live-fetch boundary degrades to catalog behavior (fail-open)."""
+
+    def test_should_return_empty_when_live_fetch_raises_unexpected_error(self):
+        from langflow.agentic.services.provider_service import list_installed_tool_calling_models
+
+        with patch(
+            f"{MODULE}.get_live_models_for_provider",
+            side_effect=RuntimeError("adapter blew up"),
+            create=True,
+        ):
+            result = list_installed_tool_calling_models("Ollama", "00000000-0000-0000-0000-000000000001")
+
+        assert result == []
+
+    def test_should_fall_back_to_catalog_candidates_when_live_fetch_raises(self):
+        with patch(
+            f"{MODULE}.get_live_models_for_provider",
+            side_effect=RuntimeError("adapter blew up"),
+            create=True,
+        ):
+            candidates = get_provider_model_candidates("Ollama", user_id="00000000-0000-0000-0000-000000000001")
+            default = get_default_model("Ollama", user_id="00000000-0000-0000-0000-000000000001")
+
+        assert candidates
+        assert candidates[0] == "llama3.3"
+        assert default == "llama3.3"

@@ -3,6 +3,7 @@
 This module exposes template search and creation functions as MCP tools using FastMCP decorators.
 """
 
+import asyncio
 from typing import Any
 from uuid import UUID
 
@@ -41,18 +42,27 @@ from langflow.agentic.utils.template_search import (
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 
 _services_initialized = False
+_services_init_lock = asyncio.Lock()
 
 
 async def _ensure_services() -> None:
-    """Boot the service registry for standalone stdio runs (no app lifespan)."""
+    """Boot the service registry for standalone stdio runs (no app lifespan).
+
+    Double-checked under a lock so concurrent MCP calls can't both run
+    ``initialize_services()`` (its startup/migration side effects are not
+    safe to run twice).
+    """
     global _services_initialized  # noqa: PLW0603
     if _services_initialized:
         return
-    get_db_service()
-    from langflow.services.utils import initialize_services
+    async with _services_init_lock:
+        if _services_initialized:
+            return
+        get_db_service()
+        from langflow.services.utils import initialize_services
 
-    await initialize_services()
-    _services_initialized = True
+        await initialize_services()
+        _services_initialized = True
 
 
 # Initialize FastMCP server

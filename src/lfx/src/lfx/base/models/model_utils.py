@@ -426,9 +426,15 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
             timeout=OPENAI_COMPATIBLE_FETCH_TIMEOUT,
         )
         response.raise_for_status()
-        entries = response.json().get("data", [])
+        payload = response.json()
     except (requests.RequestException, ValueError) as exc:
         logger.debug(f"Could not fetch live OpenAI-compatible models from {base_url}: {exc}")
+        return []
+
+    # An arbitrary OpenAI-compatible server may return a non-conforming body
+    # (a bare list, a list of strings, …); treat anything off-spec as "no models".
+    entries = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(entries, list):
         return []
 
     return [
@@ -441,7 +447,7 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
             default=index < MIN_DEFAULT_MODELS,
         )
         for index, entry in enumerate(entries)
-        if entry.get("id")
+        if isinstance(entry, dict) and entry.get("id")
     ]
 
 

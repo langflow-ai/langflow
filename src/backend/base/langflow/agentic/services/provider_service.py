@@ -148,7 +148,7 @@ def list_installed_tool_calling_models(provider: str, user_id: UUID | str | None
         return []
     try:
         live_models = get_live_models_for_provider(user_id, provider, "llm")
-    except (ConnectionError, TimeoutError, OSError, ValueError) as exc:
+    except Exception as exc:  # noqa: BLE001 — fail-open: any fetch error degrades to catalog behavior
         logger.debug(f"Live model fetch failed for provider={provider}: {exc}")
         return []
     names = [model["name"] for model in live_models if model.get("name") and model.get("tool_calling", True)]

@@ -251,8 +251,8 @@ async def update_variable(
         if existing_variable.name in model_provider_variable_mapping.values() and variable.value:
             provider = get_provider_from_variable_name(existing_variable.name)
             if provider is not None:
-                # Run validation off the event loop to avoid blocking
-                provider_vars = await asyncio.to_thread(get_all_variables_for_provider, current_user.id, provider)
+                # Run validation off the event loop; owner context (not caller) for share-aware updates.
+                provider_vars = await asyncio.to_thread(get_all_variables_for_provider, owner_id, provider)
                 try:
                     await asyncio.to_thread(
                         validate_model_provider_key,

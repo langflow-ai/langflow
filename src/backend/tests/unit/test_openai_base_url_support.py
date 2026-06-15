@@ -33,6 +33,7 @@ from lfx.base.models.unified_models import (
     validate_model_provider_key,
 )
 from lfx.base.models.unified_models.instantiation import get_llm
+from lfx.utils.util import transform_localhost_url
 
 USER_ID = "00000000-0000-0000-0000-000000000001"
 CUSTOM_BASE_URL = "http://localhost:11434/v1"
@@ -70,7 +71,7 @@ class TestGetLlmBaseUrl:
         ):
             llm = get_llm(OPENAI_MODEL_SPEC, USER_ID, api_key="sk-test")
 
-        assert llm.openai_api_base == CUSTOM_BASE_URL
+        assert llm.openai_api_base == transform_localhost_url(CUSTOM_BASE_URL)
 
     def test_should_not_set_base_url_when_variable_is_absent(self):
         with patch(
@@ -92,7 +93,7 @@ class TestKeyValidationWithBaseUrl:
                 model_name="gpt-oss:20b",
             )
 
-        assert chat_openai.call_args.kwargs.get("base_url") == CUSTOM_BASE_URL
+        assert chat_openai.call_args.kwargs.get("base_url") == transform_localhost_url(CUSTOM_BASE_URL)
 
     def test_should_not_pass_base_url_when_not_configured(self):
         chat_openai = MagicMock()
@@ -167,3 +168,66 @@ class TestConditionalLiveReplacement:
             replace_with_live_models(catalog, USER_ID, ["OpenAI"], model_type="llm")
 
         assert [m["model_name"] for m in catalog[0]["models"]] == ["gpt-oss:20b"]
+
+
+class TestMalformedModelsPayload:
+    """C7: a non-conforming /models payload from an arbitrary server degrades to [], not raises."""
+
+    def _fetch(self, payload):
+        from lfx.base.models import model_utils
+
+        class FakeResp:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return payload
+
+        with (
+            patch.object(
+                model_utils,
+                "get_provider_variable_value",
+                side_effect=lambda _uid, key: CUSTOM_BASE_URL if key == "OPENAI_BASE_URL" else "sk-x",
+            ),
+            patch("requests.get", return_value=FakeResp()),
+        ):
+            return fetch_live_openai_compatible_models(USER_ID, "llm")
+
+    def test_should_return_empty_when_payload_is_a_list_not_a_dict(self):
+        assert self._fetch(["gpt-4", "gpt-3.5"]) == []
+
+    def test_should_return_empty_when_data_is_a_list_of_strings(self):
+        assert self._fetch({"data": ["gpt-4"]}) == []
+
+    def test_should_skip_non_dict_entries_but_keep_valid_ones(self):
+        models = self._fetch({"data": ["junk", {"id": "gpt-oss:20b"}]})
+        assert [m["name"] for m in models] == ["gpt-oss:20b"]
+
+
+class TestBaseUrlNormalizationParity:
+    """C8/C5: validation normalizes OPENAI_BASE_URL like runtime (Docker localhost parity)."""
+
+    TRANSFORMED = "http://host.docker.internal:11434/v1"
+
+    def test_validation_normalizes_base_url_like_runtime(self):
+        chat_openai = MagicMock()
+        with (
+            patch("langchain_openai.ChatOpenAI", chat_openai),
+            patch("lfx.utils.util.transform_localhost_url", return_value=self.TRANSFORMED),
+        ):
+            validate_model_provider_key(
+                "OpenAI",
+                {"OPENAI_API_KEY": "sk-x", "OPENAI_BASE_URL": "http://localhost:11434/v1"},
+                model_name="gpt-oss:20b",
+            )
+
+        assert chat_openai.call_args.kwargs.get("base_url") == self.TRANSFORMED
+
+    def test_get_llm_normalizes_base_url(self):
+        with patch(
+            "lfx.base.models.unified_models.get_all_variables_for_provider",
+            return_value={"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": CUSTOM_BASE_URL},
+        ):
+            llm = get_llm(OPENAI_MODEL_SPEC, USER_ID, api_key="sk-test")
+
+        assert llm.openai_api_base == transform_localhost_url(CUSTOM_BASE_URL)
