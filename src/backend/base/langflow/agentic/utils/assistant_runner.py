@@ -101,19 +101,43 @@ class _CanvasState:
             self.changed = True
 
 
+def _apply_field_edit(flow_data: dict[str, Any], edit: dict[str, Any]) -> None:
+    """Write a proposed field value into the working flow, by component id + field.
+
+    Resolves the node by id (index-independent — nodes may have shifted since
+    the proposal was emitted) and sets its template field value. No-op when the
+    node or field cannot be resolved (e.g. the node was removed this turn).
+    """
+    component_id = edit.get("component_id")
+    field = edit.get("field")
+    if not component_id or not field:
+        return
+    for node in flow_data.get("nodes", []):
+        nid = node.get("data", {}).get("id", node.get("id"))
+        if nid != component_id:
+            continue
+        template = node.get("data", {}).get("node", {}).get("template", {})
+        target = template.get(field)
+        if isinstance(target, dict):
+            target["value"] = edit.get("new_value")
+        return
+
+
 async def _consume_stream(
     stream, initial_data: dict[str, Any] | None
-) -> tuple[_CanvasState, dict[str, Any] | None, str | None, str | None]:
-    """Drain the SSE stream into (canvas_state, working_snapshot, result_text, error_text).
+) -> tuple[_CanvasState, dict[str, Any] | None, str | None, str | None, list[dict[str, Any]]]:
+    """Drain the SSE stream into (canvas_state, working_snapshot, result_text, error_text, field_edits).
 
     ``working_snapshot`` is captured at the ``complete`` event, where the
     working flow is still alive — the generator's ``finally`` only resets it
-    after iteration ends.
+    after iteration ends. ``field_edits`` are the ``edit_field`` proposals the
+    working flow never applied; the caller writes them in before persisting.
     """
     canvas = _CanvasState(initial_data)
     working_snapshot: dict[str, Any] | None = None
     result_text: str | None = None
     error_text: str | None = None
+    field_edits: list[dict[str, Any]] = []
     async for chunk in stream:
         for line in str(chunk).splitlines():
             if not line.startswith("data: "):
@@ -125,6 +149,8 @@ async def _consume_stream(
             event_type = event.get("event")
             if event_type == "flow_update":
                 canvas.apply(event)
+                if event.get("action") == "edit_field":
+                    field_edits.append(event)
             elif event_type == "complete":
                 data = event.get("data") or {}
                 result_text = data.get("result")
@@ -133,7 +159,7 @@ async def _consume_stream(
                     working_snapshot = copy.deepcopy(working)
             elif event_type == "error":
                 error_text = event.get("message")
-    return canvas, working_snapshot, result_text, error_text
+    return canvas, working_snapshot, result_text, error_text, field_edits
 
 
 async def run_assistant_and_persist(
@@ -175,10 +201,15 @@ async def run_assistant_and_persist(
         model_name=ctx.model_name,
         api_key_var=ctx.api_key_name,
     )
-    canvas, working_snapshot, result_text, error_text = await _consume_stream(stream, flow.data)
+    canvas, working_snapshot, result_text, error_text, field_edits = await _consume_stream(stream, flow.data)
 
     if canvas.changed:
-        flow.data = working_snapshot["data"] if working_snapshot else canvas.data
+        flow_data = working_snapshot["data"] if working_snapshot else canvas.data
+        # Headless MCP has no UI to apply an edit_field review proposal, so apply
+        # each to the working flow here or the text edit is dropped (Bug #13641).
+        for edit in field_edits:
+            _apply_field_edit(flow_data, edit)
+        flow.data = flow_data
         if created_new and canvas.name:
             flow.name = canvas.name
         session.add(flow)

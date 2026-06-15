@@ -277,6 +277,130 @@ class TestRunAssistantAndPersist:
         assert exc_info.value.status_code == 404
 
 
+class TestRunAssistantAppliesProposedFieldEdits:
+    """Bug #13641: headless MCP must persist proposed text edits.
+
+    A proposed text edit (configure_component in propose-mode OR a direct
+    ProposeFieldEdit call) emits an edit_field event but never writes the value
+    into the working flow. Headless MCP has no UI to apply the proposal, so the
+    runner must apply it before persisting or the change is silently dropped.
+    """
+
+    MARKER = "PIRATE-MARKER-9000"
+
+    @staticmethod
+    def _agent_data(system_prompt_value: str) -> dict:
+        """Inner flow data (nodes/edges) — the shape stored in ``Flow.data``."""
+        return {
+            "nodes": [
+                {
+                    "id": "Agent-1",
+                    "data": {
+                        "id": "Agent-1",
+                        "type": "Agent",
+                        "node": {"template": {"system_prompt": {"value": system_prompt_value}}},
+                    },
+                }
+            ],
+            "edges": [],
+        }
+
+    def _edit_field_events(self) -> list[dict]:
+        return [
+            {
+                "event": "flow_update",
+                "action": "edit_field",
+                "component_id": "Agent-1",
+                "field": "system_prompt",
+                "old_value": "You are a Langflow Agent.",
+                "new_value": self.MARKER,
+                "patch": [
+                    {
+                        "op": "replace",
+                        "path": "/data/nodes/0/data/node/template/system_prompt/value",
+                        "value": self.MARKER,
+                    }
+                ],
+            },
+            {"event": "complete", "data": {"result": "Proposed the system prompt change."}},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_should_persist_proposed_edit_when_working_flow_omits_it(self):
+        from langflow.agentic.utils import assistant_runner
+
+        user_id = uuid4()
+        flow = SimpleNamespace(
+            id=uuid4(), name="My Flow", data=self._agent_data("You are a Langflow Agent."), user_id=user_id
+        )
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+
+        # The working flow snapshot still holds the OLD prompt — the proposal was
+        # never applied to it (the bug). The runner must apply the edit_field.
+        working_without_edit = {"data": self._agent_data("You are a Langflow Agent.")}
+
+        with (
+            patch.object(
+                assistant_runner, "_resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()
+            ),
+            patch.object(
+                assistant_runner,
+                "execute_flow_with_validation_streaming",
+                side_effect=_stream_of(self._edit_field_events()),
+            ),
+            patch.object(assistant_runner, "get_working_flow", return_value=working_without_edit),
+            patch.object(assistant_runner, "_save_flow_to_fs", new_callable=AsyncMock),
+            patch.object(assistant_runner, "get_storage_service", MagicMock()),
+        ):
+            result = await assistant_runner.run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction=f"Set the Agent's system prompt to exactly '{self.MARKER}'.",
+                flow_id=str(flow.id),
+            )
+
+        assert result["flow_changed"] is True
+        persisted = flow.data["nodes"][0]["data"]["node"]["template"]["system_prompt"]["value"]
+        assert persisted == self.MARKER, f"the proposed text edit must persist headlessly; got {persisted!r}"
+
+    @pytest.mark.asyncio
+    async def test_should_apply_proposed_edit_on_the_event_replay_fallback(self):
+        # No working-flow snapshot (empty) → the runner falls back to canvas.data
+        # built from the flow's initial data; the edit_field must still land.
+        from langflow.agentic.utils import assistant_runner
+
+        user_id = uuid4()
+        flow = SimpleNamespace(
+            id=uuid4(), name="My Flow", data=self._agent_data("You are a Langflow Agent."), user_id=user_id
+        )
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+
+        with (
+            patch.object(
+                assistant_runner, "_resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()
+            ),
+            patch.object(
+                assistant_runner,
+                "execute_flow_with_validation_streaming",
+                side_effect=_stream_of(self._edit_field_events()),
+            ),
+            patch.object(assistant_runner, "get_working_flow", return_value=None),
+            patch.object(assistant_runner, "_save_flow_to_fs", new_callable=AsyncMock),
+            patch.object(assistant_runner, "get_storage_service", MagicMock()),
+        ):
+            await assistant_runner.run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction=f"Set the Agent's system prompt to exactly '{self.MARKER}'.",
+                flow_id=str(flow.id),
+            )
+
+        persisted = flow.data["nodes"][0]["data"]["node"]["template"]["system_prompt"]["value"]
+        assert persisted == self.MARKER, f"the proposed edit must land on the replay fallback too; got {persisted!r}"
+
+
 class TestRunAssistantPersistsAuthoritativeWorkingFlow:
     """E1 (Eric): persist the authoritative working-flow snapshot so configure/remove/tool-mode survive."""
 
