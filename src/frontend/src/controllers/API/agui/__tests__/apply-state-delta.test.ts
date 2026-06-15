@@ -165,6 +165,27 @@ describe("applyStateDelta", () => {
     expect(touched.has("node-a")).toBe(true);
   });
 
+  it("maps inactive status to BuildStatus.INACTIVE and skips the flow pool", () => {
+    const touched = new Set<string>();
+
+    applyStateDelta(
+      [
+        {
+          op: "add",
+          path: "/nodes/node-a",
+          value: { status: "inactive", output: null },
+        },
+      ],
+      "run-1",
+      touched,
+    );
+
+    const state = useFlowStore.getState();
+    expect(state.flowBuildStatus["node-a"]?.status).toBe(BuildStatus.INACTIVE);
+    expect(state.flowPool["node-a"]).toBeUndefined();
+    expect(touched.has("node-a")).toBe(true);
+  });
+
   it("falls back to BuildStatus.BUILDING when the status is unknown", () => {
     const touched = new Set<string>();
 
@@ -218,7 +239,8 @@ describe("applyStateDelta", () => {
      * The v1 build path drove edge animation through onBuildStart/onBuildEnd.
      * Without an explicit toggle here the AG-UI path used to leave edges
      * static until ``finish()`` cleared them. Pin the contract: running flips
-     * edges on, success/error flips them off (per-node, no global resets).
+     * edges on, success/error flips them off, and the production caller keeps
+     * the full active node set animated across parallel branches.
      */
     it("flips edges on when a node enters running status", () => {
       const touched = new Set<string>();
@@ -280,6 +302,45 @@ describe("applyStateDelta", () => {
         { ids: ["node-a"], running: false },
         { ids: ["node-b"], running: false },
       ]);
+    });
+
+    it("keeps all currently running node edges animated together", () => {
+      const touched = new Set<string>();
+      const running = new Set<string>();
+      const calls: string[][] = [];
+      const original = useFlowStore.getState().clearAndSetEdgesRunning;
+      useFlowStore.setState({
+        clearAndSetEdgesRunning: (ids?: string[]) => {
+          calls.push(ids ?? []);
+        },
+      });
+
+      applyStateDelta(
+        [
+          {
+            op: "add",
+            path: "/nodes/node-a",
+            value: { status: "running", output: null },
+          },
+          {
+            op: "add",
+            path: "/nodes/node-b",
+            value: { status: "running", output: null },
+          },
+          {
+            op: "add",
+            path: "/nodes/node-a",
+            value: { status: "success", output: { results: {} } },
+          },
+        ],
+        "run-1",
+        touched,
+        running,
+      );
+
+      useFlowStore.setState({ clearAndSetEdgesRunning: original });
+
+      expect(calls).toEqual([["node-a"], ["node-a", "node-b"], ["node-b"]]);
     });
   });
 });

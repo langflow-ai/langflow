@@ -7,6 +7,7 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
+import { v5 as uuidv5 } from "uuid";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
@@ -46,6 +47,7 @@ import {
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
+import useAuthStore from "./authStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
@@ -929,6 +931,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // Always run through the v2 workflows endpoint. Current frontend nodes
     // + edges are sent so unsaved tweaks (dropdowns, text inputs) run as
     // the user sees them.
+    let buildingFlowId = currentFlow!.id;
+    if (get().playgroundPage) {
+      const authState = useAuthStore.getState();
+      const visitorId =
+        authState.isAuthenticated &&
+        authState.autoLogin === false &&
+        authState.userData?.id
+          ? authState.userData.id
+          : useUtilityStore.getState().clientId;
+      buildingFlowId = uuidv5(`${visitorId}_${currentFlow!.id}`, uuidv5.DNS);
+    }
+    get().setBuildingSession(buildingFlowId, session ?? null);
     await runFlowAGUI({
       flowId: currentFlow!.id,
       message: input_value,
@@ -938,6 +952,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowData: { nodes: get().nodes, edges: get().edges },
       files,
       signal: buildController.signal,
+      silent,
     });
 
     // Invalidate KB-related caches so any KnowledgeIngestion node that ran
@@ -950,8 +965,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     // Mirror the v1 build callbacks' analytics: every actual build attempt
     // logs a flow-build event with success/error and (on failure) the error
-    // list. `runFlowAGUI` always resolves and writes the outcome into
-    // `buildInfo`, so reading it back is the cleanest success/error signal.
+    // list. `runFlowAGUI` always resolves and writes failures into
+    // `buildInfo`; silent successful runs leave it null and are tracked as
+    // success.
     const finalBuildInfo = get().buildInfo;
     const hasError = finalBuildInfo?.success === false;
     trackFlowBuild(currentFlow?.name ?? "Unknown", hasError, {
