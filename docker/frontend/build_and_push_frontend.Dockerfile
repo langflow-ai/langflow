@@ -7,6 +7,11 @@
 
 # 1. force platform to the current architecture to increase build speed time on multi-platform builds
 FROM --platform=$BUILDPLATFORM node:lts-bookworm-slim AS builder-base
+# Lothal product version stamped into the bundle (badge). Passed by the deploy
+# workflow as a build-arg; "dev" for un-stamped builds. vite.config.mts reads it
+# from the environment at build time.
+ARG LOTHAL_VERSION=dev
+ENV LOTHAL_VERSION=${LOTHAL_VERSION}
 COPY src/frontend /frontend
 
 RUN cd /frontend && npm install && npm run build

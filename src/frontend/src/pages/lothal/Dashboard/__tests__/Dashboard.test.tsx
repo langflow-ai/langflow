@@ -14,6 +14,7 @@ jest.mock("@/controllers/API/queries/lothal", () => ({
   useDeleteProject: () => ({ mutate: mockDeleteMutate }),
 }));
 
+import { LOTHAL_VERSION } from "../../components";
 import Dashboard from "../index";
 
 const project = {
@@ -37,6 +38,13 @@ describe("Lothal Dashboard", () => {
     mockUseProjects.mockReturnValue({ data: [], isLoading: false });
     render(<Dashboard />);
     expect(screen.getByText("No vessels in the harbor")).toBeInTheDocument();
+  });
+
+  it("renders the product version badge from the single LOTHAL_VERSION source", () => {
+    // Drift guard: the TopBar badge must echo the constant, not a hardcode.
+    mockUseProjects.mockReturnValue({ data: [], isLoading: false });
+    render(<Dashboard />);
+    expect(screen.getByText(`v${LOTHAL_VERSION}`)).toBeInTheDocument();
   });
 
   it("renders a card per project with its name and status verb", () => {

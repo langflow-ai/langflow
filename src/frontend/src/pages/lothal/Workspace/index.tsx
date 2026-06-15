@@ -28,6 +28,7 @@ import {
   EmptyHint,
   isCodePhase,
   isNotImplemented,
+  LOTHAL_VERSION,
   LothalMark,
   NotReady,
   PhaseStepper,
@@ -449,6 +450,12 @@ function WorkspaceView() {
               }}
             >
               {project.name}
+            </span>
+            <span
+              className="mono"
+              style={{ fontSize: 11, color: "var(--ink-soft)" }}
+            >
+              v{LOTHAL_VERSION}
             </span>
           </span>
         }

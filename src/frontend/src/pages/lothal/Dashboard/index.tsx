@@ -16,6 +16,7 @@ import {
   Button,
   EmptyHint,
   HarborWatermark,
+  LOTHAL_VERSION,
   LothalMark,
   phaseStatus,
   StatusDot,
@@ -494,7 +495,7 @@ function DashboardView() {
               className="mono"
               style={{ fontSize: 11, color: "var(--ink-soft)" }}
             >
-              v0.3
+              v{LOTHAL_VERSION}
             </span>
           </span>
         }
