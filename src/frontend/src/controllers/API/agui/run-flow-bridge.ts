@@ -38,6 +38,9 @@ const AGUI_STATUS_TO_BUILD_STATUS: Record<string, BuildStatus> = {
   running: BuildStatus.BUILDING,
   success: BuildStatus.BUILT,
   error: BuildStatus.ERROR,
+  // A branch component's not-taken vertices arrive as ``inactive`` so the
+  // canvas can render them as skipped instead of leaving them on ``pending``.
+  inactive: BuildStatus.INACTIVE,
 };
 
 interface JsonPatchOp {
@@ -168,7 +171,11 @@ export function applyStateDelta(
       } else {
         flowStore.updateEdgesRunningByNodes([nodeId], true);
       }
-    } else if (value.status === "success" || value.status === "error") {
+    } else if (
+      value.status === "success" ||
+      value.status === "error" ||
+      value.status === "inactive"
+    ) {
       if (runningNodeIds) {
         runningNodeIds.delete(nodeId);
         flowStore.clearAndSetEdgesRunning([...runningNodeIds]);
