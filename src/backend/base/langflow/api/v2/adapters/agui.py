@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, ClassVar
 
-from ag_ui.core import BaseEvent, RunErrorEvent
+from ag_ui.core import BaseEvent
 
 from langflow.api.v2.adapters import (
     StreamAdapterContext,
@@ -77,7 +77,12 @@ class AGUIAdapter:
     def error_events(self, error: BaseException) -> Iterable[StreamEvent]:
         # Fallback path: emitted by the dispatcher when on_error itself fails
         # or when no error event has reached the translator.
-        return [_to_stream_event(RunErrorEvent(message=str(error)))]
+        return [_to_stream_event(e) for e in self._translator.translate("error", {"error": str(error)})]
+
+    def cancel_events(self, reason: str) -> Iterable[StreamEvent]:
+        # AG-UI has no cancellation primitive in the local event model; route
+        # through the translator so any open text lifecycle is closed first.
+        return [_to_stream_event(e) for e in self._translator.translate("error", {"error": reason})]
 
     @property
     def terminal_error_type(self) -> str | None:

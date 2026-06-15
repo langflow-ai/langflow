@@ -5,6 +5,10 @@ import {
   WORKFLOWS_PUBLIC_ENDPOINT,
 } from "../run-agent";
 
+jest.mock("@/customization/utils/get-fetch-credentials", () => ({
+  getFetchCredentials: jest.fn(() => "include"),
+}));
+
 describe("buildWorkflowRunRequest", () => {
   it("returns a native WorkflowRunRequest with input_value mapped from message", () => {
     const body = buildWorkflowRunRequest({
@@ -268,6 +272,7 @@ describe("createWorkflowAgent wire body", () => {
       expect(captured).toHaveLength(1);
       expect(captured[0].url).toBe(WORKFLOWS_ENDPOINT);
       expect(captured[0].init.method).toBe("POST");
+      expect(captured[0].init.credentials).toBe("include");
       const wireBody = JSON.parse(captured[0].init.body as string);
       expect(wireBody).toEqual({
         flow_id: "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",

@@ -10,12 +10,19 @@
 
 import { type BaseEvent, EventType } from "@ag-ui/client";
 import { handleMessageEvent } from "@/components/core/playgroundComponent/chat-view/utils/message-event-handler";
+import {
+  findLastBotMessage,
+  updateMessageProperties,
+} from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import { BuildStatus } from "@/constants/enums";
+import { persistMessageProperties } from "@/controllers/API/helpers/persist-message-properties";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import { useMessagesStore } from "@/stores/messagesStore";
 import type {
   ChatInputType,
   ChatOutputType,
+  LogsLogType,
   VertexBuildTypeAPI,
   VertexDataTypeAPI,
 } from "@/types/api";
@@ -31,6 +38,9 @@ const AGUI_STATUS_TO_BUILD_STATUS: Record<string, BuildStatus> = {
   running: BuildStatus.BUILDING,
   success: BuildStatus.BUILT,
   error: BuildStatus.ERROR,
+  // A branch component's not-taken vertices arrive as ``inactive`` so the
+  // canvas can render them as skipped instead of leaving them on ``pending``.
+  inactive: BuildStatus.INACTIVE,
 };
 
 interface JsonPatchOp {
@@ -44,6 +54,11 @@ interface AGUINodeState {
   output: VertexDataTypeAPI | null;
 }
 
+type FlowBuildStatusEntry = {
+  status: BuildStatus;
+  timestamp?: string;
+};
+
 /**
  * Hooks the bridge exposes to {@link handleAGUIEvent}. Injecting them keeps
  * the event-dispatch logic testable without importing the real flow / alert
@@ -53,6 +68,8 @@ export interface BridgeContext {
   setRunId: (runId: string) => void;
   applyDelta: (ops: JsonPatchOp[]) => void;
   handleCustomEvent: (eventType: string, data: unknown) => void;
+  handleEndEvent: (data: unknown) => void;
+  handleLogEvent: (data: unknown) => void;
   onFinished: () => void;
   onError: (message: string) => void;
 }
@@ -82,7 +99,13 @@ export function handleAGUIEvent(event: BaseEvent, ctx: BridgeContext): boolean {
       value?: { event_type?: string; data?: unknown };
     };
     if (custom.name === "langflow.event" && custom.value?.event_type) {
-      ctx.handleCustomEvent(custom.value.event_type, custom.value.data);
+      if (custom.value.event_type === "end") {
+        ctx.handleEndEvent(custom.value.data);
+      } else {
+        ctx.handleCustomEvent(custom.value.event_type, custom.value.data);
+      }
+    } else if (custom.name === "langflow.log") {
+      ctx.handleLogEvent(custom.value);
     }
     return false;
   }
@@ -112,6 +135,8 @@ export function applyStateDelta(
   ops: JsonPatchOp[],
   runId: string,
   nodeIds: Set<string>,
+  runningNodeIds?: Set<string>,
+  originalBuildStatuses?: Map<string, FlowBuildStatusEntry | undefined>,
 ): void {
   const flowStore = useFlowStore.getState();
   for (const op of ops) {
@@ -124,6 +149,13 @@ export function applyStateDelta(
 
     const buildStatus =
       AGUI_STATUS_TO_BUILD_STATUS[value.status] ?? BuildStatus.BUILDING;
+    if (originalBuildStatuses && !originalBuildStatuses.has(nodeId)) {
+      const currentStatus = useFlowStore.getState().flowBuildStatus[nodeId];
+      originalBuildStatuses.set(
+        nodeId,
+        currentStatus ? { ...currentStatus } : undefined,
+      );
+    }
     flowStore.updateBuildStatus([nodeId], buildStatus);
     nodeIds.add(nodeId);
 
@@ -133,9 +165,23 @@ export function applyStateDelta(
     // bridge's final ``finish()`` clears edges, and they never animate during
     // the run.
     if (value.status === "running") {
-      flowStore.updateEdgesRunningByNodes([nodeId], true);
-    } else if (value.status === "success" || value.status === "error") {
-      flowStore.updateEdgesRunningByNodes([nodeId], false);
+      if (runningNodeIds) {
+        runningNodeIds.add(nodeId);
+        flowStore.clearAndSetEdgesRunning([...runningNodeIds]);
+      } else {
+        flowStore.updateEdgesRunningByNodes([nodeId], true);
+      }
+    } else if (
+      value.status === "success" ||
+      value.status === "error" ||
+      value.status === "inactive"
+    ) {
+      if (runningNodeIds) {
+        runningNodeIds.delete(nodeId);
+        flowStore.clearAndSetEdgesRunning([...runningNodeIds]);
+      } else {
+        flowStore.updateEdgesRunningByNodes([nodeId], false);
+      }
     }
 
     // Only the final per-vertex emission carries the result data; running
@@ -203,6 +249,11 @@ export async function runFlowAGUI(
   const flowStore = useFlowStore.getState();
   const setErrorData = useAlertStore.getState().setErrorData;
   const touchedNodeIds = new Set<string>();
+  const runningNodeIds = new Set<string>();
+  const originalBuildStatuses = new Map<
+    string,
+    FlowBuildStatusEntry | undefined
+  >();
   // Server derives run_id from session_id/flow_id and announces it via
   // RUN_STARTED. Until that arrives we have no id to stamp on flow-pool
   // entries, so we fall back to an empty string (matches the legacy
@@ -214,6 +265,96 @@ export async function runFlowAGUI(
   // failure. Without this, a silent ``complete:`` would leave ``buildInfo``
   // ``null`` and ``trackFlowBuild`` would mis-record the run as success.
   let terminalEventSeen = false;
+  let markRunningAsError = false;
+
+  const persistBuildDuration = (data: unknown) => {
+    const buildDuration = (data as { build_duration?: number } | null)
+      ?.build_duration;
+    if (buildDuration == null) return;
+
+    const durationMs = buildDuration * 1000;
+    const currentFlowStore = useFlowStore.getState();
+    currentFlowStore.setBuildDuration(durationMs);
+
+    const found = findLastBotMessage(
+      currentFlowStore.buildingFlowId ?? undefined,
+      currentFlowStore.buildingSessionId ?? undefined,
+    );
+    if (!found) return;
+    if (found.message.properties?.build_duration != null) return;
+
+    useMessagesStore.getState().updateMessagePartial({
+      id: found.message.id,
+      properties: {
+        ...found.message.properties,
+        build_duration: durationMs,
+      },
+    });
+
+    updateMessageProperties(found.message.id!, found.queryKey, {
+      build_duration: durationMs,
+    });
+    persistMessageProperties(found.message.id!, {
+      ...found.message,
+      properties: {
+        ...found.message.properties,
+        build_duration: durationMs,
+      },
+    });
+  };
+
+  const appendLogEvent = (data: unknown) => {
+    const {
+      component_id,
+      output,
+      name,
+      message,
+      type: logType,
+    } = (data ?? {}) as {
+      component_id?: string;
+      output?: string;
+    } & Partial<LogsLogType>;
+    if (!component_id || !output) {
+      console.error(
+        "[runFlowAGUI] Received malformed log event; missing component_id or output",
+        data,
+      );
+      return;
+    }
+    useFlowStore.getState().appendLogToFlowPool(component_id, output, {
+      name,
+      message,
+      type: logType,
+    } as LogsLogType);
+  };
+
+  const markRunningNodesFailed = () => {
+    const current = useFlowStore.getState();
+    const flowBuildStatus = { ...current.flowBuildStatus };
+    for (const nodeId of touchedNodeIds) {
+      if (flowBuildStatus[nodeId]?.status === BuildStatus.BUILDING) {
+        flowBuildStatus[nodeId] = {
+          ...flowBuildStatus[nodeId],
+          status: BuildStatus.ERROR,
+        };
+      }
+    }
+    useFlowStore.setState({ flowBuildStatus });
+  };
+
+  const restoreOriginalBuildStatuses = () => {
+    const current = useFlowStore.getState();
+    const flowBuildStatus = { ...current.flowBuildStatus };
+    for (const [nodeId, status] of originalBuildStatuses) {
+      if (flowBuildStatus[nodeId]?.status !== BuildStatus.BUILDING) continue;
+      if (status) {
+        flowBuildStatus[nodeId] = { ...status };
+      } else {
+        delete flowBuildStatus[nodeId];
+      }
+    }
+    useFlowStore.setState({ flowBuildStatus });
+  };
 
   // `agent.run` still needs a `RunAgentInput` for the client-side apply
   // pipeline (subscriber correlation); the actual wire body is the native
@@ -237,14 +378,26 @@ export async function runFlowAGUI(
     setRunId: (r) => {
       runId = r;
     },
-    applyDelta: (ops) => applyStateDelta(ops, runId, touchedNodeIds),
+    applyDelta: (ops) =>
+      applyStateDelta(
+        ops,
+        runId,
+        touchedNodeIds,
+        runningNodeIds,
+        originalBuildStatuses,
+      ),
     handleCustomEvent: (eventType, data) => handleMessageEvent(eventType, data),
+    handleEndEvent: persistBuildDuration,
+    handleLogEvent: appendLogEvent,
     onFinished: () => {
       terminalEventSeen = true;
-      flowStore.setBuildInfo({ success: true });
+      if (!opts.silent) {
+        flowStore.setBuildInfo({ success: true });
+      }
     },
     onError: (message) => {
       terminalEventSeen = true;
+      markRunningAsError = true;
       flowStore.setBuildInfo({ error: [message], success: false });
       setErrorData({ title: "Workflow run failed", list: [message] });
     },
@@ -255,9 +408,15 @@ export async function runFlowAGUI(
     const finish = () => {
       if (settled) return;
       settled = true;
-      flowStore.updateEdgesRunningByNodes([...touchedNodeIds], false);
+      flowStore.clearAndSetEdgesRunning([]);
       flowStore.setIsBuilding(false);
-      flowStore.revertBuiltStatusFromBuilding();
+      if (markRunningAsError) {
+        markRunningNodesFailed();
+      } else if (!terminalEventSeen) {
+        restoreOriginalBuildStatuses();
+      } else {
+        flowStore.revertBuiltStatusFromBuilding();
+      }
       resolve();
     };
 
@@ -299,6 +458,7 @@ export async function runFlowAGUI(
         }
       },
       error: (err: Error) => {
+        markRunningAsError = true;
         flowStore.setBuildInfo({ error: [err.message], success: false });
         setErrorData({ title: "Workflow run failed", list: [err.message] });
         subscription.unsubscribe();
@@ -310,6 +470,7 @@ export async function runFlowAGUI(
         // truncated response, proxy timeout). Record an error so analytics
         // doesn't treat a silent close as success.
         if (!terminalEventSeen) {
+          markRunningAsError = true;
           flowStore.setBuildInfo({
             error: ["Workflow run ended unexpectedly"],
             success: false,
