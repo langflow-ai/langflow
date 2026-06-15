@@ -36,6 +36,11 @@ _EXTERNAL_FIELDS = (
     "EXTERNAL_AUTH_USERNAME_CLAIM",
     "EXTERNAL_AUTH_EMAIL_CLAIM",
     "EXTERNAL_AUTH_NAME_CLAIM",
+    "EXTERNAL_AUTH_ACCESS_CEILING_ENABLED",
+    "EXTERNAL_AUTH_ACCESS_CLAIM",
+    "EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING",
+    "EXTERNAL_AUTH_DEFAULT_ACCESS_LEVEL",
+    "EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS",
 )
 
 
@@ -58,6 +63,11 @@ async def external_auth_settings(client):  # noqa: ARG001
     auth_settings.EXTERNAL_AUTH_USERNAME_CLAIM = "preferred_username"
     auth_settings.EXTERNAL_AUTH_EMAIL_CLAIM = "email"
     auth_settings.EXTERNAL_AUTH_NAME_CLAIM = "name"
+    auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = False
+    auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM = None
+    auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING = None
+    auth_settings.EXTERNAL_AUTH_DEFAULT_ACCESS_LEVEL = "viewer"
+    auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS = True
 
     yield auth_settings
 
@@ -218,3 +228,47 @@ async def test_session_endpoint_rejects_expired_external_token(client, external_
 
     assert response.status_code == 200
     assert response.json()["authenticated"] is False
+
+
+async def test_external_access_ceiling_filters_effective_permissions(client, external_auth_settings):
+    external_auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
+    external_auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM = "openrag_mode"
+    external_auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING = '{"view":"viewer","edit":"editor"}'
+    token = _external_token(
+        sub="viewer-subject",
+        preferred_username="viewer-user",
+        openrag_mode="view",
+    )
+
+    response = await client.post(
+        "api/v1/authz/me/permissions",
+        headers={_EXTERNAL_AUTH_HEADER: f"Bearer {token}"},
+        json={
+            "resource_type": "flow",
+            "resource_ids": ["00000000-0000-0000-0000-000000000001"],
+            "actions": ["read", "write", "delete"],
+        },
+    )
+
+    assert response.status_code == 200
+    permissions = response.json()["permissions"]
+    assert permissions["00000000-0000-0000-0000-000000000001"] == ["read"]
+
+
+async def test_external_access_ceiling_blocks_api_key_creation(client, external_auth_settings):
+    external_auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
+    external_auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM = "openrag_mode"
+    token = _external_token(
+        sub="viewer-api-key-subject",
+        preferred_username="viewer-api-key-user",
+        openrag_mode="viewer",
+    )
+
+    response = await client.post(
+        "api/v1/api_key/",
+        headers={_EXTERNAL_AUTH_HEADER: f"Bearer {token}"},
+        json={"name": "should-not-work"},
+    )
+
+    assert response.status_code == 403
+    assert "API key creation is disabled" in response.json()["detail"]
