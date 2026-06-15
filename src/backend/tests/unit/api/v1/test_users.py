@@ -1,5 +1,7 @@
+import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.services.deps import get_settings_service
 
 
 async def test_add_user_public_signup(client: AsyncClient):
@@ -50,6 +52,40 @@ async def test_add_user(client: AsyncClient, logged_in_headers_super_user):
     assert "store_api_key" in result, "The result must have an 'store_api_key' key"
     assert "updated_at" in result, "The result must have an 'updated_at' key"
     assert "username" in result, "The result must have an 'username' key"
+
+
+@pytest.fixture
+def signup_disabled(client, monkeypatch):  # noqa: ARG001 - depend on client so settings exist before patching
+    """Close public registration for the duration of a test.
+
+    Depends on ``client`` so the app (and its settings singleton) is built
+    first; otherwise the monkeypatch would be overwritten when the client
+    fixture initializes services.
+    """
+    monkeypatch.setattr(get_settings_service().auth_settings, "ENABLE_SIGNUP", False)
+
+
+@pytest.mark.usefixtures("signup_disabled")
+async def test_add_user_signup_disabled_public_forbidden(client: AsyncClient):
+    """When ENABLE_SIGNUP is False, anonymous sign up is rejected with 403."""
+    response = await client.post(
+        "api/v1/users/",
+        json={"username": "outsider", "password": "password123"},
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "Sign up is currently disabled."
+
+
+@pytest.mark.usefixtures("signup_disabled")
+async def test_add_user_signup_disabled_superuser_allowed(client: AsyncClient, logged_in_headers_super_user):
+    """Even with sign up disabled, a superuser can still provision users."""
+    response = await client.post(
+        "api/v1/users/",
+        json={"username": "provisioned_by_admin", "password": "password123"},
+        headers=logged_in_headers_super_user,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["username"] == "provisioned_by_admin"
 
 
 async def test_read_current_user(client: AsyncClient, logged_in_headers):

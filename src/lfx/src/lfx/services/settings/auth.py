@@ -93,6 +93,16 @@ class AuthSettings(BaseSettings):
     )
     """If True, allows creation of superusers via the CLI 'langflow superuser' command."""
 
+    ENABLE_SIGNUP: bool = Field(
+        default=True,
+        description=(
+            "Allow public, self-service user registration (sign up). "
+            "Set to False to close registration so only superusers can create accounts."
+        ),
+    )
+    """If True, the public POST /users endpoint accepts self-service sign ups.
+    If False, only authenticated superusers may create users."""
+
     NEW_USER_IS_ACTIVE: bool = False
     SUPERUSER: str = DEFAULT_SUPERUSER
     # Store password as SecretStr to prevent accidental plaintext exposure
