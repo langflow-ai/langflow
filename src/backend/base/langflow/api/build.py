@@ -365,6 +365,7 @@ async def generate_flow_events(
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
     job_id: uuid.UUID | str | None = None,
+    resume: dict | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -378,7 +379,34 @@ async def generate_flow_events(
     if not inputs:
         inputs = InputValueRequest(session=str(flow_id))
 
+    async def build_resumed_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
+        """Resume a suspended HITL run from its durable checkpoint instead of building fresh.
+
+        Hydrates the graph, injects the human decision keyed by request_id, and un-builds
+        the paused node so it re-runs and routes (its first-run output was a placeholder).
+        """
+        from lfx.graph.graph.base import Graph as LfxGraph
+        from lfx.services.deps import get_checkpoint_service
+
+        run_id = str(job_id)
+        store = get_checkpoint_service()
+        checkpoint = await store.load_by_run_id(run_id)
+        if checkpoint is None:
+            return await build_graph_and_get_order()
+        graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        graph.human_input_decisions = {resume["request_id"]: resume["decision"]}
+        for vertex in graph.vertices:
+            if f"{vertex.id}:{run_id}" == resume["request_id"]:
+                vertex.built = False
+        first_layer = graph.resume_first_layer()
+        for vertex_id in first_layer:
+            graph.run_manager.add_to_vertices_being_run(vertex_id)
+        await chat_service.set_cache(str(flow_id), graph)
+        return first_layer, list(graph.vertices_to_run), graph
+
     async def build_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
+        if resume is not None and job_id is not None:
+            return await build_resumed_graph_and_get_order()
         start_time = time.perf_counter()
         components_count = 0
         graph = None

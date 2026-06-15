@@ -202,7 +202,9 @@ class JobRunner:
 
     async def _drive(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:
         """The wrapped coroutine: stream frames, persist, publish, finalize result/error."""
-        await self._maybe_resume(job_id)
+        resume = await self._maybe_resume(job_id)
+        if resume is not None:
+            source_kwargs = {**source_kwargs, "resume": resume}
         last_durable_seq = 0
         errored_payload: dict[str, Any] | None = None
         async for frame_bytes, event_type in self._frame_source(**source_kwargs):
@@ -244,13 +246,14 @@ class JobRunner:
             raise RuntimeError(msg)
         await self._jobs.set_result(job_id, {"status": "completed"})
 
-    async def _maybe_resume(self, job_id: UUID) -> None:
+    async def _maybe_resume(self, job_id: UUID) -> dict[str, Any] | None:
         data = await self._pending_resume(job_id)
         if data is None:
-            return
+            return None
         checkpoint = await self._load_checkpoint(job_id)
         await self._resume_hook(checkpoint, data.get("decision"))
         await self._jobs.consume_signals(job_id, SignalType.RESUME)
+        return {"request_id": data.get("request_id"), "decision": data.get("decision")}
 
     async def _pending_resume(self, job_id: UUID) -> dict[str, Any] | None:
         for signal in await self._jobs.unconsumed_signals(job_id):

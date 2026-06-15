@@ -6,11 +6,29 @@ these assert the pure component contract that does not need a running graph.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
 import pytest
 from lfx.components.flow_controls.human_input import HumanInput
 from lfx.schema.data import Data
+from lfx.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient
+
+
+def _wired(component, *, decision=None, run_id="job-1"):
+    """Give the component a minimal graph context (id + injected decision) and a stop spy.
+
+    Mirrors the SmartRouter test convention: the framework seams ``stop`` and
+    ``request_pause`` are mocked so the routing logic is asserted directly.
+    """
+    component._id = "human"
+    decisions = {f"human:{run_id}": decision} if decision is not None else {}
+    graph = SimpleNamespace(run_id=run_id, human_input_decisions=decisions, request_pause=MagicMock())
+    component._vertex = SimpleNamespace(graph=graph)  # self.graph resolves to self._vertex.graph
+    component.stop = MagicMock()
+    return component
 
 
 class TestHumanInputComponent(ComponentTestBaseWithoutClient):
@@ -92,3 +110,47 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
         index_path = Path(lfx.__file__).parent / "_assets" / "component_index.json"
         index = json.loads(index_path.read_text(encoding="utf-8"))
         assert "HumanInput" in json.dumps(index)
+
+    def test_route_branch_with_decision_returns_value_and_stops_others(self, component_class):
+        component = _wired(
+            component_class(input_value="payload", decisions=[{"action_id": "approve"}, {"action_id": "reject"}]),
+            decision={"action_id": "approve", "values": {}},
+        )
+        result = component.route_branch()
+        assert isinstance(result, Message)
+        assert result.text == "payload"
+        component.stop.assert_any_call("branch_reject")  # the non-chosen branch is stopped
+        assert ("branch_approve",) not in [c.args for c in component.stop.call_args_list]
+
+    def test_reject_decision_stops_approve(self, component_class):
+        component = _wired(
+            component_class(input_value="x", decisions=[{"action_id": "approve"}, {"action_id": "reject"}]),
+            decision={"action_id": "reject", "values": {}},
+        )
+        component.route_branch()
+        component.stop.assert_any_call("branch_approve")
+
+    def test_route_branch_without_decision_requests_pause(self, component_class):
+        component = _wired(component_class(prompt="ok?", decisions=[{"action_id": "approve"}]))
+        result = component.route_branch()
+        assert result.text == ""
+        component.graph.request_pause.assert_called_once()
+        _args, kwargs = component.graph.request_pause.call_args
+        assert kwargs["reason"] == "human_input_required"
+        assert kwargs["data"]["kind"] == "node_input"
+
+    def test_emit_action_with_decision_surfaces_id_and_values(self, component_class):
+        component = _wired(
+            component_class(prompt="ok?", decisions=[{"action_id": "approve"}]),
+            decision={"action_id": "approve", "values": {"reason": "fraud"}},
+        )
+        result = component.emit_action()
+        assert isinstance(result, Data)
+        assert result.data["__action_id"] == "approve"
+        assert result.data["__action_value"] == {"reason": "fraud"}
+
+    def test_emit_action_without_decision_requests_pause(self, component_class):
+        component = _wired(component_class(prompt="ok?", decisions=[{"action_id": "approve"}]))
+        result = component.emit_action()
+        assert result.data["__action_id"] is None
+        component.graph.request_pause.assert_called_once()

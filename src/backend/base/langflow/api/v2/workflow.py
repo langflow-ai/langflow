@@ -576,6 +576,7 @@ async def _stream_event_frames(
     current_user: UserRead,
     source_flow_id: UUID | None = None,
     job_id: UUID | None = None,
+    resume: dict | None = None,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -637,6 +638,7 @@ async def _stream_event_frames(
                 flow_name=flow_name,
                 source_flow_id=source_flow_id,
                 job_id=job_id,
+                resume=resume,
             )
         except asyncio.CancelledError:
             raise
@@ -762,7 +764,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
     parsed = parse_workflow_run_request(WorkflowRunRequest(**request))
     terminal_error_type = adapter.terminal_error_type
 
-    async def _source(*, job_id=None, **_kwargs):
+    async def _source(*, job_id=None, resume=None, **_kwargs):
         flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id, widen_for_shares=True)
         fresh_background_tasks = BackgroundTasks()
         errored = False
@@ -775,6 +777,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 parsed=parsed,
                 current_user=user,
                 job_id=job_id,
+                resume=resume,
             ):
                 if terminal_error_type is not None and event_type == terminal_error_type:
                     errored = True
