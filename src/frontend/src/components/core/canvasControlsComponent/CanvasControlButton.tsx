@@ -28,7 +28,7 @@ export const CanvasControlButton = ({
       className="group !h-8 !w-8 rounded !p-0"
       onClick={onClick}
       disabled={disabled}
-      title={testId?.replace(/_/g, " ")}
+      aria-label={tooltipText}
     >
       <ShadTooltip content={tooltipText} side="right">
         <div
