@@ -465,8 +465,12 @@ function WorkspaceView() {
             style={{ display: "inline-flex", alignItems: "center", gap: 16 }}
           >
             <StatusDot phase={project.phase} />
-            <span
-              aria-label={username ? `Account: ${username}` : "Account"}
+            <button
+              type="button"
+              aria-label={
+                username ? `Account: ${username} — open settings` : "Settings"
+              }
+              onClick={() => navigate("/lothal/settings")}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -474,14 +478,16 @@ function WorkspaceView() {
                 width: 28,
                 height: 28,
                 borderRadius: "50%",
+                border: "none",
                 background: "var(--accent)",
                 color: "var(--accent-fg)",
                 fontSize: 12,
                 fontWeight: 600,
+                cursor: "pointer",
               }}
             >
               {initial}
-            </span>
+            </button>
           </span>
         }
       />

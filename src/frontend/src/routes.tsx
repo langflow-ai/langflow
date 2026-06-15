@@ -53,6 +53,7 @@ const LothalSignUp = lazy(() => import("./pages/lothal/Auth/SignUpPage"));
 const LothalDashboard = lazy(() => import("./pages/lothal/Dashboard"));
 const LothalWorkspace = lazy(() => import("./pages/lothal/Workspace"));
 const LothalDesignSystem = lazy(() => import("./pages/lothal/DesignSystem"));
+const LothalSettings = lazy(() => import("./pages/lothal/Settings"));
 
 const router = createBrowserRouter(
   createRoutesFromElements([
@@ -195,6 +196,7 @@ const router = createBrowserRouter(
                 path="lothal/design-system"
                 element={<LothalDesignSystem />}
               />
+              <Route path="lothal/settings" element={<LothalSettings />} />
               <Route path="lothal/:projectId" element={<LothalWorkspace />} />
               <Route path="flow/:id/">
                 <Route path="" element={<CustomDashboardWrapperPage />}>

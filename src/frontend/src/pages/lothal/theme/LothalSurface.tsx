@@ -35,6 +35,37 @@ function ensureLothalFonts() {
 export type LothalThemeMode = "light" | "dark";
 export type LothalDensity = "compact" | "regular" | "comfy";
 
+// Appearance choices persist across mounts/reloads in localStorage so the
+// surface doesn't snap back to its defaults every visit. Keys are namespaced to
+// the lothal surface; reads are validated against the allowed values (a stale or
+// hand-edited value falls back to the default) and wrapped because storage can
+// throw in private-mode / sandboxed contexts.
+const THEME_KEY = "lothal:theme";
+const DENSITY_KEY = "lothal:density";
+const THEMES: readonly LothalThemeMode[] = ["light", "dark"];
+const DENSITIES: readonly LothalDensity[] = ["compact", "regular", "comfy"];
+
+function readStored<T extends string>(
+  key: string,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  try {
+    const stored = window.localStorage.getItem(key) as T | null;
+    return stored && allowed.includes(stored) ? stored : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStored(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Storage unavailable (private mode, quota) — persistence is best-effort.
+  }
+}
+
 type LothalThemeContextValue = {
   theme: LothalThemeMode;
   density: LothalDensity;
@@ -67,24 +98,36 @@ export function LothalSurface({
   className?: string;
   style?: CSSProperties;
 }) {
-  const [theme, setTheme] = useState<LothalThemeMode>(defaultTheme);
-  const [density, setDensity] = useState<LothalDensity>(defaultDensity);
+  // Seed from localStorage (falling back to the given defaults) so a returning
+  // user keeps their last appearance choice.
+  const [theme, setThemeState] = useState<LothalThemeMode>(() =>
+    readStored(THEME_KEY, THEMES, defaultTheme),
+  );
+  const [density, setDensityState] = useState<LothalDensity>(() =>
+    readStored(DENSITY_KEY, DENSITIES, defaultDensity),
+  );
 
   useEffect(() => {
     ensureLothalFonts();
   }, []);
 
-  const value = useMemo<LothalThemeContextValue>(
-    () => ({
+  const value = useMemo<LothalThemeContextValue>(() => {
+    const setTheme = (next: LothalThemeMode) => {
+      writeStored(THEME_KEY, next);
+      setThemeState(next);
+    };
+    const setDensity = (next: LothalDensity) => {
+      writeStored(DENSITY_KEY, next);
+      setDensityState(next);
+    };
+    return {
       theme,
       density,
       setTheme,
       setDensity,
-      toggleTheme: () =>
-        setTheme((current) => (current === "dark" ? "light" : "dark")),
-    }),
-    [theme, density],
-  );
+      toggleTheme: () => setTheme(theme === "dark" ? "light" : "dark"),
+    };
+  }, [theme, density]);
 
   return (
     <LothalThemeContext.Provider value={value}>
