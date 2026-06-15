@@ -496,6 +496,61 @@ function Gallery() {
           </div>
         </Section>
 
+        <Section title="Settings — appearance toggles (persisted)">
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <p style={{ fontSize: 13, color: "var(--ink-mute)", margin: 0 }}>
+              The settings page (/lothal/settings) renders these toggles via{" "}
+              <span className="mono">useLothalTheme()</span>; the choice is
+              saved to localStorage so it survives reloads.
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span
+                className="mono"
+                style={{ fontSize: 10, width: 60, color: "var(--ink-soft)" }}
+              >
+                theme
+              </span>
+              {(["light", "dark"] as const).map((t) => (
+                <Button
+                  key={t}
+                  size="sm"
+                  variant={theme === t ? "accent" : "outline"}
+                  onClick={() => setTheme(t)}
+                  style={{ textTransform: "capitalize" }}
+                >
+                  {t}
+                </Button>
+              ))}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span
+                className="mono"
+                style={{ fontSize: 10, width: 60, color: "var(--ink-soft)" }}
+              >
+                density
+              </span>
+              {(["compact", "regular", "comfy"] as LothalDensity[]).map((d) => (
+                <Button
+                  key={d}
+                  size="sm"
+                  variant={density === d ? "accent" : "outline"}
+                  onClick={() => setDensity(d)}
+                  style={{ textTransform: "capitalize" }}
+                >
+                  {d}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </Section>
+
         <Section title="NotReady (from a structured 501)">
           <div style={{ width: "100%", minHeight: 220 }}>
             <NotReady title="Not ready yet" error={SAMPLE_501} />

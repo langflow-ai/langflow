@@ -506,11 +506,27 @@ function DashboardView() {
             <span style={{ fontSize: 13.5, color: "var(--ink-mute)" }}>
               Docs
             </span>
-            <span style={{ fontSize: 13.5, color: "var(--ink-mute)" }}>
+            <button
+              type="button"
+              onClick={() => navigate("/lothal/settings")}
+              style={{
+                border: "none",
+                background: "transparent",
+                padding: 0,
+                fontFamily: "var(--sans)",
+                fontSize: 13.5,
+                color: "var(--ink-mute)",
+                cursor: "pointer",
+              }}
+            >
               Settings
-            </span>
-            <span
-              aria-label={username ? `Account: ${username}` : "Account"}
+            </button>
+            <button
+              type="button"
+              aria-label={
+                username ? `Account: ${username} — open settings` : "Settings"
+              }
+              onClick={() => navigate("/lothal/settings")}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -518,14 +534,16 @@ function DashboardView() {
                 width: 30,
                 height: 30,
                 borderRadius: "50%",
+                border: "none",
                 background: "var(--accent)",
                 color: "var(--accent-fg)",
                 fontSize: 12.5,
                 fontWeight: 600,
+                cursor: "pointer",
               }}
             >
               {initial}
-            </span>
+            </button>
           </span>
         }
       />
