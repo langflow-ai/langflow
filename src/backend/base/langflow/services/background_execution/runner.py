@@ -25,6 +25,7 @@ from lfx.log.logger import logger
 
 from langflow.services.background_execution.live_bus import LiveFrame
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
+from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, PauseRequested
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -35,6 +36,8 @@ if TYPE_CHECKING:
 
 # A frame source yields (sse_frame_bytes, protocol_event_type) pairs.
 FrameSource = Callable[..., AsyncIterator[tuple[bytes, str]]]
+
+__all__ = ["HUMAN_INPUT_REQUIRED_EVENT", "FrameSource", "JobRunner"]
 
 
 class JobRunner:
@@ -67,11 +70,6 @@ class JobRunner:
     async def run(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:
         """Execute one background job to a terminal state."""
 
-        # Bind job_id into the wrapped coroutine so ``execute_with_status``'s
-        # own ``job_id`` parameter is not shadowed by a forwarded kwarg. When a
-        # job timeout is configured, bound the drive with ``asyncio.wait_for`` so
-        # an overrun raises ``asyncio.TimeoutError``; ``execute_with_status``
-        # turns that into TIMED_OUT (the single source of truth for the mapping).
         async def _wrapped() -> None:
             if self._job_timeout is not None:
                 await asyncio.wait_for(
@@ -82,42 +80,45 @@ class JobRunner:
                 await self._drive(job_id=job_id, source_kwargs=source_kwargs)
 
         heartbeat_task = self._start_heartbeat(job_id)
+        paused = False
         try:
             await self._jobs.execute_with_status(job_id, _wrapped)
+        except PauseRequested as exc:
+            paused = True
+            # Stop the heartbeat BEFORE stamping suspend metadata: both are whole-blob
+            # read-modify-writes, so a beat racing the stamp would clobber the request id.
+            await self._stop_heartbeat(heartbeat_task)
+            heartbeat_task = None
+            await self._suspend(job_id, exc)
+            await logger.adebug(f"Background job {job_id} suspended for human input")
         except asyncio.CancelledError as exc:
-            # A cooperative STOP that we raised ourselves ends the run cleanly
-            # (execute_with_status already wrote CANCELLED). A genuine system
-            # cancel with no STOP signal re-raises so asyncio semantics hold; a
-            # cancel that carries a STOP signal is a user stop and is reconciled
-            # to CANCELLED in the finally below.
             user_tagged = bool(exc.args) and exc.args[0] == "LANGFLOW_USER_CANCELLED"
             if not user_tagged and not await self._stop_requested(job_id):
                 raise
             await logger.adebug(f"Background job {job_id} stopped")
         except Exception as exc:  # noqa: BLE001
-            # Terminal error / runtime failure already routed to FAILED by
-            # execute_with_status; log and swallow so the worker survives.
             await logger.aerror(f"Background job {job_id} runner error: {exc}", exc_info=True)
         finally:
-            # Stop refreshing the heartbeat: the run has reached a terminal
-            # state, so a reconciler should now see it as no-longer-live.
             await self._stop_heartbeat(heartbeat_task)
-            # Last-writer reconcile: a ``/stop`` that raced terminal finalization
-            # (execute_with_status writes COMPLETED/FAILED unconditionally) must
-            # not be silently overwritten. If a durable STOP signal exists, force
-            # CANCELLED as the runner's final write. Shielded so an executor task
-            # cancel cannot abort the correction. Mirrors the old
-            # _finalize_job_status "never overwrite CANCELLED" guard.
-            with contextlib.suppress(Exception):
-                if await asyncio.shield(self._reconcile_stop(job_id)):
-                    await logger.adebug(f"Background job {job_id} reconciled to CANCELLED after a racing stop")
-            # Every terminal path writes result/error + a terminal job_events row
-            # (design §8). COMPLETED/FAILED already do via _drive; TIMED_OUT and
-            # CANCELLED do not, so backfill their error blob + terminal milestone
-            # here (after the stop reconcile so a late-stop CANCELLED is included).
-            with contextlib.suppress(Exception):
-                await asyncio.shield(self._finalize_terminal_event(job_id))
-            await self._bus.close(str(job_id))
+            if not paused:  # a suspended run is resumable: keep the bus open, skip terminal reconcile
+                with contextlib.suppress(Exception):
+                    if await asyncio.shield(self._reconcile_stop(job_id)):
+                        await logger.adebug(f"Background job {job_id} reconciled to CANCELLED after a racing stop")
+                with contextlib.suppress(Exception):
+                    await asyncio.shield(self._finalize_terminal_event(job_id))
+                await self._bus.close(str(job_id))
+
+    async def _suspend(self, job_id: UUID, exc: PauseRequested) -> None:
+        """Suspend mechanics: durable pause event + SUSPENDED status, no finalization.
+
+        Records the pending request id so resume (LE-1446) can enforce single use.
+        Deliberately does NOT call ``set_result``/``set_error``, the terminal-event
+        finalizer, or close the live bus — the run is resumable.
+        """
+        await self._jobs.append_event(job_id, HUMAN_INPUT_REQUIRED_EVENT, exc.payload)
+        await self._jobs.update_job_status(job_id, JobStatus.SUSPENDED)
+        if exc.request_id is not None:
+            await self._jobs.update_job_metadata(job_id, {"pending_request_id": exc.request_id})
 
     async def _finalize_terminal_event(self, job_id: UUID) -> None:
         """Backfill the error blob + terminal event for TIMED_OUT / CANCELLED.
@@ -192,6 +193,9 @@ class JobRunner:
         last_durable_seq = 0
         errored_payload: dict[str, Any] | None = None
         async for frame_bytes, event_type in self._frame_source(**source_kwargs):
+            if event_type == HUMAN_INPUT_REQUIRED_EVENT:
+                payload = self._decode_payload(frame_bytes)
+                raise PauseRequested(payload=payload, request_id=payload.get("request_id"))
             if self._adapter.is_durable(event_type):
                 # Vertex/milestone-boundary cooperative cancel: a STOP written to
                 # the durable signal table flips the job at the next durable

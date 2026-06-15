@@ -217,7 +217,9 @@ class BackgroundExecutionService(Service):
         # ``while True: queue.get()`` waiting for a live tail that will never come.
         # Decide "finished" off the persisted status (the cross-restart source of
         # truth), replay, and return.
-        if job.status in _TERMINAL_STATUSES:
+        # SUSPENDED is parked awaiting human input: no live tail to wait on, so answer
+        # from the durable log alone (like a terminal status) instead of blocking.
+        if job.status in _TERMINAL_STATUSES or job.status == JobStatus.SUSPENDED:
             for frame in await read_durable(last_seq):
                 yield frame.data
             return
@@ -245,27 +247,33 @@ class BackgroundExecutionService(Service):
             payload["result"] = job.result
         if job.error is not None:
             payload["error"] = job.error
+        if job.status == JobStatus.SUSPENDED:
+            pending = await get_job_service().get_pending_human_request(job_id)
+            if pending is not None:
+                payload["pending_request"] = pending
         return payload
 
     async def result(self, job_id: UUID, user: UserRead) -> Any:
         job = await self._validate(job_id, user)
         return job.result
 
-    # -------------------------------------------------------------------- stop
-
     async def stop_job(self, job_id: UUID, user: UserRead) -> None:
-        # Enforces ownership (raises PermissionError on a cross-user/unknown job).
-        await self._validate(job_id, user)
+        job = await self._validate(job_id, user)
         job_service = get_job_service()
-        # Always write the durable STOP signal — even when the row currently
-        # reads a finished status. An in-flight runner can write its terminal
-        # status (COMPLETED/FAILED) in the tiny window after stop_workflow flips
-        # the row to CANCELLED but before this fetch; the runner's terminal
-        # reconcile keys off this signal to force CANCELLED back over that
-        # overwrite. Skipping the signal here is what let a racing FAILED win.
+        if job.status == JobStatus.SUSPENDED:
+            await self._cancel_suspended(job_id, job_service)
+            return
         await job_service.write_signal(job_id, SignalType.STOP)
-        # Cancel the in-flight task for promptness; a no-op if it already ended.
         await self._executor.cancel(str(job_id))
+
+    async def _cancel_suspended(self, job_id: UUID, job_service) -> None:
+        await job_service.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
+        with contextlib.suppress(Exception):
+            await job_service.delete_checkpoint(job_id, "graph")
+        await job_service.update_job_metadata(job_id, {"pending_request_id": None})
+        await job_service.append_event(job_id, "run_cancelled", {"type": "cancelled"})
+        await job_service.consume_signals(job_id, SignalType.STOP)
+        await self._bus.close(str(job_id))
 
     # ----------------------------------------------------------- startup sweep
 

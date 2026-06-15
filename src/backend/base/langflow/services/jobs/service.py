@@ -28,7 +28,7 @@ from langflow.services.database.models.jobs.model import (
     SignalType,
 )
 from langflow.services.deps import session_scope
-from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, DuplicateJobError, PauseRequested
 
 # Bounded retries for append_event's optimistic seq assignment. Real contention is
 # at most a couple of concurrent appenders per job (a worker plus the orphan sweep,
@@ -293,6 +293,17 @@ class JobService(Service):
             if row is not None:
                 await session.delete(row)
                 await session.flush()
+
+    async def get_pending_human_request(self, job_id: UUID) -> dict | None:
+        async with session_scope() as session:
+            stmt = (
+                select(JobEvent)
+                .where(JobEvent.job_id == job_id)
+                .where(JobEvent.event_type == HUMAN_INPUT_REQUIRED_EVENT)
+                .order_by(col(JobEvent.seq).desc())
+            )
+            row = (await session.exec(stmt)).first()
+            return row.payload if row is not None else None
 
     async def all_checkpoints(self, kind: str) -> list[tuple[UUID, str]]:
         """Return ``(job_id, blob)`` for every stored checkpoint of ``kind``.
@@ -712,6 +723,12 @@ class JobService(Service):
             # Execute the wrapped function
             await logger.ainfo(f"Executing job function for job_id={job_id}")
             result = await run_coro_func(*args, **kwargs)
+
+        except PauseRequested:
+            # A producer paused the run for human input. The runner suspends it
+            # (SUSPENDED); do NOT write a terminal status here.
+            await logger.adebug(f"Job {job_id} paused for human input")
+            raise
 
         except AssertionError as e:
             # Handle missing required arguments
