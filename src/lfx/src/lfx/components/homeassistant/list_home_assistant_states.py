@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-import requests
+import httpx
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
@@ -9,6 +9,8 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
+from lfx.utils.ssrf_protection import SSRFProtectionError
 
 
 class ListHomeAssistantStates(LCToolComponent):
@@ -103,14 +105,16 @@ class ListHomeAssistantStates(LCToolComponent):
                 "Content-Type": "application/json",
             }
             url = f"{base_url}/api/states"
-            response = requests.get(url, headers=headers, timeout=10)
+            response = ssrf_safe_httpx_get(url, headers=headers, timeout=10)
             response.raise_for_status()
 
             all_states = response.json()
             if filter_domain:
                 return [st for st in all_states if st.get("entity_id", "").startswith(f"{filter_domain}.")]
 
-        except requests.exceptions.RequestException as e:
+        except SSRFProtectionError as e:
+            return f"Error: SSRF Protection: {e}"
+        except httpx.HTTPError as e:
             return f"Error: Failed to fetch states. {e}"
         except (ValueError, TypeError) as e:
             return f"Error processing response: {e}"

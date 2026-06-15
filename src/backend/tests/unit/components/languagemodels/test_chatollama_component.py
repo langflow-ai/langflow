@@ -1260,3 +1260,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert "format" in call_args, "format should be in call when enabled"
         assert call_args["format"] == "json"
         assert model == mock_instance
+
+    @pytest.fixture(autouse=True)
+    def disable_ssrf_protection(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
