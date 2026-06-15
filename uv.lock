@@ -5937,29 +5937,29 @@ wheels = [
 
 [[package]]
 name = "ibm-watsonx-orchestrate-clients"
-version = "2.8.1"
+version = "2.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ibm-cloud-sdk-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
-    { name = "websocket-client", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "ibm-cloud-sdk-core", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
+    { name = "websocket-client", marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/98/36/cabc2577e30bb350ba092b034e94b6d019edf76ecdb1e25fb93f3f37308e/ibm_watsonx_orchestrate_clients-2.8.1.tar.gz", hash = "sha256:0cd2b0203267d87192dc3244465dadd42b022bcb5c03b381fe94f10302138a46", size = 1879, upload-time = "2026-05-18T19:39:16.281Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/06/9a9375d8ef489460b340ced95d56db3ab1375dd5d0f49700461678b198e4/ibm_watsonx_orchestrate_clients-2.11.0.tar.gz", hash = "sha256:873820b6eea1a0bc335d74f77b355b66f6bf92aa158157d5dbd9cecaf2be1003", size = 1890, upload-time = "2026-06-13T00:35:53.797Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/bd/73268828ce1a097af8a70ff5d56a6ffdb79c53c5faa43c50e1786348ceac/ibm_watsonx_orchestrate_clients-2.8.1-py3-none-any.whl", hash = "sha256:01cae11773ef1ff290587165870560d75f06943c0700fcedfa9ddb71af0782d6", size = 54114, upload-time = "2026-05-18T19:39:10.296Z" },
+    { url = "https://files.pythonhosted.org/packages/df/2e/a569993702995c08c7f82ac9206590684ab9d776cd3803d4d792d5eb59d6/ibm_watsonx_orchestrate_clients-2.11.0-py3-none-any.whl", hash = "sha256:8de53f530615d92d4b83417176afc37be144a867c2207c76b87354b41b592ba7", size = 54416, upload-time = "2026-06-13T00:35:47.107Z" },
 ]
 
 [[package]]
 name = "ibm-watsonx-orchestrate-core"
-version = "2.8.1"
+version = "2.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pydantic", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
-    { name = "pyyaml", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "pydantic", marker = "python_full_version >= '3.11'" },
+    { name = "pyyaml", marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/65/61/86ef6b9790a8d8ca637e969d73f30a52e6dcfb365316c8be7f045dec59d4/ibm_watsonx_orchestrate_core-2.8.1.tar.gz", hash = "sha256:6c250730148edcdfa5fe893def60a385b74c1fa428db3dd7f3738f004b3ee9e0", size = 1216, upload-time = "2026-05-18T19:39:17.416Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f8/0b/f6d93b477ae73f808da5b86545a7fad79f9e941070ac1acb336bf4df56c4/ibm_watsonx_orchestrate_core-2.11.0.tar.gz", hash = "sha256:06710421f44025cf6ca702b464a09f9523f40ab57b9bf20ee618bd67f1eec846", size = 1226, upload-time = "2026-06-13T00:35:54.386Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4a/a9/735a28f45b0e67bb63cb8f05815533af0ff5d044ac2a0e44e64dff2437ba/ibm_watsonx_orchestrate_core-2.8.1-py3-none-any.whl", hash = "sha256:e488bcc0fbbd8875442cb7ce7e69d2967f8685d776308711eb15b4fb4c117ab2", size = 45236, upload-time = "2026-05-18T19:39:11.752Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/53/b1b2b92c5bba087a830ec2a0b2aec796dcaf0e9496e350eec1fb1cb1482f/ibm_watsonx_orchestrate_core-2.11.0-py3-none-any.whl", hash = "sha256:f3231274761a5b04ebc7ae9a7e910bd5e58a91c33bd4d2656b5909e1ed077e8a", size = 45829, upload-time = "2026-06-13T00:35:48.074Z" },
 ]
 
 [[package]]
@@ -7945,8 +7945,10 @@ all = [
     { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14' or (python_full_version < '3.11' and platform_machine != 'arm64' and sys_platform == 'darwin')" },
     { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
+    { name = "jigsawstack" },
+    { name = "json-repair" },
     { name = "kubernetes" },
     { name = "langchain-chroma" },
     { name = "langfuse" },
@@ -8012,8 +8014,10 @@ complete = [
     { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14' or (python_full_version < '3.11' and platform_machine != 'arm64' and sys_platform == 'darwin')" },
     { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
+    { name = "jigsawstack" },
+    { name = "json-repair" },
     { name = "kubernetes" },
     { name = "langchain-chroma" },
     { name = "langfuse" },
@@ -8114,8 +8118,8 @@ huggingface = [
 ]
 ibm-watsonx-clients = [
     { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
 ]
 jigsawstack = [
     { name = "jigsawstack" },
@@ -8415,8 +8419,8 @@ requires-dist = [
     { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=1.0.0,<2.0.0" },
     { name = "ibm-cloud-sdk-core", marker = "extra == 'ibm-watsonx-clients'", specifier = "~=3.24.4" },
     { name = "ibm-watsonx-ai", specifier = ">=1.3.1,<2.0.0" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14' and extra == 'ibm-watsonx-clients'", specifier = "~=2.8.0" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14' and extra == 'ibm-watsonx-clients'", specifier = "~=2.8.0" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.11.0" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.11.0" },
     { name = "jaraco-context", specifier = ">=6.1.0" },
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
