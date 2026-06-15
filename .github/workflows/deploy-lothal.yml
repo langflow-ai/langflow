@@ -61,6 +61,10 @@ jobs:
 
       - name: Compute image refs
         id: refs
+        env:
+          # Pass the dispatch input through env, never interpolate it directly
+          # into the shell body (template injection). Validated below before use.
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
           full_sha="$(git rev-parse HEAD)"
           sha="$(git rev-parse --short=12 HEAD)"
@@ -74,7 +78,11 @@ jobs:
           # value (no leading "v") is baked into the frontend bundle as the badge;
           # default "dev" for un-stamped builds. When a version is given we also
           # tag the images :v0.X (build-push skips the blank line otherwise).
-          version_in="${{ inputs.version }}"
+          version_in="${VERSION_INPUT}"
+          if [ -n "$version_in" ] && ! printf '%s' "$version_in" | grep -Eq '^v?[0-9]+(\.[0-9]+)*$'; then
+            echo "::error::Invalid version '$version_in'. Expected forms like 0.4 or v0.4"
+            exit 1
+          fi
           bare="${version_in#v}"
           echo "build_version=${bare:-dev}" >> "$GITHUB_OUTPUT"
           if [ -n "$version_in" ]; then
