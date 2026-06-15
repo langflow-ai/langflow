@@ -1010,6 +1010,60 @@ class TestMemoryBaseHookBackgroundMode:
         assert call["job_id"] == _UUID(job_id)
 
 
+class TestBackgroundNoDuplicateWorkflowRow:
+    """A v2 background run must create exactly ONE WORKFLOW job row.
+
+    The durable runner owns the run's job row (keyed by ``submit()``'s job_id).
+    Without ``track_job_status=False`` on the background frame source, the build
+    pipeline (``generate_flow_events``) would mint its own run_id-keyed WORKFLOW
+    row, leaving a phantom/orphan row per background run that skews job-table
+    metrics and double-fires the memory-base hook.
+    """
+
+    async def test_background_run_creates_single_workflow_row(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        import asyncio as _asyncio
+        from uuid import UUID as _UUID
+
+        from langflow.services.database.models.jobs.model import Job as _Job
+        from langflow.services.database.models.jobs.model import JobType as _JobType
+        from sqlmodel import select
+
+        headers = {"x-api-key": created_api_key.api_key}
+        start = await client.post(
+            "api/v2/workflows",
+            json=_agui_body(chatbot_flow, message="hi", mode="background"),
+            headers=headers,
+        )
+        assert start.status_code == 200
+        job_id = start.json()["job_id"]
+
+        events = await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
+        assert events.status_code == 200
+        assert "RUN_FINISHED" in events.text
+
+        # Wait for the durable row to finalize.
+        for _ in range(100):
+            async with session_scope() as session:
+                row = await session.get(_Job, _UUID(job_id))
+                if row is not None and row.status.value in ("completed", "failed"):
+                    break
+            await _asyncio.sleep(0.1)
+
+        # Exactly one WORKFLOW row for this flow: the durable one. No phantom
+        # build-pipeline row keyed by a separately-minted run_id.
+        async with session_scope() as session:
+            rows = (
+                await session.exec(select(_Job).where(_Job.flow_id == chatbot_flow, _Job.type == _JobType.WORKFLOW))
+            ).all()
+        assert len(rows) == 1, f"expected one WORKFLOW row, found {len(rows)}: {[str(r.job_id) for r in rows]}"
+        assert rows[0].job_id == _UUID(job_id)
+
+
 class TestBackgroundFinalizationGuards:
     """Cancellation state + cleanup guarantees for the background path.
 
