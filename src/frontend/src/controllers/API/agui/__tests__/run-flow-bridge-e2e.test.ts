@@ -9,10 +9,12 @@
  */
 
 import { BuildStatus } from "@/constants/enums";
+import { queryClient } from "@/contexts";
 import { runFlowAGUI } from "@/controllers/API/agui/run-flow-bridge";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
+import type { Message } from "@/types/messages";
 
 beforeAll(() => {
   // jsdom lacks the codecs the AG-UI SSE decoder uses; pull them from
@@ -34,6 +36,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  queryClient.clear();
   // Reset only the slices the bridge writes to. Touching the full state
   // would clobber action implementations (Zustand stores actions in the
   // same state object).
@@ -42,6 +45,7 @@ beforeEach(() => {
     flowPool: {},
     isBuilding: true,
     buildInfo: null,
+    buildDuration: null,
   });
   useAlertStore.setState({
     errorData: { title: "", list: [] },
@@ -232,6 +236,240 @@ describe("runFlowAGUI end-to-end", () => {
     }
   });
 
+  it("marks still-running nodes as ERROR when a run-level RUN_ERROR arrives", async () => {
+    const events = [
+      {
+        type: "RUN_STARTED",
+        threadId: "thread-1",
+        runId: "run-1",
+        timestamp: 0,
+      },
+      {
+        type: "STATE_DELTA",
+        delta: [
+          {
+            op: "add",
+            path: "/nodes/node-a",
+            value: { status: "running", output: null },
+          },
+        ],
+        timestamp: 0,
+      },
+      {
+        type: "RUN_ERROR",
+        message: "graph blew up",
+        timestamp: 0,
+      },
+    ];
+    const fetchSpy = jest
+      .spyOn(global as { fetch: typeof fetch }, "fetch")
+      .mockImplementation((async () =>
+        sseResponse(events)) as unknown as typeof fetch);
+
+    try {
+      await runFlowAGUI({ flowId: "flow-1", message: "boom" });
+
+      const flow = useFlowStore.getState();
+      expect(flow.flowBuildStatus["node-a"]?.status).toBe(BuildStatus.ERROR);
+      expect(flow.buildInfo).toEqual({
+        error: ["graph blew up"],
+        success: false,
+      });
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("does not write success buildInfo for silent runs", async () => {
+    const fetchSpy = jest
+      .spyOn(global as { fetch: typeof fetch }, "fetch")
+      .mockImplementation((async () =>
+        sseResponse([
+          {
+            type: "RUN_STARTED",
+            threadId: "thread-1",
+            runId: "run-1",
+            timestamp: 0,
+          },
+          {
+            type: "RUN_FINISHED",
+            threadId: "thread-1",
+            runId: "run-1",
+            timestamp: 0,
+          },
+        ])) as unknown as typeof fetch);
+
+    try {
+      await runFlowAGUI({ flowId: "flow-1", message: "hi", silent: true });
+
+      const flow = useFlowStore.getState();
+      expect(flow.isBuilding).toBe(false);
+      expect(flow.buildInfo).toBeNull();
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("preserves build_duration from the legacy end side-channel", async () => {
+    const queryKey = [
+      "useGetMessagesQuery",
+      { id: "flow-1", session_id: "thread-1" },
+    ];
+    const botMessage: Message = {
+      id: "msg-duration",
+      flow_id: "flow-1",
+      session_id: "thread-1",
+      sender: "Machine",
+      sender_name: "agent",
+      text: "hello",
+      timestamp: "2026-06-10T12:00:00.000Z",
+      files: [],
+      edit: false,
+      background_color: "",
+      text_color: "",
+      properties: {},
+    };
+    queryClient.setQueryData(queryKey, [botMessage]);
+    useMessagesStore.setState({ messages: [botMessage] });
+    useFlowStore.setState({
+      buildingFlowId: "flow-1",
+      buildingSessionId: "thread-1",
+    });
+
+    const fetchSpy = jest
+      .spyOn(global as { fetch: typeof fetch }, "fetch")
+      .mockImplementation((async () =>
+        sseResponse([
+          {
+            type: "CUSTOM",
+            name: "langflow.event",
+            value: { event_type: "end", data: { build_duration: 1.5 } },
+            timestamp: 0,
+            rawEvent: {},
+          },
+          {
+            type: "RUN_FINISHED",
+            threadId: "thread-1",
+            runId: "run-1",
+            timestamp: 0,
+          },
+        ])) as unknown as typeof fetch);
+
+    try {
+      await runFlowAGUI({ flowId: "flow-1", message: "hi" });
+
+      expect(useFlowStore.getState().buildDuration).toBe(1500);
+      expect(
+        queryClient.getQueryData<Message[]>(queryKey)?.[0].properties
+          ?.build_duration,
+      ).toBe(1500);
+      expect(
+        useMessagesStore.getState().messages[0].properties?.build_duration,
+      ).toBe(1500);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("does not overwrite an existing message build_duration", async () => {
+    const queryKey = [
+      "useGetMessagesQuery",
+      { id: "flow-1", session_id: "thread-1" },
+    ];
+    const botMessage: Message = {
+      id: "msg-duration",
+      flow_id: "flow-1",
+      session_id: "thread-1",
+      sender: "Machine",
+      sender_name: "agent",
+      text: "hello",
+      timestamp: "2026-06-10T12:00:00.000Z",
+      files: [],
+      edit: false,
+      background_color: "",
+      text_color: "",
+      properties: { build_duration: 500 },
+    };
+    queryClient.setQueryData(queryKey, [botMessage]);
+    useMessagesStore.setState({ messages: [botMessage] });
+    useFlowStore.setState({
+      buildingFlowId: "flow-1",
+      buildingSessionId: "thread-1",
+    });
+
+    const fetchSpy = jest
+      .spyOn(global as { fetch: typeof fetch }, "fetch")
+      .mockImplementation((async () =>
+        sseResponse([
+          {
+            type: "CUSTOM",
+            name: "langflow.event",
+            value: { event_type: "end", data: { build_duration: 1.5 } },
+            timestamp: 0,
+            rawEvent: {},
+          },
+          {
+            type: "RUN_FINISHED",
+            threadId: "thread-1",
+            runId: "run-1",
+            timestamp: 0,
+          },
+        ])) as unknown as typeof fetch);
+
+    try {
+      await runFlowAGUI({ flowId: "flow-1", message: "hi" });
+
+      expect(useFlowStore.getState().buildDuration).toBe(1500);
+      expect(
+        queryClient.getQueryData<Message[]>(queryKey)?.[0].properties
+          ?.build_duration,
+      ).toBe(500);
+      expect(
+        useMessagesStore.getState().messages[0].properties?.build_duration,
+      ).toBe(500);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("appends component log events to the flow pool", async () => {
+    const fetchSpy = jest
+      .spyOn(global as { fetch: typeof fetch }, "fetch")
+      .mockImplementation((async () =>
+        sseResponse([
+          {
+            type: "CUSTOM",
+            name: "langflow.log",
+            value: {
+              component_id: "node-a",
+              output: "debug",
+              name: "Debug",
+              message: "hello",
+              type: "info",
+            },
+            timestamp: 0,
+            rawEvent: {},
+          },
+          {
+            type: "RUN_FINISHED",
+            threadId: "thread-1",
+            runId: "run-1",
+            timestamp: 0,
+          },
+        ])) as unknown as typeof fetch);
+
+    try {
+      await runFlowAGUI({ flowId: "flow-1", message: "hi" });
+
+      const entry = useFlowStore.getState().flowPool["node-a"]?.[0];
+      expect(entry?.data.logs?.debug).toEqual([
+        { name: "Debug", message: "hello", type: "info" },
+      ]);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("records a failure when the stream closes without RUN_FINISHED or RUN_ERROR", async () => {
     /**
      * Server-side crash, truncated proxy response, or a buggy stream can
@@ -275,10 +513,50 @@ describe("runFlowAGUI end-to-end", () => {
      * stream would keep running on the wire.
      */
     const signals: AbortSignal[] = [];
+    const encoder = new (
+      globalThis as { TextEncoder: typeof TextEncoder }
+    ).TextEncoder();
+    const payload = encoder.encode(
+      [
+        {
+          type: "RUN_STARTED",
+          threadId: "thread-1",
+          runId: "run-1",
+          timestamp: 0,
+        },
+        {
+          type: "STATE_DELTA",
+          delta: [
+            {
+              op: "add",
+              path: "/nodes/node-a",
+              value: { status: "running", output: null },
+            },
+            {
+              op: "add",
+              path: "/nodes/node-b",
+              value: { status: "running", output: null },
+            },
+            {
+              op: "replace",
+              path: "/nodes/node-b",
+              value: {
+                status: "success",
+                output: { results: { text: "done" } },
+              },
+            },
+          ],
+          timestamp: 0,
+        },
+      ]
+        .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+        .join(""),
+    );
     const fetchSpy = jest
       .spyOn(global as { fetch: typeof fetch }, "fetch")
       .mockImplementation(((_input: RequestInfo | URL, init?: RequestInit) => {
         if (init?.signal) signals.push(init.signal);
+        let delivered = false;
         return Promise.resolve({
           ok: true,
           status: 200,
@@ -292,7 +570,13 @@ describe("runFlowAGUI end-to-end", () => {
           body: {
             getReader() {
               return {
-                read: () => new Promise(() => {}),
+                read: () => {
+                  if (!delivered) {
+                    delivered = true;
+                    return Promise.resolve({ done: false, value: payload });
+                  }
+                  return new Promise(() => {});
+                },
                 cancel: async () => {},
               };
             },
@@ -302,6 +586,13 @@ describe("runFlowAGUI end-to-end", () => {
       }) as unknown as typeof fetch);
 
     try {
+      useFlowStore.setState({
+        flowBuildStatus: {
+          "node-a": { status: BuildStatus.TO_BUILD },
+          "node-b": { status: BuildStatus.TO_BUILD },
+        },
+      });
+
       const controller = new AbortController();
       const runPromise = runFlowAGUI({
         flowId: "flow-1",
@@ -321,6 +612,8 @@ describe("runFlowAGUI end-to-end", () => {
       expect(signals[0].aborted).toBe(true);
       const flow = useFlowStore.getState();
       expect(flow.isBuilding).toBe(false);
+      expect(flow.flowBuildStatus["node-a"]?.status).toBe(BuildStatus.TO_BUILD);
+      expect(flow.flowBuildStatus["node-b"]?.status).toBe(BuildStatus.BUILT);
       // ``buildInfo`` is recorded as a failure (so trackFlowBuild sees the
       // cancellation as an error) but without an ``error`` string: the
       // caller's stopBuilding already shows the user-facing "Build stopped"

@@ -35,7 +35,11 @@ from lfx.schema.workflow import (
     WORKFLOW_EXECUTION_RESPONSES,
     PublicWorkflowRunRequest,
 )
-from lfx.utils.flow_validation import CustomComponentValidationError, validate_flow_for_current_settings
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    validate_flow_for_current_settings,
+    validate_public_flow_no_code_execution,
+)
 
 from langflow.api.utils.flow_utils import (
     scope_session_to_namespace,
@@ -123,6 +127,11 @@ async def execute_public_workflow(
             flow = await session.get(Flow, real_flow_id)
             if flow and flow.data:
                 validate_flow_for_current_settings(flow.data)
+                # Block unauthenticated execution of flows that run arbitrary code
+                # (Python interpreter/REPL, legacy Python Code Structured tool,
+                # Smart Transform lambda). Without this, any public flow containing
+                # such a component is an unauthenticated code-execution primitive.
+                validate_public_flow_no_code_execution(flow.data)
             flow_name = flow.name if flow else None
     except CustomComponentValidationError as exc:
         # The raw message embeds the blocked component class names; do
