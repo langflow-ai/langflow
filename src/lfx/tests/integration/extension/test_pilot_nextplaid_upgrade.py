@@ -127,9 +127,12 @@ def test_lfx_nextplaid_distribution_is_importable() -> None:
     workspace venv pulls it in transitively from langflow's pyproject.
     """
     try:
-        from lfx_nextplaid import NextPlaidVectorStoreComponent, VllmMultivectorEmbeddingsComponent
-    except ImportError:
+        importlib_metadata.distribution("lfx-nextplaid")
+    except importlib_metadata.PackageNotFoundError:
         pytest.skip("lfx-nextplaid not installed in this test environment")
+
+    # Package is present: let a genuine import failure surface rather than skip.
+    from lfx_nextplaid import NextPlaidVectorStoreComponent, VllmMultivectorEmbeddingsComponent
 
     assert NextPlaidVectorStoreComponent.__name__ == "NextPlaidVectorStoreComponent"
     assert VllmMultivectorEmbeddingsComponent.__name__ == "VllmMultivectorEmbeddingsComponent"

@@ -66,6 +66,19 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
             return False
         return (self.url, self.model, self.api_key) == (other.url, other.model, other.api_key)
 
+    @staticmethod
+    def _extract_embedding_rows(payload: object) -> list[dict]:
+        """Validate the vLLM /pooling envelope before nested indexing.
+
+        Raises a clear ``RuntimeError`` instead of letting a malformed or
+        partial response crash with ``KeyError``/``IndexError`` downstream.
+        """
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(data, list) or not data:
+            msg = "vLLM /pooling response missing non-empty 'data' list"
+            raise RuntimeError(msg)
+        return data
+
     def _post_pooling(self, input_data: list) -> list[list[list[float]]]:
         last_exc: Exception | None = None
         for attempt in range(max(self.max_retries, 1)):
@@ -77,8 +90,13 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
                     timeout=self.timeout,
                 )
                 resp.raise_for_status()
-                results = sorted(resp.json()["data"], key=lambda x: x["index"])
-                return [item["data"] for item in results]
+                rows = self._extract_embedding_rows(resp.json())
+                try:
+                    results = sorted(rows, key=lambda x: x["index"])
+                    return [item["data"] for item in results]
+                except (KeyError, TypeError) as exc:
+                    msg = "vLLM /pooling response has invalid embedding row shape"
+                    raise RuntimeError(msg) from exc
             except requests.HTTPError as exc:
                 valid_client_status_codes = 500
                 if exc.response is not None and exc.response.status_code < valid_client_status_codes:
@@ -140,7 +158,12 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
                         timeout=self.timeout,
                     )
                     resp.raise_for_status()
-                    embeddings.append(resp.json()["data"][0]["data"])
+                    rows = self._extract_embedding_rows(resp.json())
+                    try:
+                        embeddings.append(rows[0]["data"])
+                    except (KeyError, TypeError, IndexError) as exc:
+                        msg = "vLLM /pooling image response has invalid embedding row shape"
+                        raise RuntimeError(msg) from exc
                     break
                 except requests.HTTPError as exc:
                     valid_client_status_codes = 500

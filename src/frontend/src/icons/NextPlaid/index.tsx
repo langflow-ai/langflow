@@ -6,8 +6,8 @@ export const NextPlaidIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<object>
 >((props, ref) => {
-  const isdark = useDarkStore((state) => state.dark).toString();
-  return <NextPlaidIconSVG ref={ref} isdark={isdark} {...props} />;
+  const isDark = useDarkStore((state) => state.dark);
+  return <NextPlaidIconSVG ref={ref} isDark={isDark} {...props} />;
 });
 
 export default NextPlaidIcon;

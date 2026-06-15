@@ -140,6 +140,34 @@ class NextPlaidVectorStoreComponent(LCVectorStoreComponent):
             ).hexdigest()
         )
 
+    @staticmethod
+    def _stable_text_id(doc, index_name: str) -> str:
+        """Derive a stable upsert ID for a text document.
+
+        Prefers explicit id metadata; otherwise fingerprints the content
+        together with its source/page so identical chunk text from different
+        sources does not collide onto the same vector.
+        """
+        explicit = doc.metadata.get("document_id") or doc.metadata.get("doc_id") or doc.metadata.get("id")
+        if explicit:
+            return explicit
+        fingerprint = (
+            f"{index_name}:"
+            f"{doc.metadata.get('source', '')}:"
+            f"{doc.metadata.get('page', '')}:"
+            f"{(doc.page_content or '').strip()}"
+        )
+        return hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _stable_raw_image_id(image, index_name: str) -> str:
+        """Fingerprint a raw PIL image so re-ingesting it upserts instead of relying on batch position."""
+        if hasattr(image, "convert") and hasattr(image, "tobytes"):
+            fingerprint = hashlib.sha256(image.convert("RGB").tobytes()).hexdigest()
+        else:
+            fingerprint = hashlib.sha256(repr(image).encode("utf-8")).hexdigest()
+        return hashlib.sha256(f"{index_name}:raw_image:{fingerprint}".encode()).hexdigest()
+
     @check_cached_vector_store
     def build_vector_store(self):
         try:
@@ -190,12 +218,7 @@ class NextPlaidVectorStoreComponent(LCVectorStoreComponent):
                 else:
                     doc = item.to_lc_document()
                     if doc.id is None:
-                        doc.id = (
-                            doc.metadata.get("document_id")
-                            or doc.metadata.get("doc_id")
-                            or doc.metadata.get("id")
-                            or hashlib.sha256((doc.page_content or "").strip().encode("utf-8")).hexdigest()
-                        )
+                        doc.id = self._stable_text_id(doc, self.index_name)
                     text_docs.append(doc)
             else:
                 # Raw PIL Image passed directly (e.g. from a custom component)
@@ -236,10 +259,7 @@ class NextPlaidVectorStoreComponent(LCVectorStoreComponent):
 
             for i in range(0, len(raw_image_items), batch_size):
                 batch = raw_image_items[i : i + batch_size]
-                ids = [
-                    hashlib.sha256(f"{self.index_name}:raw_image:{i + j}".encode()).hexdigest()
-                    for j in range(len(batch))
-                ]
+                ids = [self._stable_raw_image_id(image, self.index_name) for image in batch]
                 nextplaid_store.add_images(batch, ids=ids)
 
         return nextplaid_store
