@@ -37,7 +37,14 @@ if TYPE_CHECKING:
 # A frame source yields (sse_frame_bytes, protocol_event_type) pairs.
 FrameSource = Callable[..., AsyncIterator[tuple[bytes, str]]]
 
-__all__ = ["HUMAN_INPUT_REQUIRED_EVENT", "FrameSource", "JobRunner"]
+# Receives the hydrated checkpoint (or None) + the human decision on resume.
+ResumeHook = Callable[[Any, Any], Any]
+
+__all__ = ["HUMAN_INPUT_REQUIRED_EVENT", "FrameSource", "JobRunner", "ResumeHook"]
+
+
+async def _passthrough_resume_hook(checkpoint: Any, decision: Any) -> None:  # noqa: ARG001
+    return None
 
 
 class JobRunner:
@@ -51,11 +58,16 @@ class JobRunner:
         job_timeout: float | None = None,
         owner: str | None = None,
         heartbeat_interval_s: float = 15.0,
+        resume_hook: ResumeHook | None = None,
+        checkpoint_store: Any = None,
     ) -> None:
         self._jobs = job_service
         self._bus = live_bus
         self._adapter = adapter
         self._frame_source = frame_source
+        # Producer (LE-1447/1449) supplies the real decision fold-back; default no-op.
+        self._resume_hook = resume_hook or _passthrough_resume_hook
+        self._checkpoint_store = checkpoint_store
         # When set, the whole run is bounded by this wall-clock budget; an overrun
         # surfaces as asyncio.TimeoutError, which execute_with_status maps to
         # TIMED_OUT. None means unbounded (the prior behaviour).
@@ -190,6 +202,7 @@ class JobRunner:
 
     async def _drive(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:
         """The wrapped coroutine: stream frames, persist, publish, finalize result/error."""
+        await self._maybe_resume(job_id)
         last_durable_seq = 0
         errored_payload: dict[str, Any] | None = None
         async for frame_bytes, event_type in self._frame_source(**source_kwargs):
@@ -231,14 +244,34 @@ class JobRunner:
             raise RuntimeError(msg)
         await self._jobs.set_result(job_id, {"status": "completed"})
 
+    async def _maybe_resume(self, job_id: UUID) -> None:
+        data = await self._pending_resume(job_id)
+        if data is None:
+            return
+        checkpoint = await self._load_checkpoint(job_id)
+        await self._resume_hook(checkpoint, data.get("decision"))
+        await self._jobs.consume_signals(job_id, SignalType.RESUME)
+
+    async def _pending_resume(self, job_id: UUID) -> dict[str, Any] | None:
+        for signal in await self._jobs.unconsumed_signals(job_id):
+            if signal.signal_type == SignalType.RESUME:
+                return signal.data or {}
+        return None
+
+    async def _load_checkpoint(self, job_id: UUID) -> Any:
+        store = self._checkpoint_store
+        if store is None:
+            from lfx.services.deps import get_checkpoint_service
+
+            store = get_checkpoint_service()
+        return await store.load_by_run_id(str(job_id))
+
     async def _stop_requested(self, job_id: UUID) -> bool:
         signals = await self._jobs.unconsumed_signals(job_id)
         return any(s.signal_type == SignalType.STOP for s in signals)
 
     @staticmethod
     def _user_cancelled() -> asyncio.CancelledError:
-        # Tagging the cancel as user-initiated makes execute_with_status write
-        # CANCELLED (not FAILED). Same convention the queue service uses.
         exc = asyncio.CancelledError()
         exc.args = ("LANGFLOW_USER_CANCELLED",)
         return exc
