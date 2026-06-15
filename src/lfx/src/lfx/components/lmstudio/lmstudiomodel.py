@@ -8,6 +8,8 @@ from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from lfx.utils.ssrf_httpx import ssrf_protected_openai_clients_for_url, ssrf_safe_async_get
+from lfx.utils.ssrf_protection import SSRFProtectionError
 
 
 class LMStudioModelComponent(LCModelComponent):
@@ -24,9 +26,11 @@ class LMStudioModelComponent(LCModelComponent):
             if base_url_load_from_db:
                 base_url_value = await self.get_variables(base_url_value, field_name)
             try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(urljoin(base_url_value, "/v1/models"), timeout=2.0)
-                    response.raise_for_status()
+                response = await ssrf_safe_async_get(urljoin(base_url_value, "/v1/models"), timeout=2.0)
+                response.raise_for_status()
+            except SSRFProtectionError as e:
+                msg = f"SSRF Protection: {e}"
+                raise ValueError(msg) from e
             except httpx.HTTPError:
                 msg = "Could not access the default LM Studio URL. Please, specify the 'Base URL' field."
                 self.log(msg)
@@ -39,12 +43,14 @@ class LMStudioModelComponent(LCModelComponent):
     async def get_model(base_url_value: str) -> list[str]:
         try:
             url = urljoin(base_url_value, "/v1/models")
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url)
-                response.raise_for_status()
-                data = response.json()
+            response = await ssrf_safe_async_get(url)
+            response.raise_for_status()
+            data = response.json()
 
-                return [model["id"] for model in data.get("data", [])]
+            return [model["id"] for model in data.get("data", [])]
+        except SSRFProtectionError as e:
+            msg = f"SSRF Protection: {e}"
+            raise ValueError(msg) from e
         except Exception as e:
             msg = "Could not retrieve models. Please, make sure the LM Studio server is running."
             raise ValueError(msg) from e
@@ -103,6 +109,8 @@ class LMStudioModelComponent(LCModelComponent):
         base_url = self.base_url or "http://localhost:1234/v1"
         seed = self.seed
 
+        ssrf_client_kwargs = ssrf_protected_openai_clients_for_url(base_url)
+
         return ChatOpenAI(
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,
@@ -111,6 +119,7 @@ class LMStudioModelComponent(LCModelComponent):
             api_key=lmstudio_api_key,
             temperature=temperature if temperature is not None else 0.1,
             seed=seed,
+            **ssrf_client_kwargs,
         )
 
     def _get_exception_message(self, e: Exception):

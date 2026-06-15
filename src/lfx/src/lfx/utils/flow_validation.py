@@ -274,6 +274,179 @@ def validate_flow_for_current_settings(target: Mapping[str, Any] | Any | None) -
     )
 
 
+def collect_component_code_lookups(all_types_dict: Mapping[str, Any]) -> dict[str, str]:
+    """Map each known component type (and its aliases) to the server's trusted code.
+
+    The value is the component's source as served by this instance
+    (``template.code.value``). Used to substitute trusted code into public-flow nodes so the
+    build runs server code, not the node's stored bytes. First alias wins on collision.
+    """
+    type_to_code: dict[str, str] = {}
+
+    for category_components in all_types_dict.values():
+        if not isinstance(category_components, Mapping):
+            continue
+
+        for component_name, component_data in category_components.items():
+            if not isinstance(component_data, Mapping):
+                continue
+
+            template = component_data.get("template")
+            if not isinstance(template, Mapping):
+                continue
+
+            code_field = template.get("code")
+            code = code_field.get("value") if isinstance(code_field, Mapping) else None
+            if not isinstance(code, str) or not code:
+                continue
+
+            for alias in get_component_type_aliases(component_name, component_data):
+                type_to_code.setdefault(alias, code)
+
+    return type_to_code
+
+
+def _substitute_trusted_node_code(nodes: list, type_to_code: dict[str, str]) -> list[str]:
+    """Replace each code-bearing node's code with the server's trusted copy for its type.
+
+    Mutates the given node dicts in place (callers pass a copy). A node carries an execution
+    vector only through a non-empty ``template.code.value`` — for those nodes:
+    * known component type → its stored code is overwritten with the server's trusted code, so
+      version drift cannot break the build and a relabelled node cannot smuggle in its own bytes;
+    * unknown component type → recorded as blocked (no trusted code exists to run).
+
+    Nodes without executable code (group/note/container nodes) are left untouched. Recurses into
+    inlined sub-flow definitions. Returns ``display_name (id)`` labels for blocked nodes.
+    """
+    blocked: list[str] = []
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data")
+        if not isinstance(node_data, dict):
+            continue
+
+        node_info = node_data.get("node")
+        node_info = node_info if isinstance(node_info, dict) else None
+
+        code_field = None
+        if node_info is not None:
+            template = node_info.get("template")
+            if isinstance(template, dict) and isinstance(template.get("code"), dict):
+                code_field = template["code"]
+
+        component_type = node_data.get("type")
+        if code_field is not None and code_field.get("value"):
+            if isinstance(component_type, str) and component_type in type_to_code:
+                code_field["value"] = type_to_code[component_type]
+            else:
+                display_name = (node_info.get("display_name") if node_info else None) or component_type
+                node_id = node_data.get("id") or node.get("id", "unknown")
+                blocked.append(f"{display_name} ({node_id})")
+
+        # Recurse into inlined sub-flows (group / sub-flow nodes).
+        if node_info is not None:
+            nested_flow = node_info.get("flow")
+            if isinstance(nested_flow, dict):
+                nested_data = nested_flow.get("data")
+                nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
+                if isinstance(nested_nodes, list) and nested_nodes:
+                    blocked.extend(_substitute_trusted_node_code(nested_nodes, type_to_code))
+
+    return blocked
+
+
+async def _ensure_component_code_lookups(settings_service: Any) -> dict[str, str]:
+    """Load the component registry if needed and return the type→trusted-code map (fail closed)."""
+    from lfx.interface.components import component_cache, get_and_cache_all_types_dict
+
+    if component_cache.all_types_dict is None:
+        try:
+            await get_and_cache_all_types_dict(settings_service)
+        except Exception as exc:
+            logger.warning("Failed to load component templates for public flow sanitization", exc_info=exc)
+            raise
+
+    all_types_dict = component_cache.all_types_dict
+    if not all_types_dict:
+        return {}
+    return collect_component_code_lookups(all_types_dict)
+
+
+async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> dict | None:
+    """Return server-trusted, build-ready flow data for the unauthenticated public build path.
+
+    ``POST /api/v1/build_public_tmp/{flow_id}/flow`` builds a public flow **as its owner**
+    without authentication, executing the flow's components — each node's stored ``code`` is run
+    via ``eval_custom_component_code``. The global ``allow_custom_components`` flag is an
+    operator's decision to let *authenticated* users run custom (non-template) code; it must not
+    silently extend that trust to anonymous visitors.
+
+    Default (``allow_public_custom_components`` is False): every code-bearing node's code is
+    replaced with the server's trusted code for its component type, and nodes whose type is not a
+    known server component are rejected. Running the server's code (rather than gating on a code
+    hash) means legitimate flows whose stored built-in code has merely drifted across versions
+    still build, while arbitrary / relabelled custom code never executes. Returns the sanitized
+    graph dict for the caller to build from.
+
+    Opt-in (``allow_public_custom_components`` is True): preserves the prior behavior — runs the
+    standard custom-component validation and returns ``None`` so the caller builds from the
+    database as before.
+
+    Returns:
+        The sanitized graph dict to build from, or ``None`` to fall back to the default
+        database-loaded build (opt-in mode, or no flow data to sanitize).
+
+    Raises:
+        CustomComponentValidationError: if the flow contains an unrecognized custom component, or
+            the component templates cannot be loaded (fail closed).
+    """
+    import copy
+
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None:
+        raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
+
+    # Opt-in: honor the global custom-component policy and build from the database as before.
+    if settings_service.settings.allow_public_custom_components:
+        validate_flow_for_current_settings(target)
+        return None
+
+    normalized_flow_data = _extract_flow_data(target)
+    if normalized_flow_data is None:
+        # A target we cannot verify must fail closed rather than skip sanitization.
+        if target is not None:
+            msg = (
+                "Flow validation failed: could not extract graph data from the provided target. "
+                "Ensure the flow payload or Graph object contains valid graph data."
+            )
+            raise CustomComponentValidationError(msg)
+        return None
+
+    nodes = normalized_flow_data.get("nodes")
+    if not isinstance(nodes, list) or not nodes:
+        return None
+
+    type_to_code = await _ensure_component_code_lookups(settings_service)
+    if not type_to_code:
+        # Templates unavailable — do not let unverified code through.
+        raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
+
+    sanitized = copy.deepcopy(normalized_flow_data)
+    blocked = _substitute_trusted_node_code(sanitized.get("nodes", []), type_to_code)
+    if blocked:
+        blocked_names = ", ".join(blocked)
+        logger.warning(f"Public flow build blocked: unrecognized custom components are not allowed: {blocked_names}")
+        message = (
+            f"Public flows cannot be built without authentication when they contain custom components: {blocked_names}"
+        )
+        raise CustomComponentValidationError(message)
+
+    return sanitized
+
+
 def _node_code_hash(node_info: Any) -> str | None:
     """Return the code-hash of a node's ``code`` field, mirroring the hash gate.
 
