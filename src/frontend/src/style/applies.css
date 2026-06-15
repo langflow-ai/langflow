@@ -1295,7 +1295,6 @@ input[type="password"]::-ms-clear {
     @apply flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all;
   }
 
-
   .helper-lines {
     @apply pointer-events-none absolute left-0 top-0 z-10 h-full w-full;
   }
