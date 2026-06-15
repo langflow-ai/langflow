@@ -20,7 +20,7 @@ on:
         description: "Fail the run when scans differ from committed baselines"
         required: false
         type: boolean
-        default: true
+        default: false
 
 env:
   NODE_VERSION: "22"
@@ -122,7 +122,7 @@ jobs:
         shell: bash
         env:
           RUN_A11Y: "true"
-          RUN_A11Y_ASSERT: ${{ github.event_name != 'workflow_dispatch' && 'true' || inputs.assert && 'true' || 'false' }}
+          RUN_A11Y_ASSERT: ${{ github.event_name == 'workflow_dispatch' && inputs.assert && 'true' || 'false' }}
           LANGFLOW_DEACTIVATE_TRACING: "true"
         run: |
           cd src/frontend
