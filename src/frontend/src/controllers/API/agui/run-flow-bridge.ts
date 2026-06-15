@@ -10,18 +10,25 @@
 
 import { type BaseEvent, EventType } from "@ag-ui/client";
 import { handleMessageEvent } from "@/components/core/playgroundComponent/chat-view/utils/message-event-handler";
+import { updateMessage } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
+import { queryClient } from "@/contexts";
 import { BuildStatus } from "@/constants/enums";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import { useMessagesStore } from "@/stores/messagesStore";
 import type {
   ChatInputType,
   ChatOutputType,
   VertexBuildTypeAPI,
   VertexDataTypeAPI,
 } from "@/types/api";
+import type { ContentBlock, InteractiveContent } from "@/types/chat";
+import type { Message } from "@/types/messages";
+import { api } from "../api";
 import {
   buildWorkflowRunRequest,
   createWorkflowAgent,
+  WORKFLOWS_ENDPOINT,
   WORKFLOWS_PUBLIC_ENDPOINT,
   type WorkflowRunOptions,
 } from "./run-agent";
@@ -53,6 +60,7 @@ export interface BridgeContext {
   setRunId: (runId: string) => void;
   applyDelta: (ops: JsonPatchOp[]) => void;
   handleCustomEvent: (eventType: string, data: unknown) => void;
+  onHumanInput: (payload: unknown) => void;
   onFinished: () => void;
   onError: (message: string) => void;
 }
@@ -83,6 +91,9 @@ export function handleAGUIEvent(event: BaseEvent, ctx: BridgeContext): boolean {
     };
     if (custom.name === "langflow.event" && custom.value?.event_type) {
       ctx.handleCustomEvent(custom.value.event_type, custom.value.data);
+    } else if (custom.name === "langflow.human_input_required") {
+      // Non-terminal: surface the card; the SSE ends at suspend and reattaches on resume.
+      ctx.onHumanInput(custom.value);
     }
     return false;
   }
@@ -239,6 +250,11 @@ export async function runFlowAGUI(
     },
     applyDelta: (ops) => applyStateDelta(ops, runId, touchedNodeIds),
     handleCustomEvent: (eventType, data) => handleMessageEvent(eventType, data),
+    onHumanInput: () => {
+      // Stream mode can't durably suspend; HITL runs go through the background
+      // path (runFlowHITL). Mark awaiting-input so the UI reflects the pause.
+      flowStore.setAwaitingInput(true);
+    },
     onFinished: () => {
       terminalEventSeen = true;
       flowStore.setBuildInfo({ success: true });
@@ -320,4 +336,290 @@ export async function runFlowAGUI(
       },
     });
   });
+}
+
+/** Background-run body (mode="background"); HITL needs the durable substrate. */
+function buildBackgroundRunRequest(opts: WorkflowRunOptions) {
+  const body: Record<string, unknown> = {
+    flow_id: opts.flowId,
+    input_value: opts.message ?? "",
+    mode: "background",
+    stream_protocol: "agui",
+  };
+  if (opts.threadId) body.session_id = opts.threadId;
+  if (opts.tweaks) body.tweaks = opts.tweaks;
+  if (opts.startComponentId) body.start_component_id = opts.startComponentId;
+  if (opts.stopComponentId) body.stop_component_id = opts.stopComponentId;
+  if (opts.flowData) body.data = opts.flowData;
+  if (opts.files && opts.files.length > 0) body.files = opts.files;
+  return body;
+}
+
+function toInteractiveContent(
+  payload: Record<string, unknown>,
+  jobId: string,
+): InteractiveContent {
+  const allowed = (payload.allowed_decisions as string[]) ?? [];
+  return {
+    type: "human_input",
+    kind: (payload.kind as InteractiveContent["kind"]) ?? "node_input",
+    request_id: String(payload.request_id ?? ""),
+    prompt: payload.prompt as string | undefined,
+    options: (payload.options as InteractiveContent["options"]) ?? [],
+    schema: payload.schema as InteractiveContent["schema"],
+    allowed_decisions: allowed,
+    job_id: jobId,
+  };
+}
+
+/**
+ * Reattach context per pause, keyed by request id. The interactive card resumes the
+ * run itself (no prop-drilling through the chat render chain), so it needs the exact
+ * run opts to stream the continued run back into the right session.
+ */
+const resumeRegistry = new Map<
+  string,
+  { jobId: string; opts: WorkflowRunOptions }
+>();
+
+export function getResumeContext(
+  requestId: string,
+): { jobId: string; opts: WorkflowRunOptions } | undefined {
+  return resumeRegistry.get(requestId);
+}
+
+function _cardSubmittedAction(messageId: string): string | undefined {
+  for (const query of queryClient.getQueryCache().getAll()) {
+    const key = query.queryKey;
+    if (!Array.isArray(key) || key[0] !== "useGetMessagesQuery") continue;
+    const messages = query.state.data as Message[] | undefined;
+    const msg = Array.isArray(messages)
+      ? messages.find((m) => m.id === messageId)
+      : undefined;
+    const content = msg?.content_blocks?.[0]?.contents?.find(
+      (c) => c?.type === "human_input",
+    ) as { submitted_action?: string } | undefined;
+    if (content?.submitted_action) return content.submitted_action;
+  }
+  return undefined;
+}
+
+function cardAlreadyAnswered(messageId: string): boolean {
+  return _cardSubmittedAction(messageId) !== undefined;
+}
+
+/**
+ * Stamp the chosen action onto the card message in the react-query cache so the
+ * selection is derived from a stable source — local React state is lost when the
+ * resume reattach replays the stream and re-renders the message list.
+ */
+export function markHumanInputSubmitted(
+  requestId: string,
+  actionId: string,
+): void {
+  const messageId = `human-input-${requestId}`;
+  for (const query of queryClient.getQueryCache().getAll()) {
+    const key = query.queryKey;
+    if (!Array.isArray(key) || key[0] !== "useGetMessagesQuery") continue;
+    const messages = query.state.data as Message[] | undefined;
+    if (!Array.isArray(messages) || !messages.some((m) => m.id === messageId)) {
+      continue;
+    }
+    queryClient.setQueryData(key, (old: Message[] = []) =>
+      old.map((m) =>
+        m.id === messageId
+          ? {
+              ...m,
+              content_blocks: (m.content_blocks ?? []).map((block) => ({
+                ...block,
+                contents: (block.contents ?? []).map((c) =>
+                  c?.type === "human_input"
+                    ? { ...c, submitted_action: actionId }
+                    : c,
+                ),
+              })),
+            }
+          : m,
+      ),
+    );
+  }
+}
+
+/** Render the pause as an interactive card in the chat and flag awaiting-input. */
+function injectHumanInputCard(
+  payload: Record<string, unknown>,
+  jobId: string,
+  opts: WorkflowRunOptions,
+): void {
+  const content = toInteractiveContent(payload, jobId);
+  resumeRegistry.set(content.request_id, { jobId, opts });
+  const messageId = `human-input-${content.request_id}`;
+  // A resume reattach replays the pause event; if the user already answered (the
+  // card carries submitted_action), re-injecting would clobber that choice. Skip.
+  if (cardAlreadyAnswered(messageId)) {
+    useFlowStore.getState().setAwaitingInput(true);
+    return;
+  }
+  const block: ContentBlock = {
+    title: "Human input required",
+    contents: [content],
+    allow_markdown: true,
+    component: "HumanInput",
+  };
+  const message: Message = {
+    flow_id: opts.flowId,
+    text: "",
+    sender: "Machine",
+    sender_name: "AI",
+    session_id: opts.threadId ?? opts.flowId,
+    timestamp: new Date().toISOString(),
+    files: [],
+    id: messageId,
+    edit: false,
+    background_color: "",
+    text_color: "",
+    content_blocks: [block],
+  };
+  // The new playground reads the react-query messages cache; the legacy IOModal
+  // playground reads useMessagesStore. Write both so the card renders either way.
+  updateMessage(message);
+  useMessagesStore.getState().addMessage(message);
+  useFlowStore.getState().setAwaitingInput(true);
+}
+
+/**
+ * Consume a background run's durable event stream (`GET /{job_id}/events`) and fold
+ * events into the flow store. Resolves when the run ends, suspends for human input,
+ * or the request errors. Reused for the initial run and for resume reattach.
+ *
+ * Uses a direct fetch + SSE parser rather than the AG-UI ``HttpAgent``: a paused run
+ * closes the stream WITHOUT a terminal ``RUN_FINISHED``, which the agent's protocol
+ * verifier treats as a violation and can swallow the pause event we depend on.
+ */
+export async function consumeBackgroundEvents(
+  jobId: string,
+  opts: WorkflowRunOptions & { signal?: AbortSignal },
+  lastEventId?: string,
+): Promise<void> {
+  const flowStore = useFlowStore.getState();
+  const setErrorData = useAlertStore.getState().setErrorData;
+  const touchedNodeIds = new Set<string>();
+  let runId = jobId;
+  let suspended = false;
+
+  const ctx: BridgeContext = {
+    setRunId: (r) => {
+      runId = r;
+    },
+    applyDelta: (ops) => applyStateDelta(ops, runId, touchedNodeIds),
+    handleCustomEvent: (eventType, data) => handleMessageEvent(eventType, data),
+    onHumanInput: (payload) => {
+      suspended = true;
+      injectHumanInputCard(payload as Record<string, unknown>, jobId, opts);
+    },
+    onFinished: () => flowStore.setBuildInfo({ success: true }),
+    onError: (message) => {
+      flowStore.setBuildInfo({ error: [message], success: false });
+      setErrorData({ title: "Workflow run failed", list: [message] });
+    },
+  };
+
+  const finish = () => {
+    flowStore.updateEdgesRunningByNodes([...touchedNodeIds], false);
+    // A suspended run stops building and parks awaiting input; the spinner reads
+    // isBuilding, so it must clear on suspend too — only awaitingInput differs.
+    flowStore.setIsBuilding(false);
+    flowStore.setAwaitingInput(suspended);
+    flowStore.revertBuiltStatusFromBuilding();
+  };
+
+  const headers: Record<string, string> = { Accept: "text/event-stream" };
+  if (lastEventId) headers["Last-Event-ID"] = lastEventId;
+  const url = `${WORKFLOWS_ENDPOINT}/${encodeURIComponent(jobId)}/events`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+      credentials: "same-origin",
+      signal: opts.signal,
+    });
+    if (!response.ok || !response.body) {
+      ctx.onError(`Events stream failed with status ${response.status}`);
+      finish();
+      return;
+    }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let terminal = false;
+
+    const dispatch = (frame: string): boolean => {
+      const dataLine = frame
+        .split("\n")
+        .find((line) => line.startsWith("data:"));
+      if (!dataLine) return false;
+      let event: BaseEvent;
+      try {
+        event = JSON.parse(dataLine.slice(5).trim()) as BaseEvent;
+      } catch {
+        return false;
+      }
+      if (handleAGUIEvent(event, ctx)) {
+        // A terminal event supersedes a replayed pause (resume reattach re-emits it).
+        suspended = false;
+        return true;
+      }
+      return false;
+    };
+
+    while (!terminal) {
+      const { value, done } = await reader.read();
+      if (done) {
+        // The stream can close right after the pause event without a trailing
+        // blank line; flush whatever is buffered so that last frame isn't lost.
+        if (buffer.trim()) dispatch(buffer);
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      let boundary = buffer.indexOf("\n\n");
+      while (boundary !== -1) {
+        const frame = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        boundary = buffer.indexOf("\n\n");
+        if (dispatch(frame)) {
+          terminal = true;
+          break;
+        }
+      }
+    }
+    finish();
+  } catch (err) {
+    if ((err as Error)?.name !== "AbortError") {
+      ctx.onError((err as Error)?.message ?? "Events stream error");
+    }
+    finish();
+  }
+}
+
+/**
+ * Run a flow that contains a Human Input node through the durable background path:
+ * submit in background mode, then consume the run's event stream. The pause renders
+ * an interactive card; resume reattaches via {@link consumeBackgroundEvents}.
+ */
+export async function runFlowHITL(
+  opts: WorkflowRunOptions & { signal?: AbortSignal },
+): Promise<void> {
+  const body = buildBackgroundRunRequest(opts);
+  const { data } = await api.post(WORKFLOWS_ENDPOINT, body);
+  const jobId: string | undefined = data?.job_id;
+  if (!jobId) {
+    useFlowStore.getState().setBuildInfo({
+      error: ["Background run did not return a job id"],
+      success: false,
+    });
+    useFlowStore.getState().setIsBuilding(false);
+    return;
+  }
+  await consumeBackgroundEvents(jobId, opts);
 }

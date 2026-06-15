@@ -225,8 +225,12 @@ class BackgroundExecutionService(Service):
             return
 
         async def _is_terminal() -> bool:
+            # SUSPENDED ends the tail too: a run that connected while IN_PROGRESS and
+            # then suspended has no live tail to wait on (the pause isn't published live).
             current = await job_service.get_job_by_job_id(job_id)
-            return current is not None and current.status in _TERMINAL_STATUSES
+            return current is not None and (
+                current.status in _TERMINAL_STATUSES or current.status == JobStatus.SUSPENDED
+            )
 
         async for frame in self._bus.reattach(
             str(job_id), last_seq=last_seq, read_durable=read_durable, is_done=_is_terminal
@@ -266,20 +270,21 @@ class BackgroundExecutionService(Service):
         await job_service.write_signal(job_id, SignalType.STOP)
         await self._executor.cancel(str(job_id))
 
-    async def resume_job(self, job_id: UUID, user: UserRead, *, request_id: str, decision: Any) -> bool:
+    async def resume_job(self, job_id: UUID, user: UserRead, *, request_id: str, decision: Any) -> bool:  # noqa: ARG002
         """Carry a human decision back into a SUSPENDED run and re-enqueue it.
 
         Returns True when the run was accepted for resume, False on a conflict
         (not suspended, stale request_id, or lost the single-flight flip) — the
-        route maps False to 409. Ownership is enforced by ``_validate``.
+        route maps False to 409. Ownership (owner-or-superuser) is enforced at the
+        HTTP route, so this fetches by id alone and trusts the already-validated user.
         """
-        job = await self._validate(job_id, user)
-        if job.status != JobStatus.SUSPENDED:
+        job_service = get_job_service()
+        job = await job_service.get_job_by_job_id(job_id)
+        if job is None or job.type != JobType.WORKFLOW or job.status != JobStatus.SUSPENDED:
             return False
         pending = (job.job_metadata or {}).get("pending_request_id")
         if pending is not None and request_id != pending:
             return False
-        job_service = get_job_service()
         # Win the single-flight flip BEFORE writing the RESUME signal, so exactly one
         # RESUME row exists per suspend and a loser never strands a stray decision.
         if not await job_service.claim_suspended_for_resume(job_id, owner=self._owner):

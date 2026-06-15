@@ -457,6 +457,21 @@ class WorkflowStopResponse(BaseModel):
     message: str | None = None
 
 
+class WorkflowResumeRequest(BaseModel):
+    """Request schema for resuming a suspended (human-in-the-loop) workflow."""
+
+    request_id: str
+    decision: dict | None = None
+
+
+class WorkflowResumeResponse(BaseModel):
+    """Response schema for resuming a workflow."""
+
+    job_id: JobId
+    status: str
+    message: str | None = None
+
+
 # OpenAPI response definitions
 WORKFLOW_EXECUTION_RESPONSES = {
     200: {

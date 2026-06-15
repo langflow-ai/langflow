@@ -350,6 +350,43 @@ async def create_flow_response(
     )
 
 
+async def _persist_human_input_card(data: dict, flow_id: uuid.UUID, session_id: str, job_id) -> None:
+    """Persist the pause as a chat message so the interactive card survives reload.
+
+    The card carries request_id + job_id, so a reloaded session can resume the run.
+    """
+    from lfx.memory import astore_message
+    from lfx.schema.content_block import ContentBlock
+    from lfx.schema.content_types import HumanInputContent
+    from lfx.schema.message import Message
+
+    content = HumanInputContent(
+        request_id=data.get("request_id", ""),
+        job_id=str(job_id) if job_id else None,
+        kind=data.get("kind", "node_input"),
+        prompt=data.get("prompt"),
+        options=data.get("options") or [],
+        fields=data.get("schema") or [],
+        allowed_decisions=data.get("allowed_decisions") or [],
+    )
+    block = ContentBlock(title="Human input required", contents=[content])
+    message = Message(
+        text="",
+        sender="Machine",
+        sender_name="AI",
+        session_id=session_id,
+        flow_id=flow_id,
+        content_blocks=[block],
+    )
+    try:
+        stored = await astore_message(message, flow_id=flow_id, run_id=str(job_id) if job_id else None)
+        # Record the card's message id so resume can mark it answered (see the resume route).
+        if stored and job_id is not None:
+            await get_job_service().update_job_metadata(uuid.UUID(str(job_id)), {"card_message_id": str(stored[0].id)})
+    except Exception:  # noqa: BLE001
+        await logger.awarning("Failed to persist human-input card for flow %s", flow_id, exc_info=True)
+
+
 async def generate_flow_events(
     *,
     flow_id: uuid.UUID,
@@ -420,6 +457,12 @@ async def generate_flow_events(
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
             graph.set_run_id(run_id)
+            if job_id is not None:
+                from lfx.services.deps import get_checkpoint_service
+
+                graph.job_id = str(job_id)  # the checkpoint is keyed by job_id
+                graph.checkpointing_enabled = True  # arm the pause seam for producers
+                graph.checkpoint_store = get_checkpoint_service()
             first_layer = sort_vertices(graph)
 
             for vertex_id in first_layer:
@@ -718,12 +761,14 @@ async def generate_flow_events(
         _build_run_id = uuid.UUID(graph.run_id) if graph.run_id else None
         if _build_run_id is not None:
             _build_job_svc = get_job_service()
-            await _build_job_svc.create_job(
-                job_id=_build_run_id,
-                flow_id=flow_id,
-                user_id=current_user.id,
-                job_type=JobType.WORKFLOW,
-            )
+            # Background path already created the job; re-creating it = UNIQUE violation.
+            if await _build_job_svc.get_job_by_job_id(_build_run_id) is None:
+                await _build_job_svc.create_job(
+                    job_id=_build_run_id,
+                    flow_id=flow_id,
+                    user_id=current_user.id,
+                    job_type=JobType.WORKFLOW,
+                )
     except Exception:  # noqa: BLE001
         await logger.awarning(
             "Failed to create workflow job for /build — memory base tracking disabled for flow %s",
@@ -774,10 +819,18 @@ async def generate_flow_events(
             event_manager.on_error(data=error_message.data)
             raise
 
-    if _build_job_svc and _build_run_id:
-        await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
-    else:
-        await _run_vertex_build()
+    try:
+        runner_owns_status = job_id is not None  # background path: JobRunner already wraps execute_with_status
+        if _build_job_svc and _build_run_id and not runner_owns_status:
+            await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
+        else:
+            await _run_vertex_build()
+    except GraphPausedException as exc:
+        # Non-terminal: persist the card to history, emit the pause event, end without on_end.
+        await _persist_human_input_card(exc.data or {}, flow_id, graph.session_id or str(flow_id), job_id)
+        event_manager.send_event(event_type="human_input_required", data=exc.data or {})
+        await event_manager.queue.put((None, None, time.time()))
+        return
 
     build_duration = sum(vertex_timedeltas)
     event_manager.on_end(data={"build_duration": build_duration})

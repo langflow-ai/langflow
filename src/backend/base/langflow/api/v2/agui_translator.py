@@ -124,6 +124,10 @@ class AGUITranslator:
                 del self._buffered_messages[removed_id]
                 self._emitted_text_message_ids.add(removed_id)
             return [CustomEvent(name="langflow.message.removed", value={"message_id": removed_id})]
+        if event_type == "human_input_required":
+            # Non-terminal: the run suspends for human input. Must precede the end/error
+            # branches so it never closes the open message or emits RUN_FINISHED/RUN_ERROR.
+            return [CustomEvent(name="langflow.human_input_required", value=data)]
 
         # Only terminal events close an open text message. Non-terminal events
         # (build_start, end_vertex, log, ...) interleave with tokens of the same

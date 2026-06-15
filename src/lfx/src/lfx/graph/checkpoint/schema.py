@@ -59,11 +59,16 @@ def serialize_value(value: Any) -> dict[str, Any] | None:
     if value is None or isinstance(value, (str, int, float, bool)):
         return {_WIRE_KIND: "raw", "value": value}
     if isinstance(value, BaseModel):
+        try:
+            dumped = value.model_dump(mode="json")
+        except Exception:  # noqa: BLE001
+            # A model with an opaque field (LLM client, model class) can't round-trip; degrade to None so the checkpoint stays writable.
+            return None
         return {
             _WIRE_KIND: "model",
             "module": type(value).__module__,
             "name": type(value).__qualname__,
-            "value": value.model_dump(mode="json"),
+            "value": dumped,
         }
     if isinstance(value, dict):
         if not all(isinstance(k, str) for k in value):

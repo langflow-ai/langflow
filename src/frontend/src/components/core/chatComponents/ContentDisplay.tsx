@@ -2,20 +2,28 @@ import type { ReactNode } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
-import type { ContentType, JSONValue } from "@/types/chat";
+import type { ContentType, InteractiveContent, JSONValue } from "@/types/chat";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
+import HumanInputCard, { type HumanInputDecision } from "./HumanInputCard";
 
 export default function ContentDisplay({
   content,
   chatId,
   playgroundPage,
+  humanInputSubmitted,
+  onHumanInputSubmit,
 }: {
   content: ContentType;
   chatId: string;
   playgroundPage?: boolean;
+  humanInputSubmitted?: boolean;
+  onHumanInputSubmit?: (
+    content: InteractiveContent,
+    decision: HumanInputDecision,
+  ) => void;
 }) {
   const renderDuration = content.duration !== undefined && !playgroundPage && (
     <div className="absolute right-2 top-4">
@@ -240,6 +248,19 @@ export default function ContentDisplay({
           ))}
           {content.caption && <div>{content.caption}</div>}
         </div>
+      );
+      break;
+    case "human_input":
+      contentData = (
+        <HumanInputCard
+          content={content}
+          submitted={humanInputSubmitted}
+          onSubmit={
+            onHumanInputSubmit
+              ? (decision) => onHumanInputSubmit(content, decision)
+              : undefined
+          }
+        />
       );
       break;
   }

@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 from datetime import datetime, timezone
 from uuid import UUID
 
+from lfx.graph.exceptions import GraphPausedException
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlmodel import col, func, select
 
@@ -751,7 +752,7 @@ class JobService(Service):
             await logger.ainfo(f"Executing job function for job_id={job_id}")
             result = await run_coro_func(*args, **kwargs)
 
-        except PauseRequested:
+        except (PauseRequested, GraphPausedException):
             # A producer paused the run for human input. The runner suspends it
             # (SUSPENDED); do NOT write a terminal status here.
             await logger.adebug(f"Job {job_id} paused for human input")

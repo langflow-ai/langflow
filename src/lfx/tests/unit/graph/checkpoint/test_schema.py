@@ -109,3 +109,18 @@ def test_serialize_value_returns_none_for_opaque_objects():
 
     assert serialize_value(Opaque()) is None
     assert serialize_value(lambda: 1) is None
+
+
+def test_serialize_value_degrades_model_with_unserializable_field():
+    """A model holding an opaque field (e.g. an LLM client / model class) must not raise.
+
+    Reproduces the HITL-with-Agent crash: pausing serialized the agent's state and a
+    nested model class blew up ``model_dump(mode="json")``.
+    """
+    from pydantic import BaseModel, ConfigDict
+
+    class Holder(BaseModel):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        opaque: type = BaseModel
+
+    assert serialize_value(Holder()) is None

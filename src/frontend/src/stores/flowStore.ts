@@ -10,7 +10,10 @@ import { cloneDeep } from "lodash";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
-import { runFlowAGUI } from "@/controllers/API/agui/run-flow-bridge";
+import {
+  runFlowAGUI,
+  runFlowHITL,
+} from "@/controllers/API/agui/run-flow-bridge";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
@@ -168,6 +171,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
+  awaitingInput: false,
   buildStartTime: null,
   buildDuration: null,
   buildingFlowId: null,
@@ -367,6 +371,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       buildingFlowId: !isBuilding ? null : current.buildingFlowId,
       buildingSessionId: !isBuilding ? null : current.buildingSessionId,
     });
+  },
+  setAwaitingInput: (awaitingInput) => {
+    set({ awaitingInput });
   },
   setBuildStartTime: (time) => {
     set({ buildStartTime: time });
@@ -926,10 +933,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const buildController = new AbortController();
     get().setBuildController(buildController);
 
-    // Always run through the v2 workflows endpoint. Current frontend nodes
-    // + edges are sent so unsaved tweaks (dropdowns, text inputs) run as
-    // the user sees them.
-    await runFlowAGUI({
+    // A Human Input node can suspend mid-run — only the durable background path supports it.
+    const runArgs = {
       flowId: currentFlow!.id,
       message: input_value,
       threadId: session,
@@ -938,7 +943,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowData: { nodes: get().nodes, edges: get().edges },
       files,
       signal: buildController.signal,
-    });
+    };
+    const hasHumanInput = get().nodes.some(
+      (node) => node.data?.type === "HumanInput",
+    );
+    await (hasHumanInput ? runFlowHITL(runArgs) : runFlowAGUI(runArgs));
 
     // Invalidate KB-related caches so any KnowledgeIngestion node that ran
     // inside this build surfaces its updated stats / runs the next time the
