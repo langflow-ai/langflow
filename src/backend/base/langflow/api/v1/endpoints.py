@@ -1456,7 +1456,16 @@ async def custom_component_update(
             field_name=code_request.field,
         )
         if "code" not in updated_build_config or not updated_build_config.get("code", {}).get("value"):
-            updated_build_config = add_code_field_to_build_config(updated_build_config, code_request.code)
+            updated_build_config = add_code_field_to_build_config(updated_build_config, effective_code)
+        else:
+            # Never echo client bytes back in restricted mode. A colliding
+            # payload may have cleared the truncated-hash gate, but the server
+            # executed its trusted copy (``effective_code``); the returned node
+            # must carry that trusted code too, otherwise the attacker bytes
+            # could be persisted into a saved flow and later exec'd on the
+            # build path. In the default (unrestricted) mode ``effective_code``
+            # is ``code_request.code``, so this is a no-op.
+            updated_build_config["code"]["value"] = effective_code
         component_node["template"] = updated_build_config
 
         if isinstance(cc_instance, Component):
