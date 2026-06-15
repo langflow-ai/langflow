@@ -1,9 +1,13 @@
 import inspect
 import os
+from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from dotenv import load_dotenv
 from langflow.load import run_flow_from_json
+from langflow.load.utils import get_flow
+from lfx.load.utils import UploadError
 
 
 def test_run_flow_from_json_params():
@@ -79,3 +83,29 @@ def test_run_flow_with_fake_env_tweaks(fake_env_file):
     # Extract and check the output data
     output_data = result[0].outputs[0].results["message"].data["text"]
     assert output_data == "**********"
+
+
+def test_get_flow_uses_bounded_http_timeout():
+    response = MagicMock()
+    response.status_code = httpx.codes.OK
+    response.json.return_value = {"name": "Remote Flow"}
+
+    with patch("langflow.load.utils.httpx.get", return_value=response) as mock_get:
+        result = get_flow("http://host", "flow-1")
+
+    assert result["name"] == "Remote Flow"
+    _args, kwargs = mock_get.call_args
+    assert kwargs["timeout"] == 30.0
+
+
+def test_get_flow_raises_upload_error_with_response_body_on_http_error():
+    response = MagicMock()
+    response.status_code = httpx.codes.INTERNAL_SERVER_ERROR
+    response.text = "database unavailable"
+
+    with patch("langflow.load.utils.httpx.get", return_value=response), pytest.raises(UploadError) as exc_info:
+        get_flow("http://host", "flow-1")
+
+    message = str(exc_info.value)
+    assert "500" in message
+    assert "database unavailable" in message

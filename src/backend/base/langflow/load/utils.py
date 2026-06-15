@@ -3,6 +3,8 @@ from lfx.load.utils import UploadError, replace_tweaks_with_env, upload, upload_
 
 from langflow.services.database.models.flow.model import FlowBase
 
+GET_FLOW_TIMEOUT = 30.0
+
 
 def get_flow(url: str, flow_id: str):
     """Get the details of a flow from Langflow.
@@ -20,10 +22,20 @@ def get_flow(url: str, flow_id: str):
     """
     try:
         flow_url = f"{url}/api/v1/flows/{flow_id}"
-        response = httpx.get(flow_url)
+        response = httpx.get(flow_url, timeout=GET_FLOW_TIMEOUT)
         if response.status_code == httpx.codes.OK:
             json_response = response.json()
             return FlowBase(**json_response).model_dump()
+        response_text = getattr(response, "text", "")
+        msg = f"Error retrieving flow: {response.status_code}"
+        if response_text:
+            msg = f"{msg} - {response_text}"
+        raise UploadError(msg)
+    except UploadError:
+        raise
+    except httpx.TimeoutException as e:
+        msg = f"Error retrieving flow: request timed out after {GET_FLOW_TIMEOUT}s"
+        raise UploadError(msg) from e
     except Exception as e:
         msg = f"Error retrieving flow: {e}"
         raise UploadError(msg) from e
