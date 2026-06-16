@@ -4580,6 +4580,186 @@
       "legacy_slot": "ext:langwatch:LangWatchComponent@official-pre-a",
       "target": "ext:langwatch:LangWatchComponent@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "FaissVectorStoreComponent",
+      "target": "ext:faiss:FaissVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.FAISS.faiss.FaissVectorStoreComponent",
+      "target": "ext:faiss:FaissVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.FAISS.FaissVectorStoreComponent",
+      "target": "ext:faiss:FaissVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:faiss:FaissVectorStoreComponent@official-pre-a",
+      "target": "ext:faiss:FaissVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AddContentToPage",
+      "target": "ext:notion:AddContentToPage@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.add_content_to_page.AddContentToPage",
+      "target": "ext:notion:AddContentToPage@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.AddContentToPage",
+      "target": "ext:notion:AddContentToPage@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:notion:AddContentToPage@official-pre-a",
+      "target": "ext:notion:AddContentToPage@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "NotionPageCreator",
+      "target": "ext:notion:NotionPageCreator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.create_page.NotionPageCreator",
+      "target": "ext:notion:NotionPageCreator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionPageCreator",
+      "target": "ext:notion:NotionPageCreator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionPageCreator@official-pre-a",
+      "target": "ext:notion:NotionPageCreator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "NotionDatabaseProperties",
+      "target": "ext:notion:NotionDatabaseProperties@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.list_database_properties.NotionDatabaseProperties",
+      "target": "ext:notion:NotionDatabaseProperties@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionDatabaseProperties",
+      "target": "ext:notion:NotionDatabaseProperties@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionDatabaseProperties@official-pre-a",
+      "target": "ext:notion:NotionDatabaseProperties@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "NotionListPages",
+      "target": "ext:notion:NotionListPages@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.list_pages.NotionListPages",
+      "target": "ext:notion:NotionListPages@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionListPages",
+      "target": "ext:notion:NotionListPages@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionListPages@official-pre-a",
+      "target": "ext:notion:NotionListPages@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "NotionUserList",
+      "target": "ext:notion:NotionUserList@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.list_users.NotionUserList",
+      "target": "ext:notion:NotionUserList@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionUserList",
+      "target": "ext:notion:NotionUserList@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionUserList@official-pre-a",
+      "target": "ext:notion:NotionUserList@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "NotionPageContent",
+      "target": "ext:notion:NotionPageContent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.page_content_viewer.NotionPageContent",
+      "target": "ext:notion:NotionPageContent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionPageContent",
+      "target": "ext:notion:NotionPageContent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionPageContent@official-pre-a",
+      "target": "ext:notion:NotionPageContent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "NotionSearch",
+      "target": "ext:notion:NotionSearch@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.search.NotionSearch",
+      "target": "ext:notion:NotionSearch@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionSearch",
+      "target": "ext:notion:NotionSearch@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionSearch@official-pre-a",
+      "target": "ext:notion:NotionSearch@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "NotionPageUpdate",
+      "target": "ext:notion:NotionPageUpdate@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.update_page_property.NotionPageUpdate",
+      "target": "ext:notion:NotionPageUpdate@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionPageUpdate",
+      "target": "ext:notion:NotionPageUpdate@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionPageUpdate@official-pre-a",
+      "target": "ext:notion:NotionPageUpdate@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

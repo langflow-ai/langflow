@@ -47,6 +47,7 @@ cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.1
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
 exa = ["metaphor-python==0.1.23"]
+faiss = ["faiss-cpu==1.9.0.post1; python_version < '3.14'", "faiss-cpu>=1.13.2; python_version >= '3.14'", "langchain-community>=0.4.1,<1.0.0"]
 firecrawl = ["firecrawl-py>=1.0.16,<2.0.0"]
 git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
@@ -65,6 +66,7 @@ milvus = ["langchain-milvus~=0.3.2"]
 mistral = ["langchain-mistralai~=1.1.1"]
 mongodb = ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"]
 needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
+notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
 olivya = []
@@ -118,6 +120,7 @@ all = [
     "lfx-bundles[deepseek]",
     "lfx-bundles[elastic]",
     "lfx-bundles[exa]",
+    "lfx-bundles[faiss]",
     "lfx-bundles[firecrawl]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
@@ -136,6 +139,7 @@ all = [
     "lfx-bundles[mistral]",
     "lfx-bundles[mongodb]",
     "lfx-bundles[needle]",
+    "lfx-bundles[notion]",
     "lfx-bundles[novita]",
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",

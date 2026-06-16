@@ -4,14 +4,13 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 from langchain_core.tools import StructuredTool
-from markdown import markdown
-from pydantic import BaseModel, Field
-
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import MultilineInput, SecretStrInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+from markdown import markdown
+from pydantic import BaseModel, Field
 
 MIN_ROWS_IN_TABLE = 3
 

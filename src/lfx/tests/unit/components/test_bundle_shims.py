@@ -91,13 +91,16 @@ def test_shim_source_contract(shim_dir: Path) -> None:
     message must name the matching distribution.
     """
     provider = shim_dir.name
+    # Bundle names are lowercase (BUNDLE_NAME_RE), so a mixed-case in-tree dir
+    # (e.g. FAISS, Notion) aliases to its lowercased bundle (faiss, notion).
+    slug = provider.lower()
     src = (shim_dir / "__init__.py").read_text(encoding="utf-8")
 
     assert src.startswith(SHIM_MARKER), f"{provider}: first line must be the {SHIM_MARKER!r} marker"
     assert "sys.modules[__name__] = importlib.import_module(" in src, f"{provider}: must module-alias"
 
-    meta_target = f'importlib.import_module("lfx_bundles.{provider}")'
-    partner_target = f'importlib.import_module("lfx_{provider}.components.{provider}")'
+    meta_target = f'importlib.import_module("lfx_bundles.{slug}")'
+    partner_target = f'importlib.import_module("lfx_{slug}.components.{slug}")'
     is_meta = meta_target in src
     is_partner = partner_target in src
     assert is_meta or is_partner, f"{provider}: alias target is neither metapackage nor partner shape"
@@ -106,9 +109,9 @@ def test_shim_source_contract(shim_dir: Path) -> None:
         assert 'exc.name == "lfx_bundles"' in src, f"{provider}: name-check must guard lfx_bundles"
         assert _METAPACKAGE_MSG in src, f"{provider}: locked install message missing ({_METAPACKAGE_MSG!r})"
     else:
-        assert f'exc.name == "lfx_{provider}"' in src, f"{provider}: name-check must guard lfx_{provider}"
-        assert f"{_PARTNER_MSG_PREFIX}{provider}" in src, (
-            f"{provider}: locked install message missing ('pip install lfx-{provider}')"
+        assert f'exc.name == "lfx_{slug}"' in src, f"{provider}: name-check must guard lfx_{slug}"
+        assert f"{_PARTNER_MSG_PREFIX}{slug}" in src, (
+            f"{provider}: locked install message missing ('pip install lfx-{slug}')"
         )
     # Contract #5: anything other than the bundle-missing case re-raises.
     assert src.rstrip().endswith("raise"), f"{provider}: must re-raise non-bundle import errors untouched"

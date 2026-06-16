@@ -158,6 +158,14 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # --- tranche 9: langwatch evaluator (pure httpx REST; the langwatch SDK extra
     # is for the tracing service, not this component) ---
     "langwatch": [],
+    # --- tranche 10: uppercase source dirs -> lowercase bundle slug (FAISS->faiss,
+    # Notion->notion via bundle_slug(); import paths keep historical casing) ---
+    "FAISS": [
+        "faiss-cpu==1.9.0.post1; python_version < '3.14'",
+        "faiss-cpu>=1.13.2; python_version >= '3.14'",
+        _LC_COMMUNITY,
+    ],
+    "Notion": ["requests>=2.32.0", "Markdown>=3.8.0"],
 }
 
 _OPTIONAL_DEPS_HEADER = (
@@ -201,7 +209,7 @@ def discover_component_classes(provider_dir: Path) -> list[tuple[str, str]]:
     return found
 
 
-def _shim_source(provider: str) -> str:
+def _shim_source(provider: str, slug: str) -> str:
     return (
         "# lfx-bundles-shim\n"
         f'"""Compatibility shim: lfx.components.{provider} moved to lfx-bundles.\n'
@@ -215,7 +223,7 @@ def _shim_source(provider: str) -> str:
         "import sys\n"
         "\n"
         "try:\n"
-        f'    sys.modules[__name__] = importlib.import_module("lfx_bundles.{provider}")\n'
+        f'    sys.modules[__name__] = importlib.import_module("lfx_bundles.{slug}")\n'
         "except ModuleNotFoundError as exc:\n"
         '    if exc.name is not None and (exc.name == "lfx_bundles" or exc.name.startswith("lfx_bundles.")):\n'
         "        msg = (\n"
@@ -228,15 +236,28 @@ def _shim_source(provider: str) -> str:
     )
 
 
-def _rewrite_self_imports(text: str, provider: str) -> str:
-    """Rewrite absolute ``lfx.components.<provider>`` self-refs to ``lfx_bundles.<provider>``."""
-    return re.sub(rf"\blfx\.components\.{re.escape(provider)}\b", f"lfx_bundles.{provider}", text)
+def _rewrite_self_imports(text: str, provider: str, slug: str) -> str:
+    """Rewrite absolute ``lfx.components.<provider>`` self-refs to ``lfx_bundles.<slug>``."""
+    return re.sub(rf"\blfx\.components\.{re.escape(provider)}\b", f"lfx_bundles.{slug}", text)
+
+
+def bundle_slug(provider: str) -> str:
+    """Bundle directory / ext-slug name for a provider.
+
+    Bundle names must satisfy ``BUNDLE_NAME_RE`` (lowercase), so the in-tree
+    source dir name is lowercased -- e.g. ``FAISS`` -> ``faiss``, ``Notion`` ->
+    ``notion``. Already-lowercase providers are unchanged. The historical
+    ``lfx.components.<provider>`` import paths (migration table) keep the
+    original casing; only the bundle dir + ``ext:<slug>`` id are lowercased.
+    """
+    return provider.lower()
 
 
 def move_provider(provider: str, *, apply: bool) -> list[tuple[str, str]]:
     """Move one provider into the metapackage and leave a shim. Returns its classes."""
+    slug = bundle_slug(provider)
     src = COMPONENTS_DIR / provider
-    dst = BUNDLES_PKG / provider
+    dst = BUNDLES_PKG / slug
     if not src.is_dir():
         msg = f"provider directory not found: {src}"
         raise SystemExit(msg)
@@ -248,19 +269,19 @@ def move_provider(provider: str, *, apply: bool) -> list[tuple[str, str]]:
     py_files = sorted(src.glob("*.py"))
     print(f"  {provider}: {len(py_files)} file(s), {len(classes)} component class(es) -> {dst.relative_to(REPO_ROOT)}")
     for module_stem, class_name in classes:
-        print(f"      {module_stem}.{class_name} -> ext:{provider}:{class_name}@official")
+        print(f"      {module_stem}.{class_name} -> ext:{slug}:{class_name}@official")
 
     if not apply:
         return classes
 
     dst.mkdir(parents=True)
     for py in py_files:
-        content = _rewrite_self_imports(py.read_text(encoding="utf-8"), provider)
+        content = _rewrite_self_imports(py.read_text(encoding="utf-8"), provider, slug)
         (dst / py.name).write_text(content, encoding="utf-8")
     # Remove the moved source, then replace the in-tree dir with a one-file shim.
     shutil.rmtree(src)
     src.mkdir()
-    (src / "__init__.py").write_text(_shim_source(provider), encoding="utf-8")
+    (src / "__init__.py").write_text(_shim_source(provider, slug), encoding="utf-8")
     return classes
 
 
@@ -324,8 +345,11 @@ def append_migration_entries(plan: dict[str, list[tuple[str, str]]], *, apply: b
     new_entries: list[dict] = []
     new_ambiguous: list[dict] = []
     for provider, classes in plan.items():
+        # ext id uses the lowercase bundle slug; import paths keep the historical
+        # (possibly mixed-case) ``lfx.components.<provider>`` form for migration.
+        slug = bundle_slug(provider)
         for module_stem, class_name in classes:
-            target = f"ext:{provider}:{class_name}@official"
+            target = f"ext:{slug}:{class_name}@official"
             prior = existing_bare.get(class_name)
             if class_name in already_ambiguous:
                 print(f"      ! {class_name!r} already ambiguous; import-path entries only")
@@ -337,7 +361,7 @@ def append_migration_entries(plan: dict[str, list[tuple[str, str]]], *, apply: b
                 existing_bare[class_name] = target
             new_entries.append(_entry("import_path", f"lfx.components.{provider}.{module_stem}.{class_name}", target))
             new_entries.append(_entry("import_path", f"lfx.components.{provider}.{class_name}", target))
-            new_entries.append(_entry("legacy_slot", f"ext:{provider}:{class_name}@official-pre-a", target))
+            new_entries.append(_entry("legacy_slot", f"ext:{slug}:{class_name}@official-pre-a", target))
 
     # Idempotency guard: a partially-failed earlier run (provider dir moved
     # but the table already written, or vice versa) must not duplicate rows on

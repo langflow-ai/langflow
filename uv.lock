@@ -9150,6 +9150,8 @@ all = [
     { name = "couchbase" },
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "elasticsearch" },
+    { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "faiss-cpu", version = "1.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "firecrawl-py" },
     { name = "gassist", marker = "sys_platform == 'win32'" },
     { name = "gitpython" },
@@ -9177,6 +9179,7 @@ all = [
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
     { name = "langchain-weaviate" },
+    { name = "markdown" },
     { name = "mem0ai" },
     { name = "metaphor-python" },
     { name = "needle-python" },
@@ -9278,6 +9281,11 @@ elastic = [
 exa = [
     { name = "metaphor-python" },
 ]
+faiss = [
+    { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "faiss-cpu", version = "1.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
+    { name = "langchain-community" },
+]
 firecrawl = [
     { name = "firecrawl-py" },
 ]
@@ -9335,6 +9343,10 @@ mongodb = [
 needle = [
     { name = "langchain-community" },
     { name = "needle-python" },
+]
+notion = [
+    { name = "markdown" },
+    { name = "requests" },
 ]
 novita = [
     { name = "langchain-openai" },
@@ -9457,6 +9469,8 @@ requires-dist = [
     { name = "cuga", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
     { name = "cuga", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
     { name = "elasticsearch", marker = "extra == 'elastic'", specifier = "~=8.19" },
+    { name = "faiss-cpu", marker = "python_full_version >= '3.14' and extra == 'faiss'", specifier = ">=1.13.2" },
+    { name = "faiss-cpu", marker = "python_full_version < '3.14' and extra == 'faiss'", specifier = "==1.9.0.post1" },
     { name = "firecrawl-py", marker = "extra == 'firecrawl'", specifier = ">=1.0.16,<2.0.0" },
     { name = "gassist", marker = "sys_platform == 'win32' and extra == 'nvidia'", specifier = ">=0.0.1" },
     { name = "gitpython", marker = "extra == 'git'", specifier = ">=3.1.50" },
@@ -9474,6 +9488,7 @@ requires-dist = [
     { name = "langchain-community", marker = "extra == 'cloudflare'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'confluence'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'couchbase'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'faiss'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'git'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'huggingface'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'maritalk'", specifier = ">=0.4.1,<1.0.0" },
@@ -9537,6 +9552,7 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["deepseek"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["elastic"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["exa"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["faiss"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["firecrawl"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["git"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["glean"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9555,6 +9571,7 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["mistral"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["mongodb"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["needle"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["notion"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["novita"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["nvidia"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["olivya"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9586,6 +9603,7 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["yahoosearch"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["youtube"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["zep"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
     { name = "metaphor-python", marker = "extra == 'exa'", specifier = "==0.1.23" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
@@ -9608,6 +9626,7 @@ requires-dist = [
     { name = "requests", marker = "extra == 'deepseek'", specifier = ">=2.32.0" },
     { name = "requests", marker = "extra == 'homeassistant'", specifier = ">=2.32.0" },
     { name = "requests", marker = "extra == 'icosacomputing'", specifier = ">=2.32.0" },
+    { name = "requests", marker = "extra == 'notion'", specifier = ">=2.32.0" },
     { name = "requests", marker = "extra == 'novita'", specifier = ">=2.32.0" },
     { name = "requests", marker = "extra == 'xai'", specifier = ">=2.32.0" },
     { name = "scrapegraph-py", marker = "extra == 'scrapegraph'", specifier = ">=1.12.0" },
@@ -9624,7 +9643,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "exa", "firecrawl", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "toolguard", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vllm", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "exa", "faiss", "firecrawl", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "toolguard", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vllm", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
 
 [[package]]
 name = "lfx-cohere"

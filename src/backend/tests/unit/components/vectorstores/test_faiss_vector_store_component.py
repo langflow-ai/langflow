@@ -4,8 +4,8 @@ import pytest
 
 pytest.importorskip("langchain_community")
 
-from lfx.components.FAISS.faiss import FaissVectorStoreComponent
 from lfx.io import BoolInput
+from lfx_bundles.faiss.faiss import FaissVectorStoreComponent
 
 
 class TestFaissVectorStoreComponentDefaults:

@@ -640,7 +640,7 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
         logger.error(f"Failed to import module {modname}: {e}", exc_info=True)
         return None
     # Extract the top-level subpackage name after "lfx.components."
-    # e.g., "lfx.components.Notion.add_content_to_page" -> "Notion"
+    # e.g., "lfx.components.processing.combine_text" -> "processing"
     mod_parts = modname.split(".")
     if len(mod_parts) <= MIN_MODULE_PARTS:
         return None

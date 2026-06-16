@@ -2,12 +2,11 @@ from typing import Any
 
 import requests
 from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, Field
-
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import DropdownInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from pydantic import BaseModel, Field
 
 
 class NotionSearch(LCToolComponent):
