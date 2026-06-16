@@ -785,3 +785,108 @@ async def test_debug_llm_real_subscription(client: AsyncClient, logged_in_header
     reply = response.json()["response"]
     assert isinstance(reply, str)
     assert reply.strip()
+
+
+# A realistic opening description plus answers to the questions a clarification
+# turn is likely to ask. Detailed answers let the model converge to clarity
+# within a handful of turns; the trailing nudges close out any lingering question
+# so the test stays bounded if the model keeps probing.
+_SMOKE_DESCRIPTION = (
+    "I want to build a recipe-sharing web app where home cooks can post their own "
+    "recipes, browse and search recipes by ingredient or cuisine, save favourites, "
+    "and leave ratings and comments on each other's recipes."
+)
+_SMOKE_ANSWERS = [
+    "It's for home cooks and food enthusiasts — anyone who wants to share or "
+    "discover recipes; no professional chefs needed.",
+    "Core features: post a recipe with ingredients, steps and a photo; search "
+    "and filter by ingredient and cuisine; save favourites; rate and comment.",
+    "Each recipe has a title, ingredient list, step-by-step instructions, a "
+    "photo, prep/cook time, and tags. Users have a profile with their recipes.",
+    "Main flows: sign up, post a recipe, search/browse, open a recipe, save it, and leave a rating or comment.",
+    "That covers everything I need — please write the product spec now.",
+    "Yes, that's complete. Please summarise the specification.",
+]
+# Hard cap on turns so a model that never stops asking fails loudly instead of
+# looping forever against a live subscription.
+_SMOKE_MAX_TURNS = 8
+
+
+@pytest.mark.api_key_required
+async def test_clarification_end_to_end_real_subscription(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Story 1.4 acceptance: a real clarification conversation reaches clarity end-to-end.
+
+    Excluded from the default suite (`api_key_required`); run with a live Claude
+    Code subscription via `-m api_key_required`. Pinned to Haiku — all real-LLM
+    tests use `claude-haiku-4-5`.
+
+    Drives the live `POST /chat` endpoint with a realistic app description and
+    progressively detailed answers. Asserts the model asks focused questions with
+    tappable suggestions while gathering requirements, then within a few turns
+    emits `[CLARITY_REACHED]`: the project advances to DIAGRAM_GENERATION, the
+    control token is stripped, and `GET /prd` returns the stored summary.
+    """
+    if find_spec("claude_agent_sdk") is None:
+        pytest.skip("claude-agent-sdk not installed")
+    monkeypatch.setenv("LOTHAL_MODEL_NAME", "claude-haiku-4-5")
+
+    project_id = await _create_chat_project(client, logged_in_headers, name="Recipe App")
+
+    async def send(content: str) -> dict:
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/chat", json={"content": content}, headers=logged_in_headers
+        )
+        assert response.status_code == status.HTTP_200_OK, response.text
+        return response.json()
+
+    # Opening turn: a vague idea should keep the project in CLARIFICATION and draw
+    # a focused, non-empty question back.
+    reply = await send(_SMOKE_DESCRIPTION)
+    assert reply["role"] == "ASSISTANT"
+    assert reply["phase"] == "CLARIFICATION"
+    assert reply["content"].strip()
+    assert "[CLARITY_REACHED]" not in reply["content"]
+
+    saw_suggestions = bool(reply["suggestions"])
+
+    async def has_transitioned() -> bool:
+        # A turn's reply is stamped with the phase it ran *under*, so a transition
+        # only shows up on the project row — never on `reply["phase"]`.
+        project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+        return project["phase"] != "CLARIFICATION"
+
+    transitioned = await has_transitioned()
+
+    # Keep answering until the model reaches clarity (phase moves off CLARIFICATION),
+    # falling back to a generic nudge once the canned answers run out.
+    answers = iter(_SMOKE_ANSWERS)
+    turns = 1
+    while not transitioned and turns < _SMOKE_MAX_TURNS:
+        answer = next(answers, "That's everything you need — please write the spec now.")
+        reply = await send(answer)
+        turns += 1
+        saw_suggestions = saw_suggestions or bool(reply["suggestions"])
+        transitioned = await has_transitioned()
+
+    # Clarity must be reached within the bounded number of turns.
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "DIAGRAM_GENERATION", f"never reached clarity in {turns} turns"
+
+    # At least one clarification turn offered tappable suggestions (focused questions).
+    assert saw_suggestions, "no clarification turn returned suggestions"
+
+    # The clarity turn's reply is the PRD summary with the control token stripped.
+    assert "[CLARITY_REACHED]" not in reply["content"]
+    assert reply["suggestions"] == []
+
+    # The PRD is stored and surfaced by `GET /prd`, token-free.
+    prd = (await client.get(f"api/v1/lothal/projects/{project_id}/prd", headers=logged_in_headers)).json()
+    assert prd["content"], "PRD was not stored on transition"
+    assert "[CLARITY_REACHED]" not in prd["content"]
+    assert project["prd_content"] == prd["content"]
+
+    # History replays the whole exchange, oldest first, alternating user/assistant.
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert len(messages) == turns * 2  # each turn = user + assistant
+    assert messages[0]["role"] == "USER"
+    assert all("[CLARITY_REACHED]" not in m["content"] for m in messages)
