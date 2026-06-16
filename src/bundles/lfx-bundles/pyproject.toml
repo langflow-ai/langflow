@@ -31,6 +31,7 @@ apify = ["apify-client>=1.8.1", "langchain-community>=0.4.1,<1.0.0"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
 azure = ["langchain-openai>=1.1.6"]
 chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", "langchain-community>=0.4.1,<1.0.0"]
+cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
 clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
 cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
@@ -42,6 +43,7 @@ git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
 groq = ["langchain-groq~=1.1.1"]
 icosacomputing = ["requests>=2.32.0"]
+jigsawstack = ["jigsawstack==0.2.7"]
 litellm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 lmstudio = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"]
 mem0 = ["mem0ai>=2.0.2,<3.0.0"]
@@ -63,6 +65,7 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 supabase = ["supabase>=2.6.0,<3.0.0", "langchain-community>=0.4.1,<1.0.0"]
 tavily = []
 toolguard = ["toolguard>=0.2.16,<1.0.0"]
+twelvelabs = ["twelvelabs>=0.4.7,<1.0.0"]
 unstructured = ["langchain-unstructured~=1.0.0"]
 upstash = ["upstash-vector==0.6.0", "langchain-community>=0.4.1,<1.0.0"]
 vllm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
@@ -79,6 +82,7 @@ all = [
     "lfx-bundles[assemblyai]",
     "lfx-bundles[azure]",
     "lfx-bundles[chroma]",
+    "lfx-bundles[cleanlab]",
     "lfx-bundles[clickhouse]",
     "lfx-bundles[cometapi]",
     "lfx-bundles[confluence]",
@@ -90,6 +94,7 @@ all = [
     "lfx-bundles[glean]",
     "lfx-bundles[groq]",
     "lfx-bundles[icosacomputing]",
+    "lfx-bundles[jigsawstack]",
     "lfx-bundles[litellm]",
     "lfx-bundles[lmstudio]",
     "lfx-bundles[mem0]",
@@ -111,6 +116,7 @@ all = [
     "lfx-bundles[supabase]",
     "lfx-bundles[tavily]",
     "lfx-bundles[toolguard]",
+    "lfx-bundles[twelvelabs]",
     "lfx-bundles[unstructured]",
     "lfx-bundles[upstash]",
     "lfx-bundles[vllm]",

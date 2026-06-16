@@ -2120,6 +2120,426 @@
       "legacy_slot": "ext:toolguard:PoliciesComponent@official-pre-a",
       "target": "ext:toolguard:PoliciesComponent@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "CleanlabEvaluator",
+      "target": "ext:cleanlab:CleanlabEvaluator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.cleanlab_evaluator.CleanlabEvaluator",
+      "target": "ext:cleanlab:CleanlabEvaluator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.CleanlabEvaluator",
+      "target": "ext:cleanlab:CleanlabEvaluator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:cleanlab:CleanlabEvaluator@official-pre-a",
+      "target": "ext:cleanlab:CleanlabEvaluator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "CleanlabRAGEvaluator",
+      "target": "ext:cleanlab:CleanlabRAGEvaluator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.cleanlab_rag_evaluator.CleanlabRAGEvaluator",
+      "target": "ext:cleanlab:CleanlabRAGEvaluator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.CleanlabRAGEvaluator",
+      "target": "ext:cleanlab:CleanlabRAGEvaluator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:cleanlab:CleanlabRAGEvaluator@official-pre-a",
+      "target": "ext:cleanlab:CleanlabRAGEvaluator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "CleanlabRemediator",
+      "target": "ext:cleanlab:CleanlabRemediator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.cleanlab_remediator.CleanlabRemediator",
+      "target": "ext:cleanlab:CleanlabRemediator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.CleanlabRemediator",
+      "target": "ext:cleanlab:CleanlabRemediator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:cleanlab:CleanlabRemediator@official-pre-a",
+      "target": "ext:cleanlab:CleanlabRemediator@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "ConvertAstraToTwelveLabs",
+      "target": "ext:twelvelabs:ConvertAstraToTwelveLabs@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.convert_astra_results.ConvertAstraToTwelveLabs",
+      "target": "ext:twelvelabs:ConvertAstraToTwelveLabs@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.ConvertAstraToTwelveLabs",
+      "target": "ext:twelvelabs:ConvertAstraToTwelveLabs@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:ConvertAstraToTwelveLabs@official-pre-a",
+      "target": "ext:twelvelabs:ConvertAstraToTwelveLabs@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "PegasusIndexVideo",
+      "target": "ext:twelvelabs:PegasusIndexVideo@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.pegasus_index.PegasusIndexVideo",
+      "target": "ext:twelvelabs:PegasusIndexVideo@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.PegasusIndexVideo",
+      "target": "ext:twelvelabs:PegasusIndexVideo@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:PegasusIndexVideo@official-pre-a",
+      "target": "ext:twelvelabs:PegasusIndexVideo@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "SplitVideoComponent",
+      "target": "ext:twelvelabs:SplitVideoComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.split_video.SplitVideoComponent",
+      "target": "ext:twelvelabs:SplitVideoComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.SplitVideoComponent",
+      "target": "ext:twelvelabs:SplitVideoComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:SplitVideoComponent@official-pre-a",
+      "target": "ext:twelvelabs:SplitVideoComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "TwelveLabsTextEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.text_embeddings.TwelveLabsTextEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TwelveLabsTextEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TwelveLabsTextEmbeddingsComponent@official-pre-a",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "TwelveLabsPegasus",
+      "target": "ext:twelvelabs:TwelveLabsPegasus@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.twelvelabs_pegasus.TwelveLabsPegasus",
+      "target": "ext:twelvelabs:TwelveLabsPegasus@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TwelveLabsPegasus",
+      "target": "ext:twelvelabs:TwelveLabsPegasus@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TwelveLabsPegasus@official-pre-a",
+      "target": "ext:twelvelabs:TwelveLabsPegasus@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "TwelveLabsVideoEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.video_embeddings.TwelveLabsVideoEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TwelveLabsVideoEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TwelveLabsVideoEmbeddingsComponent@official-pre-a",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "VideoFileComponent",
+      "target": "ext:twelvelabs:VideoFileComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.video_file.VideoFileComponent",
+      "target": "ext:twelvelabs:VideoFileComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.VideoFileComponent",
+      "target": "ext:twelvelabs:VideoFileComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:VideoFileComponent@official-pre-a",
+      "target": "ext:twelvelabs:VideoFileComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackAIScraperComponent",
+      "target": "ext:jigsawstack:JigsawStackAIScraperComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.ai_scrape.JigsawStackAIScraperComponent",
+      "target": "ext:jigsawstack:JigsawStackAIScraperComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackAIScraperComponent",
+      "target": "ext:jigsawstack:JigsawStackAIScraperComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackAIScraperComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackAIScraperComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackAIWebSearchComponent",
+      "target": "ext:jigsawstack:JigsawStackAIWebSearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.ai_web_search.JigsawStackAIWebSearchComponent",
+      "target": "ext:jigsawstack:JigsawStackAIWebSearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackAIWebSearchComponent",
+      "target": "ext:jigsawstack:JigsawStackAIWebSearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackAIWebSearchComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackAIWebSearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackFileReadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileReadComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.file_read.JigsawStackFileReadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileReadComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackFileReadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileReadComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackFileReadComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackFileReadComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackFileUploadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileUploadComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.file_upload.JigsawStackFileUploadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileUploadComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackFileUploadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileUploadComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackFileUploadComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackFileUploadComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackImageGenerationComponent",
+      "target": "ext:jigsawstack:JigsawStackImageGenerationComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.image_generation.JigsawStackImageGenerationComponent",
+      "target": "ext:jigsawstack:JigsawStackImageGenerationComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackImageGenerationComponent",
+      "target": "ext:jigsawstack:JigsawStackImageGenerationComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackImageGenerationComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackImageGenerationComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackNSFWComponent",
+      "target": "ext:jigsawstack:JigsawStackNSFWComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.nsfw.JigsawStackNSFWComponent",
+      "target": "ext:jigsawstack:JigsawStackNSFWComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackNSFWComponent",
+      "target": "ext:jigsawstack:JigsawStackNSFWComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackNSFWComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackNSFWComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackObjectDetectionComponent",
+      "target": "ext:jigsawstack:JigsawStackObjectDetectionComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.object_detection.JigsawStackObjectDetectionComponent",
+      "target": "ext:jigsawstack:JigsawStackObjectDetectionComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackObjectDetectionComponent",
+      "target": "ext:jigsawstack:JigsawStackObjectDetectionComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackObjectDetectionComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackObjectDetectionComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackSentimentComponent",
+      "target": "ext:jigsawstack:JigsawStackSentimentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.sentiment.JigsawStackSentimentComponent",
+      "target": "ext:jigsawstack:JigsawStackSentimentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackSentimentComponent",
+      "target": "ext:jigsawstack:JigsawStackSentimentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackSentimentComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackSentimentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackTextToSQLComponent",
+      "target": "ext:jigsawstack:JigsawStackTextToSQLComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.text_to_sql.JigsawStackTextToSQLComponent",
+      "target": "ext:jigsawstack:JigsawStackTextToSQLComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackTextToSQLComponent",
+      "target": "ext:jigsawstack:JigsawStackTextToSQLComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackTextToSQLComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackTextToSQLComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackTextTranslateComponent",
+      "target": "ext:jigsawstack:JigsawStackTextTranslateComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.text_translate.JigsawStackTextTranslateComponent",
+      "target": "ext:jigsawstack:JigsawStackTextTranslateComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackTextTranslateComponent",
+      "target": "ext:jigsawstack:JigsawStackTextTranslateComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackTextTranslateComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackTextTranslateComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "JigsawStackVOCRComponent",
+      "target": "ext:jigsawstack:JigsawStackVOCRComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.vocr.JigsawStackVOCRComponent",
+      "target": "ext:jigsawstack:JigsawStackVOCRComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackVOCRComponent",
+      "target": "ext:jigsawstack:JigsawStackVOCRComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackVOCRComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackVOCRComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

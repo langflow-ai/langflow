@@ -9142,12 +9142,14 @@ all = [
     { name = "assemblyai" },
     { name = "atlassian-python-api" },
     { name = "chromadb" },
+    { name = "cleanlab-tlm" },
     { name = "clickhouse-connect" },
     { name = "couchbase" },
     { name = "firecrawl-py" },
     { name = "gitpython" },
     { name = "google-api-python-client" },
     { name = "google-search-results" },
+    { name = "jigsawstack" },
     { name = "langchain-chroma" },
     { name = "langchain-community" },
     { name = "langchain-groq" },
@@ -9177,6 +9179,7 @@ all = [
     { name = "spider-client" },
     { name = "supabase" },
     { name = "toolguard" },
+    { name = "twelvelabs" },
     { name = "upstash-vector" },
     { name = "weaviate-client" },
     { name = "wikipedia" },
@@ -9200,6 +9203,9 @@ chroma = [
     { name = "chromadb" },
     { name = "langchain-chroma" },
     { name = "langchain-community" },
+]
+cleanlab = [
+    { name = "cleanlab-tlm" },
 ]
 clickhouse = [
     { name = "clickhouse-connect" },
@@ -9237,6 +9243,9 @@ groq = [
 ]
 icosacomputing = [
     { name = "requests" },
+]
+jigsawstack = [
+    { name = "jigsawstack" },
 ]
 litellm = [
     { name = "langchain-openai" },
@@ -9309,6 +9318,9 @@ supabase = [
 toolguard = [
     { name = "toolguard" },
 ]
+twelvelabs = [
+    { name = "twelvelabs" },
+]
 unstructured = [
     { name = "langchain-unstructured" },
 ]
@@ -9355,12 +9367,14 @@ requires-dist = [
     { name = "assemblyai", marker = "extra == 'assemblyai'", specifier = ">=0.33.0,<1.0.0" },
     { name = "atlassian-python-api", marker = "extra == 'confluence'", specifier = "==3.41.16" },
     { name = "chromadb", marker = "extra == 'chroma'", specifier = ">=1.0.0,<2.0.0" },
+    { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "firecrawl-py", marker = "extra == 'firecrawl'", specifier = ">=1.0.16,<2.0.0" },
     { name = "gitpython", marker = "extra == 'git'", specifier = ">=3.1.50" },
     { name = "google-api-python-client", marker = "extra == 'youtube'", specifier = "~=2.161" },
     { name = "google-search-results", marker = "extra == 'serpapi'", specifier = ">=2.4.1,<3.0.0" },
+    { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
     { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
     { name = "langchain-community", marker = "extra == 'apify'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'chroma'", specifier = ">=0.4.1,<1.0.0" },
@@ -9403,6 +9417,7 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["assemblyai"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["azure"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["chroma"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["cleanlab"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["clickhouse"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["cometapi"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["confluence"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9414,6 +9429,7 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["glean"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["groq"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["icosacomputing"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["jigsawstack"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["litellm"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["lmstudio"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["mem0"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9435,6 +9451,7 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["supabase"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["tavily"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["toolguard"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["twelvelabs"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["unstructured"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["upstash"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["vllm"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9467,6 +9484,7 @@ requires-dist = [
     { name = "spider-client", marker = "extra == 'spider'", specifier = ">=0.0.27,<1.0.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
     { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.16,<1.0.0" },
+    { name = "twelvelabs", marker = "extra == 'twelvelabs'", specifier = ">=0.4.7,<1.0.0" },
     { name = "upstash-vector", marker = "extra == 'upstash'", specifier = "==0.6.0" },
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.10.2,<5.0.0" },
     { name = "wikipedia", marker = "extra == 'wikipedia'", specifier = "==1.4.0" },
@@ -9475,7 +9493,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["aiml", "apify", "assemblyai", "azure", "chroma", "clickhouse", "cometapi", "confluence", "couchbase", "deepseek", "exa", "firecrawl", "git", "glean", "groq", "icosacomputing", "litellm", "lmstudio", "mem0", "milvus", "mistral", "mongodb", "needle", "novita", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "sambanova", "scrapegraph", "serpapi", "spider", "supabase", "tavily", "toolguard", "unstructured", "upstash", "vllm", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
+provides-extras = ["aiml", "apify", "assemblyai", "azure", "chroma", "cleanlab", "clickhouse", "cometapi", "confluence", "couchbase", "deepseek", "exa", "firecrawl", "git", "glean", "groq", "icosacomputing", "jigsawstack", "litellm", "lmstudio", "mem0", "milvus", "mistral", "mongodb", "needle", "novita", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "sambanova", "scrapegraph", "serpapi", "spider", "supabase", "tavily", "toolguard", "twelvelabs", "unstructured", "upstash", "vllm", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
 
 [[package]]
 name = "lfx-cohere"

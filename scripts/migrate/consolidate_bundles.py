@@ -114,6 +114,10 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "openrouter": ["langchain-openai>=1.1.6"],
     "vllm": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"],
     "xai": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"],
+    # --- tranche 4: remaining single-SDK providers (post core-tail audit) ---
+    "cleanlab": ["cleanlab-tlm>=1.1.2,<2.0.0"],
+    "twelvelabs": ["twelvelabs>=0.4.7,<1.0.0"],
+    "jigsawstack": ["jigsawstack==0.2.7"],
 }
 
 _OPTIONAL_DEPS_HEADER = (
