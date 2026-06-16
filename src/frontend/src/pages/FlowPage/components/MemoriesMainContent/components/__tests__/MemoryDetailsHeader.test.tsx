@@ -463,27 +463,27 @@ describe("MemoryDetailsHeader", () => {
       const props = makeProps({ selectedSession: null });
       render(<MemoryDetailsHeader {...props} />);
 
-      expect(
-        screen.getByTestId("session-filter-button"),
-      ).toHaveTextContent("All Sessions");
+      expect(screen.getByTestId("session-filter-button")).toHaveTextContent(
+        "All Sessions",
+      );
     });
 
     it("shows 'All Sessions' label on trigger when selectedSession is ALL_SESSIONS_VALUE", () => {
       const props = makeProps({ selectedSession: ALL_SESSIONS_VALUE });
       render(<MemoryDetailsHeader {...props} />);
 
-      expect(
-        screen.getByTestId("session-filter-button"),
-      ).toHaveTextContent("All Sessions");
+      expect(screen.getByTestId("session-filter-button")).toHaveTextContent(
+        "All Sessions",
+      );
     });
 
     it("shows the selected session ID on the trigger when a specific session is active", () => {
       const props = makeProps({ selectedSession: "session-1" });
       render(<MemoryDetailsHeader {...props} />);
 
-      expect(
-        screen.getByTestId("session-filter-button"),
-      ).toHaveTextContent("session-1");
+      expect(screen.getByTestId("session-filter-button")).toHaveTextContent(
+        "session-1",
+      );
     });
 
     it("marks the 'All Sessions' item as checked when selectedSession is null", () => {

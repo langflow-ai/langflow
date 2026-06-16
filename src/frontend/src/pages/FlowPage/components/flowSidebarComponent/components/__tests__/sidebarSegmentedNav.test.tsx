@@ -378,8 +378,12 @@ describe("SidebarSegmentedNav", () => {
     const separatorIndex = nodes.findIndex(
       (n) => n.getAttribute("role") === "separator",
     );
-    const memoriesButton = container.querySelector('[data-testid="sidebar-nav-memories"]');
-    const memoriesItem = memoriesButton?.closest('[data-testid="sidebar-menu-item"]');
+    const memoriesButton = container.querySelector(
+      '[data-testid="sidebar-nav-memories"]',
+    );
+    const memoriesItem = memoriesButton?.closest(
+      '[data-testid="sidebar-menu-item"]',
+    );
     const memoriesIndex = nodes.indexOf(memoriesItem as Element);
     // Separator should appear immediately before memories
     expect(separatorIndex).toBe(memoriesIndex - 1);

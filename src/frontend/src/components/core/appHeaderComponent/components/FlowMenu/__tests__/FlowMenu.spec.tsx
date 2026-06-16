@@ -51,8 +51,7 @@ jest.mock("@/stores/flowsManagerStore", () => ({
 }));
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
-  default: (sel: (s: object) => unknown) =>
-    sel({ setSuccessData: jest.fn() }),
+  default: (sel: (s: object) => unknown) => sel({ setSuccessData: jest.fn() }),
 }));
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
