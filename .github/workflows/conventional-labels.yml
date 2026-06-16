@@ -18,12 +18,7 @@ jobs:
           access_token: ${{ secrets.GITHUB_TOKEN }}
           issue: false
 
-  label:
-    needs: validate-pr
-    name: Label PR
-    runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.user.type != 'Bot'}}
-    steps:
-      - uses: bcoe/conventional-release-labels@v1
-        with:
-          type_labels: '{"feat": "enhancement","fix": "bug","docs": "documentation","style": "style","refactor": "refactor","perf": "performance","test": "test","chore": "chore","build": "build"}'
+  # NOTE: the upstream `label` job (bcoe/conventional-release-labels) was removed
+  # on this fork — its GITHUB_TOKEN can't write labels here ("Resource not
+  # accessible by integration"), so it failed on every PR. Conventional-commit
+  # validation above still runs.
