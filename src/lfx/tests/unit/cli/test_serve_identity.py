@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -326,6 +327,14 @@ class TestIdentityVerifierJwt:
 
     def test_missing_claim_rejected(self, verifier, keypair):
         token = _sign(keypair, {"sub": "no-email-here"})  # claim is 'email'
+        with pytest.raises(HTTPException) as exc:
+            verifier.authenticate(self._headers(token))
+        assert exc.value.status_code == 401
+
+    @pytest.mark.parametrize("blank", ["", "   ", "\t", "\n "])
+    def test_blank_claim_rejected(self, verifier, keypair, blank):
+        # An empty or whitespace-only claim must not become a (blank) user_id.
+        token = _sign(keypair, {"email": blank})
         with pytest.raises(HTTPException) as exc:
             verifier.authenticate(self._headers(token))
         assert exc.value.status_code == 401
@@ -720,8 +729,12 @@ class TestServeCli:
         with patch.dict(os.environ, {"COLUMNS": "200"}):
             result = CliRunner().invoke(app, ["serve", "--help"])
         assert result.exit_code == 0
-        assert "--identity-mode" in result.output
-        assert "--identity-jwt-issuer" in result.output
+        # Strip ANSI styling: rich colorizes each hyphen-segment of an option name
+        # (``-``/``-identity``/``-mode``), so the raw output never holds the literal
+        # ``--identity-mode`` substring when color is forced (as it is in CI).
+        plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+        assert "--identity-mode" in plain
+        assert "--identity-jwt-issuer" in plain
 
     def test_jwt_mode_without_issuer_fails_fast(self):
         from lfx.__main__ import app

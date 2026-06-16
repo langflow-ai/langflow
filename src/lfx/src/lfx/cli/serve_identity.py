@@ -452,7 +452,9 @@ class IdentityVerifier:
             raise HTTPException(status_code=401, detail="Invalid identity token") from exc
 
         identity = claims.get(self._config.claim)
-        if identity is None or identity == "":
+        # Reject missing, empty, and whitespace-only string claims; a non-string claim
+        # (e.g. a numeric sub) is left to str() below.
+        if identity is None or (isinstance(identity, str) and not identity.strip()):
             raise HTTPException(status_code=401, detail=f"Token missing claim '{self._config.claim}'")
         return str(identity)
 
