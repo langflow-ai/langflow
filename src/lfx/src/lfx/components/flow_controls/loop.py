@@ -28,8 +28,8 @@ class LoopComponent(Component):
         HandleInput(
             name="data",
             display_name="Inputs",
-            info="The initial DataFrame to iterate over.",
-            input_types=["DataFrame", "Table"],
+            info="Data to iterate over. Accepts DataFrame, Table, Data, or Message.",
+            input_types=["DataFrame", "Table", "Data", "Message"],
         ),
     ]
 
@@ -38,11 +38,18 @@ class LoopComponent(Component):
             display_name="Item",
             name="item",
             method="item_output",
+            types=["Data"],
             allows_loop=True,
             loop_types=["Message"],
             group_outputs=True,
         ),
-        Output(display_name="Done", name="done", method="done_output", group_outputs=True),
+        Output(
+            display_name="Done",
+            name="done",
+            method="done_output",
+            types=["DataFrame", "Table"],
+            group_outputs=True,
+        ),
     ]
 
     def initialize_data(self) -> None:
@@ -71,7 +78,16 @@ class LoopComponent(Component):
         return convert_to_data(message, auto_parse=False)
 
     def _validate_data(self, data):
-        """Validate and return a list of Data objects."""
+        """Validate and return a list of Data objects.
+
+        Message inputs (e.g. from ChatInput or Agent) are converted to a clean
+        Data object first so iteration sees the message payload rather than the
+        full Message envelope. `Message` subclasses `Data`, so without this it
+        would be accepted verbatim as a single Data carrying all of the
+        message metadata. `validate_data_input` handles DataFrame/Data/list.
+        """
+        if isinstance(data, Message):
+            data = self._convert_message_to_data(data)
         return validate_data_input(data)
 
     def get_loop_body_vertices(self) -> set[str]:
