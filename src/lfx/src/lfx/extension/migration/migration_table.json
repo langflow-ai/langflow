@@ -4560,6 +4560,26 @@
       "legacy_slot": "ext:cuga:CugaComponent@official-pre-a",
       "target": "ext:cuga:CugaComponent@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "LangWatchComponent",
+      "target": "ext:langwatch:LangWatchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.langwatch.langwatch.LangWatchComponent",
+      "target": "ext:langwatch:LangWatchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.langwatch.LangWatchComponent",
+      "target": "ext:langwatch:LangWatchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:langwatch:LangWatchComponent@official-pre-a",
+      "target": "ext:langwatch:LangWatchComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

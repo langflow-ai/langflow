@@ -155,6 +155,9 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         "cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'",
         "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
     ],
+    # --- tranche 9: langwatch evaluator (pure httpx REST; the langwatch SDK extra
+    # is for the tracing service, not this component) ---
+    "langwatch": [],
 }
 
 _OPTIONAL_DEPS_HEADER = (

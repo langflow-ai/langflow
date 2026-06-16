@@ -56,6 +56,7 @@ homeassistant = ["requests>=2.32.0"]
 huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'", "huggingface-hub[inference]>=1.0.0,<2.0.0", "langchain-community>=0.4.1,<1.0.0"]
 icosacomputing = ["requests>=2.32.0"]
 jigsawstack = ["jigsawstack==0.2.7"]
+langwatch = []
 litellm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 lmstudio = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"]
 maritalk = ["langchain-community>=0.4.1,<1.0.0"]
@@ -126,6 +127,7 @@ all = [
     "lfx-bundles[huggingface]",
     "lfx-bundles[icosacomputing]",
     "lfx-bundles[jigsawstack]",
+    "lfx-bundles[langwatch]",
     "lfx-bundles[litellm]",
     "lfx-bundles[lmstudio]",
     "lfx-bundles[maritalk]",
