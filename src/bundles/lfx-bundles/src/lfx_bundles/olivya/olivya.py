@@ -1,7 +1,6 @@
 import json
 
 import httpx
-
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
 from lfx.log.logger import logger

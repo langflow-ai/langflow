@@ -2780,6 +2780,86 @@
       "legacy_slot": "ext:vectara:VectaraRagComponent@official-pre-a",
       "target": "ext:vectara:VectaraRagComponent@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "HomeAssistantControl",
+      "target": "ext:homeassistant:HomeAssistantControl@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.homeassistant.home_assistant_control.HomeAssistantControl",
+      "target": "ext:homeassistant:HomeAssistantControl@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.homeassistant.HomeAssistantControl",
+      "target": "ext:homeassistant:HomeAssistantControl@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:homeassistant:HomeAssistantControl@official-pre-a",
+      "target": "ext:homeassistant:HomeAssistantControl@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "ListHomeAssistantStates",
+      "target": "ext:homeassistant:ListHomeAssistantStates@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.homeassistant.list_home_assistant_states.ListHomeAssistantStates",
+      "target": "ext:homeassistant:ListHomeAssistantStates@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.homeassistant.ListHomeAssistantStates",
+      "target": "ext:homeassistant:ListHomeAssistantStates@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:homeassistant:ListHomeAssistantStates@official-pre-a",
+      "target": "ext:homeassistant:ListHomeAssistantStates@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "OlivyaComponent",
+      "target": "ext:olivya:OlivyaComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.olivya.olivya.OlivyaComponent",
+      "target": "ext:olivya:OlivyaComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.olivya.OlivyaComponent",
+      "target": "ext:olivya:OlivyaComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:olivya:OlivyaComponent@official-pre-a",
+      "target": "ext:olivya:OlivyaComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AgentQL",
+      "target": "ext:agentql:AgentQL@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.agentql.agentql_api.AgentQL",
+      "target": "ext:agentql:AgentQL@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.agentql.AgentQL",
+      "target": "ext:agentql:AgentQL@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:agentql:AgentQL@official-pre-a",
+      "target": "ext:agentql:AgentQL@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

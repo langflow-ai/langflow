@@ -127,6 +127,10 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "maritalk": [_LC_COMMUNITY],  # ChatMaritalk (community)
     "searchapi": [_LC_COMMUNITY],  # SearchApiAPIWrapper (community)
     "vectara": [_LC_COMMUNITY],  # Vectara (community)
+    # --- tranche 6: REST-wrapper providers (httpx/requests, no vendor SDK) ---
+    "homeassistant": ["requests>=2.32.0"],  # REST via requests; no vendor SDK
+    "olivya": [],  # httpx REST only (lfx core)
+    "agentql": [],  # httpx REST only (lfx core)
 }
 
 _OPTIONAL_DEPS_HEADER = (

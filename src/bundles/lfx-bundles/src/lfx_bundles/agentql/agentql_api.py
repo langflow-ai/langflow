@@ -1,5 +1,4 @@
 import httpx
-
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput

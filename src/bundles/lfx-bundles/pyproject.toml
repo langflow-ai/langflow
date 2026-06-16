@@ -26,6 +26,7 @@ dependencies = [
 # PEP 685-normalized (lowercase, hyphen-separated). ``all`` is GENERATED
 # from the per-provider keys -- never hand-edit it. Managed by
 # scripts/migrate/consolidate_bundles.py.
+agentql = []
 aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 apify = ["apify-client>=1.8.1", "langchain-community>=0.4.1,<1.0.0"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
@@ -46,6 +47,7 @@ firecrawl = ["firecrawl-py>=1.0.16,<2.0.0"]
 git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
 groq = ["langchain-groq~=1.1.1"]
+homeassistant = ["requests>=2.32.0"]
 icosacomputing = ["requests>=2.32.0"]
 jigsawstack = ["jigsawstack==0.2.7"]
 litellm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
@@ -57,6 +59,7 @@ mistral = ["langchain-mistralai~=1.1.1"]
 mongodb = ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"]
 needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
+olivya = []
 ollama = ["langchain-ollama~=0.3.10"]
 openrouter = ["langchain-openai>=1.1.6"]
 perplexity = ["langchain-perplexity>=1.0.0,<2.0.0"]
@@ -85,6 +88,7 @@ yahoosearch = ["yfinance==0.2.50"]
 youtube = ["pytube==15.0.0", "youtube-transcript-api>=1.0.0,<2.0.0", "google-api-python-client~=2.161"]
 zep = ["zep-python==2.0.2"]
 all = [
+    "lfx-bundles[agentql]",
     "lfx-bundles[aiml]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
@@ -105,6 +109,7 @@ all = [
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
     "lfx-bundles[groq]",
+    "lfx-bundles[homeassistant]",
     "lfx-bundles[icosacomputing]",
     "lfx-bundles[jigsawstack]",
     "lfx-bundles[litellm]",
@@ -116,6 +121,7 @@ all = [
     "lfx-bundles[mongodb]",
     "lfx-bundles[needle]",
     "lfx-bundles[novita]",
+    "lfx-bundles[olivya]",
     "lfx-bundles[ollama]",
     "lfx-bundles[openrouter]",
     "lfx-bundles[perplexity]",
