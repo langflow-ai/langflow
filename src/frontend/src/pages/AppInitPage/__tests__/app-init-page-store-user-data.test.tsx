@@ -77,6 +77,7 @@ function renderAppInit() {
 
 describe("AppInitPage — Zustand store user data on session restore", () => {
   beforeEach(() => {
+    sessionData = undefined;
     useAuthStore.setState({
       userData: null,
       isAuthenticated: false,
@@ -104,12 +105,17 @@ describe("AppInitPage — Zustand store user data on session restore", () => {
   });
 
   it("clears the auth store userData when the session is explicitly unauthenticated", () => {
-    useAuthStore.setState({ userData: { username: "admin" } as Users });
+    useAuthStore.setState({
+      userData: { username: "admin" } as Users,
+      isAdmin: true,
+    });
     sessionData = { authenticated: false };
 
     renderAppInit();
 
-    expect(useAuthStore.getState().userData).toBeNull();
-    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    const state = useAuthStore.getState();
+    expect(state.userData).toBeNull();
+    expect(state.isAuthenticated).toBe(false);
+    expect(state.isAdmin).toBe(false);
   });
 });

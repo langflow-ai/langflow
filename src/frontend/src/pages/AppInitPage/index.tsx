@@ -68,9 +68,13 @@ export function AppInitPage() {
         storeApiKey(sessionData.store_api_key);
       }
     } else if (sessionData && !sessionData.authenticated) {
-      // Explicitly not authenticated
+      // Explicitly not authenticated — clear every auth-derived holder so a
+      // session that flips to signed-out while mounted can't leave stale
+      // identity or admin state behind.
+      setUserData(null);
       setStoreUserData(null);
       setIsAuthenticated(false);
+      setIsAdmin(false);
     }
   }, [sessionData]);
 
