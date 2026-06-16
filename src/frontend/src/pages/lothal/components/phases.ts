@@ -59,7 +59,7 @@ export const PHASES: PhaseMeta[] = [
     id: "DONE",
     label: "Deliver",
     short: "05",
-    status: { text: "ready to ship", action: false },
+    status: { text: "ready to deliver", action: false },
   },
 ];
 

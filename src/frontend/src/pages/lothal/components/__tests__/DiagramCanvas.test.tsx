@@ -47,7 +47,10 @@ jest.mock("@xyflow/react", () => ({
   Position: { Left: "left", Right: "right" },
 }));
 
+import { ActorNode } from "../ActorNode";
 import { DiagramCanvas } from "../DiagramCanvas";
+import type { CanvasNodeData } from "../nodeStyles";
+import { SystemNode } from "../SystemNode";
 
 const nodes: DiagramNode[] = [
   {
@@ -108,5 +111,82 @@ describe("DiagramCanvas", () => {
     expect(screen.queryByTestId("rf-minimap")).not.toBeInTheDocument();
     expect(screen.queryByTestId("rf-panel")).not.toBeInTheDocument();
     expect(screen.getByTestId("rf-background")).toBeInTheDocument();
+  });
+});
+
+// Helper that builds the minimal props object ActorNode/SystemNode consume.
+// TypeScript's NodeProps<T> carries many required layout fields that only
+// xyflow's renderer supplies at runtime; these nodes read only `data`, so the
+// helper is typed `any` to spread just `data` into the node under test.
+// biome-ignore lint/suspicious/noExplicitAny: test-only minimal node props
+function nodeProps(data: CanvasNodeData): any {
+  return { data };
+}
+
+describe("ActorNode — direct render", () => {
+  it("renders the label and falls back to 'Actor' when label is absent", () => {
+    render(<ActorNode {...nodeProps({ label: "Alice" })} />);
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+  });
+
+  it("uses 'Actor' as the label fallback when data.label is undefined", () => {
+    render(<ActorNode {...nodeProps({})} />);
+    expect(screen.getByText("Actor")).toBeInTheDocument();
+  });
+
+  it("renders the optional note when supplied", () => {
+    render(
+      <ActorNode {...nodeProps({ label: "Bob", note: "initiates flow" })} />,
+    );
+    expect(screen.getByText("initiates flow")).toBeInTheDocument();
+  });
+
+  it("omits the note element when data.note is absent", () => {
+    const { container } = render(
+      <ActorNode {...nodeProps({ label: "Bob" })} />,
+    );
+    // The note span has small muted text; confirm it's not rendered.
+    expect(container.querySelector('[style*="ink-soft"]')).toBeNull();
+  });
+
+  it("renders the kind hint when data.kind is supplied", () => {
+    render(<ActorNode {...nodeProps({ label: "Alice", kind: "person" })} />);
+    expect(screen.getByLabelText("kind: person")).toBeInTheDocument();
+    expect(screen.getByLabelText("kind: person").textContent).toBe("person");
+  });
+
+  it("omits the kind hint when data.kind is absent", () => {
+    render(<ActorNode {...nodeProps({ label: "Alice" })} />);
+    expect(screen.queryByLabelText(/^kind:/)).toBeNull();
+  });
+});
+
+describe("SystemNode — direct render", () => {
+  it("renders the label and falls back to 'System' when label is absent", () => {
+    render(<SystemNode {...nodeProps({ label: "API" })} />);
+    expect(screen.getByText("API")).toBeInTheDocument();
+  });
+
+  it("uses 'System' as the label fallback when data.label is undefined", () => {
+    render(<SystemNode {...nodeProps({})} />);
+    expect(screen.getByText("System")).toBeInTheDocument();
+  });
+
+  it("renders the optional note when supplied", () => {
+    render(
+      <SystemNode {...nodeProps({ label: "Cache", note: "Redis layer" })} />,
+    );
+    expect(screen.getByText("Redis layer")).toBeInTheDocument();
+  });
+
+  it("renders the kind hint when data.kind is supplied", () => {
+    render(<SystemNode {...nodeProps({ label: "DB", kind: "data" })} />);
+    expect(screen.getByLabelText("kind: data")).toBeInTheDocument();
+    expect(screen.getByLabelText("kind: data").textContent).toBe("data");
+  });
+
+  it("omits the kind hint when data.kind is absent", () => {
+    render(<SystemNode {...nodeProps({ label: "API" })} />);
+    expect(screen.queryByLabelText(/^kind:/)).toBeNull();
   });
 });

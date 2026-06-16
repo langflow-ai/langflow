@@ -304,4 +304,62 @@ describe("Lothal Workspace", () => {
     render(<Workspace />);
     expect(document.title).toBe("Lothal");
   });
+
+  // --- New: project-fetch error handling ---
+
+  it("shows the not-found state when the project GET returns 404", () => {
+    mockUseProject.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: { response: { status: 404 } },
+      refetch: jest.fn(),
+    });
+    render(<Workspace />);
+    expect(screen.getByText("Project not found")).toBeInTheDocument();
+    // Should NOT show the transient-error state.
+    expect(
+      screen.queryByText(/Couldn.t load this project/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the error+retry state (not not-found) when the project GET 500s on all attempts", () => {
+    const mockRefetch = jest.fn();
+    mockUseProject.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: { response: { status: 500 } },
+      refetch: mockRefetch,
+    });
+    render(<Workspace />);
+    expect(screen.getByText(/Couldn.t load this project/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Something went wrong reaching the server. Try again in a moment.",
+      ),
+    ).toBeInTheDocument();
+    // Should NOT show the not-found state.
+    expect(screen.queryByText("Project not found")).not.toBeInTheDocument();
+    // Retry button calls refetch.
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it("renders the version badge in the Workspace TopBar", () => {
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
+    render(<Workspace />);
+    // LOTHAL_VERSION may be "dev" or a semver string — the badge is always present.
+    const badge = screen.getByText(/^v/);
+    expect(badge).toBeInTheDocument();
+  });
+
+  it("navigates to /lothal/settings when the TopBar Settings affordance is clicked", () => {
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
+    render(<Workspace />);
+    // The account/settings button uses aria-label containing "settings".
+    const settingsBtn = screen.getByRole("button", { name: /settings/i });
+    fireEvent.click(settingsBtn);
+    expect(mockNavigate).toHaveBeenCalledWith("/lothal/settings");
+  });
 });

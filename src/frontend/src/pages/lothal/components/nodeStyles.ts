@@ -6,6 +6,8 @@
 export type CanvasNodeData = {
   label?: string;
   note?: string;
+  /** Optional render hint set by canvasGraph.ts. Drives a subtle kind label. */
+  kind?: "person" | "service" | "ui" | "data";
 };
 
 // Small borderless accent dots for the left/right message handles.

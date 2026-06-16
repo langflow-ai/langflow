@@ -139,4 +139,31 @@ describe("Lothal SignUpPage", () => {
       list: ["username taken"],
     });
   });
+
+  it("shows the 403 signup-disabled message and does not navigate away", () => {
+    renderAt("/signup");
+    fill("Username", "ada");
+    fill("Password", "secret");
+    fill("Confirm password", "secret");
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    // Simulate the mutation's onError being called with the 403 response
+    // that the backend sends when LANGFLOW_ENABLE_SIGNUP=false.
+    const [, handlers] = mockMutate.mock.calls[0];
+    handlers.onError({
+      response: {
+        status: 403,
+        data: { detail: "Sign up is currently disabled." },
+      },
+    });
+
+    // The disabled message must be surfaced via the alert store.
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "Sign up failed",
+      list: ["Sign up is currently disabled."],
+    });
+
+    // The user must NOT be navigated away — they should stay on the signup page.
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
 });

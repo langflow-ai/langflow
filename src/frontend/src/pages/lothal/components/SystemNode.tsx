@@ -36,6 +36,21 @@ function SystemNodeImpl({ data }: NodeProps<SystemFlowNode>) {
           {data.note}
         </span>
       )}
+      {data.kind && (
+        <span
+          aria-label={`kind: ${data.kind}`}
+          style={{
+            fontSize: 9,
+            fontWeight: 500,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "var(--ink-faint)",
+            marginTop: 2,
+          }}
+        >
+          {data.kind}
+        </span>
+      )}
       <Handle type="source" position={Position.Right} style={HANDLE_STYLE} />
     </div>
   );

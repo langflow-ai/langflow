@@ -31,7 +31,9 @@ type TreeNode = {
 };
 
 // Build a nested folder/file tree from flat paths, folders before files and
-// alphabetical within each level.
+// alphabetical within each level. A segment can be both a file and a directory
+// prefix simultaneously (e.g. files ["app", "app/main.py"]); we create two
+// distinct sibling nodes in that case so React keys remain unique.
 function buildTree(files: FileEntry[]): TreeNode[] {
   const root: TreeNode = { name: "", path: "", isDir: true, children: [] };
   for (const file of files) {
@@ -40,8 +42,10 @@ function buildTree(files: FileEntry[]): TreeNode[] {
     parts.forEach((part, i) => {
       const isLeaf = i === parts.length - 1;
       const path = parts.slice(0, i + 1).join("/");
+      // Match by name AND the expected isDir value so a file and a directory
+      // that share the same path prefix can coexist as separate siblings.
       let child = node.children.find(
-        (c) => c.name === part && c.isDir !== isLeaf,
+        (c) => c.name === part && c.isDir === !isLeaf,
       );
       if (!child) {
         child = { name: part, path, isDir: !isLeaf, children: [] };
@@ -260,7 +264,7 @@ function TreeRow({
       {node.isDir && isOpen
         ? node.children.map((child) => (
             <TreeRow
-              key={child.path}
+              key={`${child.path}:${child.isDir ? "d" : "f"}`}
               node={child}
               depth={depth + 1}
               activePath={activePath}
@@ -513,7 +517,7 @@ export function CodeView({ files }: { files: FileEntry[] }): ReactNode {
         >
           {tree.map((node) => (
             <TreeRow
-              key={node.path}
+              key={`${node.path}:${node.isDir ? "d" : "f"}`}
               node={node}
               depth={0}
               activePath={activeFile?.path ?? null}

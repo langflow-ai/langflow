@@ -78,7 +78,13 @@ function ApiInterceptor() {
         if (shouldRetryRefresh) {
           if (
             error?.config?.url?.includes("github") ||
-            error?.config?.url?.includes("public")
+            error?.config?.url?.includes("public") ||
+            // Sign up (POST /users/) can legitimately 403 when public signup is
+            // disabled; surface that to the caller's onError instead of treating
+            // it as an expired session (refresh→logout would swallow the message).
+            // Scoped to POST so a GET /users/ with an expired token still refreshes.
+            (error?.config?.url?.includes("users") &&
+              error?.config?.method?.toLowerCase() === "post")
           ) {
             return Promise.reject(error);
           }

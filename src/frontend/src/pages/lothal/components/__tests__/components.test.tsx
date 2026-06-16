@@ -427,4 +427,29 @@ describe("CodeView", () => {
       screen.queryByRole("button", { name: "Close only.py" }),
     ).not.toBeInTheDocument();
   });
+
+  // Duplicate-key regression: a payload where a segment is both a file and a
+  // directory prefix (e.g. ["app", "app/main.py"]) must render both nodes with
+  // no duplicate-key React warning.
+  it("handles a file and dir that share the same path prefix without duplicate keys", () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const files = [
+        { path: "app", content: "# top-level file\n" },
+        { path: "app/main.py", content: "# nested\n" },
+      ];
+      render(<CodeView files={files} />);
+      // Both the "app" file node and the "app" directory node must appear.
+      // The directory shows up as a collapsible row containing "main.py".
+      // It may appear more than once (tree + tab), so we check at least one.
+      expect(screen.getAllByText("main.py").length).toBeGreaterThan(0);
+      // No duplicate-key console error from React.
+      const keyWarnings = errorSpy.mock.calls.filter((args) =>
+        String(args[0]).includes("same key"),
+      );
+      expect(keyWarnings).toHaveLength(0);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 });
