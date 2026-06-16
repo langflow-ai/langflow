@@ -12,6 +12,7 @@ directly instead — the mapping is per-provider by design.
 
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import TYPE_CHECKING, Any
 
@@ -53,6 +54,8 @@ class ClaudeAgentProvider(LLMProvider):
             async for message in sdk.query(prompt=prompt, options=options):
                 if isinstance(message, sdk.AssistantMessage):
                     parts.extend(block.text for block in message.content if isinstance(block, sdk.TextBlock))
+        except asyncio.CancelledError:
+            raise
         except Exception as exc:  # SDK / runtime / connection faults
             msg = f"Claude Agent SDK call failed: {exc}"
             raise LLMConnectionError(msg) from exc

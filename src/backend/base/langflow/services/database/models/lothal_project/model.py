@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
 
-from sqlalchemy import ForeignKey, Text, Uuid
+from sqlalchemy import DateTime, ForeignKey, Text, Uuid
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -41,7 +41,15 @@ class Project(SQLModel, table=True):  # type: ignore[call-arg]
     # JSON string of xyflow node positions; canvas-only, never sent to the LLM.
     diagram_layout: str | None = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(
+            DateTime,
+            default=lambda: datetime.now(timezone.utc),
+            onupdate=lambda: datetime.now(timezone.utc),
+            nullable=False,
+        ),
+    )
 
     messages: list["Message"] = Relationship(
         back_populates="project",
@@ -99,57 +107,3 @@ class CodeFile(SQLModel, table=True):  # type: ignore[call-arg]
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     project: Project | None = Relationship(back_populates="code_files")
-
-
-class ProjectCreate(SQLModel):
-    name: str
-
-
-class ProjectRead(SQLModel):
-    id: UUIDstr
-    user_id: UUIDstr
-    name: str
-    phase: str
-    prd_content: str | None
-    diagram_mmd: str | None
-    diagram_layout: str | None
-    created_at: datetime
-    updated_at: datetime
-
-
-class ProjectUpdate(SQLModel):
-    name: str | None = None
-    phase: str | None = None
-    prd_content: str | None = None
-    diagram_mmd: str | None = None
-    diagram_layout: str | None = None
-
-
-class MessageCreate(SQLModel):
-    role: str
-    content: str
-    phase: str
-    suggestions: list[str] = Field(default_factory=list)
-
-
-class MessageRead(SQLModel):
-    id: UUIDstr
-    project_id: UUIDstr
-    role: str
-    content: str
-    suggestions: list[str]
-    phase: str
-    created_at: datetime
-
-
-class CodeFileCreate(SQLModel):
-    path: str
-    content: str
-
-
-class CodeFileRead(SQLModel):
-    id: UUIDstr
-    project_id: UUIDstr
-    path: str
-    content: str
-    created_at: datetime
