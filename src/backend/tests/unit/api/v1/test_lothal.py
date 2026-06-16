@@ -337,9 +337,30 @@ async def test_malformed_diagram_layout_reads_as_null(client: AsyncClient, logge
 # `debug_llm` calls `call_llm` through its own module namespace, so the fakes
 # below patch `langflow.api.v1.lothal.call_llm` — the bridge itself stays
 # untouched and is covered by `tests/unit/lothal/test_llm_caller.py`.
+#
+# The endpoint triggers a real, billable model call, so it is superuser-gated:
+# the happy-path tests authenticate as a superuser (`logged_in_headers_super_user`)
+# and `test_debug_llm_forbidden_for_non_superuser` locks the gate in.
 
 
-async def test_debug_llm_returns_model_reply(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+async def test_debug_llm_forbidden_for_non_superuser(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """An ordinary authenticated user must not be able to drive LLM calls."""
+    called = False
+
+    async def fake_call_llm(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        return "should not reach here"
+
+    monkeypatch.setattr(lothal_api, "call_llm", fake_call_llm)
+
+    response = await client.post("api/v1/lothal/debug/llm", json={"message": "ping"}, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert called is False  # the gate runs before the handler body
+
+
+async def test_debug_llm_returns_model_reply(client: AsyncClient, logged_in_headers_super_user: dict, monkeypatch):
     captured = {}
 
     async def fake_call_llm(messages, **_kwargs):
@@ -348,7 +369,9 @@ async def test_debug_llm_returns_model_reply(client: AsyncClient, logged_in_head
 
     monkeypatch.setattr(lothal_api, "call_llm", fake_call_llm)
 
-    response = await client.post("api/v1/lothal/debug/llm", json={"message": "ping"}, headers=logged_in_headers)
+    response = await client.post(
+        "api/v1/lothal/debug/llm", json={"message": "ping"}, headers=logged_in_headers_super_user
+    )
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"response": "pong"}
@@ -356,29 +379,35 @@ async def test_debug_llm_returns_model_reply(client: AsyncClient, logged_in_head
 
 
 async def test_debug_llm_strips_whitespace_and_rejects_blank_message(
-    client: AsyncClient, logged_in_headers: dict, monkeypatch
+    client: AsyncClient, logged_in_headers_super_user: dict, monkeypatch
 ):
     async def fake_call_llm(messages, **_kwargs):
         return f"echo:{messages[0]['content']}"
 
     monkeypatch.setattr(lothal_api, "call_llm", fake_call_llm)
 
-    response = await client.post("api/v1/lothal/debug/llm", json={"message": "  hi  "}, headers=logged_in_headers)
+    response = await client.post(
+        "api/v1/lothal/debug/llm", json={"message": "  hi  "}, headers=logged_in_headers_super_user
+    )
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"response": "echo:hi"}
 
-    response = await client.post("api/v1/lothal/debug/llm", json={"message": "   "}, headers=logged_in_headers)
+    response = await client.post(
+        "api/v1/lothal/debug/llm", json={"message": "   "}, headers=logged_in_headers_super_user
+    )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-async def test_debug_llm_maps_config_error_to_503(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+async def test_debug_llm_maps_config_error_to_503(client: AsyncClient, logged_in_headers_super_user: dict, monkeypatch):
     async def fake_call_llm(*_args, **_kwargs):
         msg = "the `claude-agent-sdk` package is required"
         raise LLMConfigError(msg)
 
     monkeypatch.setattr(lothal_api, "call_llm", fake_call_llm)
 
-    response = await client.post("api/v1/lothal/debug/llm", json={"message": "ping"}, headers=logged_in_headers)
+    response = await client.post(
+        "api/v1/lothal/debug/llm", json={"message": "ping"}, headers=logged_in_headers_super_user
+    )
 
     assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     detail = response.json()["detail"]
@@ -386,14 +415,18 @@ async def test_debug_llm_maps_config_error_to_503(client: AsyncClient, logged_in
     assert "claude-agent-sdk" in detail
 
 
-async def test_debug_llm_maps_connection_error_to_502(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+async def test_debug_llm_maps_connection_error_to_502(
+    client: AsyncClient, logged_in_headers_super_user: dict, monkeypatch
+):
     async def fake_call_llm(*_args, **_kwargs):
         msg = "Claude returned an empty response."
         raise LLMConnectionError(msg)
 
     monkeypatch.setattr(lothal_api, "call_llm", fake_call_llm)
 
-    response = await client.post("api/v1/lothal/debug/llm", json={"message": "ping"}, headers=logged_in_headers)
+    response = await client.post(
+        "api/v1/lothal/debug/llm", json={"message": "ping"}, headers=logged_in_headers_super_user
+    )
 
     assert response.status_code == status.HTTP_502_BAD_GATEWAY
     detail = response.json()["detail"]
@@ -401,8 +434,99 @@ async def test_debug_llm_maps_connection_error_to_502(client: AsyncClient, logge
     assert "empty response" in detail
 
 
+# --- ORM update bumps updated_at (Task 1 regression) ----------------------------
+
+
+async def test_project_updated_at_bumped_on_orm_update(client: AsyncClient, active_user):  # noqa: ARG001 — client boots DB
+    """updated_at must advance when a field is mutated and the row flushed.
+
+    Uses session_scope directly (no HTTP round-trip) so the onupdate fires
+    through the ORM UPDATE path, which is what the Column(onupdate=...) hooks.
+    """
+    async with session_scope() as session:
+        project = Project(name="bump-test", user_id=active_user.id)
+        session.add(project)
+        await session.flush()
+        await session.refresh(project)
+        pk = project.id
+        created_at = project.created_at
+        updated_at_before = project.updated_at
+
+    # Mutate in a new session so that the ORM issues a genuine UPDATE statement.
+    async with session_scope() as session:
+        project = await session.get(Project, pk)
+        assert project is not None
+        project.name = "bump-test-renamed"
+        await session.flush()
+        await session.refresh(project)
+        updated_at_after = project.updated_at
+
+    assert updated_at_after >= created_at, "updated_at must not go before created_at"
+    assert updated_at_after > updated_at_before, "updated_at must advance after a mutation"
+
+    # Cleanup
+    async with session_scope() as session:
+        leftover = await session.get(Project, pk)
+        if leftover:
+            await session.delete(leftover)
+
+
+# --- Message suggestions round-trip (Task 5b) ------------------------------------
+
+
+async def test_message_suggestions_round_trip(client: AsyncClient, active_user):  # noqa: ARG001 — client boots DB
+    """Suggestions are persisted and survive a DB round-trip via the ORM.
+
+    Covers both a non-empty list (ASSISTANT clarification chips) and the []
+    default for USER messages, and asserts >= created_at for the created_at
+    column while we're here.
+    """
+    async with session_scope() as session:
+        project = Project(name="suggestions-test", user_id=active_user.id)
+        session.add(project)
+        await session.flush()
+        project_pk = project.id
+
+        assistant_msg = Message(
+            project_id=project_pk,
+            role="ASSISTANT",
+            content="Which framework?",
+            suggestions=["React", "Vue", "Svelte"],
+            phase="CLARIFICATION",
+        )
+        user_msg = Message(
+            project_id=project_pk,
+            role="USER",
+            content="React please",
+            phase="CLARIFICATION",
+        )
+        session.add(assistant_msg)
+        session.add(user_msg)
+        await session.flush()
+        assistant_pk = assistant_msg.id
+        user_pk = user_msg.id
+
+    # Read back in a fresh session to verify persistence.
+    async with session_scope() as session:
+        loaded_assistant = await session.get(Message, assistant_pk)
+        loaded_user = await session.get(Message, user_pk)
+
+        assert loaded_assistant is not None
+        assert loaded_assistant.suggestions == ["React", "Vue", "Svelte"]
+        assert loaded_assistant.created_at is not None
+
+        assert loaded_user is not None
+        assert loaded_user.suggestions == [], "USER message with default suggestions must be []"
+
+    # Cleanup — project cascade removes messages.
+    async with session_scope() as session:
+        leftover = await session.get(Project, project_pk)
+        if leftover:
+            await session.delete(leftover)
+
+
 @pytest.mark.api_key_required
-async def test_debug_llm_real_subscription(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+async def test_debug_llm_real_subscription(client: AsyncClient, logged_in_headers_super_user: dict, monkeypatch):
     """Story 0.4 acceptance: a real model reply comes back through the endpoint.
 
     Excluded from the default suite (`api_key_required`); run with a live
@@ -413,7 +537,9 @@ async def test_debug_llm_real_subscription(client: AsyncClient, logged_in_header
         pytest.skip("claude-agent-sdk not installed")
     monkeypatch.setenv("LOTHAL_MODEL_NAME", "claude-haiku-4-5")
 
-    response = await client.post("api/v1/lothal/debug/llm", json={"message": "say hi"}, headers=logged_in_headers)
+    response = await client.post(
+        "api/v1/lothal/debug/llm", json={"message": "say hi"}, headers=logged_in_headers_super_user
+    )
 
     assert response.status_code == status.HTTP_200_OK
     reply = response.json()["response"]

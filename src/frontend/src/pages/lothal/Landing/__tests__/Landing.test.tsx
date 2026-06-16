@@ -27,6 +27,7 @@ jest.mock("../../components/DiagramCanvas", () => ({
   ),
 }));
 
+import { LOTHAL_VERSION } from "../../components";
 import Landing from "../index";
 
 describe("Lothal Landing", () => {
@@ -106,5 +107,32 @@ describe("Lothal Landing", () => {
     render(<Landing />);
     fireEvent.click(screen.getByRole("button", { name: "How it works" }));
     expect(scrollSpy).toHaveBeenCalled();
+  });
+
+  // --- Version badge --------------------------------------------------------
+
+  it("renders a v-prefixed version badge in the footer from LOTHAL_VERSION", () => {
+    render(<Landing />);
+    // The footer renders `v{LOTHAL_VERSION}` in a mono span.  Assert that the
+    // rendered text starts with 'v' and equals the constant so neither the
+    // prefix nor the constant value can drift independently.
+    const expected = `v${LOTHAL_VERSION}`;
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.getByText(expected).textContent).toMatch(/^v/);
+  });
+
+  // --- Voice guard + Langflow credit ----------------------------------------
+
+  it("renders no nautical / dockyard wording anywhere on the page", () => {
+    render(<Landing />);
+    const body = document.body.textContent ?? "";
+    expect(body).not.toMatch(/harbor|vessel|dockyard|keel|drydock/i);
+  });
+
+  it("displays the 'Built on Langflow' credit in the footer", () => {
+    render(<Landing />);
+    // The footer credit is lowercase "built on langflow" in source; match
+    // case-insensitively so a capitalisation change doesn't create a false red.
+    expect(screen.getByText(/built on langflow/i)).toBeInTheDocument();
   });
 });

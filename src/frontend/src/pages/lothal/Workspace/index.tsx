@@ -142,6 +142,9 @@ function ChatPanel({ project }: { project: Project }) {
     setPending(trimmed);
     try {
       await send.mutateAsync(trimmed);
+      // Clear on success so the bubble doesn't stick if the /messages refetch
+      // errors. The useEffect below is the backstop when the refetch succeeds.
+      setPending(null);
     } catch {
       // Roll back the optimistic bubble and surface the failure inline.
       setPending(null);
@@ -343,7 +346,14 @@ function WorkspaceView() {
   const navigate = useNavigate();
   // One project, fetched directly — the workspace doesn't need (or wait for)
   // the whole project list. A 404 leaves `project` unset → the not-found state.
-  const { data: project, isLoading } = useProject(projectId ?? "");
+  // Non-404 failures (5xx, network) surface as `isError` → distinct error state.
+  const {
+    data: project,
+    isLoading,
+    isError: projectIsError,
+    error: projectError,
+    refetch: refetchProject,
+  } = useProject(projectId ?? "");
   const username = useAuthStore((s) => s.userData?.username);
   const initial = username ? username.charAt(0).toUpperCase() : "";
 
@@ -378,6 +388,38 @@ function WorkspaceView() {
         </span>
       </div>
     );
+  }
+
+  // Non-404 error: a transient 5xx or network failure. Distinct from not-found
+  // so the user isn’t misled into thinking their project was deleted.
+  if (projectIsError) {
+    const is404 =
+      (projectError as { response?: { status?: number } } | null)?.response
+        ?.status === 404;
+    if (!is404) {
+      return (
+        <div
+          style={{
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 16,
+          }}
+        >
+          <NotReady
+            title="Couldn’t load this project"
+            detail="Something went wrong reaching the server. Try again in a moment."
+            action={
+              <Button variant="accent" onClick={() => void refetchProject()}>
+                Retry
+              </Button>
+            }
+          />
+        </div>
+      );
+    }
   }
 
   if (!project) {

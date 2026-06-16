@@ -116,7 +116,8 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # LANGFLOW_SECRE
 #   - POSTGRES_PASSWORD            (compose derives LANGFLOW_DATABASE_URL from POSTGRES_*)
 #   - LANGFLOW_SUPERUSER_PASSWORD
 #   - LANGFLOW_SECRET_KEY          (generate once — see warning below)
-#   - OPENAI_BASE_URL / OPENAI_API_KEY / LOTHAL_MODEL_NAME   (the Epic 0+ LLM interface)
+#   - CLAUDE_CODE_OAUTH_TOKEN      (Claude Code subscription token — `claude setup-token`; the Epic 0+ LLM interface)
+#   - LOTHAL_LLM_PROVIDER / LOTHAL_MODEL_NAME   (optional; default claude / claude-opus-4-8)
 chmod 600 .env
 ```
 
@@ -175,7 +176,7 @@ gh secret list -R realbytecode/langflow          # confirm
 ```
 
 **Not stored in GitHub:** `POSTGRES_PASSWORD`, `LANGFLOW_SECRET_KEY`, `LANGFLOW_SUPERUSER_PASSWORD`,
-`OPENAI_*`, `LOTHAL_MODEL_NAME`. These live only in `/opt/lothal/.env` on the box. If you later
+`CLAUDE_CODE_OAUTH_TOKEN`, `LOTHAL_MODEL_NAME`. These live only in `/opt/lothal/.env` on the box. If you later
 prefer CI-rendered env, add them as secrets and have C.3 write `.env` — but keep `LANGFLOW_SECRET_KEY`
 out of any path that could regenerate it.
 

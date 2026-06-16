@@ -9,7 +9,9 @@ real implementation — its signature, response model, and the UI stay unchanged
 Auth is enforced router-wide via `get_current_active_user`. A missing token
 returns `403` (mapped from `MissingCredentialsError` by `_auth_error_to_http`
 in `services/auth/utils.py`); an invalid or expired token returns `401`. The
-auth tests accept either status.
+auth tests accept either status. `POST /debug/llm` narrows this to
+`get_current_active_superuser` — it triggers a real model call, so it is
+admin-only and not exposed to ordinary users in production.
 
 Ownership is enforced per-route via the `OwnedProject` dependency: every
 project-scoped route — stubs included — resolves `{project_id}` to a project
@@ -41,7 +43,7 @@ from langflow.lothal.schemas import (
     ProjectCreate,
     ProjectRead,
 )
-from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.database.models.lothal_project.model import Project
 
 router = APIRouter(
@@ -282,10 +284,17 @@ async def download_project(project: OwnedProject) -> JSONResponse:
 
 @router.post(
     "/debug/llm",
-    summary="Test LLM connectivity (dev only)",
+    dependencies=[Depends(get_current_active_superuser)],
+    summary="Test LLM connectivity (superuser only)",
 )
 async def debug_llm(body: DebugLLMRequest) -> DebugLLMResponse:
     """Round-trip one message through the configured LLM (Story 0.4).
+
+    Superuser-gated: every call is a real, billable model round-trip, so this
+    connectivity probe is restricted to admins (an ordinary authenticated user
+    must not be able to drive unmetered LLM calls against the operator's
+    subscription). The router-wide `get_current_active_user` is narrowed here to
+    `get_current_active_superuser`.
 
     The typed bridge errors map to distinct statuses so a curl can tell a
     misconfigured environment (503 — e.g. SDK missing or not logged in) apart

@@ -1,4 +1,4 @@
-/* Lothal design-system theme — the "dockyard" look: rust + Ubuntu aubergine.
+/* Lothal design-system theme — the editorial rust + aubergine look.
  *
  * Ported from the Claude Design bundle. Everything is scoped under
  * `.lothal-surface` so the rest of Langflow keeps its own theme untouched —
@@ -216,8 +216,8 @@
 
 /* --- Canvas (@xyflow/react) ------------------------------------------------
  * The base xyflow stylesheet ships light controls/edges; re-skin them with the
- * dockyard tokens so the canvas reads correctly in both themes. Scoped under
- * .lothal-surface so the main Langflow flow editor is untouched. */
+ * rust + aubergine tokens so the canvas reads correctly in both themes. Scoped
+ * under .lothal-surface so the main Langflow flow editor is untouched. */
 .lothal-surface .react-flow {
   background: var(--paper-deep);
 }

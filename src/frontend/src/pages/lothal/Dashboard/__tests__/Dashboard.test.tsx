@@ -17,6 +17,13 @@ jest.mock("@/controllers/API/queries/lothal", () => ({
 import { LOTHAL_VERSION } from "../../components";
 import Dashboard from "../index";
 
+// Fixed "now" used across relativeTime bucket tests: 2026-06-01T12:00:00Z.
+// Each fixture's updated_at is computed relative to this so the bucket
+// is unambiguous (staying well away from bucket edges avoids off-by-one
+// flakiness in the test runner).
+const NOW_ISO = "2026-06-01T12:00:00Z";
+const NOW_MS = new Date(NOW_ISO).getTime();
+
 const project = {
   id: "p1",
   user_id: "u1",
@@ -194,5 +201,136 @@ describe("Lothal Dashboard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     // Expected: the user is told the create failed (an alert surfaces).
     expect(screen.getByRole("alert")).toBeInTheDocument();
+  });
+
+  // --- relativeTime bucket tests -------------------------------------------
+  // These pin Date.now() to NOW_MS so bucket membership is deterministic.
+
+  describe("relativeTime buckets", () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(NOW_MS);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    function renderWithTimestamp(updatedAt: string) {
+      mockUseProjects.mockReturnValue({
+        data: [{ ...project, updated_at: updatedAt }],
+        isLoading: false,
+      });
+      render(<Dashboard />);
+    }
+
+    it("shows 'just now' when updated less than one minute ago", () => {
+      // 30 seconds before NOW — comfortably inside the < 1 min bucket.
+      const ts = new Date(NOW_MS - 30_000).toISOString();
+      renderWithTimestamp(ts);
+      expect(screen.getByText("just now")).toBeInTheDocument();
+    });
+
+    it("shows 'N minutes ago' when updated 1–59 minutes ago (singular)", () => {
+      // Exactly 1 minute ago.
+      const ts = new Date(NOW_MS - 60_000).toISOString();
+      renderWithTimestamp(ts);
+      expect(screen.getByText("1 minute ago")).toBeInTheDocument();
+    });
+
+    it("shows 'N minutes ago' when updated 1–59 minutes ago (plural)", () => {
+      // 5 minutes ago — well inside the minutes bucket.
+      const ts = new Date(NOW_MS - 5 * 60_000).toISOString();
+      renderWithTimestamp(ts);
+      expect(screen.getByText("5 minutes ago")).toBeInTheDocument();
+    });
+
+    it("shows 'N hours ago' when updated 1–23 hours ago (singular)", () => {
+      // Exactly 1 hour ago.
+      const ts = new Date(NOW_MS - 60 * 60_000).toISOString();
+      renderWithTimestamp(ts);
+      expect(screen.getByText("1 hour ago")).toBeInTheDocument();
+    });
+
+    it("shows 'N hours ago' when updated 1–23 hours ago (plural)", () => {
+      // 3 hours ago — well inside the hours bucket.
+      const ts = new Date(NOW_MS - 3 * 60 * 60_000).toISOString();
+      renderWithTimestamp(ts);
+      expect(screen.getByText("3 hours ago")).toBeInTheDocument();
+    });
+
+    it("shows 'yesterday' when updated exactly one day ago", () => {
+      // 26 hours ago — day===1, safely away from the 24 h and 48 h boundaries.
+      const ts = new Date(NOW_MS - 26 * 60 * 60_000).toISOString();
+      renderWithTimestamp(ts);
+      expect(screen.getByText("yesterday")).toBeInTheDocument();
+    });
+
+    it("shows 'N days ago' when updated 2–6 days ago", () => {
+      // 3 days ago — squarely in the days bucket (day===3).
+      const ts = new Date(NOW_MS - 3 * 24 * 60 * 60_000).toISOString();
+      renderWithTimestamp(ts);
+      expect(screen.getByText("3 days ago")).toBeInTheDocument();
+    });
+
+    it("shows an absolute date when updated 7 or more days ago", () => {
+      // 10 days before NOW_MS → 2026-05-22 — well past the 7-day cutoff.
+      const tenDaysAgo = new Date(NOW_MS - 10 * 24 * 60 * 60_000);
+      const ts = tenDaysAgo.toISOString();
+      renderWithTimestamp(ts);
+      // The source calls toLocaleDateString with { month:'short', day:'numeric',
+      // year:'numeric' }. We assert the year appears rather than hardcoding a
+      // locale-specific month/day string so the test stays locale-agnostic.
+      expect(
+        screen.getByText((text) => text.includes("2026")),
+      ).toBeInTheDocument();
+      // And it must NOT be a relative-time string.
+      expect(
+        screen.queryByText(/ago|just now|yesterday/i),
+      ).not.toBeInTheDocument();
+    });
+
+    it("appends 'Z' to bare UTC timestamps (no TZ offset) before computing the diff", () => {
+      // The API often sends naive timestamps without a trailing Z.  The
+      // toDate() helper must treat them as UTC so the browser's local offset
+      // doesn't corrupt the bucket.  We pass the bare form and assert the
+      // bucket is correct under the controlled clock.
+      // 5 minutes ago as a bare ISO string (no Z / offset).
+      const bareTs = new Date(NOW_MS - 5 * 60_000)
+        .toISOString()
+        .replace("Z", "");
+      renderWithTimestamp(bareTs);
+      expect(screen.getByText("5 minutes ago")).toBeInTheDocument();
+    });
+  });
+
+  // --- Settings navigation --------------------------------------------------
+
+  it("navigates to /lothal/settings when the TopBar 'Settings' button is clicked", () => {
+    mockUseProjects.mockReturnValue({ data: [], isLoading: false });
+    render(<Dashboard />);
+    // The TopBar right slot contains two Settings affordances: a text "Settings"
+    // button and an avatar button (which also resolves to name "Settings" when
+    // there's no logged-in username).  Both call navigate('/lothal/settings').
+    // Click the first one — the text button — and assert the route.
+    const settingsBtns = screen.getAllByRole("button", { name: "Settings" });
+    expect(settingsBtns.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(settingsBtns[0]);
+    expect(mockNavigate).toHaveBeenCalledWith("/lothal/settings");
+  });
+
+  // --- Voice guard ----------------------------------------------------------
+
+  it("renders no nautical / dockyard wording in the visible text", () => {
+    mockUseProjects.mockReturnValue({
+      data: [
+        { ...project, id: "p1", phase: "CLARIFICATION" },
+        { ...project, id: "p2", phase: "DONE" },
+      ],
+      isLoading: false,
+    });
+    render(<Dashboard />);
+    const body = document.body.textContent ?? "";
+    expect(body).not.toMatch(/harbor|vessel|dockyard|keel|drydock/i);
   });
 });

@@ -45,10 +45,17 @@ services:
       LANGFLOW_SUPERUSER: ${LANGFLOW_SUPERUSER}
       LANGFLOW_SUPERUSER_PASSWORD: ${LANGFLOW_SUPERUSER_PASSWORD}
       LANGFLOW_SECRET_KEY: ${LANGFLOW_SECRET_KEY}
-      # Lothal LLM interface (OpenAI-compatible) — consumed by the Epic 0+ engines
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Lothal LLM interface — consumed by the Epic 0+ engines. The only
+      # implemented provider is "claude" (Claude Agent SDK over a Claude Code
+      # subscription); it reads LOTHAL_LLM_PROVIDER + LOTHAL_MODEL_NAME and
+      # authenticates with CLAUDE_CODE_OAUTH_TOKEN. Without that token call_llm
+      # raises LLMConfigError (every LLM endpoint 503s), so it must be set in prod.
+      # NB: a set ANTHROPIC_API_KEY silently overrides the subscription and bills
+      # per-token — deliberately not passed through here.
+      LOTHAL_LLM_PROVIDER: ${LOTHAL_LLM_PROVIDER:-claude}
       LOTHAL_MODEL_NAME: ${LOTHAL_MODEL_NAME:-}
+      # Required: fail compose at parse time rather than booting into runtime 503s.
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:?CLAUDE_CODE_OAUTH_TOKEN is required in production}
     volumes:
       - lothal-langflow-data:/app/langflow  # secret_key, profile pics, etc. — must persist
     healthcheck:
