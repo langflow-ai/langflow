@@ -311,12 +311,18 @@ async def list_messages(*, session: DbSession, project: OwnedProject) -> list[Me
 
 @router.get(
     "/projects/{project_id}/prd",
-    response_model=PRDResponse,
-    responses=_NOT_IMPLEMENTED,
     summary="Get the project's PRD summary",
 )
-async def get_prd(project: OwnedProject) -> JSONResponse:
-    return stub("The PRD endpoint is not implemented yet.")
+async def get_prd(project: OwnedProject) -> PRDResponse:
+    """Return the synthesised PRD (Story 1.3).
+
+    `content` is `null` while the project is still in CLARIFICATION and becomes
+    the stored summary once the clarification engine reaches clarity and the
+    project leaves that phase (see `chat`, which writes `prd_content` on the
+    transition). This is a plain read of `lothal_project.prd_content` behind the
+    shared ownership check.
+    """
+    return PRDResponse(content=project.prd_content)
 
 
 # --- Diagram -----------------------------------------------------------------
