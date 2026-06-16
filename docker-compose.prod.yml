@@ -41,7 +41,20 @@ services:
       LANGFLOW_CONFIG_DIR: /app/langflow
       LANGFLOW_HOST: 0.0.0.0
       LANGFLOW_PORT: "7860"
-      LANGFLOW_AUTO_LOGIN: ${LANGFLOW_AUTO_LOGIN:-false}
+      # ── Access control — locked down for prod, deliberately NOT .env-overridable ──
+      # These are hardcoded literals (no ${...} interpolation) so a fumbled or
+      # tampered /opt/lothal/.env can never reopen the app. The site is invite-only:
+      # the superuser provisions accounts via the /admin page; nobody self-registers.
+      #   AUTO_LOGIN=false      -> no anonymous superuser session; real credentials required.
+      #   ENABLE_SIGNUP=false   -> public POST /api/v1/users 403s ("Sign up is currently
+      #                            disabled."); a logged-in superuser can still create users.
+      #   NEW_USER_IS_ACTIVE=false -> new accounts start inactive until the superuser
+      #                            activates them in /admin (belt-and-suspenders).
+      # To intentionally relax any of these (e.g. a throwaway demo), edit this file in a
+      # reviewed commit — do not move them back to env vars.
+      LANGFLOW_AUTO_LOGIN: "false"
+      LANGFLOW_ENABLE_SIGNUP: "false"
+      LANGFLOW_NEW_USER_IS_ACTIVE: "false"
       LANGFLOW_SUPERUSER: ${LANGFLOW_SUPERUSER}
       LANGFLOW_SUPERUSER_PASSWORD: ${LANGFLOW_SUPERUSER_PASSWORD}
       LANGFLOW_SECRET_KEY: ${LANGFLOW_SECRET_KEY}

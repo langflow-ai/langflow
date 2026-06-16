@@ -124,6 +124,29 @@ chmod 600 .env
 > ⚠️ **`LANGFLOW_SECRET_KEY` must stay stable.** It encrypts stored credentials; rotating it
 > orphans every encrypted value. Generate it once and never re-render it from CI.
 
+## Access control (invite-only)
+
+The site is **closed**: anonymous visitors only ever see the public landing (`/`), `/login`,
+and `/signup` pages — every other route and every `/api/v1/lothal/*` endpoint is auth-gated at
+the backend (router-level `get_current_active_user` + per-project owner scoping). Three settings
+enforce that nobody can let themselves in, and they are **hardcoded in `docker-compose.prod.yml`**
+(literal `"false"`, deliberately not `.env`-overridable, so a fumbled/tampered `.env` cannot
+reopen the app):
+
+| Setting | Value | Effect |
+|---|---|---|
+| `LANGFLOW_AUTO_LOGIN` | `false` | No anonymous superuser session — real credentials required to get in. |
+| `LANGFLOW_ENABLE_SIGNUP` | `false` | Public `POST /api/v1/users` returns `403` ("Sign up is currently disabled."). The `/signup` page still renders but submitting it is rejected — no account is created. |
+| `LANGFLOW_NEW_USER_IS_ACTIVE` | `false` | New accounts start inactive until the superuser activates them. |
+
+**Provisioning accounts (the only way in):** log in as the superuser
+(`LANGFLOW_SUPERUSER` / `LANGFLOW_SUPERUSER_PASSWORD` from `/opt/lothal/.env`) and use the
+**`/admin`** page to create users and toggle them active. `ENABLE_SIGNUP=false` blocks public
+self-registration but a logged-in superuser can still create users there.
+
+To intentionally open the site later (e.g. enable self-serve signup), flip the relevant value in
+`docker-compose.prod.yml` in a reviewed commit and redeploy — not via `.env`.
+
 ## GHCR auth
 
 - **Automated deploy (C.3):** the GitHub Actions workflow logs into GHCR with the built-in
