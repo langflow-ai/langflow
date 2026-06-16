@@ -95,31 +95,31 @@ class ProjectRead(BaseModel):
     name: str
     phase: Phase
     prd_content: str | None = None
-    diagram_mmd: str | None = None
-    diagram_layout: dict[str, Any] | None = None
+    diagram_json: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
 
-    @field_validator("diagram_layout", mode="before")
+    @field_validator("diagram_json", mode="before")
     @classmethod
-    def _parse_diagram_layout(cls, value: Any) -> Any:
+    def _parse_diagram_json(cls, value: Any) -> Any:
         """Parse the stored JSON string once, at the schema boundary.
 
-        The ORM stores `diagram_layout` as a JSON string (canvas-only xyflow
-        positions); every reader receives the parsed object from here, and the
-        diagram-save story must serialize back through this same boundary. A
-        malformed or non-object value is logged and exposed as `null` — one bad
-        row must never fail a whole project read or list response.
+        The ORM stores `diagram_json` as a JSON string (the full xyflow graph —
+        nodes-with-positions + edges); every reader receives the parsed object
+        from here, and the diagram-save story must serialize back through this
+        same boundary. A malformed or non-object value is logged and exposed as
+        `null` — one bad row must never fail a whole project read or list
+        response.
         """
         if value is None or isinstance(value, dict):
             return value
         try:
             parsed = json.loads(value)
         except (TypeError, ValueError):
-            logger.warning("Ignoring malformed diagram_layout; exposing null.")
+            logger.warning("Ignoring malformed diagram_json; exposing null.")
             return None
         if not isinstance(parsed, dict):
-            logger.warning("Ignoring non-object diagram_layout; exposing null.")
+            logger.warning("Ignoring non-object diagram_json; exposing null.")
             return None
         return parsed
 

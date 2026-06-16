@@ -47,8 +47,7 @@ const PROJECT: Project = {
   name: "Demo",
   phase: "CLARIFICATION",
   prd_content: null,
-  diagram_mmd: null,
-  diagram_layout: null,
+  diagram_json: null,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };

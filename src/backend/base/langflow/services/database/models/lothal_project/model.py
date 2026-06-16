@@ -36,10 +36,9 @@ class Project(SQLModel, table=True):  # type: ignore[call-arg]
     phase: str = Field(default=ProjectPhase.CLARIFICATION)
     # Synthesised PRD; null until clarification completes. Primary LLM context source.
     prd_content: str | None = Field(default=None, sa_column=Column(Text))
-    # Canonical Mermaid sequence diagram; null until generated. LLM reads/writes this.
-    diagram_mmd: str | None = Field(default=None, sa_column=Column(Text))
-    # JSON string of xyflow node positions; canvas-only, never sent to the LLM.
-    diagram_layout: str | None = Field(default=None, sa_column=Column(Text))
+    # Canonical xyflow diagram as a JSON string ({nodes, edges} incl. positions);
+    # null until generated. The single diagram source of truth — LLM reads/writes it.
+    diagram_json: str | None = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

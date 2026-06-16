@@ -166,8 +166,7 @@ async def test_create_list_get_delete_project(client: AsyncClient, logged_in_hea
     assert project["name"] == "My App"
     assert project["phase"] == "CLARIFICATION"
     assert project["prd_content"] is None
-    assert project["diagram_mmd"] is None
-    assert project["diagram_layout"] is None
+    assert project["diagram_json"] is None
     project_id = project["id"]
 
     # List — includes the new project.
@@ -308,11 +307,11 @@ async def test_lothal_fks_cascade_on_delete(client: AsyncClient):  # noqa: ARG00
     assert found == expected
 
 
-async def test_malformed_diagram_layout_reads_as_null(client: AsyncClient, logged_in_headers: dict):
+async def test_malformed_diagram_json_reads_as_null(client: AsyncClient, logged_in_headers: dict):
     # One corrupted row must never 500 a project read — or, worse, the whole
-    # list. Layouts are seeded straight into the DB: the save endpoint that
+    # list. Graphs are seeded straight into the DB: the save endpoint that
     # will write them (story 3.2) is still a stub.
-    response = await client.post("api/v1/lothal/projects/", json={"name": "Layout"}, headers=logged_in_headers)
+    response = await client.post("api/v1/lothal/projects/", json={"name": "Graph"}, headers=logged_in_headers)
     assert response.status_code == status.HTTP_201_CREATED
     project_pk = UUID(response.json()["id"])
 
@@ -320,21 +319,21 @@ async def test_malformed_diagram_layout_reads_as_null(client: AsyncClient, logge
         ("not json", None),
         ("   ", None),
         ("[1, 2]", None),  # valid JSON but not an object
-        ('{"n1": {"x": 1, "y": 2}}', {"n1": {"x": 1, "y": 2}}),
+        ('{"nodes": [], "edges": []}', {"nodes": [], "edges": []}),
     ]
     for raw, expected in cases:
         async with session_scope() as session:
             project = await session.get(Project, project_pk)
-            project.diagram_layout = raw
+            project.diagram_json = raw
 
         response = await client.get(f"api/v1/lothal/projects/{project_pk}", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["diagram_layout"] == expected
+        assert response.json()["diagram_json"] == expected
 
         response = await client.get("api/v1/lothal/projects/", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK
         listed = next(p for p in response.json() if p["id"] == str(project_pk))
-        assert listed["diagram_layout"] == expected
+        assert listed["diagram_json"] == expected
 
 
 # --- LLM debug (Story 0.4) ------------------------------------------------------
