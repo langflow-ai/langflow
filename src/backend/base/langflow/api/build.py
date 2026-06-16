@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
+from lfx.graph.vertex.base import Vertex
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from sqlmodel import select
@@ -365,6 +366,7 @@ async def generate_flow_events(
     source_flow_id: uuid.UUID | None = None,
     run_id: str | None = None,
     track_job_status: bool = True,
+    tweaks: dict | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -392,6 +394,22 @@ async def generate_flow_events(
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
+
+            # Apply request tweaks to the built graph. The sync path applies
+            # tweaks before Graph construction; the streaming/background path
+            # builds from the DB (or request data), so tweaks must be applied
+            # to the built graph here or they are silently dropped. We use
+            # ``update_raw_params`` rather than the lfx ``process_tweaks_on_graph``
+            # helper because that helper only sets ``vertex.params`` and does not
+            # persist the override to runtime (mirrors the workaround in
+            # ``lfx.base.tools.run_flow._process_tweaks_on_graph``).
+            if tweaks:
+                for vertex in graph.vertices:
+                    if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):
+                        continue
+                    if node_tweaks := tweaks.get(vertex.id):
+                        node_tweaks = {k: v for k, v in node_tweaks.items() if k != "code"}
+                        vertex.update_raw_params(node_tweaks, overwrite=True)
 
             graph.set_run_id(build_run_id)
             first_layer = sort_vertices(graph)
