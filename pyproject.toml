@@ -154,6 +154,8 @@ postgresql = [
 
 [tool.uv]
 override-dependencies = [
+    # Force onnxruntime 1.24+ to resolve pipecat-ai vs langflow-base conflict
+    "onnxruntime>=1.24.3",
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
     # z3-solver 4.15.7 dropped Linux wheels, pin until codeflash is removed

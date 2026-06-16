@@ -109,6 +109,14 @@ dependencies = [
     "langgraph-checkpoint>4.0.0,<5.0.0",
     "transformers>=5.6.0,<6.0.0",
     "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
+    # Pipecat voice runtime (Phase 0 of Pipecat deep integration).
+    # Extras pull in the providers used by the pipecat_services / pipecat_transports components.
+    # pipecat-ai requires Python >=3.11.
+    # NOTE: `daily` extra is omitted because daily-python has no Windows wheels;
+    #       add it back behind a `sys_platform != 'win32'` marker when DailyTransport is needed.
+    "pipecat-ai[silero,google,openai,anthropic,deepgram,elevenlabs,cartesia]>=1.1.0; python_version >= '3.11'",
+    # State-machine orchestrator used by PipecatFlowComponent (Phase 5b).
+    "pipecat-ai-flows>=0.0.20; python_version >= '3.11'",
 ]
 
 [tool.uv]
