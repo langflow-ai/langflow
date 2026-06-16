@@ -207,6 +207,28 @@ def test_prewarm_flow_run_executes_model_free_flow_with_no_network(monkeypatch):
     assert result.error is None
 
 
+def test_prewarm_flow_run_reports_fork_safety():
+    """After a run, the result carries a fork-safety check; a model-free run is clean."""
+    from lfx.preload import prewarm_flow
+
+    result = prewarm_flow(_hermetic_flow_payload(), run=True)
+
+    assert result.ran is True
+    assert isinstance(result.ghost_threads, list)
+    # A model-free flow opens no network connections.
+    assert result.ghost_connections == []
+
+
+def test_prewarm_flow_build_only_skips_fork_safety_check():
+    """build-only opens nothing, so the fork-safety fields stay empty."""
+    from lfx.preload import prewarm_flow
+
+    result = prewarm_flow(_hermetic_flow_payload(), run=False)
+
+    assert result.ghost_threads == []
+    assert result.ghost_connections == []
+
+
 def test_prewarm_flow_captures_error_without_raising():
     """A flow that can't be loaded reports an error instead of raising."""
     from lfx.preload import prewarm_flow

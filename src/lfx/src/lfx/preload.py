@@ -67,6 +67,10 @@ class FlowPrewarmResult:
     froze: bool = False
     elapsed_s: float = 0.0
     error: str | None = None
+    # Fork-hostile state left behind by a `run` (empty unless `run=True`). Non-empty here
+    # means the warm-up is NOT safe to fork/snapshot as-is.
+    ghost_threads: list[str] = field(default_factory=list)
+    ghost_connections: list[str] = field(default_factory=list)
 
 
 def freeze_heap() -> None:
@@ -218,6 +222,14 @@ def prewarm_flow(
         # this is hygiene, not a substitute for a fork-safe warm path.)
         graph = None  # explicit drop of the only ref before gc
         gc.collect()
+        if run:
+            # A run can open connections/threads; report what (if anything) survived so the
+            # caller can refuse to fork/snapshot a dirty process.
+            from lfx.fork import fork_safety_report
+
+            report = fork_safety_report()
+            result.ghost_threads = report.ghost_threads
+            result.ghost_connections = report.ghost_connections
 
     if freeze:
         freeze_heap()
