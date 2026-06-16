@@ -69,6 +69,7 @@ from langflow.api.v2.converters import (
     create_error_response,
     parse_workflow_run_request,
     run_response_to_workflow_response,
+    workflow_response_from_output_events,
 )
 from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_response_from_job_id
 from langflow.exceptions.api import (
@@ -978,10 +979,15 @@ async def get_workflow_status(
                     user_id=str(current_user.id),
                 )
             except ValueError:
-                return WorkflowExecutionResponse(
+                # Rebuild the result from the ``output`` events the runner
+                # captured into ``Job.result`` (langflow-protocol runs). Falls
+                # back to a bare COMPLETED when none were captured (e.g. an
+                # agui-protocol run, where the result lives only on /events).
+                result = job.result if isinstance(job.result, dict) else {}
+                return workflow_response_from_output_events(
+                    result.get("outputs") or [],
                     flow_id=flow_id_str,
                     job_id=job_id_str,
-                    status=JobStatus.COMPLETED,
                 )
 
         if job.status == JobStatus.FAILED:
