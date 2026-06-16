@@ -18,11 +18,10 @@ endpoint's job.
 
 from __future__ import annotations
 
-import json
-import re
 from typing import TYPE_CHECKING
 
 from langflow.lothal.context import build_messages
+from langflow.lothal.engines.parsing import extract_json_object
 from langflow.lothal.llm import call_llm
 from langflow.lothal.router import LLMResponse, PhaseEngine, register_engine
 from langflow.services.database.models.lothal_project.model import ProjectPhase
@@ -65,36 +64,6 @@ these sections: Overview, Target Users, Core Features, Key Flows. Do not include
 any suggestions on that turn."""
 
 
-def _strip_code_fences(text: str) -> str:
-    """Drop a surrounding ```...``` markdown fence if the model added one."""
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = re.sub(r"^```[a-zA-Z0-9]*\s*\n", "", stripped)
-        stripped = re.sub(r"\n```\s*$", "", stripped)
-    return stripped.strip()
-
-
-def _extract_json_object(text: str) -> dict | None:
-    """Best-effort parse of a single JSON object from the model's reply.
-
-    Tolerates a surrounding markdown fence and leading/trailing prose by falling
-    back to the first balanced-looking ``{...}`` slice. Returns ``None`` when no
-    JSON object can be recovered.
-    """
-    candidate = _strip_code_fences(text)
-    try:
-        data = json.loads(candidate)
-    except (ValueError, TypeError):
-        start, end = candidate.find("{"), candidate.rfind("}")
-        if start == -1 or end <= start:
-            return None
-        try:
-            data = json.loads(candidate[start : end + 1])
-        except (ValueError, TypeError):
-            return None
-    return data if isinstance(data, dict) else None
-
-
 def _coerce_suggestions(value: object) -> list[str]:
     """Keep only non-empty string suggestions, trimmed and capped at the max."""
     if not isinstance(value, list):
@@ -115,7 +84,7 @@ def _parse_reply(raw: str) -> LLMResponse:
         summary = raw.replace(CLARITY_TOKEN, "").strip()
         # Defensive: if the model still wrapped the summary as JSON, surface the
         # message rather than raw braces.
-        data = _extract_json_object(summary)
+        data = extract_json_object(summary)
         if data is not None and isinstance(data.get("message"), str) and data["message"].strip():
             summary = data["message"].strip()
         if not summary:
@@ -124,7 +93,7 @@ def _parse_reply(raw: str) -> LLMResponse:
             summary = "Specification confirmed. Generating the diagram next."
         return LLMResponse(text=summary, suggestions=[], next_phase=ProjectPhase.DIAGRAM_GENERATION)
 
-    data = _extract_json_object(raw)
+    data = extract_json_object(raw)
     if data is not None and isinstance(data.get("message"), str) and data["message"].strip():
         return LLMResponse(text=data["message"].strip(), suggestions=_coerce_suggestions(data.get("suggestions")))
 

@@ -8,4 +8,7 @@ As each engine lands, add its import below so registration runs on import of
 this package (the router imports it last, after its names are defined).
 """
 
-from langflow.lothal.engines import clarification  # noqa: F401  -- registers the CLARIFICATION engine
+from langflow.lothal.engines import (
+    clarification,  # noqa: F401  -- registers the CLARIFICATION engine
+    diagram_generation,  # noqa: F401  -- registers the DIAGRAM_GENERATION engine
+)
