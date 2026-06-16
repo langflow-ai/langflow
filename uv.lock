@@ -7343,7 +7343,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.9.6"
+version = "1.9.7"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
@@ -7501,7 +7501,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.9.6"
+version = "0.9.7"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile", version = "3.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -8570,7 +8570,7 @@ dev = [
 
 [[package]]
 name = "langflow-sdk"
-version = "0.1.6"
+version = "0.1.7"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -8777,7 +8777,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "0.4.6"
+version = "0.4.7"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "ag-ui-protocol" },
