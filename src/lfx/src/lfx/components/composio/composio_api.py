@@ -10,6 +10,7 @@ from langchain_core.tools import Tool
 from lfx.base.composio.safe_provider import SafeLangchainProvider
 
 # Local imports
+from lfx.base.composio.schema_utils import sanitize_tools_with_fallback
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.inputs.inputs import (
     ConnectionInput,
@@ -18,6 +19,7 @@ from lfx.inputs.inputs import (
     SortableListInput,
 )
 from lfx.io import Output
+from lfx.log.logger import logger
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 # TODO: We get the list from the API but we need to filter it
@@ -255,7 +257,12 @@ class ComposioAPIComponent(LCToolComponent):
         all_tools = composio.tools.get(user_id=self.entity_id, toolkits=list(toolkits))
 
         # Filter to only the specific actions we want using list comprehension
-        return [tool for tool in all_tools if hasattr(tool, "name") and tool.name in action_names]
+        selected_tools = [tool for tool in all_tools if hasattr(tool, "name") and tool.name in action_names]
+        sanitized_tools, excluded_summary = sanitize_tools_with_fallback(selected_tools, logger.debug)
+        if excluded_summary:
+            failure_count = len(selected_tools) - len(sanitized_tools)
+            self.log(f"Excluded {failure_count} tool(s) due to args schema sanitization failures: {excluded_summary}")
+        return sanitized_tools
 
     def _build_wrapper(self) -> Composio:
         """Build the Composio wrapper using new SDK.

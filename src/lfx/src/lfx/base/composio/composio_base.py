@@ -8,7 +8,8 @@ from typing import Any
 from composio import Composio
 from langchain_core.tools import Tool
 
-from lfx.base.composio.safe_provider import SafeLangchainProvider, _sanitize_schema
+from lfx.base.composio.safe_provider import SafeLangchainProvider
+from lfx.base.composio.schema_utils import sanitize_tools_with_fallback
 from lfx.base.mcp.util import create_input_schema_from_json_schema
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import (
@@ -2376,17 +2377,11 @@ class ComposioBaseComponent(Component):
         if limit is None:
             limit = 999
 
-        tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=limit)
-        # Composio caches a deep copy of each tool's schema in `_tool_schemas` *before* the
-        # provider wraps it, and reuses that copy at execute time for file substitution.
-        # Patch every cached schema so missing JSON Schema "type" keys don't raise
-        # KeyError("type") inside `_substitute_file_uploads_recursively` (issues #12894/#12895).
-        cached_schemas = getattr(composio.tools, "_tool_schemas", None)
-        if isinstance(cached_schemas, dict):
-            for cached_tool in cached_schemas.values():
-                _sanitize_schema(getattr(cached_tool, "input_parameters", None))
+        tools = list(composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=limit))
+        sanitized_tools, excluded_summary = sanitize_tools_with_fallback(tools, logger.debug)
+        failure_count = len(tools) - len(sanitized_tools)
         configured_tools = []
-        for tool in tools:
+        for tool in sanitized_tools:
             # Set the sanitized name
             display_name = self._actions_data.get(tool.name, {}).get(
                 "display_name", self._sanitized_names.get(tool.name, self._name_sanitizer.sub("-", tool.name))
@@ -2395,6 +2390,12 @@ class ComposioBaseComponent(Component):
             tool.tags = [tool.name]
             tool.metadata = {"display_name": display_name, "display_description": tool.description, "readonly": True}
             configured_tools.append(tool)
+        if failure_count > 0:
+            logger.warning(
+                "Excluded %d tool(s) due to args schema sanitization failures: %s",
+                failure_count,
+                excluded_summary,
+            )
         return configured_tools
 
     async def _get_tools(self) -> list[Tool]:
