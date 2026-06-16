@@ -464,6 +464,45 @@ def _resolve_output(outputs: dict[str, ComponentOutput], selected_ids: list[str]
     return WorkflowOutput(reason=reason)
 
 
+def workflow_response_from_output_events(
+    output_events: list[dict[str, Any]],
+    *,
+    flow_id: str,
+    job_id: str,
+) -> WorkflowExecutionResponse:
+    """Rebuild a completed-run response from durable ``output`` event payloads.
+
+    Background runs do not persist ``vertex_builds`` keyed by ``job_id``, so the
+    vertex-build reconstruction path finds nothing. The durable runner instead
+    captures each terminal ``output`` event the langflow adapter emits (an
+    ``OutputEvent``: a ``ComponentOutput`` plus its ``component_id``) into
+    ``Job.result``. Re-keying those by component id reproduces the same
+    ``outputs`` map and resolved ``output`` that sync returns, so a completed
+    background run's GET status carries its result without a /events re-attach.
+    """
+    outputs: dict[str, ComponentOutput] = {}
+    for item in output_events:
+        if not isinstance(item, dict):
+            continue
+        component_id = item.get("component_id")
+        if not component_id:
+            continue
+        fields = {key: value for key, value in item.items() if key != "component_id"}
+        try:
+            outputs[component_id] = ComponentOutput(**fields)
+        except ValueError:
+            # A malformed stored payload should not 500 the status read; skip it
+            # and report whatever outputs did rebuild cleanly.
+            continue
+    return WorkflowExecutionResponse(
+        flow_id=flow_id,
+        job_id=job_id,
+        status=JobStatus.COMPLETED,
+        output=_resolve_output(outputs),
+        outputs=outputs,
+    )
+
+
 def run_response_to_workflow_response(
     run_response: RunResponse,
     flow_id: str,
