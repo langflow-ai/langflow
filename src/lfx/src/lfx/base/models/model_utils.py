@@ -7,7 +7,11 @@ from uuid import UUID
 import httpx
 import requests
 
-from lfx.base.models.model_metadata import LIVE_MODEL_PROVIDERS, create_model_metadata
+from lfx.base.models.model_metadata import (
+    CONDITIONAL_LIVE_MODEL_PROVIDERS,
+    LIVE_MODEL_PROVIDERS,
+    create_model_metadata,
+)
 from lfx.base.models.watsonx_constants import (
     IBM_WATSONX_URLS,
 )
@@ -393,6 +397,60 @@ OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
 OPENROUTER_FETCH_TIMEOUT = 10.0
 
 
+OPENAI_COMPATIBLE_FETCH_TIMEOUT = 10.0
+
+
+def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
+    """Fetch models from a custom OpenAI-compatible endpoint (OPENAI_BASE_URL).
+
+    Returns [] when no custom base URL is configured, so api.openai.com
+    users keep the curated static catalog. ``tool_calling`` is assumed
+    True: ``/models`` carries no capability data and the OpenAI wire
+    format implies tools support.
+    """
+    if model_type != "llm":
+        return []
+
+    base_url = get_provider_variable_value(user_id, "OPENAI_BASE_URL")
+    if not base_url:
+        return []
+    base_url = transform_localhost_url(base_url)
+
+    api_key = get_provider_variable_value(user_id, "OPENAI_API_KEY")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+    try:
+        response = requests.get(
+            f"{base_url.rstrip('/')}/models",
+            headers=headers,
+            timeout=OPENAI_COMPATIBLE_FETCH_TIMEOUT,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        logger.debug(f"Could not fetch live OpenAI-compatible models from {base_url}: {exc}")
+        return []
+
+    # An arbitrary OpenAI-compatible server may return a non-conforming body
+    # (a bare list, a list of strings, …); treat anything off-spec as "no models".
+    entries = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(entries, list):
+        return []
+
+    return [
+        create_model_metadata(
+            provider="OpenAI",
+            name=entry["id"],
+            icon="OpenAI",
+            model_type="llm",
+            tool_calling=True,
+            default=index < MIN_DEFAULT_MODELS,
+        )
+        for index, entry in enumerate(entries)
+        if isinstance(entry, dict) and entry.get("id")
+    ]
+
+
 def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
     """Fetch live OpenRouter models using the user's configured API key.
 
@@ -566,6 +624,8 @@ def get_live_models_for_provider(
         return fetch_live_watsonx_models(user_id, model_type)
     if provider == "OpenRouter":
         return fetch_live_openrouter_models(user_id, model_type)
+    if provider == "OpenAI":
+        return fetch_live_openai_compatible_models(user_id, model_type)
     return []
 
 
@@ -606,7 +666,7 @@ def replace_with_live_models(
     if not user_id or not enabled_providers:
         return provider_models
 
-    for provider in LIVE_MODEL_PROVIDERS:
+    for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS):
         if provider not in enabled_providers:
             continue
 
@@ -616,6 +676,9 @@ def replace_with_live_models(
             live_models = live_llm + live_emb
         else:
             live_models = get_live_models_for_provider(user_id, provider, model_type)
+
+        if provider in CONDITIONAL_LIVE_MODEL_PROVIDERS and not live_models:
+            continue
 
         catalog_models = _live_models_to_catalog_shape(live_models) if live_models else []
 
