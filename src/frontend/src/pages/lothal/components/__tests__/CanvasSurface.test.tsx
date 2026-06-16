@@ -57,7 +57,6 @@ const error501 = {
 };
 
 const diagram = (over: Partial<Diagram> = {}): Diagram => ({
-  mermaid: null,
   nodes: [],
   edges: [],
   ...over,
@@ -78,7 +77,7 @@ const sampleNodes: DiagramNode[] = [
   },
 ];
 const sampleEdges: DiagramEdge[] = [
-  { id: "e1", source: "u", target: "s", label: "go", data: { order: 1 } },
+  { id: "e1", source: "u", target: "s", data: { order: 1, label: "go" } },
 ];
 
 beforeEach(() => {
