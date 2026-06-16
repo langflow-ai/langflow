@@ -33,7 +33,6 @@ PROJECT_ID = "00000000-0000-0000-0000-000000000000"
 # shared ownership check (404), or the stub itself (501) — never validation
 # (422).
 STUB_TEMPLATES = [
-    ("GET", "api/v1/lothal/projects/{project_id}/prd", None),
     ("GET", "api/v1/lothal/projects/{project_id}/diagram", None),
     ("POST", "api/v1/lothal/projects/{project_id}/diagram/save", {"nodes": [], "edges": []}),
     ("POST", "api/v1/lothal/projects/{project_id}/diagram/approve", None),
@@ -48,8 +47,8 @@ PROJECT_SCOPED_STUB_TEMPLATES = [t for t in STUB_TEMPLATES if "{project_id}" in 
 STUBBED_ENDPOINTS = [(m, p.format(project_id=PROJECT_ID), b) for m, p, b in STUB_TEMPLATES]
 
 # The routes that have gone live: project CRUD (B.2), the LLM debug round-trip
-# (0.4), and chat routing + message history (1.2). Still require auth, but no
-# longer return `501`.
+# (0.4), chat routing + message history (1.2), and the PRD read (1.3). Still
+# require auth, but no longer return `501`.
 LIVE_ENDPOINTS = [
     ("POST", "api/v1/lothal/projects/", {"name": "My App"}),
     ("GET", "api/v1/lothal/projects/", None),
@@ -57,6 +56,7 @@ LIVE_ENDPOINTS = [
     ("DELETE", f"api/v1/lothal/projects/{PROJECT_ID}", None),
     ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/chat", {"content": "hi"}),
     ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/messages", None),
+    ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/prd", None),
     ("POST", "api/v1/lothal/debug/llm", {"message": "ping"}),
 ]
 
@@ -148,9 +148,10 @@ async def test_openapi_lists_full_lothal_surface(client: AsyncClient):
     assert expected <= set(paths)
 
     # A still-stubbed route documents the structured 501 in its responses; the
-    # routes that have gone live (chat, debug) no longer advertise it.
-    assert "501" in paths["/api/v1/lothal/projects/{project_id}/prd"]["get"]["responses"]
+    # routes that have gone live (chat, debug, prd) no longer advertise it.
+    assert "501" in paths["/api/v1/lothal/projects/{project_id}/diagram"]["get"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/chat"]["post"]["responses"]
+    assert "501" not in paths["/api/v1/lothal/projects/{project_id}/prd"]["get"]["responses"]
     assert "501" not in paths["/api/v1/lothal/debug/llm"]["post"]["responses"]
 
 
@@ -642,6 +643,74 @@ async def test_chat_three_no_signal_turns_then_clarity_transition(
     assert project["prd_content"] is not None
     assert "[CLARITY_REACHED]" not in project["prd_content"]
     assert "Overview" in project["prd_content"]
+
+
+# --- PRD endpoint (Story 1.3) -------------------------------------------------
+
+
+async def test_prd_is_null_before_clarity_and_content_after(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Backlog acceptance for `GET /prd`: `null` until the project leaves CLARIFICATION, populated after.
+
+    Drives the real clarification turn lifecycle (only the model call is faked):
+    a no-signal turn keeps the PRD `null`; a `[CLARITY_REACHED]` turn transitions
+    the project and `GET /prd` returns the stored summary with the token stripped.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+
+    # No turns yet → PRD is null.
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/prd", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"content": None}
+
+    replies = iter(
+        [
+            _clarification_reply("Who is it for?", ["Just me", "My team"]),
+            "[CLARITY_REACHED]\n## Overview\nA todo app for individuals.",
+        ]
+    )
+
+    async def fake_call_llm(_messages, **_kwargs):
+        return next(replies)
+
+    monkeypatch.setattr(clarification_engine, "call_llm", fake_call_llm)
+
+    # A no-signal turn keeps the project in CLARIFICATION → PRD still null.
+    await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat", json={"content": "a todo app"}, headers=logged_in_headers
+    )
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/prd", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"content": None}
+
+    # The clarity turn transitions the project → PRD is the stored summary.
+    await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat", json={"content": "looks good"}, headers=logged_in_headers
+    )
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/prd", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    content = response.json()["content"]
+    assert content is not None
+    assert "[CLARITY_REACHED]" not in content  # control token stripped
+    assert "Overview" in content
+
+
+async def test_prd_404_for_unowned_project(client: AsyncClient, logged_in_headers: dict, user_two):
+    """The PRD read is behind the shared ownership check — another user's project 404s."""
+    async with session_scope() as session:
+        foreign = Project(name="Theirs", user_id=user_two.id)
+        session.add(foreign)
+        await session.flush()
+        foreign_pk = foreign.id
+
+    try:
+        for project_id in (PROJECT_ID, str(foreign_pk)):
+            response = await client.get(f"api/v1/lothal/projects/{project_id}/prd", headers=logged_in_headers)
+            assert response.status_code == status.HTTP_404_NOT_FOUND, project_id
+    finally:
+        async with session_scope() as session:
+            leftover = await session.get(Project, foreign_pk)
+            if leftover:
+                await session.delete(leftover)
 
 
 async def test_chat_rejects_blank_content(client: AsyncClient, logged_in_headers: dict):
