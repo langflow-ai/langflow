@@ -305,6 +305,63 @@ class TestAGUIStreaming:
                 if flow:
                     await session.delete(flow)
 
+    async def test_stream_applies_request_tweaks(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        json_memory_chatbot_no_llm,
+    ):
+        """Request ``tweaks`` must reach the graph on the streaming path.
+
+        Regression: the stream/background path builds the graph via the v1
+        build-vertex loop (``generate_flow_events``) and previously dropped
+        ``tweaks`` entirely, so only ``mode=sync`` applied them. Here we
+        override the ChatInput's ``input_value`` via tweaks (with no top-level
+        input to override it) and assert the tweaked text drives the run.
+        Stream and background share ``generate_flow_events``, so this covers
+        both non-sync paths.
+        """
+        raw = json.loads(json_memory_chatbot_no_llm)
+        flow_data = raw.get("data", raw)
+        chat_input_id = next(n["id"] for n in flow_data["nodes"] if n.get("data", {}).get("type") == "ChatInput")
+        flow_id = uuid4()
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="AG-UI Tweaks Flow",
+                data=flow_data,
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+
+        tweaked = "TWEAKED_VIA_TWEAKS_123"
+        try:
+            response = await client.post(
+                "api/v2/workflows",
+                json={
+                    "flow_id": str(flow_id),
+                    "mode": "stream",
+                    "stream_protocol": "agui",
+                    # No top-level input_value and no session_id, so the build
+                    # loop receives no chat-input override and the tweak is the
+                    # only source of the ChatInput value. Without the fix the
+                    # flow default is used and the tweaked text never appears.
+                    "tweaks": {chat_input_id: {"input_value": tweaked}},
+                },
+                headers={"x-api-key": created_api_key.api_key},
+            )
+
+            assert response.status_code == 200
+            body = response.text
+            assert "RUN_ERROR" not in body
+            assert tweaked in body
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
 
 class TestAGUISyncExecution:
     """mode=sync runs the flow inline and folds outputs into the response."""

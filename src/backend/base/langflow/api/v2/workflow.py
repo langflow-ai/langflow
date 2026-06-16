@@ -637,6 +637,7 @@ async def _stream_event_frames(
                 flow_name=flow_name,
                 source_flow_id=source_flow_id,
                 track_job_status=track_job_status,
+                tweaks=parsed.tweaks,
             )
         except asyncio.CancelledError:
             raise
