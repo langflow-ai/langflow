@@ -336,8 +336,40 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
         return result
 
+    @staticmethod
+    def _code_execution_allowed() -> bool:
+        """Whether executing guard code is permitted by the deployment policy.
+
+        ToolGuard runs guard Python whose source comes from the component's
+        client-editable CodeInput template values (make_toolguard_result reads
+        attrs[...]["value"]) — these are NOT covered by the custom-component hash
+        gate. So when an operator locks the deployment down with
+        allow_custom_components=False, running that code must be refused too
+        (LE-1579). When no settings service is present (lfx standalone CLI),
+        execution is allowed: that context is local/trusted.
+        """
+        try:
+            from lfx.services.deps import get_settings_service
+
+            settings_service = get_settings_service()
+        except Exception:  # noqa: BLE001 - no settings layer (lfx standalone) -> local/trusted
+            return True
+        if settings_service is None:
+            return True
+        return bool(getattr(settings_service.settings, "allow_custom_components", True))
+
     async def guard_tools(self) -> list[Tool]:
         if self.enabled:
+            # Refuse to execute guard code when allow_custom_components is disabled
+            # (LE-1579). Checked before importing/loading any toolguard runtime so
+            # the client-supplied CodeInput guard values are never exec'd.
+            if not self._code_execution_allowed():
+                msg = (
+                    "Policies/ToolGuard executes guard code, which is disabled because "
+                    "allow_custom_components is False. Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true "
+                    "to enable this component."
+                )
+                raise ValueError(msg)
             tg = self._import_toolguard()
             mode = getattr(self, "mode", MODE_GENERATE)
             if mode == MODE_GENERATE:
