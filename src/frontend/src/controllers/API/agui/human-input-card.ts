@@ -8,6 +8,7 @@
 import { updateMessage } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import { queryClient } from "@/contexts";
 import useFlowStore from "@/stores/flowStore";
+import { useHitlStore } from "@/stores/hitlStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import type { ContentBlock, InteractiveContent } from "@/types/chat";
 import type { Message } from "@/types/messages";
@@ -150,5 +151,7 @@ export function injectHumanInputCard(
   // playground reads useMessagesStore. Write both so the card renders either way.
   updateMessage(message);
   useMessagesStore.getState().addMessage(message);
+  // Canvas: surface the pause on the node that requested it (request_id = node_id:run_id).
+  useHitlStore.getState().setPending({ nodeId: content.request_id.split(":")[0], content });
   useFlowStore.getState().setAwaitingInput(true);
 }

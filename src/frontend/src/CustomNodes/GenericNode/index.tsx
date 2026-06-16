@@ -31,6 +31,7 @@ import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fiel
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
 import NodeLegacyComponent from "./components/NodeLegacyComponent";
+import HumanInputNodeBadge from "./components/HumanInputNodeBadge";
 import NodeName from "./components/NodeName";
 import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
@@ -605,6 +606,7 @@ function GenericNode({
                   setHasChangedNodeDescription={setHasChangedNodeDescription}
                 />
               </div>
+              <HumanInputNodeBadge nodeId={data.id} />
             </div>
             {!showNode && (
               <>

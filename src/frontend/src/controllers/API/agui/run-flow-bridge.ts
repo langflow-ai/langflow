@@ -13,6 +13,7 @@ import { handleMessageEvent } from "@/components/core/playgroundComponent/chat-v
 import { BuildStatus } from "@/constants/enums";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import { useHitlStore } from "@/stores/hitlStore";
 import type {
   ChatInputType,
   ChatOutputType,
@@ -394,6 +395,8 @@ export async function consumeBackgroundEvents(
     // isBuilding, so it must clear on suspend too — only awaitingInput differs.
     flowStore.setIsBuilding(false);
     flowStore.setAwaitingInput(suspended);
+    // The run ended (not parked at a pause): drop the canvas awaiting-input badge.
+    if (!suspended) useHitlStore.getState().clear();
     flowStore.revertBuiltStatusFromBuilding();
   };
 
