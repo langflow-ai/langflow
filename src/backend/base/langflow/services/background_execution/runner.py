@@ -191,6 +191,14 @@ class JobRunner:
         """The wrapped coroutine: stream frames, persist, publish, finalize result/error."""
         last_durable_seq = 0
         errored_payload: dict[str, Any] | None = None
+        # Terminal outputs the run produced, captured so GET status can return
+        # the result without forcing a /events re-attach. The langflow adapter
+        # normalizes each terminal output into a durable ``output`` event whose
+        # ``data`` is the same ``OutputEvent`` (a ``ComponentOutput`` plus its
+        # component id) that sync returns in ``outputs[id]``. The agui adapter
+        # does not emit these, so agui-protocol runs leave this empty and their
+        # status stays result-less (the result is still on the /events log).
+        output_events: list[dict[str, Any]] = []
         async for frame_bytes, event_type in self._frame_source(**source_kwargs):
             if self._adapter.is_durable(event_type):
                 # Vertex/milestone-boundary cooperative cancel: a STOP written to
@@ -206,6 +214,10 @@ class JobRunner:
                 await self._bus.publish(str(job_id), LiveFrame(seq=seq, data=self._restamp_id(frame_bytes, seq)))
                 if event_type == self._adapter.terminal_error_type:
                     errored_payload = payload
+                elif event_type == "output":
+                    output_data = payload.get("data")
+                    if isinstance(output_data, dict):
+                        output_events.append(output_data)
             else:
                 await self._bus.publish(
                     str(job_id),
@@ -225,7 +237,7 @@ class JobRunner:
             # Surface as a failure so execute_with_status writes FAILED.
             msg = "Background job emitted a terminal error event"
             raise RuntimeError(msg)
-        await self._jobs.set_result(job_id, {"status": "completed"})
+        await self._jobs.set_result(job_id, {"status": "completed", "outputs": output_events})
 
     async def _stop_requested(self, job_id: UUID) -> bool:
         signals = await self._jobs.unconsumed_signals(job_id)
