@@ -110,3 +110,37 @@ class TestValidateCodeSafety:
         """Unparseable code surfaces a SyntaxError to the caller."""
         with pytest.raises(SyntaxError):
             validate_code_safety("print('unterminated")
+
+
+class TestEnsureCodeExecutionEnabled:
+    """GHSA-8qpj-27x8-pwpq: code execution honors allow_custom_components."""
+
+    def test_blocks_when_custom_components_disabled(self, monkeypatch):
+        from types import SimpleNamespace
+
+        from lfx.utils.python_repl_security import CodeExecutionDisabledError, ensure_code_execution_enabled
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
+        )
+        with pytest.raises(CodeExecutionDisabledError):
+            ensure_code_execution_enabled()
+
+    def test_allows_when_custom_components_enabled(self, monkeypatch):
+        from types import SimpleNamespace
+
+        from lfx.utils.python_repl_security import ensure_code_execution_enabled
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True)),
+        )
+        ensure_code_execution_enabled()  # must not raise
+
+    def test_allows_when_settings_service_unavailable(self, monkeypatch):
+        """Standalone lfx (no settings service) is local/trusted -> execution allowed."""
+        from lfx.utils.python_repl_security import ensure_code_execution_enabled
+
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: None)
+        ensure_code_execution_enabled()  # must not raise

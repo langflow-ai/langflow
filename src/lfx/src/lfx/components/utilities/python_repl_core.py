@@ -5,7 +5,7 @@ from langchain_experimental.utilities import PythonREPL
 from lfx.custom.custom_component.component import Component
 from lfx.io import MultilineInput, Output, StrInput
 from lfx.schema.data import Data
-from lfx.utils.python_repl_security import safe_builtins, validate_code_safety
+from lfx.utils.python_repl_security import ensure_code_execution_enabled, safe_builtins, validate_code_safety
 
 
 class PythonREPLComponent(Component):
@@ -77,6 +77,9 @@ class PythonREPLComponent(Component):
             return global_dict
 
     def run_python_repl(self) -> Data:
+        # Refuse to run user code when allow_custom_components is disabled
+        # (GHSA-8qpj-27x8-pwpq). Raised before any sanitize/exec.
+        ensure_code_execution_enabled()
         try:
             # Validate the exact code that will run: PythonREPL.run() strips a leading
             # "python"/backticks/whitespace prefix before exec, so validate the sanitized

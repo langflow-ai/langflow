@@ -146,6 +146,43 @@ _BLOCKED_ATTRIBUTES = frozenset(
 _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 
 
+class CodeExecutionDisabledError(ValueError):
+    """Raised when code-execution components are disabled by policy.
+
+    Subclasses ``ValueError`` so existing ``except ValueError``/``except Exception``
+    handlers around the interpreter components surface the message gracefully.
+    """
+
+
+def ensure_code_execution_enabled() -> None:
+    """Refuse to run user code when ``allow_custom_components`` is disabled.
+
+    Code-execution components (the Python Interpreter and the legacy Python REPL
+    tool) run arbitrary user-supplied Python. They honor the same
+    ``allow_custom_components`` switch as custom components: when an operator
+    locks a deployment down with ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``,
+    running arbitrary Python must be refused too — otherwise an authenticated
+    user can still execute code despite the policy (GHSA-8qpj-27x8-pwpq).
+
+    When the settings service is unavailable (e.g. the lfx standalone CLI),
+    execution is allowed: that context is local and trusted.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
+
+        settings_service = get_settings_service()
+    except Exception:  # noqa: BLE001 - no settings layer (lfx standalone) -> local/trusted, allow
+        return
+    if settings_service is None:
+        return
+    if not getattr(settings_service.settings, "allow_custom_components", True):
+        msg = (
+            "Python code execution is disabled because allow_custom_components is False. "
+            "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to enable this component."
+        )
+        raise CodeExecutionDisabledError(msg)
+
+
 def safe_builtins() -> dict:
     """Return a fresh curated ``__builtins__`` mapping for interpreter globals.
 
