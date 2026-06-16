@@ -307,7 +307,8 @@ export default function InputComponent({
       {password && (!setSelectedOption || selectedOption === "") && (
         <button
           type="button"
-          tabIndex={-1}
+          aria-label={pwdVisible ? "Hide password" : "Show password"}
+          aria-pressed={pwdVisible}
           className={classNames(
             "mb-px mr-3 p-0",
             editNode

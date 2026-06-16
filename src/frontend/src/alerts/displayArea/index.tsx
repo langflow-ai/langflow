@@ -15,7 +15,12 @@ export default function AlertDisplayArea() {
   };
 
   return (
-    <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
+    <div
+      aria-live="polite"
+      role="status"
+      className="flex flex-col-reverse"
+      style={{ zIndex: 999 }}
+    >
       {tempNotificationList.map((alert) => (
         <div key={alert.id}>
           {alert.type === "error" ? (
