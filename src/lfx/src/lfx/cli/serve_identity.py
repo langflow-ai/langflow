@@ -31,11 +31,10 @@ from __future__ import annotations
 
 import json
 import time
-import urllib.request
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Literal
-from urllib.error import URLError
 
+import httpx
 import jwt
 from fastapi import HTTPException
 
@@ -90,15 +89,26 @@ class IdentityConfigError(ValueError):
 def _fetch_json(url: str) -> dict:
     """Fetch and parse a JSON document over http(s).
 
-    Only http/https URLs are allowed — the scheme guard satisfies the URL-audit
-    linter and prevents ``file://``/``ftp://`` smuggling via a misconfigured
-    issuer or JWKS URL.
+    Only http/https URLs are allowed — the scheme guard prevents ``file://``/``ftp://``
+    smuggling via a misconfigured issuer or JWKS URL.
+
+    Redirects are NOT followed. Following a redirect would let a misconfigured or
+    malicious issuer downgrade ``https://`` → ``http://`` (or point off-host), and the
+    plaintext follow-up request would already be on the wire before any scheme check
+    could run. We reject the redirect instead so the fetch fails closed rather than
+    silently downgrading the transport.
     """
     if not url.lower().startswith(("http://", "https://")):
         msg = f"Refusing to fetch non-http(s) URL: {url!r}"
         raise IdentityConfigError(msg)
-    with urllib.request.urlopen(url, timeout=_HTTP_TIMEOUT_SECONDS) as resp:  # noqa: S310 - scheme checked above
-        return json.loads(resp.read())
+    with httpx.Client(timeout=_HTTP_TIMEOUT_SECONDS, follow_redirects=False) as client:
+        resp = client.get(url)
+        if resp.is_redirect:
+            location = resp.headers.get("location", "")
+            msg = f"Refusing to follow redirect from {url!r} to {location!r} (possible transport downgrade)."
+            raise IdentityConfigError(msg)
+        resp.raise_for_status()
+        return resp.json()
 
 
 @dataclass(frozen=True)
@@ -259,7 +269,7 @@ class _JwksCache:
                 "This is a configuration error, not a transient outage — requests will be "
                 "rejected (401) until it is fixed."
             )
-        except (URLError, OSError, TimeoutError, json.JSONDecodeError, jwt.PyJWTError) as exc:
+        except (httpx.HTTPError, OSError, TimeoutError, json.JSONDecodeError, jwt.PyJWTError) as exc:
             logger.error(
                 f"JWKS refresh from {self.source_label} failed ({type(exc).__name__}: {exc}); keeping cached keys."
             )

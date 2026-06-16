@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import httpx
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
@@ -511,6 +512,16 @@ class TestJwksSourceResolution:
         # The SSRF guard: a file:// (or other non-http) URL must be refused.
         with pytest.raises(IdentityConfigError):
             _fetch_json("file:///etc/passwd")
+
+    def test_fetch_json_refuses_redirect(self):
+        # A redirect (e.g. https -> http) must be refused, not followed: following it
+        # would issue the plaintext request before any scheme check could run.
+        redirect = httpx.Response(status_code=302, headers={"location": "http://evil.example/jwks"})
+        with (
+            patch.object(httpx.Client, "get", return_value=redirect),
+            pytest.raises(IdentityConfigError, match="redirect"),
+        ):
+            _fetch_json("https://accounts.example.com/jwks")
 
     def _assert_fails_closed(self, verifier, keypair):
         """A malformed external shape must not raise out of prefetch/auth — 401."""
