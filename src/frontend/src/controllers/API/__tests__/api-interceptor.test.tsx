@@ -15,6 +15,9 @@ const mockSetAuthErrorCount = jest.fn();
 const authState = {
   autoLogin: false, // forces the "should retry refresh" branch on auth errors
   accessToken: "tok",
+  // A signed-in session — the interceptor only refreshes when authenticated, so
+  // an anonymous visitor never enters the refresh loop (see the no-session test).
+  isAuthenticated: true,
   authenticationErrorCount: 0,
   setAuthenticationErrorCount: mockSetAuthErrorCount,
 };
@@ -89,6 +92,7 @@ describe("ApiInterceptor auth-error handling", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     authState.authenticationErrorCount = 0;
+    authState.isAuthenticated = true;
     // Default to a non-auth page so the refresh path is exercised.
     window.history.pushState({}, "", "/");
   });
@@ -197,6 +201,21 @@ describe("ApiInterceptor auth-error handling", () => {
 
   it("still guards the /login page against the refresh loop", async () => {
     window.history.pushState({}, "", "/login");
+    const onRejected = mountAndCaptureErrorHandler();
+    const error = authError(401, "get", "/api/v1/flows");
+
+    await expect(onRejected(error)).rejects.toBe(error);
+    expect(mockRenew).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
+  });
+
+  it("does not refresh when there is no session, on any route (e.g. the landing '/')", async () => {
+    // The route-agnostic guard: an anonymous visitor (no session) on a route
+    // that isn't part of the auth funnel — the public landing "/" — must not
+    // enter the refresh→logout path. Before this guard, "/" slipped past the
+    // path-based check and spun an unbounded /refresh loop.
+    authState.isAuthenticated = false;
+    window.history.pushState({}, "", "/");
     const onRejected = mountAndCaptureErrorHandler();
     const error = authError(401, "get", "/api/v1/flows");
 

@@ -93,6 +93,16 @@ function ApiInterceptor() {
           ) {
             return Promise.reject(error);
           }
+          // Only a signed-in session can be refreshed. With no session, an auth
+          // error on ANY route — the public landing "/", an expired-session
+          // reload, etc. — must NOT enter the refresh→logout path, or it spins an
+          // unbounded /refresh retry loop. This is the route-agnostic guard;
+          // isPublicAuthPage() below is defense-in-depth for the auth funnel.
+          // Read live via getState(): the interceptor is registered once, so a
+          // value closed over at render time would go stale after navigation.
+          if (!useAuthStore.getState().isAuthenticated) {
+            return Promise.reject(error);
+          }
           const stillRefresh = checkErrorCount();
           if (!stillRefresh) {
             return Promise.reject(error);
