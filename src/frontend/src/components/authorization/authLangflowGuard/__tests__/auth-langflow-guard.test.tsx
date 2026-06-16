@@ -93,4 +93,18 @@ describe("ProtectedLangflowRoute", () => {
     expect(screen.queryByTestId("navigate")).not.toBeInTheDocument();
     expect(screen.queryByTestId("langflow-page")).not.toBeInTheDocument();
   });
+
+  it("shows the loader for an unauthenticated user (no redirect)", () => {
+    // The outer ProtectedRoute is what bounces anonymous users to /login;
+    // this guard must not redirect them itself — it just holds on the loader.
+    renderGuard({
+      isAuthenticated: false,
+      autoLogin: false,
+      isAdmin: false,
+      userData: null,
+    });
+    expect(screen.getByTestId("loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("navigate")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("langflow-page")).not.toBeInTheDocument();
+  });
 });
