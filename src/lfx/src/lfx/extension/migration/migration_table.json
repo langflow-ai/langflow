@@ -259,6 +259,9 @@
     {
       "legacy_slot": "ext:firecrawl:FirecrawlSearchApi@official-pre-a",
       "target": "ext:firecrawl:FirecrawlSearchApi@official",
+      "added_in": "1.11.0"
+    },
+    {
       "bare_class_name": "NextPlaidVectorStoreComponent",
       "target": "ext:nextplaid:NextPlaidVectorStoreComponent@official",
       "added_in": "1.11.0"
