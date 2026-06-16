@@ -34,6 +34,7 @@ members = [
     "lfx-docling",
     "lfx-duckduckgo",
     "lfx-ibm",
+    "lfx-nextplaid",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -7281,6 +7282,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-plaid"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/a2/ab1be67245eade111c313e6db5fd58fe072832b7d2186095a1a1b8a72794/langchain_plaid-0.1.0.tar.gz", hash = "sha256:a315547b6d3f31047bd1c1ae5067b8c59eaaf131b031e223b71e44994071028e", size = 6050, upload-time = "2026-03-09T09:19:35.527Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/8b/350b3f1a42c4cff87a4191dd983f1c0a6b5d67097cfd684a00d25c539687/langchain_plaid-0.1.0-py3-none-any.whl", hash = "sha256:473cfa09de04f9c36e5434ecef3f1ec218a63e51fc0617145057664eb1fe3dfa", size = 7015, upload-time = "2026-03-09T09:19:38.408Z" },
+]
+
+[[package]]
 name = "langchain-protocol"
 version = "0.0.16"
 source = { registry = "https://pypi.org/simple" }
@@ -7400,7 +7414,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.10.0"
+version = "1.11.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
@@ -7408,6 +7422,7 @@ dependencies = [
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
     { name = "lfx-ibm" },
+    { name = "lfx-nextplaid" },
 ]
 
 [package.optional-dependencies]
@@ -7501,6 +7516,7 @@ requires-dist = [
     { name = "lfx-docling", extras = ["local"], marker = "extra == 'docling'", editable = "src/bundles/docling" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
+    { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
@@ -7554,7 +7570,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.10.0"
+version = "0.11.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile", version = "3.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -8895,7 +8911,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "1.10.0"
+version = "1.11.0"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "ag-ui-protocol" },
@@ -9040,7 +9056,7 @@ integration = [
 
 [[package]]
 name = "lfx-arxiv"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/arxiv" }
 dependencies = [
     { name = "defusedxml" },
@@ -9055,7 +9071,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-docling"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/docling" }
 dependencies = [
     { name = "docling-core" },
@@ -9124,7 +9140,7 @@ provides-extras = ["local", "chunking", "image-description", "all"]
 
 [[package]]
 name = "lfx-duckduckgo"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/duckduckgo" }
 dependencies = [
     { name = "ddgs" },
@@ -9141,7 +9157,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ibm"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/ibm" }
 dependencies = [
     { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
@@ -9159,6 +9175,23 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-ibm", specifier = "~=1.1.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-nextplaid"
+version = "0.1.0"
+source = { editable = "src/bundles/nextplaid" }
+dependencies = [
+    { name = "langchain-plaid" },
+    { name = "lfx" },
+    { name = "pillow" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-plaid", specifier = ">=0.1.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "pillow", specifier = ">=10.0.0" },
 ]
 
 [[package]]

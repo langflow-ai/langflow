@@ -264,6 +264,18 @@ Continuing from the [Create a custom component with Langflow Assistant](#create-
    For example, ask Langflow Assistant `How do I send an API request to chat with this flow in Python?`
    The response includes a request sourced from the Langflow documentation that you can copy and paste into your application.
 
+## Reference canvas components in your prompts
+
+Reference components and their fields directly in a **Langflow Assistant** prompt using the `@` and `.` selectors.
+
+In the **Langflow Assistant** prompt input, enter `@`  to list all available components, and then select a component to insert its reference.
+To select a specific field within a component, enter `.` after the component.
+
+For example, to prompt **Langflow Assistant** to update the system prompt field on an Agent component, enter the following:
+```
+Update @Agent.System Prompt to always respond in bullet points.
+```
+
 ## See also
 
 - [Build flows](/concepts-flows)
