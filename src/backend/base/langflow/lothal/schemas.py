@@ -180,14 +180,6 @@ class PRDResponse(BaseModel):
     content: str | None
 
 
-class DiagramResponse(BaseModel):
-    """`GET /projects/{id}/diagram` — raw Mermaid plus the converted xyflow graph."""
-
-    mermaid: str | None
-    nodes: list[Node]
-    edges: list[Edge]
-
-
 class DiagramSaveResponse(BaseModel):
     """`POST /projects/{id}/diagram/save` — serialized Mermaid plus any validation warning."""
 

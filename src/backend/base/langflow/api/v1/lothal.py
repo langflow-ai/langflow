@@ -25,9 +25,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
+from lfx.log.logger import logger
+from pydantic import ValidationError
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.lothal.diagram import DiagramGraph
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError, call_llm
 from langflow.lothal.router import process_turn
 from langflow.lothal.schemas import (
@@ -36,7 +39,6 @@ from langflow.lothal.schemas import (
     DebugLLMRequest,
     DebugLLMResponse,
     DiagramApproveResponse,
-    DiagramResponse,
     DiagramSaveRequest,
     DiagramSaveResponse,
     MessageRead,
@@ -47,6 +49,18 @@ from langflow.lothal.schemas import (
 )
 from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.database.models.lothal_project.model import Message, MessageRole, Project, ProjectPhase
+
+# Phases in which the diagram exists and is readable — the `GET /diagram` phase
+# gate from `api-endpoints.md`. CLARIFICATION precedes generation, so the diagram
+# read 403s there (no graph can exist yet); every later phase may read it.
+_DIAGRAM_VISIBLE_PHASES = frozenset(
+    {
+        ProjectPhase.DIAGRAM_GENERATION.value,
+        ProjectPhase.DIAGRAM_REFINEMENT.value,
+        ProjectPhase.CODE_GENERATION.value,
+        ProjectPhase.DONE.value,
+    }
+)
 
 router = APIRouter(
     prefix="/lothal",
@@ -337,12 +351,39 @@ async def get_prd(project: OwnedProject) -> PRDResponse:
 
 @router.get(
     "/projects/{project_id}/diagram",
-    response_model=DiagramResponse,
-    responses=_NOT_IMPLEMENTED,
-    summary="Get the diagram (Mermaid + xyflow)",
+    summary="Get the diagram (xyflow graph)",
 )
-async def get_diagram(project: OwnedProject) -> JSONResponse:
-    return stub("The diagram endpoint is not implemented yet.")
+async def get_diagram(project: OwnedProject) -> DiagramGraph:
+    """Return the project's xyflow diagram graph (Story 2.3).
+
+    The diagram *is* an xyflow graph — there is no Mermaid and no conversion. The
+    stored `diagram_json` (the canonical `DiagramGraph` written by the generator,
+    Story 2.1) is returned straight through as `{nodes, edges}`.
+
+    Phase-gated to `DIAGRAM_GENERATION` and later: the diagram doesn't exist
+    during CLARIFICATION, so a read there is a `403` (ownership is checked first
+    by `OwnedProject`, so an unowned project still 404s regardless of phase).
+    Once the project enters generation but before a graph is produced,
+    `diagram_json` is `null` and an empty `{nodes: [], edges: []}` is returned.
+
+    A malformed stored graph is logged and exposed as the empty graph rather than
+    failing the read — one bad row must never 500 the canvas (mirrors the
+    `ProjectRead.diagram_json` parse boundary).
+    """
+    if project.phase not in _DIAGRAM_VISIBLE_PHASES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The diagram is not available until diagram generation begins.",
+        )
+
+    if not project.diagram_json:
+        return DiagramGraph()
+
+    try:
+        return DiagramGraph.model_validate(json.loads(project.diagram_json))
+    except (TypeError, ValueError, ValidationError):
+        logger.warning(f"Ignoring malformed diagram_json for project {project.id}; returning empty graph.")
+        return DiagramGraph()
 
 
 @router.post(
