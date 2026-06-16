@@ -355,6 +355,46 @@ describe("SidebarSegmentedNav", () => {
     expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("mcp");
   });
 
+  it("renders a separator element before the memories nav item", () => {
+    const { container } = render(<SidebarSegmentedNav />);
+    // The separator is a <li role="separator" aria-hidden="true"> injected before memories
+    const separator = container.querySelector('li[role="separator"]');
+    expect(separator).toBeInTheDocument();
+    expect(separator).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("separator renders only once", () => {
+    const { container } = render(<SidebarSegmentedNav />);
+    const separators = container.querySelectorAll('li[role="separator"]');
+    expect(separators).toHaveLength(1);
+  });
+
+  it("separator appears between versions and memories in the DOM order", () => {
+    const { container } = render(<SidebarSegmentedNav />);
+    const menuItems = container.querySelectorAll(
+      '[data-testid="sidebar-menu-item"], li[role="separator"]',
+    );
+    const nodes = Array.from(menuItems);
+    const separatorIndex = nodes.findIndex(
+      (n) => n.getAttribute("role") === "separator",
+    );
+    const memoriesButton = container.querySelector('[data-testid="sidebar-nav-memories"]');
+    const memoriesItem = memoriesButton?.closest('[data-testid="sidebar-menu-item"]');
+    const memoriesIndex = nodes.indexOf(memoriesItem as Element);
+    // Separator should appear immediately before memories
+    expect(separatorIndex).toBe(memoriesIndex - 1);
+  });
+
+  it("sidebar-menu has no direct div children between it and menu items", () => {
+    const { container } = render(<SidebarSegmentedNav />);
+    const sidebarMenu = container.querySelector('[data-testid="sidebar-menu"]');
+    const directDivChildren = Array.from(sidebarMenu?.children ?? []).filter(
+      (child) => child.tagName === "DIV" && !child.hasAttribute("data-testid"),
+    );
+    // No anonymous wrapper divs — each direct child is either a menu-item or separator
+    expect(directDivChildren).toHaveLength(0);
+  });
+
   it("exports NAV_ITEMS correctly", () => {
     expect(NAV_ITEMS).toHaveLength(6);
     expect(NAV_ITEMS[0]).toEqual({

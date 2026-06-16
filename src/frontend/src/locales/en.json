@@ -58,6 +58,7 @@
   "stepper.nextStep": "Next Step",
   "stepper.back": "Back",
   "stepper.needHelp": "Need Help?",
+  "flow.flowSettings": "Flow settings",
   "flow.menu.editDetails": "Edit details",
   "flow.menu.export": "Export",
   "flow.menu.duplicate": "Duplicate",

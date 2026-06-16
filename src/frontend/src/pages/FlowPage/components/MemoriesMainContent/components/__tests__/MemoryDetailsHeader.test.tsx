@@ -190,9 +190,7 @@ describe("MemoryDetailsHeader", () => {
     const props = makeProps({ sessions: ["session-1", "session-2"] });
     render(<MemoryDetailsHeader {...props} />);
 
-    const sessionTrigger = screen.getByRole("button", {
-      name: "Session filter",
-    });
+    const sessionTrigger = screen.getByTestId("session-filter-button");
     expect(sessionTrigger).toBeInTheDocument();
     expect(sessionTrigger).not.toBeDisabled();
   });
@@ -203,9 +201,7 @@ describe("MemoryDetailsHeader", () => {
       hasNextSessionsPage: false,
     });
     render(<MemoryDetailsHeader {...props} />);
-    expect(
-      screen.getByRole("button", { name: "Session filter" }),
-    ).not.toBeDisabled();
+    expect(screen.getByTestId("session-filter-button")).not.toBeDisabled();
   });
 
   it("renders the reload button with correct aria-label", () => {
@@ -468,7 +464,7 @@ describe("MemoryDetailsHeader", () => {
       render(<MemoryDetailsHeader {...props} />);
 
       expect(
-        screen.getByRole("button", { name: "Session filter" }),
+        screen.getByTestId("session-filter-button"),
       ).toHaveTextContent("All Sessions");
     });
 
@@ -477,7 +473,7 @@ describe("MemoryDetailsHeader", () => {
       render(<MemoryDetailsHeader {...props} />);
 
       expect(
-        screen.getByRole("button", { name: "Session filter" }),
+        screen.getByTestId("session-filter-button"),
       ).toHaveTextContent("All Sessions");
     });
 
@@ -486,7 +482,7 @@ describe("MemoryDetailsHeader", () => {
       render(<MemoryDetailsHeader {...props} />);
 
       expect(
-        screen.getByRole("button", { name: "Session filter" }),
+        screen.getByTestId("session-filter-button"),
       ).toHaveTextContent("session-1");
     });
 
@@ -557,7 +553,7 @@ describe("MemoryDetailsHeader", () => {
       });
       render(<MemoryDetailsHeader {...props} />);
 
-      const btn = screen.getByRole("button", { name: "Session filter" });
+      const btn = screen.getByTestId("session-filter-button");
       expect(btn).toHaveTextContent(`${longId.slice(0, 20)}...`);
     });
   });
