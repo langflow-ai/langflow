@@ -20,7 +20,7 @@ def _get_type(d: dict | BaseModel) -> str | None:
     return getattr(d, "type", None)
 
 
-# Create a union type of all content types
+# Mirror of the lfx ContentType union — keep both in sync (a missing tag breaks MessageRead validation).
 ContentType = Annotated[
     Annotated[ToolContent, Tag("tool_use")]
     | Annotated[ErrorContent, Tag("error")]

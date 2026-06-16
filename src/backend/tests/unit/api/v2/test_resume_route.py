@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
+from langflow.services.database.models.jobs.model import Job, JobEvent, JobStatus, JobType
 from lfx.services.deps import session_scope
 
 pytestmark = pytest.mark.usefixtures("client")
@@ -75,7 +75,9 @@ async def test_resume_non_suspended_job_409(client, created_api_key):
     flow_id, job_id = uuid4(), uuid4()
     async with session_scope() as session:
         session.add(Flow(id=flow_id, name=f"f-{flow_id}", data={"nodes": [], "edges": []}, user_id=user_id))
-        session.add(Job(job_id=job_id, flow_id=flow_id, user_id=user_id, type=JobType.WORKFLOW, status=JobStatus.QUEUED))
+        session.add(
+            Job(job_id=job_id, flow_id=flow_id, user_id=user_id, type=JobType.WORKFLOW, status=JobStatus.QUEUED)
+        )
         await session.flush()
     try:
         body = {"request_id": "req-1", "decision": {}}
@@ -93,3 +95,67 @@ async def test_resume_invalid_job_id_404(client, created_api_key):
     body = {"request_id": "req-1", "decision": {}}
     resp = await client.post("api/v2/workflows/not-a-uuid/resume", json=body, headers=_headers(created_api_key))
     assert resp.status_code == 404
+
+
+@pytest.fixture
+async def suspended_job_with_decisions(created_api_key):
+    """A SUSPENDED job whose pending request constrains the choice to approve/reject."""
+    user_id = created_api_key.user_id
+    flow_id, job_id = uuid4(), uuid4()
+    request = {"flow_id": str(flow_id), "mode": "background", "stream_protocol": "langflow", "input_value": "hi"}
+    async with session_scope() as session:
+        session.add(Flow(id=flow_id, name=f"f-{flow_id}", data={"nodes": [], "edges": []}, user_id=user_id))
+        session.add(
+            Job(
+                job_id=job_id,
+                flow_id=flow_id,
+                user_id=user_id,
+                type=JobType.WORKFLOW,
+                status=JobStatus.SUSPENDED,
+                job_metadata={"pending_request_id": "req-1", "request": request},
+            )
+        )
+        session.add(
+            JobEvent(
+                job_id=job_id,
+                seq=1,
+                event_type="human_input_required",
+                payload={"request_id": "req-1", "allowed_decisions": ["approve", "reject"]},
+            )
+        )
+        await session.flush()
+    yield job_id
+    async with session_scope() as session:
+        job = await session.get(Job, job_id)
+        if job:
+            await session.delete(job)
+        flow = await session.get(Flow, flow_id)
+        if flow:
+            await session.delete(flow)
+
+
+async def test_resume_action_id_not_allowed_422(client, created_api_key, suspended_job_with_decisions):
+    """B1: a decision whose action_id is not in allowed_decisions is rejected with 422."""
+    body = {"request_id": "req-1", "decision": {"action_id": "delete_everything"}}
+    resp = await client.post(
+        f"api/v2/workflows/{suspended_job_with_decisions}/resume", json=body, headers=_headers(created_api_key)
+    )
+    assert resp.status_code == 422, resp.text
+    assert resp.json()["detail"]["code"] == "INVALID_DECISION"
+
+
+async def test_resume_allowed_action_id_accepted_200(client, created_api_key, suspended_job_with_decisions):
+    """B1: a decision whose action_id is in allowed_decisions passes validation."""
+    body = {"request_id": "req-1", "decision": {"action_id": "approve"}}
+    resp = await client.post(
+        f"api/v2/workflows/{suspended_job_with_decisions}/resume", json=body, headers=_headers(created_api_key)
+    )
+    assert resp.status_code == 200, resp.text
+
+
+async def test_mark_card_answered_is_noop_without_card_message(client):  # noqa: ARG001
+    """mark_card_answered degrades gracefully when no card message id is recorded."""
+    from langflow.api.v2.hitl import mark_card_answered
+
+    # Unknown job → no job_metadata.card_message_id → returns without raising.
+    await mark_card_answered(uuid4(), "req-1", {"action_id": "approve"})

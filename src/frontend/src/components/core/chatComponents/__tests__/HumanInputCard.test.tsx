@@ -16,6 +16,8 @@ jest.mock("@/controllers/API/queries/workflows/use-resume-workflow", () => ({
 }));
 jest.mock("@/controllers/API/agui/run-flow-bridge", () => ({
   consumeBackgroundEvents: (...args: unknown[]) => mockConsume(...args),
+}));
+jest.mock("@/controllers/API/agui/human-input-card", () => ({
   getResumeContext: () => ({ jobId: "job-1", opts: { flowId: "f1" } }),
   markHumanInputSubmitted: jest.fn(),
 }));
@@ -140,6 +142,23 @@ describe("HumanInputCard", () => {
     render(<HumanInputCard content={content} />);
     fireEvent.click(screen.getByTestId("human-input-decision-approve"));
     expect(screen.getByTestId("human-input-decision-approve")).toBeDisabled();
+  });
+
+  it("renders resolved on reload when content carries submitted_action", () => {
+    const content: InteractiveContent = {
+      ..._approval,
+      job_id: "job-1",
+      submitted_action: "approve",
+    };
+    render(<HumanInputCard content={content} />);
+    // Only the chosen option is shown; the others are gone; no resume is fired.
+    expect(
+      screen.getByTestId("human-input-decision-approve"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("human-input-decision-reject"),
+    ).not.toBeInTheDocument();
+    expect(mockResume).not.toHaveBeenCalled();
   });
 
   it("keeps only the chosen option and removes the others after selecting", () => {

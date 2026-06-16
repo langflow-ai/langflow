@@ -7,8 +7,8 @@ import IconComponent, {
 import MessageMetadata from "@/components/common/messageMetadataComponent";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import HumanInputCard from "@/components/core/chatComponents/HumanInputCard";
+import { findHumanInputContent } from "@/controllers/API/agui/human-input-card";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
-import type { InteractiveContent } from "@/types/chat";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -47,11 +47,11 @@ export const BotMessage = memo(
     const isEmpty = decodedMessage?.trim() === "";
     const chatMessage = chat.message ? chat.message.toString() : "";
     // ContentBlockDisplay renders only tool_use content, so the HITL card is rendered directly below.
-    const humanInputContent = chat.content_blocks
-      ?.flatMap((block) => block.contents ?? [])
-      .find((content) => content?.type === "human_input") as
-      | InteractiveContent
-      | undefined;
+    const humanInputContent = findHumanInputContent(chat.content_blocks);
+    const showThinkingDots =
+      (chatMessage === "" || (isEmpty && !isStreaming)) &&
+      isBuilding &&
+      lastMessage;
     const { mutate: updateMessageMutation } = useUpdateMessage();
 
     const handleEditMessage = (message: string) => {
@@ -228,10 +228,7 @@ export const BotMessage = memo(
                           data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                           className="flex w-full flex-col"
                         >
-                          {humanInputContent ? null : (chatMessage === "" ||
-                              (isEmpty && !isStreaming)) &&
-                              isBuilding &&
-                              lastMessage ? (
+                          {humanInputContent ? null : showThinkingDots ? (
                             <IconComponent
                               name="MoreHorizontal"
                               className="h-8 w-8 animate-pulse"

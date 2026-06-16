@@ -1191,6 +1191,19 @@ async def resume_workflow(
     if job is None or job.type != JobType.WORKFLOW or not (is_owner or current_user.is_superuser):
         raise _not_found()
 
+    from langflow.api.v2.hitl import is_decision_allowed, mark_card_answered
+
+    if not await is_decision_allowed(parsed_job_id, request.decision or {}):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "Invalid decision",
+                "code": "INVALID_DECISION",
+                "message": "decision.action_id is not one of the pending request's allowed_decisions.",
+                "job_id": job_id,
+            },
+        )
+
     service = get_background_execution_service()
     if service._frame_source_factory is None:  # noqa: SLF001
         service._frame_source_factory = _default_frame_source_factory  # noqa: SLF001
@@ -1210,8 +1223,6 @@ async def resume_workflow(
                 "job_id": job_id,
             },
         )
-    from langflow.api.v2.hitl import mark_card_answered
-
     await mark_card_answered(parsed_job_id, request.request_id, request.decision or {})
     return WorkflowResumeResponse(job_id=job_id, status="resuming", message="Resume accepted")
 

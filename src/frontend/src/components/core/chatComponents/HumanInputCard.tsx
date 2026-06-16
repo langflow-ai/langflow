@@ -3,10 +3,10 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { queryClient } from "@/contexts";
 import {
-  consumeBackgroundEvents,
   getResumeContext,
   markHumanInputSubmitted,
-} from "@/controllers/API/agui/run-flow-bridge";
+} from "@/controllers/API/agui/human-input-card";
+import { consumeBackgroundEvents } from "@/controllers/API/agui/run-flow-bridge";
 import { useResumeWorkflow } from "@/controllers/API/queries/workflows/use-resume-workflow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

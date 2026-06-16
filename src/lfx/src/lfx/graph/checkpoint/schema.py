@@ -13,6 +13,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from lfx.log.logger import logger
+
 _WIRE_KIND = "__lfx_ser__"
 
 
@@ -55,6 +57,10 @@ def serialize_value(value: Any) -> dict[str, Any] | None:
     Opaque objects (no faithful JSON form) degrade to None rather than raising:
     a checkpoint must still be writable when one vertex holds e.g. a client
     handle, and resume re-derives such objects from the rebuilt component.
+
+    Limitation: paused vertex state that is not JSON-serializable is NOT restored
+    on resume (it returns as None). A flow that depends on such state downstream of
+    the pause must re-derive it from the rebuilt node, not from the checkpoint.
     """
     if value is None or isinstance(value, (str, int, float, bool)):
         return {_WIRE_KIND: "raw", "value": value}
@@ -62,7 +68,8 @@ def serialize_value(value: Any) -> dict[str, Any] | None:
         try:
             dumped = value.model_dump(mode="json")
         except Exception:  # noqa: BLE001
-            # A model with an opaque field (LLM client, model class) can't round-trip; degrade to None so the checkpoint stays writable.
+            # Opaque field (LLM client / model class) can't round-trip; degrade to None.
+            logger.debug("checkpoint: dropping non-serializable model %s", type(value).__qualname__)
             return None
         return {
             _WIRE_KIND: "model",
