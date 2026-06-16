@@ -30,12 +30,16 @@ class LLMResponse:
     `text` is the assistant message and is always present. `suggestions` are
     clarification chips and stay `[]` for phases that don't offer them.
     `next_phase` is the transition target, or `None` when the turn keeps the
-    project in its current phase.
+    project in its current phase. `diagram` is a validated xyflow graph
+    (`{nodes, edges}` as a plain dict) the diagram generator emits for the chat
+    endpoint to persist to `lothal_project.diagram_json`; `None` for every phase
+    that doesn't touch the diagram (the engine itself never writes the DB).
     """
 
     text: str
     suggestions: list[str] = field(default_factory=list)
     next_phase: str | None = None
+    diagram: dict | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.text, str) or not self.text.strip():
@@ -46,6 +50,9 @@ class LLMResponse:
             raise ValueError(msg)
         if self.next_phase is not None and not isinstance(self.next_phase, str):
             msg = "LLMResponse.next_phase must be a string or None."
+            raise ValueError(msg)
+        if self.diagram is not None and not isinstance(self.diagram, dict):
+            msg = "LLMResponse.diagram must be a dict or None."
             raise ValueError(msg)
 
 

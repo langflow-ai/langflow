@@ -18,6 +18,7 @@ from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1 import lothal as lothal_api
 from langflow.lothal.engines import clarification as clarification_engine
+from langflow.lothal.engines import diagram_generation as diagram_engine
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError
 from langflow.services.database.models.lothal_project.model import CodeFile, Message, Project
 from langflow.services.deps import session_scope
@@ -642,6 +643,102 @@ async def test_chat_three_no_signal_turns_then_clarity_transition(
     assert project["prd_content"] is not None
     assert "[CLARITY_REACHED]" not in project["prd_content"]
     assert "Overview" in project["prd_content"]
+
+
+# --- Diagram generation (Story 2.1) ------------------------------------------
+
+
+def _diagram_reply() -> str:
+    """A valid xyflow graph in the canonical shape the generator emits."""
+    return json.dumps(
+        {
+            "nodes": [
+                {"id": "user", "type": "actorNode", "position": {"x": 0, "y": 0}, "data": {"label": "User"}},
+                {"id": "api", "type": "systemNode", "position": {"x": 240, "y": 0}, "data": {"label": "API"}},
+            ],
+            "edges": [
+                {"id": "e1", "source": "user", "target": "api", "data": {"order": 1, "label": "submit"}},
+                {"id": "e2", "source": "api", "target": "user", "animated": True, "data": {"order": 2, "label": "ok"}},
+                {"id": "e3", "source": "user", "target": "api", "data": {"order": 3, "label": "poll"}},
+            ],
+        }
+    )
+
+
+async def test_diagram_generation_turn_persists_graph_and_holds_phase(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Backlog acceptance for Story 2.1 (fake LLM).
+
+    A chat turn while the project is in DIAGRAM_GENERATION runs the generator
+    engine for real (only the model call is faked): the injected xyflow graph is
+    validated and persisted to `lothal_project.diagram_json`, the turn does not
+    transition the project, and the stored graph is readable back as an object.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+
+    # Precondition: the project has left CLARIFICATION (PRD written, phase moved).
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "DIAGRAM_GENERATION"
+        session.add(project)
+
+    async def fake_call_llm(_messages, **_kwargs):
+        return _diagram_reply()
+
+    monkeypatch.setattr(diagram_engine, "call_llm", fake_call_llm)
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat",
+        json={"content": "generate the diagram"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    reply = response.json()
+    assert reply["role"] == "ASSISTANT"
+    assert reply["phase"] == "DIAGRAM_GENERATION"  # the turn ran under (and stays in) this phase
+    assert reply["suggestions"] == []
+
+    # The project read exposes the persisted graph as a parsed object, phase held.
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "DIAGRAM_GENERATION"  # next_phase was None — no transition
+    diagram = project["diagram_json"]
+    assert diagram is not None
+    assert [n["id"] for n in diagram["nodes"]] == ["user", "api"]
+    assert [e["data"]["order"] for e in diagram["edges"]] == [1, 2, 3]
+
+
+async def test_diagram_generation_invalid_twice_is_502_and_rolls_back(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Two invalid graphs fail the turn as a bad model round-trip and persist nothing.
+
+    The whole turn is one transaction, so the user message is rolled back too and
+    `diagram_json` stays null — the user can resend cleanly.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "DIAGRAM_GENERATION"
+        session.add(project)
+
+    async def fake_call_llm(_messages, **_kwargs):
+        return json.dumps({"nodes": [], "edges": []})  # too few nodes/edges — always invalid
+
+    monkeypatch.setattr(diagram_engine, "call_llm", fake_call_llm)
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat",
+        json={"content": "generate the diagram"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+
+    # Nothing persisted: no diagram, and the user turn rolled back with it.
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["diagram_json"] is None
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert messages == []
 
 
 # --- PRD endpoint (Story 1.3) -------------------------------------------------

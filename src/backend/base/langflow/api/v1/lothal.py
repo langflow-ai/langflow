@@ -19,6 +19,7 @@ owned by the caller or 404s, so an endpoint going live can never forget the
 check.
 """
 
+import json
 from typing import Annotated
 from uuid import UUID
 
@@ -278,6 +279,13 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
         phase=turn_phase,
     )
     session.add(assistant_message)
+
+    if response.diagram is not None:
+        # The diagram generator (Story 2.1) emits a validated xyflow graph for us
+        # to persist; `diagram_json` is the canonical store (a JSON string of the
+        # full graph), parsed back to an object at the `ProjectRead` boundary.
+        project.diagram_json = json.dumps(response.diagram)
+        session.add(project)
 
     if response.next_phase is not None and response.next_phase != turn_phase:
         # The PRD is the clarification engine's parting summary; capture it as the
