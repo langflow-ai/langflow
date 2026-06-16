@@ -50,12 +50,6 @@ function ApiInterceptor() {
 
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
-  // Pages of the public auth funnel where a logged-out visitor is expected.
-  // On these we must NOT attempt a token refresh or force-logout on a 401/403,
-  // otherwise an anonymous visitor triggers an unbounded /refresh retry loop.
-  // "/signup" used to slip through (it does not contain "login"), so guard it too.
-  const isPublicAuthPage =
-    location.pathname.includes("login") || location.pathname.includes("signup");
   const customHeaders = useCustomApiHeaders();
 
   const setHealthCheckTimeout = useUtilityStore(
@@ -199,8 +193,22 @@ function ApiInterceptor() {
     };
   }, [accessToken, setErrorData, customHeaders, autoLogin]);
 
+  // Pages of the public auth funnel where a logged-out visitor is expected.
+  // On these we must NOT attempt a token refresh or force-logout on a 401/403,
+  // otherwise an anonymous visitor triggers an unbounded /refresh retry loop.
+  // "/signup" used to slip through (it does not contain "login"), so guard it too.
+  // Read the pathname live: ApiInterceptor is mounted app-wide and does not
+  // re-render on client-side (SPA) navigation, so a value captured at render
+  // time would stay stale after navigating e.g. "/" -> "/signup".
+  function isPublicAuthPage(): boolean {
+    return (
+      window.location.pathname.includes("login") ||
+      window.location.pathname.includes("signup")
+    );
+  }
+
   function checkErrorCount() {
-    if (isPublicAuthPage) return;
+    if (isPublicAuthPage()) return;
 
     // Read the live count from the store, not the value captured in this
     // component's render closure. The response interceptor is registered once
@@ -221,7 +229,7 @@ function ApiInterceptor() {
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
-    if (isPublicAuthPage) return;
+    if (isPublicAuthPage()) return;
     if (error.config?.headers) {
       for (const [key, value] of Object.entries(customHeaders)) {
         error.config.headers[key] = value;

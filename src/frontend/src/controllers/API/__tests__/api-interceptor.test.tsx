@@ -181,6 +181,20 @@ describe("ApiInterceptor auth-error handling", () => {
     expect(mockLogout).not.toHaveBeenCalled();
   });
 
+  it("guards /signup reached by client-side navigation after mount (no stale closure)", async () => {
+    // ApiInterceptor mounts app-wide and does not re-render on SPA navigation,
+    // so the page guard must read the pathname live. Mount on "/", capture the
+    // handler, THEN navigate to "/signup" — the guard must still suppress the
+    // refresh→logout path even though the component never re-rendered.
+    const onRejected = mountAndCaptureErrorHandler();
+    window.history.pushState({}, "", "/signup");
+    const error = authError(401, "get", "/api/v1/flows");
+
+    await expect(onRejected(error)).rejects.toBe(error);
+    expect(mockRenew).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
+  });
+
   it("still guards the /login page against the refresh loop", async () => {
     window.history.pushState({}, "", "/login");
     const onRejected = mountAndCaptureErrorHandler();
