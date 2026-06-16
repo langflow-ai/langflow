@@ -531,6 +531,55 @@ def test_apply_tweaks_code_only_prevention():
     assert node["data"]["node"]["template"]["code"]["value"] == "original_code"
 
 
+def test_apply_tweaks_blocks_code_type_field_with_other_name():
+    """A code-injection bypass: a field of type 'code' but named something other than 'code'.
+
+    The old guard only blocked the literal field name 'code'. Block by field *type*.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "node": {
+                "template": {
+                    "custom_source": {"value": "original", "type": "code"},
+                    "param1": {"value": "ok", "type": "str"},
+                }
+            }
+        },
+    }
+    apply_tweaks(node, {"custom_source": "import os; os.system('id')", "param1": "new"})
+
+    # The code-type field must NOT be overridden; the ordinary field is fine.
+    assert node["data"]["node"]["template"]["custom_source"]["value"] == "original"
+    assert node["data"]["node"]["template"]["param1"]["value"] == "new"
+
+
+def test_apply_tweaks_blocks_code_execution_component_fields():
+    """Tweaks must not override the executable input of a code-execution component.
+
+    The component's code lives under names like 'python_code', not 'code', so the
+    block must key off the component *type* (CODE_EXECUTION_COMPONENT_TYPES).
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "PythonREPLComponent",
+            "node": {
+                "template": {
+                    "python_code": {"value": "print('safe')", "type": "str"},
+                }
+            },
+        },
+    }
+    apply_tweaks(node, {"python_code": "__import__('os').system('id')"})
+
+    assert node["data"]["node"]["template"]["python_code"]["value"] == "print('safe')"
+
+
 def test_apply_tweaks_mcp_field_type():
     """Test that MCP field types are handled correctly with dict values."""
     from langflow.processing.process import apply_tweaks

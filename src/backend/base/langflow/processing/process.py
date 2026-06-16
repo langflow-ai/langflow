@@ -144,14 +144,21 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
         logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
         return
 
+    # Security: tweaks must never inject executable code. The previous name-only
+    # block on "code" was bypassable because code-execution components expose
+    # their code under other field names (python_code, script, ...); block by
+    # field type ("code") and by code-execution component type too.
+    from lfx.utils.flow_validation import CODE_EXECUTION_COMPONENT_TYPES
+
+    is_code_exec_component = node.get("data", {}).get("type") in CODE_EXECUTION_COMPONENT_TYPES
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name not in template_data:
             continue
-        if tweak_name == "code":
-            logger.warning("Security: Code field cannot be overridden via tweaks.")
-            continue
         if tweak_name in template_data:
             field_type = template_data[tweak_name].get("type", "")
+            if tweak_name == "code" or field_type == "code" or is_code_exec_component:
+                logger.warning("Security: Code field cannot be overridden via tweaks.")
+                continue
             if field_type == "NestedDict":
                 value = validate_and_repair_json(tweak_value)
                 template_data[tweak_name]["value"] = value
