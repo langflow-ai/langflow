@@ -1,5 +1,7 @@
 import asyncio
 import atexit
+import hashlib
+import hmac
 import os
 import pickle
 import tempfile
@@ -232,6 +234,9 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
 
     KEY_PREFIX = "langflow:cache:"
 
+    # Size of the HMAC-SHA256 tag prepended to every stored payload.
+    _HMAC_DIGEST_SIZE = hashlib.sha256().digest_size
+
     def __init__(self, host="localhost", port=6379, db=0, url=None, expiration_time=60 * 60) -> None:
         """Initialize a new RedisCache instance.
 
@@ -252,10 +257,24 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         else:
             self._client = StrictRedis(host=host, port=port, db=db)
         self.expiration_time = expiration_time
+        self._signing_key: bytes | None = None
 
     def _key(self, key) -> str:
         """Return the namespaced Redis key."""
         return f"{self.KEY_PREFIX}{key}"
+
+    def _get_signing_key(self) -> bytes:
+        """Derive the HMAC key for cache payload integrity from the server secret.
+
+        Bound to the same ``SECRET_KEY`` used elsewhere, so no extra config is
+        required. Cached after first use (the secret does not change at runtime).
+        """
+        if self._signing_key is None:
+            from lfx.services.deps import get_settings_service
+
+            secret = get_settings_service().auth_settings.SECRET_KEY.get_secret_value()
+            self._signing_key = hashlib.sha256(b"langflow-redis-cache-hmac:" + secret.encode()).digest()
+        return self._signing_key
 
     async def is_connected(self) -> bool:
         """Check if the Redis client is connected."""
@@ -274,13 +293,32 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         if key is None:
             return CACHE_MISS
         value = await self._client.get(self._key(key))
-        return dill.loads(value) if value else CACHE_MISS
+        if not value:
+            return CACHE_MISS
+        # Integrity check before deserializing. The Redis datastore is an
+        # untrusted boundary (a co-tenant on a shared Redis, an exposed/un-ACL'd
+        # port, or anyone able to write under the langflow:cache: namespace could
+        # plant a payload). dill.loads() executes embedded reduce gadgets, so we
+        # only deserialize bytes carrying a valid HMAC produced with the server
+        # secret. Unsigned/tampered/legacy entries are treated as a miss and are
+        # never passed to dill.loads (CWE-502 / LE-1248).
+        if len(value) < self._HMAC_DIGEST_SIZE:
+            return CACHE_MISS
+        tag, payload = value[: self._HMAC_DIGEST_SIZE], value[self._HMAC_DIGEST_SIZE :]
+        expected = hmac.new(self._get_signing_key(), payload, hashlib.sha256).digest()
+        if not hmac.compare_digest(tag, expected):
+            await logger.awarning("RedisCache: discarding cache entry with an invalid integrity tag (key=%s)", key)
+            return CACHE_MISS
+        return dill.loads(payload)
 
     @override
     async def set(self, key, value, lock=None) -> None:
         try:
             if pickled := dill.dumps(value, recurse=True):
-                result = await self._client.setex(self._key(key), self.expiration_time, pickled)
+                # Prefix an HMAC tag so get() can reject tampered/forged payloads
+                # before deserialization (see get()).
+                tag = hmac.new(self._get_signing_key(), pickled, hashlib.sha256).digest()
+                result = await self._client.setex(self._key(key), self.expiration_time, tag + pickled)
                 if not result:
                     msg = "RedisCache could not set the value."
                     raise ValueError(msg)
