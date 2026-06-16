@@ -1,7 +1,7 @@
-// The lothal "surface": a themed container that scopes the dockyard design
+// The lothal "surface": a themed container that scopes the Lothal design
 // system to everything it wraps. It applies `data-theme` (light/dark) and
 // `data-density` to a `.lothal-surface` element — the CSS variables in
-// lothal-theme.css resolve only inside this subtree, so the rest of Langflow
+// lothal-theme.css resolve only inside this subtree, so the rest of the app
 // keeps its own theme. Provides `useLothalTheme()` for toggling.
 
 import {
@@ -15,8 +15,8 @@ import {
 } from "react";
 import "./lothal-theme.css";
 
-// The dockyard fonts load only when a lothal surface actually mounts — the
-// rest of Langflow never pays the two Google-Fonts requests. The link is
+// The Lothal fonts load only when a lothal surface actually mounts — the
+// rest of the app never pays the two Google-Fonts requests. The link is
 // injected once (id-guarded) and intentionally never removed: the fonts are
 // cached, and removing it would flash unstyled text on the next visit.
 const FONTS_LINK_ID = "lothal-fonts";

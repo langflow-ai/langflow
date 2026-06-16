@@ -30,10 +30,10 @@ export function isNotImplemented(error: unknown): boolean {
   return status === 501 || body?.status === "not_implemented";
 }
 
-/** The human message from a structured 501, or a dockyard-flavored fallback. */
+/** The human message from a structured 501, or a generic fallback. */
 export function notImplementedDetail(
   error: unknown,
-  fallback = "This part of the dockyard isn't built yet.",
+  fallback = "This part of Lothal isn't built yet.",
 ): string {
   if (!error || typeof error !== "object") return fallback;
   const e = error as MaybeAxiosError;

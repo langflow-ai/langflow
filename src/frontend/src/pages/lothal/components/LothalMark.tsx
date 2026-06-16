@@ -1,5 +1,4 @@
-// Lothal mark — a paper boat. Lothal was an ancient dockyard where ships were
-// built; this app is the modern drydock for software. Inherits `currentColor`.
+// Lothal mark — the product logo, a small paper boat. Inherits `currentColor`.
 
 export function LothalMark({ size = 22 }: { size?: number }) {
   return (

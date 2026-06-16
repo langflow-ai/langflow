@@ -1,4 +1,4 @@
-// Lothal signup page (Epic B.9) — the dockyard-branded account creation that
+// Lothal signup page (Epic B.9) — the Lothal-branded account creation that
 // replaces Langflow's default signup at "/signup". The login page funnels new
 // visitors here via its "Create an account" link, carrying any ?redirect along.
 // Account creation does not log the user in, so on success we send them to
@@ -295,7 +295,7 @@ function SignUpView() {
   );
 }
 
-/** Lothal account creation at "/signup" — dockyard theme, dark by default. */
+/** Lothal account creation at "/signup" — Lothal theme, dark by default. */
 export default function SignUpPage() {
   return (
     <LothalSurface style={{ minHeight: "100vh" }}>

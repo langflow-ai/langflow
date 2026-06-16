@@ -97,14 +97,14 @@ describe("Lothal Workspace", () => {
   it("shows a themed loading state while projects load", () => {
     mockUseProject.mockReturnValue({ data: undefined, isLoading: true });
     render(<Workspace />);
-    expect(screen.getByText("Opening the workshop…")).toBeInTheDocument();
+    expect(screen.getByText("Opening your project…")).toBeInTheDocument();
   });
 
   it("shows a not-found state when no project matches the id", () => {
     mockUseProject.mockReturnValue({ data: undefined, isLoading: false });
     render(<Workspace />);
     expect(screen.getByText("Project not found")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Back to the harbor" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back to projects" }));
     expect(mockNavigate).toHaveBeenCalledWith("/lothal");
   });
 
@@ -278,7 +278,7 @@ describe("Lothal Workspace", () => {
     expect(screen.getByText("Couldn't load the code")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Something went wrong reaching the dockyard. Try again in a moment.",
+        "Something went wrong loading this. Try again in a moment.",
       ),
     ).toBeInTheDocument();
   });

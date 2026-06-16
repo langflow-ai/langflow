@@ -176,13 +176,13 @@ function ChatPanel({ project }: { project: Project }) {
   if (isError) {
     // Contract-first: a structured 501 means the backend isn't built yet, so
     // the whole column shows the uniform NotReady state. Any other error is a
-    // genuine failure reaching the dockyard.
+    // genuine failure reaching the server.
     return isNotImplemented(error) ? (
       <NotReady title="The conversation isn't live yet" error={error} />
     ) : (
       <NotReady
         title="Couldn't load the conversation"
-        detail="Something went wrong reaching the dockyard. Try again in a moment."
+        detail="Something went wrong loading this. Try again in a moment."
       />
     );
   }
@@ -303,13 +303,13 @@ function CodePanel({ project }: { project: Project }) {
   if (isError) {
     // Contract-first: a structured 501 means code generation isn't built yet
     // (Epic 4), so the pane shows the uniform NotReady state. Any other error
-    // is a genuine failure reaching the dockyard.
+    // is a genuine failure reaching the server.
     return isNotImplemented(error) ? (
       <NotReady title="The code isn't ready yet" error={error} />
     ) : (
       <NotReady
         title="Couldn't load the code"
-        detail="Something went wrong reaching the dockyard. Try again in a moment."
+        detail="Something went wrong loading this. Try again in a moment."
       />
     );
   }
@@ -342,7 +342,7 @@ function WorkspaceView() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   // One project, fetched directly — the workspace doesn't need (or wait for)
-  // the whole harbor. A 404 leaves `project` unset → the not-found state.
+  // the whole project list. A 404 leaves `project` unset → the not-found state.
   const { data: project, isLoading } = useProject(projectId ?? "");
   const username = useAuthStore((s) => s.userData?.username);
   const initial = username ? username.charAt(0).toUpperCase() : "";
@@ -374,7 +374,7 @@ function WorkspaceView() {
             fontStyle: "italic",
           }}
         >
-          Opening the workshop…
+          Opening your project…
         </span>
       </div>
     );
@@ -394,10 +394,10 @@ function WorkspaceView() {
       >
         <EmptyHint
           title="Project not found"
-          sub="This build isn’t in your harbor — it may have been deleted."
+          sub="This project doesn’t exist — it may have been deleted."
         />
         <Button variant="accent" onClick={() => navigate("/lothal")}>
-          Back to the harbor
+          Back to projects
         </Button>
       </div>
     );
@@ -418,7 +418,7 @@ function WorkspaceView() {
           >
             <button
               type="button"
-              aria-label="Back to the harbor"
+              aria-label="Back to projects"
               onClick={() => navigate("/lothal")}
               style={{
                 display: "inline-flex",

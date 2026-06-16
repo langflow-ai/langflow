@@ -270,7 +270,7 @@ function SettingsView() {
 
           <Section
             title="Keys & providers"
-            description="Credentials live in Langflow's settings. Lothal reads the GitHub token from your global variables; manage API keys there too."
+            description="Credentials live in your settings. Lothal reads the GitHub token from your global variables; manage API keys there too."
           >
             <Field
               label="Global variables"
@@ -285,10 +285,7 @@ function SettingsView() {
                 <ExternalGlyph />
               </Button>
             </Field>
-            <Field
-              label="API keys"
-              hint="Langflow API keys for programmatic access."
-            >
+            <Field label="API keys" hint="API keys for programmatic access.">
               <Button
                 variant="outline"
                 size="sm"

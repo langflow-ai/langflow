@@ -11,7 +11,7 @@
 //
 // Reviewed 2026-06-09 (code-review finding 7) and kept as a conscious
 // won't-fix: react-syntax-highlighter is already a dependency (four upstream
-// components use it), but the dockyard palette maps exactly onto these five
+// components use it), but the Lothal palette maps exactly onto these five
 // token types, CodeView's hand-built gutter/tab layout doesn't fit the
 // library's renderer, and these regexes were verified free of catastrophic
 // backtracking. Revisit only if the Code view ever needs real language

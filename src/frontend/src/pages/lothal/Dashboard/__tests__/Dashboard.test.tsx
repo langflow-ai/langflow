@@ -34,10 +34,10 @@ describe("Lothal Dashboard", () => {
     jest.clearAllMocks();
   });
 
-  it("shows the dockyard empty state when there are no projects", () => {
+  it("shows the empty state when there are no projects", () => {
     mockUseProjects.mockReturnValue({ data: [], isLoading: false });
     render(<Dashboard />);
-    expect(screen.getByText("No vessels in the harbor")).toBeInTheDocument();
+    expect(screen.getByText("No projects yet")).toBeInTheDocument();
   });
 
   it("renders the product version badge from the single LOTHAL_VERSION source", () => {
@@ -133,7 +133,7 @@ describe("Lothal Dashboard", () => {
   // Each of these reproduced a real bug; the source is now fixed, so they are
   // plain passing tests guarding the fix.
 
-  it("shows an error state — not the empty 'harbor' — when the project list fails to load", () => {
+  it("shows an error state — not the empty state — when the project list fails to load", () => {
     // Input: the list query failed (backend 500 / expired session / network drop).
     mockUseProjects.mockReturnValue({
       data: undefined,
@@ -143,11 +143,9 @@ describe("Lothal Dashboard", () => {
     });
     render(<Dashboard />);
     // Expected: a user with real projects is NOT told they have none...
-    expect(
-      screen.queryByText("No vessels in the harbor"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("No projects yet")).not.toBeInTheDocument();
     // ...and the error UI with a retry affordance is shown instead.
-    expect(screen.getByText("Couldn’t reach the harbor")).toBeInTheDocument();
+    expect(screen.getByText("Couldn’t load your projects")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Try again" }),
     ).toBeInTheDocument();

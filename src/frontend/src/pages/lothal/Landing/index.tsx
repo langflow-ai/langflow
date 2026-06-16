@@ -4,8 +4,8 @@
 // preview of the sample bakery project ("larder" — clarification chat beside
 // a real diagram canvas), a principles grid, the five steps, a canvas
 // showcase band, delivery cards, a glowing closing CTA, and the footer.
-// Anonymous visitors funnel into /login?redirect=/lothal; authenticated
-// users go straight to the dashboard.
+// The page's only actions are Log in and Sign up — it never opens the projects
+// app directly; /lothal lives behind auth (ProtectedRoute) for a later epic.
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +13,6 @@ import type {
   DiagramEdge,
   DiagramNode,
 } from "@/controllers/API/queries/lothal";
-import useAuthStore from "@/stores/authStore";
 import {
   Button,
   DiagramCanvas,
@@ -239,8 +238,7 @@ function SceneChat() {
             className="serif"
             style={{ fontSize: 14.5, lineHeight: 1.5, color: "var(--ink-90)" }}
           >
-            That's enough to draft a sequence
-            <span className="caret" />
+            That's enough to draft a sequence diagram.
           </div>
         </div>
       </div>
@@ -258,7 +256,12 @@ function SceneChat() {
             color: "var(--ink-soft)",
           }}
         >
-          <span>Type your answer…</span>
+          <span
+            style={{ display: "inline-flex", alignItems: "center", gap: 1 }}
+          >
+            <span className="caret" aria-hidden />
+            <span>Type your answer…</span>
+          </span>
           <span className="mono" style={{ fontSize: 10.5 }}>
             ↵
           </span>
@@ -480,17 +483,11 @@ const LANDING_CSS = `
 /** The landing content; assumes a surrounding LothalSurface for theme tokens. */
 function LandingView() {
   const navigate = useNavigate();
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const autoLogin = useAuthStore((s) => s.autoLogin);
-  // autoLogin === true means the backend signs everyone in — treat as authed,
-  // mirroring ProtectedLoginRoute.
-  const authed = isAuthenticated || autoLogin === true;
 
-  // The CTA funnels into the Lothal dashboard; anonymous visitors pass the
-  // destination to the login page via the redirect param it already honors.
-  const enter = () => navigate(authed ? "/lothal" : "/login?redirect=/lothal");
-  const startLabel = authed ? "Open dashboard" : "Start building";
-  const startLabelLg = authed ? "Open dashboard" : "Start building free";
+  // The landing's only actions: create an account or sign in. The Lothal login
+  // page defaults its own post-login redirect to /lothal, so these go plain.
+  const goSignup = () => navigate("/signup");
+  const goLogin = () => navigate("/login");
 
   // The marketing title, restored to the app default on the way out.
   useEffect(() => {
@@ -608,13 +605,11 @@ function LandingView() {
             </nav>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {!authed && (
-                <Button variant="ghost" size="sm" onClick={enter}>
-                  Sign in
-                </Button>
-              )}
-              <Button variant="accent" size="sm" onClick={enter}>
-                {startLabel}
+              <Button variant="ghost" size="sm" onClick={goLogin}>
+                Log in
+              </Button>
+              <Button variant="accent" size="sm" onClick={goSignup}>
+                Sign up
               </Button>
             </div>
           </div>
@@ -658,7 +653,7 @@ function LandingView() {
                 background: "var(--accent)",
               }}
             />
-            Built on Langflow · now in early access
+            Now in early access
           </div>
 
           <h1
@@ -702,15 +697,11 @@ function LandingView() {
               justifyContent: "center",
             }}
           >
-            <Button variant="accent" size="lg" onClick={enter}>
-              {startLabelLg}
+            <Button variant="accent" size="lg" onClick={goSignup}>
+              Sign up free
             </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => scrollTo(SECTION_IDS.how)}
-            >
-              See how it works
+            <Button variant="outline" size="lg" onClick={goLogin}>
+              Log in
             </Button>
           </div>
 
@@ -872,7 +863,7 @@ function LandingView() {
                 align="left"
                 eyebrow="The canvas"
                 title="A real diagram, not a black box."
-                sub="The same node-and-edge canvas Langflow uses to wire up agents. Your architecture is something you can actually touch."
+                sub="A real node-and-edge canvas for wiring up agents. Your architecture is something you can actually touch."
               />
               <div
                 style={{
@@ -919,11 +910,6 @@ function LandingView() {
                     </span>
                   </div>
                 ))}
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <Button variant="accent" onClick={enter}>
-                  Open the canvas
-                </Button>
               </div>
             </div>
 
@@ -1100,14 +1086,12 @@ function LandingView() {
                 justifyContent: "center",
               }}
             >
-              <Button variant="accent" size="lg" onClick={enter}>
-                {startLabelLg}
+              <Button variant="accent" size="lg" onClick={goSignup}>
+                Sign up free
               </Button>
-              {!authed && (
-                <Button variant="outline" size="lg" onClick={enter}>
-                  Sign in
-                </Button>
-              )}
+              <Button variant="outline" size="lg" onClick={goLogin}>
+                Log in
+              </Button>
             </div>
           </div>
         </section>
@@ -1163,7 +1147,7 @@ function LandingView() {
   );
 }
 
-/** Public landing page at "/" — marketing surface on the dockyard theme. */
+/** Public landing page at "/" — marketing surface on the Lothal theme. */
 export default function Landing() {
   return (
     <LothalSurface>
