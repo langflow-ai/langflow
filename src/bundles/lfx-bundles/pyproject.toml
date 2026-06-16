@@ -40,8 +40,10 @@ clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
 cloudflare = ["langchain-community>=0.4.1,<1.0.0"]
 codeagents = ["smolagents>=1.8.0", "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
 cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
+composio = ["composio==0.9.2", "composio-langchain==0.9.2"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
 couchbase = ["couchbase>=4.2.1", "langchain-community>=0.4.1,<1.0.0"]
+cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
 exa = ["metaphor-python==0.1.23"]
@@ -51,6 +53,7 @@ glean = []
 google = ["langchain-google-genai~=4.1.2", "langchain-google-community~=3.0.2", "google-api-python-client~=2.161"]
 groq = ["langchain-groq~=1.1.1"]
 homeassistant = ["requests>=2.32.0"]
+huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'", "huggingface-hub[inference]>=1.0.0,<2.0.0", "langchain-community>=0.4.1,<1.0.0"]
 icosacomputing = ["requests>=2.32.0"]
 jigsawstack = ["jigsawstack==0.2.7"]
 litellm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
@@ -62,6 +65,7 @@ mistral = ["langchain-mistralai~=1.1.1"]
 mongodb = ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"]
 needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
+nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
 olivya = []
 ollama = ["langchain-ollama~=0.3.10"]
 openrouter = ["langchain-openai>=1.1.6"]
@@ -106,8 +110,10 @@ all = [
     "lfx-bundles[cloudflare]",
     "lfx-bundles[codeagents]",
     "lfx-bundles[cometapi]",
+    "lfx-bundles[composio]",
     "lfx-bundles[confluence]",
     "lfx-bundles[couchbase]",
+    "lfx-bundles[cuga]",
     "lfx-bundles[deepseek]",
     "lfx-bundles[elastic]",
     "lfx-bundles[exa]",
@@ -117,6 +123,7 @@ all = [
     "lfx-bundles[google]",
     "lfx-bundles[groq]",
     "lfx-bundles[homeassistant]",
+    "lfx-bundles[huggingface]",
     "lfx-bundles[icosacomputing]",
     "lfx-bundles[jigsawstack]",
     "lfx-bundles[litellm]",
@@ -128,6 +135,7 @@ all = [
     "lfx-bundles[mongodb]",
     "lfx-bundles[needle]",
     "lfx-bundles[novita]",
+    "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
     "lfx-bundles[ollama]",
     "lfx-bundles[openrouter]",

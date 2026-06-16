@@ -13,7 +13,7 @@ class TestNVIDIAModelComponentLazyLoading:
 
     def test_model_options_empty_on_import(self):
         """The model_name dropdown should have no options at class definition time."""
-        from lfx.components.nvidia.nvidia import NVIDIAModelComponent
+        from lfx_bundles.nvidia.nvidia import NVIDIAModelComponent
 
         model_name_input = next(
             inp for inp in NVIDIAModelComponent.inputs if getattr(inp, "name", None) == "model_name"
@@ -31,7 +31,7 @@ class TestNVIDIAModelComponentLazyLoading:
         mock_nvidia_module = MagicMock()
         sys.modules["langchain_nvidia_ai_endpoints"] = mock_nvidia_module
         try:
-            import lfx.components.nvidia.nvidia as nvidia_mod
+            import lfx_bundles.nvidia.nvidia as nvidia_mod
 
             importlib.reload(nvidia_mod)
 
@@ -43,8 +43,8 @@ class TestNVIDIAModelComponentLazyLoading:
 
     def test_update_build_config_populates_models(self):
         """update_build_config should fetch models and populate the dropdown options."""
-        from lfx.components.nvidia.nvidia import NVIDIAModelComponent
         from lfx.schema.dotdict import dotdict
+        from lfx_bundles.nvidia.nvidia import NVIDIAModelComponent
 
         fake_model_a = MagicMock()
         fake_model_a.id = "model-a"
@@ -56,7 +56,7 @@ class TestNVIDIAModelComponentLazyLoading:
         component = NVIDIAModelComponent()
         component._attributes = {
             "base_url": "https://integrate.api.nvidia.com/v1",
-            "api_key": "fake-key",
+            "api_key": "fake-key",  # pragma: allowlist secret
             "tool_model_enabled": False,
         }
 
@@ -67,7 +67,7 @@ class TestNVIDIAModelComponentLazyLoading:
             }
         )
 
-        with patch("lfx.components.nvidia.nvidia.ChatNVIDIA", create=True) as mock_cls:
+        with patch("lfx_bundles.nvidia.nvidia.ChatNVIDIA", create=True) as mock_cls:
             mock_instance = MagicMock()
             mock_instance.available_models = [fake_model_a, fake_model_b]
             mock_instance.get_available_models.return_value = [fake_model_a, fake_model_b]
@@ -82,13 +82,13 @@ class TestNVIDIAModelComponentLazyLoading:
 
     def test_update_build_config_handles_api_failure(self):
         """update_build_config should clear options and raise on API failure."""
-        from lfx.components.nvidia.nvidia import NVIDIAModelComponent
         from lfx.schema.dotdict import dotdict
+        from lfx_bundles.nvidia.nvidia import NVIDIAModelComponent
 
         component = NVIDIAModelComponent()
         component._attributes = {
             "base_url": "https://integrate.api.nvidia.com/v1",
-            "api_key": "fake-key",
+            "api_key": "fake-key",  # pragma: allowlist secret
             "tool_model_enabled": False,
         }
 

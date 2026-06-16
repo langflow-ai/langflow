@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, cast
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import StructuredTool
-
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,

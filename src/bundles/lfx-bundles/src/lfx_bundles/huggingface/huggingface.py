@@ -1,12 +1,11 @@
 from typing import Any
 
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
-from tenacity import retry, stop_after_attempt, wait_fixed
-
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 # TODO: langchain_community.llms.huggingface_endpoint is depreciated.
 #  Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0

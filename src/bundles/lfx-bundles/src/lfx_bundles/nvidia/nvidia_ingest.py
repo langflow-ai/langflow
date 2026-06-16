@@ -1,10 +1,9 @@
 from urllib.parse import urlparse
 
-from pypdf import PdfReader
-
 from lfx.base.data.base_file import BaseFileComponent
 from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.schema.data import Data
+from pypdf import PdfReader
 
 
 class NvidiaIngestComponent(BaseFileComponent):

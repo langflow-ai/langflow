@@ -2,14 +2,13 @@ from urllib.parse import urlparse
 
 import requests
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
+from lfx.base.embeddings.model import LCEmbeddingsModel
+from lfx.field_typing import Embeddings
+from lfx.io import MessageTextInput, Output, SecretStrInput
 
 # Next update: use langchain_huggingface
 from pydantic import SecretStr
 from tenacity import retry, stop_after_attempt, wait_fixed
-
-from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.field_typing import Embeddings
-from lfx.io import MessageTextInput, Output, SecretStrInput
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):

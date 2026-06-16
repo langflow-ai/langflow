@@ -139,6 +139,22 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         "smolagents>=1.8.0",
         "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",  # noqa: E501
     ],
+    # --- tranche 8: agent/model SDKs (needed the lfx dynamic-import test decoupling) ---
+    "composio": ["composio==0.9.2", "composio-langchain==0.9.2"],
+    "huggingface": [
+        "langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+        "huggingface-hub[inference]>=1.0.0,<2.0.0",
+        _LC_COMMUNITY,
+    ],
+    "nvidia": [
+        "langchain-nvidia-ai-endpoints~=1.0.0",
+        "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
+        "gassist>=0.0.1; sys_platform == 'win32'",
+    ],
+    "cuga": [
+        "cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'",
+        "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+    ],
 }
 
 _OPTIONAL_DEPS_HEADER = (
