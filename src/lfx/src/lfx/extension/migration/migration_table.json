@@ -2080,6 +2080,46 @@
       "legacy_slot": "ext:nextplaid:VllmMultivectorEmbeddingsComponent@official-pre-a",
       "target": "ext:nextplaid:VllmMultivectorEmbeddingsComponent@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "SpiderTool",
+      "target": "ext:spider:SpiderTool@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.langchain_utilities.spider.SpiderTool",
+      "target": "ext:spider:SpiderTool@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.langchain_utilities.SpiderTool",
+      "target": "ext:spider:SpiderTool@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:spider:SpiderTool@official-pre-a",
+      "target": "ext:spider:SpiderTool@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "PoliciesComponent",
+      "target": "ext:toolguard:PoliciesComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.models_and_agents.policies_component.PoliciesComponent",
+      "target": "ext:toolguard:PoliciesComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.models_and_agents.PoliciesComponent",
+      "target": "ext:toolguard:PoliciesComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:toolguard:PoliciesComponent@official-pre-a",
+      "target": "ext:toolguard:PoliciesComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

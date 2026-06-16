@@ -9174,7 +9174,9 @@ all = [
     { name = "requests" },
     { name = "scrapegraph-py", version = "1.47.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scrapegraph-py", version = "2.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "spider-client" },
     { name = "supabase" },
+    { name = "toolguard" },
     { name = "upstash-vector" },
     { name = "weaviate-client" },
     { name = "wikipedia" },
@@ -9297,9 +9299,15 @@ serpapi = [
     { name = "google-search-results" },
     { name = "langchain-community" },
 ]
+spider = [
+    { name = "spider-client" },
+]
 supabase = [
     { name = "langchain-community" },
     { name = "supabase" },
+]
+toolguard = [
+    { name = "toolguard" },
 ]
 unstructured = [
     { name = "langchain-unstructured" },
@@ -9423,8 +9431,10 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["sambanova"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["scrapegraph"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["serpapi"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["spider"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["supabase"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["tavily"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["toolguard"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["unstructured"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["upstash"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["vllm"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9454,7 +9464,9 @@ requires-dist = [
     { name = "requests", marker = "extra == 'novita'", specifier = ">=2.32.0" },
     { name = "requests", marker = "extra == 'xai'", specifier = ">=2.32.0" },
     { name = "scrapegraph-py", marker = "extra == 'scrapegraph'", specifier = ">=1.12.0" },
+    { name = "spider-client", marker = "extra == 'spider'", specifier = ">=0.0.27,<1.0.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
+    { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.16,<1.0.0" },
     { name = "upstash-vector", marker = "extra == 'upstash'", specifier = "==0.6.0" },
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.10.2,<5.0.0" },
     { name = "wikipedia", marker = "extra == 'wikipedia'", specifier = "==1.4.0" },
@@ -9463,7 +9475,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["aiml", "apify", "assemblyai", "azure", "chroma", "clickhouse", "cometapi", "confluence", "couchbase", "deepseek", "exa", "firecrawl", "git", "glean", "groq", "icosacomputing", "litellm", "lmstudio", "mem0", "milvus", "mistral", "mongodb", "needle", "novita", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "sambanova", "scrapegraph", "serpapi", "supabase", "tavily", "unstructured", "upstash", "vllm", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
+provides-extras = ["aiml", "apify", "assemblyai", "azure", "chroma", "clickhouse", "cometapi", "confluence", "couchbase", "deepseek", "exa", "firecrawl", "git", "glean", "groq", "icosacomputing", "litellm", "lmstudio", "mem0", "milvus", "mistral", "mongodb", "needle", "novita", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "sambanova", "scrapegraph", "serpapi", "spider", "supabase", "tavily", "toolguard", "unstructured", "upstash", "vllm", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
 
 [[package]]
 name = "lfx-cohere"
