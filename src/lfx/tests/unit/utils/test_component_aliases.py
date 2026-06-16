@@ -60,3 +60,32 @@ def test_flatten_alias_never_overrides_real_key():
     }
     flat = flatten_components_with_aliases(all_types_dict)
     assert flat["TavilySearchComponent"] is in_tree
+
+
+# Identity (class name) must beat another component's display_name regardless of
+# registry iteration order.  Both the standalone ``AgentQL`` component (ext class
+# name "AgentQL") and the Composio wrapper (display_name "AgentQL") contribute the
+# "AgentQL" alias; only the standalone owns it as an identity.  When both moved to
+# bundles, single-pass setdefault made the winner order-dependent and the Composio
+# wrapper sometimes shadowed the real component, mismatching starter-project nodes.
+_AGENTQL_STANDALONE = (
+    "ext:agentql:AgentQL@official",
+    {"display_name": "Extract Web Data", "template": {"_type": "Component"}},
+)
+_AGENTQL_COMPOSIO = (
+    "ext:composio:ComposioAgentQLAPIComponent@official",
+    {"display_name": "AgentQL", "template": {"_type": "Component"}},
+)
+
+
+def test_identity_alias_beats_display_name_collision_standalone_first():
+    all_types_dict = {"c": dict([_AGENTQL_STANDALONE, _AGENTQL_COMPOSIO])}
+    flat = flatten_components_with_aliases(all_types_dict)
+    assert flat["AgentQL"] is flat[_AGENTQL_STANDALONE[0]]
+
+
+def test_identity_alias_beats_display_name_collision_composio_first():
+    # Reversed insertion order -- the case that was failing intermittently in CI.
+    all_types_dict = {"c": dict([_AGENTQL_COMPOSIO, _AGENTQL_STANDALONE])}
+    flat = flatten_components_with_aliases(all_types_dict)
+    assert flat["AgentQL"] is flat[_AGENTQL_STANDALONE[0]]

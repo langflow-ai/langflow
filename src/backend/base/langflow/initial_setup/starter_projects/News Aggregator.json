@@ -227,7 +227,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "lfx.components.composio.agentql_composio.ComposioAgentQLAPIComponent"
+              "module": "lfx.components.agentql.agentql_api.AgentQL"
             },
             "minimized": false,
             "output_types": [],

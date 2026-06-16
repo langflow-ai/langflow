@@ -24,26 +24,42 @@ LEGACY_TYPE_ALIASES: dict[str, str] = {
 _EXT_KEY_RE = re.compile(r"^ext:[^:]+:(?P<class_name>[^@]+)@.+$")
 
 
-def get_component_type_aliases(
+def _component_alias_tiers(
     component_name: str,
     component_data: Mapping[str, Any] | None,
-) -> tuple[str, ...]:
-    """Return the known aliases for a component type."""
-    aliases: list[str] = [component_name]
-    aliases.extend(old_name for old_name, new_name in LEGACY_TYPE_ALIASES.items() if new_name == component_name)
+) -> tuple[list[str], list[str]]:
+    """Split a component's aliases into identity and display tiers.
+
+    Identity aliases derive from the component's own canonical name -- the
+    registry key, explicit legacy mappings, the ext-key class name, and the
+    ``name`` field.  Display aliases derive from human-facing labels
+    (``display_name``, the template ``_type``) that can legitimately collide
+    with another component's identity (e.g. the Composio ``AgentQL`` wrapper's
+    ``display_name`` vs. the standalone ``AgentQL`` component's class name).
+
+    Keeping the two tiers separate lets ``flatten_components_with_aliases``
+    register every identity alias before any display alias, so a component's
+    true name always wins its own key regardless of registry iteration order.
+    """
+    identity: list[str] = [component_name]
+    identity.extend(old_name for old_name, new_name in LEGACY_TYPE_ALIASES.items() if new_name == component_name)
 
     ext_match = _EXT_KEY_RE.match(component_name)
     if ext_match:
         bare_class_name = ext_match.group("class_name")
-        aliases.append(bare_class_name)
+        identity.append(bare_class_name)
         if bare_class_name.endswith("Component"):
-            aliases.append(bare_class_name.removesuffix("Component"))
+            identity.append(bare_class_name.removesuffix("Component"))
 
+    display: list[str] = []
     if component_data:
-        for field_name in ("name", "display_name"):
-            value = component_data.get(field_name)
-            if isinstance(value, str) and value:
-                aliases.append(value)
+        name_value = component_data.get("name")
+        if isinstance(name_value, str) and name_value:
+            identity.append(name_value)
+
+        display_name_value = component_data.get("display_name")
+        if isinstance(display_name_value, str) and display_name_value:
+            display.append(display_name_value)
 
         template = component_data.get("template")
         if isinstance(template, Mapping):
@@ -53,18 +69,34 @@ def get_component_type_aliases(
                 and component_class_name
                 and component_class_name.endswith("Component")
             ):
-                aliases.append(component_class_name.removesuffix("Component"))
+                display.append(component_class_name.removesuffix("Component"))
 
-    deduped_aliases = dict.fromkeys(alias for alias in aliases if alias)
+    return identity, display
+
+
+def get_component_type_aliases(
+    component_name: str,
+    component_data: Mapping[str, Any] | None,
+) -> tuple[str, ...]:
+    """Return the known aliases for a component type."""
+    identity, display = _component_alias_tiers(component_name, component_data)
+    deduped_aliases = dict.fromkeys(alias for alias in (*identity, *display) if alias)
     return tuple(deduped_aliases)
 
 
 def flatten_components_with_aliases(
     all_types_dict: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Flatten a categorized component dict and append derived aliases."""
+    """Flatten a categorized component dict and append derived aliases.
+
+    Aliases are registered in two passes: identity aliases (a component's own
+    canonical name) for every component first, then display aliases.  This makes
+    resolution deterministic when two components share a label -- a component's
+    own class name beats another component's ``display_name`` no matter the
+    registry iteration order.
+    """
     flattened: dict[str, Any] = {}
-    aliased_entries: list[tuple[str, Mapping[str, Any], Any]] = []
+    aliased_entries: list[tuple[list[str], list[str], Any]] = []
 
     for category_components in all_types_dict.values():
         if not isinstance(category_components, Mapping):
@@ -72,10 +104,17 @@ def flatten_components_with_aliases(
         for component_name, component_data in category_components.items():
             flattened[component_name] = component_data
             if isinstance(component_data, Mapping):
-                aliased_entries.append((component_name, component_data, component_data))
+                identity, display = _component_alias_tiers(component_name, component_data)
+                aliased_entries.append((identity, display, component_data))
 
-    for component_name, component_data, component_value in aliased_entries:
-        for alias in get_component_type_aliases(component_name, component_data):
-            flattened.setdefault(alias, component_value)
+    for identity, _display, component_value in aliased_entries:
+        for alias in identity:
+            if alias:
+                flattened.setdefault(alias, component_value)
+
+    for _identity, display, component_value in aliased_entries:
+        for alias in display:
+            if alias:
+                flattened.setdefault(alias, component_value)
 
     return flattened
