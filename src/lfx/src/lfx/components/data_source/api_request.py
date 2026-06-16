@@ -819,8 +819,13 @@ class APIRequestComponent(Component):
             content_disposition = response.headers["Content-Disposition"]
             filename_match = re.search(r'filename="(.+?)"', content_disposition)
             if filename_match:
-                extracted_filename = filename_match.group(1)
-                filename = extracted_filename
+                # Reduce to the basename to prevent path traversal: the response
+                # (and therefore this header) is fully attacker-influenced, so a
+                # value like filename="../../../../tmp/evil.sh" must not escape
+                # component_temp_dir. Path(...).name strips any directory parts.
+                extracted_filename = Path(filename_match.group(1)).name
+                if extracted_filename and extracted_filename not in (".", ".."):
+                    filename = extracted_filename
 
         # Step 3: Infer file extension or use part of the request URL if no filename
         if not filename:
@@ -843,6 +848,12 @@ class APIRequestComponent(Component):
 
         # Step 4: Define the full file path
         file_path = component_temp_dir / filename
+
+        # Defense-in-depth: ensure the resolved path stays within the component
+        # temp dir even if filename derivation above is ever changed.
+        if component_temp_dir.resolve() not in file_path.resolve().parents:
+            msg = "Resolved output path escapes the component temporary directory"
+            raise ValueError(msg)
 
         # Step 5: Check if file exists asynchronously and handle accordingly
         try:
