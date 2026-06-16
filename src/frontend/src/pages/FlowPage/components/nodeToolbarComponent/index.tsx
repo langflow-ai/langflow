@@ -632,7 +632,10 @@ const NodeToolbarComponent = memo(
               onOpenChange={handleOpenChange}
               open={dropdownOpen}
             >
-              <SelectTrigger className="w-62">
+              <SelectTrigger
+                className="w-62"
+                aria-label={t("nodeToolbar.showMore")}
+              >
                 <ShadTooltip content={t("nodeToolbar.showMore")} side="top">
                   <div data-testid="more-options-modal">
                     <Button

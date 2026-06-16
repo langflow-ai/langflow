@@ -469,6 +469,9 @@ function GenericNode({
                 ? "node-save-name-description-button"
                 : "node-edit-name-description-button"
             }
+            aria-label={
+              editedNameDescription ? "Save node details" : "Edit node details"
+            }
           >
             <ForwardedIconComponent
               name={editedNameDescription ? "Check" : "PencilLine"}

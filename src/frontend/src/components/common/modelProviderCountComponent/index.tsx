@@ -27,6 +27,7 @@ export const ModelProviderCount = () => {
         className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
         onClick={() => setOpen((cur) => !cur)}
         data-testid="model-provider-count-button"
+        aria-label="Model providers"
       >
         <ForwardedIconComponent name="BrainCog" className="w-5 h-5" />
         <div className="text-sm">Models</div>

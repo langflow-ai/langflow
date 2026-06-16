@@ -292,6 +292,7 @@ export default function InputComponent({
                   : "text-placeholder-foreground",
                 !disabled && "hover:text-foreground",
               )}
+              aria-label="Select input option"
             >
               <ForwardedIconComponent
                 name={
