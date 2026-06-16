@@ -486,6 +486,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "MistralAI", name: "mistral", icon: "MistralAI" },
   { display_name: "MongoDB", name: "mongodb", icon: "MongoDB" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
+  { display_name: "NextPlaid", name: "nextplaid", icon: "NextPlaid" },
   { display_name: "Not Diamond", name: "notdiamond", icon: "NotDiamond" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Novita", name: "novita", icon: "Novita" },

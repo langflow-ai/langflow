@@ -1,0 +1,7 @@
+/**
+ * Swizzled (ejected) from @docusaurus/theme-classic 3.9.2 — unchanged.
+ */
+
+.tabItem > *:last-child {
+  margin-bottom: 0;
+}

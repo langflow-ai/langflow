@@ -259,6 +259,43 @@
     {
       "legacy_slot": "ext:firecrawl:FirecrawlSearchApi@official-pre-a",
       "target": "ext:firecrawl:FirecrawlSearchApi@official",
+      "bare_class_name": "NextPlaidVectorStoreComponent",
+      "target": "ext:nextplaid:NextPlaidVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.nextplaid.nextplaid.NextPlaidVectorStoreComponent",
+      "target": "ext:nextplaid:NextPlaidVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.nextplaid.NextPlaidVectorStoreComponent",
+      "target": "ext:nextplaid:NextPlaidVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:nextplaid:NextPlaidVectorStoreComponent@official-pre-a",
+      "target": "ext:nextplaid:NextPlaidVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "VllmMultivectorEmbeddingsComponent",
+      "target": "ext:nextplaid:VllmMultivectorEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vllm.vllm_multivector_embeddings.VllmMultivectorEmbeddingsComponent",
+      "target": "ext:nextplaid:VllmMultivectorEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vllm.VllmMultivectorEmbeddingsComponent",
+      "target": "ext:nextplaid:VllmMultivectorEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:nextplaid:VllmMultivectorEmbeddingsComponent@official-pre-a",
+      "target": "ext:nextplaid:VllmMultivectorEmbeddingsComponent@official",
       "added_in": "1.11.0"
     }
   ],
