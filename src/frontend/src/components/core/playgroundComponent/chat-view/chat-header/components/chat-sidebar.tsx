@@ -126,6 +126,7 @@ export function ChatSidebar({
               variant="ghost"
               className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
               onClick={onNewChat}
+              aria-label={t("chat.newChat")}
             >
               <ForwardedIconComponent
                 name="Plus"

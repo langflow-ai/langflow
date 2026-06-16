@@ -26,9 +26,10 @@ export const LangflowCounts = () => {
           unstyled
           onClick={() => window.open(GITHUB_URL, "_blank")}
           className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
+          aria-label={`GitHub ${formattedStars}`.trim()}
         >
           <div className="relative items-center rounded-md px-2 py-1 flex">
-            <FaGithub className="h-4 w-4" />
+            <FaGithub className="h-4 w-4" aria-hidden="true" />
             <Case condition={Boolean(formattedStars) && formattedStars !== "0"}>
               <span className="text-xs font-semibold pl-2">
                 {formattedStars}
@@ -47,9 +48,10 @@ export const LangflowCounts = () => {
           unstyled
           onClick={() => window.open(DISCORD_URL, "_blank")}
           className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
+          aria-label={`Discord ${formattedDiscordCount}`.trim()}
         >
           <div className="relative items-center rounded-md px-2 py-1 flex">
-            <FaDiscord className="h-4 w-4" />
+            <FaDiscord className="h-4 w-4" aria-hidden="true" />
             <Case
               condition={
                 Boolean(formattedDiscordCount) && formattedDiscordCount !== "0"

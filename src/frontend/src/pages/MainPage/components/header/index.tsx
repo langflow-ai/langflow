@@ -227,6 +227,9 @@ const HeaderComponent = ({
                           : "text-muted-foreground hover:bg-muted"
                       }`}
                       onClick={() => setView(viewType as "list" | "grid")}
+                      aria-label={
+                        viewType === "list" ? "List view" : "Grid view"
+                      }
                     >
                       <ForwardedIconComponent
                         name={viewType === "list" ? "Menu" : "LayoutGrid"}
@@ -252,6 +255,7 @@ const HeaderComponent = ({
                     onClick={handleDownload}
                     loading={isDownloading}
                     tabIndex={hasSelection ? 0 : -1}
+                    aria-label={t("shortcuts.name.download")}
                   >
                     <ForwardedIconComponent name="Download" />
                   </Button>

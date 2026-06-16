@@ -37,6 +37,7 @@ export default function PageLayout({
                       navigate(backTo);
                     }}
                     data-testid="back_page_button"
+                    aria-label="Back"
                   >
                     <ForwardedIconComponent
                       name="ChevronLeft"
