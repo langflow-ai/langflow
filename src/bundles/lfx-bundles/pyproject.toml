@@ -28,6 +28,7 @@ dependencies = [
 # scripts/migrate/consolidate_bundles.py.
 agentql = []
 aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
+altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 apify = ["apify-client>=1.8.1", "langchain-community>=0.4.1,<1.0.0"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
 azure = ["langchain-openai>=1.1.6"]
@@ -37,6 +38,7 @@ chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", "langchain-commun
 cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
 clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
 cloudflare = ["langchain-community>=0.4.1,<1.0.0"]
+codeagents = ["smolagents>=1.8.0", "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
 cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
 couchbase = ["couchbase>=4.2.1", "langchain-community>=0.4.1,<1.0.0"]
@@ -46,6 +48,7 @@ exa = ["metaphor-python==0.1.23"]
 firecrawl = ["firecrawl-py>=1.0.16,<2.0.0"]
 git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
+google = ["langchain-google-genai~=4.1.2", "langchain-google-community~=3.0.2", "google-api-python-client~=2.161"]
 groq = ["langchain-groq~=1.1.1"]
 homeassistant = ["requests>=2.32.0"]
 icosacomputing = ["requests>=2.32.0"]
@@ -79,6 +82,7 @@ twelvelabs = ["twelvelabs>=0.4.7,<1.0.0"]
 unstructured = ["langchain-unstructured~=1.0.0"]
 upstash = ["upstash-vector==0.6.0", "langchain-community>=0.4.1,<1.0.0"]
 vectara = ["langchain-community>=0.4.1,<1.0.0"]
+vertexai = ["langchain-google-vertexai>=3.2.0"]
 vllm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0", "langchain-weaviate>=0.0.6"]
 wikipedia = ["wikipedia==1.4.0", "langchain-community>=0.4.1,<1.0.0"]
@@ -90,6 +94,7 @@ zep = ["zep-python==2.0.2"]
 all = [
     "lfx-bundles[agentql]",
     "lfx-bundles[aiml]",
+    "lfx-bundles[altk]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
     "lfx-bundles[azure]",
@@ -99,6 +104,7 @@ all = [
     "lfx-bundles[cleanlab]",
     "lfx-bundles[clickhouse]",
     "lfx-bundles[cloudflare]",
+    "lfx-bundles[codeagents]",
     "lfx-bundles[cometapi]",
     "lfx-bundles[confluence]",
     "lfx-bundles[couchbase]",
@@ -108,6 +114,7 @@ all = [
     "lfx-bundles[firecrawl]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
+    "lfx-bundles[google]",
     "lfx-bundles[groq]",
     "lfx-bundles[homeassistant]",
     "lfx-bundles[icosacomputing]",
@@ -141,6 +148,7 @@ all = [
     "lfx-bundles[unstructured]",
     "lfx-bundles[upstash]",
     "lfx-bundles[vectara]",
+    "lfx-bundles[vertexai]",
     "lfx-bundles[vllm]",
     "lfx-bundles[weaviate]",
     "lfx-bundles[wikipedia]",

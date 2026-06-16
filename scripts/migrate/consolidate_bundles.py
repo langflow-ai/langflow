@@ -131,6 +131,14 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "homeassistant": ["requests>=2.32.0"],  # REST via requests; no vendor SDK
     "olivya": [],  # httpx REST only (lfx core)
     "agentql": [],  # httpx REST only (lfx core)
+    # --- tranche 7: google family + agent SDKs (markers preserved from base) ---
+    "google": ["langchain-google-genai~=4.1.2", "langchain-google-community~=3.0.2", "google-api-python-client~=2.161"],
+    "vertexai": ["langchain-google-vertexai>=3.2.0"],
+    "altk": ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"],
+    "codeagents": [
+        "smolagents>=1.8.0",
+        "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",  # noqa: E501
+    ],
 }
 
 _OPTIONAL_DEPS_HEADER = (

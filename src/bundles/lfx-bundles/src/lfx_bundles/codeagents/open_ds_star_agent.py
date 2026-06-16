@@ -6,7 +6,6 @@ from typing import Any, ClassVar
 
 from langchain_core.agents import AgentFinish
 from langchain_core.runnables import Runnable, RunnableConfig
-
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.inputs.inputs import BoolInput, DataInput, DropdownInput, MessageTextInput, MultilineInput
 from lfx.io import HandleInput, IntInput

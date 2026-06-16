@@ -1,5 +1,4 @@
 from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
-
 from lfx.custom.custom_component.component import Component
 from lfx.io import IntInput, MultilineInput, Output, SecretStrInput
 from lfx.schema.dataframe import DataFrame

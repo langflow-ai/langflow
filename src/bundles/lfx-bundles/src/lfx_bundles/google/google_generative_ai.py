@@ -1,8 +1,6 @@
 from typing import Any
 
 import requests
-from pydantic.v1 import SecretStr
-
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
@@ -11,6 +9,7 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
+from pydantic.v1 import SecretStr
 
 
 class GoogleGenerativeAIComponent(LCModelComponent):

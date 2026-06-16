@@ -2860,6 +2860,286 @@
       "legacy_slot": "ext:agentql:AgentQL@official-pre-a",
       "target": "ext:agentql:AgentQL@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "GmailLoaderComponent",
+      "target": "ext:google:GmailLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.gmail.GmailLoaderComponent",
+      "target": "ext:google:GmailLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.GmailLoaderComponent",
+      "target": "ext:google:GmailLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:google:GmailLoaderComponent@official-pre-a",
+      "target": "ext:google:GmailLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "BigQueryExecutorComponent",
+      "target": "ext:google:BigQueryExecutorComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_bq_sql_executor.BigQueryExecutorComponent",
+      "target": "ext:google:BigQueryExecutorComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.BigQueryExecutorComponent",
+      "target": "ext:google:BigQueryExecutorComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:google:BigQueryExecutorComponent@official-pre-a",
+      "target": "ext:google:BigQueryExecutorComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "GoogleDriveComponent",
+      "target": "ext:google:GoogleDriveComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_drive.GoogleDriveComponent",
+      "target": "ext:google:GoogleDriveComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleDriveComponent",
+      "target": "ext:google:GoogleDriveComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:google:GoogleDriveComponent@official-pre-a",
+      "target": "ext:google:GoogleDriveComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "GoogleDriveSearchComponent",
+      "target": "ext:google:GoogleDriveSearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_drive_search.GoogleDriveSearchComponent",
+      "target": "ext:google:GoogleDriveSearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleDriveSearchComponent",
+      "target": "ext:google:GoogleDriveSearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:google:GoogleDriveSearchComponent@official-pre-a",
+      "target": "ext:google:GoogleDriveSearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "GoogleGenerativeAIComponent",
+      "target": "ext:google:GoogleGenerativeAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_generative_ai.GoogleGenerativeAIComponent",
+      "target": "ext:google:GoogleGenerativeAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleGenerativeAIComponent",
+      "target": "ext:google:GoogleGenerativeAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:google:GoogleGenerativeAIComponent@official-pre-a",
+      "target": "ext:google:GoogleGenerativeAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "GoogleGenerativeAIEmbeddingsComponent",
+      "target": "ext:google:GoogleGenerativeAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_generative_ai_embeddings.GoogleGenerativeAIEmbeddingsComponent",
+      "target": "ext:google:GoogleGenerativeAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleGenerativeAIEmbeddingsComponent",
+      "target": "ext:google:GoogleGenerativeAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:google:GoogleGenerativeAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:google:GoogleGenerativeAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "GoogleOAuthToken",
+      "target": "ext:google:GoogleOAuthToken@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_oauth_token.GoogleOAuthToken",
+      "target": "ext:google:GoogleOAuthToken@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleOAuthToken",
+      "target": "ext:google:GoogleOAuthToken@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:google:GoogleOAuthToken@official-pre-a",
+      "target": "ext:google:GoogleOAuthToken@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "GoogleSearchAPICore",
+      "target": "ext:google:GoogleSearchAPICore@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_search_api_core.GoogleSearchAPICore",
+      "target": "ext:google:GoogleSearchAPICore@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleSearchAPICore",
+      "target": "ext:google:GoogleSearchAPICore@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:google:GoogleSearchAPICore@official-pre-a",
+      "target": "ext:google:GoogleSearchAPICore@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "GoogleSerperAPICore",
+      "target": "ext:google:GoogleSerperAPICore@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_serper_api_core.GoogleSerperAPICore",
+      "target": "ext:google:GoogleSerperAPICore@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleSerperAPICore",
+      "target": "ext:google:GoogleSerperAPICore@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:google:GoogleSerperAPICore@official-pre-a",
+      "target": "ext:google:GoogleSerperAPICore@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "ChatVertexAIComponent",
+      "target": "ext:vertexai:ChatVertexAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vertexai.vertexai.ChatVertexAIComponent",
+      "target": "ext:vertexai:ChatVertexAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vertexai.ChatVertexAIComponent",
+      "target": "ext:vertexai:ChatVertexAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:vertexai:ChatVertexAIComponent@official-pre-a",
+      "target": "ext:vertexai:ChatVertexAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "VertexAIEmbeddingsComponent",
+      "target": "ext:vertexai:VertexAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vertexai.vertexai_embeddings.VertexAIEmbeddingsComponent",
+      "target": "ext:vertexai:VertexAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vertexai.VertexAIEmbeddingsComponent",
+      "target": "ext:vertexai:VertexAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:vertexai:VertexAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:vertexai:VertexAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "ALTKAgentComponent",
+      "target": "ext:altk:ALTKAgentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.altk.altk_agent.ALTKAgentComponent",
+      "target": "ext:altk:ALTKAgentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.altk.ALTKAgentComponent",
+      "target": "ext:altk:ALTKAgentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:altk:ALTKAgentComponent@official-pre-a",
+      "target": "ext:altk:ALTKAgentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "CodeActAgentSmolagentsComponent",
+      "target": "ext:codeagents:CodeActAgentSmolagentsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.codeact_agent_smolagents.CodeActAgentSmolagentsComponent",
+      "target": "ext:codeagents:CodeActAgentSmolagentsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.CodeActAgentSmolagentsComponent",
+      "target": "ext:codeagents:CodeActAgentSmolagentsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:codeagents:CodeActAgentSmolagentsComponent@official-pre-a",
+      "target": "ext:codeagents:CodeActAgentSmolagentsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "OpenDsStarAgentComponent",
+      "target": "ext:codeagents:OpenDsStarAgentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.open_ds_star_agent.OpenDsStarAgentComponent",
+      "target": "ext:codeagents:OpenDsStarAgentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.OpenDsStarAgentComponent",
+      "target": "ext:codeagents:OpenDsStarAgentComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:codeagents:OpenDsStarAgentComponent@official-pre-a",
+      "target": "ext:codeagents:OpenDsStarAgentComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [
