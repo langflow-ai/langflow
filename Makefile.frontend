@@ -5,7 +5,7 @@
 FRONTEND_DIR = src/frontend
 NPM = npm
 
-.PHONY: install_frontend install_frontendci install_frontendc frontend_deps_check build_frontend run_frontend frontend frontendc format_frontend tests_frontend test_frontend test_frontend_watch test_frontend_coverage test_frontend_verbose test_frontend_ci test_frontend_clean test_frontend_file test_frontend_pattern test_frontend_snapshots test_frontend_config test_frontend_bail test_frontend_silent test_frontend_coverage_open help_frontend storybook storybook_build storybook_network
+.PHONY: install_frontend install_frontendci install_frontendc frontend_deps_check build_frontend run_frontend frontend frontendc format_frontend tests_frontend test_frontend_a11y_e2e test_frontend_a11y_e2e_blocking test_frontend_a11y_e2e_update test_frontend test_frontend_watch test_frontend_coverage test_frontend_verbose test_frontend_ci test_frontend_clean test_frontend_file test_frontend_pattern test_frontend_snapshots test_frontend_config test_frontend_bail test_frontend_silent test_frontend_coverage_open help_frontend storybook storybook_build storybook_network
 
 ######################
 # FRONTEND DEPENDENCIES
@@ -76,6 +76,17 @@ ifeq ($(UI), true)
 else
 	@cd $(FRONTEND_DIR) && npx playwright test --project=chromium
 endif
+
+test_frontend_a11y_e2e: frontend_deps_check ## run non-blocking Playwright a11y scans and reports
+	@cd $(FRONTEND_DIR) && SCAN_SPECS="$$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)" && echo "Specs with a11y scans:" && echo "$$SCAN_SPECS" && test -n "$$SCAN_SPECS" && RUN_A11Y=true RUN_A11Y_ASSERT=false npx playwright test $$SCAN_SPECS --project=chromium --workers=1
+
+test_frontend_a11y_e2e_blocking: frontend_deps_check ## run blocking Playwright a11y scans against baselines
+	@cd $(FRONTEND_DIR) && SCAN_SPECS="$$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)" && echo "Specs with a11y scans:" && echo "$$SCAN_SPECS" && test -n "$$SCAN_SPECS" && RUN_A11Y=true RUN_A11Y_ASSERT=true npx playwright test $$SCAN_SPECS --project=chromium --workers=1
+
+test_frontend_a11y_e2e_update: frontend_deps_check ## refresh Playwright a11y reports used as baselines
+	@cd $(FRONTEND_DIR) && rm -rf coverage/accessibility-reports && SCAN_SPECS="$$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)" && echo "Specs with a11y scans:" && echo "$$SCAN_SPECS" && test -n "$$SCAN_SPECS" && RUN_A11Y=true RUN_A11Y_ASSERT=false npx playwright test $$SCAN_SPECS --project=chromium --workers=1
+	@mkdir -p $(FRONTEND_DIR)/tests/baselines
+	@cp $(FRONTEND_DIR)/coverage/accessibility-reports/chromium__*.json $(FRONTEND_DIR)/tests/baselines/
 
 ######################
 # FRONTEND UNIT TESTS (JEST)

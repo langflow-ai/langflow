@@ -1,4 +1,4 @@
-name: Run Accessibility Scans (IBM Equal Access)
+name: A11y / Playwright Scans
 
 on:
   # TEMP: remove before merging — allows testing the workflow from this
@@ -17,7 +17,7 @@ on:
         required: false
         type: string
       assert:
-        description: "Fail the run on a11y violations (RUN_A11Y_ASSERT)"
+        description: "Fail the run when scans differ from committed baselines"
         required: false
         type: boolean
         default: false
@@ -32,7 +32,7 @@ env:
 
 jobs:
   a11y-scan:
-    name: IBM Accessibility Scans
+    name: IBM Equal Access
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -122,8 +122,8 @@ jobs:
         shell: bash
         env:
           RUN_A11Y: "true"
-          RUN_A11Y_ASSERT: ${{ inputs.assert == true && 'true' || 'false' }}
-          LANGFLOW_DEACTIVE_TRACING: "true"
+          RUN_A11Y_ASSERT: ${{ github.event_name == 'workflow_dispatch' && inputs.assert && 'true' || 'false' }}
+          LANGFLOW_DEACTIVATE_TRACING: "true"
         run: |
           cd src/frontend
           # Only specs that call runA11yScan produce reports; discover them
@@ -131,7 +131,8 @@ jobs:
           SCAN_SPECS=$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)
           echo "Specs with a11y scans:"
           echo "$SCAN_SPECS"
-          npx playwright test $SCAN_SPECS --project=chromium --workers 1 --retries=2
+          test -n "$SCAN_SPECS"
+          npx playwright test $SCAN_SPECS --project=chromium --workers=1 --retries=2
 
       - name: Build Aggregated A11y Summary
         if: always()
