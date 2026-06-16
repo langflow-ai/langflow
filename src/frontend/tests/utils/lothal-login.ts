@@ -25,10 +25,21 @@ export const loginAsSuperuser = async (page: Page) => {
 // context's session cookie authorizes the request). Gives the dashboard tests a
 // clean slate without mocking the project list.
 export const deleteAllProjects = async (page: Page) => {
+  // Fail loudly: a swallowed cleanup error leaves stale projects behind and
+  // surfaces later as a confusing assertion failure in an unrelated test.
   const res = await page.request.get("/api/v1/lothal/projects/");
-  if (!res.ok()) return;
+  if (!res.ok()) {
+    throw new Error(
+      `Project cleanup failed to list projects: ${res.status()} ${res.statusText()}`,
+    );
+  }
   const projects = (await res.json()) as Array<{ id: string }>;
   for (const p of projects) {
-    await page.request.delete(`/api/v1/lothal/projects/${p.id}`);
+    const del = await page.request.delete(`/api/v1/lothal/projects/${p.id}`);
+    if (!del.ok()) {
+      throw new Error(
+        `Project cleanup failed to delete ${p.id}: ${del.status()} ${del.statusText()}`,
+      );
+    }
   }
 };
