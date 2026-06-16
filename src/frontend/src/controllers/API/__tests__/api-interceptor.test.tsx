@@ -18,10 +18,17 @@ const authState = {
   authenticationErrorCount: 0,
   setAuthenticationErrorCount: mockSetAuthErrorCount,
 };
-jest.mock("@/stores/authStore", () => ({
-  __esModule: true,
-  default: (selector: (s: typeof authState) => unknown) => selector(authState),
-}));
+// The store's hook form `useAuthStore(selector)` is used for subscriptions, but
+// the interceptor reads the live error count via `useAuthStore.getState()` so the
+// ">3" logout cap can't be defeated by a stale render closure — mock both.
+jest.mock("@/stores/authStore", () => {
+  const useAuthStoreMock = (selector: (s: typeof authState) => unknown) =>
+    selector(authState);
+  (
+    useAuthStoreMock as unknown as { getState: () => typeof authState }
+  ).getState = () => authState;
+  return { __esModule: true, default: useAuthStoreMock };
+});
 
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
@@ -81,6 +88,9 @@ function authError(status: number, method: string, url: string): AxiosError {
 describe("ApiInterceptor auth-error handling", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    authState.authenticationErrorCount = 0;
+    // Default to a non-auth page so the refresh path is exercised.
+    window.history.pushState({}, "", "/");
   });
 
   it("re-rejects a 403 on POST /users/ without renewing the token or logging out", async () => {
@@ -137,5 +147,47 @@ describe("ApiInterceptor auth-error handling", () => {
 
     await onRejected(error);
     expect(mockRenew).toHaveBeenCalledTimes(1);
+  });
+
+  // --- B.16: terminate the refresh loop ------------------------------------
+
+  it("logs out instead of refreshing once the live error count exceeds the cap", async () => {
+    // The interceptor reads the count via getState(), so a stale render closure
+    // can't keep the count pinned at 0. Once it is past the cap, the next auth
+    // error must log out (ending the loop) rather than renew again.
+    authState.authenticationErrorCount = 4;
+    const onRejected = mountAndCaptureErrorHandler();
+    const error = authError(401, "get", "/api/v1/flows");
+
+    // Past the cap, the handler re-rejects instead of renewing.
+    await expect(onRejected(error)).rejects.toBe(error);
+
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+    expect(mockRenew).not.toHaveBeenCalled();
+    // Counter is reset so a fresh session starts clean.
+    expect(mockSetAuthErrorCount).toHaveBeenCalledWith(0);
+  });
+
+  it("neither refreshes nor logs out on /signup (no unbounded refresh loop)", async () => {
+    // A logged-out visitor on /signup is expected; an auth error there must be
+    // re-rejected without touching the refresh→logout path. "/signup" does not
+    // contain "login", so it was previously unguarded.
+    window.history.pushState({}, "", "/signup");
+    const onRejected = mountAndCaptureErrorHandler();
+    const error = authError(401, "get", "/api/v1/flows");
+
+    await expect(onRejected(error)).rejects.toBe(error);
+    expect(mockRenew).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
+  });
+
+  it("still guards the /login page against the refresh loop", async () => {
+    window.history.pushState({}, "", "/login");
+    const onRejected = mountAndCaptureErrorHandler();
+    const error = authError(401, "get", "/api/v1/flows");
+
+    await expect(onRejected(error)).rejects.toBe(error);
+    expect(mockRenew).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
   });
 });

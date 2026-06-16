@@ -44,16 +44,18 @@ function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const accessToken = useAuthStore((state) => state.accessToken);
-  const authenticationErrorCount = useAuthStore(
-    (state) => state.authenticationErrorCount,
-  );
   const setAuthenticationErrorCount = useAuthStore(
     (state) => state.setAuthenticationErrorCount,
   );
 
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
-  const isLoginPage = location.pathname.includes("login");
+  // Pages of the public auth funnel where a logged-out visitor is expected.
+  // On these we must NOT attempt a token refresh or force-logout on a 401/403,
+  // otherwise an anonymous visitor triggers an unbounded /refresh retry loop.
+  // "/signup" used to slip through (it does not contain "login"), so guard it too.
+  const isPublicAuthPage =
+    location.pathname.includes("login") || location.pathname.includes("signup");
   const customHeaders = useCustomApiHeaders();
 
   const setHealthCheckTimeout = useUtilityStore(
@@ -198,11 +200,18 @@ function ApiInterceptor() {
   }, [accessToken, setErrorData, customHeaders, autoLogin]);
 
   function checkErrorCount() {
-    if (isLoginPage) return;
+    if (isPublicAuthPage) return;
 
-    setAuthenticationErrorCount(authenticationErrorCount + 1);
+    // Read the live count from the store, not the value captured in this
+    // component's render closure. The response interceptor is registered once
+    // per effect run (its deps exclude authenticationErrorCount), so the
+    // closed-over count stays frozen at its render-time value (initially 0) and
+    // the ">3" cap would never trip — producing an unbounded refresh loop.
+    // getState() always returns the current store value.
+    const currentErrorCount = useAuthStore.getState().authenticationErrorCount;
+    setAuthenticationErrorCount(currentErrorCount + 1);
 
-    if (authenticationErrorCount > 3) {
+    if (currentErrorCount > 3) {
       setAuthenticationErrorCount(0);
       mutationLogout();
       return false;
@@ -212,7 +221,7 @@ function ApiInterceptor() {
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
-    if (isLoginPage) return;
+    if (isPublicAuthPage) return;
     if (error.config?.headers) {
       for (const [key, value] of Object.entries(customHeaders)) {
         error.config.headers[key] = value;
