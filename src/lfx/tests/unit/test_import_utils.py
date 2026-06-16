@@ -42,8 +42,9 @@ class TestImportAttr:
 
     def test_import_nonexistent_module(self):
         """Test error handling when module doesn't exist."""
+        # helpers is an in-tree core category; the submodule simply does not exist.
         with pytest.raises(ImportError, match="not found"):
-            import_mod("SomeComponent", "nonexistent_module", "lfx.components.composio")
+            import_mod("SomeComponent", "nonexistent_module", "lfx.components.helpers")
 
     def test_module_not_found_with_none_module_name(self):
         """Test ModuleNotFoundError handling when module_name is None."""
@@ -119,14 +120,14 @@ class TestImportAttr:
 
     def test_return_value_types(self):
         """Test that import_mod returns appropriate types."""
-        # Test module import (composio: in-tree lazy category whose SDK is
-        # absent in the bare lfx env; openai is a bundle-package shim now)
-        module_result = import_mod("composio", "__module__", "lfx.components")
+        # Test module import (processing is an in-tree core category)
+        module_result = import_mod("processing", "__module__", "lfx.components")
         assert hasattr(module_result, "__name__")
 
-        # Test class import - this should fail due to the missing composio SDK
+        # Test class import - KnowledgeComponent's module imports langchain_chroma /
+        # langflow, which are absent in the engine-only lfx env, so this fails.
         with pytest.raises((ImportError, ModuleNotFoundError)):
-            import_mod("ComposioAPIComponent", "composio_api", "lfx.components.composio")
+            import_mod("KnowledgeComponent", "knowledge", "lfx.components.files_and_knowledge")
 
     def test_caching_independence(self):
         """Test that import_mod doesn't interfere with Python's module caching."""
