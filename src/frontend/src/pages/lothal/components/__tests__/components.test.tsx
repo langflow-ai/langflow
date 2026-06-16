@@ -162,7 +162,7 @@ describe("NotReady — structured 501 detection", () => {
 });
 
 describe("LothalSurface", () => {
-  it("injects the dockyard fonts once, on mount", () => {
+  it("injects the Lothal fonts once, on mount", () => {
     // The fonts left index.html so non-lothal pages never load them; the
     // surface injects the stylesheet link exactly once, even when several
     // surfaces mount.

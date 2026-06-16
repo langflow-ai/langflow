@@ -49,7 +49,7 @@ describe("Lothal LoginPage", () => {
     sessionStorage.clear();
   });
 
-  it("renders the dockyard sign-in card", () => {
+  it("renders the Lothal sign-in card", () => {
     renderAt("/login");
     expect(screen.getByText("Welcome back")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();

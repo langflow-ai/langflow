@@ -1,4 +1,4 @@
-// Lothal login page (Epic B.8) — the dockyard-branded sign-in that replaces
+// Lothal login page (Epic B.8) — the Lothal-branded sign-in that replaces
 // Langflow's default login at "/login". The landing CTA funnels anonymous
 // visitors here via "/login?redirect=/lothal"; on success the redirect param
 // (stashed by useSanitizeRedirectUrl) carries them on to the dashboard, while
@@ -188,7 +188,7 @@ function LoginView() {
             Welcome back
           </h1>
           <p style={{ fontSize: 13.5, color: "var(--ink-mute)", margin: 0 }}>
-            Sign in to your dockyard.
+            Sign in to continue building.
           </p>
         </div>
 
@@ -277,7 +277,7 @@ function LoginView() {
   );
 }
 
-/** Lothal sign-in at "/login" — dockyard theme, dark by default. */
+/** Lothal sign-in at "/login" — Lothal theme, dark by default. */
 export default function LoginPage() {
   return (
     <LothalSurface style={{ minHeight: "100vh" }}>

@@ -1,7 +1,7 @@
-// Lothal dashboard (Story B.2) — the dockyard's front desk. Rebuilt onto the
-// B.1 design system: a themed surface with a harbor watermark, an editorial
-// hero, a stats row, and a phase-aware grid of project cards. Wired to the
-// live project CRUD (`useProjects` / `useCreateProject` / `useDeleteProject`).
+// Lothal dashboard (Story B.2) — the project home. Rebuilt onto the
+// B.1 design system: a themed surface with an editorial hero, a stats row, and
+// a phase-aware grid of project cards. Wired to the live project CRUD
+// (`useProjects` / `useCreateProject` / `useDeleteProject`).
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -15,14 +15,13 @@ import useAuthStore from "@/stores/authStore";
 import {
   Button,
   EmptyHint,
-  HarborWatermark,
   LOTHAL_VERSION,
   LothalMark,
   phaseStatus,
   StatusDot,
   TopBar,
 } from "../components";
-import { LothalSurface, useLothalTheme } from "../theme/LothalSurface";
+import { LothalSurface } from "../theme/LothalSurface";
 
 // The API serialises naive UTC timestamps (no offset); treat them as UTC so the
 // browser doesn't shift them by its own local offset.
@@ -413,7 +412,6 @@ function ProjectCard({
 
 function DashboardView() {
   const navigate = useNavigate();
-  const { theme } = useLothalTheme();
   const username = useAuthStore((s) => s.userData?.username);
   const initial = username ? username.charAt(0).toUpperCase() : "";
   const [showModal, setShowModal] = useState(false);
@@ -555,11 +553,6 @@ function DashboardView() {
           overflowY: "auto",
         }}
       >
-        <HarborWatermark
-          style={{ color: "var(--ink)" }}
-          opacity={theme === "dark" ? 0.08 : 0.06}
-        />
-
         <div
           style={{
             position: "relative",
@@ -577,7 +570,7 @@ function DashboardView() {
           {/* Hero */}
           <section style={{ maxWidth: 660 }}>
             <div className="label" style={{ color: "var(--accent)" }}>
-              Your workshop
+              Your workspace
             </div>
             <h1
               className="serif"
@@ -592,7 +585,7 @@ function DashboardView() {
               <span style={{ fontStyle: "italic", color: "var(--ink-soft)" }}>
                 Shape it.
               </span>{" "}
-              Ship it.
+              Build it.
             </h1>
             <p
               style={{
@@ -678,7 +671,7 @@ function DashboardView() {
                   color: "var(--ink-soft)",
                 }}
               >
-                Loading the harbor…
+                Loading your projects…
               </div>
             ) : isError ? (
               <div
@@ -692,7 +685,7 @@ function DashboardView() {
                 }}
               >
                 <EmptyHint
-                  title="Couldn’t reach the harbor"
+                  title="Couldn’t load your projects"
                   sub="We couldn’t load your projects. Check your connection and try again."
                 />
                 <Button variant="outline" onClick={() => refetch()}>
@@ -710,7 +703,7 @@ function DashboardView() {
                 }}
               >
                 <EmptyHint
-                  title="No vessels in the harbor"
+                  title="No projects yet"
                   sub="Describe what you want to build and a new project takes shape here."
                   kbd="N to start"
                 />

@@ -1,5 +1,5 @@
-// Dockyard button. Five variants over the lothal theme tokens. A button atom
-// scoped to the lothal surface — distinct from Langflow's `@/components/ui/button`.
+// Lothal button. Five variants over the lothal theme tokens. A button atom
+// scoped to the lothal surface — distinct from the app's `@/components/ui/button`.
 
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
 

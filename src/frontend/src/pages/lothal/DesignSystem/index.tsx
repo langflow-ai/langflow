@@ -451,7 +451,7 @@ function Gallery() {
         <Section title="Empty hint">
           <div style={{ width: "100%" }}>
             <EmptyHint
-              title="No vessels in the harbor"
+              title="No projects yet"
               sub="Describe what you want to build and a new project takes shape here."
               kbd="N to start"
             />

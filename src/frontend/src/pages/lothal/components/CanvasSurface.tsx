@@ -58,13 +58,13 @@ export function CanvasSurface({ project }: { project: Project }) {
 
   if (isError) {
     // A structured 501 means the canvas backend isn't built yet → uniform
-    // NotReady. Anything else is a genuine failure reaching the dockyard.
+    // NotReady. Anything else is a genuine failure reaching the server.
     return isNotImplemented(error) ? (
       <NotReady title="The canvas isn't live yet" error={error} />
     ) : (
       <NotReady
         title="Couldn't load the diagram"
-        detail="Something went wrong reaching the dockyard. Try again in a moment."
+        detail="Something went wrong loading this. Try again in a moment."
       />
     );
   }

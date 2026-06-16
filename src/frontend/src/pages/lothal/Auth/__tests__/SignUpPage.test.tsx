@@ -50,7 +50,7 @@ describe("Lothal SignUpPage", () => {
     jest.clearAllMocks();
   });
 
-  it("renders the dockyard sign-up card", () => {
+  it("renders the Lothal sign-up card", () => {
     renderAt("/signup");
     expect(screen.getByText("Create your account")).toBeInTheDocument();
     expect(

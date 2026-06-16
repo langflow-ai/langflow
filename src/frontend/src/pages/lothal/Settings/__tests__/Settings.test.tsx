@@ -63,7 +63,7 @@ describe("Lothal Settings", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/");
   });
 
-  it("links out to Langflow's credential pages", () => {
+  it("links out to the credential pages", () => {
     render(<Settings />);
     const openButtons = screen.getAllByRole("button", { name: /Open/ });
     fireEvent.click(openButtons[0]);

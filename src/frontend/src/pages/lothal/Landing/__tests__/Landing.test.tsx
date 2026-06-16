@@ -27,25 +27,17 @@ jest.mock("../../components/DiagramCanvas", () => ({
   ),
 }));
 
-import useAuthStore from "@/stores/authStore";
 import Landing from "../index";
-
-function setAuth(state: { isAuthenticated: boolean; autoLogin: boolean }) {
-  useAuthStore.setState(state);
-}
 
 describe("Lothal Landing", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    setAuth({ isAuthenticated: false, autoLogin: false });
   });
 
   it("renders the design's hero: headline, pill, and marketing title", () => {
     render(<Landing />);
     expect(screen.getByText(/Build software the way/)).toBeInTheDocument();
-    expect(
-      screen.getByText("Built on Langflow · now in early access"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Now in early access")).toBeInTheDocument();
     expect(document.title).toBe("Lothal — build software by describing it");
   });
 
@@ -96,34 +88,16 @@ describe("Lothal Landing", () => {
     expect(screen.getByText("Download ZIP")).toBeInTheDocument();
   });
 
-  it("sends anonymous visitors to login with the lothal redirect", () => {
+  it("offers sign up and log in, never opening the projects app directly", () => {
     render(<Landing />);
-    fireEvent.click(
-      screen.getAllByRole("button", { name: "Start building free" })[0],
-    );
-    expect(mockNavigate).toHaveBeenCalledWith("/login?redirect=/lothal");
-    fireEvent.click(screen.getAllByRole("button", { name: "Sign in" })[0]);
-    expect(mockNavigate).toHaveBeenLastCalledWith("/login?redirect=/lothal");
-  });
-
-  it("sends authenticated users straight to the dashboard, without Sign in", () => {
-    setAuth({ isAuthenticated: true, autoLogin: false });
-    render(<Landing />);
-    expect(
-      screen.queryByRole("button", { name: "Sign in" }),
-    ).not.toBeInTheDocument();
-    fireEvent.click(
-      screen.getAllByRole("button", { name: "Open dashboard" })[0],
-    );
-    expect(mockNavigate).toHaveBeenCalledWith("/lothal");
-  });
-
-  it("treats auto-login deployments as authenticated", () => {
-    setAuth({ isAuthenticated: false, autoLogin: true });
-    render(<Landing />);
-    expect(
-      screen.getAllByRole("button", { name: "Open dashboard" }).length,
-    ).toBeGreaterThan(0);
+    // Primary CTA creates an account…
+    fireEvent.click(screen.getAllByRole("button", { name: "Sign up free" })[0]);
+    expect(mockNavigate).toHaveBeenCalledWith("/signup");
+    // …and the secondary CTA signs an existing user in.
+    fireEvent.click(screen.getAllByRole("button", { name: "Log in" })[0]);
+    expect(mockNavigate).toHaveBeenLastCalledWith("/login");
+    // The landing must never jump straight into the (auth-guarded) projects app.
+    expect(mockNavigate).not.toHaveBeenCalledWith("/lothal");
   });
 
   it("scrolls to a section from the nav", () => {

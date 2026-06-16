@@ -1,6 +1,6 @@
 // A centered system note in the chat stream — used to mark a phase transition
 // ("Requirements clear · moving to Sketch"). Distinct from a message bubble: it
-// reads as the dockyard narrating the build, not a participant speaking.
+// reads as Lothal narrating the build, not a participant speaking.
 
 import type { ReactNode } from "react";
 

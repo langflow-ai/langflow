@@ -12,7 +12,6 @@ export { ChatDock } from "./ChatDock";
 export { CodeView } from "./CodeView";
 export { DiagramCanvas } from "./DiagramCanvas";
 export { EmptyHint } from "./EmptyHint";
-export { HarborWatermark } from "./HarborWatermark";
 export { LothalMark } from "./LothalMark";
 export {
   isNotImplemented,
