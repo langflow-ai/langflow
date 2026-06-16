@@ -363,6 +363,31 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         assert file_path is not None
         assert file_path.suffix == ".bin"
 
+    async def test_response_info_content_disposition_path_traversal(self, component):
+        """A malicious Content-Disposition filename must not escape the component temp dir.
+
+        Regression for GHSA-h3c6-fqr4-m99p path traversal.
+        """
+        import tempfile
+        from pathlib import Path
+
+        component_temp_dir = Path(tempfile.gettempdir()) / component.__class__.__name__
+        request = httpx.Request("GET", "https://example.com/download")
+        malicious = Response(
+            200,
+            content=b"payload",
+            headers={"Content-Disposition": 'attachment; filename="../../../../tmp/evil.sh"'},
+            request=request,
+        )
+
+        _, file_path = await component._response_info(malicious, with_file_path=True)
+
+        assert file_path is not None
+        # The filename was reduced to its basename, so the file stays inside the temp dir.
+        assert file_path.parent.resolve() == component_temp_dir.resolve()
+        assert file_path.name.endswith("evil.sh")
+        assert ".." not in file_path.parts
+
 
 class TestAPIRequestSSRFProtection:
     """Rewritten SSRF Protection Tests for API Request Component.
