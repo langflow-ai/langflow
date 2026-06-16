@@ -22,6 +22,36 @@ async def test_add_user_public_signup(client: AsyncClient):
     assert result["is_superuser"] is False, "New users should not be superusers"
 
 
+async def test_add_user_signup_refused_when_disabled(client: AsyncClient):
+    """Public registration must be refused (403) when ENABLE_SIGNUP is False."""
+    from langflow.services.deps import get_settings_service
+
+    auth_settings = get_settings_service().auth_settings
+    original = auth_settings.ENABLE_SIGNUP
+    auth_settings.ENABLE_SIGNUP = False
+    try:
+        response = await client.post("api/v1/users/", json={"username": "signupblocked", "password": "newpassword123"})
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+    finally:
+        auth_settings.ENABLE_SIGNUP = original
+
+
+async def test_add_user_signup_refused_when_auto_login(client: AsyncClient):
+    """Public registration must be refused (403) when AUTO_LOGIN is enabled."""
+    from langflow.services.deps import get_settings_service
+
+    auth_settings = get_settings_service().auth_settings
+    original = auth_settings.AUTO_LOGIN
+    auth_settings.AUTO_LOGIN = True
+    try:
+        response = await client.post(
+            "api/v1/users/", json={"username": "autologinblocked", "password": "newpassword123"}
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+    finally:
+        auth_settings.AUTO_LOGIN = original
+
+
 async def test_add_user_duplicate_username(client: AsyncClient):
     """Test that duplicate usernames are rejected."""
     basic_case = {"username": "duplicateuser", "password": "password123"}

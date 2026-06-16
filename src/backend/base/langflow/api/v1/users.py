@@ -25,10 +25,17 @@ async def add_user(
 ) -> User:
     """Add a new user to the database.
 
-    This endpoint allows public user registration (sign up).
-    User activation is controlled by the NEW_USER_IS_ACTIVE setting.
+    This endpoint allows public user registration (sign up) when it is enabled.
+    Registration is refused when AUTO_LOGIN is on (single-user mode) or when
+    ENABLE_SIGNUP is False, to prevent unauthenticated/unrestricted account
+    creation. User activation is controlled by the NEW_USER_IS_ACTIVE setting.
     """
     settings_service = get_settings_service()
+    auth_settings = settings_service.auth_settings
+    # Security: the registration endpoint is unauthenticated. Refuse it unless
+    # public sign up is actually intended for this deployment.
+    if auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP:
+        raise HTTPException(status_code=403, detail="Public user registration is disabled.")
 
     new_user = User.model_validate(user, from_attributes=True)
     try:
