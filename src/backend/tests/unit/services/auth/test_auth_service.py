@@ -318,7 +318,7 @@ def test_encrypt_decrypt_roundtrip_with_base64_encoded_32_byte_key(tmp_path):
 
 
 def test_encrypt_decrypt_roundtrip_with_short_key(tmp_path):
-    """Keys shorter than 32 chars use the random.seed path and must work."""
+    """Keys shorter than 32 chars use the SHA-256 derivation and must work."""
     raw_key = "short-key"
 
     settings = AuthSettings(CONFIG_DIR=str(tmp_path))
@@ -365,6 +365,36 @@ def test_ensure_fernet_key_with_44_char_key():
     fernet = Fernet(ensure_fernet_key(raw_key))
     encrypted = fernet.encrypt(b"test-value")
     assert fernet.decrypt(encrypted) == b"test-value"
+
+
+def test_ensure_fernet_key_short_key_independent_of_random_state():
+    """Short-key derivation must not depend on the global ``random`` state.
+
+    Regression for GHSA-jxw3-mjmx-3pqm: the key was previously derived
+    with ``random.seed(secret_key)`` + ``random.getrandbits`` — a predictable,
+    non-cryptographic PRNG. The SHA-256 derivation must be deterministic for a
+    given secret regardless of the process-global PRNG state.
+    """
+    import random
+
+    from langflow.services.auth.utils import ensure_fernet_key
+
+    raw_key = "short-key"  # < 32 chars -> derivation branch
+
+    random.seed(0)
+    key_a = ensure_fernet_key(raw_key)
+    random.seed(123456789)
+    _ = [random.random() for _ in range(100)]  # noqa: S311  # perturb global PRNG state
+    key_b = ensure_fernet_key(raw_key)
+
+    # Deterministic from the secret, not from PRNG state.
+    assert key_a == key_b
+    # And it must be the SHA-256 derivation, not the old random.getrandbits output.
+    import base64
+    import hashlib
+
+    expected = base64.urlsafe_b64encode(hashlib.sha256(raw_key.encode()).digest())
+    assert key_a == expected
 
 
 def test_password_helpers_roundtrip(auth_service: AuthService):
