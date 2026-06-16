@@ -27,6 +27,10 @@ export function AppInitPage() {
   const { setUserData, storeApiKey } = useContext(AuthContext);
   const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
   const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
+  // The auth store holds its own userData (separate from AuthContext). Pages that
+  // read the store directly — e.g. Lothal Settings — show a blank user on a
+  // cookie-based session restore unless we populate it here too.
+  const setStoreUserData = useAuthStore((state) => state.setUserData);
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -57,6 +61,7 @@ export function AppInitPage() {
   useEffect(() => {
     if (sessionData?.authenticated && sessionData.user) {
       setUserData(sessionData.user);
+      setStoreUserData(sessionData.user);
       setIsAuthenticated(true);
       setIsAdmin(sessionData.user.is_superuser || false);
       if (sessionData.store_api_key) {
@@ -64,6 +69,7 @@ export function AppInitPage() {
       }
     } else if (sessionData && !sessionData.authenticated) {
       // Explicitly not authenticated
+      setStoreUserData(null);
       setIsAuthenticated(false);
     }
   }, [sessionData]);
