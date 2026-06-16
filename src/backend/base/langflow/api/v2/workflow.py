@@ -658,7 +658,7 @@ async def _stream_event_frames(
     # side-channel ``CustomEvent``; emitted only when the wire protocol is
     # AG-UI. A follow-up retires this once chat-view consumes AG-UI primitives.
     emit_side_channel = adapter.name == "agui"
-    side_channel_events = frozenset({"add_message", "token", "remove_message", "error"})
+    side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
 
     seq = 0
     run_task = asyncio.create_task(drive())
