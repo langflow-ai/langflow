@@ -168,13 +168,18 @@ class TestCORSConfiguration:
     @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
     @patch("langflow.main.get_settings_service")
     @patch("langflow.main.logger")
-    def test_cors_wildcard_credentials_runtime_check_current_behavior(
+    def test_cors_wildcard_credentials_disabled_at_middleware(
         self, mock_logger, mock_get_settings, mock_add_sentry_middleware
     ):
-        """Test runtime validation prevents wildcard with credentials (current behavior)."""
+        """Wildcard CORS origins must NOT be paired with credentials at the middleware.
+
+        Even though the setting defaults to credentials=True, a wildcard origin makes
+        the credentialed-CORS combination unsafe (and invalid per the spec), so the
+        middleware must be configured with allow_credentials=False.
+        """
         from langflow.main import create_app
 
-        # Mock settings with configuration that triggers current security measure
+        # Mock settings with the insecure wildcard + credentials combination.
         mock_settings = MagicMock()
         mock_settings.settings.cors_origins = "*"
         mock_settings.settings.cors_allow_credentials = True  # Gets disabled for security
@@ -189,15 +194,13 @@ class TestCORSConfiguration:
         mock_add_sentry_middleware.return_value = None  # Use the mock
         app = create_app()
 
-        # Check that warning was logged about deprecation/security
-        # The actual warning message is different from what we expected
+        # The permissive-defaults warning still fires (the setting is unchanged).
         warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
-        # We expect warnings about the insecure configuration - check for the actual message
         assert any("CORS" in str(call) and "permissive" in str(call) for call in warning_calls), (
             f"Expected CORS security warning but got: {warning_calls}"
         )
 
-        # Find CORS middleware and verify credentials are still allowed (current insecure behavior)
+        # Find CORS middleware and verify credentials were force-disabled for the wildcard.
         cors_middleware = None
         for middleware in app.user_middleware:
             if middleware.cls == CORSMiddleware:
@@ -206,16 +209,7 @@ class TestCORSConfiguration:
 
         assert cors_middleware is not None
         assert cors_middleware.kwargs["allow_origins"] == "*"
-        assert cors_middleware.kwargs["allow_credentials"] is True  # Current behavior: NOT disabled (insecure!)
-
-        # Warn about the security implications
-        warnings.warn(
-            "CRITICAL SECURITY WARNING: Current behavior allows wildcard origins WITH CREDENTIALS ENABLED! "
-            "This is a severe security vulnerability. Any website can make authenticated requests. "
-            "In v1.7, this will be changed to secure defaults with specific origins only.",
-            UserWarning,
-            stacklevel=2,
-        )
+        assert cors_middleware.kwargs["allow_credentials"] is False  # wildcard => credentials disabled
 
 
 class TestRefreshTokenSecurity:

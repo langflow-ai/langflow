@@ -645,6 +645,14 @@ def create_app():
 
     # Configure CORS using settings (with backward compatible defaults)
     origins = settings.cors_origins
+    allow_credentials = settings.cors_allow_credentials
+    # Security: a wildcard origin combined with credentials is unsafe (and invalid
+    # per the CORS spec). Starlette would reflect the caller's Origin and return
+    # Access-Control-Allow-Credentials: true, letting any site make credentialed
+    # cross-origin requests (CSRF / token theft). Force credentials off whenever
+    # the origin list is a wildcard; specific origins keep credentials.
+    if origins == "*" or (isinstance(origins, list) and "*" in origins):
+        allow_credentials = False
     if isinstance(origins, str) and origins != "*":
         origins = [origins]
 
@@ -652,7 +660,7 @@ def create_app():
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=settings.cors_allow_credentials,
+        allow_credentials=allow_credentials,
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
