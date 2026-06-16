@@ -21,7 +21,9 @@ from lfx.utils.flow_validation import (
     _get_invalid_components,
     check_flow_and_raise,
     code_hash_matches_any_template,
+    collect_code_by_hash,
     collect_component_hash_lookups,
+    get_trusted_code_for_validation,
     validate_flow_for_current_settings,
 )
 
@@ -722,3 +724,124 @@ class TestCustomComponentsFromPathPassValidation:
                 allow_custom_components=False,
                 type_to_current_hash=cache.type_to_current_hash,
             )
+
+
+class TestCollectCodeByHash:
+    """Tests for collect_code_by_hash — the code-hash -> trusted-source map."""
+
+    def test_maps_hash_to_trusted_source(self):
+        source_a = "class A:\n    pass\n"
+        source_b = "class B:\n    pass\n"
+        all_types = {
+            "models": {
+                "A": {"metadata": {"code_hash": _hash(source_a)}, "template": {"code": {"value": source_a}}},
+                "B": {"metadata": {"code_hash": _hash(source_b)}, "template": {"code": {"value": source_b}}},
+            }
+        }
+
+        code_by_hash = collect_code_by_hash(all_types)
+
+        assert code_by_hash[_hash(source_a)] == source_a
+        assert code_by_hash[_hash(source_b)] == source_b
+
+    def test_skips_entries_without_code_hash(self):
+        source = "class A:\n    pass\n"
+        all_types = {"models": {"A": {"metadata": {}, "template": {"code": {"value": source}}}}}
+
+        assert collect_code_by_hash(all_types) == {}
+
+    def test_skips_entries_without_source_value(self):
+        all_types = {"models": {"A": {"metadata": {"code_hash": "abc123def456"}, "template": {"code": {}}}}}
+
+        assert collect_code_by_hash(all_types) == {}
+
+    def test_drops_source_whose_hash_does_not_match_its_key(self):
+        """Reject a poisoned index entry filed under a hash it does not produce.
+
+        Security: attacker source must never become trusted/executable just
+        because it was stored under a known hash key.
+        """
+        trusted_hash = _hash("class Real:\n    pass\n")
+        malicious_source = "import os; os.system('rm -rf /')\n"
+        # The malicious source is stored under a hash it does not produce.
+        all_types = {
+            "models": {
+                "Spoofed": {
+                    "metadata": {"code_hash": trusted_hash},
+                    "template": {"code": {"value": malicious_source}},
+                }
+            }
+        }
+
+        code_by_hash = collect_code_by_hash(all_types)
+
+        # The mismatched entry is dropped entirely — nothing trusted for that hash.
+        assert trusted_hash not in code_by_hash
+        assert malicious_source not in code_by_hash.values()
+
+    def test_empty_and_malformed_inputs(self):
+        assert collect_code_by_hash({}) == {}
+        assert collect_code_by_hash({"models": "not-a-mapping"}) == {}
+        assert collect_code_by_hash({"models": {"A": "not-a-mapping"}}) == {}
+
+
+class TestGetTrustedCodeForValidation:
+    """Tests for get_trusted_code_for_validation — substitution + fail-closed."""
+
+    def test_returns_trusted_source_for_known_hash(self, monkeypatch):
+        trusted = "class Trusted:\n    pass\n"
+        monkeypatch.setattr(component_cache, "all_types_dict", None)
+        monkeypatch.setattr(component_cache, "code_by_hash", {_hash(trusted): trusted})
+
+        assert get_trusted_code_for_validation(trusted) == trusted
+
+    def test_returns_none_for_unknown_hash(self, monkeypatch):
+        monkeypatch.setattr(component_cache, "all_types_dict", None)
+        monkeypatch.setattr(component_cache, "code_by_hash", {"deadbeefcafe": "class T:\n    pass\n"})
+
+        assert get_trusted_code_for_validation("totally unknown code") is None
+
+    def test_returns_none_when_map_empty(self, monkeypatch):
+        monkeypatch.setattr(component_cache, "all_types_dict", None)
+        monkeypatch.setattr(component_cache, "code_by_hash", None)
+
+        assert get_trusted_code_for_validation("anything") is None
+
+    def test_collision_substitutes_trusted_source_not_client_bytes(self, monkeypatch):
+        """Return trusted source, never client bytes, on a hash collision.
+
+        Security core: when attacker bytes collide with a known template hash,
+        the lookup must return the server's trusted source.
+        """
+        import lfx.utils.flow_validation as fv
+
+        trusted = "class TextInput:\n    pass  # the real built-in\n"
+        malicious = "import os\n_pwn = os.system('id')\n"
+
+        # Force both inputs to the same (truncated) hash, simulating a 48-bit collision.
+        collision_hash = "c0ffeec0ffee"  # pragma: allowlist secret
+
+        def fake_hash(_code: str) -> str:
+            return collision_hash
+
+        monkeypatch.setattr(fv, "_compute_code_hash", fake_hash)
+        monkeypatch.setattr(component_cache, "all_types_dict", None)
+        monkeypatch.setattr(component_cache, "code_by_hash", {collision_hash: trusted})
+
+        # Attacker submits malicious bytes that clear the (collided) hash gate...
+        result = get_trusted_code_for_validation(malicious)
+
+        # ...but the trusted server copy is what comes back, not the payload.
+        assert result == trusted
+        assert result != malicious
+
+    def test_self_heals_from_all_types_dict_when_map_unbuilt(self, monkeypatch):
+        trusted = "class Heal:\n    pass\n"
+        monkeypatch.setattr(component_cache, "code_by_hash", None)
+        monkeypatch.setattr(
+            component_cache,
+            "all_types_dict",
+            {"models": {"Heal": {"metadata": {"code_hash": _hash(trusted)}, "template": {"code": {"value": trusted}}}}},
+        )
+
+        assert get_trusted_code_for_validation(trusted) == trusted

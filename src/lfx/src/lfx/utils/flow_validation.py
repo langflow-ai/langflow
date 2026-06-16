@@ -141,6 +141,61 @@ def collect_component_hash_lookups(
     return type_to_hash, all_hashes
 
 
+def collect_code_by_hash(
+    all_types_dict: Mapping[str, Any],
+) -> dict[str, str]:
+    """Map each known component code-hash to its trusted server-side source.
+
+    The hash gate (``code_hash_matches_any_template``) only proves that a
+    submitted blob *hashes* to a known value. Because the hash is a truncated
+    digest, a collision could let attacker-controlled code clear the gate. By
+    exec'ing the trusted source returned here — keyed by the same hash — a
+    collision merely re-runs the server's own known-good component instead of
+    the client bytes. See ``get_trusted_code_for_validation``.
+
+    Only source whose recomputed hash actually equals its key is trusted, so a
+    malformed index entry can never widen what gets executed.
+    """
+    code_by_hash: dict[str, str] = {}
+
+    for category_components in all_types_dict.values():
+        if not isinstance(category_components, Mapping):
+            continue
+
+        for component_data in category_components.values():
+            if not isinstance(component_data, Mapping):
+                continue
+
+            metadata = component_data.get("metadata")
+            if not isinstance(metadata, Mapping):
+                continue
+
+            code_hash = metadata.get("code_hash")
+            if not isinstance(code_hash, str) or not code_hash:
+                continue
+
+            template = component_data.get("template")
+            if not isinstance(template, Mapping):
+                continue
+
+            code_field = template.get("code")
+            if not isinstance(code_field, Mapping):
+                continue
+
+            source = code_field.get("value")
+            if not isinstance(source, str) or not source:
+                continue
+
+            # Defensive: only trust source whose hash matches its key, so a
+            # bad index entry can't smuggle in code under a known hash.
+            if _compute_code_hash(source) != code_hash:
+                continue
+
+            code_by_hash.setdefault(code_hash, source)
+
+    return code_by_hash
+
+
 def _get_invalid_components(
     nodes: list[dict],
     type_to_current_hash: dict[str, set[str]],
@@ -196,6 +251,33 @@ def code_hash_matches_any_template(code: str, all_known_hashes: set[str]) -> boo
     return _compute_code_hash(code) in all_known_hashes
 
 
+def get_trusted_code_for_validation(code: str) -> str | None:
+    """Return the server-trusted source whose hash matches ``code``, if any.
+
+    When a request clears the hash gate in a restricted deployment
+    (``allow_custom_components=False`` or admin-only mode), callers must exec
+    the value returned here instead of the client-submitted bytes. Because the
+    gate is a truncated-hash check, a second-preimage collision could otherwise
+    run attacker code; substituting the trusted source keyed by the same hash
+    closes that gap — a collision just re-runs the server's own component.
+
+    Returns ``None`` when no trusted source is known for the code's hash, in
+    which case callers must fail closed rather than fall back to client bytes.
+    """
+    from lfx.interface.components import component_cache
+
+    # Self-heal: build the lookup lazily if the cache hasn't populated it yet
+    # (e.g. the eager warm-up path didn't run before the first request).
+    if component_cache.code_by_hash is None and component_cache.all_types_dict is not None:
+        component_cache.code_by_hash = collect_code_by_hash(component_cache.all_types_dict)
+
+    code_by_hash = component_cache.code_by_hash
+    if not code_by_hash:
+        return None
+
+    return code_by_hash.get(_compute_code_hash(code))
+
+
 def check_flow_and_raise(
     flow_data: dict | None,
     *,
@@ -240,6 +322,7 @@ def get_component_hash_lookups_for_validation() -> dict[str, set[str]] | None:
         type_to_hash, all_hashes = collect_component_hash_lookups(component_cache.all_types_dict)
         component_cache.type_to_current_hash = type_to_hash
         component_cache.all_known_hashes = all_hashes
+        component_cache.code_by_hash = collect_code_by_hash(component_cache.all_types_dict)
 
     return component_cache.type_to_current_hash
 
