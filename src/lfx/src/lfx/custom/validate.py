@@ -57,16 +57,22 @@ def validate_code(code):
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
 
-    # Evaluate the function definition with langflow context
+    # Validate each function definition WITHOUT executing it.
+    #
+    # Security (GHSA-2wcq-pvw2-xh7v): this endpoint only
+    # *validates* code, but it previously compiled and exec()'d every function
+    # definition. Executing a function definition evaluates its decorators and
+    # default-argument expressions at definition time, so a payload such as
+    #     def f(x=__import__("os").system("...")): ...
+    # achieves arbitrary code execution during "validation" — the function never
+    # has to be called. Compile only, to surface syntax/compile errors; never
+    # exec untrusted code on the validation path.
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
-            code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
-                # Create execution context with common langflow imports
-                exec_globals = _create_langflow_execution_context()
-                exec(code_obj, exec_globals)
+                compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             except Exception as e:  # noqa: BLE001
-                logger.debug("Error executing function code", exc_info=True)
+                logger.debug("Error compiling function code", exc_info=True)
                 errors["function"]["errors"].append(str(e))
 
     # Return the errors dictionary
