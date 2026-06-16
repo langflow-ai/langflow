@@ -60,6 +60,25 @@ def _make_fake_tg(**overrides):
 
 
 @pytest.mark.asyncio
+async def test_guard_tools_blocked_when_custom_components_disabled(mock_component, monkeypatch):
+    """ToolGuard guard execution must be refused under allow_custom_components=False.
+
+    Regression test: the guard code comes from client-editable CodeInput
+    template values that bypass the custom-component hash gate, so a locked-down
+    deployment must refuse to execute it. The refusal happens before any toolguard
+    import/exec.
+    """
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
+    )
+
+    with pytest.raises(ValueError, match="allow_custom_components"):
+        await mock_component.guard_tools()
+
+
 async def test_cache_mode_success(mock_component, mock_tool):
     """Test PoliciesComponent in cache mode with valid cached guards."""
     code_dir = mock_component.work_dir / STEP2
