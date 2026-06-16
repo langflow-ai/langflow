@@ -119,6 +119,24 @@ def error_function():
         assert result["imports"]["errors"] == []
         assert result["function"]["errors"] == []
 
+    def test_validate_code_does_not_execute_default_args(self, tmp_path):
+        """validate_code must not run function-definition-time code.
+
+        Regression for GHSA-2wcq-pvw2-xh7v (LE-1247 / duplicate LE-1168): the
+        validator previously exec()'d each function definition, so a default
+        argument (or decorator) expression executed during validation. Here a
+        default arg would create a file as a side effect; it must NOT run.
+        """
+        marker = tmp_path / "pwned.txt"
+        code = f'def exploit(x=open({str(marker)!r}, "w").write("pwned")):\n    return x\n'
+
+        result = validate_code(code)
+
+        # No code executed -> the side-effect file was never created.
+        assert not marker.exists()
+        # Validation still returns the normal structure (valid syntax, no imports).
+        assert result["imports"]["errors"] == []
+
     def test_code_with_multiple_imports(self):
         """Test validation handles multiple imports."""
         code = """
