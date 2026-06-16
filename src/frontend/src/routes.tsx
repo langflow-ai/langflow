@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
+import { ProtectedLangflowRoute } from "./components/authorization/authLangflowGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
 import { PlaygroundAuthGate } from "./components/authorization/playgroundAuthGate";
@@ -63,7 +64,9 @@ const router = createBrowserRouter(
         element={
           <ContextWrapper key={1}>
             <PlaygroundAuthGate>
-              <PlaygroundPage />
+              <ProtectedLangflowRoute>
+                <PlaygroundPage />
+              </ProtectedLangflowRoute>
             </PlaygroundAuthGate>
           </ContextWrapper>
         }
@@ -93,7 +96,14 @@ const router = createBrowserRouter(
           >
             <Route path="" element={<AppAuthenticatedPage />}>
               <Route path="" element={<CustomDashboardWrapperPage />}>
-                <Route path="" element={<CollectionPage />}>
+                <Route
+                  path=""
+                  element={
+                    <ProtectedLangflowRoute>
+                      <CollectionPage />
+                    </ProtectedLangflowRoute>
+                  }
+                >
                   {/* No index route here: exact "/" belongs to the public
                       landing page above. The flows app home is /flows. */}
                   {ENABLE_FILE_MANAGEMENT && (
@@ -154,33 +164,77 @@ const router = createBrowserRouter(
                     index
                     element={<CustomNavigate replace to={"general"} />}
                   />
+                  {/* Open to all logged-in users: the Lothal Settings page links
+                      regular users here to manage their keys/variables. Keep
+                      these two un-gated. Everything else under /settings is part
+                      of the legacy Langflow surface → superuser only. */}
                   <Route
                     path="global-variables"
                     element={<GlobalVariablesPage />}
                   />
+                  <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route
                     path="model-providers"
-                    element={<ModelProvidersPage />}
+                    element={
+                      <ProtectedLangflowRoute>
+                        <ModelProvidersPage />
+                      </ProtectedLangflowRoute>
+                    }
                   />
-                  <Route path="mcp-servers" element={<MCPServersPage />} />
-                  <Route path="mcp-client" element={<McpClientPage />} />
-
-                  <Route path="api-keys" element={<ApiKeysPage />} />
+                  <Route
+                    path="mcp-servers"
+                    element={
+                      <ProtectedLangflowRoute>
+                        <MCPServersPage />
+                      </ProtectedLangflowRoute>
+                    }
+                  />
+                  <Route
+                    path="mcp-client"
+                    element={
+                      <ProtectedLangflowRoute>
+                        <McpClientPage />
+                      </ProtectedLangflowRoute>
+                    }
+                  />
                   <Route
                     path="general/:scrollId?"
                     element={
-                      <AuthSettingsGuard>
-                        <GeneralPage />
-                      </AuthSettingsGuard>
+                      <ProtectedLangflowRoute>
+                        <AuthSettingsGuard>
+                          <GeneralPage />
+                        </AuthSettingsGuard>
+                      </ProtectedLangflowRoute>
                     }
                   />
-                  <Route path="shortcuts" element={<ShortcutsPage />} />
-                  <Route path="messages" element={<MessagesPage />} />
+                  <Route
+                    path="shortcuts"
+                    element={
+                      <ProtectedLangflowRoute>
+                        <ShortcutsPage />
+                      </ProtectedLangflowRoute>
+                    }
+                  />
+                  <Route
+                    path="messages"
+                    element={
+                      <ProtectedLangflowRoute>
+                        <MessagesPage />
+                      </ProtectedLangflowRoute>
+                    }
+                  />
                   {CustomRoutesStore()}
                 </Route>
                 {CustomRoutesStorePages()}
                 <Route path="account">
-                  <Route path="delete" element={<DeleteAccountPage />}></Route>
+                  <Route
+                    path="delete"
+                    element={
+                      <ProtectedLangflowRoute>
+                        <DeleteAccountPage />
+                      </ProtectedLangflowRoute>
+                    }
+                  ></Route>
                 </Route>
                 <Route
                   path="admin"
@@ -199,11 +253,25 @@ const router = createBrowserRouter(
               <Route path="lothal/settings" element={<LothalSettings />} />
               <Route path="lothal/:projectId" element={<LothalWorkspace />} />
               <Route path="flow/:id/">
-                <Route path="" element={<CustomDashboardWrapperPage />}>
+                <Route
+                  path=""
+                  element={
+                    <ProtectedLangflowRoute>
+                      <CustomDashboardWrapperPage />
+                    </ProtectedLangflowRoute>
+                  }
+                >
                   <Route path="folder/:folderId/" element={<FlowPage />} />
                   <Route path="" element={<FlowPage />} />
                 </Route>
-                <Route path="view" element={<ViewPage />} />
+                <Route
+                  path="view"
+                  element={
+                    <ProtectedLangflowRoute>
+                      <ViewPage />
+                    </ProtectedLangflowRoute>
+                  }
+                />
               </Route>
             </Route>
           </Route>

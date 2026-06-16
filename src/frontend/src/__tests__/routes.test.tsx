@@ -26,6 +26,9 @@ jest.mock("@/components/authorization/authAdminGuard", () => ({
 jest.mock("@/components/authorization/authGuard", () => ({
   ProtectedRoute: ({ children }: { children?: ReactNode }) => children,
 }));
+jest.mock("@/components/authorization/authLangflowGuard", () => ({
+  ProtectedLangflowRoute: ({ children }: { children?: ReactNode }) => children,
+}));
 jest.mock("@/components/authorization/authLoginGuard", () => ({
   ProtectedLoginRoute: ({ children }: { children?: ReactNode }) => children,
 }));
