@@ -86,3 +86,71 @@ class TestRedisCacheTeardown:
                 await cache.teardown()
 
             mock_client.aclose.assert_called_once()
+
+
+_MARKER_PATH_HOLDER: list[str] = []
+
+
+def _deser_side_effect(path: str) -> str:
+    """Module-level callable used as a pickle reduce gadget in the test below."""
+    _MARKER_PATH_HOLDER.append(path)
+    return path
+
+
+class _Gadget:
+    """A picklable object whose deserialization would run _deser_side_effect."""
+
+    def __init__(self, path: str) -> None:
+        self.path = path
+
+    def __reduce__(self):
+        return (_deser_side_effect, (self.path,))
+
+
+@pytest.mark.asyncio
+class TestRedisCacheDeserializationIntegrity:
+    """Regression (insecure dill.loads of untrusted Redis bytes)."""
+
+    async def test_get_rejects_payload_without_valid_hmac(self):
+        """A payload lacking a valid HMAC tag must not be deserialized (no gadget run)."""
+        import dill
+        from lfx.services.cache.utils import CACHE_MISS
+
+        _MARKER_PATH_HOLDER.clear()
+        with patch("redis.asyncio.StrictRedis") as mock_redis_class:
+            mock_client = AsyncMock()
+            mock_redis_class.return_value = mock_client
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+            cache._signing_key = b"k" * 32  # inject a fixed key (no settings dependency)
+
+            # Attacker-written value: a reduce gadget, prefixed with a WRONG 32-byte tag.
+            forged = b"\x00" * cache._HMAC_DIGEST_SIZE + dill.dumps(_Gadget("gadget-ran"))
+            mock_client.get.return_value = forged
+
+            result = await cache.get("k")
+
+            assert result is CACHE_MISS  # rejected before dill.loads
+            assert _MARKER_PATH_HOLDER == []  # gadget never executed
+
+    async def test_set_get_roundtrip_with_signature(self):
+        """Values written by set() carry a valid tag and round-trip through get()."""
+        with patch("redis.asyncio.StrictRedis") as mock_redis_class:
+            mock_client = AsyncMock()
+            mock_redis_class.return_value = mock_client
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+            cache._signing_key = b"k" * 32
+
+            store: dict[str, bytes] = {}
+
+            async def fake_setex(key, _ttl, value):
+                store[key] = value
+                return True
+
+            async def fake_get(key):
+                return store.get(key)
+
+            mock_client.setex.side_effect = fake_setex
+            mock_client.get.side_effect = fake_get
+
+            await cache.set("k", {"a": 1, "b": [2, 3]})
+            assert await cache.get("k") == {"a": 1, "b": [2, 3]}
