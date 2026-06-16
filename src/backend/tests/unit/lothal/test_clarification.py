@@ -117,6 +117,15 @@ def test_parse_reply_falls_back_to_prose_when_not_json():
     assert response.next_phase is None
 
 
+def test_parse_reply_handles_whitespace_only_reply():
+    # call_llm normally guarantees non-empty, but _parse_reply must stay total:
+    # an all-whitespace reply still yields a storable (non-empty) message.
+    response = _parse_reply("   \n  ")
+    assert response.text.strip()
+    assert response.suggestions == []
+    assert response.next_phase is None
+
+
 def test_parse_reply_handles_clarity_token_wrapped_in_json():
     raw = f'{CLARITY_TOKEN} {{"message": "Spec: a todo app for teams."}}'
     response = _parse_reply(raw)

@@ -129,8 +129,10 @@ def _parse_reply(raw: str) -> LLMResponse:
         return LLMResponse(text=data["message"].strip(), suggestions=_coerce_suggestions(data.get("suggestions")))
 
     # The model ignored the JSON contract — show its prose verbatim with no chips
-    # rather than failing the turn.
-    return LLMResponse(text=raw.strip(), suggestions=[])
+    # rather than failing the turn. Guard the all-whitespace case so a degenerate
+    # reply still yields a storable assistant message instead of a ValueError.
+    text = raw.strip() or "Could you tell me a bit more about what you want to build?"
+    return LLMResponse(text=text, suggestions=[])
 
 
 @register_engine
