@@ -38,6 +38,7 @@ dependencies = [
     "lfx-amazon>=0.1.0,<1.0.0",
     "lfx-cohere>=0.1.0,<1.0.0",
     "lfx-oracle>=0.1.0,<1.0.0",
+    "lfx-nextplaid>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -106,6 +107,7 @@ lfx-anthropic = { workspace = true }
 lfx-amazon = { workspace = true }
 lfx-cohere = { workspace = true }
 lfx-oracle = { workspace = true }
+lfx-nextplaid = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -129,6 +131,7 @@ members = [
     "src/bundles/amazon",
     "src/bundles/cohere",
     "src/bundles/oracle",
+    "src/bundles/nextplaid",
     # langflow-extensions:bundle-members-end
 ]
 
