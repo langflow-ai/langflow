@@ -2255,10 +2255,7 @@ async def update_tools(
         # so a tenant only ever gets their own id bound and cannot read/write another tenant's flows.
         if AGENTIC_MCP_MODULE in command or any(AGENTIC_MCP_MODULE in arg for arg in args):
             if not current_user_id:
-                msg = (
-                    "The Langflow agentic MCP server requires an authenticated user context and "
-                    "cannot be used here."
-                )
+                msg = "The Langflow agentic MCP server requires an authenticated user context and cannot be used here."
                 raise ValueError(msg)
             env = {**(env or {}), AGENTIC_USER_ID_ENV_VAR: str(current_user_id)}
         # For stdio mode, inject component headers as --headers CLI args.

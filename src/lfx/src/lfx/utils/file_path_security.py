@@ -124,9 +124,6 @@ def enforce_local_file_access(resolved_path: str | Path) -> Path:
     # siblings of the upload subdirs; deny those explicitly (a traversal like "<flow>/../secret_key"
     # resolves back inside the boundary but must not be readable).
     if candidate in _reserved_secret_paths(data_dir):
-        msg = (
-            "Access to this server-managed file is not permitted "
-            "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
-        )
+        msg = "Access to this server-managed file is not permitted (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
         raise LocalFileAccessError(msg)
     return path

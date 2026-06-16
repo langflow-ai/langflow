@@ -603,9 +603,7 @@ async def update_flow_component_field(
         >>> if result["success"]:
         ...     print(f"Updated from {result['old_value']} to {result['new_value']}")
     """
-    return await update_component_field_value(
-        flow_id_or_name, component_id, field_name, new_value, _bound_user_id()
-    )
+    return await update_component_field_value(flow_id_or_name, component_id, field_name, new_value, _bound_user_id())
 
 
 @mcp.tool()
