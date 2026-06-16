@@ -54,7 +54,8 @@ services:
       # per-token — deliberately not passed through here.
       LOTHAL_LLM_PROVIDER: ${LOTHAL_LLM_PROVIDER:-claude}
       LOTHAL_MODEL_NAME: ${LOTHAL_MODEL_NAME:-}
-      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      # Required: fail compose at parse time rather than booting into runtime 503s.
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:?CLAUDE_CODE_OAUTH_TOKEN is required in production}
     volumes:
       - lothal-langflow-data:/app/langflow  # secret_key, profile pics, etc. — must persist
     healthcheck:

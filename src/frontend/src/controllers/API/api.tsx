@@ -26,6 +26,20 @@ const api: AxiosInstance = axios.create({
   baseURL: baseURL,
   withCredentials: getAxiosWithCredentials(),
 });
+
+// A 403 on the sign-up endpoint (POST /api/v1/users/) is a real error to show
+// the caller (e.g. "Sign up is currently disabled."), not an expired session,
+// so it must bypass the refresh→logout path. Match only the create endpoint
+// (pathname ending in /users or /users/) — never other URLs containing "users".
+function isSignupCreateRequest(config?: AxiosRequestConfig): boolean {
+  if (config?.method?.toLowerCase() !== "post") return false;
+  try {
+    const { pathname } = new URL(config?.url ?? "", window.location.origin);
+    return /\/users\/?$/.test(pathname);
+  } catch {
+    return false;
+  }
+}
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -79,12 +93,7 @@ function ApiInterceptor() {
           if (
             error?.config?.url?.includes("github") ||
             error?.config?.url?.includes("public") ||
-            // Sign up (POST /users/) can legitimately 403 when public signup is
-            // disabled; surface that to the caller's onError instead of treating
-            // it as an expired session (refresh→logout would swallow the message).
-            // Scoped to POST so a GET /users/ with an expired token still refreshes.
-            (error?.config?.url?.includes("users") &&
-              error?.config?.method?.toLowerCase() === "post")
+            isSignupCreateRequest(error?.config)
           ) {
             return Promise.reject(error);
           }
