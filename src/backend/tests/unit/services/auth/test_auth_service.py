@@ -193,6 +193,40 @@ async def test_authenticate_with_credentials_auto_login_skip_missing_superuser_r
 
 
 @pytest.mark.anyio
+async def test_auto_login_longterm_token_is_short_lived_with_refresh(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """auto_login must not mint a 365-day superuser token.
+
+    Regression for GHSA-fjgc-vj2f-77hm (LE-1173): create_user_longterm_token
+    previously issued a 365-day access token with no refresh token. It must now
+    issue a normally-scoped access token (ACCESS_TOKEN_EXPIRE_SECONDS) plus a
+    refresh token.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.SUPERUSER = "admin"
+    superuser = _dummy_user(uuid4())
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=superuser)),
+        patch("langflow.services.auth.service.update_user_last_login_at", new=AsyncMock()),
+    ):
+        user_id, tokens = await auth_service.create_user_longterm_token(AsyncMock())
+
+    assert user_id == superuser.id
+    # A refresh token is now issued (previously None).
+    assert tokens["refresh_token"]
+
+    # The access token lifetime is bounded by ACCESS_TOKEN_EXPIRE_SECONDS (60 in
+    # the fixture), nowhere near a year.
+    claims = jwt.decode(tokens["access_token"], options={"verify_signature": False})
+    lifetime = claims["exp"] - int(datetime.now(timezone.utc).timestamp())
+    assert lifetime <= auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS + 5
+    assert lifetime < 60 * 60 * 24  # far below a day, definitely not 365 days
+
+
+@pytest.mark.anyio
 async def test_authenticate_with_credentials_auto_login_skip_empty_superuser_config_raises():
     """AUTO_LOGIN + skip_auth_auto_login with an empty SUPERUSER config rejects without a DB lookup.
 
