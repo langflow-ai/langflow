@@ -250,6 +250,14 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
     if not content:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content cannot be empty.")
 
+    # Serialize concurrent turns on the same project (double-submit, two tabs).
+    # Re-read the project row under a FOR UPDATE lock before deriving phase and
+    # history: a second in-flight turn blocks here until this one commits, then
+    # sees the committed phase and the messages this turn added — so turns can't
+    # interleave or double-apply a transition. No-op on SQLite (the test DB),
+    # whose dialect omits FOR UPDATE and which serializes writes DB-wide anyway.
+    await session.refresh(project, with_for_update=True)
+
     turn_phase = project.phase
 
     # Prior turns only — loaded before the new user message is added so the engine
