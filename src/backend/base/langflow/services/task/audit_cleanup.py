@@ -26,8 +26,10 @@ from langflow.services.utils import clean_authz_audit_log
 if TYPE_CHECKING:
     from lfx.services.settings.auth import AuthSettings
 
-# Daily by default; mirrors AuthSettings.AUTHZ_AUDIT_CLEANUP_INTERVAL so the
-# worker still has a sane cadence if the setting is somehow unavailable.
+# Placeholder cadence used only until ``start()`` resolves the real value from
+# AUTHZ_AUDIT_CLEANUP_INTERVAL. Covers the window where a worker is constructed
+# but not yet started (the module-level singleton below, or a worker in tests),
+# so ``_interval`` is always a valid float. Daily, matching the setting default.
 DEFAULT_CLEANUP_INTERVAL_SECONDS = 86400
 
 
@@ -55,13 +57,15 @@ class AuditLogCleanupWorker:
         self._task: asyncio.Task | None = None
 
     def _resolve_interval(self, auth_settings: AuthSettings) -> float:
-        """Resolve the sweep interval, preferring the constructor override."""
+        """Resolve the sweep interval, preferring the constructor override.
+
+        Otherwise reads AUTHZ_AUDIT_CLEANUP_INTERVAL directly: it is a pydantic
+        field guaranteed present and ``>= 300`` (see AuthSettings), so no
+        defaulting or type-coercion guard is needed here.
+        """
         if self._interval_override is not None:
             return float(self._interval_override)
-        try:
-            return float(getattr(auth_settings, "AUTHZ_AUDIT_CLEANUP_INTERVAL", DEFAULT_CLEANUP_INTERVAL_SECONDS))
-        except (TypeError, ValueError):
-            return float(DEFAULT_CLEANUP_INTERVAL_SECONDS)
+        return float(auth_settings.AUTHZ_AUDIT_CLEANUP_INTERVAL)
 
     async def start(self) -> None:
         """Start the periodic cleanup task, honouring the audit/retention gates."""

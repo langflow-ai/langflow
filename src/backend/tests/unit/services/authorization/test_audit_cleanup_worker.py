@@ -158,14 +158,16 @@ async def test_worker_survives_cleanup_failure(monkeypatch):
 
 
 def test_interval_resolution_prefers_override():
-    """The constructor override wins; otherwise the setting (then default) is used."""
+    """The constructor override wins; otherwise the value comes from the setting.
+
+    AUTHZ_AUDIT_CLEANUP_INTERVAL is a pydantic field (default 86400, ge=300), so
+    the worker reads it directly without a missing/garbage fallback.
+    """
     overridden = audit_cleanup.AuditLogCleanupWorker(interval=1.5)
     assert overridden._resolve_interval(SimpleNamespace(AUTHZ_AUDIT_CLEANUP_INTERVAL=99)) == 1.5
 
     from_settings = audit_cleanup.AuditLogCleanupWorker()
     assert from_settings._resolve_interval(SimpleNamespace(AUTHZ_AUDIT_CLEANUP_INTERVAL=99)) == 99.0
-    # Missing/garbage setting falls back to the module default.
-    assert from_settings._resolve_interval(SimpleNamespace()) == float(audit_cleanup.DEFAULT_CLEANUP_INTERVAL_SECONDS)
 
 
 # --------------------------------------------------------------------------- #
