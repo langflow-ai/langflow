@@ -6,13 +6,16 @@ from lfx.utils.lazy_import import import_mod
 
 if TYPE_CHECKING:
     from .chroma import ChromaVectorStoreComponent
+    from .local_db import LocalDBComponent
 
 _dynamic_imports = {
     "ChromaVectorStoreComponent": "chroma",
+    "LocalDBComponent": "local_db",
 }
 
 __all__ = [
     "ChromaVectorStoreComponent",
+    "LocalDBComponent",
 ]
 
 

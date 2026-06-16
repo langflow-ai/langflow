@@ -93,7 +93,11 @@ def test_shim_source_contract(shim_dir: Path) -> None:
     provider = shim_dir.name
     # Bundle names are lowercase (BUNDLE_NAME_RE), so a mixed-case in-tree dir
     # (e.g. FAISS, Notion) aliases to its lowercased bundle (faiss, notion).
-    slug = provider.lower()
+    # A few dirs are cross-bundle shims: their lone component lives in a
+    # differently-named bundle (e.g. vectorstores' LocalDBComponent is
+    # Chroma-backed, so it aliases the ``chroma`` bundle).
+    cross_bundle = {"vectorstores": "chroma"}
+    slug = cross_bundle.get(provider, provider.lower())
     src = (shim_dir / "__init__.py").read_text(encoding="utf-8")
 
     assert src.startswith(SHIM_MARKER), f"{provider}: first line must be the {SHIM_MARKER!r} marker"

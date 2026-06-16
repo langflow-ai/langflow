@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.services.cache.utils import CACHE_DIR
-from lfx.components.vectorstores.local_db import LocalDBComponent
 from lfx.schema.data import Data
+from lfx_bundles.chroma.local_db import LocalDBComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -372,7 +372,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         updated_config = component.update_build_config(build_config, "new_collection", "existing_collections")
         assert updated_config["collection_name"]["value"] == "new_collection"
 
-    @patch("lfx.components.vectorstores.local_db.LocalDBComponent.list_existing_collections")
+    @patch("lfx_bundles.chroma.local_db.LocalDBComponent.list_existing_collections")
     def test_list_existing_collections(self, mock_list: MagicMock, component_class: type[LocalDBComponent]) -> None:
         """Test the list_existing_collections method."""
         mock_list.return_value = ["collection1", "collection2", "collection3"]

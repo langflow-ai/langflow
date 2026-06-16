@@ -4760,6 +4760,26 @@
       "legacy_slot": "ext:notion:NotionPageUpdate@official-pre-a",
       "target": "ext:notion:NotionPageUpdate@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "LocalDBComponent",
+      "target": "ext:chroma:LocalDBComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vectorstores.local_db.LocalDBComponent",
+      "target": "ext:chroma:LocalDBComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vectorstores.LocalDBComponent",
+      "target": "ext:chroma:LocalDBComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:chroma:LocalDBComponent@official-pre-a",
+      "target": "ext:chroma:LocalDBComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

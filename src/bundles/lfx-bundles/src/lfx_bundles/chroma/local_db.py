@@ -2,8 +2,6 @@ from copy import deepcopy
 from pathlib import Path
 
 from langchain_chroma import Chroma
-from typing_extensions import override
-
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.utils import chroma_collection_to_data
@@ -14,6 +12,7 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
+from typing_extensions import override
 
 disable_component_in_astra_cloud_msg = (
     "Local vector stores are not supported in S3/cloud mode. "
