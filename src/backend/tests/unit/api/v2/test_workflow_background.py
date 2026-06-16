@@ -98,6 +98,40 @@ async def test_background_reaches_terminal_status(client, created_api_key, bg_fl
     assert final == JobStatus.COMPLETED, f"job did not complete: last={final}"
 
 
+async def test_background_status_returns_output(client, created_api_key, bg_flow):
+    """A completed background run's GET status carries its terminal output.
+
+    Background runs do not persist ``vertex_builds`` keyed by job_id, so the
+    vertex-build reconstruction finds nothing. The runner instead captures the
+    terminal ``output`` events into ``Job.result`` and the COMPLETED branch
+    rebuilds the ``outputs`` map from them. Regression: the status previously
+    returned a bare COMPLETED with an empty ``outputs`` and a null ``output``.
+    """
+    from uuid import UUID
+
+    from langflow.services.database.models.jobs.model import Job, JobStatus
+
+    submit = await client.post("api/v2/workflows", json=_body(bg_flow), headers=_headers(created_api_key))
+    job_id = submit.json()["job_id"]
+
+    row = None
+    for _ in range(150):
+        async with session_scope() as session:
+            row = await session.get(Job, UUID(job_id))
+        if row is not None and row.status == JobStatus.COMPLETED:
+            break
+        await asyncio.sleep(0.1)
+    assert row is not None, "job row missing"
+    assert row.status == JobStatus.COMPLETED, "job never completed"
+
+    status = await client.get("api/v2/workflows", params={"job_id": job_id}, headers=_headers(created_api_key))
+    assert status.status_code == 200, status.text
+    body = status.json()
+    assert body["status"] == "completed"
+    # The terminal outputs are present (an empty dict before the fix).
+    assert body["outputs"], f"completed background status carried no outputs: {body}"
+
+
 async def test_stop_does_not_overwrite_completed_job(client, created_api_key, bg_flow):
     """A late ``/stop`` on an already-COMPLETED job must NOT flip it to CANCELLED.
 
