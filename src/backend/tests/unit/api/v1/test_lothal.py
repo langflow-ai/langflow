@@ -803,8 +803,7 @@ _SMOKE_ANSWERS = [
     "and filter by ingredient and cuisine; save favourites; rate and comment.",
     "Each recipe has a title, ingredient list, step-by-step instructions, a "
     "photo, prep/cook time, and tags. Users have a profile with their recipes.",
-    "Main flows: sign up, post a recipe, search/browse, open a recipe, save it, "
-    "and leave a rating or comment.",
+    "Main flows: sign up, post a recipe, search/browse, open a recipe, save it, and leave a rating or comment.",
     "That covers everything I need — please write the product spec now.",
     "Yes, that's complete. Please summarise the specification.",
 ]
@@ -849,7 +848,14 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
     assert "[CLARITY_REACHED]" not in reply["content"]
 
     saw_suggestions = bool(reply["suggestions"])
-    transitioned = reply["phase"] != "CLARIFICATION"
+
+    async def has_transitioned() -> bool:
+        # A turn's reply is stamped with the phase it ran *under*, so a transition
+        # only shows up on the project row — never on `reply["phase"]`.
+        project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+        return project["phase"] != "CLARIFICATION"
+
+    transitioned = await has_transitioned()
 
     # Keep answering until the model reaches clarity (phase moves off CLARIFICATION),
     # falling back to a generic nudge once the canned answers run out.
@@ -860,10 +866,7 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
         reply = await send(answer)
         turns += 1
         saw_suggestions = saw_suggestions or bool(reply["suggestions"])
-        # The turn ran under CLARIFICATION, so the engine stamps it CLARIFICATION
-        # either way; the transition shows up on the project row, read below.
-        project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-        transitioned = project["phase"] != "CLARIFICATION"
+        transitioned = await has_transitioned()
 
     # Clarity must be reached within the bounded number of turns.
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
