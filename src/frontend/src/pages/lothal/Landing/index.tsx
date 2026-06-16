@@ -80,29 +80,25 @@ const LARDER_EDGES: DiagramEdge[] = [
     id: "e1",
     source: "customer",
     target: "order",
-    label: "submit order",
-    data: { order: 1, kind: "sync" },
+    data: { order: 1, label: "submit order", kind: "sync" },
   },
   {
     id: "e2",
     source: "order",
     target: "inventory",
-    label: "reserve stock",
-    data: { order: 2, kind: "sync" },
+    data: { order: 2, label: "reserve stock", kind: "sync" },
   },
   {
     id: "e3",
     source: "inventory",
     target: "kitchen",
-    label: "stock status",
-    data: { order: 3, kind: "return" },
+    data: { order: 3, label: "stock status", kind: "return" },
   },
   {
     id: "e4",
     source: "kitchen",
     target: "customer",
-    label: "ready for pickup",
-    data: { order: 4, kind: "async" },
+    data: { order: 4, label: "ready for pickup", kind: "async" },
   },
 ];
 

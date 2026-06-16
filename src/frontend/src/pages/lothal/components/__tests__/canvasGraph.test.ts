@@ -24,8 +24,7 @@ const edge = (over: Partial<DiagramEdge>): DiagramEdge => ({
   id: "e",
   source: "a",
   target: "b",
-  label: "msg",
-  data: { order: 1 },
+  data: { order: 1, label: "msg" },
   ...over,
 });
 
@@ -44,6 +43,18 @@ describe("resolveEdgeKind", () => {
     expect(resolveEdgeKind(edge({ data: { order: 1, kind: "async" } }))).toBe(
       "async",
     );
+  });
+  it("falls back to the animated flag when kind is absent", () => {
+    expect(resolveEdgeKind(edge({ animated: true, data: { order: 1 } }))).toBe(
+      "async",
+    );
+  });
+  it("prefers an explicit kind over the animated flag", () => {
+    expect(
+      resolveEdgeKind(
+        edge({ animated: true, data: { order: 1, kind: "return" } }),
+      ),
+    ).toBe("return");
   });
 });
 
@@ -96,6 +107,13 @@ describe("toFlowEdges", () => {
     expect(out.map((e) => e.id)).toEqual(["e1", "e2", "e3"]);
   });
 
+  it("reads the rendered label from data.label", () => {
+    const [e] = toFlowEdges([
+      edge({ data: { order: 1, label: "create order" } }),
+    ]);
+    expect(e.label).toBe("create order");
+  });
+
   it("applies the kind's visual treatment to each edge", () => {
     const [e] = toFlowEdges([edge({ data: { order: 1, kind: "async" } })]);
     expect(e.animated).toBe(true);
@@ -117,7 +135,6 @@ describe("toFlowEdges", () => {
 
 describe("isEmptyDiagram", () => {
   const diagram = (nodes: DiagramNode[]): Diagram => ({
-    mermaid: null,
     nodes,
     edges: [],
   });

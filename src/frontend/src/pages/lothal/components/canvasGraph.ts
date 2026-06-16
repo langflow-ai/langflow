@@ -5,10 +5,11 @@
 // all deterministic. The presentational <DiagramCanvas> feeds the output of
 // these functions straight into <ReactFlow>.
 //
-// Edge kinds come from the Mermaid arrow style (a render hint, not the LLM
-// contract): `sync` (solid `->>`), `async` (dashed `-->>`, in-flight), `return`
-// (dashed `-->>`, a reply). When absent we default to `sync`. Node kinds default
-// from the node type (actor→person, system→service).
+// Edge kinds are a render hint the model emits alongside the canonical graph:
+// `sync` (solid call), `async` (dashed, in-flight), `return` (dashed reply).
+// When `data.kind` is absent we fall back to the top-level `animated` flag
+// (animated → `async`, else `sync`). Node kinds default from the node type
+// (actor→person, system→service).
 
 import type {
   Edge as FlowEdge,
@@ -57,9 +58,12 @@ export function edgeStyle(kind: EdgeKind): {
   }
 }
 
-/** The edge kind, defaulting to `sync` when the render hint is absent. */
+/**
+ * The edge kind: the explicit `data.kind` hint when present, else inferred from
+ * the top-level `animated` flag (animated → `async`), defaulting to `sync`.
+ */
 export function resolveEdgeKind(edge: DiagramEdge): EdgeKind {
-  return edge.data?.kind ?? "sync";
+  return edge.data?.kind ?? (edge.animated ? "async" : "sync");
 }
 
 function toFlowNode(node: DiagramNode): FlowNode {
@@ -81,7 +85,7 @@ function toFlowEdge(edge: DiagramEdge): FlowEdge {
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    label: edge.label,
+    label: edge.data?.label,
     animated,
     data: { ...edge.data, kind },
     markerEnd: { type: ARROW_CLOSED, color: stroke },

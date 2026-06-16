@@ -33,10 +33,12 @@ export type Message = {
 };
 
 // --- Diagram (xyflow render layer) -----------------------------------------
-// Mirrors the `GET /diagram` contract. `data.label` is the only guaranteed node
-// field; `kind`/`note` are optional render hints the converter may add (not part
-// of the LLM contract). Edges always carry `data.order`; `data.kind` is an
-// optional render hint (sync/async/return) derived from the Mermaid arrow style.
+// Mirrors the canonical `GET /diagram` contract (`lothal/diagram.py`'s
+// `DiagramGraph`) verbatim — xyflow end to end, no Mermaid, no conversion. A
+// node's `data.label` is its only guaranteed field; `kind`/`note` are optional
+// render hints. An edge always carries `data.order`; its message text lives in
+// `data.label`, and `data.kind` (sync/async/return) plus the top-level
+// `animated` flag are the optional style hints the model emits.
 
 export type NodeKind = "person" | "service" | "ui" | "data";
 export type EdgeKind = "sync" | "async" | "return";
@@ -52,12 +54,11 @@ export type DiagramEdge = {
   id: string;
   source: string;
   target: string;
-  label: string;
-  data: { order: number; kind?: EdgeKind };
+  animated?: boolean;
+  data: { order: number; label?: string; kind?: EdgeKind };
 };
 
 export type Diagram = {
-  mermaid: string | null;
   nodes: DiagramNode[];
   edges: DiagramEdge[];
 };

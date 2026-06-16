@@ -67,7 +67,7 @@ const nodes: DiagramNode[] = [
   },
 ];
 const edges: DiagramEdge[] = [
-  { id: "e1", source: "a", target: "b", label: "call", data: { order: 1 } },
+  { id: "e1", source: "a", target: "b", data: { order: 1, label: "call" } },
 ];
 
 describe("DiagramCanvas", () => {
