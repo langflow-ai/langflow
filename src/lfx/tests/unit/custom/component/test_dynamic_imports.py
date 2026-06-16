@@ -184,19 +184,19 @@ class TestComponentDynamicImports:
 
     def test_import_error_handling(self):
         """Test error handling when import fails."""
-        import lfx.components.notdiamond as notdiamond_components
+        import lfx.components.processing as processing_components
 
         # Patch the import_mod function directly
-        with patch("lfx.components.notdiamond.import_mod") as mock_import_mod:
+        with patch("lfx.components.processing.import_mod") as mock_import_mod:
             # Mock import_mod to raise ImportError
             mock_import_mod.side_effect = ImportError("Module not found")
 
             # Clear any cached attribute
-            if "NotDiamondComponent" in notdiamond_components.__dict__:
-                del notdiamond_components.__dict__["NotDiamondComponent"]
+            if "CombineTextComponent" in processing_components.__dict__:
+                del processing_components.__dict__["CombineTextComponent"]
 
             with pytest.raises(AttributeError, match="Could not import"):
-                _ = notdiamond_components.NotDiamondComponent
+                _ = processing_components.CombineTextComponent
 
     def test_consistency_check(self):
         """Test that __all__ and _dynamic_imports are consistent."""
