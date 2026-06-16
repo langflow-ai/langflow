@@ -9,6 +9,7 @@ return the structured `501`.
 Common to both: every endpoint requires auth and appears in the OpenAPI schema.
 """
 
+import json
 from importlib.util import find_spec
 from uuid import UUID, uuid4
 
@@ -16,6 +17,7 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1 import lothal as lothal_api
+from langflow.lothal.engines import clarification as clarification_engine
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError
 from langflow.services.database.models.lothal_project.model import CodeFile, Message, Project
 from langflow.services.deps import session_scope
@@ -31,8 +33,6 @@ PROJECT_ID = "00000000-0000-0000-0000-000000000000"
 # shared ownership check (404), or the stub itself (501) — never validation
 # (422).
 STUB_TEMPLATES = [
-    ("POST", "api/v1/lothal/projects/{project_id}/chat", {"content": "hi"}),
-    ("GET", "api/v1/lothal/projects/{project_id}/messages", None),
     ("GET", "api/v1/lothal/projects/{project_id}/prd", None),
     ("GET", "api/v1/lothal/projects/{project_id}/diagram", None),
     ("POST", "api/v1/lothal/projects/{project_id}/diagram/save", {"nodes": [], "edges": []}),
@@ -47,13 +47,16 @@ PROJECT_SCOPED_STUB_TEMPLATES = [t for t in STUB_TEMPLATES if "{project_id}" in 
 
 STUBBED_ENDPOINTS = [(m, p.format(project_id=PROJECT_ID), b) for m, p, b in STUB_TEMPLATES]
 
-# The routes that have gone live: project CRUD (B.2) and the LLM debug
-# round-trip (0.4). Still require auth, but no longer return `501`.
+# The routes that have gone live: project CRUD (B.2), the LLM debug round-trip
+# (0.4), and chat routing + message history (1.2). Still require auth, but no
+# longer return `501`.
 LIVE_ENDPOINTS = [
     ("POST", "api/v1/lothal/projects/", {"name": "My App"}),
     ("GET", "api/v1/lothal/projects/", None),
     ("GET", f"api/v1/lothal/projects/{PROJECT_ID}", None),
     ("DELETE", f"api/v1/lothal/projects/{PROJECT_ID}", None),
+    ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/chat", {"content": "hi"}),
+    ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/messages", None),
     ("POST", "api/v1/lothal/debug/llm", {"message": "ping"}),
 ]
 
@@ -145,8 +148,9 @@ async def test_openapi_lists_full_lothal_surface(client: AsyncClient):
     assert expected <= set(paths)
 
     # A still-stubbed route documents the structured 501 in its responses; the
-    # live debug endpoint no longer advertises it.
-    assert "501" in paths["/api/v1/lothal/projects/{project_id}/chat"]["post"]["responses"]
+    # routes that have gone live (chat, debug) no longer advertise it.
+    assert "501" in paths["/api/v1/lothal/projects/{project_id}/prd"]["get"]["responses"]
+    assert "501" not in paths["/api/v1/lothal/projects/{project_id}/chat"]["post"]["responses"]
     assert "501" not in paths["/api/v1/lothal/debug/llm"]["post"]["responses"]
 
 
@@ -523,6 +527,173 @@ async def test_message_suggestions_round_trip(client: AsyncClient, active_user):
         leftover = await session.get(Project, project_pk)
         if leftover:
             await session.delete(leftover)
+
+
+# --- Chat routing + suggestions persistence (Story 1.2) -------------------------
+
+# Chat drives the *real* clarification engine end to end; only the model call is
+# faked. The engine reads `call_llm` from its own module, so these tests patch
+# `langflow.lothal.engines.clarification.call_llm` — `process_turn`, the phase
+# router, parsing, and the persistence path all run for real.
+
+
+def _clarification_reply(question: str, suggestions: list[str]) -> str:
+    """The JSON-object shape the clarification engine expects each turn."""
+    return json.dumps({"message": question, "suggestions": suggestions})
+
+
+async def _create_chat_project(client: AsyncClient, headers: dict, name: str = "Chat") -> str:
+    response = await client.post("api/v1/lothal/projects/", json={"name": name}, headers=headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    return response.json()["id"]
+
+
+async def test_chat_persists_turn_and_replays_suggestions(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """A no-signal turn stores both messages, returns the reply with chips, and replays them.
+
+    The phase stays put; `GET /messages` rehydrates the user turn (no chips) and the
+    assistant turn (chips) in order.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+
+    async def fake_call_llm(_messages, **_kwargs):
+        return _clarification_reply("Who is it for?", ["Just me", "My team"])
+
+    monkeypatch.setattr(clarification_engine, "call_llm", fake_call_llm)
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat", json={"content": "a todo app"}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    reply = response.json()
+    assert reply["role"] == "ASSISTANT"
+    assert reply["content"] == "Who is it for?"
+    assert reply["suggestions"] == ["Just me", "My team"]
+    assert reply["phase"] == "CLARIFICATION"
+
+    # History replays user turn (no chips) then assistant turn (chips), oldest first.
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    messages = response.json()
+    assert [m["role"] for m in messages] == ["USER", "ASSISTANT"]
+    assert messages[0]["content"] == "a todo app"
+    assert messages[0]["suggestions"] == []
+    assert messages[1]["suggestions"] == ["Just me", "My team"]
+    assert all(m["phase"] == "CLARIFICATION" for m in messages)
+
+    # A no-signal turn doesn't move the project or write a PRD.
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "CLARIFICATION"
+    assert project["prd_content"] is None
+
+
+async def test_chat_three_no_signal_turns_then_clarity_transition(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Backlog acceptance for the clarification turn lifecycle.
+
+    Three no-signal turns yield 6 messages with the phase unchanged; one
+    `[CLARITY_REACHED]` turn advances to DIAGRAM_GENERATION, stores the PRD, and
+    strips the control token.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+
+    replies = iter(
+        [
+            _clarification_reply("Q1?", ["a", "b"]),
+            _clarification_reply("Q2?", ["c", "d"]),
+            _clarification_reply("Q3?", ["e", "f"]),
+            "[CLARITY_REACHED]\n## Overview\nA todo app for individuals.",
+        ]
+    )
+
+    async def fake_call_llm(_messages, **_kwargs):
+        return next(replies)
+
+    monkeypatch.setattr(clarification_engine, "call_llm", fake_call_llm)
+
+    # Three no-signal turns keep the project in CLARIFICATION.
+    for turn in range(3):
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/chat", json={"content": f"turn {turn}"}, headers=logged_in_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["phase"] == "CLARIFICATION"
+
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert len(messages) == 6  # 3 turns x (user + assistant)
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "CLARIFICATION"
+    assert project["prd_content"] is None
+
+    # The clarity turn transitions the project and stores the PRD with the token stripped.
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat", json={"content": "looks good"}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    reply = response.json()
+    assert reply["phase"] == "CLARIFICATION"  # the turn ran under CLARIFICATION
+    assert reply["suggestions"] == []
+    assert "[CLARITY_REACHED]" not in reply["content"]  # control token stripped
+    assert "Overview" in reply["content"]
+
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "DIAGRAM_GENERATION"  # phase persists on transition
+    assert project["prd_content"] is not None
+    assert "[CLARITY_REACHED]" not in project["prd_content"]
+    assert "Overview" in project["prd_content"]
+
+
+async def test_chat_rejects_blank_content(client: AsyncClient, logged_in_headers: dict):
+    project_id = await _create_chat_project(client, logged_in_headers)
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat", json={"content": "   "}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_chat_llm_failure_rolls_back_the_turn(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """An LLM failure maps to 502 and leaves no half-written turn behind."""
+    project_id = await _create_chat_project(client, logged_in_headers)
+
+    async def boom(_messages, **_kwargs):
+        msg = "Claude returned an empty response."
+        raise LLMConnectionError(msg)
+
+    monkeypatch.setattr(clarification_engine, "call_llm", boom)
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat", json={"content": "hi"}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+
+    # The user message was rolled back with the failed turn — history is empty.
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert messages == []
+
+
+async def test_chat_and_messages_404_for_unowned_project(client: AsyncClient, logged_in_headers: dict, user_two):
+    """Both live chat routes resolve ownership first: another user's project 404s."""
+    async with session_scope() as session:
+        foreign = Project(name="Theirs", user_id=user_two.id)
+        session.add(foreign)
+        await session.flush()
+        foreign_pk = foreign.id
+
+    try:
+        assert (
+            await client.post(
+                f"api/v1/lothal/projects/{foreign_pk}/chat", json={"content": "hi"}, headers=logged_in_headers
+            )
+        ).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            await client.get(f"api/v1/lothal/projects/{foreign_pk}/messages", headers=logged_in_headers)
+        ).status_code == status.HTTP_404_NOT_FOUND
+    finally:
+        async with session_scope() as session:
+            leftover = await session.get(Project, foreign_pk)
+            if leftover:
+                await session.delete(leftover)
 
 
 @pytest.mark.api_key_required
