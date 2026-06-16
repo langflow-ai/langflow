@@ -1,5 +1,5 @@
-"""
-Ensure the Makefile backend target scopes --reload to source directories only.
+"""Ensure the Makefile backend target scopes --reload to source directories only.
+
 Without --reload-dir, uvicorn watches everything including .venv, causing
 constant reloads from package files and making the dev server unusable.
 """
