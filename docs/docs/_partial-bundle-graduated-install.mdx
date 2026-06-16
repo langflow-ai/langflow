@@ -1,0 +1,22 @@
+import Admonition from '@theme/Admonition';
+
+export const GraduatedBundleInstall = ({packageName}) => {
+  const providerNames = {
+    'lfx-openai': 'OpenAI',
+    'lfx-anthropic': 'Anthropic',
+    'lfx-amazon': 'Amazon',
+    'lfx-datastax': 'DataStax',
+    'lfx-cohere': 'Cohere',
+  };
+  const providerName = providerNames[packageName] ?? packageName;
+  return (
+    <Admonition type="note" title="Bundle installation required">
+      <p>The <strong>{providerName}</strong> bundle is a standalone partner package and is <strong>not</strong> included in a standard <code>uv pip install langflow</code> installation.</p>
+      <p>To install it, run:</p>
+      <pre><code>uv pip install {packageName}</code></pre>
+      <p>After installation, restart Langflow. To confirm the bundle loaded, run:</p>
+      <pre><code>lfx extension list</code></pre>
+      <p>For more information, see <a href="/get-started-installation#bundle-install">Install Langflow bundle components</a>.</p>
+    </Admonition>
+  );
+};
