@@ -27,10 +27,20 @@ class TestSearchComponentTypes:
         assert "ChatInput" in types
 
     def test_search_no_query_returns_all(self):
+        from lfx.graph.flow_builder.builder import load_local_registry
+        from lfx.mcp.registry import search_registry
+
         comp = SearchComponentTypes()
         comp.set(query="")
         result = comp.search_components()
-        assert result.data["count"] > 100
+        # An empty query returns the entire (non-legacy) catalog. Tie the
+        # expectation to the registry itself rather than a hardcoded count:
+        # bundle extraction moves components out of lfx core over time, so a
+        # fixed threshold goes stale, but "no query == every component the
+        # registry exposes" is the durable contract.
+        expected = len(search_registry(load_local_registry()))
+        assert result.data["count"] == expected
+        assert result.data["count"] > 0
 
 
 def _node(nid, ntype, template=None):
