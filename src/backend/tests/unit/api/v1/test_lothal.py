@@ -33,7 +33,6 @@ PROJECT_ID = "00000000-0000-0000-0000-000000000000"
 # shared ownership check (404), or the stub itself (501) — never validation
 # (422).
 STUB_TEMPLATES = [
-    ("GET", "api/v1/lothal/projects/{project_id}/diagram", None),
     ("POST", "api/v1/lothal/projects/{project_id}/diagram/save", {"nodes": [], "edges": []}),
     ("POST", "api/v1/lothal/projects/{project_id}/diagram/approve", None),
     ("GET", "api/v1/lothal/projects/{project_id}/code", None),
@@ -47,8 +46,8 @@ PROJECT_SCOPED_STUB_TEMPLATES = [t for t in STUB_TEMPLATES if "{project_id}" in 
 STUBBED_ENDPOINTS = [(m, p.format(project_id=PROJECT_ID), b) for m, p, b in STUB_TEMPLATES]
 
 # The routes that have gone live: project CRUD (B.2), the LLM debug round-trip
-# (0.4), chat routing + message history (1.2), and the PRD read (1.3). Still
-# require auth, but no longer return `501`.
+# (0.4), chat routing + message history (1.2), the PRD read (1.3), and the
+# diagram read (2.3). Still require auth, but no longer return `501`.
 LIVE_ENDPOINTS = [
     ("POST", "api/v1/lothal/projects/", {"name": "My App"}),
     ("GET", "api/v1/lothal/projects/", None),
@@ -57,6 +56,7 @@ LIVE_ENDPOINTS = [
     ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/chat", {"content": "hi"}),
     ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/messages", None),
     ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/prd", None),
+    ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/diagram", None),
     ("POST", "api/v1/lothal/debug/llm", {"message": "ping"}),
 ]
 
@@ -148,8 +148,9 @@ async def test_openapi_lists_full_lothal_surface(client: AsyncClient):
     assert expected <= set(paths)
 
     # A still-stubbed route documents the structured 501 in its responses; the
-    # routes that have gone live (chat, debug, prd) no longer advertise it.
-    assert "501" in paths["/api/v1/lothal/projects/{project_id}/diagram"]["get"]["responses"]
+    # routes that have gone live (chat, debug, prd, diagram) no longer advertise it.
+    assert "501" in paths["/api/v1/lothal/projects/{project_id}/diagram/save"]["post"]["responses"]
+    assert "501" not in paths["/api/v1/lothal/projects/{project_id}/diagram"]["get"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/chat"]["post"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/prd"]["get"]["responses"]
     assert "501" not in paths["/api/v1/lothal/debug/llm"]["post"]["responses"]
@@ -704,6 +705,117 @@ async def test_prd_404_for_unowned_project(client: AsyncClient, logged_in_header
     try:
         for project_id in (PROJECT_ID, str(foreign_pk)):
             response = await client.get(f"api/v1/lothal/projects/{project_id}/prd", headers=logged_in_headers)
+            assert response.status_code == status.HTTP_404_NOT_FOUND, project_id
+    finally:
+        async with session_scope() as session:
+            leftover = await session.get(Project, foreign_pk)
+            if leftover:
+                await session.delete(leftover)
+
+
+# --- Diagram endpoint (Story 2.3) ---------------------------------------------
+
+# A valid canonical xyflow graph (the shape `diagram.py`'s `DiagramGraph`
+# defines and the generator persists): 2 nodes, 3 ordered edges, positions
+# present. Seeded straight into `diagram_json` — the save/generate endpoints
+# that will write it are still stubs / a later story.
+_SEED_GRAPH = {
+    "nodes": [
+        {"id": "user", "type": "actorNode", "position": {"x": 0, "y": 0}, "data": {"label": "User"}},
+        {"id": "api", "type": "systemNode", "position": {"x": 240, "y": 0}, "data": {"label": "API"}},
+    ],
+    "edges": [
+        {"id": "e1", "source": "user", "target": "api", "data": {"order": 1, "label": "request"}},
+        {"id": "e2", "source": "api", "target": "user", "animated": True, "data": {"order": 2, "label": "response"}},
+        {"id": "e3", "source": "user", "target": "api", "data": {"order": 3, "label": "ack"}},
+    ],
+}
+
+
+async def _set_phase_and_diagram(project_pk: UUID, *, phase: str, diagram_json: str | None) -> None:
+    """Seed a project's phase and raw `diagram_json` directly (no live writer yet)."""
+    async with session_scope() as session:
+        project = await session.get(Project, project_pk)
+        project.phase = phase
+        project.diagram_json = diagram_json
+
+
+async def test_diagram_403_in_clarification(client: AsyncClient, logged_in_headers: dict):
+    """A fresh project sits in CLARIFICATION, before any diagram exists → 403."""
+    project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_diagram_empty_before_generation_completes(client: AsyncClient, logged_in_headers: dict):
+    """Past CLARIFICATION but before a graph is produced → empty `{nodes, edges}`."""
+    project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
+    await _set_phase_and_diagram(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_json=None)
+
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"nodes": [], "edges": []}
+
+
+async def test_diagram_returns_seeded_graph(client: AsyncClient, logged_in_headers: dict):
+    """A seeded `diagram_json` comes back straight through with the right shape and counts."""
+    project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
+    await _set_phase_and_diagram(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_json=json.dumps(_SEED_GRAPH))
+
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+
+    # No `mermaid` field — xyflow is the only format.
+    assert set(body) == {"nodes", "edges"}
+
+    # Node count matches and the graph is returned verbatim (ids, types, labels, positions).
+    assert len(body["nodes"]) == 2
+    assert {n["id"] for n in body["nodes"]} == {"user", "api"}
+    assert {n["data"]["label"] for n in body["nodes"]} == {"User", "API"}
+    assert body["nodes"][0]["position"] == {"x": 0, "y": 0}
+
+    # Edge count matches; order/label/animated round-trip.
+    assert len(body["edges"]) == 3
+    assert [e["data"]["order"] for e in body["edges"]] == [1, 2, 3]
+    assert {e["data"]["label"] for e in body["edges"]} == {"request", "response", "ack"}
+    by_id = {e["id"]: e for e in body["edges"]}
+    assert by_id["e2"]["animated"] is True
+    assert by_id["e1"]["animated"] is False
+
+
+async def test_diagram_readable_in_later_phases(client: AsyncClient, logged_in_headers: dict):
+    """The diagram stays readable through refinement, code generation, and done."""
+    project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
+    for phase in ("DIAGRAM_REFINEMENT", "CODE_GENERATION", "DONE"):
+        await _set_phase_and_diagram(UUID(project_id), phase=phase, diagram_json=json.dumps(_SEED_GRAPH))
+        response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_200_OK, phase
+        assert len(response.json()["nodes"]) == 2
+
+
+async def test_diagram_malformed_json_reads_as_empty_not_500(client: AsyncClient, logged_in_headers: dict):
+    """A corrupted stored graph must never 500 the canvas — it reads as the empty graph."""
+    project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
+    for raw in ("not json", "   ", "[1, 2]", '{"nodes": [{"id": "x"}]}'):
+        await _set_phase_and_diagram(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_json=raw)
+        response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_200_OK, raw
+        assert response.json() == {"nodes": [], "edges": []}, raw
+
+
+async def test_diagram_404_for_unowned_project(client: AsyncClient, logged_in_headers: dict, user_two):
+    """Ownership is resolved before the phase gate — another user's project 404s, never 403."""
+    async with session_scope() as session:
+        # Phase set past CLARIFICATION so a 403 can't mask the 404 we're asserting.
+        foreign = Project(name="Theirs", user_id=user_two.id, phase="DIAGRAM_GENERATION")
+        session.add(foreign)
+        await session.flush()
+        foreign_pk = foreign.id
+
+    try:
+        for project_id in (PROJECT_ID, str(foreign_pk)):
+            response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
             assert response.status_code == status.HTTP_404_NOT_FOUND, project_id
     finally:
         async with session_scope() as session:
