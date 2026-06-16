@@ -7,9 +7,6 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
-from opensearchpy import OpenSearch, helpers
-from opensearchpy.exceptions import OpenSearchException, RequestError
-
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from lfx.io import (
@@ -26,6 +23,8 @@ from lfx.io import (
 from lfx.log import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import Table
+from opensearchpy import OpenSearch, helpers
+from opensearchpy.exceptions import OpenSearchException, RequestError
 
 REQUEST_TIMEOUT = 60
 MAX_RETRIES = 5

@@ -2540,6 +2540,246 @@
       "legacy_slot": "ext:jigsawstack:JigsawStackVOCRComponent@official-pre-a",
       "target": "ext:jigsawstack:JigsawStackVOCRComponent@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "QianfanChatEndpointComponent",
+      "target": "ext:baidu:QianfanChatEndpointComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.baidu.baidu_qianfan_chat.QianfanChatEndpointComponent",
+      "target": "ext:baidu:QianfanChatEndpointComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.baidu.QianfanChatEndpointComponent",
+      "target": "ext:baidu:QianfanChatEndpointComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:baidu:QianfanChatEndpointComponent@official-pre-a",
+      "target": "ext:baidu:QianfanChatEndpointComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "RedisVectorStoreComponent",
+      "target": "ext:redis:RedisVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.redis.redis.RedisVectorStoreComponent",
+      "target": "ext:redis:RedisVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.redis.RedisVectorStoreComponent",
+      "target": "ext:redis:RedisVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:redis:RedisVectorStoreComponent@official-pre-a",
+      "target": "ext:redis:RedisVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "RedisIndexChatMemory",
+      "target": "ext:redis:RedisIndexChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.redis.redis_chat.RedisIndexChatMemory",
+      "target": "ext:redis:RedisIndexChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.redis.RedisIndexChatMemory",
+      "target": "ext:redis:RedisIndexChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:redis:RedisIndexChatMemory@official-pre-a",
+      "target": "ext:redis:RedisIndexChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "ElasticsearchVectorStoreComponent",
+      "target": "ext:elastic:ElasticsearchVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.elasticsearch.ElasticsearchVectorStoreComponent",
+      "target": "ext:elastic:ElasticsearchVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.ElasticsearchVectorStoreComponent",
+      "target": "ext:elastic:ElasticsearchVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:elastic:ElasticsearchVectorStoreComponent@official-pre-a",
+      "target": "ext:elastic:ElasticsearchVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "OpenSearchVectorStoreComponent",
+      "target": "ext:elastic:OpenSearchVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.opensearch.OpenSearchVectorStoreComponent",
+      "target": "ext:elastic:OpenSearchVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.OpenSearchVectorStoreComponent",
+      "target": "ext:elastic:OpenSearchVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:elastic:OpenSearchVectorStoreComponent@official-pre-a",
+      "target": "ext:elastic:OpenSearchVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "OpenSearchVectorStoreComponentMultimodalMultiEmbedding",
+      "target": "ext:elastic:OpenSearchVectorStoreComponentMultimodalMultiEmbedding@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.opensearch_multimodal.OpenSearchVectorStoreComponentMultimodalMultiEmbedding",
+      "target": "ext:elastic:OpenSearchVectorStoreComponentMultimodalMultiEmbedding@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.OpenSearchVectorStoreComponentMultimodalMultiEmbedding",
+      "target": "ext:elastic:OpenSearchVectorStoreComponentMultimodalMultiEmbedding@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:elastic:OpenSearchVectorStoreComponentMultimodalMultiEmbedding@official-pre-a",
+      "target": "ext:elastic:OpenSearchVectorStoreComponentMultimodalMultiEmbedding@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "BingSearchAPIComponent",
+      "target": "ext:bing:BingSearchAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.bing.bing_search_api.BingSearchAPIComponent",
+      "target": "ext:bing:BingSearchAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.bing.BingSearchAPIComponent",
+      "target": "ext:bing:BingSearchAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:bing:BingSearchAPIComponent@official-pre-a",
+      "target": "ext:bing:BingSearchAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "CloudflareWorkersAIEmbeddingsComponent",
+      "target": "ext:cloudflare:CloudflareWorkersAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cloudflare.cloudflare.CloudflareWorkersAIEmbeddingsComponent",
+      "target": "ext:cloudflare:CloudflareWorkersAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cloudflare.CloudflareWorkersAIEmbeddingsComponent",
+      "target": "ext:cloudflare:CloudflareWorkersAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:cloudflare:CloudflareWorkersAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:cloudflare:CloudflareWorkersAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "MaritalkModelComponent",
+      "target": "ext:maritalk:MaritalkModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.maritalk.maritalk.MaritalkModelComponent",
+      "target": "ext:maritalk:MaritalkModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.maritalk.MaritalkModelComponent",
+      "target": "ext:maritalk:MaritalkModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:maritalk:MaritalkModelComponent@official-pre-a",
+      "target": "ext:maritalk:MaritalkModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "SearchComponent",
+      "target": "ext:searchapi:SearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.searchapi.search.SearchComponent",
+      "target": "ext:searchapi:SearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.searchapi.SearchComponent",
+      "target": "ext:searchapi:SearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:searchapi:SearchComponent@official-pre-a",
+      "target": "ext:searchapi:SearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "VectaraVectorStoreComponent",
+      "target": "ext:vectara:VectaraVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vectara.vectara.VectaraVectorStoreComponent",
+      "target": "ext:vectara:VectaraVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vectara.VectaraVectorStoreComponent",
+      "target": "ext:vectara:VectaraVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:vectara:VectaraVectorStoreComponent@official-pre-a",
+      "target": "ext:vectara:VectaraVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "VectaraRagComponent",
+      "target": "ext:vectara:VectaraRagComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vectara.vectara_rag.VectaraRagComponent",
+      "target": "ext:vectara:VectaraRagComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vectara.VectaraRagComponent",
+      "target": "ext:vectara:VectaraRagComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:vectara:VectaraRagComponent@official-pre-a",
+      "target": "ext:vectara:VectaraRagComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

@@ -1,5 +1,4 @@
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
-
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing.constants import LanguageModel
 from lfx.io import DropdownInput, FloatInput, MessageTextInput, SecretStrInput

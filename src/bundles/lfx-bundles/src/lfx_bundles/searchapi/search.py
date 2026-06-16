@@ -1,7 +1,6 @@
 from typing import Any
 
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DictInput, DropdownInput, IntInput, MultilineInput, SecretStrInput
 from lfx.io import Output

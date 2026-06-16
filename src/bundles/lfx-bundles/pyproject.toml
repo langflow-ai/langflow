@@ -30,13 +30,17 @@ aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 apify = ["apify-client>=1.8.1", "langchain-community>=0.4.1,<1.0.0"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
 azure = ["langchain-openai>=1.1.6"]
+baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
+bing = ["langchain-community>=0.4.1,<1.0.0"]
 chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", "langchain-community>=0.4.1,<1.0.0"]
 cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
 clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
+cloudflare = ["langchain-community>=0.4.1,<1.0.0"]
 cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
 couchbase = ["couchbase>=4.2.1", "langchain-community>=0.4.1,<1.0.0"]
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
+elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
 exa = ["metaphor-python==0.1.23"]
 firecrawl = ["firecrawl-py>=1.0.16,<2.0.0"]
 git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
@@ -46,6 +50,7 @@ icosacomputing = ["requests>=2.32.0"]
 jigsawstack = ["jigsawstack==0.2.7"]
 litellm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 lmstudio = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"]
+maritalk = ["langchain-community>=0.4.1,<1.0.0"]
 mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 milvus = ["langchain-milvus~=0.3.2"]
 mistral = ["langchain-mistralai~=1.1.1"]
@@ -58,8 +63,10 @@ perplexity = ["langchain-perplexity>=1.0.0,<2.0.0"]
 pgvector = ["pgvector>=0.4.2", "langchain-community>=0.4.1,<1.0.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
 qdrant = ["qdrant-client>=1.12.0,<2.0.0", "langchain-qdrant>=1.0.0,<2.0.0"]
+redis = ["redis>=7.4.0,<8.0.0", "langchain-community>=0.4.1,<1.0.0"]
 sambanova = ["langchain-sambanova~=1.0.0"]
 scrapegraph = ["scrapegraph-py>=1.12.0"]
+searchapi = ["langchain-community>=0.4.1,<1.0.0"]
 serpapi = ["google-search-results>=2.4.1,<3.0.0", "langchain-community>=0.4.1,<1.0.0"]
 spider = ["spider-client>=0.0.27,<1.0.0"]
 supabase = ["supabase>=2.6.0,<3.0.0", "langchain-community>=0.4.1,<1.0.0"]
@@ -68,6 +75,7 @@ toolguard = ["toolguard>=0.2.16,<1.0.0"]
 twelvelabs = ["twelvelabs>=0.4.7,<1.0.0"]
 unstructured = ["langchain-unstructured~=1.0.0"]
 upstash = ["upstash-vector==0.6.0", "langchain-community>=0.4.1,<1.0.0"]
+vectara = ["langchain-community>=0.4.1,<1.0.0"]
 vllm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0", "langchain-weaviate>=0.0.6"]
 wikipedia = ["wikipedia==1.4.0", "langchain-community>=0.4.1,<1.0.0"]
@@ -81,13 +89,17 @@ all = [
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
     "lfx-bundles[azure]",
+    "lfx-bundles[baidu]",
+    "lfx-bundles[bing]",
     "lfx-bundles[chroma]",
     "lfx-bundles[cleanlab]",
     "lfx-bundles[clickhouse]",
+    "lfx-bundles[cloudflare]",
     "lfx-bundles[cometapi]",
     "lfx-bundles[confluence]",
     "lfx-bundles[couchbase]",
     "lfx-bundles[deepseek]",
+    "lfx-bundles[elastic]",
     "lfx-bundles[exa]",
     "lfx-bundles[firecrawl]",
     "lfx-bundles[git]",
@@ -97,6 +109,7 @@ all = [
     "lfx-bundles[jigsawstack]",
     "lfx-bundles[litellm]",
     "lfx-bundles[lmstudio]",
+    "lfx-bundles[maritalk]",
     "lfx-bundles[mem0]",
     "lfx-bundles[milvus]",
     "lfx-bundles[mistral]",
@@ -109,8 +122,10 @@ all = [
     "lfx-bundles[pgvector]",
     "lfx-bundles[pinecone]",
     "lfx-bundles[qdrant]",
+    "lfx-bundles[redis]",
     "lfx-bundles[sambanova]",
     "lfx-bundles[scrapegraph]",
+    "lfx-bundles[searchapi]",
     "lfx-bundles[serpapi]",
     "lfx-bundles[spider]",
     "lfx-bundles[supabase]",
@@ -119,6 +134,7 @@ all = [
     "lfx-bundles[twelvelabs]",
     "lfx-bundles[unstructured]",
     "lfx-bundles[upstash]",
+    "lfx-bundles[vectara]",
     "lfx-bundles[vllm]",
     "lfx-bundles[weaviate]",
     "lfx-bundles[wikipedia]",

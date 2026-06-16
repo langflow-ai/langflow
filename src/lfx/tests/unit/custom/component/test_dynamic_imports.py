@@ -216,23 +216,26 @@ class TestComponentDynamicImports:
         # work correctly with the dynamic import system
         import importlib.util
 
-        import lfx.components.searchapi as searchapi_components
+        # Use a core (non-bundled) category so this runs in the isolated lfx
+        # environment. FakeEmbeddingsComponent imports langchain_community at
+        # module-import time, exercising the same optional-dependency path.
+        import lfx.components.langchain_utilities as langchain_utilities_components
 
         # Components should be available for dynamic loading
-        assert "SearchComponent" in searchapi_components.__all__
-        assert "SearchComponent" in searchapi_components._dynamic_imports
+        assert "FakeEmbeddingsComponent" in langchain_utilities_components.__all__
+        assert "FakeEmbeddingsComponent" in langchain_utilities_components._dynamic_imports
 
-        # SearchComponent imports from langchain_community at module-import time.
-        # If that package is present in this environment (e.g. transitively via
-        # OpenDsStar), the dynamic import should succeed; otherwise it should
-        # raise AttributeError wrapping the ImportError.
+        # FakeEmbeddingsComponent imports from langchain_community at module-import
+        # time. If that package is present in this environment, the dynamic import
+        # should succeed; otherwise it should raise AttributeError wrapping the
+        # ImportError.
         if importlib.util.find_spec("langchain_community") is not None:
-            component = searchapi_components.SearchComponent
+            component = langchain_utilities_components.FakeEmbeddingsComponent
             assert component is not None
             assert hasattr(component, "__init__")
         else:
-            with pytest.raises(AttributeError, match=r"Could not import.*SearchComponent"):
-                _ = searchapi_components.SearchComponent
+            with pytest.raises(AttributeError, match=r"Could not import.*FakeEmbeddingsComponent"):
+                _ = langchain_utilities_components.FakeEmbeddingsComponent
 
 
 class TestPerformanceCharacteristics:

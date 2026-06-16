@@ -1,5 +1,4 @@
 from langchain_community.embeddings.cloudflare_workersai import CloudflareWorkersAIEmbeddings
-
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DictInput, IntInput, MessageTextInput, Output, SecretStrInput

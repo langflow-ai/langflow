@@ -1,7 +1,6 @@
 from urllib import parse
 
 from langchain_community.chat_message_histories.redis import RedisChatMessageHistory
-
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.field_typing.constants import Memory
 from lfx.inputs.inputs import IntInput, MessageTextInput, SecretStrInput, StrInput

@@ -118,6 +118,15 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "cleanlab": ["cleanlab-tlm>=1.1.2,<2.0.0"],
     "twelvelabs": ["twelvelabs>=0.4.7,<1.0.0"],
     "jigsawstack": ["jigsawstack==0.2.7"],
+    # --- tranche 5: vector/datastores + langchain-community REST wrappers ---
+    "baidu": ["qianfan==0.3.5", _LC_COMMUNITY],  # QianfanChatEndpoint (community wrapper) lazy-loads qianfan
+    "redis": ["redis>=7.4.0,<8.0.0", _LC_COMMUNITY],
+    "elastic": ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"],
+    "bing": [_LC_COMMUNITY],  # BingSearchAPIWrapper (community, httpx-based)
+    "cloudflare": [_LC_COMMUNITY],  # CloudflareWorkersAI (community)
+    "maritalk": [_LC_COMMUNITY],  # ChatMaritalk (community)
+    "searchapi": [_LC_COMMUNITY],  # SearchApiAPIWrapper (community)
+    "vectara": [_LC_COMMUNITY],  # Vectara (community)
 }
 
 _OPTIONAL_DEPS_HEADER = (
