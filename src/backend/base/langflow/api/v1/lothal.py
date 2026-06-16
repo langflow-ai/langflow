@@ -74,7 +74,7 @@ def stub(detail: str) -> JSONResponse:
 def _to_project_read(project: Project) -> ProjectRead:
     """Map the ORM row to the contract shape.
 
-    `diagram_layout` is stored as a JSON string of xyflow positions but the
+    `diagram_json` is stored as a JSON string of the full xyflow graph but the
     contract exposes it as an object; `ProjectRead`'s validator parses it once
     at the schema boundary (it is `None` for every B.2 flow — only the diagram
     stories populate it).
@@ -85,8 +85,7 @@ def _to_project_read(project: Project) -> ProjectRead:
         name=project.name,
         phase=project.phase,
         prd_content=project.prd_content,
-        diagram_mmd=project.diagram_mmd,
-        diagram_layout=project.diagram_layout,
+        diagram_json=project.diagram_json,
         created_at=project.created_at,
         updated_at=project.updated_at,
     )

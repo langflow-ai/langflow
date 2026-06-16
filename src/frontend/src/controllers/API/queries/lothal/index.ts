@@ -15,8 +15,9 @@ export type Project = {
   name: string;
   phase: Phase;
   prd_content: string | null;
-  diagram_mmd: string | null;
-  diagram_layout: Record<string, unknown> | null;
+  // The canonical xyflow graph ({nodes, edges} incl. positions) parsed from the
+  // stored JSON string; null until DIAGRAM_GENERATION produces one.
+  diagram_json: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };
