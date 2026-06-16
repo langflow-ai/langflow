@@ -15,9 +15,12 @@ from lfx.utils.flow_requirements import (
     _get_lfx_provided_imports,
     _get_lfx_transitive_dists,
     _import_to_package,
+    _is_installed,
     _pin_version,
     _resolve_embedding_provider_packages,
     _resolve_provider_packages,
+    find_missing_dependencies,
+    format_missing_dependencies_error,
     generate_requirements_from_file,
     generate_requirements_from_flow,
     generate_requirements_txt,
@@ -1020,3 +1023,72 @@ class TestTyperRequirementsCommand:
         result = runner.invoke(app, ["requirements", str(bad)])
         assert result.exit_code == 1
         assert "Error" in result.output
+
+
+# ===================================================================
+# Unit tests: dependency preflight (find_missing_dependencies et al.)
+# ===================================================================
+
+# A distribution name that is guaranteed not to be installed anywhere.
+_DEFINITELY_MISSING_PKG = "totally-missing-pkg-xyz123"
+_DEFINITELY_MISSING_IMPORT = "totally_missing_pkg_xyz123"
+
+
+class TestIsInstalled:
+    def test_installed_core_dep(self):
+        # pandas is a core lfx dependency, so it is always present in the test env.
+        assert _is_installed("pandas") is True
+
+    def test_normalized_name_resolves(self):
+        # importlib.metadata normalizes per PEP 503, so the hyphen/underscore
+        # variants of an installed dist both resolve.
+        assert _is_installed("langchain-core") is True
+
+    def test_not_installed(self):
+        assert _is_installed(_DEFINITELY_MISSING_PKG) is False
+
+
+class TestFindMissingDependencies:
+    def test_missing_code_import_detected(self):
+        node = _make_node("Custom", code=f"import {_DEFINITELY_MISSING_IMPORT}")
+        missing = find_missing_dependencies(_make_flow(node))
+        assert _DEFINITELY_MISSING_PKG in missing
+
+    def test_installed_import_not_flagged(self):
+        # pandas is provided by lfx's tree; it must never be reported missing.
+        node = _make_node("Custom", code="import pandas")
+        assert "pandas" not in find_missing_dependencies(_make_flow(node))
+
+    def test_stdlib_only_is_empty(self):
+        node = _make_node("Custom", code="import os\nimport sys\nimport json")
+        assert find_missing_dependencies(_make_flow(node)) == []
+
+    def test_lfx_never_reported(self):
+        node = _make_node("Custom", code=f"import {_DEFINITELY_MISSING_IMPORT}")
+        assert "lfx" not in find_missing_dependencies(_make_flow(node))
+
+    def test_empty_flow_is_empty(self):
+        assert find_missing_dependencies(_make_flow()) == []
+
+    def test_result_is_sorted(self):
+        node = _make_node(
+            "Custom",
+            code=f"import {_DEFINITELY_MISSING_IMPORT}\nimport another_missing_zzz_pkg",
+        )
+        missing = find_missing_dependencies(_make_flow(node))
+        assert missing == sorted(missing)
+
+
+class TestFormatMissingDependenciesError:
+    def test_includes_pip_install_line(self):
+        msg = format_missing_dependencies_error(["langchain-openai", "chromadb"])
+        assert "pip install langchain-openai chromadb" in msg
+
+    def test_lists_each_package(self):
+        msg = format_missing_dependencies_error(["langchain-openai", "chromadb"])
+        assert "  - langchain-openai" in msg
+        assert "  - chromadb" in msg
+
+    def test_mentions_skip_flag(self):
+        msg = format_missing_dependencies_error(["chromadb"])
+        assert "--no-check-dependencies" in msg

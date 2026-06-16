@@ -609,3 +609,56 @@ def generate_requirements_from_file(
         include_lfx=include_lfx,
         pin_versions=pin_versions,
     )
+
+
+# ===================================================================
+# Dependency preflight (fail-fast for `lfx run` / `lfx serve`)
+# ===================================================================
+
+
+def _is_installed(package_name: str) -> bool:
+    """Return True if a distribution providing *package_name* is installed.
+
+    Mirrors the presence check used by the inline-script installer
+    (``cli.common._needs_install``): ``importlib.metadata`` normalizes the name
+    per PEP 503, so hyphen/underscore/case variants resolve to the same record.
+    """
+    try:
+        md.version(package_name)
+    except md.PackageNotFoundError:
+        return False
+    return True
+
+
+def find_missing_dependencies(flow: dict) -> list[str]:
+    """Return the sorted PyPI names a flow needs that are not installed.
+
+    Reuses :func:`generate_requirements_from_flow` to infer the flow's
+    third-party packages (excluding ``lfx`` itself and anything already provided
+    by lfx's transitive tree), then keeps only those with no installed
+    distribution.
+
+    Best-effort by design: it shares the analyzer's limitations (string-based
+    dynamic imports and ``PythonREPLTool.global_imports`` are invisible), so it
+    is a guard against the common "exported flow run on a bare ``pip install
+    lfx``" failure, not a complete dependency solver. Callers run it as a
+    fail-fast preflight before the graph load triggers the missing import deep
+    in a component.
+    """
+    required = generate_requirements_from_flow(flow, include_lfx=False, pin_versions=False)
+    return sorted(pkg for pkg in required if not _is_installed(pkg))
+
+
+def format_missing_dependencies_error(missing: list[str]) -> str:
+    """Build the actionable error message for a failed dependency preflight."""
+    bullets = "\n".join(f"  - {pkg}" for pkg in missing)
+    install_line = " ".join(missing)
+    return (
+        "This flow needs Python packages that are not installed in this environment:\n"
+        f"{bullets}\n\n"
+        "Install them and re-run:\n"
+        f"  pip install {install_line}\n\n"
+        "Provider components moved out of the lfx engine in the bundle split, so an "
+        "exported flow can require packages that a bare `pip install lfx` does not "
+        "include. Skip this preflight with --no-check-dependencies."
+    )
