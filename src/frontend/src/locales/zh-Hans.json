@@ -2066,5 +2066,13 @@
   "voiceAssistant.apiKeyError": "请检查您的 API 密钥，然后重试",
   "voiceAssistant.connected": "已连接",
   "voiceAssistant.connectionError": "连接错误",
-  "voiceAssistant.connectionFailed": "连接失败"
+  "voiceAssistant.connectionFailed": "连接失败",
+  "header.home": "Go to home",
+  "flows.viewList": "List view",
+  "flows.viewGrid": "Grid view",
+  "flows.downloadSelected": "Download selected flows",
+  "flows.selectFlow": "Select {{name}}",
+  "flows.moreOptions": "More options for {{name}}",
+  "folder.optionsFor": "Options for {{name}}",
+  "paginator.pageLabel": "Page"
 }

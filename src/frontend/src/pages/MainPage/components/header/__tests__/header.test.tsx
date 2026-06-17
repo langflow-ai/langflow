@@ -235,17 +235,11 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
 
     it("view toggle buttons have aria-label attributes", () => {
       const { container } = render(<HeaderComponent {...defaultProps} />);
-      // Both view toggle buttons must carry an aria-label (actual text depends on loaded locale)
-      const labelled = container.querySelectorAll("button[aria-label]");
-      const viewBtns = Array.from(labelled).filter((b) => {
-        const label = b.getAttribute("aria-label") ?? "";
-        return (
-          label.toLowerCase().includes("view") ||
-          label.toLowerCase().includes("list") ||
-          label.toLowerCase().includes("grid")
-        );
+      const viewBtns = container.querySelectorAll("button[aria-pressed]");
+      expect(viewBtns.length).toBe(2);
+      viewBtns.forEach((btn) => {
+        expect(btn.getAttribute("aria-label")).toBeTruthy();
       });
-      expect(viewBtns.length).toBeGreaterThanOrEqual(2);
     });
 
     it("view toggle buttons expose aria-pressed reflecting active view", () => {
@@ -274,8 +268,8 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
       const falseCount = Array.from(allPressed).filter(
         (b) => b.getAttribute("aria-pressed") === "false",
       ).length;
-      expect(trueCount).toBeGreaterThanOrEqual(1);
-      expect(falseCount).toBeGreaterThanOrEqual(1);
+      expect(trueCount).toBe(1);
+      expect(falseCount).toBe(1);
     });
   });
 

@@ -18,9 +18,13 @@ jest.mock("@/components/ui/button", () => ({
     children,
     "aria-label": ariaLabel,
     "data-testid": testId,
-    unstyled,
+    unstyled: _unstyled,
     ...props
-  }: any) => (
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    children?: React.ReactNode;
+    "data-testid"?: string;
+    unstyled?: boolean;
+  }) => (
     <button aria-label={ariaLabel} data-testid={testId} {...props}>
       {children}
     </button>
@@ -33,7 +37,7 @@ jest.mock("@/components/ui/separator", () => ({
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
-  default: ({ children }: any) => <>{children}</>,
+  default: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 jest.mock("@/components/common/modelProviderCountComponent", () => ({
@@ -43,7 +47,7 @@ jest.mock("@/components/common/modelProviderCountComponent", () => ({
 
 jest.mock("@/alerts/alertDropDown", () => ({
   __esModule: true,
-  default: ({ children }: any) => <>{children}</>,
+  default: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 jest.mock("@/assets/LangflowLogo.svg?react", () => ({

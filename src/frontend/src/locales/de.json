@@ -2066,5 +2066,13 @@
   "voiceAssistant.apiKeyError": "Bitte überprüfen Sie Ihren API-Schlüssel und versuchen Sie es erneut",
   "voiceAssistant.connected": "Verbunden",
   "voiceAssistant.connectionError": "Verbindungsfehler",
-  "voiceAssistant.connectionFailed": "Verbindung fehlgeschlagen"
+  "voiceAssistant.connectionFailed": "Verbindung fehlgeschlagen",
+  "header.home": "Go to home",
+  "flows.viewList": "List view",
+  "flows.viewGrid": "Grid view",
+  "flows.downloadSelected": "Download selected flows",
+  "flows.selectFlow": "Select {{name}}",
+  "flows.moreOptions": "More options for {{name}}",
+  "folder.optionsFor": "Options for {{name}}",
+  "paginator.pageLabel": "Page"
 }

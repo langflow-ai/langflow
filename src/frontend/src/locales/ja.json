@@ -2066,5 +2066,13 @@
   "voiceAssistant.apiKeyError": "APIキーを確認の上、もう一度お試しください",
   "voiceAssistant.connected": "接続済み",
   "voiceAssistant.connectionError": "接続エラー",
-  "voiceAssistant.connectionFailed": "接続失敗"
+  "voiceAssistant.connectionFailed": "接続失敗",
+  "header.home": "Go to home",
+  "flows.viewList": "List view",
+  "flows.viewGrid": "Grid view",
+  "flows.downloadSelected": "Download selected flows",
+  "flows.selectFlow": "Select {{name}}",
+  "flows.moreOptions": "More options for {{name}}",
+  "folder.optionsFor": "Options for {{name}}",
+  "paginator.pageLabel": "Page"
 }
