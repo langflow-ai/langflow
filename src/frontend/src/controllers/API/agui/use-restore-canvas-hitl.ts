@@ -2,7 +2,10 @@ import { useEffect } from "react";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import { useHitlStore } from "@/stores/hitlStore";
 import type { Message } from "@/types/messages";
-import { findHumanInputContent } from "./human-input-card";
+import {
+  findHumanInputContent,
+  registerResumeContext,
+} from "./human-input-card";
 
 /**
  * Restore the canvas awaiting-input badge after a reload (LE-1603 reconnect): the
@@ -20,8 +23,15 @@ export function useRestoreCanvasHitl(flowId: string | undefined): void {
     const rows =
       (data as { rows?: { data?: Message[] } } | undefined)?.rows?.data ?? [];
     for (let i = rows.length - 1; i >= 0; i--) {
-      const content = findHumanInputContent(rows[i].content_blocks);
+      const message = rows[i];
+      const content = findHumanInputContent(message.content_blocks);
       if (content && !content.submitted_action && content.request_id) {
+        if (content.job_id) {
+          registerResumeContext(content.request_id, content.job_id, {
+            flowId: message.flow_id ?? flowId ?? "",
+            threadId: message.session_id ?? undefined,
+          });
+        }
         useHitlStore.getState().setPending({
           nodeId: content.request_id.split(":")[0],
           content,

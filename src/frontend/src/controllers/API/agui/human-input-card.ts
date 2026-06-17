@@ -59,6 +59,19 @@ export function getResumeContext(
   return resumeRegistry.get(requestId);
 }
 
+/**
+ * Re-seed the resume context after a reload — the live run populates the registry,
+ * but a page reload loses it, so reconnect rebuilds it from the persisted card. Only
+ * fills a missing entry so it never clobbers a richer live one.
+ */
+export function registerResumeContext(
+  requestId: string,
+  jobId: string,
+  opts: WorkflowRunOptions,
+): void {
+  if (!resumeRegistry.has(requestId)) resumeRegistry.set(requestId, { jobId, opts });
+}
+
 function forEachMessageCache(
   fn: (key: unknown[], messages: Message[]) => void,
 ): void {

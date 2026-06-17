@@ -134,7 +134,9 @@ describe("HumanInputCard", () => {
     onSuccess();
     expect(mockSetAwaitingInput).toHaveBeenCalledWith(false);
     expect(mockSetIsBuilding).toHaveBeenCalledWith(true);
-    expect(mockConsume).toHaveBeenCalledWith("job-1", { flowId: "f1" });
+    expect(mockConsume).toHaveBeenCalledWith("job-1", { flowId: "f1" }, undefined, {
+      skipCardInjection: true,
+    });
   });
 
   it("disables controls after a self-resume click (single-use)", () => {

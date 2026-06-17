@@ -2,6 +2,7 @@ import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { queryClient } from "@/contexts";
+import { useHitlStore } from "@/stores/hitlStore";
 import {
   getResumeContext,
   markHumanInputSubmitted,
@@ -60,10 +61,14 @@ export default function HumanInputCard({
         onSuccess: () => {
           const flowStore = useFlowStore.getState();
           flowStore.setAwaitingInput(false);
+          // Resolve the canvas badge now — covers the reconnect path with no reattach.
+          useHitlStore.getState().clear();
           const reattach = getResumeContext(content.request_id);
           if (reattach) {
             flowStore.setIsBuilding(true);
-            void consumeBackgroundEvents(reattach.jobId, reattach.opts);
+            void consumeBackgroundEvents(reattach.jobId, reattach.opts, undefined, {
+              skipCardInjection: true,
+            });
           } else {
             // After a reload there is no live stream to reattach to; refetch the
             // history so the resumed run's persisted output shows up.

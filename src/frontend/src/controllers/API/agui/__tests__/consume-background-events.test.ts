@@ -151,6 +151,34 @@ describe("consumeBackgroundEvents", () => {
     expect(setAwaitingInput).toHaveBeenLastCalledWith(true);
   });
 
+  it("does not re-inject the card on a post-resume reattach (skipCardInjection)", async () => {
+    const humanInput = JSON.stringify({
+      type: "CUSTOM",
+      name: "langflow.human_input_required",
+      value: { request_id: "HI:job-3", kind: "node_input", prompt: "Approve?", options: [], allowed_decisions: [] },
+    });
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      body: sseStream([
+        JSON.stringify({ type: "RUN_STARTED", runId: "job-3" }),
+        humanInput,
+        JSON.stringify({ type: "RUN_FINISHED" }),
+      ]),
+    }) as unknown as typeof fetch;
+
+    await consumeBackgroundEvents(
+      "job-3",
+      { flowId: "f1", threadId: "s1" },
+      undefined,
+      { skipCardInjection: true },
+    );
+
+    // The replayed pause must NOT re-add the card; the run finishes normally.
+    expect(addMessage).not.toHaveBeenCalled();
+    expect(updateMessageMock).not.toHaveBeenCalled();
+    expect(setAwaitingInput).toHaveBeenLastCalledWith(false);
+  });
+
   it("clears awaiting-input when a resumed run reaches RUN_FINISHED", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,

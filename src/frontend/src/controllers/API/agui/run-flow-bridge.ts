@@ -365,6 +365,7 @@ export async function consumeBackgroundEvents(
   jobId: string,
   opts: WorkflowRunOptions & { signal?: AbortSignal },
   lastEventId?: string,
+  { skipCardInjection = false }: { skipCardInjection?: boolean } = {},
 ): Promise<void> {
   const flowStore = useFlowStore.getState();
   const setErrorData = useAlertStore.getState().setErrorData;
@@ -379,6 +380,9 @@ export async function consumeBackgroundEvents(
     applyDelta: (ops) => applyStateDelta(ops, runId, touchedNodeIds),
     handleCustomEvent: (eventType, data) => handleMessageEvent(eventType, data),
     onHumanInput: (payload) => {
+      // After a resume the pause is already answered; the replay re-emits it, but
+      // re-injecting would re-show the card/badge. Stream the continued run only.
+      if (skipCardInjection) return;
       suspended = true;
       injectHumanInputCard(payload as Record<string, unknown>, jobId, opts);
     },
