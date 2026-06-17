@@ -19,7 +19,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import session_scope
 from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, select, text
@@ -191,6 +191,65 @@ def check_postgresql_version_sync(database_url: str) -> None:
             _check_version_row(*row)
     finally:
         engine.dispose()
+
+
+def get_sqlite_database_file_path(database_url: str) -> Path | None:
+    """Return the on-disk file path for a SQLite URL, or ``None`` when there is none.
+
+    Returns ``None`` for non-SQLite URLs and for in-memory SQLite databases
+    (``sqlite://`` and ``sqlite:///:memory:``), which have no file on disk. The
+    returned path is kept exactly as written in the URL (relative paths are *not*
+    resolved) so callers can report it back to the user verbatim.
+    """
+    if not database_url.startswith("sqlite"):
+        return None
+    try:
+        database = make_url(database_url).database
+    except Exception:  # noqa: BLE001 - defensive: malformed URLs are handled elsewhere
+        return None
+    if not database or database == ":memory:":
+        return None
+    return Path(database)
+
+
+def check_sqlite_database_path(database_url: str) -> None:
+    """Fail fast with an actionable message when a SQLite database cannot be opened.
+
+    SQLite does not create intermediate directories, and relative paths in
+    ``LANGFLOW_DATABASE_URL`` are resolved by SQLAlchemy against the current
+    working directory at connect time. When the resolved parent directory is
+    missing the raw ``sqlite3.OperationalError`` ("unable to open database file")
+    is opaque, so surface where Langflow actually tried to open the database and
+    how a relative path was resolved. No-op for non-SQLite and in-memory URLs.
+
+    Note: this only improves diagnostics; it does not change which URLs are
+    accepted nor create any directories. See issue #13634.
+    """
+    db_path = get_sqlite_database_file_path(database_url)
+    if db_path is None:
+        return
+
+    resolved = db_path.resolve()
+    logger.debug(f"Using SQLite database at {resolved}")
+
+    parent = resolved.parent
+    if parent.exists():
+        return
+
+    msg = (
+        f"Cannot open the SQLite database at '{resolved}': the parent directory "
+        f"'{parent}' does not exist, and SQLite does not create intermediate "
+        f"directories. "
+    )
+    if db_path.is_absolute():
+        msg += "Create the directory before starting Langflow, or point LANGFLOW_DATABASE_URL at an existing path."
+    else:
+        msg += (
+            f"The relative path '{db_path}' from LANGFLOW_DATABASE_URL was resolved against the current working "
+            f"directory ('{Path.cwd()}'). Set LANGFLOW_DATABASE_URL to an absolute path "
+            f"(e.g. 'sqlite:///{resolved}'), or create the directory before starting Langflow."
+        )
+    raise ValueError(msg)
 
 
 class DatabaseService(Service):

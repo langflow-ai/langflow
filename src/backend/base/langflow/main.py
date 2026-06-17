@@ -165,6 +165,12 @@ def get_lifespan(*, fix_migration=False, version=None):
         sync_flows_from_fs_task = None
         mcp_init_task = None
         models_dev_refresh_task = None
+        # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
+        # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
+        # when startup fails before bundle loading assigns it below. Otherwise an
+        # early failure (e.g. an unresolvable LANGFLOW_DATABASE_URL) is masked by a
+        # secondary error during cleanup. See issue #13634.
+        temp_dirs: list = []
 
         try:
             start_time = asyncio.get_event_loop().time()
