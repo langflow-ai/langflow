@@ -265,6 +265,20 @@ def move_provider(provider: str, *, apply: bool) -> list[tuple[str, str]]:
         msg = f"destination already exists (already consolidated?): {dst}"
         raise SystemExit(msg)
 
+    # move_provider relocates only top-level ``*.py`` modules (see the glob
+    # below) but rmtree's the whole source tree.  A provider with a subpackage
+    # would have its subdir silently destroyed -- never copied to the bundle and
+    # never migration-mapped.  Refuse rather than half-move; port_bundle.py is
+    # the tool for nested layouts.
+    subdirs = sorted(p.name for p in src.iterdir() if p.is_dir() and p.name != "__pycache__")
+    if subdirs:
+        msg = (
+            f"{provider}: source has subdirectory/ies {subdirs} that move_provider does not "
+            "relocate (it copies only top-level *.py modules). Use port_bundle.py, which "
+            "handles nested subpackages, instead."
+        )
+        raise SystemExit(msg)
+
     classes = discover_component_classes(src)
     py_files = sorted(src.glob("*.py"))
     print(f"  {provider}: {len(py_files)} file(s), {len(classes)} component class(es) -> {dst.relative_to(REPO_ROOT)}")

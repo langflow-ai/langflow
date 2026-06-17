@@ -39,7 +39,12 @@ def _component_alias_tiers(
 
     Keeping the two tiers separate lets ``flatten_components_with_aliases``
     register every identity alias before any display alias, so a component's
-    true name always wins its own key regardless of registry iteration order.
+    own identity always beats another component's ``display_name`` for a shared
+    key, regardless of registry iteration order.  (This does not disambiguate
+    two components that contribute the *same identity* alias -- e.g. an
+    ``XComponent`` and a bare ``X`` across two bundles -- which remain
+    first-wins by iteration order; a real registry key, set directly, still
+    beats any alias.)
     """
     identity: list[str] = [component_name]
     identity.extend(old_name for old_name, new_name in LEGACY_TYPE_ALIASES.items() if new_name == component_name)
@@ -90,10 +95,12 @@ def flatten_components_with_aliases(
     """Flatten a categorized component dict and append derived aliases.
 
     Aliases are registered in two passes: identity aliases (a component's own
-    canonical name) for every component first, then display aliases.  This makes
-    resolution deterministic when two components share a label -- a component's
-    own class name beats another component's ``display_name`` no matter the
-    registry iteration order.
+    canonical name) for every component first, then display aliases.  A
+    component's own class name therefore beats another component's
+    ``display_name`` for a shared key, no matter the registry iteration order
+    (and a real registry key, set directly below, beats any alias).  This does
+    NOT disambiguate two components that contribute the *same identity* alias --
+    that collision remains first-wins by iteration order.
     """
     flattened: dict[str, Any] = {}
     aliased_entries: list[tuple[list[str], list[str], Any]] = []
