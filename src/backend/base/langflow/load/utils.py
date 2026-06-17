@@ -4,6 +4,9 @@ from lfx.load.utils import UploadError, replace_tweaks_with_env, upload, upload_
 from langflow.services.database.models.flow.model import FlowBase
 
 GET_FLOW_TIMEOUT = 30.0
+# Cap how much of an error response body is embedded in the raised UploadError
+# so a large upstream error page (e.g. an HTML 500) can't bloat logs/messages.
+GET_FLOW_ERROR_BODY_LIMIT = 500
 
 
 def get_flow(url: str, flow_id: str):
@@ -26,10 +29,13 @@ def get_flow(url: str, flow_id: str):
         if response.status_code == httpx.codes.OK:
             json_response = response.json()
             return FlowBase(**json_response).model_dump()
-        response_text = getattr(response, "text", "")
+        response_text = response.text or ""
         msg = f"Error retrieving flow: {response.status_code}"
         if response_text:
-            msg = f"{msg} - {response_text}"
+            truncated = response_text[:GET_FLOW_ERROR_BODY_LIMIT]
+            if len(response_text) > GET_FLOW_ERROR_BODY_LIMIT:
+                truncated = f"{truncated}... (truncated)"
+            msg = f"{msg} - {truncated}"
         raise UploadError(msg)
     except UploadError:
         raise

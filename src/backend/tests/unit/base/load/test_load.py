@@ -6,7 +6,7 @@ import httpx
 import pytest
 from dotenv import load_dotenv
 from langflow.load import run_flow_from_json
-from langflow.load.utils import get_flow
+from langflow.load.utils import GET_FLOW_ERROR_BODY_LIMIT, GET_FLOW_TIMEOUT, get_flow
 from lfx.load.utils import UploadError
 
 
@@ -95,7 +95,7 @@ def test_get_flow_uses_bounded_http_timeout():
 
     assert result["name"] == "Remote Flow"
     _args, kwargs = mock_get.call_args
-    assert kwargs["timeout"] == 30.0
+    assert kwargs["timeout"] == GET_FLOW_TIMEOUT
 
 
 def test_get_flow_raises_upload_error_with_response_body_on_http_error():
@@ -109,3 +109,27 @@ def test_get_flow_raises_upload_error_with_response_body_on_http_error():
     message = str(exc_info.value)
     assert "500" in message
     assert "database unavailable" in message
+
+
+def test_get_flow_raises_upload_error_on_timeout():
+    with (
+        patch("langflow.load.utils.httpx.get", side_effect=httpx.ReadTimeout("slow host")),
+        pytest.raises(UploadError) as exc_info,
+    ):
+        get_flow("http://host", "flow-1")
+
+    assert "timed out" in str(exc_info.value)
+
+
+def test_get_flow_truncates_large_response_body_in_error():
+    response = MagicMock()
+    response.status_code = httpx.codes.INTERNAL_SERVER_ERROR
+    response.text = "x" * (GET_FLOW_ERROR_BODY_LIMIT * 10)
+
+    with patch("langflow.load.utils.httpx.get", return_value=response), pytest.raises(UploadError) as exc_info:
+        get_flow("http://host", "flow-1")
+
+    message = str(exc_info.value)
+    assert "truncated" in message
+    # Body portion is capped; the full 5000-char payload is not embedded verbatim.
+    assert len(message) < len(response.text)
