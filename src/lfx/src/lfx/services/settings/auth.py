@@ -163,6 +163,17 @@ class AuthSettings(BaseSettings):
             "enterprise deployments."
         ),
     )
+    AUTHZ_AUDIT_CLEANUP_INTERVAL: int = Field(
+        default=86400,
+        ge=300,
+        description=(
+            "Seconds between scheduled ``authz_audit_log`` retention sweeps. A sweep runs once at "
+            "startup; thereafter a background worker prunes rows older than "
+            "AUTHZ_AUDIT_RETENTION_DAYS every interval so a long-running instance stays bounded "
+            "between restarts. The worker only runs when AUTHZ_AUDIT_ENABLED is True and "
+            "AUTHZ_AUDIT_RETENTION_DAYS > 0. Default 86400 (daily); minimum 300 (5 minutes)."
+        ),
+    )
 
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
