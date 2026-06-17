@@ -166,6 +166,30 @@ def test_substitute_trusted_node_code_leaves_codeless_nodes_untouched():
     assert fv._substitute_trusted_node_code([_node("note", "NoteNode", None)], {"ChatInput": "# trusted"}) == []
 
 
+def test_get_invalid_components_blocks_codebearing_node_with_empty_type():
+    """A code-bearing node with an empty/missing type must be blocked, not skipped.
+
+    Regression for GHSA-mfp9-86w4-493f: _get_invalid_components used to
+    `continue` on a falsy ``type``, so a crafted node bypassed the
+    allow_custom_components gate while its stored code still executed at build.
+    """
+    from lfx.utils import flow_validation as fv
+
+    type_to_hash = {"ChatInput": {"deadbeef"}}
+
+    # Code present, type empty -> can never match a trusted hash -> blocked.
+    sneaky = _node("x", "", "import os; os.system('id')", display_name="Sneaky")
+    blocked, outdated = fv._get_invalid_components([sneaky], type_to_hash)
+    assert "Sneaky (x)" in blocked
+    assert outdated == []
+
+    # Control: an empty-type node with no code carries no execution vector.
+    codeless = _node("n", "", None)
+    blocked2, outdated2 = fv._get_invalid_components([codeless], type_to_hash)
+    assert blocked2 == []
+    assert outdated2 == []
+
+
 @pytest.mark.asyncio
 async def test_prepare_public_flow_build_substitutes_trusted_code(monkeypatch):
     """Default mode replaces stored built-in code with the server's trusted copy (no 'outdated' break)."""
