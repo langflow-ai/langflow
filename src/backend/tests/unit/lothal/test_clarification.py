@@ -134,6 +134,44 @@ def test_parse_reply_handles_clarity_token_wrapped_in_json():
     assert response.suggestions == []
 
 
+def test_parse_reply_keeps_full_prd_when_it_contains_an_embedded_json_object():
+    # Regression: a clarity PRD that legitimately contains a `{"message": ...}`
+    # example (common for chat/notification/webhook apps) must be stored whole,
+    # not greedily sliced down to that embedded fragment.
+    prd = (
+        "# PRD\n\n## Overview\nA team chat app.\n\n## Key Flows\n"
+        'Clients send messages as JSON like {"message": "hello team"} over the socket.'
+    )
+    response = _parse_reply(f"{CLARITY_TOKEN}\n{prd}")
+    assert response.next_phase == ProjectPhase.DIAGRAM_GENERATION
+    assert response.text == prd  # whole spec preserved, not "hello team"
+    assert "## Overview" in response.text
+
+
+def test_parse_reply_strips_only_the_leading_clarity_token():
+    # Only the control prefix is removed; an occurrence inside the PRD body is
+    # preserved rather than silently rewritten by a blanket replace.
+    body = "# PRD\n\n## Overview\nThe app shows a [CLARITY_REACHED] banner when a spec is locked."
+    response = _parse_reply(f"{CLARITY_TOKEN}\n{body}")
+    assert response.next_phase == ProjectPhase.DIAGRAM_GENERATION
+    assert response.text == body
+    assert response.text.count(CLARITY_TOKEN) == 1  # the body mention survived
+
+
+def test_parse_reply_does_not_transition_when_token_only_mentioned_mid_reply():
+    # Regression: the control token appearing inside a clarification question (not
+    # leading the reply) must NOT transition — it stays a clarification turn with
+    # its chips intact and its message untouched.
+    raw = (
+        f'{{"message": "When ready I will emit {CLARITY_TOKEN}. Who is this app for?", '
+        '"suggestions": ["Just me", "My team"]}'
+    )
+    response = _parse_reply(raw)
+    assert response.next_phase is None  # stayed in CLARIFICATION
+    assert response.suggestions == ["Just me", "My team"]
+    assert "Who is this app for?" in response.text
+
+
 def test_system_prompt_documents_the_clarity_token():
     # The transition only fires if the model knows to emit the token.
     assert CLARITY_TOKEN in SYSTEM_PROMPT

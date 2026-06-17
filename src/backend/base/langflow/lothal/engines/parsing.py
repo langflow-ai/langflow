@@ -44,3 +44,24 @@ def extract_json_object(text: str) -> dict | None:
         except (ValueError, TypeError):
             return None
     return data if isinstance(data, dict) else None
+
+
+def parse_json_object(text: str) -> dict | None:
+    """Parse the reply as a JSON object only when the *whole* reply is one.
+
+    The strict sibling of `extract_json_object`: it strips a surrounding code
+    fence and parses the entire remaining text, but it does **not** fall back to
+    slicing the first ``{`` .. last ``}`` out of surrounding prose. Use it when
+    the payload is free-form text that may legitimately *contain* a JSON example
+    (the clarity-reached PRD summary): the greedy slice would otherwise truncate
+    a whole spec down to an embedded ``{"message": ...}`` fragment.
+
+    Returns the parsed object, or ``None`` for prose, non-object JSON (a list or
+    scalar), or anything that doesn't parse.
+    """
+    candidate = strip_code_fences(text)
+    try:
+        data = json.loads(candidate)
+    except (ValueError, TypeError):
+        return None
+    return data if isinstance(data, dict) else None
