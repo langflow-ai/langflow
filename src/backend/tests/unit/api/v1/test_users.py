@@ -27,13 +27,17 @@ async def test_add_user_signup_refused_when_disabled(client: AsyncClient):
     from langflow.services.deps import get_settings_service
 
     auth_settings = get_settings_service().auth_settings
-    original = auth_settings.ENABLE_SIGNUP
+    original_signup = auth_settings.ENABLE_SIGNUP
+    original_auto_login = auth_settings.AUTO_LOGIN
+    # Pin AUTO_LOGIN to a permissive value so the 403 can only come from ENABLE_SIGNUP=False.
+    auth_settings.AUTO_LOGIN = False
     auth_settings.ENABLE_SIGNUP = False
     try:
         response = await client.post("api/v1/users/", json={"username": "signupblocked", "password": "newpassword123"})
         assert response.status_code == status.HTTP_403_FORBIDDEN
     finally:
-        auth_settings.ENABLE_SIGNUP = original
+        auth_settings.ENABLE_SIGNUP = original_signup
+        auth_settings.AUTO_LOGIN = original_auto_login
 
 
 async def test_add_user_signup_refused_when_auto_login(client: AsyncClient):
@@ -41,7 +45,10 @@ async def test_add_user_signup_refused_when_auto_login(client: AsyncClient):
     from langflow.services.deps import get_settings_service
 
     auth_settings = get_settings_service().auth_settings
-    original = auth_settings.AUTO_LOGIN
+    original_auto_login = auth_settings.AUTO_LOGIN
+    original_signup = auth_settings.ENABLE_SIGNUP
+    # Pin ENABLE_SIGNUP to a permissive value so the 403 can only come from AUTO_LOGIN=True.
+    auth_settings.ENABLE_SIGNUP = True
     auth_settings.AUTO_LOGIN = True
     try:
         response = await client.post(
@@ -49,7 +56,8 @@ async def test_add_user_signup_refused_when_auto_login(client: AsyncClient):
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
     finally:
-        auth_settings.AUTO_LOGIN = original
+        auth_settings.AUTO_LOGIN = original_auto_login
+        auth_settings.ENABLE_SIGNUP = original_signup
 
 
 async def test_add_user_duplicate_username(client: AsyncClient):
