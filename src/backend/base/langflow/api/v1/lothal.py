@@ -20,6 +20,7 @@ check.
 """
 
 import json
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
@@ -308,6 +309,14 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
             project.prd_content = response.text
         project.phase = response.next_phase
         session.add(project)
+
+    # Every successful turn is project activity: bump updated_at so list ordering
+    # (updated_at DESC) surfaces recently-chatted projects. A no-signal
+    # clarification turn changes neither the diagram nor the phase, so without
+    # this the project row stays unmodified and its timestamp would freeze at
+    # creation despite active conversation.
+    project.updated_at = datetime.now(timezone.utc)
+    session.add(project)
 
     await session.flush()
     await session.refresh(assistant_message)

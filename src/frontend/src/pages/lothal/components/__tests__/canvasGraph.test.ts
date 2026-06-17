@@ -44,9 +44,11 @@ describe("resolveEdgeKind", () => {
       "async",
     );
   });
-  it("falls back to the animated flag when kind is absent", () => {
+  it("falls back to the conservative return style for a kindless animated edge", () => {
+    // `animated` can't distinguish async from return, so we default to the
+    // muted/static `return` style rather than over-claiming `async`.
     expect(resolveEdgeKind(edge({ animated: true, data: { order: 1 } }))).toBe(
-      "async",
+      "return",
     );
   });
   it("prefers an explicit kind over the animated flag", () => {
