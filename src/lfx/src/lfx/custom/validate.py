@@ -79,66 +79,6 @@ def validate_code(code):
     return errors
 
 
-def _create_langflow_execution_context():
-    """Create execution context with common langflow imports."""
-    context = {}
-
-    # Import common langflow types that are used in templates
-    try:
-        from lfx.schema.dataframe import DataFrame
-
-        context["DataFrame"] = DataFrame
-    except ImportError:
-        # Create a mock DataFrame if import fails
-        context["DataFrame"] = type("DataFrame", (), {})
-
-    try:
-        from lfx.schema.message import Message
-
-        context["Message"] = Message
-    except ImportError:
-        context["Message"] = type("Message", (), {})
-
-    try:
-        from lfx.schema.data import Data
-
-        context["Data"] = Data
-    except ImportError:
-        context["Data"] = type("Data", (), {})
-
-    try:
-        from lfx.custom import Component
-
-        context["Component"] = Component
-    except ImportError:
-        context["Component"] = type("Component", (), {})
-
-    try:
-        from lfx.io import HandleInput, Output, TabInput
-
-        context["HandleInput"] = HandleInput
-        context["Output"] = Output
-        context["TabInput"] = TabInput
-    except ImportError:
-        context["HandleInput"] = type("HandleInput", (), {})
-        context["Output"] = type("Output", (), {})
-        context["TabInput"] = type("TabInput", (), {})
-
-    # Add common Python typing imports
-    try:
-        from typing import Any, Optional, Union
-
-        context["Any"] = Any
-        context["Dict"] = dict
-        context["List"] = list
-        context["Optional"] = Optional
-        context["Union"] = Union
-    except ImportError:
-        pass
-
-    return context
-
-
 def eval_function(function_string: str):
     # Create an empty dictionary to serve as a separate namespace
     namespace: dict = {}
