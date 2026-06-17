@@ -9,6 +9,7 @@ flow that needs an uninstalled provider package surfaces as one actionable
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import json
 from unittest.mock import patch
 
@@ -36,9 +37,39 @@ def _node_with_code(code: str) -> dict:
     }
 
 
+def _node_with_provider(provider: str) -> dict:
+    """Build a flow node whose `model` template field selects *provider*.
+
+    No third-party import lives in the `code` field — the provider package is
+    inferred purely from the template's provider selection, the way an exported
+    model/agent node carries it.
+    """
+    return {
+        "id": "node-1",
+        "type": "genericNode",
+        "data": {
+            "id": "node-1",
+            "type": "LLM",
+            "node": {
+                "display_name": "LLM",
+                "template": {
+                    "_type": "Component",
+                    "code": {"type": "code", "value": "from lfx.base.models.model import LCModelComponent"},
+                    "model": {"type": "other", "value": [{"provider": provider, "name": "claude-3-opus"}]},
+                },
+            },
+        },
+    }
+
+
 def _flow_inner(code: str) -> dict:
     """Bare inner graph (no outer envelope)."""
     return {"nodes": [_node_with_code(code)], "edges": []}
+
+
+def _flow_inner_provider(provider: str) -> dict:
+    """Bare inner graph for a provider-configured node."""
+    return {"nodes": [_node_with_provider(provider)], "edges": []}
 
 
 def _flow_envelope_json(code: str) -> str:
@@ -87,6 +118,23 @@ class TestPreflightDependenciesHelper:
                 verbose=False,
             )
         assert _MISSING_PKG in str(exc_info.value)
+
+    @pytest.mark.skipif(
+        importlib.util.find_spec("langchain_anthropic") is not None,
+        reason="langchain-anthropic is installed, so the preflight will not flag it",
+    )
+    def test_raises_for_missing_provider_dict(self):
+        # The provider is inferred from the `model` template field, not from a raw
+        # `import` — this is the path the code-driven cases never exercise. In an
+        # engine-only install langchain-anthropic is absent, so the preflight must
+        # fail fast carrying that SDK name.
+        with pytest.raises(RunError) as exc_info:
+            _preflight_dependencies(
+                flow_dict=_flow_inner_provider("Anthropic"),
+                script_path=None,
+                verbose=False,
+            )
+        assert "langchain-anthropic" in str(exc_info.value)
 
     def test_noop_for_stdlib_dict(self):
         # Should not raise for a stdlib-only flow.

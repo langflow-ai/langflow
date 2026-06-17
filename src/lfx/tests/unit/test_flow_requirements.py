@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -1077,6 +1078,28 @@ class TestFindMissingDependencies:
         )
         missing = find_missing_dependencies(_make_flow(node))
         assert missing == sorted(missing)
+
+    @pytest.mark.skipif(
+        importlib.util.find_spec("langchain_anthropic") is not None,
+        reason="langchain-anthropic is installed, so it cannot be flagged as missing",
+    )
+    def test_missing_provider_package_detected(self):
+        # A node configured with a `model` provider (no code import) must still
+        # surface the provider's SDK as missing. In an engine-only install
+        # MODEL_PROVIDERS_DICT is empty, so this exercises the
+        # provider -> _PROVIDER_PACKAGE_FALLBACKS -> _is_installed composition
+        # that the raw `import`-driven tests never cover.
+        node = _make_node(
+            "LLM",
+            "from lfx.base.models.model import LCModelComponent",
+            template_extra={
+                "model": {
+                    "value": [{"provider": "Anthropic", "name": "claude-3-opus"}],
+                },
+            },
+        )
+        missing = find_missing_dependencies(_make_flow(node))
+        assert "langchain-anthropic" in missing
 
 
 class TestFormatMissingDependenciesError:
