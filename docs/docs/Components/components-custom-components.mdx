@@ -35,6 +35,10 @@ Save the custom component in the Langflow directory where the UI will discover a
 
 By default, Langflow looks for custom components in the `src/lfx/src/lfx/components` directory.
 
+:::note
+The `src/lfx/src/lfx/components` path is frozen for new providers. To add new provider integrations that others can install, create a [distributable bundle](/contributing-bundles) instead. The default path is intended for personal customizations and internal-use components only.
+:::
+
 When saving components in the default directory, components must be organized in a specific directory structure to be properly loaded and displayed in the visual editor.
 
 Components must be placed inside category folders, not directly in the base directory.
@@ -593,6 +597,11 @@ This example logs a message when the component starts processing a file.
 def process_file(self, file_path: str):
 self.log(f"Processing file {file_path}")
 ```
+
+## Distribute components as a bundle
+
+If you want to share your custom components with others or publish them as a reusable integration, package them as an **Extension Bundle**.
+For the full guide, see [Contribute component bundles](/contributing-bundles).
 
 ## Contribute custom components to Langflow
 
