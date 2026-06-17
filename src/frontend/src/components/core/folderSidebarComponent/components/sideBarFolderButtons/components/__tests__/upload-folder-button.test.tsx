@@ -23,7 +23,9 @@ jest.mock("@/components/ui/button", () => ({
     "aria-label": ariaLabel,
     disabled,
     ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    children?: React.ReactNode;
+  }) => (
     <button aria-label={ariaLabel} disabled={disabled} {...props}>
       {children}
     </button>
