@@ -13,6 +13,14 @@
 [![Discord Server](https://img.shields.io/discord/1116803230643527710?logo=discord&style=social&label=Join)](https://discord.gg/EqksyE2EX9)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/langflow-ai/langflow)
 
+<p align="center">
+  <a href="https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=langflow">
+    <img src="./docs/static/img/atlas-cloud-logo.png" alt="Atlas Cloud" width="150">
+  </a>
+</p>
+
+> 🎁 **[Atlas Cloud](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=langflow)** is a full-modal, OpenAI-compatible AI inference platform — use the built-in **Atlas Cloud** model component to plug in DeepSeek, Qwen, GLM, Kimi, MiniMax, Claude, GPT, Gemini and more through a single API, no multi-vendor setup needed. Budget-friendly [coding plan](https://www.atlascloud.ai/console/coding-plan) available.
+
 [Langflow](https://langflow.org) is a powerful platform for building and deploying AI-powered agents and workflows. It provides developers with both a visual authoring experience and built-in API and MCP servers that turn every workflow into a tool that can be integrated into applications built on any framework or stack. Langflow comes with batteries included and supports all major LLMs, vector databases and a growing library of AI tools.
 
 ## ✨ Highlight features
