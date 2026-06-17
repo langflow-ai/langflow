@@ -165,7 +165,7 @@ class VoiceConfig:
         return dict(self.default_openai_realtime_session)
 
 
-def get_voice_config(session_id: str, user_id: str | None = None) -> VoiceConfig:
+def get_voice_config(session_id: str, user_id: UUID | None = None) -> VoiceConfig:
     if session_id is None:
         msg = "session_id cannot be None"
         raise ValueError(msg)
@@ -218,7 +218,7 @@ class TTSConfig:
         return self.openai_voice
 
 
-def get_tts_config(session_id: str, openai_key: str, user_id: str | None = None) -> TTSConfig:
+def get_tts_config(session_id: str, openai_key: str, user_id: UUID | None = None) -> TTSConfig:
     if session_id is None:
         msg = "session_id cannot be None"
         raise ValueError(msg)
@@ -484,8 +484,8 @@ async def handle_function_call(
         msg_handler.openai_send(function_output)
 
 
-voice_config_cache: dict[tuple[str | None, str], VoiceConfig] = {}
-tts_config_cache: dict[tuple[str | None, str], TTSConfig] = {}
+voice_config_cache: dict[tuple[UUID | None, str], VoiceConfig] = {}
+tts_config_cache: dict[tuple[UUID | None, str], TTSConfig] = {}
 
 
 # --- Global Queues and Message Processing ---
@@ -1208,6 +1208,8 @@ async def flow_tts_websocket(
 
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
+        if current_user is None or openai_key is None:
+            return
         url = "wss://api.openai.com/v1/realtime?intent=transcription"
         headers = {
             "Authorization": f"Bearer {openai_key}",
