@@ -30,6 +30,21 @@ class CheckpointStore(ABC):
     @abstractmethod
     async def list_by_session(self, session_id: str) -> list[GraphCheckpoint]: ...
 
+    async def save_blob(self, job_id: str, kind: str, blob: str) -> None:
+        """Persist an opaque per-run blob keyed by ``(job_id, kind)``.
+
+        Used by the agent tool-approval saver (LE-1447, kind='agent'), separate from
+        the graph checkpoint. The default is in-memory (standalone/CLI); the durable
+        store overrides it to write the job-scoped table.
+        """
+        if not hasattr(self, "_blobs"):
+            self._blobs: dict[tuple[str, str], str] = {}
+        self._blobs[(job_id, kind)] = blob
+
+    async def load_blob(self, job_id: str, kind: str) -> str | None:
+        """Return the blob stored for ``(job_id, kind)``, or None."""
+        return getattr(self, "_blobs", {}).get((job_id, kind))
+
 
 def _expired(checkpoint: GraphCheckpoint) -> bool:
     return checkpoint.expires_at is not None and checkpoint.expires_at <= datetime.now(timezone.utc)

@@ -1479,3 +1479,109 @@ async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_tru
         component._get_llm()
 
     assert captured.get("stream") is True
+
+
+def test_should_attach_hitl_middleware_when_a_tool_is_gated() -> None:
+    """LE-1447 Slice 1: a tool listed for approval adds HumanInTheLoopMiddleware."""
+    from langchain.agents.middleware import HumanInTheLoopMiddleware
+
+    component = _build_component()
+    search = SimpleNamespace(name="search")
+    component.set_attributes({"tools": [search], "tools_requiring_approval": ["search"]})
+
+    middleware = component._build_middleware(MagicMock(name="fake_llm"))
+
+    hitl = [m for m in middleware if isinstance(m, HumanInTheLoopMiddleware)]
+    assert len(hitl) == 1
+    assert component._gated_interrupt_on() == {"search": True}
+
+
+def test_should_omit_hitl_middleware_when_no_tools_gated() -> None:
+    """No tool listed for approval keeps the existing graph shape (no HITL middleware)."""
+    from langchain.agents.middleware import HumanInTheLoopMiddleware
+
+    component = _build_component()
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="search")], "tools_requiring_approval": []}
+    )
+
+    middleware = component._build_middleware(MagicMock(name="fake_llm"))
+
+    assert not any(isinstance(m, HumanInTheLoopMiddleware) for m in middleware)
+
+
+def test_gated_interrupt_on_ignores_unknown_tool_names() -> None:
+    """A stale approval name never gates a tool that is not wired."""
+    component = _build_component()
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="search")], "tools_requiring_approval": ["nonexistent"]}
+    )
+
+    assert component._gated_interrupt_on() == {}
+
+
+def _capture_kwargs(captured: dict):
+    def _capture(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    return _capture
+
+
+@pytest.mark.asyncio
+async def test_should_pass_durable_checkpointer_when_gated_with_run_context() -> None:
+    """LE-1447 Slice 3: a gated tool + a per-run id wires the durable saver + thread_id."""
+    from lfx.components.models_and_agents.agent_helpers.job_checkpoint_saver import JobCheckpointSaver
+
+    captured: dict = {}
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer")], "tools_requiring_approval": ["transfer"]}
+    )
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
+    ):
+        component.create_agent_runnable()
+
+    assert isinstance(captured.get("checkpointer"), JobCheckpointSaver)
+    assert component._agent_thread_id() == "job-1"
+
+
+@pytest.mark.asyncio
+async def test_should_omit_checkpointer_when_no_tools_gated() -> None:
+    captured: dict = {}
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer")], "tools_requiring_approval": []}
+    )
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
+    ):
+        component.create_agent_runnable()
+
+    assert captured.get("checkpointer") is None
+
+
+@pytest.mark.asyncio
+async def test_should_omit_checkpointer_and_hitl_when_allow_interrupts_false() -> None:
+    """The structured-output path disables interrupts: no checkpointer, no HITL middleware."""
+    from langchain.agents.middleware import HumanInTheLoopMiddleware
+
+    captured: dict = {}
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer")], "tools_requiring_approval": ["transfer"]}
+    )
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
+    ):
+        component.create_agent_runnable(allow_interrupts=False)
+
+    assert captured.get("checkpointer") is None
+    assert not any(isinstance(m, HumanInTheLoopMiddleware) for m in (captured.get("middleware") or []))

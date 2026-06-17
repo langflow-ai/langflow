@@ -6,7 +6,11 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, cast
 
 from langchain.agents import create_agent
-from langchain.agents.middleware import ModelCallLimitMiddleware, ToolRetryMiddleware
+from langchain.agents.middleware import (
+    HumanInTheLoopMiddleware,
+    ModelCallLimitMiddleware,
+    ToolRetryMiddleware,
+)
 
 from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
     adapt_graph_events_to_executor_shape,
@@ -219,6 +223,16 @@ class AgentComponent(ToolCallingAgentComponent):
             info="Maximum number of tokens to generate. Field name varies by provider.",
             advanced=True,
             range_spec=RangeSpec(min=1, max=128000, step=1, step_type="int"),
+        ),
+        StrInput(
+            name="tools_requiring_approval",
+            display_name="Tools Requiring Approval",
+            info=(
+                "Names of connected tools that pause for human approval before running "
+                "(human-in-the-loop). Leave empty to auto-approve every tool."
+            ),
+            is_list=True,
+            advanced=True,
         ),
         MultilineInput(
             name="format_instructions",
@@ -489,7 +503,7 @@ class AgentComponent(ToolCallingAgentComponent):
             prompt = prompt.replace(placeholder, value)
         return prompt
 
-    def create_agent_runnable(self):
+    def create_agent_runnable(self, *, allow_interrupts: bool = True):
         """Build the LangGraph `CompiledStateGraph` via `langchain.agents.create_agent`.
 
         Replaces the legacy `AgentExecutor` runnable inherited from
@@ -537,12 +551,14 @@ class AgentComponent(ToolCallingAgentComponent):
                 )
                 raise NotImplementedError(msg) from exc
 
-        middleware = self._build_middleware(llm)
+        middleware = self._build_middleware(llm, allow_interrupts=allow_interrupts)
+        checkpointer = self._build_agent_checkpointer() if allow_interrupts else None
         return create_agent(
             model=llm,
             tools=tools,
             system_prompt=self.system_prompt or "",
             middleware=middleware or None,
+            checkpointer=checkpointer,
         )
 
     def _compute_recursion_limit(self) -> int:
@@ -556,7 +572,7 @@ class AgentComponent(ToolCallingAgentComponent):
         run_limit = max(1, int(raw)) if raw is not None else 15
         return run_limit * 2 + 5
 
-    def _build_middleware(self, llm: Any) -> list:
+    def _build_middleware(self, llm: Any, *, allow_interrupts: bool = True) -> list:
         # `llm` is passed in (rather than re-fetched via `self._get_llm()`)
         # because some providers do credential resolution / client instantiation
         # lazily on each call. The caller — `create_agent_runnable` — already
@@ -589,7 +605,49 @@ class AgentComponent(ToolCallingAgentComponent):
         if is_watsonx_model(llm):
             middleware.append(SingleToolCallMiddleware())
             middleware.append(WatsonXPlaceholderMiddleware())
+        # Human-in-the-loop: attach only when a tool is gated AND interrupts are allowed
+        # (the structured-output path disables them), keeping ungated flows unchanged.
+        interrupt_on = self._gated_interrupt_on() if allow_interrupts else {}
+        if interrupt_on:
+            middleware.append(HumanInTheLoopMiddleware(interrupt_on=interrupt_on))
         return middleware
+
+    def _agent_thread_id(self) -> str | None:
+        """Per-run thread id for the agent HITL checkpoint (run_id, not session_id)."""
+        run_id = getattr(getattr(self, "graph", None), "run_id", None)
+        return str(run_id) if run_id else None
+
+    def _build_agent_checkpointer(self):
+        """Durable saver for a gated agent run, else None (no checkpointer overhead).
+
+        The blob store is the INJECTED checkpoint service (DB-backed in the Langflow
+        runtime, in-memory standalone) so lfx never imports langflow.
+        """
+        thread_id = self._agent_thread_id()
+        if not thread_id or not self._gated_interrupt_on():
+            return None
+        from lfx.components.models_and_agents.agent_helpers.job_checkpoint_saver import JobCheckpointSaver
+        from lfx.graph.checkpoint.store import default_checkpoint_store
+        from lfx.services.deps import get_checkpoint_service
+
+        try:
+            store = get_checkpoint_service()
+        except Exception:  # noqa: BLE001
+            store = None
+        store = store or default_checkpoint_store()
+        return JobCheckpointSaver(thread_id, store.save_blob, store.load_blob)
+
+    def _gated_interrupt_on(self) -> dict[str, bool]:
+        """Map each connected tool flagged for approval to a HITL interrupt entry.
+
+        Intersects the user-listed names with the real tool names so a stale name
+        never gates a tool that isn't wired.
+        """
+        requested = getattr(self, "tools_requiring_approval", None) or []
+        if not requested:
+            return {}
+        tool_names = {getattr(tool, "name", None) for tool in (self.tools or [])}
+        return {name: True for name in requested if name in tool_names}
 
     async def run_agent(self, agent) -> Message:
         """Run the LangGraph `CompiledStateGraph` and return the final agent Message.
@@ -623,19 +681,21 @@ class AgentComponent(ToolCallingAgentComponent):
         # for start/end overhead.
         recursion_limit = self._compute_recursion_limit()
 
+        agent_config: dict[str, Any] = {
+            "callbacks": [
+                AgentAsyncHandler(self.log),
+                token_usage_handler,
+                *self._get_shared_callbacks(),
+            ],
+            "recursion_limit": recursion_limit,
+        }
+        # The durable checkpointer keys on the per-run thread_id; it must be in the
+        # astream_events config (not just create_agent) for both initial run and resume.
+        thread_id = self._agent_thread_id()
+        if thread_id and self._gated_interrupt_on():
+            agent_config["configurable"] = {"thread_id": thread_id}
         stream = adapt_graph_events_to_executor_shape(
-            agent.astream_events(
-                input_dict,
-                config={
-                    "callbacks": [
-                        AgentAsyncHandler(self.log),
-                        token_usage_handler,
-                        *self._get_shared_callbacks(),
-                    ],
-                    "recursion_limit": recursion_limit,
-                },
-                version="v2",
-            )
+            agent.astream_events(input_dict, config=agent_config, version="v2")
         )
         try:
             result = await process_agent_events(

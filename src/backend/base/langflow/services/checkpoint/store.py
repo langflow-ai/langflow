@@ -55,6 +55,18 @@ class JobScopedCheckpointStore(CheckpointStore, Service):
     async def teardown(self) -> None:
         pass
 
+    async def save_blob(self, job_id: str, kind: str, blob: str) -> None:
+        """Durably persist the agent-thread blob (LE-1447) on the job-scoped row."""
+        parsed = _as_uuid(job_id)
+        if parsed is not None:
+            await self._jobs.save_checkpoint(parsed, kind, blob)
+
+    async def load_blob(self, job_id: str, kind: str) -> str | None:
+        parsed = _as_uuid(job_id)
+        if parsed is None:
+            return None
+        return await self._jobs.load_checkpoint(parsed, kind)
+
     async def save(self, checkpoint: GraphCheckpoint) -> None:
         if checkpoint.job_id is None:
             msg = "GraphCheckpoint.job_id is required to persist a durable checkpoint"
