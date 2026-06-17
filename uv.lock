@@ -38,6 +38,7 @@ members = [
     "lfx-datastax",
     "lfx-docling",
     "lfx-duckduckgo",
+    "lfx-firecrawl",
     "lfx-ibm",
     "lfx-nextplaid",
     "lfx-openai",
@@ -4267,18 +4268,20 @@ wheels = [
 
 [[package]]
 name = "firecrawl-py"
-version = "1.17.0"
+version = "4.28.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "aiohttp" },
+    { name = "httpx" },
     { name = "nest-asyncio" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/08/61df5c8357742d8bee504db166b633ef7972b40c831e8c2f2a26feb9021c/firecrawl_py-1.17.0.tar.gz", hash = "sha256:5e2f50ec1f0e67514cdf6f0afc7df6be36eb8277fbec9e1f5a283fc01fae7875", size = 22191, upload-time = "2025-04-17T18:13:01.068Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2d/09/e7c667875c9a9dac09480e2f69fd46bdd9c1139555b835c3036a9858aff2/firecrawl_py-4.28.2.tar.gz", hash = "sha256:7e6181e2129b63c8d6aec5728d9b2fcf16ea82cb854372ad824b278efd258696", size = 191869, upload-time = "2026-05-28T00:03:48.822Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/53/a6/9431b62571b4ff4cd0d09f70c7df1253abf611e829f68d194e1ea69ea57e/firecrawl_py-1.17.0-py3-none-any.whl", hash = "sha256:0392822fbd906731f4c0876f91a9c3cce7624279c81948e4e3f8bc60b4e1c855", size = 21295, upload-time = "2025-04-17T18:12:59.463Z" },
+    { url = "https://files.pythonhosted.org/packages/80/08/384ca104c8004ca0541aacd3470e855bd28666d6bdb2101e08446dfcb407/firecrawl_py-4.28.2-py3-none-any.whl", hash = "sha256:0689080cb01672370e5a97963e0df479f6102137aa088857eac0fa287a4269b6", size = 239166, upload-time = "2026-05-28T00:03:47.479Z" },
 ]
 
 [[package]]
@@ -7450,6 +7453,7 @@ dependencies = [
     { name = "lfx-datastax" },
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
+    { name = "lfx-firecrawl" },
     { name = "lfx-ibm" },
     { name = "lfx-nextplaid" },
     { name = "lfx-openai" },
@@ -7551,6 +7555,7 @@ requires-dist = [
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["local"], marker = "extra == 'docling'", editable = "src/bundles/docling" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
+    { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
@@ -7634,7 +7639,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "fastapi-pagination" },
     { name = "filelock" },
-    { name = "firecrawl-py" },
     { name = "grandalf" },
     { name = "greenlet" },
     { name = "gunicorn" },
@@ -8351,7 +8355,6 @@ requires-dist = [
     { name = "fastmcp", marker = "extra == 'fastmcp'", specifier = ">=3.2.0" },
     { name = "fastparquet", marker = "extra == 'fastparquet'", specifier = ">=2024.11.0,<2025.0.0" },
     { name = "filelock", specifier = ">=3.20.1,<4.0.0" },
-    { name = "firecrawl-py", specifier = ">=1.0.16,<2.0.0" },
     { name = "gassist", marker = "sys_platform == 'win32' and extra == 'gassist'", specifier = ">=0.0.1" },
     { name = "gitpython", marker = "extra == 'gitpython'", specifier = ">=3.1.50" },
     { name = "google-api-python-client", marker = "extra == 'google'", specifier = "~=2.161" },
@@ -9130,7 +9133,6 @@ all = [
     { name = "elasticsearch" },
     { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "faiss-cpu", version = "1.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
-    { name = "firecrawl-py" },
     { name = "gassist", marker = "sys_platform == 'win32'" },
     { name = "gitpython" },
     { name = "google-api-python-client" },
@@ -9263,9 +9265,6 @@ faiss = [
     { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "faiss-cpu", version = "1.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "langchain-community" },
-]
-firecrawl = [
-    { name = "firecrawl-py" },
 ]
 git = [
     { name = "gitpython" },
@@ -9449,7 +9448,6 @@ requires-dist = [
     { name = "elasticsearch", marker = "extra == 'elastic'", specifier = "~=8.19" },
     { name = "faiss-cpu", marker = "python_full_version >= '3.14' and extra == 'faiss'", specifier = ">=1.13.2" },
     { name = "faiss-cpu", marker = "python_full_version < '3.14' and extra == 'faiss'", specifier = "==1.9.0.post1" },
-    { name = "firecrawl-py", marker = "extra == 'firecrawl'", specifier = ">=1.0.16,<2.0.0" },
     { name = "gassist", marker = "sys_platform == 'win32' and extra == 'nvidia'", specifier = ">=0.0.1" },
     { name = "gitpython", marker = "extra == 'git'", specifier = ">=3.1.50" },
     { name = "google-api-python-client", marker = "extra == 'google'", specifier = "~=2.161" },
@@ -9531,7 +9529,6 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["elastic"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["exa"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["faiss"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["firecrawl"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["git"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["glean"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["google"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9621,7 +9618,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "exa", "faiss", "firecrawl", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "toolguard", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vllm", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "exa", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "toolguard", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vllm", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
 
 [[package]]
 name = "lfx-cohere"
@@ -9744,6 +9741,21 @@ dependencies = [
 requires-dist = [
     { name = "ddgs", specifier = ">=9.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-firecrawl"
+version = "0.1.0"
+source = { editable = "src/bundles/firecrawl" }
+dependencies = [
+    { name = "firecrawl-py" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "firecrawl-py", specifier = ">=4.0.0,<5.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
 

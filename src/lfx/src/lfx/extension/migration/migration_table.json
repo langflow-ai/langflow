@@ -842,26 +842,6 @@
       "added_in": "1.11.0"
     },
     {
-      "bare_class_name": "FirecrawlExtractApi",
-      "target": "ext:firecrawl:FirecrawlExtractApi@official",
-      "added_in": "1.11.0"
-    },
-    {
-      "import_path": "lfx.components.firecrawl.firecrawl_extract_api.FirecrawlExtractApi",
-      "target": "ext:firecrawl:FirecrawlExtractApi@official",
-      "added_in": "1.11.0"
-    },
-    {
-      "import_path": "lfx.components.firecrawl.FirecrawlExtractApi",
-      "target": "ext:firecrawl:FirecrawlExtractApi@official",
-      "added_in": "1.11.0"
-    },
-    {
-      "legacy_slot": "ext:firecrawl:FirecrawlExtractApi@official-pre-a",
-      "target": "ext:firecrawl:FirecrawlExtractApi@official",
-      "added_in": "1.11.0"
-    },
-    {
       "bare_class_name": "FirecrawlMapApi",
       "target": "ext:firecrawl:FirecrawlMapApi@official",
       "added_in": "1.11.0"
@@ -899,6 +879,26 @@
     {
       "legacy_slot": "ext:firecrawl:FirecrawlScrapeApi@official-pre-a",
       "target": "ext:firecrawl:FirecrawlScrapeApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "FirecrawlSearchApi",
+      "target": "ext:firecrawl:FirecrawlSearchApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.firecrawl_search_api.FirecrawlSearchApi",
+      "target": "ext:firecrawl:FirecrawlSearchApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.FirecrawlSearchApi",
+      "target": "ext:firecrawl:FirecrawlSearchApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:firecrawl:FirecrawlSearchApi@official-pre-a",
+      "target": "ext:firecrawl:FirecrawlSearchApi@official",
       "added_in": "1.11.0"
     },
     {

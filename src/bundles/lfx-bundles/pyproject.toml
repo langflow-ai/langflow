@@ -48,7 +48,6 @@ deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
 exa = ["metaphor-python==0.1.23"]
 faiss = ["faiss-cpu==1.9.0.post1; python_version < '3.14'", "faiss-cpu>=1.13.2; python_version >= '3.14'", "langchain-community>=0.4.1,<1.0.0"]
-firecrawl = ["firecrawl-py>=1.0.16,<2.0.0"]
 git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
 google = ["langchain-google-genai~=4.1.2", "langchain-google-community~=3.0.2", "google-api-python-client~=2.161"]
@@ -121,7 +120,6 @@ all = [
     "lfx-bundles[elastic]",
     "lfx-bundles[exa]",
     "lfx-bundles[faiss]",
-    "lfx-bundles[firecrawl]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
     "lfx-bundles[google]",
