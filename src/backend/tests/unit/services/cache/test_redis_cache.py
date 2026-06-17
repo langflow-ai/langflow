@@ -132,6 +132,21 @@ class TestRedisCacheDeserializationIntegrity:
             assert result is CACHE_MISS  # rejected before dill.loads
             assert _MARKER_PATH_HOLDER == []  # gadget never executed
 
+    async def test_get_rejects_payload_shorter_than_tag(self):
+        """A value too short to even hold a tag is a miss (cheapest attacker write)."""
+        from lfx.services.cache.utils import CACHE_MISS
+
+        with patch("redis.asyncio.StrictRedis") as mock_redis_class:
+            mock_client = AsyncMock()
+            mock_redis_class.return_value = mock_client
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+            cache._signing_key = b"k" * 32
+
+            # Fewer bytes than the HMAC tag length: rejected before any slicing/HMAC.
+            mock_client.get.return_value = b"short"
+
+            assert await cache.get("k") is CACHE_MISS
+
     async def test_set_get_roundtrip_with_signature(self):
         """Values written by set() carry a valid tag and round-trip through get()."""
         with patch("redis.asyncio.StrictRedis") as mock_redis_class:

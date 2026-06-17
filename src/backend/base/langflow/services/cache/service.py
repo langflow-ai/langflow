@@ -270,7 +270,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         required. Cached after first use (the secret does not change at runtime).
         """
         if self._signing_key is None:
-            from lfx.services.deps import get_settings_service
+            from langflow.services.deps import get_settings_service
 
             secret = get_settings_service().auth_settings.SECRET_KEY.get_secret_value()
             self._signing_key = hashlib.sha256(b"langflow-redis-cache-hmac:" + secret.encode()).digest()
