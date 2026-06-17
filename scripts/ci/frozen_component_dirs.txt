@@ -88,9 +88,11 @@ sambanova
 scrapegraph
 searchapi
 serpapi
+spider
 supabase
 tavily
 textsplitters
+toolguard
 toolkits
 tools
 twelvelabs

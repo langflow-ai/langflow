@@ -10,7 +10,6 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data
-from spider.spider import Spider
 
 
 class SpiderTool(Component):
@@ -95,6 +94,10 @@ class SpiderTool(Component):
     ]
 
     def crawl(self) -> list[Data]:
+        # Imported lazily so SpiderTool stays importable -- for registration and
+        # i18n string extraction -- without the optional ``spider-client`` SDK.
+        from spider.spider import Spider
+
         if self.params:
             parameters = self.params["data"]
         else:
