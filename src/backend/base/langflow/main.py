@@ -49,6 +49,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.schema import ServiceType
+from langflow.services.tracing.otel_fastapi_patch import patch_otel_fastapi_route_details
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
@@ -828,6 +829,10 @@ def create_app():
             content={"message": str(exc)},
         )
 
+    # FastAPI >=0.137 lazy include_router puts `_IncludedRouter` wrappers (no `.path`)
+    # in `app.routes`, which crashes OTel's span route extraction on partial matches
+    # (e.g. CORS preflight). Patch the helper before instrumenting.
+    patch_otel_fastapi_route_details()
     FastAPIInstrumentor.instrument_app(app)
 
     add_pagination(app)
