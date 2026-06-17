@@ -83,8 +83,6 @@ class PythonREPLComponent(Component):
             ensure_code_execution_enabled()
             # Validate the exact code that will run: PythonREPL.run() strips a leading
             # "python"/backticks/whitespace prefix before exec, so validate the sanitized
-            # Validate the exact code that will run: PythonREPL.run() strips a leading
-            # "python"/backticks/whitespace prefix before exec, so validate the sanitized
             # form. Rejects inline imports and escape gadgets (e.g.
             # ().__class__.__subclasses__()); combined with restricted builtins in get_globals().
             code = PythonREPL.sanitize_input(self.python_code)

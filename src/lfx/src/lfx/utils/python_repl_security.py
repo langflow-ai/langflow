@@ -164,21 +164,37 @@ def ensure_code_execution_enabled() -> None:
     running arbitrary Python must be refused too — otherwise an authenticated
     user can still execute code despite the policy (GHSA-8qpj-27x8-pwpq).
 
-    When the settings service is unavailable (e.g. the lfx standalone CLI),
-    execution is allowed: that context is local and trusted.
+    Failure handling is deliberately asymmetric so the gate can never be
+    silently bypassed:
+
+    * ``ImportError`` importing the services layer means there is no settings
+      stack at all (e.g. a stripped-down lfx embedding). That context is local
+      and trusted, so execution is allowed.
+    * Any other exception from ``get_settings_service()`` propagates — a stack
+      that exists but errors must not fail open.
+    * A ``None`` settings service means the stack is registered but failed to
+      initialise (``get_service`` swallows init errors into ``None``). Fail
+      closed, matching ``validate_flow_for_current_settings``, rather than
+      bypass the very control this gate enforces.
     """
     try:
         from lfx.services.deps import get_settings_service
 
         settings_service = get_settings_service()
     except ImportError:
-        # Services layer absent (lfx standalone) -> local/trusted context, allow.
-        # Only ImportError is treated as "no settings layer": other exceptions from
-        # get_settings_service() must propagate rather than silently fail open and
-        # bypass the allow_custom_components gate (GHSA-8qpj-27x8-pwpq).
+        # Services layer absent (e.g. stripped-down lfx embed) -> local/trusted, allow.
+        # Only ImportError is treated as "no settings layer"; any other exception from
+        # get_settings_service() propagates rather than silently failing open and
+        # bypassing the allow_custom_components gate (GHSA-8qpj-27x8-pwpq).
         return
     if settings_service is None:
-        return
+        # Registered-but-failed settings stack (get_service swallows init errors into
+        # None). Fail closed rather than bypass the gate (GHSA-8qpj-27x8-pwpq).
+        msg = (
+            "Python code execution is disabled because the settings service could not "
+            "be resolved. Check the server configuration and try again."
+        )
+        raise CodeExecutionDisabledError(msg)
     if not getattr(settings_service.settings, "allow_custom_components", True):
         msg = (
             "Python code execution is disabled because allow_custom_components is False. "

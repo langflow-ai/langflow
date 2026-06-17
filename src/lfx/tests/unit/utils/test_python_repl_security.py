@@ -138,9 +138,33 @@ class TestEnsureCodeExecutionEnabled:
         )
         ensure_code_execution_enabled()  # must not raise
 
-    def test_allows_when_settings_service_unavailable(self, monkeypatch):
-        """Standalone lfx (no settings service) is local/trusted -> execution allowed."""
+    def test_allows_when_services_layer_absent(self, monkeypatch):
+        """An absent services layer (ImportError) is a local/trusted context -> allowed."""
         from lfx.utils.python_repl_security import ensure_code_execution_enabled
 
-        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: None)
+        # Deleting the imported name makes ``from lfx.services.deps import
+        # get_settings_service`` raise ImportError, simulating an absent services layer.
+        monkeypatch.delattr("lfx.services.deps.get_settings_service")
         ensure_code_execution_enabled()  # must not raise
+
+    def test_blocks_when_settings_service_is_none(self, monkeypatch):
+        """A None settings service (registered-but-failed stack) fails closed, not open."""
+        from lfx.utils.python_repl_security import CodeExecutionDisabledError, ensure_code_execution_enabled
+
+        # get_service swallows init errors into None; the gate must refuse, not bypass.
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: None)
+        with pytest.raises(CodeExecutionDisabledError):
+            ensure_code_execution_enabled()
+
+    def test_non_import_error_propagates(self, monkeypatch):
+        """A non-ImportError from get_settings_service() propagates, never failing open."""
+        from lfx.utils.python_repl_security import ensure_code_execution_enabled
+
+        # Only ImportError means "no services layer"; anything else must surface.
+        def _boom():
+            error = "settings stack exploded"
+            raise RuntimeError(error)
+
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", _boom)
+        with pytest.raises(RuntimeError, match="settings stack exploded"):
+            ensure_code_execution_enabled()
