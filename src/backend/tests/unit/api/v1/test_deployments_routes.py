@@ -4,21 +4,38 @@ These tests guard against route-order regressions where static routes could be
 captured by the dynamic `/{deployment_id}` route.
 """
 
+from collections.abc import Iterator
 from uuid import uuid4
 
 import langflow.api.router as api_router_module
 import pytest
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter
 from fastapi.routing import APIRoute
 from langflow.api.v1.deployments import router
 from starlette.routing import Match
 
 
+def _flatten_api_routes(router: APIRouter) -> Iterator[APIRoute]:
+    """Yield every ``APIRoute`` reachable from ``router``.
+
+    FastAPI >=0.137 includes sub-routers lazily: ``include_router`` stores an
+    internal ``_IncludedRouter`` wrapper instead of eagerly copying the child
+    ``APIRoute`` objects into ``router.routes``. Descend through that wrapper via
+    its public ``original_router`` reference so these tests work on both the
+    eager (<=0.136) and lazy (>=0.137) inclusion behaviours.
+    """
+    for route in router.routes:
+        if isinstance(route, APIRoute):
+            yield route
+        else:
+            original = getattr(route, "original_router", None)
+            if original is not None:
+                yield from _flatten_api_routes(original)
+
+
 @pytest.fixture
 def deployment_routes() -> list[APIRoute]:
-    app = FastAPI()
-    app.include_router(router)
-    return [route for route in app.router.routes if isinstance(route, APIRoute)]
+    return list(_flatten_api_routes(router))
 
 
 def _resolve_endpoint_name(routes: list[APIRoute], *, path: str, method: str = "GET") -> str:
@@ -104,7 +121,7 @@ def test_include_deployment_router_skips_routes_when_feature_disabled(monkeypatc
     router_v1 = APIRouter(prefix="/v1")
     api_router_module.include_deployment_router(router_v1)
 
-    assert all("/deployments" not in route.path for route in router_v1.routes)
+    assert all("/deployments" not in route.path for route in _flatten_api_routes(router_v1))
 
 
 def test_include_deployment_router_adds_routes_when_feature_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -113,4 +130,4 @@ def test_include_deployment_router_adds_routes_when_feature_enabled(monkeypatch:
     router_v1 = APIRouter(prefix="/v1")
     api_router_module.include_deployment_router(router_v1)
 
-    assert any("/deployments" in route.path for route in router_v1.routes)
+    assert any("/deployments" in route.path for route in _flatten_api_routes(router_v1))
