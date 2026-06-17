@@ -95,13 +95,17 @@ class AuthSettings(BaseSettings):
 
     NEW_USER_IS_ACTIVE: bool = False
 
-    ENABLE_SIGNUP: bool = Field(default=True)
-    """Whether public self-registration via POST /api/v1/users/ is allowed.
-
-    Registration is always refused when AUTO_LOGIN is enabled (single-user mode
-    has no signup concept). Operators running multi-user instances can set this
-    to False to disable public sign up entirely.
-    """
+    ENABLE_SIGNUP: bool = Field(
+        default=True,
+        description=(
+            "Whether public self-registration via POST /api/v1/users/ is allowed. "
+            "Always refused when AUTO_LOGIN is enabled (single-user mode has no signup "
+            "concept); operators running multi-user instances can set this to False to "
+            "disable public sign up entirely. Authenticated superusers can still create "
+            "users regardless of this setting."
+        ),
+    )
+    """If True, public self-registration via POST /api/v1/users/ is allowed."""
 
     SUPERUSER: str = DEFAULT_SUPERUSER
     # Store password as SecretStr to prevent accidental plaintext exposure
