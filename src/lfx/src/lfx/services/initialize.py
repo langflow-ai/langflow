@@ -1,21 +1,31 @@
 """Initialize services for lfx package."""
 
 from lfx.services.settings.factory import SettingsServiceFactory
+from lfx.services.storage.factory import StorageServiceFactory
+from lfx.services.variable.factory import VariableServiceFactory
 
 
 def initialize_services():
     """Initialize required services for lfx."""
     from lfx.services.manager import get_service_manager
 
-    # Register the settings service factory
     service_manager = get_service_manager()
+
+    # Register the lean no-deps defaults. Settings is the only hard requirement;
+    # storage and variable are registered here so file-backed and variable-using
+    # components have a real service in bare lfx instead of None. These go into
+    # the factory tier, so a heavier backend (e.g. langflow) can override either
+    # through the same manager (config/decorator registrations take precedence).
     service_manager.register_factory(SettingsServiceFactory())
+    service_manager.register_factory(StorageServiceFactory())
+    service_manager.register_factory(VariableServiceFactory())
 
-    # Ensure built-in pluggable services are registered (decorator runs on import).
-    # This allows LFX to use minimal auth/telemetry/tracing/variable when no config overrides.
+    # Note: auth and authorization self-register at import time via the
+    # @register_service decorator. Storage and variable do NOT self-register on
+    # import — they are wired up by the explicit register_factory calls above.
 
-    # Note: We don't create the service immediately,
-    # it will be created on first use via get_settings_service()
+    # Services are created lazily on first use (e.g. via get_storage_service()),
+    # not eagerly here.
 
 
 # Initialize services when the module is imported

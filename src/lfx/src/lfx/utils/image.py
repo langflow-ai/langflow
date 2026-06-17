@@ -28,7 +28,13 @@ def convert_image_to_base64(image_path: str | Path) -> str:
     """
     image_path = Path(image_path)
 
-    storage_service = get_storage_service()
+    # An absolute path is a real filesystem path, not a logical
+    # "flow_id/filename" storage key. Read it directly so callers can pass plain
+    # local paths (e.g. tempfiles) regardless of whether a storage service is
+    # registered. Routing such a path through the storage service would parse it
+    # into flow_id="/abs/dir" and raise a validation error instead of the
+    # expected FileNotFoundError when the file is missing.
+    storage_service = None if image_path.is_absolute() else get_storage_service()
     if storage_service:
         flow_id, file_name = storage_service.parse_file_path(str(image_path))
         try:
