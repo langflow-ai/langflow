@@ -2074,5 +2074,6 @@
   "flows.selectFlow": "Select {{name}}",
   "flows.moreOptions": "More options for {{name}}",
   "folder.optionsFor": "Options for {{name}}",
-  "paginator.pageLabel": "Page"
+  "paginator.pageLabel": "Page",
+  "flow.flowSettings": "Flow settings"
 }
