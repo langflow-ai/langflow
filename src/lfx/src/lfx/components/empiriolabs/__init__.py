@@ -6,12 +6,14 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from lfx.components.empiriolabs.empiriolabs import EmpirioLabsModelComponent
+    from lfx.components.empiriolabs.empiriolabs_image_generation import EmpirioLabsImageGenerationComponent
 
 _dynamic_imports = {
     "EmpirioLabsModelComponent": "empiriolabs",
+    "EmpirioLabsImageGenerationComponent": "empiriolabs_image_generation",
 }
 
-__all__ = ["EmpirioLabsModelComponent"]
+__all__ = ["EmpirioLabsImageGenerationComponent", "EmpirioLabsModelComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
