@@ -7,9 +7,12 @@
 //
 // Edge kinds are a render hint the model emits alongside the canonical graph:
 // `sync` (solid call), `async` (dashed, in-flight), `return` (dashed reply).
-// When `data.kind` is absent we fall back to the top-level `animated` flag
-// (animated → `async`, else `sync`). Node kinds default from the node type
-// (actor→person, system→service).
+// When `data.kind` is absent we fall back to the top-level `animated` flag. The
+// backend sets `animated` for any dashed message — async OR return — so it can't
+// tell the two apart; we therefore default an animated-but-kindless edge to the
+// conservative `return` style (muted, static) rather than `async`'s accent +
+// animation, which would over-claim an in-flight call. Node kinds default from
+// the node type (actor→person, system→service).
 
 import type {
   Edge as FlowEdge,
@@ -60,10 +63,13 @@ export function edgeStyle(kind: EdgeKind): {
 
 /**
  * The edge kind: the explicit `data.kind` hint when present, else inferred from
- * the top-level `animated` flag (animated → `async`), defaulting to `sync`.
+ * the top-level `animated` flag. `animated` marks a dashed message but can't
+ * distinguish async from return, so a kindless animated edge falls back to the
+ * conservative `return` style rather than `async` (which would add a spurious
+ * accent + animation); a non-animated kindless edge defaults to `sync`.
  */
 export function resolveEdgeKind(edge: DiagramEdge): EdgeKind {
-  return edge.data?.kind ?? (edge.animated ? "async" : "sync");
+  return edge.data?.kind ?? (edge.animated ? "return" : "sync");
 }
 
 function toFlowNode(node: DiagramNode): FlowNode {
