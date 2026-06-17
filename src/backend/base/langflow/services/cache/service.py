@@ -276,6 +276,26 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             self._signing_key = hashlib.sha256(b"langflow-redis-cache-hmac:" + secret.encode()).digest()
         return self._signing_key
 
+    def _integrity_tag(self, namespaced_key: str, payload: bytes) -> bytes:
+        """Compute the HMAC-SHA256 tag binding ``payload`` to ``namespaced_key``.
+
+        The Redis key is mixed in as associated authenticated data so a tag is
+        only valid for the exact key the payload was written under. Without this
+        binding, a payload signed for one key verifies under any other key,
+        letting anyone with write access to the ``langflow:cache:`` namespace
+        relocate/replay a validly-signed entry across keys (cross-key
+        substitution → type confusion / stale-value injection) without ever
+        knowing the secret. The key is length-prefixed so the (key, payload)
+        framing is unambiguous and bytes cannot be shifted across the boundary
+        while keeping a valid tag.
+        """
+        mac = hmac.new(self._get_signing_key(), digestmod=hashlib.sha256)
+        key_bytes = namespaced_key.encode("utf-8")
+        mac.update(len(key_bytes).to_bytes(8, "big"))
+        mac.update(key_bytes)
+        mac.update(payload)
+        return mac.digest()
+
     async def is_connected(self) -> bool:
         """Check if the Redis client is connected."""
         import redis
@@ -292,7 +312,8 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
     async def get(self, key, lock=None):
         if key is None:
             return CACHE_MISS
-        value = await self._client.get(self._key(key))
+        namespaced_key = self._key(key)
+        value = await self._client.get(namespaced_key)
         if not value:
             return CACHE_MISS
         # Integrity check before deserializing. The Redis datastore is an
@@ -305,7 +326,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         if len(value) < self._HMAC_DIGEST_SIZE:
             return CACHE_MISS
         tag, payload = value[: self._HMAC_DIGEST_SIZE], value[self._HMAC_DIGEST_SIZE :]
-        expected = hmac.new(self._get_signing_key(), payload, hashlib.sha256).digest()
+        expected = self._integrity_tag(namespaced_key, payload)
         if not hmac.compare_digest(tag, expected):
             await logger.awarning("RedisCache: discarding cache entry with an invalid integrity tag")
             return CACHE_MISS
@@ -316,9 +337,11 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         try:
             if pickled := dill.dumps(value, recurse=True):
                 # Prefix an HMAC tag so get() can reject tampered/forged payloads
-                # before deserialization (see get()).
-                tag = hmac.new(self._get_signing_key(), pickled, hashlib.sha256).digest()
-                result = await self._client.setex(self._key(key), self.expiration_time, tag + pickled)
+                # before deserialization (see get()). The tag is bound to the
+                # namespaced key so it cannot be replayed under a different key.
+                namespaced_key = self._key(key)
+                tag = self._integrity_tag(namespaced_key, pickled)
+                result = await self._client.setex(namespaced_key, self.expiration_time, tag + pickled)
                 if not result:
                     msg = "RedisCache could not set the value."
                     raise ValueError(msg)

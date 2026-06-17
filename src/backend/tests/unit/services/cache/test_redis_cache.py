@@ -154,3 +154,40 @@ class TestRedisCacheDeserializationIntegrity:
 
             await cache.set("k", {"a": 1, "b": [2, 3]})
             assert await cache.get("k") == {"a": 1, "b": [2, 3]}
+
+    async def test_get_rejects_payload_replayed_under_different_key(self):
+        """A validly-signed entry must not verify when relocated to another key.
+
+        The integrity tag is bound to the namespaced Redis key, so copying a
+        legitimately-signed payload from key ``a`` into the slot for key ``b``
+        (cross-key substitution) is rejected as a miss instead of deserialized.
+        """
+        from lfx.services.cache.utils import CACHE_MISS
+
+        with patch("redis.asyncio.StrictRedis") as mock_redis_class:
+            mock_client = AsyncMock()
+            mock_redis_class.return_value = mock_client
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+            cache._signing_key = b"k" * 32
+
+            store: dict[str, bytes] = {}
+
+            async def fake_setex(key, _ttl, value):
+                store[key] = value
+                return True
+
+            async def fake_get(key):
+                return store.get(key)
+
+            mock_client.setex.side_effect = fake_setex
+            mock_client.get.side_effect = fake_get
+
+            # Write a real, validly-signed entry under key "a".
+            await cache.set("a", {"secret": "for-a"})
+            assert await cache.get("a") == {"secret": "for-a"}
+
+            # Attacker relocates a's signed bytes into b's namespaced slot.
+            store[cache._key("b")] = store[cache._key("a")]
+
+            # The tag was bound to "a"'s key, so it fails verification under "b".
+            assert await cache.get("b") is CACHE_MISS
