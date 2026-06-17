@@ -35,7 +35,7 @@ class SQLComponent(ComponentWithCache):
                     self.db = cached_db
                     try:
                         self.db.run("SELECT 1")
-                        return 
+                        return
                     except Exception as e:
                         self.log(f"Cached database connection is stale. Reconnecting: {e}")
                 self.log("Connecting to database")
