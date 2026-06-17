@@ -148,6 +148,16 @@ def test_parse_reply_keeps_full_prd_when_it_contains_an_embedded_json_object():
     assert "## Overview" in response.text
 
 
+def test_parse_reply_strips_only_the_leading_clarity_token():
+    # Only the control prefix is removed; an occurrence inside the PRD body is
+    # preserved rather than silently rewritten by a blanket replace.
+    body = "# PRD\n\n## Overview\nThe app shows a [CLARITY_REACHED] banner when a spec is locked."
+    response = _parse_reply(f"{CLARITY_TOKEN}\n{body}")
+    assert response.next_phase == ProjectPhase.DIAGRAM_GENERATION
+    assert response.text == body
+    assert response.text.count(CLARITY_TOKEN) == 1  # the body mention survived
+
+
 def test_parse_reply_does_not_transition_when_token_only_mentioned_mid_reply():
     # Regression: the control token appearing inside a clarification question (not
     # leading the reply) must NOT transition — it stays a clarification turn with

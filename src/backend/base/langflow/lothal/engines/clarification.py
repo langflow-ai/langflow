@@ -85,8 +85,12 @@ def _parse_reply(raw: str) -> LLMResponse:
     # it. A bare `CLARITY_TOKEN in raw` substring test would misfire on any
     # clarification turn whose question or a suggestion merely mentions the token,
     # falsely transitioning out of CLARIFICATION with a half-sentence PRD.
-    if raw.strip().startswith(CLARITY_TOKEN):
-        summary = raw.replace(CLARITY_TOKEN, "").strip()
+    stripped = raw.strip()
+    if stripped.startswith(CLARITY_TOKEN):
+        # Strip only the leading control token, not every occurrence: a PRD body
+        # may legitimately mention `[CLARITY_REACHED]`, and `replace` would
+        # silently rewrite that content.
+        summary = stripped.removeprefix(CLARITY_TOKEN).strip()
         # Defensive: if the model wrapped the *entire* summary as a JSON object
         # (`{"message": "<the PRD>"}`), surface the message rather than raw braces.
         # Use the strict whole-reply parse — never the greedy first-{..last-}
