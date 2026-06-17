@@ -16,7 +16,6 @@ import inspect
 import json
 import time
 from collections.abc import Awaitable, Callable, Mapping
-from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, TypeVar, cast
@@ -28,8 +27,48 @@ from lfx.log.logger import logger
 
 from langflow.services.auth.exceptions import InvalidTokenError as AuthInvalidTokenError
 
+# The request-scoped access ceiling is an authorization primitive. It lives in
+# the authorization package so guards can enforce it without importing the auth
+# layer; the auth layer (here) only *derives* the ceiling from an identity and
+# installs it. These re-exports keep ``langflow.services.auth.external`` a stable
+# import site for callers that derive/inspect the ceiling.
+from langflow.services.authorization.access_ceiling import (
+    EXTERNAL_ACCESS_ADMIN,
+    EXTERNAL_ACCESS_EDITOR,
+    EXTERNAL_ACCESS_LEVELS,
+    EXTERNAL_ACCESS_VIEWER,
+    ExternalAccessContext,
+    clear_current_external_access_context,
+    external_access_allows,
+    filter_actions_by_external_access_ceiling,
+    get_current_external_access_context,
+    set_current_external_access_context,
+)
+
 if TYPE_CHECKING:
     from lfx.services.settings.auth import AuthSettings
+
+__all__ = [
+    "EXTERNAL_ACCESS_ADMIN",
+    "EXTERNAL_ACCESS_EDITOR",
+    "EXTERNAL_ACCESS_LEVELS",
+    "EXTERNAL_ACCESS_VIEWER",
+    "ExternalAccessContext",
+    "ExternalIdentity",
+    "ExternalIdentityResolver",
+    "JwtExternalIdentityResolver",
+    "access_context_from_identity",
+    "clear_current_external_access_context",
+    "decode_external_jwt",
+    "external_access_allows",
+    "extract_bearer_or_raw_token",
+    "extract_external_token",
+    "filter_actions_by_external_access_ceiling",
+    "get_current_external_access_context",
+    "identity_from_claims",
+    "resolve_external_identity",
+    "set_current_external_access_context",
+]
 
 
 JWKS_CACHE_TTL_SECONDS = 300
@@ -37,16 +76,10 @@ JWKS_MIN_REFRESH_INTERVAL_SECONDS = 30
 _jwks_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 T = TypeVar("T")
 
-EXTERNAL_ACCESS_VIEWER = "viewer"
-EXTERNAL_ACCESS_EDITOR = "editor"
-EXTERNAL_ACCESS_ADMIN = "admin"
-_EXTERNAL_ACCESS_LEVELS = frozenset(
-    {
-        EXTERNAL_ACCESS_VIEWER,
-        EXTERNAL_ACCESS_EDITOR,
-        EXTERNAL_ACCESS_ADMIN,
-    }
-)
+# Maps raw external claim values to a normalized access level. The level
+# vocabulary and the deny-only enforcement live in the authorization package
+# (see ``access_ceiling``); this alias table is the auth-side interpretation of
+# provider-specific claim strings.
 _EXTERNAL_ACCESS_ALIASES = {
     "view": EXTERNAL_ACCESS_VIEWER,
     "viewer": EXTERNAL_ACCESS_VIEWER,
@@ -61,12 +94,6 @@ _EXTERNAL_ACCESS_ALIASES = {
     "admin": EXTERNAL_ACCESS_ADMIN,
     "administrator": EXTERNAL_ACCESS_ADMIN,
 }
-_VIEWER_ALLOWED_ACTIONS = frozenset({"read"})
-_EDITOR_ALLOWED_ACTIONS = frozenset({"read", "write", "create", "execute", "ingest"})
-_current_external_access = ContextVar["ExternalAccessContext | None"](
-    "langflow_external_access",
-    default=None,
-)
 
 
 @dataclass(frozen=True)
@@ -79,17 +106,6 @@ class ExternalIdentity:
     email: str | None = None
     name: str | None = None
     claims: Mapping[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class ExternalAccessContext:
-    """Request-local access ceiling derived from an external identity claim."""
-
-    provider: str
-    subject: str
-    level: str
-    claim_name: str | None = None
-    claim_value: str | None = None
 
 
 class ExternalIdentityResolver(Protocol):
@@ -169,7 +185,7 @@ def _normalize_access_level(value: str | None) -> str | None:
     normalized = value.strip().lower()
     if not normalized:
         return None
-    return _EXTERNAL_ACCESS_ALIASES.get(normalized, normalized if normalized in _EXTERNAL_ACCESS_LEVELS else None)
+    return _EXTERNAL_ACCESS_ALIASES.get(normalized, normalized if normalized in EXTERNAL_ACCESS_LEVELS else None)
 
 
 def _access_claim_mapping(auth_settings: AuthSettings) -> dict[str, str]:
@@ -228,48 +244,6 @@ def access_context_from_identity(
         claim_name=claim_name,
         claim_value=claim_value,
     )
-
-
-def set_current_external_access_context(context: ExternalAccessContext | None) -> None:
-    """Store the external access ceiling for the current request/task."""
-    _current_external_access.set(context)
-
-
-def clear_current_external_access_context() -> None:
-    """Clear any external access ceiling from the current request/task."""
-    _current_external_access.set(None)
-
-
-def get_current_external_access_context() -> ExternalAccessContext | None:
-    """Return the external access ceiling for the current request/task, if any."""
-    return _current_external_access.get()
-
-
-def external_access_allows(action: str, context: ExternalAccessContext | None = None) -> bool:
-    """Return whether the external access ceiling allows this action.
-
-    This is deliberately action-level and deny-only. It does not grant access to
-    resources; normal ownership, route guards, and enterprise authz plugins still
-    decide whether an otherwise allowed action may proceed.
-    """
-    context = context if context is not None else get_current_external_access_context()
-    if context is None:
-        return True
-
-    normalized_action = action.strip().lower()
-    if context.level == EXTERNAL_ACCESS_ADMIN:
-        return True
-    if context.level == EXTERNAL_ACCESS_EDITOR:
-        return normalized_action in _EDITOR_ALLOWED_ACTIONS
-    return normalized_action in _VIEWER_ALLOWED_ACTIONS
-
-
-def filter_actions_by_external_access_ceiling(actions: list[str] | tuple[str, ...]) -> list[str]:
-    """Filter an action list through the current external access ceiling."""
-    context = get_current_external_access_context()
-    if context is None:
-        return list(actions)
-    return [action for action in actions if external_access_allows(action, context)]
 
 
 def _validate_trusted_time_claims(claims: Mapping[str, Any]) -> None:
@@ -331,9 +305,12 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
 
     If ``EXTERNAL_AUTH_TRUSTED_JWT_DECODE`` is enabled, signature verification
     is skipped (the caller has stated an upstream proxy already validated it).
-    Otherwise ``EXTERNAL_AUTH_JWKS_URL`` is required and the signature is
-    verified against the fetched JWKS using ``EXTERNAL_AUTH_ALGORITHMS``.
-    ``exp`` / ``nbf`` are always checked.
+    Otherwise ``EXTERNAL_AUTH_JWKS_URL`` and ``EXTERNAL_AUTH_AUDIENCE`` are both
+    required: the signature is verified against the fetched JWKS using
+    ``EXTERNAL_AUTH_ALGORITHMS`` and the ``aud`` claim is bound to this
+    deployment so tokens the IdP minted for other services are rejected.
+    ``EXTERNAL_AUTH_ISSUER`` is verified when set. ``exp`` / ``nbf`` are always
+    checked.
     """
     if not auth_settings.EXTERNAL_AUTH_ENABLED:
         msg = "External authentication is not enabled"
@@ -358,6 +335,20 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
             msg = "External authentication requires EXTERNAL_AUTH_JWKS_URL unless trusted decode is enabled"
             raise AuthInvalidTokenError(msg)
 
+        audience = _split_csv(auth_settings.EXTERNAL_AUTH_AUDIENCE)
+        if not audience:
+            # Without audience binding, any token the IdP minted for a *different*
+            # relying party would verify here (same signing keys, valid exp).
+            # Audience is the control that stops cross-service token reuse, so it
+            # is required whenever signatures are checked against a JWKS.
+            msg = (
+                "External JWKS verification requires EXTERNAL_AUTH_AUDIENCE so tokens the IdP issued "
+                "for other services are rejected. Set EXTERNAL_AUTH_AUDIENCE to this deployment's "
+                "expected audience, or only enable EXTERNAL_AUTH_TRUSTED_JWT_DECODE behind a proxy "
+                "that already validates audience."
+            )
+            raise AuthInvalidTokenError(msg)
+
         jwks = await _fetch_jwks(auth_settings.EXTERNAL_AUTH_JWKS_URL)
         try:
             jwk = _select_jwk(jwks, token)
@@ -371,7 +362,6 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
                 raise
             jwk = _select_jwk(refreshed, token)
         signing_key = jwt.PyJWK.from_dict(jwk).key
-        audience = _split_csv(auth_settings.EXTERNAL_AUTH_AUDIENCE)
         issuer = auth_settings.EXTERNAL_AUTH_ISSUER or None
         algorithms = _split_csv(auth_settings.EXTERNAL_AUTH_ALGORITHMS) or ["RS256"]
 
@@ -379,10 +369,10 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
             token,
             signing_key,
             algorithms=algorithms,
-            audience=audience if audience else None,
+            audience=audience,
             issuer=issuer,
             options={
-                "verify_aud": bool(audience),
+                "verify_aud": True,
                 "verify_iss": bool(issuer),
             },
         )

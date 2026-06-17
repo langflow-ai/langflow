@@ -8,8 +8,11 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
 
-from langflow.services.auth.external import external_access_allows, get_current_external_access_context
 from langflow.services.authorization import audit as _audit
+from langflow.services.authorization.access_ceiling import (
+    external_access_allows,
+    get_current_external_access_context,
+)
 from langflow.services.authorization.actions import (
     DeploymentAction,
     FileAction,

@@ -55,6 +55,9 @@ def mock_settings(monkeypatch):
     settings = SimpleNamespace(
         auth_settings=SimpleNamespace(
             SECRET_KEY=SimpleNamespace(get_secret_value=lambda: "a" * 43),
+            # Non-optional AuthSettings fields read directly by create_api_key.
+            EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=False,
+            EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS=True,
         ),
         settings=SimpleNamespace(disable_track_apikey_usage=False),
     )

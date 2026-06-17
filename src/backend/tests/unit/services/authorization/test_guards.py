@@ -6,8 +6,11 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from langflow.services.auth.external import ExternalAccessContext, set_current_external_access_context
 from langflow.services.authorization import guards as authz_guards
+from langflow.services.authorization.access_ceiling import (
+    ExternalAccessContext,
+    set_current_external_access_context,
+)
 from langflow.services.authorization.actions import (
     DeploymentAction,
     FileAction,
