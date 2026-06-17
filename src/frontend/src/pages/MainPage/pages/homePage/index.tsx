@@ -98,6 +98,15 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     },
   };
 
+  // Flow ids to evaluate for the permission gate. Only the flows/components
+  // tabs render selectable, gated cards; other tabs send no ids so the query
+  // is disabled and the gate fails open. Shared by the header bulk actions and
+  // the per-card menus so both entry points agree on what is allowed.
+  const permissionGatedFlowIds =
+    flowType === "flows" || flowType === "components"
+      ? data.flows.map((flow) => flow.id)
+      : [];
+
   useEffect(() => {
     localStorage.setItem("view", view);
   }, [view]);
@@ -288,55 +297,55 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         <div className="flex h-full w-full flex-col 3xl:container">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
           <div className="flex flex-1 flex-col justify-start p-4">
-            <div className="flex h-full flex-col justify-start">
-              <HeaderComponent
-                folderName={folderName}
-                flowType={flowType}
-                setFlowType={setFlowType}
-                view={view}
-                setView={setView}
-                setNewProjectModal={setNewProjectModal}
-                onNewFlow={startNewFlow}
-                setSearch={onSearch}
-                isEmptyFolder={isEmptyFolder === true}
-                selectedFlows={selectedFlows}
-              />
-              {isEmptyFolder === true ? (
-                <EmptyFolder
-                  setOpenModal={setNewProjectModal}
+            <PermissionsProvider
+              resourceType="flow"
+              resourceIds={permissionGatedFlowIds}
+              domain={
+                permissionsFolderId
+                  ? `project:${permissionsFolderId}`
+                  : undefined
+              }
+            >
+              <div className="flex h-full flex-col justify-start">
+                <HeaderComponent
+                  folderName={folderName}
+                  flowType={flowType}
+                  setFlowType={setFlowType}
+                  view={view}
+                  setView={setView}
+                  setNewProjectModal={setNewProjectModal}
                   onNewFlow={startNewFlow}
+                  setSearch={onSearch}
+                  isEmptyFolder={isEmptyFolder === true}
+                  selectedFlows={selectedFlows}
                 />
-              ) : (
-                <div className="flex h-full flex-col">
-                  {isLoading || isEmptyFolder === null ? (
-                    view === "grid" ? (
-                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-                        <ListSkeleton />
-                        <ListSkeleton />
-                      </div>
-                    ) : (
-                      <div className="mt-4 flex flex-col gap-1">
-                        <ListSkeleton />
-                        <ListSkeleton />
-                      </div>
-                    )
-                  ) : flowType === "mcp" ? (
-                    <CustomMcpServerTab folderName={folderName} />
-                  ) : flowType === "deployments" ? (
-                    <DeploymentsPage />
-                  ) : (flowType === "flows" || flowType === "components") &&
-                    data &&
-                    data.pagination.total > 0 ? (
-                    <PermissionsProvider
-                      resourceType="flow"
-                      resourceIds={data.flows.map((flow) => flow.id)}
-                      domain={
-                        permissionsFolderId
-                          ? `project:${permissionsFolderId}`
-                          : undefined
-                      }
-                    >
-                      {view === "grid" ? (
+                {isEmptyFolder === true ? (
+                  <EmptyFolder
+                    setOpenModal={setNewProjectModal}
+                    onNewFlow={startNewFlow}
+                  />
+                ) : (
+                  <div className="flex h-full flex-col">
+                    {isLoading || isEmptyFolder === null ? (
+                      view === "grid" ? (
+                        <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                          <ListSkeleton />
+                          <ListSkeleton />
+                        </div>
+                      ) : (
+                        <div className="mt-4 flex flex-col gap-1">
+                          <ListSkeleton />
+                          <ListSkeleton />
+                        </div>
+                      )
+                    ) : flowType === "mcp" ? (
+                      <CustomMcpServerTab folderName={folderName} />
+                    ) : flowType === "deployments" ? (
+                      <DeploymentsPage />
+                    ) : (flowType === "flows" || flowType === "components") &&
+                      data &&
+                      data.pagination.total > 0 ? (
+                      view === "grid" ? (
                         <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
                           {data.flows.map((flow, index) => (
                             <ListComponent
@@ -364,16 +373,16 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                             />
                           ))}
                         </div>
-                      )}
-                    </PermissionsProvider>
-                  ) : (
-                    <div className="pt-24 text-center text-sm text-secondary-foreground">
-                      {t("home.flowTypeNotSupported", { flowType })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                      )
+                    ) : (
+                      <div className="pt-24 text-center text-sm text-secondary-foreground">
+                        {t("home.flowTypeNotSupported", { flowType })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </PermissionsProvider>
           </div>
           {(flowType === "flows" || flowType === "components") &&
             !isLoading &&
