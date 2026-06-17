@@ -367,14 +367,23 @@ def test_ensure_fernet_key_with_44_char_key():
     assert fernet.decrypt(encrypted) == b"test-value"
 
 
-def test_ensure_fernet_key_short_key_independent_of_random_state():
-    """Short-key derivation must not depend on the global ``random`` state.
+def test_ensure_fernet_key_short_key_uses_sha256_derivation():
+    """Short-key derivation must be the SHA-256 hash, not the old PRNG output.
 
-    Regression for GHSA-jxw3-mjmx-3pqm: the key was previously derived
-    with ``random.seed(secret_key)`` + ``random.getrandbits`` — a predictable,
-    non-cryptographic PRNG. The SHA-256 derivation must be deterministic for a
-    given secret regardless of the process-global PRNG state.
+    Regression for GHSA-jxw3-mjmx-3pqm: the key was previously derived with
+    ``random.seed(secret_key)`` + ``random.getrandbits`` — a predictable,
+    non-cryptographic PRNG. The guard that catches that regression is the
+    SHA-256 equality below: the derived key must equal
+    ``base64.urlsafe_b64encode(sha256(secret))``, which the old PRNG path could
+    never produce.
+
+    The random-state perturbation between the two calls is only a determinism
+    sanity check. On its own it would *not* catch the old bug — the vulnerable
+    code re-seeded with the secret on every call, so it was deterministic per
+    secret too; the SHA-256 assertion is what proves the path actually changed.
     """
+    import base64
+    import hashlib
     import random
 
     from langflow.services.auth.utils import ensure_fernet_key
@@ -387,12 +396,9 @@ def test_ensure_fernet_key_short_key_independent_of_random_state():
     _ = [random.random() for _ in range(100)]  # noqa: S311  # perturb global PRNG state
     key_b = ensure_fernet_key(raw_key)
 
-    # Deterministic from the secret, not from PRNG state.
+    # Determinism sanity check (held under the old impl too — not the regression guard).
     assert key_a == key_b
-    # And it must be the SHA-256 derivation, not the old random.getrandbits output.
-    import base64
-    import hashlib
-
+    # Regression guard: the key must be the SHA-256 derivation, not random.getrandbits output.
     expected = base64.urlsafe_b64encode(hashlib.sha256(raw_key.encode()).digest())
     assert key_a == expected
 
