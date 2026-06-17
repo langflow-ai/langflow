@@ -307,7 +307,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         tag, payload = value[: self._HMAC_DIGEST_SIZE], value[self._HMAC_DIGEST_SIZE :]
         expected = hmac.new(self._get_signing_key(), payload, hashlib.sha256).digest()
         if not hmac.compare_digest(tag, expected):
-            await logger.awarning("RedisCache: discarding cache entry with an invalid integrity tag (key=%s)", key)
+            await logger.awarning("RedisCache: discarding cache entry with an invalid integrity tag")
             return CACHE_MISS
         return dill.loads(payload)
 
