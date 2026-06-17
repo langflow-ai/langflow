@@ -209,27 +209,34 @@ def _get_invalid_components(
         node_info = node_data.get("node", {})
 
         component_type = node_data.get("type")
-        if not component_type:
-            continue
 
         node_template = node_info.get("template", {})
         node_code_field = node_template.get("code", {})
         node_code = node_code_field.get("value") if isinstance(node_code_field, dict) else None
 
-        if not node_code:
-            continue
+        if node_code:
+            display_name = node_info.get("display_name") or component_type or "unknown"
+            node_id = node_data.get("id") or node.get("id", "unknown")
+            label = f"{display_name} ({node_id})"
 
-        display_name = node_info.get("display_name") or component_type
-        node_id = node_data.get("id") or node.get("id", "unknown")
-        label = f"{display_name} ({node_id})"
-
-        expected_hashes = type_to_current_hash.get(component_type)
-        if expected_hashes is None:
-            blocked.append(label)
-        else:
-            node_hash = _compute_code_hash(node_code)
-            if node_hash not in expected_hashes:
-                outdated.append(label)
+            # A node carrying executable code must resolve to a known component
+            # type so its code hash can be checked against the trusted set. If the
+            # type is missing/empty (or otherwise unknown), it can never match a
+            # known hash, so block it instead of silently skipping it.
+            #
+            # Security (GHSA-mfp9-86w4-493f): this previously did
+            # `if not component_type: continue`, so a crafted node with an empty
+            # `type` but a populated `template.code.value` bypassed the
+            # allow_custom_components gate while its stored code still executed at
+            # build time (instantiate_class runs the node's stored code, which
+            # does not consult the type).
+            expected_hashes = type_to_current_hash.get(component_type) if component_type else None
+            if expected_hashes is None:
+                blocked.append(label)
+            else:
+                node_hash = _compute_code_hash(node_code)
+                if node_hash not in expected_hashes:
+                    outdated.append(label)
 
         flow_data = node_info.get("flow", {})
         if isinstance(flow_data, dict):
