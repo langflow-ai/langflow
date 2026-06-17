@@ -1,6 +1,7 @@
 """Tests for flow_builder_tools components."""
 
 import asyncio
+import copy
 import json
 
 from lfx.mcp.flow_builder_tools import (
@@ -198,6 +199,107 @@ class TestProposeFieldEditReadableSummary:
         ev = drain_flow_events()[-1]
         assert "Dog" in ev["description"]
         assert "…" not in ev["description"]
+
+
+class TestApplyEditsLiveHeadless:
+    """Bug #13641: headless callers must apply proposed text edits live.
+
+    Headless callers (no review UI) must apply proposed text edits live and
+    narrate them as done — never as "(pending user approval)", which can never
+    resolve without a frontend. set_apply_edits_live(enabled=True) is the switch
+    the assistant service flips for the MCP/headless entrypoint.
+    """
+
+    def setup_method(self):
+        from lfx.mcp.flow_builder_tools import reset_working_flow
+
+        reset_working_flow()
+
+    def teardown_method(self):
+        from lfx.mcp.flow_builder_tools import reset_working_flow
+
+        reset_working_flow()
+
+    def test_propose_field_edit_applies_live_and_narrates_done_when_enabled(self):
+        from lfx.mcp.flow_builder_tools import (
+            ProposeFieldEdit,
+            _ensure_working_flow,
+            init_working_flow,
+            set_apply_edits_live,
+        )
+
+        init_working_flow(copy.deepcopy(_IO_FLOW), "flow-io-1")
+        set_apply_edits_live(enabled=True)
+
+        edit = ProposeFieldEdit()
+        edit.set(component_id="ChatInput-1", field_name="input_value", new_value="Dog")
+        result = edit.propose_field_edit()
+
+        assert "error" not in result.data, result.data
+        assert "pending user approval" not in result.data["text"], result.data["text"]
+        assert result.data["text"].startswith("Set "), result.data["text"]
+
+        flow = _ensure_working_flow()
+        node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == "ChatInput-1")
+        assert node["data"]["node"]["template"]["input_value"]["value"] == "Dog"
+
+    def test_propose_field_edit_stays_a_pending_proposal_when_disabled(self):
+        # Regression guard: the UI path keeps the reviewable proposal untouched.
+        from lfx.mcp.flow_builder_tools import ProposeFieldEdit, _ensure_working_flow, init_working_flow
+
+        init_working_flow(copy.deepcopy(_IO_FLOW), "flow-io-1")
+        edit = ProposeFieldEdit()
+        edit.set(component_id="ChatInput-1", field_name="input_value", new_value="Dog")
+        result = edit.propose_field_edit()
+
+        assert "pending user approval" in result.data["text"], result.data["text"]
+        flow = _ensure_working_flow()
+        node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == "ChatInput-1")
+        assert node["data"]["node"]["template"]["input_value"]["value"] == "Cat"
+
+    def test_configure_text_field_applies_live_when_enabled_despite_propose_mode(self):
+        from lfx.mcp.flow_builder_tools import (
+            ConfigureComponent,
+            _ensure_working_flow,
+            init_working_flow,
+            set_apply_edits_live,
+            set_propose_existing_edits,
+        )
+
+        init_working_flow(copy.deepcopy(_IO_FLOW), "flow-io-1")
+        set_propose_existing_edits(enabled=True)
+        set_apply_edits_live(enabled=True)
+
+        cfg = ConfigureComponent()
+        cfg.set(component_id="ChatInput-1", params='{"input_value": "Dog"}')
+        result = cfg.configure_component()
+
+        assert result.data.get("proposed") is None, result.data
+        assert "pending user approval" not in result.data.get("text", ""), result.data
+        flow = _ensure_working_flow()
+        node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == "ChatInput-1")
+        assert node["data"]["node"]["template"]["input_value"]["value"] == "Dog"
+
+    def test_configure_text_field_proposes_when_live_disabled(self):
+        # Regression guard: propose-mode without the headless switch still proposes.
+        from lfx.mcp.flow_builder_tools import (
+            ConfigureComponent,
+            _ensure_working_flow,
+            init_working_flow,
+            set_propose_existing_edits,
+        )
+
+        init_working_flow(copy.deepcopy(_IO_FLOW), "flow-io-1")
+        set_propose_existing_edits(enabled=True)
+
+        cfg = ConfigureComponent()
+        cfg.set(component_id="ChatInput-1", params='{"input_value": "Dog"}')
+        result = cfg.configure_component()
+
+        assert result.data.get("proposed") == ["input_value"], result.data
+        flow = _ensure_working_flow()
+        node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == "ChatInput-1")
+        assert node["data"]["node"]["template"]["input_value"]["value"] == "Cat"
 
 
 class TestDescribeComponentType:
