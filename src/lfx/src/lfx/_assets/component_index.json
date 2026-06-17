@@ -22164,6 +22164,265 @@
             }
           },
           "tool_mode": false
+        },
+        "policies": {
+          "base_classes": [
+            "Tool"
+          ],
+          "beta": true,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Component for building tool protection code from textual business policies and instructions.\nPowered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )",
+          "display_name": "Policies",
+          "documentation": "https://github.com/AgentToolkit/toolguard",
+          "edited": false,
+          "field_order": [
+            "enabled",
+            "mode",
+            "project",
+            "in_tools",
+            "policies",
+            "model",
+            "api_key"
+          ],
+          "frozen": false,
+          "icon": "shield-check",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "15af226d3e92",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "lfx",
+                  "version": null
+                },
+                {
+                  "name": "toolguard",
+                  "version": "0.2.19"
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "keywords": [
+              "model",
+              "llm",
+              "language model",
+              "large language model"
+            ],
+            "module": "lfx.components.models_and_agents.policies_component.PoliciesComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Guarded Tools",
+              "group_outputs": false,
+              "method": "guard_tools",
+              "name": "guarded_tools",
+              "selected": "Tool",
+              "tool_mode": true,
+              "types": [
+                "Tool"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "api_key": {
+              "_input_type": "SecretStrInput",
+              "advanced": true,
+              "display_name": "API Key",
+              "dynamic": false,
+              "info": "Model Provider API key",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "api_key",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "from __future__ import annotations\n\nimport os\nimport re\nimport shutil\nfrom pathlib import Path\nfrom typing import TYPE_CHECKING, cast\n\nfrom lfx.base.models import LCModelComponent\nfrom lfx.base.models.unified_models import (\n    get_language_model_options,\n    get_llm,\n    update_model_options_in_build_config,\n)\nfrom lfx.components.models_and_agents.policies.module_utils import unload_module\nfrom lfx.field_typing import LanguageModel, Tool\nfrom lfx.io import (\n    BoolInput,\n    HandleInput,\n    ModelInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n    StrInput,\n    TabInput,\n)\nfrom lfx.log.logger import logger\n\nif TYPE_CHECKING:\n    from toolguard.buildtime import ToolGuardsCodeGenerationResult, ToolGuardSpec\n\n    from lfx.inputs.inputs import InputTypes\n\n\nTOOLGUARD_WORK_DIR = Path(os.getenv(\"TOOLGUARD_WORK_DIR\") or \"tmp_toolguard\")\nBUILDTIME_MODELS = [\"gpt-5\", \"claude-sonnet\"]  # currently inactive, we recommend but do not enforce\nSTEP1 = \"Step_1\"\nSTEP2 = \"Step_2\"\nMODE_GENERATE = \"🛠️ Generate\"\nMODE_GUARD = \"🛡️ Guard\"\nGENERATED_GUARD_INFO_PREFIX = \"Auto-generated ToolGuard code for \"\n\n_TOOLGUARD_INSTALL_HINT = (\n    \"The 'toolguard' package is required to use PoliciesComponent. \"\n    \"Install the optional extra: `pip install 'langflow-base[toolguard]'`.\"\n)\n\n\nclass PoliciesComponent(LCModelComponent):\n    \"\"\"Component for building tool protection code from textual business policies and instructions.\n\n    This component uses ToolGuard to generate and apply policy-based guards to tools,\n    ensuring that tool execution complies with defined business policies.\n    Powered by ALTK ToolGuard (https://github.com/AgentToolkit/toolguard).\n\n    `toolguard` is an optional extra (`langflow-base[toolguard]`); imports happen\n    lazily inside methods so this component can be discovered and inspected even\n    when the extra isn't installed.\n    \"\"\"\n\n    display_name = \"Policies\"\n    description = \"\"\"Component for building tool protection code from textual business policies and instructions.\nPowered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )\"\"\"\n    documentation: str = \"https://github.com/AgentToolkit/toolguard\"\n    icon = \"shield-check\"\n    name = \"policies\"\n    beta = True\n\n    inputs = cast(\n        \"list[InputTypes]\",\n        [\n            BoolInput(\n                name=\"enabled\",\n                display_name=\"Enabled\",\n                info=\"If `true` - guards tool calls. If `false`, skip policy validation.\",\n                value=True,\n            ),\n            TabInput(\n                name=\"mode\",\n                display_name=\"Activity\",\n                options=[MODE_GENERATE, MODE_GUARD],\n                info=(\n                    \"Generate new guard code or apply existing guard. \"\n                    \"Review generated files in the details panel on the right.\"\n                ),\n                value=MODE_GENERATE,\n                real_time_refresh=True,\n                tool_mode=True,\n            ),\n            MultilineInput(\n                name=\"project\",\n                display_name=\"Policies Project\",\n                info=\"Folder name of the generated code\",\n                value=\"my_project\",\n                # required=True,\n            ),\n            HandleInput(\n                name=\"in_tools\",\n                display_name=\"Tools\",\n                input_types=[\"Tool\"],\n                is_list=True,\n                required=True,\n                info=\"These are the tools that the agent can use to help with tasks.\",\n            ),\n            StrInput(\n                name=\"policies\",\n                display_name=\"Policies\",\n                info=\"One or more clear, well-defined and self-contained business policies\",\n                is_list=True,\n                tool_mode=True,\n                placeholder=\"Add business policy...\",\n                list_add_label=\"Add Policy\",\n                # input_types=[],\n            ),\n            ModelInput(\n                name=\"model\",\n                display_name=\"Language Model\",\n                info=(\n                    \"Select LLM for Policies buildtime. We recommend using \"\n                    \"Anthropic Claude-Sonnet series for this task.\"\n                ),\n                real_time_refresh=True,\n                required=True,\n            ),\n            SecretStrInput(\n                name=\"api_key\",\n                display_name=\"API Key\",\n                info=\"Model Provider API key\",\n                required=False,\n                advanced=True,\n            ),\n        ],\n    )\n    outputs = [\n        Output(\n            display_name=\"Guarded Tools\",\n            type_=Tool,\n            name=\"guarded_tools\",\n            method=\"guard_tools\",\n            # group_outputs=True,\n        ),\n    ]\n\n    @staticmethod\n    def _import_toolguard():\n        \"\"\"Lazily import `toolguard` and the sibling helpers that depend on it.\n\n        Defined as a static method so it survives custom-component re-execution\n        via `create_class`, which only re-executes the class body, not arbitrary\n        module-level statements such as `try/except` import guards.\n        \"\"\"\n        try:\n            from toolguard.buildtime import (\n                PolicySpecOptions,\n                ToolGuardsCodeGenerationResult,\n                generate_guard_specs,\n                generate_guards_code,\n            )\n            from toolguard.extra.langchain_to_oas import langchain_tools_to_openapi\n            from toolguard.runtime import load_toolguards, load_toolguards_from_memory\n            from toolguard.runtime.runtime import RESULTS_FILENAME\n\n            from lfx.components.models_and_agents.policies.guard_sync_utils import sync_generated_guard_code_inputs\n            from lfx.components.models_and_agents.policies.guarded_tool import GuardedTool\n            from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper\n        except ModuleNotFoundError as e:\n            raise ImportError(_TOOLGUARD_INSTALL_HINT) from e\n        return {\n            \"PolicySpecOptions\": PolicySpecOptions,\n            \"ToolGuardsCodeGenerationResult\": ToolGuardsCodeGenerationResult,\n            \"generate_guard_specs\": generate_guard_specs,\n            \"generate_guards_code\": generate_guards_code,\n            \"langchain_tools_to_openapi\": langchain_tools_to_openapi,\n            \"load_toolguards\": load_toolguards,\n            \"load_toolguards_from_memory\": load_toolguards_from_memory,\n            \"RESULTS_FILENAME\": RESULTS_FILENAME,\n            \"sync_generated_guard_code_inputs\": sync_generated_guard_code_inputs,\n            \"GuardedTool\": GuardedTool,\n            \"LangchainModelWrapper\": LangchainModelWrapper,\n        }\n\n    @property\n    def work_dir(self) -> Path:\n        return TOOLGUARD_WORK_DIR / self._to_snake_case(self.project)\n\n    def build_model(self) -> LanguageModel:\n        llm_model = get_llm(\n            model=self.model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n            stream=False,\n        )\n        if llm_model is None:\n            msg = \"No language model selected. Please choose a model to proceed.\"\n            raise ValueError(msg)\n        return llm_model\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        updated_build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"language_model_options\",\n            get_options_func=get_language_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n        tg = self._import_toolguard()\n        py_module = self._to_snake_case(self.project)\n        return tg[\"sync_generated_guard_code_inputs\"](\n            build_config=updated_build_config,\n            work_dir=self.work_dir,\n            step2_subdir=STEP2,\n            project_name=py_module,\n        )\n\n    async def _generate_guard_specs(self) -> list[ToolGuardSpec]:\n        tg = self._import_toolguard()\n        logger.debug(\"Starting step 1\")\n        logger.debug(f\"model = {self.model}\")\n        llm = tg[\"LangchainModelWrapper\"](self.build_model())\n        out_dir = self.work_dir / STEP1\n        if out_dir.exists():\n            shutil.rmtree(out_dir)\n        policy_text = \"\\n * \".join(self.policies)\n        open_api = tg[\"langchain_tools_to_openapi\"](self.in_tools)\n\n        options = tg[\"PolicySpecOptions\"](example_number=4)\n        specs = await tg[\"generate_guard_specs\"](\n            policy_text=policy_text, tools=open_api, llm=llm, work_dir=out_dir, options=options\n        )\n        logger.debug(\"Step 1 Done\")\n        return specs\n\n    async def _generate_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:\n        tg = self._import_toolguard()\n        logger.debug(\"Starting step 2\")\n        out_dir = self.work_dir / STEP2\n        if out_dir.exists():\n            shutil.rmtree(out_dir)\n        llm = tg[\"LangchainModelWrapper\"](self.build_model())\n        app_name = self._to_snake_case(self.project)\n        open_api = tg[\"langchain_tools_to_openapi\"](self.in_tools)\n\n        gen_result = await tg[\"generate_guards_code\"](\n            tools=open_api, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=app_name\n        )\n        logger.debug(\"Step 2 Done\")\n        return gen_result\n\n    def in_recommended_models(self, model_name: str):\n        return any(recommended in model_name for recommended in BUILDTIME_MODELS)\n\n    def validate_before_generate(self) -> None:\n        \"\"\"Validate required inputs before generating guard code.\"\"\"\n        if not self.project:\n            msg = \"Policies: project cannot be empty!\"\n            raise ValueError(msg)\n\n        if not any(self.policies):\n            msg = \"Policies: policies cannot be empty!\"\n            raise ValueError(msg)\n\n        if not self.in_tools:\n            msg = \"Policies: in_tools cannot be empty!\"\n            raise ValueError(msg)\n\n        if not self.model or not self.api_key:\n            msg = \"Policies: model or api_key cannot be empty!\"\n            raise ValueError(msg)\n\n        # uncomment if willing to enforce certain models for buildtime\n        # if not self.in_recommended_models(self.model[0][\"name\"]):\n        #     msg = f\"Policies: model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}\"\n        #     raise ValueError(msg)\n\n    async def generate(self):\n        specs = await self._generate_guard_specs()\n        res = await self._generate_guard_code(specs)\n\n        # if there was a previous version of the guard, remove it from python cache\n        unload_module(res.domain.app_name)\n\n    def _verify_cached_guards(self, code_dir: Path) -> None:\n        tg = self._import_toolguard()\n        # Validate cache exists before attempting to load\n        if not code_dir.exists():\n            msg = (\n                f\"Policies: Cache directory not found at '{code_dir}'. \"\n                f\"Please run in 'Generate' mode first to create the guard code, \"\n                f\"or verify the project name is correct.\"\n            )\n            raise ValueError(msg)\n\n        try:\n            tg[\"load_toolguards\"](code_dir)\n        except FileNotFoundError as exc:\n            msg = (\n                f\"Policies: Required guard code files missing in '{code_dir}'. \"\n                f\"Please run in 'Generate' mode to create the guard code.\"\n            )\n            raise ValueError(msg) from exc\n        except Exception as exc:\n            msg = (\n                f\"Policies: Failed to load guard code from '{code_dir}'. \"\n                f\"The cached code may be invalid or corrupted. \"\n                f\"Try running in 'Generate' mode to rebuild the guard code. \"\n                f\"Error: {exc!s}\"\n            )\n            raise ValueError(msg) from exc\n\n    def _validate_before_using_cache(self, code_dir: Path) -> None:\n        if not self.in_tools:\n            msg = \"Policies: in_tools cannot be empty!\"\n            raise ValueError(msg)\n\n        self._verify_cached_guards(code_dir)\n\n    def make_toolguard_result(self) -> ToolGuardsCodeGenerationResult:\n        tg = self._import_toolguard()\n        attrs = self.get_vertex().data[\"node\"][\"template\"]\n        if not attrs:\n            raise ValueError\n\n        result_str = attrs[str(tg[\"RESULTS_FILENAME\"])][\"value\"]\n        result = tg[\"ToolGuardsCodeGenerationResult\"].model_validate_json(result_str)\n\n        result.domain.app_types.content = attrs.get(str(result.domain.app_types.file_name))[\"value\"]\n        result.domain.app_api.content = attrs.get(str(result.domain.app_api.file_name))[\"value\"]\n        result.domain.app_api_impl.content = attrs.get(str(result.domain.app_api_impl.file_name))[\"value\"]\n\n        for tool in result.tools.values():\n            tool.guard_file.content = attrs.get(str(tool.guard_file.file_name))[\"value\"]\n            for tool_item in tool.item_guard_files:\n                tool_item.content = attrs.get(str(tool_item.file_name))[\"value\"]\n\n        return result\n\n    async def guard_tools(self) -> list[Tool]:\n        if self.enabled:\n            tg = self._import_toolguard()\n            mode = getattr(self, \"mode\", MODE_GENERATE)\n            if mode == MODE_GENERATE:\n                self.log(f\"Start generating guard code at {self.work_dir}\", name=\"info\")\n                self.validate_before_generate()\n                await self.generate()\n                self.log(f\"Policies code generation saved to {self.work_dir}\", name=\"info\")\n                self.log(\"Review the generated files in the details panel on the right.\", name=\"info\")\n\n            else:  # mode == \"guard\"\n                self.log(f\"using cache from {self.work_dir}\", name=\"info\")\n                code_dir = self.work_dir / STEP2\n                self._validate_before_using_cache(code_dir)\n                try:\n                    tg_result = self.make_toolguard_result()\n                    tg_runtime = tg[\"load_toolguards_from_memory\"](tg_result)\n                    guarded_tools = [tg[\"GuardedTool\"](tool, self.in_tools, tg_runtime) for tool in self.in_tools]\n                    return cast(\"list[Tool]\", guarded_tools)\n                except Exception as e:\n                    logger.exception(e)\n                    raise\n\n        return self.in_tools\n\n    @staticmethod\n    def _to_snake_case(human_name: str) -> str:\n        \"\"\"Convert human-readable name to snake_case, sanitizing path traversal attempts.\"\"\"\n        # Convert to lowercase\n        result = human_name.lower()\n\n        # Replace any non-alphanumeric character (including path traversal chars) with underscore\n        result = re.sub(r\"[^a-z0-9]+\", \"_\", result)\n\n        # Strip leading/trailing underscores\n        result = result.strip(\"_\")\n\n        # Ensure the result contains at least one alphanumeric character\n        if not result or not re.search(r\"[a-z0-9]\", result):\n            msg = \"Project name must contain at least one alphanumeric character\"\n            raise ValueError(msg)\n\n        return result\n"
+            },
+            "enabled": {
+              "_input_type": "BoolInput",
+              "advanced": false,
+              "display_name": "Enabled",
+              "dynamic": false,
+              "info": "If `true` - guards tool calls. If `false`, skip policy validation.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "enabled",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": true
+            },
+            "in_tools": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "display_name": "Tools",
+              "dynamic": false,
+              "info": "These are the tools that the agent can use to help with tasks.",
+              "input_types": [
+                "Tool"
+              ],
+              "list": true,
+              "list_add_label": "Add More",
+              "name": "in_tools",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "mode": {
+              "_input_type": "TabInput",
+              "advanced": false,
+              "display_name": "Activity",
+              "dynamic": false,
+              "info": "Generate new guard code or apply existing guard. Review generated files in the details panel on the right.",
+              "name": "mode",
+              "options": [
+                "🛠️ Generate",
+                "🛡️ Guard"
+              ],
+              "override_skip": false,
+              "placeholder": "",
+              "real_time_refresh": true,
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "tab",
+              "value": "🛠️ Generate"
+            },
+            "model": {
+              "_input_type": "ModelInput",
+              "advanced": false,
+              "display_name": "Language Model",
+              "dynamic": false,
+              "external_options": {
+                "fields": {
+                  "data": {
+                    "node": {
+                      "display_name": "Connect other models",
+                      "icon": "CornerDownLeft",
+                      "name": "connect_other_models"
+                    }
+                  }
+                }
+              },
+              "info": "Select LLM for Policies buildtime. We recommend using Anthropic Claude-Sonnet series for this task.",
+              "input_types": [
+                "LanguageModel"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "model_type": "language",
+              "name": "model",
+              "override_skip": false,
+              "placeholder": "Setup Provider",
+              "real_time_refresh": true,
+              "refresh_button": true,
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "track_in_telemetry": false,
+              "type": "model",
+              "value": ""
+            },
+            "policies": {
+              "_input_type": "StrInput",
+              "advanced": false,
+              "display_name": "Policies",
+              "dynamic": false,
+              "info": "One or more clear, well-defined and self-contained business policies",
+              "list": true,
+              "list_add_label": "Add Policy",
+              "load_from_db": false,
+              "name": "policies",
+              "override_skip": false,
+              "placeholder": "Add business policy...",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "project": {
+              "_input_type": "MultilineInput",
+              "advanced": false,
+              "ai_enabled": false,
+              "copy_field": false,
+              "display_name": "Policies Project",
+              "dynamic": false,
+              "info": "Folder name of the generated code",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "project",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": "my_project"
+            }
+          },
+          "tool_mode": false
         }
       }
     ],
@@ -30113,9 +30372,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 128,
+    "num_components": 129,
     "num_modules": 17
   },
-  "sha256": "8da0f44bfce5d3a5ef1bbfaa8440467aa7805513ad7be3a0c660834403ef6461",
+  "sha256": "8de11d602652e5fbe1b74a0f68fe77a77e8145afbfb8fa8e13e34218a3bf6992",
   "version": "1.11.0"
 }

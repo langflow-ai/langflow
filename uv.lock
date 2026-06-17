@@ -9179,7 +9179,6 @@ all = [
     { name = "smolagents" },
     { name = "spider-client" },
     { name = "supabase" },
-    { name = "toolguard" },
     { name = "twelvelabs" },
     { name = "upstash-vector" },
     { name = "weaviate-client" },
@@ -9379,9 +9378,6 @@ supabase = [
     { name = "langchain-community" },
     { name = "supabase" },
 ]
-toolguard = [
-    { name = "toolguard" },
-]
 twelvelabs = [
     { name = "twelvelabs" },
 ]
@@ -9564,7 +9560,6 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["spider"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["supabase"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["tavily"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["toolguard"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["twelvelabs"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["unstructured"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["upstash"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9608,7 +9603,6 @@ requires-dist = [
     { name = "smolagents", marker = "extra == 'codeagents'", specifier = ">=1.8.0" },
     { name = "spider-client", marker = "extra == 'spider'", specifier = ">=0.0.27,<1.0.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
-    { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.16,<1.0.0" },
     { name = "twelvelabs", marker = "extra == 'twelvelabs'", specifier = ">=0.4.7,<1.0.0" },
     { name = "upstash-vector", marker = "extra == 'upstash'", specifier = "==0.6.0" },
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.10.2,<5.0.0" },
@@ -9618,7 +9612,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "exa", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "toolguard", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vllm", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "exa", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vllm", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
 
 [[package]]
 name = "lfx-cohere"

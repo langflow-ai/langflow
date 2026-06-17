@@ -92,7 +92,6 @@ spider
 supabase
 tavily
 textsplitters
-toolguard
 toolkits
 tools
 twelvelabs

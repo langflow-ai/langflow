@@ -12,6 +12,7 @@ from lfx.base.models.unified_models import (
     get_llm,
     update_model_options_in_build_config,
 )
+from lfx.components.models_and_agents.policies.module_utils import unload_module
 from lfx.field_typing import LanguageModel, Tool
 from lfx.io import (
     BoolInput,
@@ -25,11 +26,10 @@ from lfx.io import (
 )
 from lfx.log.logger import logger
 
-from lfx_bundles.toolguard.policies.module_utils import unload_module
-
 if TYPE_CHECKING:
-    from lfx.inputs.inputs import InputTypes
     from toolguard.buildtime import ToolGuardsCodeGenerationResult, ToolGuardSpec
+
+    from lfx.inputs.inputs import InputTypes
 
 
 TOOLGUARD_WORK_DIR = Path(os.getenv("TOOLGUARD_WORK_DIR") or "tmp_toolguard")
@@ -160,9 +160,9 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             from toolguard.runtime import load_toolguards, load_toolguards_from_memory
             from toolguard.runtime.runtime import RESULTS_FILENAME
 
-            from lfx_bundles.toolguard.policies.guard_sync_utils import sync_generated_guard_code_inputs
-            from lfx_bundles.toolguard.policies.guarded_tool import GuardedTool
-            from lfx_bundles.toolguard.policies.llm_wrapper import LangchainModelWrapper
+            from lfx.components.models_and_agents.policies.guard_sync_utils import sync_generated_guard_code_inputs
+            from lfx.components.models_and_agents.policies.guarded_tool import GuardedTool
+            from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper
         except ModuleNotFoundError as e:
             raise ImportError(_TOOLGUARD_INSTALL_HINT) from e
         return {

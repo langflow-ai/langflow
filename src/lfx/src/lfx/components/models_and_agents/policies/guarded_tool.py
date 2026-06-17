@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from langchain_core.messages import ToolCall
     from toolguard.runtime.runtime import ToolguardRuntime
 
-    from lfx_bundles.toolguard.policies.tool_invoker import ToolInvoker
+    from lfx.components.models_and_agents.policies.tool_invoker import ToolInvoker
 
 
 def _is_policy_violation_exception(exc: Exception) -> bool:
@@ -35,7 +35,7 @@ class GuardedTool(Tool):
     _toolguard: ToolguardRuntime
 
     def __init__(self, tool: Tool, all_tools: list[Tool], toolguard: ToolguardRuntime):
-        from lfx_bundles.toolguard.policies.tool_invoker import ToolInvoker
+        from lfx.components.models_and_agents.policies.tool_invoker import ToolInvoker
 
         super().__init__(
             name=tool.name,

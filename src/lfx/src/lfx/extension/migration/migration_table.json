@@ -2102,26 +2102,6 @@
       "added_in": "1.11.0"
     },
     {
-      "bare_class_name": "PoliciesComponent",
-      "target": "ext:toolguard:PoliciesComponent@official",
-      "added_in": "1.11.0"
-    },
-    {
-      "import_path": "lfx.components.models_and_agents.policies_component.PoliciesComponent",
-      "target": "ext:toolguard:PoliciesComponent@official",
-      "added_in": "1.11.0"
-    },
-    {
-      "import_path": "lfx.components.models_and_agents.PoliciesComponent",
-      "target": "ext:toolguard:PoliciesComponent@official",
-      "added_in": "1.11.0"
-    },
-    {
-      "legacy_slot": "ext:toolguard:PoliciesComponent@official-pre-a",
-      "target": "ext:toolguard:PoliciesComponent@official",
-      "added_in": "1.11.0"
-    },
-    {
       "bare_class_name": "CleanlabEvaluator",
       "target": "ext:cleanlab:CleanlabEvaluator@official",
       "added_in": "1.11.0"

@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx_bundles.toolguard.policies_component import (
+from lfx.components.models_and_agents.policies_component import (
     MODE_GENERATE,
     MODE_GUARD,
     STEP2,
@@ -153,8 +153,8 @@ async def test_cache_mode_corrupted_cache(mock_component):
 #     with (
 #         patch.object(Path, "exists", return_value=True),
 #         patch.object(mock_component, "make_toolguard_result") as mock_make_result,
-#         patch("lfx_bundles.toolguard.policies_component.load_toolguards_from_memory") as mock_load_memory,
-#         patch("lfx_bundles.toolguard.policies_component.GuardedTool") as mock_guarded_tool,
+#         patch("lfx.components.models_and_agents.policies_component.load_toolguards_from_memory") as mock_load_memory,
+#         patch("lfx.components.models_and_agents.policies_component.GuardedTool") as mock_guarded_tool,
 #     ):
 #         mock_tg_result = MagicMock()
 #         mock_make_result.return_value = mock_tg_result
