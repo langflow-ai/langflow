@@ -7755,7 +7755,6 @@ all = [
     { name = "gitpython" },
     { name = "google-api-python-client" },
     { name = "google-search-results" },
-    { name = "graph-retriever" },
     { name = "huggingface-hub" },
     { name = "ibm-cloud-sdk-core" },
     { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
@@ -7763,15 +7762,12 @@ all = [
     { name = "jigsawstack" },
     { name = "json-repair" },
     { name = "kubernetes" },
-    { name = "langchain-astradb" },
-    { name = "langchain-aws" },
     { name = "langchain-chroma" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
     { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
-    { name = "langchain-graph-retriever" },
     { name = "langchain-groq" },
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "langchain-mcp-adapters" },
@@ -7846,9 +7842,6 @@ arize = [
 assemblyai = [
     { name = "assemblyai" },
 ]
-astradb = [
-    { name = "langchain-astradb" },
-]
 astrapy = [
     { name = "astrapy" },
 ]
@@ -7860,7 +7853,6 @@ audio = [
 ]
 aws = [
     { name = "boto3" },
-    { name = "langchain-aws" },
 ]
 beautifulsoup = [
     { name = "beautifulsoup4" },
@@ -7916,7 +7908,6 @@ complete = [
     { name = "gitpython" },
     { name = "google-api-python-client" },
     { name = "google-search-results" },
-    { name = "graph-retriever" },
     { name = "huggingface-hub" },
     { name = "ibm-cloud-sdk-core" },
     { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
@@ -7924,15 +7915,12 @@ complete = [
     { name = "jigsawstack" },
     { name = "json-repair" },
     { name = "kubernetes" },
-    { name = "langchain-astradb" },
-    { name = "langchain-aws" },
     { name = "langchain-chroma" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
     { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
-    { name = "langchain-graph-retriever" },
     { name = "langchain-groq" },
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "langchain-mcp-adapters" },
@@ -8069,10 +8057,6 @@ google = [
 ]
 google-api = [
     { name = "google-api-python-client" },
-]
-graph-retriever = [
-    { name = "graph-retriever" },
-    { name = "langchain-graph-retriever" },
 ]
 groq = [
     { name = "langchain-groq" },
@@ -8374,7 +8358,6 @@ requires-dist = [
     { name = "google-api-python-client", marker = "extra == 'google-api'", specifier = "~=2.161" },
     { name = "google-search-results", marker = "extra == 'serpapi'", specifier = ">=2.4.1,<3.0.0" },
     { name = "grandalf", specifier = ">=0.8.0,<1.0.0" },
-    { name = "graph-retriever", marker = "extra == 'graph-retriever'", specifier = "==0.8.0" },
     { name = "greenlet", specifier = ">=3.1.1,<4.0.0" },
     { name = "gunicorn", specifier = ">=25.3.0,<27.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
@@ -8391,8 +8374,6 @@ requires-dist = [
     { name = "jsonquerylang", specifier = ">=1.1.1,<2.0.0" },
     { name = "kubernetes", marker = "extra == 'kubernetes'", specifier = "==31.0.0" },
     { name = "langchain", specifier = "~=1.2.0" },
-    { name = "langchain-astradb", marker = "extra == 'astradb'", specifier = "~=1.0.0" },
-    { name = "langchain-aws", marker = "extra == 'aws'", specifier = "~=1.1.0" },
     { name = "langchain-chroma", specifier = "~=0.2.6" },
     { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
     { name = "langchain-community", specifier = "~=0.4.1" },
@@ -8404,7 +8385,6 @@ requires-dist = [
     { name = "langchain-google-community", marker = "extra == 'google'", specifier = "~=3.0.2" },
     { name = "langchain-google-genai", marker = "extra == 'google'", specifier = "~=4.1.2" },
     { name = "langchain-google-vertexai", marker = "extra == 'google'", specifier = ">=3.2.0" },
-    { name = "langchain-graph-retriever", marker = "extra == 'graph-retriever'", specifier = "==0.8.0" },
     { name = "langchain-groq", marker = "extra == 'groq'", specifier = "~=1.1.1" },
     { name = "langchain-huggingface", marker = "(platform_machine != 'x86_64' and extra == 'langchain-huggingface') or (sys_platform != 'darwin' and extra == 'langchain-huggingface')", specifier = "~=1.2.0" },
     { name = "langchain-ibm", specifier = "~=1.1.0" },
@@ -8429,7 +8409,6 @@ requires-dist = [
     { name = "langflow-base", extras = ["apify"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["arize"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["assemblyai"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["astradb"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["astrapy"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["atlassian"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["aws"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8458,7 +8437,6 @@ requires-dist = [
     { name = "langflow-base", extras = ["gitpython"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["google"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["google-api"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["graph-retriever"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["groq"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["huggingface"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["ibm-watsonx-clients"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8624,7 +8602,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
