@@ -21,7 +21,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from langflow.lothal.context import build_messages
-from langflow.lothal.engines.parsing import extract_json_object
+from langflow.lothal.engines.parsing import extract_json_object, parse_json_object
 from langflow.lothal.llm import call_llm
 from langflow.lothal.router import LLMResponse, PhaseEngine, register_engine
 from langflow.services.database.models.lothal_project.model import ProjectPhase
@@ -80,11 +80,19 @@ def _parse_reply(raw: str) -> LLMResponse:
     other reply is a clarification turn (JSON question + suggestions, phase
     unchanged).
     """
-    if CLARITY_TOKEN in raw:
+    # Anchor the transition to the *start* of the reply. The system prompt asks
+    # for the token "on its own", leading the PRD, so a clarity turn begins with
+    # it. A bare `CLARITY_TOKEN in raw` substring test would misfire on any
+    # clarification turn whose question or a suggestion merely mentions the token,
+    # falsely transitioning out of CLARIFICATION with a half-sentence PRD.
+    if raw.strip().startswith(CLARITY_TOKEN):
         summary = raw.replace(CLARITY_TOKEN, "").strip()
-        # Defensive: if the model still wrapped the summary as JSON, surface the
-        # message rather than raw braces.
-        data = extract_json_object(summary)
+        # Defensive: if the model wrapped the *entire* summary as a JSON object
+        # (`{"message": "<the PRD>"}`), surface the message rather than raw braces.
+        # Use the strict whole-reply parse — never the greedy first-{..last-}
+        # slice — so a free-form Markdown PRD that merely contains a JSON example
+        # is not truncated to that embedded fragment.
+        data = parse_json_object(summary)
         if data is not None and isinstance(data.get("message"), str) and data["message"].strip():
             summary = data["message"].strip()
         if not summary:
