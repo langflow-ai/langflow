@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from langflow.services.database.models.api_key.crud import ApiKeyAuthResult
+
 
 AUTH_METHOD_API_KEY = "api_key"  # pragma: allowlist secret
 AUTH_METHOD_AUTO_LOGIN = "auto_login"
@@ -30,6 +32,19 @@ class AuthCredentialContext:
     api_key_id: UUID | None = None
     api_key_source: str | None = None
     external_provider: str | None = None
+
+    @classmethod
+    def from_api_key_result(cls, result: ApiKeyAuthResult) -> AuthCredentialContext:
+        """Build API-key credential context from an authenticated API-key result.
+
+        Centralizes the API-key projection so every call site stays in sync if the
+        set of API-key caveat fields ever changes.
+        """
+        return cls(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=result.api_key_id,
+            api_key_source=result.api_key_source,
+        )
 
     def to_authz_context(self) -> dict[str, Any]:
         """Return values safe to pass into authorization plugin context."""

@@ -18,7 +18,6 @@ from sqlalchemy.exc import IntegrityError
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
-    AUTH_METHOD_API_KEY,
     AUTH_METHOD_AUTO_LOGIN,
     AUTH_METHOD_EXTERNAL,
     AUTH_METHOD_JWT,
@@ -272,13 +271,7 @@ class AuthService(BaseAuthService):
             if not user_read.is_active:
                 msg = "User account is inactive"
                 raise InactiveUserError(msg)
-            set_current_auth_context(
-                AuthCredentialContext(
-                    method=AUTH_METHOD_API_KEY,
-                    api_key_id=result.api_key_id,
-                    api_key_source=result.api_key_source,
-                )
-            )
+            set_current_auth_context(AuthCredentialContext.from_api_key_result(result))
             return user_read
 
         return None
@@ -478,13 +471,7 @@ class AuthService(BaseAuthService):
             )
 
         if isinstance(api_key_result.user, User):
-            set_current_auth_context(
-                AuthCredentialContext(
-                    method=AUTH_METHOD_API_KEY,
-                    api_key_id=api_key_result.api_key_id,
-                    api_key_source=api_key_result.api_key_source,
-                )
-            )
+            set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
             return UserRead.model_validate(api_key_result.user, from_attributes=True)
 
         msg = "Invalid result type"
@@ -542,13 +529,7 @@ class AuthService(BaseAuthService):
 
             if isinstance(result, User):
                 if api_key_result is not None:
-                    set_current_auth_context(
-                        AuthCredentialContext(
-                            method=AUTH_METHOD_API_KEY,
-                            api_key_id=api_key_result.api_key_id,
-                            api_key_source=api_key_result.api_key_source,
-                        )
-                    )
+                    set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
                 return UserRead.model_validate(result, from_attributes=True)
 
         raise WebSocketException(
@@ -661,13 +642,7 @@ class AuthService(BaseAuthService):
                     logger.warning("Invalid API key provided for webhook")
                     raise HTTPException(status_code=403, detail="Invalid API key")
 
-                set_current_auth_context(
-                    AuthCredentialContext(
-                        method=AUTH_METHOD_API_KEY,
-                        api_key_id=result.api_key_id,
-                        api_key_source=result.api_key_source,
-                    )
-                )
+                set_current_auth_context(AuthCredentialContext.from_api_key_result(result))
                 authenticated_user = UserRead.model_validate(result.user, from_attributes=True)
                 logger.info("Webhook API key validated successfully")
         except HTTPException:
@@ -1029,13 +1004,7 @@ class AuthService(BaseAuthService):
 
         if isinstance(result, User):
             if api_key_result is not None:
-                set_current_auth_context(
-                    AuthCredentialContext(
-                        method=AUTH_METHOD_API_KEY,
-                        api_key_id=api_key_result.api_key_id,
-                        api_key_source=api_key_result.api_key_source,
-                    )
-                )
+                set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
             return result
 
         raise HTTPException(

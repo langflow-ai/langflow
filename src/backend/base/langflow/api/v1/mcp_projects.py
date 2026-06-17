@@ -68,9 +68,9 @@ from langflow.api.v1.schemas import (
 )
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
-    AUTH_METHOD_API_KEY,
     AUTH_METHOD_AUTO_LOGIN,
     AuthCredentialContext,
+    clear_current_auth_context,
     set_current_auth_context,
 )
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
@@ -99,6 +99,10 @@ async def verify_project_auth(
     This function provides authentication for MCP endpoints when using MCP Composer and no API key is provided,
     or checks if the API key is valid.
     """
+    # Mirror the service.py auth entrypoints: reset request-local credential metadata at entry so a
+    # later branch (e.g. the composer-token fast path) never inherits stale context from a prior call.
+    clear_current_auth_context()
+
     settings_service = get_settings_service()
 
     project = (await db.exec(select(Folder).where(Folder.id == project_id))).first()
@@ -153,13 +157,7 @@ async def verify_project_auth(
         api_key_result = await authenticate_api_key(db, api_key)
         if not api_key_result:
             raise HTTPException(status_code=401, detail="Invalid API key")
-        set_current_auth_context(
-            AuthCredentialContext(
-                method=AUTH_METHOD_API_KEY,
-                api_key_id=api_key_result.api_key_id,
-                api_key_source=api_key_result.api_key_source,
-            )
-        )
+        set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
         user = api_key_result.user
 
         # Verify user has access to the project
