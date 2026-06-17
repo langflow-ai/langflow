@@ -282,6 +282,19 @@ async def upload_user_file(
         existing_file = None
 
         if new_filename == mcp_file_ext:
+            # Honor the MCP-servers lock on this path too. The structured
+            # /api/v2/mcp/servers endpoints reject non-superuser writes when the lock
+            # is on, but this branch writes the same _mcp_servers_<uid>.json that
+            # get_server_list reads — so without the same guard a non-superuser could
+            # replace their MCP config via the file-upload path while it's locked.
+            from langflow.api.v2.mcp import is_mcp_servers_locked
+
+            if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
+                raise HTTPException(
+                    status_code=403,
+                    detail="MCP server configuration is locked. "
+                    "Contact an administrator to manage external MCP servers.",
+                )
             # Validate the uploaded MCP servers config before storing it, so this
             # path can't bypass the command allow-list enforced by the structured
             # /api/v2/mcp/servers endpoints (otherwise an attacker-supplied command
