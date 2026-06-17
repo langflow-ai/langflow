@@ -2,8 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { LangflowCounts } from "../langflow-counts";
 
 jest.mock("@/stores/darkStore", () => ({
-  useDarkStore: (selector: (s: { stars: number; discordCount: number }) => unknown) =>
-    selector({ stars: 1234, discordCount: 5678 }),
+  useDarkStore: (
+    selector: (s: { stars: number; discordCount: number }) => unknown,
+  ) => selector({ stars: 1234, discordCount: 5678 }),
 }));
 
 jest.mock("react-i18next", () => ({
@@ -30,8 +31,13 @@ jest.mock("@/utils/utils", () => ({
 }));
 
 jest.mock("@/shared/components/caseComponent", () => ({
-  Case: ({ condition, children }: { condition: boolean; children: React.ReactNode }) =>
-    condition ? <>{children}</> : null,
+  Case: ({
+    condition,
+    children,
+  }: {
+    condition: boolean;
+    children: React.ReactNode;
+  }) => (condition ? <>{children}</> : null),
 }));
 
 describe("LangflowCounts accessibility", () => {
