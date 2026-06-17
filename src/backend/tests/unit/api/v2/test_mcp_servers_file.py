@@ -197,6 +197,9 @@ async def test_mcp_servers_upload_rejects_disallowed_command(session, storage_se
     assert exc_info.value.status_code == 422
     # Nothing should have been written to storage on rejection.
     assert storage_service._store == {}
+    # And no database metadata record should have been created either, so a rejected
+    # upload can't leave a dangling row behind (partial-write regression guard).
+    assert session._db == {}
 
 
 @pytest.mark.asyncio
