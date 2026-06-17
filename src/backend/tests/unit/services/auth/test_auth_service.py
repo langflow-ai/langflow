@@ -222,6 +222,7 @@ async def test_auto_login_longterm_token_is_short_lived_with_refresh(
     # the fixture), nowhere near a year.
     claims = jwt.decode(tokens["access_token"], options={"verify_signature": False})
     lifetime = claims["exp"] - int(datetime.now(timezone.utc).timestamp())
+    assert lifetime > 0
     assert lifetime <= auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS + 5
     assert lifetime < 60 * 60 * 24  # far below a day, definitely not 365 days
 
