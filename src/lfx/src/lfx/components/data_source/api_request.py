@@ -823,7 +823,12 @@ class APIRequestComponent(Component):
                 # (and therefore this header) is fully attacker-influenced, so a
                 # value like filename="../../../../tmp/evil.sh" must not escape
                 # component_temp_dir. Path(...).name strips any directory parts.
-                extracted_filename = Path(filename_match.group(1)).name
+                # Normalize backslashes to forward slashes first so Windows-style
+                # separators (e.g. filename="..\..\tmp\evil.sh") are also stripped
+                # on POSIX, where "\\" is a valid filename character that
+                # Path(...).name would otherwise leave intact.
+                normalized_filename = filename_match.group(1).replace("\\", "/")
+                extracted_filename = Path(normalized_filename).name
                 if extracted_filename and extracted_filename not in (".", ".."):
                     filename = extracted_filename
 
