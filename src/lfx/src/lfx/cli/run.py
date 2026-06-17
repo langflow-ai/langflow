@@ -110,6 +110,15 @@ async def run(
         ),
     ),
     upgrade_flow: str | None = None,
+    human_input: bool | None = typer.Option(
+        None,
+        "--human-input/--no-human-input",
+        help=(
+            "Interactive human-in-the-loop. Default auto-enables it when the flow has a "
+            "pausing node (e.g. HumanInput) and the terminal is interactive; the run then "
+            "prompts at each pause. Use --no-human-input to disable."
+        ),
+    ),
 ) -> None:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -131,6 +140,7 @@ async def run(
         timing: Include detailed timing information in output
         session_id: Optional session ID; auto-generated if not supplied
         upgrade_flow: Component compatibility mode ('check' or 'safe')
+        human_input: Interactive human-in-the-loop (None auto-detects; True/False force)
     """
     # Determine verbosity for output formatting
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
@@ -151,6 +161,7 @@ async def run(
             global_variables=None,
             session_id=session_id,
             upgrade_flow=upgrade_flow,
+            human_input=human_input,
         )
 
         # Output based on format

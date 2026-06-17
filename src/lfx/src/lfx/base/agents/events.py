@@ -1,6 +1,6 @@
 # Add helper functions for each event type
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from time import perf_counter
 from typing import Any, Protocol
 
@@ -12,6 +12,8 @@ from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
+
+GetPendingInterrupt = Callable[[], Awaitable[dict[str, Any] | None]]
 
 
 class ExceptionWithMessageError(Exception):
@@ -26,6 +28,18 @@ class ExceptionWithMessageError(Exception):
             if self.agent_message.error or self.agent_message.text
             else f"{self.message}."
         )
+
+
+class AgentPausedError(Exception):
+    """Raised when the agent stops on a pending tool-approval interrupt (LE-1447).
+
+    Carries the ``tool_approval`` human request so the AgentComponent can suspend the
+    run through the graph pause seam instead of finalizing an empty 'complete' message.
+    """
+
+    def __init__(self, request: dict[str, Any]):
+        self.request = request
+        super().__init__("Agent paused for human approval")
 
 
 class InputDict(TypedDict):
@@ -377,6 +391,7 @@ async def process_agent_events(
     agent_message: Message,
     send_message_callback: SendMessageFunctionType,
     send_token_callback: OnTokenFunctionType | None = None,
+    get_pending_interrupt: GetPendingInterrupt | None = None,
 ) -> Message:
     """Process agent events and return the final output."""
     if isinstance(agent_message.properties, dict):
@@ -422,9 +437,17 @@ async def process_agent_events(
                         event, agent_message, send_message_callback, None, start_time, had_streaming=had_streaming
                     )
 
+        # A tool-approval interrupt ends the loop without completing: suspend, don't finalize.
+        if get_pending_interrupt is not None:
+            pending = await get_pending_interrupt()
+            if pending is not None:
+                raise AgentPausedError(pending)
+
         agent_message.properties.state = "complete"
         # Final DB update with the complete message (skip_db_update=False by default)
         agent_message = await send_message_callback(message=agent_message)
+    except AgentPausedError:
+        raise
     except Exception as e:
         raise ExceptionWithMessageError(agent_message, str(e)) from e
     return await Message.create(**agent_message.model_dump())

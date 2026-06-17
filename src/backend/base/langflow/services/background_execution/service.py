@@ -16,6 +16,7 @@ branch and runs in-process regardless.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import os
@@ -74,13 +75,37 @@ class BackgroundExecutionService(Service):
         # is running from a genuinely orphaned one.
         self._owner = f"api:{os.getpid()}:{uuid4().hex[:8]}"
         self._frame_source_factory = frame_source_factory
+        self._deadline_task: asyncio.Task | None = None
         self.set_ready()
 
     async def start(self) -> None:
         await self._executor.start()
+        self._start_deadline_watchdog()
 
     async def stop(self) -> None:
+        if self._deadline_task is not None:
+            self._deadline_task.cancel()
+            self._deadline_task = None
         await self._executor.stop()
+
+    def _start_deadline_watchdog(self) -> None:
+        """Run the input-deadline sweep on the watchdog interval (only when the budget is set).
+
+        Without this, a never-restarting process would enforce the deadline only on the
+        startup sweep. The loop is skipped entirely when ``background_input_deadline_s`` is
+        None, so default deployments spawn no extra task.
+        """
+        if self._settings.background_input_deadline_s is None or self._deadline_task is not None:
+            return
+        interval = self._settings.background_watchdog_interval_s
+
+        async def _loop() -> None:
+            while True:
+                await asyncio.sleep(interval)
+                with contextlib.suppress(Exception):
+                    await self.sweep_input_deadlines()
+
+        self._deadline_task = asyncio.create_task(_loop())
 
     async def teardown(self) -> None:
         await self.stop()
@@ -182,6 +207,7 @@ class BackgroundExecutionService(Service):
             job_timeout=self._settings.background_job_timeout,
             owner=self._owner,
             heartbeat_interval_s=self._settings.background_heartbeat_interval_s,
+            input_deadline_s=self._settings.background_input_deadline_s,
         )
 
         async def _coro() -> None:
@@ -362,6 +388,24 @@ class BackgroundExecutionService(Service):
                     request=request_dict,
                     user=user,
                 )
+        # Give up on runs that have sat suspended past their human-input deadline.
+        with contextlib.suppress(Exception):
+            await self.sweep_input_deadlines()
+
+    async def sweep_input_deadlines(self) -> list[UUID]:
+        """Enforce the input deadline (LE-1452): FAIL overdue SUSPENDED runs, close their bus.
+
+        The durable FAIL + terminal event is JobService's; this also closes any live bus
+        still held open for a same-process suspended run so a reattaching client ends
+        cleanly. A no-op (and never queries the DB) when the deadline is disabled.
+        """
+        if self._settings.background_input_deadline_s is None:
+            return []
+        failed = await get_job_service().sweep_input_deadlines()
+        for job_id in failed:
+            with contextlib.suppress(Exception):
+                await self._bus.close(str(job_id))
+        return failed
 
     @staticmethod
     async def _queued_workflow_jobs() -> list[Job]:

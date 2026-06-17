@@ -79,6 +79,15 @@ def register(app: typer.Typer) -> None:
                 "'safe' auto-applies safe upgrades; aborts on breaking or blocked components."
             ),
         ),
+        human_input: bool | None = typer.Option(
+            None,
+            "--human-input/--no-human-input",
+            help=(
+                "Interactive human-in-the-loop. Default auto-enables it when the flow has a "
+                "pausing node (e.g. HumanInput) and the terminal is interactive; the run then "
+                "prompts at each pause. Use --no-human-input to disable."
+            ),
+        ),
     ) -> None:
         """Run a flow directly (lazy-loaded)."""
         from pathlib import Path
@@ -102,6 +111,7 @@ def register(app: typer.Typer) -> None:
             timing=timing,
             session_id=session_id,
             upgrade_flow=upgrade_flow,
+            human_input=human_input,
         )
 
     @app.command(name="serve", help="Serve a flow as an API", rich_help_panel="Running")

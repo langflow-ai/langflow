@@ -11,6 +11,7 @@ from langchain.agents.middleware import (
     ModelCallLimitMiddleware,
     ToolRetryMiddleware,
 )
+from langgraph.types import Command
 
 from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
     adapt_graph_events_to_executor_shape,
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
-from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.events import AgentPausedError, ExceptionWithMessageError, process_agent_events
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
@@ -143,6 +144,11 @@ def _suppress_send_message(component: Any):
         yield
     finally:
         component.send_message = original
+
+
+_HUMAN_INPUT_REQUIRED = "human_input_required"
+_KIND_TOOL_APPROVAL = "tool_approval"
+_DECISION_LABELS = {"approve": "Approve", "edit": "Edit", "reject": "Reject", "respond": "Respond"}
 
 
 class AgentComponent(ToolCallingAgentComponent):
@@ -649,6 +655,101 @@ class AgentComponent(ToolCallingAgentComponent):
         tool_names = {getattr(tool, "name", None) for tool in (self.tools or [])}
         return {name: True for name in requested if name in tool_names}
 
+    def _map_interrupt_to_request(self, value: dict[str, Any]) -> dict[str, Any]:
+        """Translate a HumanInTheLoopMiddleware interrupt into the HITL pause request.
+
+        Reuses the same ``request_id``/``options``/``allowed_decisions`` contract as the
+        HumanInput node so the persisted card, resume route, and frontend treat an agent
+        tool-approval pause exactly like a node pause.
+        """
+        action_requests = value.get("action_requests") or []
+        review_configs = value.get("review_configs") or []
+        allowed: list[str] = []
+        for config in review_configs:
+            for decision in config.get("allowed_decisions") or []:
+                if decision not in allowed:
+                    allowed.append(decision)
+        calls = ", ".join(str(req.get("name")) for req in action_requests if req.get("name"))
+        prompt = action_requests[0].get("description") if action_requests else ""
+        return {
+            "request_id": f"{self._id}:{self._agent_thread_id()}",
+            "kind": _KIND_TOOL_APPROVAL,
+            "prompt": prompt or (f"Approve tool call: {calls}" if calls else "Approve the agent's next action?"),
+            "options": [{"action_id": d, "label": _DECISION_LABELS.get(d, d.title())} for d in allowed],
+            "allowed_decisions": allowed,
+            "action_requests": action_requests,
+        }
+
+    async def _read_pending_interrupt_value(self, agent, config: dict[str, Any]) -> dict[str, Any] | None:
+        """Return the raw interrupt value (action_requests/review_configs) from the snapshot."""
+        snapshot = await agent.aget_state(config)
+        interrupts = getattr(snapshot, "interrupts", None) or []
+        if not interrupts:
+            for task in getattr(snapshot, "tasks", None) or []:
+                interrupts = getattr(task, "interrupts", None) or []
+                if interrupts:
+                    break
+        if not interrupts:
+            return None
+        value = getattr(interrupts[0], "value", None)
+        return value if isinstance(value, dict) else None
+
+    def _pending_interrupt_getter(self, agent, config: dict[str, Any]):
+        """Closure that reports the agent's pending tool-approval request, or None.
+
+        Called after the event stream drains; the interrupt has by then been written to
+        the checkpointer, so the state snapshot carries it.
+        """
+
+        async def _get() -> dict[str, Any] | None:
+            value = await self._read_pending_interrupt_value(agent, config)
+            return self._map_interrupt_to_request(value) if value else None
+
+        return _get
+
+    def _injected_agent_decision(self, thread_id: str) -> dict[str, Any] | None:
+        """Human decision for this agent's pending approval, injected on resume."""
+        decisions = getattr(self.graph, "human_input_decisions", None)
+        if not isinstance(decisions, dict):
+            return None
+        return decisions.get(f"{self._id}:{thread_id}")
+
+    @staticmethod
+    def _to_langgraph_decision(decision: dict[str, Any], action_request: dict[str, Any]) -> dict[str, Any]:
+        """Translate one HITL action_id into the middleware's resume Decision shape."""
+        action_id = decision.get("action_id")
+        values = decision.get("values") or {}
+        if action_id == "edit":
+            return {
+                "type": "edit",
+                "edited_action": {"name": action_request.get("name"), "args": values.get("args", values)},
+            }
+        if action_id == "reject":
+            return {"type": "reject", "message": values.get("message", "")}
+        if action_id == "respond":
+            return {"type": "respond", "message": values.get("message") or values.get("response") or ""}
+        return {"type": "approve"}
+
+    def _build_resume_decisions(
+        self, decision: dict[str, Any], action_requests: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """One Decision per interrupted tool call (count must match), all from the human pick."""
+        count = max(len(action_requests), 1)
+        return [
+            self._to_langgraph_decision(decision, action_requests[i] if i < len(action_requests) else {})
+            for i in range(count)
+        ]
+
+    def _suspend_for_tool_approval(self, request: dict[str, Any], agent_message: Message) -> Message:
+        """Request a graph pause carrying the tool-approval request, mirroring HumanInput.
+
+        The actual suspend happens at the next ``check_and_handle_pause`` (start of the
+        following ``build_vertices``); returning the partial message lets this vertex finish.
+        """
+        self.graph.request_pause(reason=_HUMAN_INPUT_REQUIRED, data=request)
+        self.status = "Awaiting human approval"
+        return agent_message
+
     async def run_agent(self, agent) -> Message:
         """Run the LangGraph `CompiledStateGraph` and return the final agent Message.
 
@@ -692,10 +793,23 @@ class AgentComponent(ToolCallingAgentComponent):
         # The durable checkpointer keys on the per-run thread_id; it must be in the
         # astream_events config (not just create_agent) for both initial run and resume.
         thread_id = self._agent_thread_id()
-        if thread_id and self._gated_interrupt_on():
+        get_pending_interrupt = None
+        stream_input: Any = input_dict
+        # A checkpointer is only present when the agent was built with interrupts enabled
+        # (the structured-output path builds without one); never probe its state otherwise.
+        interrupts_enabled = getattr(agent, "checkpointer", None) is not None
+        if interrupts_enabled and thread_id and self._gated_interrupt_on():
             agent_config["configurable"] = {"thread_id": thread_id}
+            get_pending_interrupt = self._pending_interrupt_getter(agent, agent_config)
+            decision = self._injected_agent_decision(thread_id)
+            if decision is not None:
+                # Resume the interrupted thread with the human pick rather than re-running
+                # from the original input; the checkpointer reloads the paused state.
+                value = await self._read_pending_interrupt_value(agent, agent_config)
+                action_requests = (value or {}).get("action_requests") or []
+                stream_input = Command(resume={"decisions": self._build_resume_decisions(decision, action_requests)})
         stream = adapt_graph_events_to_executor_shape(
-            agent.astream_events(input_dict, config=agent_config, version="v2")
+            agent.astream_events(stream_input, config=agent_config, version="v2")
         )
         try:
             result = await process_agent_events(
@@ -703,7 +817,10 @@ class AgentComponent(ToolCallingAgentComponent):
                 agent_message,
                 cast("SendMessageFunctionType", self.send_message),
                 on_token_callback,
+                get_pending_interrupt=get_pending_interrupt,
             )
+        except AgentPausedError as e:
+            return self._suspend_for_tool_approval(e.request, agent_message)
         except ExceptionWithMessageError as e:
             # Drop the half-stored partial message from the DB (only if it was
             # actually persisted) and tell the frontend to remove the stale bubble.
@@ -808,7 +925,8 @@ class AgentComponent(ToolCallingAgentComponent):
                 input_value=self.input_value,
                 system_prompt=augmented_prompt,
             )
-            agent_runnable = self.create_agent_runnable()
+            # Structured output cannot suspend mid-parse: disable tool-approval interrupts.
+            agent_runnable = self.create_agent_runnable(allow_interrupts=False)
             with _suppress_send_message(self):
                 result = await self.run_agent(agent_runnable)
             return _extract_text_content(result)

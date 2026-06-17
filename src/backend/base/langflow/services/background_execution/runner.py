@@ -19,6 +19,7 @@ import asyncio
 import contextlib
 import json
 from collections.abc import AsyncIterator, Callable
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -60,6 +61,7 @@ class JobRunner:
         heartbeat_interval_s: float = 15.0,
         resume_hook: ResumeHook | None = None,
         checkpoint_store: Any = None,
+        input_deadline_s: float | None = None,
     ) -> None:
         self._jobs = job_service
         self._bus = live_bus
@@ -72,6 +74,9 @@ class JobRunner:
         # surfaces as asyncio.TimeoutError, which execute_with_status maps to
         # TIMED_OUT. None means unbounded (the prior behaviour).
         self._job_timeout = job_timeout
+        # Human-latency budget for a SUSPENDED run, independent of _job_timeout. When set,
+        # the suspend path stamps a deadline the sweep enforces; None disables it (LE-1452).
+        self._input_deadline_s = input_deadline_s
         # Liveness: while a run is in flight, a background task refreshes the
         # job-row heartbeat so a reconciler can tell this live run from a
         # genuinely orphaned one. ``owner`` is a process-unique token; when None
@@ -83,6 +88,8 @@ class JobRunner:
         """Execute one background job to a terminal state."""
 
         async def _wrapped() -> None:
+            # Per-pass clock: paused time never accrues here (resume re-enqueues a fresh
+            # run). The suspend-window budget is the separate input deadline (LE-1452).
             if self._job_timeout is not None:
                 await asyncio.wait_for(
                     self._drive(job_id=job_id, source_kwargs=source_kwargs),
@@ -129,8 +136,14 @@ class JobRunner:
         """
         await self._jobs.append_event(job_id, HUMAN_INPUT_REQUIRED_EVENT, exc.payload)
         await self._jobs.update_job_status(job_id, JobStatus.SUSPENDED)
+        metadata: dict[str, Any] = {}
         if exc.request_id is not None:
-            await self._jobs.update_job_metadata(job_id, {"pending_request_id": exc.request_id})
+            metadata["pending_request_id"] = exc.request_id
+        if self._input_deadline_s is not None:
+            deadline = datetime.now(timezone.utc) + timedelta(seconds=self._input_deadline_s)
+            metadata["input_deadline_at"] = deadline.isoformat()
+        if metadata:
+            await self._jobs.update_job_metadata(job_id, metadata)
 
     async def _finalize_terminal_event(self, job_id: UUID) -> None:
         """Backfill the error blob + terminal event for TIMED_OUT / CANCELLED.

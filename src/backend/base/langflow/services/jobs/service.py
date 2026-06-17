@@ -664,6 +664,44 @@ class JobService(Service):
             await self.append_event(job_id, "run_failed", dict(error_payload))
         return reconciled
 
+    async def sweep_input_deadlines(self) -> list[UUID]:
+        """FAIL SUSPENDED runs whose human-input deadline has passed (LE-1452).
+
+        A separate pass from ``sweep_orphans`` (which only touches IN_PROGRESS): selects
+        SUSPENDED rows carrying an ``input_deadline_at`` in ``job_metadata`` that is now
+        in the past and writes a terminal FAILED status with an ``input_timed_out`` error
+        plus a durable terminal event, so a reattaching client sees a clean end. Rows
+        without a stamped deadline (the setting was off at suspend) are left untouched.
+
+        Returns the ids transitioned to FAILED.
+        """
+        error_payload = {"type": "input_timed_out"}
+        reconciled: list[UUID] = []
+        async with session_scope() as session:
+            result = await session.exec(select(Job).where(Job.status == JobStatus.SUSPENDED))
+            now = datetime.now(timezone.utc)
+            for job in result.all():
+                deadline = (job.job_metadata or {}).get("input_deadline_at")
+                if not deadline or self._parse_deadline(deadline) is None or self._parse_deadline(deadline) > now:
+                    continue
+                job.status = JobStatus.FAILED
+                job.error = dict(error_payload)
+                job.finished_timestamp = now
+                session.add(job)
+                reconciled.append(job.job_id)
+            await session.flush()
+        for job_id in reconciled:
+            await self.append_event(job_id, "input_timed_out", dict(error_payload))
+        return reconciled
+
+    @staticmethod
+    def _parse_deadline(raw: str) -> datetime | None:
+        try:
+            parsed = datetime.fromisoformat(raw)
+        except (ValueError, TypeError):
+            return None
+        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.
 
