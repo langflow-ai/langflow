@@ -1,3 +1,5 @@
+import re
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import (
     DataInput,
@@ -7,6 +9,18 @@ from lfx.io import (
     SecretStrInput,
 )
 from lfx.schema.data import Data
+
+_CAMEL_TO_SNAKE_RE = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+def _to_snake_case_kwargs(params: dict) -> dict:
+    """Convert camelCase option keys to snake_case keyword arguments.
+
+    The firecrawl-py v1 convention uses camelCase, while the v2 SDK expects
+    snake_case keyword arguments. Keys that are already snake_case are passed
+    through unchanged.
+    """
+    return {_CAMEL_TO_SNAKE_RE.sub("_", key).lower(): value for key, value in params.items()}
 
 
 class FirecrawlScrapeApi(Component):
@@ -54,20 +68,30 @@ class FirecrawlScrapeApi(Component):
 
     def scrape(self) -> Data:
         try:
-            from firecrawl import FirecrawlApp
+            from firecrawl import Firecrawl
         except ImportError as e:
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
 
-        params = self.scrapeOptions.__dict__.get("data", {}) if self.scrapeOptions else {}
-        extractor_options_dict = self.extractorOptions.__dict__.get("data", {}) if self.extractorOptions else {}
-        if extractor_options_dict:
-            params["extract"] = extractor_options_dict
+        params = dict(self.scrapeOptions.__dict__.get("data", {})) if self.scrapeOptions else {}
 
         # Set default values for parameters
         params.setdefault("formats", ["markdown"])  # Default output format
         params.setdefault("onlyMainContent", True)  # Default to only main content
+        if self.timeout:
+            params.setdefault("timeout", self.timeout)
 
-        app = FirecrawlApp(api_key=self.api_key)
-        results = app.scrape_url(self.url, params=params)
-        return Data(data=results)
+        kwargs = _to_snake_case_kwargs(params)
+
+        # In firecrawl-py v2, structured extraction is requested via a "json" format entry
+        # on the scrape call rather than a separate extractor option.
+        extractor_options_dict = self.extractorOptions.__dict__.get("data", {}) if self.extractorOptions else {}
+        if extractor_options_dict:
+            formats = list(kwargs.get("formats", []))
+            formats.append({"type": "json", **_to_snake_case_kwargs(extractor_options_dict)})
+            kwargs["formats"] = formats
+
+        app = Firecrawl(api_key=self.api_key)
+        document = app.scrape(self.url, **kwargs)
+        # v2 returns a typed Document object; serialize to a dict for downstream consumers.
+        return Data(data=document.model_dump())
