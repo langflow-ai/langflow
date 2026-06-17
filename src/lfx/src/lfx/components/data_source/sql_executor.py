@@ -33,7 +33,11 @@ class SQLComponent(ComponentWithCache):
                 cached_db = self._shared_component_cache.get(self.database_url)
                 if not isinstance(cached_db, CacheMiss):
                     self.db = cached_db
-                    return
+                    try:
+                        self.db.run("SELECT 1")
+                        return 
+                    except Exception as e:
+                        self.log(f"Cached database connection is stale. Reconnecting: {e}")
                 self.log("Connecting to database")
             try:
                 self.db = SQLDatabase.from_uri(self.database_url)
