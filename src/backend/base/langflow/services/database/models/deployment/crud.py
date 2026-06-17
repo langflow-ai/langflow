@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.log.logger import logger
-from sqlalchemy import column, values
+from sqlalchemy import Select, column, values
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import col, delete, func, or_, select, update
+from sqlmodel import col, delete, func, select, update
 
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment.orm_guards import ensure_deployment_immutable_fields
@@ -24,6 +24,11 @@ if TYPE_CHECKING:
     from lfx.services.adapters.deployment.schema import DeploymentType
     from sqlalchemy.sql.selectable import CTE
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+# Preserves the concrete statement type (scalar count select vs. multi-column
+# page select) through the authz scoping helper below.
+StmtT = TypeVar("StmtT", bound=Select[Any])
 
 
 @dataclass(frozen=True, slots=True)
@@ -317,7 +322,7 @@ async def update_deployment_metadata_batch(
     (await db.exec(stmt)).all()
 
 
-def _scope_to_owner_or_allowed(stmt: Any, *, user_id: UUID, allowed_ids: list[UUID] | None) -> Any:
+def _scope_to_owner_or_allowed(stmt: StmtT, *, user_id: UUID, allowed_ids: list[UUID] | None) -> StmtT:
     """Scope a deployment query to owner rows, optionally widened by ``allowed_ids``.
 
     ``allowed_ids is None`` (OSS default) → owner-only (``user_id == user_id``),
@@ -326,10 +331,24 @@ def _scope_to_owner_or_allowed(stmt: Any, *, user_id: UUID, allowed_ids: list[UU
     the caller may read). Centralized so the page query and its count apply the
     identical predicate — a drift would make pagination totals disagree with the
     rows returned.
+
+    The list branch delegates to
+    :func:`langflow.services.authorization.restrict_to_owned_or_visible` so the
+    ``(owner ⊕ visible-ids)`` union lives in one place; the import is lazy to
+    match the rest of this module's authorization access and keep import order
+    cycle-free. The ``None`` branch stays here so the OSS default never emits a
+    degenerate ``IN ()`` term.
     """
     if allowed_ids is None:
         return stmt.where(Deployment.user_id == user_id)
-    return stmt.where(or_(Deployment.user_id == user_id, col(Deployment.id).in_(allowed_ids)))
+    from langflow.services.authorization.listing import restrict_to_owned_or_visible
+
+    return restrict_to_owned_or_visible(
+        stmt,
+        id_column=Deployment.id,
+        owner_clause=Deployment.user_id == user_id,
+        visible_ids=allowed_ids,
+    )
 
 
 async def list_deployments_page(

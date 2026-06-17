@@ -150,10 +150,19 @@ async def read_flows(
         if not folder_id:
             folder_id = default_folder_id
 
+        # Rows the caller owns outright. Under AUTO_LOGIN the legacy owner-scoped
+        # query also surfaces null-owner flows; keep that in the fallback path
+        # (``fallback_clause``). The SQL prefilter union, however, must NOT
+        # blanket-include null-owner rows: the in-memory fallback routes them
+        # through ``batch_enforce`` (``filter_visible_resources``'s owner_extractor
+        # returns None, which never equals a real user id), so the prefilter keeps
+        # them out of the owned half and a null-owner flow is visible only when the
+        # plugin lists its id. AUTHZ_ENABLED and AUTO_LOGIN are independent flags,
+        # so both can be set — this keeps the two paths consistent regardless.
+        owned_clause = Flow.user_id == current_user.id
+        fallback_clause = owned_clause
         if auth_settings.AUTO_LOGIN:
-            owner_clause = (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa: E711
-        else:
-            owner_clause = Flow.user_id == current_user.id
+            fallback_clause = (Flow.user_id == None) | owned_clause  # noqa: E711
 
         # DB-layer authz prefilter: a registered authorization plugin can return
         # the concrete set of flow ids the caller may read, letting us widen the
@@ -163,10 +172,10 @@ async def read_flows(
         visible_flow_ids = await visible_id_prefilter(current_user, resource_type="flow", act=FlowAction.READ)
         if visible_flow_ids is not None:
             stmt = restrict_to_owned_or_visible(
-                select(Flow), id_column=Flow.id, owner_clause=owner_clause, visible_ids=visible_flow_ids
+                select(Flow), id_column=Flow.id, owner_clause=owned_clause, visible_ids=visible_flow_ids
             )
         else:
-            stmt = select(Flow).where(owner_clause)
+            stmt = select(Flow).where(fallback_clause)
 
         if remove_example_flows:
             stmt = stmt.where(Flow.folder_id != starter_folder_id)

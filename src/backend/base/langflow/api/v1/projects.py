@@ -215,7 +215,16 @@ async def read_projects(
     current_user: CurrentActiveUser,
 ):
     try:
-        owner_clause = or_(Folder.user_id == current_user.id, Folder.user_id == None)  # noqa: E711
+        # Rows the caller owns outright. The legacy owner-scoped fallback also
+        # surfaces null-owner projects (e.g. the starter project), but those must
+        # be policy-checked rather than blanket-included: ``filter_visible_resources``
+        # below treats a null owner as un-owned (its ``owner_extractor`` returns
+        # None, which never equals a real user id) and routes them through
+        # ``batch_enforce``. So the SQL prefilter union uses the owned-only clause
+        # — a null-owner project is visible only when the plugin lists its id —
+        # keeping both paths' null semantics identical (the name filter below is
+        # then a convenience, not the thing preventing a null-owner leak).
+        owned_clause = Folder.user_id == current_user.id
         # DB-layer authz prefilter: when a plugin returns the concrete set of
         # project ids the caller may read, widen the owner-scoped query to
         # (owned ⊕ visible) in SQL and skip the per-row in-memory filter below.
@@ -223,10 +232,10 @@ async def read_projects(
         visible_project_ids = await visible_id_prefilter(current_user, resource_type="project", act=ProjectAction.READ)
         if visible_project_ids is not None:
             stmt = restrict_to_owned_or_visible(
-                select(Folder), id_column=Folder.id, owner_clause=owner_clause, visible_ids=visible_project_ids
+                select(Folder), id_column=Folder.id, owner_clause=owned_clause, visible_ids=visible_project_ids
             )
         else:
-            stmt = select(Folder).where(owner_clause)
+            stmt = select(Folder).where(or_(owned_clause, Folder.user_id == None))  # noqa: E711
         projects = (await session.exec(stmt)).all()
         projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
         # When no DB prefilter is available (OSS pass-through), drop projects the

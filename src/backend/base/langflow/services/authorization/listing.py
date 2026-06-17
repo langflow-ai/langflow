@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from sqlalchemy import Select
 from sqlmodel import col, or_
 
 from langflow.services.authorization.actions import FlowAction
@@ -16,12 +17,16 @@ if TYPE_CHECKING:
 
     from sqlalchemy.orm.attributes import InstrumentedAttribute
     from sqlalchemy.sql.elements import ColumnElement
-    from sqlmodel.sql.expression import SelectOfScalar
 
     from langflow.services.database.models.user.model import User, UserRead
 
 
 T = TypeVar("T")
+# Bound to SQLAlchemy's ``Select`` so the helper accepts both a scalar
+# ``SelectOfScalar`` (e.g. ``select(Folder)``) and a multi-column ``Select``
+# (e.g. the deployment page query ``select(Deployment, func.coalesce(...))``),
+# preserving the concrete statement type through ``.where()`` (returns ``Self``).
+StatementT = TypeVar("StatementT", bound=Select[Any])
 
 
 def _default_resource_id_getter(item: Any) -> UUID:
@@ -135,18 +140,29 @@ async def visible_id_prefilter(
 
 
 def restrict_to_owned_or_visible(
-    stmt: SelectOfScalar[T],
+    stmt: StatementT,
     *,
     id_column: InstrumentedAttribute,
     owner_clause: ColumnElement[bool],
     visible_ids: Sequence[UUID],
-) -> SelectOfScalar[T]:
+) -> StatementT:
     """Constrain ``stmt`` to the prefilter union: owner rows ⊕ plugin-visible ids.
 
     A row is kept when it satisfies ``owner_clause`` (the caller's own rows,
     always visible via the owner-override invariant — so an empty ``visible_ids``
     still returns every owned row) OR its id is in ``visible_ids`` (rows a
     registered authorization plugin reports the caller may read).
+
+    ``stmt`` may be a scalar ``select(Model)`` or a multi-column statement (e.g.
+    the deployment page query ``select(Deployment, func.coalesce(...))``); the
+    concrete statement type is preserved on return so callers keep their row
+    shape. ``owner_clause`` must describe only rows the caller owns outright —
+    do NOT fold a ``user_id IS NULL`` term into it, or null-owner rows would be
+    blanket-included here while the in-memory fallback policy-checks them via
+    :func:`filter_visible_resources` (its ``owner_extractor`` returns ``None``,
+    which never equals a real user id, so those rows go through ``batch_enforce``).
+    Keeping null-owner rows out of ``owner_clause`` makes a null-owner row
+    visible only when the plugin lists its id, so both paths enforce alike.
 
     Apply this BEFORE pagination so the page total counts only rows in the
     union; an in-memory post-filter would leave the total overcounting rows it
