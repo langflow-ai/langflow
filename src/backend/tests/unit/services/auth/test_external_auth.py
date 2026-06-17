@@ -622,3 +622,31 @@ def test_no_mapping_still_interprets_raw_claim_via_aliases(tmp_path):
     assert context is not None
     assert context.level == "admin"
     assert external_access_allows("delete", context)
+
+
+def test_configured_but_all_invalid_mapping_does_not_elevate_via_aliases(tmp_path):
+    """A configured-but-all-invalid mapping must still suppress alias fallthrough.
+
+    If an operator configures EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING but every entry
+    is invalid/typo'd, the parsed dict is empty. Gating the alias fallthrough on
+    the parsed dict (``not mapping``) would treat this as "no mapping" and let a
+    raw "admin" claim self-elevate through the built-in alias table, re-opening
+    the hole F12 closes. The gate is on the RAW setting being configured, so an
+    unmapped claim must fall to the default (viewer floor) instead.
+    """
+    settings = _auth_settings(
+        tmp_path,
+        EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=True,
+        EXTERNAL_AUTH_ACCESS_CLAIM="role",
+        # Every value is an unrecognized level -> _access_claim_mapping returns {}.
+        EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING='{"can_view":"bogus","can_edit":"typo"}',
+    )
+    identity = identity_from_claims({"sub": "subject-1", "role": "admin"}, settings)
+
+    context = access_context_from_identity(identity, settings)
+
+    assert context is not None
+    assert context.level == "viewer"  # default/floor, NOT admin
+    assert external_access_allows("read", context)
+    assert not external_access_allows("write", context)
+    assert not external_access_allows("delete", context)

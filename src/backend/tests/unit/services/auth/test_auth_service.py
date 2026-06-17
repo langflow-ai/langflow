@@ -984,3 +984,159 @@ async def test_external_token_only_authenticates_without_native_token(
         clear_current_auth_context()
 
     assert result.id == user.id
+
+
+# =============================================================================
+# P1: regular HTTP + /session external-credential shadowing
+# get_current_user_from_access_token must fall back to a distinct external token
+# when the native token is stale/invalid, and accept an external-only credential.
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_access_token_path_falls_back_to_external_on_invalid_native(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """A stale/invalid native token plus a valid external credential recovers (P1)."""
+    from langflow.services.auth.external import identity_from_claims
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+
+    identity = identity_from_claims(
+        {"sub": "ext-p1-1", "preferred_username": "dave"},
+        auth_settings,
+    )
+    user = await auth_service._materialize_external_user(identity, async_session)
+    await async_session.flush()
+
+    external_token = _external_jwt(auth_service, {"sub": "ext-p1-1", "preferred_username": "dave"})
+
+    try:
+        result = await auth_service.get_current_user_from_access_token(
+            "not-a-valid-jwt",  # native decode fails
+            async_session,
+            external_token=external_token,
+        )
+    finally:
+        clear_current_auth_context()
+
+    assert result.id == user.id
+
+
+@pytest.mark.anyio
+async def test_access_token_path_external_only_authenticates(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """No native token but a valid external credential authenticates via /session path (P1)."""
+    from langflow.services.auth.external import identity_from_claims
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+
+    identity = identity_from_claims(
+        {"sub": "ext-p1-2", "preferred_username": "erin"},
+        auth_settings,
+    )
+    user = await auth_service._materialize_external_user(identity, async_session)
+    await async_session.flush()
+
+    external_token = _external_jwt(auth_service, {"sub": "ext-p1-2", "preferred_username": "erin"})
+
+    try:
+        result = await auth_service.get_current_user_from_access_token(
+            None,
+            async_session,
+            external_token=external_token,
+        )
+    finally:
+        clear_current_auth_context()
+
+    assert result.id == user.id
+
+
+@pytest.mark.anyio
+async def test_access_token_path_no_external_keeps_native_error(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """With external_token=None, an invalid native token still raises (no behavior change)."""
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+
+    with pytest.raises(InvalidTokenError):
+        await auth_service.get_current_user_from_access_token(
+            "not-a-valid-jwt",
+            AsyncMock(),
+            external_token=None,
+        )
+
+
+@pytest.mark.anyio
+async def test_access_token_path_missing_native_token_still_raises(
+    auth_service: AuthService,
+):
+    """A None native token with no external credential still raises MissingCredentialsError."""
+    with pytest.raises(MissingCredentialsError):
+        await auth_service.get_current_user_from_access_token(None, AsyncMock())
+
+
+# =============================================================================
+# P2: the external-access ceiling ContextVar is cleared at every auth entrypoint.
+# A stale ceiling left over from a prior same-task external auth must not leak
+# into a subsequent non-external API-key auth path.
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_api_key_entrypoint_clears_stale_external_access_ceiling(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """_api_key_security_impl must clear a stale external-access ceiling ContextVar."""
+    from langflow.services.auth.external import (
+        ExternalAccessContext,
+        get_current_external_access_context,
+        set_current_external_access_context,
+    )
+
+    auth_settings.AUTO_LOGIN = False
+    user = _dummy_user(uuid4())
+
+    # Simulate a stale ceiling left in this task by a prior external auth.
+    set_current_external_access_context(
+        ExternalAccessContext(provider="external", subject="stale-subject", level="viewer")
+    )
+    assert get_current_external_access_context() is not None
+
+    try:
+        with patch(
+            "langflow.services.auth.service.authenticate_api_key",
+            new=AsyncMock(
+                return_value=ApiKeyAuthResult(
+                    user=user,
+                    api_key_source="db",  # pragma: allowlist secret
+                    api_key_id=uuid4(),
+                )
+            ),
+        ):
+            result = await auth_service._api_key_security_impl(
+                query_param="sk-test-key",  # pragma: allowlist secret
+                header_param=None,
+                db=AsyncMock(),
+                settings_service=auth_service.settings,
+            )
+
+        # The stale ceiling must have been cleared by the entrypoint.
+        assert get_current_external_access_context() is None
+    finally:
+        clear_current_auth_context()
+        set_current_external_access_context(None)
+
+    assert result.id == user.id

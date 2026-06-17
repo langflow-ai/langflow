@@ -536,3 +536,102 @@ async def test_authenticate_api_key_ignores_profile_for_other_provider(async_ses
     result = await authenticate_api_key(async_session, plaintext)
     assert result is not None
     assert result.user.id == user.id
+
+
+# =============================================================================
+# LOW: a DENIED API-key auth must not mutate usage counters (total_uses/last_used_at)
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_blocked_external_user_key_does_not_increment_usage(async_session, mock_settings):
+    """A ceiling-blocked external user's key must NOT bump total_uses / last_used_at (fast hash path)."""
+    from sqlmodel import select
+
+    mock_settings.auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
+    mock_settings.auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS = True
+
+    _user, plaintext = await _seed_external_user_with_key(async_session)
+
+    # Denied auth.
+    assert await authenticate_api_key(async_session, plaintext) is None
+
+    row = (await async_session.exec(select(ApiKey).where(ApiKey.api_key_hash == hash_api_key(plaintext)))).first()
+    assert row is not None
+    assert row.total_uses == 0
+    assert row.last_used_at is None
+
+
+@pytest.mark.anyio
+async def test_blocked_external_user_legacy_key_does_not_increment_usage(async_session, mock_settings, monkeypatch):
+    """A ceiling-blocked external user's legacy (hashless) key must NOT bump usage / backfill hash."""
+    from langflow.services.database.models.auth import SSOUserProfile
+    from sqlmodel import select
+
+    mock_settings.auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
+    mock_settings.auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS = True
+
+    user = _make_user(username=f"ext-{uuid4().hex[:8]}")
+    async_session.add(user)
+    await async_session.flush()
+    async_session.add(
+        SSOUserProfile(
+            user_id=user.id,
+            sso_provider="external",
+            sso_user_id=f"subject-{uuid4().hex[:8]}",
+        )
+    )
+
+    plaintext = "sk-legacy-blocked"  # pragma: allowlist secret
+    legacy = ApiKey(
+        api_key=plaintext,
+        api_key_hash=None,
+        name="legacy-blocked",
+        user_id=user.id,
+        created_at=datetime.now(timezone.utc),
+    )
+    async_session.add(legacy)
+    await async_session.flush()
+
+    monkeypatch.setattr(
+        "langflow.services.database.models.api_key.crud.auth_utils.decrypt_api_key",
+        lambda val, **_kwargs: val,
+    )
+
+    assert await authenticate_api_key(async_session, plaintext) is None
+
+    row = (await async_session.exec(select(ApiKey).where(ApiKey.id == legacy.id))).first()
+    assert row is not None
+    assert row.total_uses == 0
+    assert row.last_used_at is None
+    # The hash backfill is a success-path side effect and must not run on a denial.
+    assert row.api_key_hash is None
+
+
+@pytest.mark.anyio
+async def test_allowed_user_key_still_increments_usage(async_session, mock_settings):  # noqa: ARG001
+    """Sanity: a non-blocked user's key still records usage (success-path unchanged)."""
+    from sqlmodel import select
+
+    user = _make_user()
+    async_session.add(user)
+    await async_session.flush()
+    plaintext = "sk-usage-tracked"  # pragma: allowlist secret
+    async_session.add(
+        ApiKey(
+            api_key="encrypted-tracked",  # pragma: allowlist secret
+            api_key_hash=hash_api_key(plaintext),
+            name="tracked",
+            user_id=user.id,
+            created_at=datetime.now(timezone.utc),
+        )
+    )
+    await async_session.flush()
+
+    result = await authenticate_api_key(async_session, plaintext)
+    assert result is not None
+
+    row = (await async_session.exec(select(ApiKey).where(ApiKey.api_key_hash == hash_api_key(plaintext)))).first()
+    assert row is not None
+    assert row.total_uses == 1
+    assert row.last_used_at is not None

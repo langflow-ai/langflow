@@ -160,8 +160,11 @@ _WINDOWS_FORBIDDEN_CHARS = frozenset('<>"|?*')
 #   * literals — exact basename match (e.g. `.env`, `.netrc`)
 #   * prefixes — basename startswith (e.g. `id_rsa`, `id_rsa.pub`, `id_ed25519`)
 #   * suffixes — basename endswith (e.g. `cert.pem`, `private.key`)
-#   * fragments — any DIRECTORY component equals the fragment (e.g. `.ssh/`,
-#     `.aws/config`); the basename itself is not matched against fragments.
+#   * fragments — any path component equals the fragment, including the
+#     basename (e.g. `.ssh/`, `.aws/config`, or a bare `.ssh` request). Matching
+#     the basename too prevents requesting a protected directory directly (which
+#     would leak its existence) and stops a `**/*` glob from returning the
+#     protected directory entry itself even when its children are filtered.
 _DENY_BASENAME_LITERALS = frozenset({".env", ".netrc", ".pgpass", ".htpasswd", "authorized_keys"})
 _DENY_BASENAME_PREFIXES = ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "credentials")
 _DENY_BASENAME_SUFFIXES = (".pem", ".key", ".pfx", ".p12")
@@ -174,6 +177,8 @@ def _check_deny_list(path: str) -> str | None:
         return None
     *directories, basename = parts
     folded = basename.casefold()
+    if folded in _DENY_PATH_FRAGMENTS:
+        return f"Access to {basename!r} is denied: name matches a protected directory"
     if (
         folded in _DENY_BASENAME_LITERALS
         or folded.startswith(_DENY_BASENAME_PREFIXES)

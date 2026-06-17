@@ -894,6 +894,19 @@ async def build_public_tmp(
     except CustomComponentValidationError as exc:
         await logger.awarning(f"Public flow validation failed: {exc}")
         raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc
+    except JobQueueBackendUnavailableError as exc:
+        # The public marker could not be persisted to the shared (Redis) backend.
+        # Returning the job_id anyway would hand back an un-shareable id: on a
+        # multi-worker deployment every other worker's public events/cancel
+        # endpoints would 404 it. Cancel the just-started build (best-effort) and
+        # surface a clean 503 instead of a 500 / an unusable job_id.
+        try:
+            await queue_service.cancel_job(job_id)
+        except Exception as cancel_exc:  # noqa: BLE001
+            await logger.awarning(
+                f"Failed to cancel public job {job_id} after marker persistence failed: {cancel_exc!r}"
+            )
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

@@ -2482,6 +2482,126 @@ async def test_redis_cleanup_removes_public_job_key():
         await fake_client.aclose()
 
 
+@pytest.mark.asyncio
+async def test_register_public_job_raises_backend_unavailable_when_marker_write_fails() -> None:
+    """register_public_job must surface (not swallow) a failed Redis marker write.
+
+    Swallowing the failure would let build_public_tmp return a job_id that only
+    this worker recognizes — on a multi-worker deployment the public events/cancel
+    endpoints would 404 it on every other worker. With a Redis client configured,
+    the failure must raise JobQueueBackendUnavailableError.
+    """
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.register_public_job(str(uuid.uuid4()))
+
+
+@pytest.mark.asyncio
+async def test_register_public_job_is_noop_success_for_in_memory_backend() -> None:
+    """The in-memory base class stays a pure no-op success (no shared marker to persist).
+
+    Single-worker deployments have no Redis client; there is no shared marker, so
+    register_public_job must not raise and must record the job locally.
+    """
+    service = JobQueueService()
+    job_id = str(uuid.uuid4())
+    await service.register_public_job(job_id)  # must not raise
+    assert service.is_public_job(job_id) is True
+
+
+@pytest.mark.asyncio
+async def test_build_public_tmp_returns_503_when_public_marker_persist_fails(monkeypatch) -> None:
+    """build_public_tmp returns 503 (not an un-shareable job_id) when the marker write fails.
+
+    The build task is started before the public marker is persisted. If the shared
+    backend write fails, the handler must cancel the just-started build and surface
+    a clean 503 instead of returning a job_id that other workers cannot resolve.
+    """
+    from fastapi import HTTPException
+    from langflow.api.v1 import chat as chat_module
+
+    service, fake_client = await _make_service(cancel_channel_enabled=False)
+    service._POST_CANCEL_CLEANUP_TIMEOUT_S = 0.5
+    try:
+        flow_id = uuid.uuid4()
+        new_flow_id = uuid.uuid4()
+        job_id = str(uuid.uuid4())
+        service.create_queue(job_id)
+
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        async def _build() -> None:
+            started.set()
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        class _Owner:
+            id = uuid.uuid4()
+
+        async def _fake_verify_public_flow_and_get_user(**_kwargs):
+            return _Owner(), new_flow_id
+
+        async def _fake_start_flow_build(**_kwargs):
+            service.start_job(job_id, _build())
+            await asyncio.wait_for(started.wait(), timeout=5)
+            return job_id
+
+        class _FakeFlow:
+            data = None
+
+        class _FakeSession:
+            async def get(self, *_args, **_kwargs):
+                return _FakeFlow()
+
+        @contextlib.asynccontextmanager
+        async def _fake_session_scope():
+            yield _FakeSession()
+
+        class _FakeSettingsService:
+            class auth_settings:  # noqa: N801
+                AUTO_LOGIN = True
+
+        monkeypatch.setattr(chat_module, "verify_public_flow_and_get_user", _fake_verify_public_flow_and_get_user)
+        monkeypatch.setattr(chat_module, "start_flow_build", _fake_start_flow_build)
+        monkeypatch.setattr(chat_module, "session_scope", _fake_session_scope)
+        monkeypatch.setattr(chat_module, "get_settings_service", lambda: _FakeSettingsService())
+
+        # Redis marker write fails: register_public_job raises JobQueueBackendUnavailableError.
+        service._client = _PingFailRedis()
+
+        class _FakeRequest:
+            cookies: dict[str, str] = {"client_id": "test-client"}
+
+        with pytest.raises(HTTPException) as exc_info:
+            await chat_module.build_public_tmp(
+                background_tasks=None,
+                flow_id=flow_id,
+                inputs=None,
+                files=None,
+                stop_component_id=None,
+                start_component_id=None,
+                log_builds=False,
+                flow_name=None,
+                request=_FakeRequest(),
+                queue_service=service,
+                authenticated_user=None,
+                event_delivery=EventDeliveryType.POLLING,
+            )
+        assert exc_info.value.status_code == 503
+        # The just-started build must have been cancelled, not left running unreachable.
+        await asyncio.wait_for(cancelled.wait(), timeout=5)
+    finally:
+        await _stop_service(service)
+        await fake_client.aclose()
+
+
 # ---------------------------------------------------------------------------
 # Startup connectivity probe + runtime backstop (LE-1396)
 # ---------------------------------------------------------------------------

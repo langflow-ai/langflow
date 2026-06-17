@@ -1776,6 +1776,16 @@ class RedisJobQueueService(JobQueueService):
         before the marker exists and incorrectly 404 a legitimate public job. Awaiting
         the write here guarantees the marker is visible to every worker by the time
         build_public_tmp's response (containing job_id) reaches the client.
+
+        Raises:
+            JobQueueBackendUnavailableError: if a Redis client is configured but the
+                marker write fails. Surfacing (instead of swallowing) prevents
+                build_public_tmp from returning a job_id that only this worker
+                recognizes — on a multi-worker deployment that would let the public
+                events/cancel endpoints 404 on every other worker. The caller cleans
+                up the started job and returns a 503. With no Redis client configured
+                (single-worker, in-memory) there is no shared marker to persist, so
+                the base no-op success path is unchanged.
         """
         await super().register_public_job(job_id)
         if self._client:
@@ -1784,8 +1794,10 @@ class RedisJobQueueService(JobQueueService):
     async def _set_public_job_key(self, job_id: str) -> None:
         try:
             await self._client.set(self._public_job_key(job_id), b"1", ex=self._ttl)
-        except Exception as exc:  # noqa: BLE001
-            await logger.awarning(f"Failed to set public_job Redis key for {job_id}: {exc!r}")
+        except Exception as exc:
+            if _is_backend_connection_error(exc):
+                raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
+            raise
 
     async def is_public_job_async(self, job_id: str) -> bool:
         """Return True if the job was started through the public build endpoint.

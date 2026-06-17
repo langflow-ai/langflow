@@ -171,13 +171,22 @@ def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
 
 
 async def get_current_user(
+    request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope),
 ) -> User:
+    # Keep the native token (resolved by oauth2_login, which may already have
+    # collapsed to the external credential) separate from a freshly-extracted
+    # external credential so a present-but-invalid native cookie cannot shadow a
+    # valid external one. The auth service tries the native token first and only
+    # falls back to the external credential when it differs from the token.
+    external_token = _get_external_token(request.headers, request.cookies)
     try:
-        return await _auth_service().get_current_user(token, query_param, header_param, db)
+        return await _auth_service().get_current_user(
+            token, query_param, header_param, db, external_token=external_token
+        )
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 
@@ -185,18 +194,21 @@ async def get_current_user(
 async def get_current_user_from_access_token(
     token: str | Coroutine | None,
     db: AsyncSession,
+    external_token: str | None = None,
 ) -> User:
     """Compatibility helper to resolve a user from an access token.
 
     This simply delegates to the active auth service's
-    `get_current_user_from_access_token` implementation.
+    `get_current_user_from_access_token` implementation. ``external_token`` is an
+    optional, separately-extracted external credential tried as a fallback when
+    native token authentication fails; when ``None`` behavior is unchanged.
 
     **For new code, prefer calling
     `get_auth_service().get_current_user_from_access_token(...)` directly**
     instead of importing this function.
     """
     try:
-        return await _auth_service().get_current_user_from_access_token(token, db)
+        return await _auth_service().get_current_user_from_access_token(token, db, external_token=external_token)
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 

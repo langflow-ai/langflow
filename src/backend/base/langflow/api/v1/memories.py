@@ -277,10 +277,18 @@ async def update_memory_base(
     Preprocessing fields (preprocessing, preproc_model, preproc_instructions, preproc_kill_phrase)
     are immutable after creation and cannot be patched.
     """
+    # Resolve the memory base so the guard receives the REAL owner / kb identity:
+    # owner-override then fires only for genuine owners, a non-owner reaches the
+    # registered plugin's enforce path, and audit rows carry the kb id.
+    mb = await get_memory_base_service().get(memory_base_id, user_id=current_user.id)
+    if mb is None:
+        raise HTTPException(status_code=404, detail="Memory base not found")
     await ensure_knowledge_base_permission(
         current_user,
         KnowledgeBaseAction.WRITE,
-        kb_user_id=current_user.id,
+        kb_id=memory_base_id,
+        kb_user_id=mb.user_id,
+        kb_name=mb.kb_name,
     )
     try:
         mb = await get_memory_base_service().update(memory_base_id, user_id=current_user.id, patch=patch)
@@ -302,10 +310,17 @@ async def delete_memory_base(
     removed. The associated KB directory is deleted from disk afterwards
     (best-effort — a disk failure will not affect the 204 response).
     """
+    # Resolve the memory base so the guard receives the REAL owner / kb identity
+    # (owner-override only for genuine owners; non-owners hit plugin enforce).
+    mb = await get_memory_base_service().get(memory_base_id, user_id=current_user.id)
+    if mb is None:
+        raise HTTPException(status_code=404, detail="Memory base not found")
     await ensure_knowledge_base_permission(
         current_user,
         KnowledgeBaseAction.DELETE,
-        kb_user_id=current_user.id,
+        kb_id=memory_base_id,
+        kb_user_id=mb.user_id,
+        kb_name=mb.kb_name,
     )
     deleted = await get_memory_base_service().delete(memory_base_id, user_id=current_user.id)
     if not deleted:
@@ -328,10 +343,17 @@ async def flush_memory_base(
     Returns 409 Conflict if an ingestion task is already in progress for the
     given (memory_base_id, session_id) pair to prevent concurrent indexing.
     """
+    # Resolve the memory base so the guard receives the REAL owner / kb identity
+    # (owner-override only for genuine owners; non-owners hit plugin enforce).
+    mb = await get_memory_base_service().get(memory_base_id, user_id=current_user.id)
+    if mb is None:
+        raise HTTPException(status_code=404, detail="Memory base not found")
     await ensure_knowledge_base_permission(
         current_user,
         KnowledgeBaseAction.INGEST,
-        kb_user_id=current_user.id,
+        kb_id=memory_base_id,
+        kb_user_id=mb.user_id,
+        kb_name=mb.kb_name,
     )
     try:
         job_id = await get_memory_base_service().trigger_ingestion(
@@ -380,10 +402,17 @@ async def regenerate_memory_base(
     Use this to recover from external Chroma directory deletions or vector DB corruption.
     All MemoryBaseSession.cursor_id values are set to None before re-running ingestion.
     """
+    # Resolve the memory base so the guard receives the REAL owner / kb identity
+    # (owner-override only for genuine owners; non-owners hit plugin enforce).
+    mb = await get_memory_base_service().get(memory_base_id, user_id=current_user.id)
+    if mb is None:
+        raise HTTPException(status_code=404, detail="Memory base not found")
     await ensure_knowledge_base_permission(
         current_user,
         KnowledgeBaseAction.INGEST,
-        kb_user_id=current_user.id,
+        kb_id=memory_base_id,
+        kb_user_id=mb.user_id,
+        kb_name=mb.kb_name,
     )
     try:
         job_ids = await get_memory_base_service().regenerate(memory_base_id, user_id=current_user.id)

@@ -207,17 +207,20 @@ async def _check_key_from_db_with_context(
         api_key_obj = matches[0]
         if _is_expired(api_key_obj.expires_at):
             return None
-        if settings_service.settings.disable_track_apikey_usage is not True:
-            api_key_obj.total_uses += 1
-            api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-            session.add(api_key_obj)
-            await session.flush()
+        # Resolve + authorize the user BEFORE mutating usage counters so a denied
+        # authentication (missing user or blocked external user) does not bump
+        # total_uses / last_used_at.
         user = await session.get(User, api_key_obj.user_id)
         if user is None:
             return None
         if await _external_access_ceiling_blocks_user(session, user, settings_service):
             logger.info("API key rejected for externally managed user while external access ceiling is enabled")
             return None
+        if settings_service.settings.disable_track_apikey_usage is not True:
+            api_key_obj.total_uses += 1
+            api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+            session.add(api_key_obj)
+            await session.flush()
         return ApiKeyAuthResult(user=user, api_key_source="db", api_key_id=api_key_obj.id)  # pragma: allowlist secret
 
     if len(matches) > 1:
@@ -249,6 +252,15 @@ async def _check_key_from_db_with_context(
         if matched:
             if _is_expired(api_key_obj.expires_at):
                 return None
+            # Resolve + authorize the user BEFORE mutating usage counters / hash
+            # backfill so a denied authentication (missing user or blocked
+            # external user) does not bump total_uses / last_used_at.
+            user = await session.get(User, api_key_obj.user_id)
+            if user is None:
+                return None
+            if await _external_access_ceiling_blocks_user(session, user, settings_service):
+                logger.info("API key rejected for externally managed user while external access ceiling is enabled")
+                return None
             # Backfill hash for future O(1) lookups
             api_key_obj.api_key_hash = incoming_hash
             if settings_service.settings.disable_track_apikey_usage is not True:
@@ -256,12 +268,6 @@ async def _check_key_from_db_with_context(
                 api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
             await session.flush()
-            user = await session.get(User, api_key_obj.user_id)
-            if user is None:
-                return None
-            if await _external_access_ceiling_blocks_user(session, user, settings_service):
-                logger.info("API key rejected for externally managed user while external access ceiling is enabled")
-                return None
             return ApiKeyAuthResult(
                 user=user,
                 api_key_source="db",  # pragma: allowlist secret

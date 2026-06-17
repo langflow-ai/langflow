@@ -462,6 +462,7 @@ class AuthService(BaseAuthService):
         settings_service,
     ) -> UserRead | None:
         clear_current_auth_context()
+        clear_current_external_access_context()
 
         if settings_service.auth_settings.AUTO_LOGIN:
             if not settings_service.auth_settings.SUPERUSER:
@@ -524,6 +525,7 @@ class AuthService(BaseAuthService):
     async def ws_api_key_security(self, api_key: str | None) -> UserRead:
         settings = self.settings
         clear_current_auth_context()
+        clear_current_external_access_context()
         async with session_scope() as db:
             api_key_result = None
             if settings.auth_settings.AUTO_LOGIN:
@@ -606,19 +608,25 @@ class AuthService(BaseAuthService):
         self,
         token: str | Coroutine | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User:
         """Get user from access token (raises generic exceptions).
 
         This method now uses the framework-agnostic _authenticate_with_token() internally.
+
+        ``external_token`` is an optional, separately-extracted external credential
+        tried as a fallback when native token authentication fails so a
+        present-but-invalid native token cannot shadow a valid external one. When
+        ``None`` (or identical to ``token``) behavior is unchanged.
         """
         clear_current_auth_context()
-        if token is None:
-            msg = "Missing authentication token"
-            raise MissingCredentialsError(msg)
+        clear_current_external_access_context()
 
         # Handle coroutine token (FastAPI dependency injection)
-        resolved_token: str
-        if isinstance(token, Coroutine):
+        resolved_token: str | None
+        if token is None:
+            resolved_token = None
+        elif isinstance(token, Coroutine):
             resolved_token = await token
         elif isinstance(token, str):
             resolved_token = token
@@ -626,8 +634,31 @@ class AuthService(BaseAuthService):
             msg = "Invalid token format"
             raise AuthInvalidTokenError(msg)
 
-        # Use internal authentication method
-        return await self._authenticate_with_token(resolved_token, db)
+        # No native token: try a separately-extracted external credential before
+        # rejecting so a valid external credential authenticates on its own. When
+        # external_token is None (the default), behavior is unchanged: a missing
+        # native token raises MissingCredentialsError.
+        if not resolved_token:
+            if external_token:
+                external_user = await self._authenticate_with_external_token(external_token, db)
+                if external_user is not None:
+                    return external_user
+            msg = "Missing authentication token"
+            raise MissingCredentialsError(msg)
+
+        # Use internal authentication method. Try the native token first; on
+        # failure fall back to a *distinct* external credential before surfacing
+        # the native error so a stale/invalid native token can't shadow a valid
+        # external one. When external_token is None or identical, behavior is
+        # unchanged.
+        try:
+            return await self._authenticate_with_token(resolved_token, db)
+        except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError, InvalidCredentialsError) as e:
+            if external_token and external_token != resolved_token:
+                external_user = await self._authenticate_with_external_token(external_token, db)
+                if external_user is not None:
+                    return external_user
+            raise e  # noqa: TRY201
 
     async def get_current_user_for_websocket(
         self,
@@ -662,6 +693,7 @@ class AuthService(BaseAuthService):
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
         settings_service = self.settings
         clear_current_auth_context()
+        clear_current_external_access_context()
 
         if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
             try:
@@ -999,6 +1031,7 @@ class AuthService(BaseAuthService):
         db: AsyncSession,
     ) -> User | UserRead:
         clear_current_auth_context()
+        clear_current_external_access_context()
         if token:
             return await self.get_current_user_from_access_token(token, db)
 

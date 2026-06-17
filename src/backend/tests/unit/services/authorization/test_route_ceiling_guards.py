@@ -281,7 +281,8 @@ async def test_memory_delete_viewer_denied(monkeypatch, owner):
     from langflow.api.v1 import memories
 
     delete_spy = AsyncMock(return_value=True)
-    _install_memory_service(monkeypatch, delete=delete_spy)
+    mb = SimpleNamespace(user_id=owner.id, kb_name="kb")
+    _install_memory_service(monkeypatch, delete=delete_spy, get=AsyncMock(return_value=mb))
 
     set_current_external_access_context(_viewer_ceiling())
     try:
@@ -299,7 +300,8 @@ async def test_memory_flush_viewer_denied(monkeypatch, owner):
     from langflow.api.v1 import memories
 
     trigger_spy = AsyncMock(return_value=uuid4())
-    _install_memory_service(monkeypatch, trigger_ingestion=trigger_spy)
+    mb = SimpleNamespace(user_id=owner.id, kb_name="kb")
+    _install_memory_service(monkeypatch, trigger_ingestion=trigger_spy, get=AsyncMock(return_value=mb))
 
     set_current_external_access_context(_viewer_ceiling())
     try:
@@ -319,7 +321,8 @@ async def test_memory_regenerate_viewer_denied(monkeypatch, owner):
     from langflow.api.v1 import memories
 
     regen_spy = AsyncMock(return_value=[])
-    _install_memory_service(monkeypatch, regenerate=regen_spy)
+    mb = SimpleNamespace(user_id=owner.id, kb_name="kb")
+    _install_memory_service(monkeypatch, regenerate=regen_spy, get=AsyncMock(return_value=mb))
 
     set_current_external_access_context(_viewer_ceiling())
     try:
@@ -338,7 +341,8 @@ async def test_memory_delete_owner_proceeds(monkeypatch, owner):
     from langflow.api.v1 import memories
 
     delete_spy = AsyncMock(return_value=True)
-    _install_memory_service(monkeypatch, delete=delete_spy)
+    mb = SimpleNamespace(user_id=owner.id, kb_name="kb")
+    _install_memory_service(monkeypatch, delete=delete_spy, get=AsyncMock(return_value=mb))
 
     set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="s-1", level="editor"))
     try:
@@ -347,3 +351,260 @@ async def test_memory_delete_owner_proceeds(monkeypatch, owner):
         set_current_external_access_context(None)
 
     delete_spy.assert_awaited_once()
+
+
+# --------------------------------------------------------------------------- #
+# endpoints.custom_component / custom_component_update (direct ceiling, "create")
+#
+# These routes instantiate posted component code and are not tied to a single
+# owned resource, so they enforce the deny-only ceiling primitive directly
+# instead of an ``ensure_*_permission`` guard.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_custom_component_viewer_denied_before_build(monkeypatch, owner):
+    from langflow.api.v1 import endpoints
+
+    build_spy = MagicMock()
+    monkeypatch.setattr(endpoints, "build_custom_component_template", build_spy)
+    raw_code = SimpleNamespace(code="print('x')", frontend_node=None)
+
+    set_current_external_access_context(_viewer_ceiling())
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await endpoints.custom_component(raw_code=raw_code, user=owner, request=MagicMock())
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    build_spy.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_custom_component_update_viewer_denied_before_build(monkeypatch, owner):
+    from langflow.api.v1 import endpoints
+
+    build_spy = MagicMock()
+    monkeypatch.setattr(endpoints, "build_custom_component_template", build_spy)
+    code_request = SimpleNamespace(code="print('x')", tool_mode=False, get_template=dict)
+
+    set_current_external_access_context(_viewer_ceiling())
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await endpoints.custom_component_update(code_request=code_request, user=owner, request=MagicMock())
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    build_spy.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_custom_component_editor_passes_ceiling(monkeypatch, owner):
+    """An editor ceiling allows component instantiation (create is in the editor set)."""
+    from langflow.api.v1 import endpoints
+
+    # Stub the build pipeline so the route returns without real execution; the
+    # point is that the ceiling check does NOT short-circuit for an editor.
+    instance = MagicMock()
+    instance.update_frontend_node = AsyncMock(return_value={"tool_mode": False})
+    monkeypatch.setattr(
+        endpoints,
+        "build_custom_component_template",
+        MagicMock(return_value=({"tool_mode": False}, instance)),
+    )
+    monkeypatch.setattr(endpoints, "get_instance_name", lambda _i: "MyComponent")
+    monkeypatch.setattr(endpoints, "_requires_component_hash_lookups", lambda *_a, **_k: False)
+    # Settings: custom components allowed, no admin-only gate.
+    settings = SimpleNamespace(allow_custom_components=True, custom_component_admin_only=False)
+    monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=settings))
+    # ``isinstance(instance, Component)`` must be False so the optional
+    # run_and_validate_update_outputs branch is skipped for this MagicMock.
+    raw_code = SimpleNamespace(code="print('x')", frontend_node=None)
+    request = SimpleNamespace(state=SimpleNamespace(locale="en"))
+
+    set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="s-1", level="editor"))
+    try:
+        result = await endpoints.custom_component(raw_code=raw_code, user=owner, request=request)
+    finally:
+        set_current_external_access_context(None)
+
+    assert result.type == "MyComponent"
+
+
+# --------------------------------------------------------------------------- #
+# endpoints.create_upload_file — deprecated upload (flow WRITE)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_deprecated_upload_viewer_denied(monkeypatch, owner):
+    from langflow.api.v1 import endpoints
+
+    flow = _make_flow(owner.id)
+    save_spy = MagicMock()
+    monkeypatch.setattr(endpoints, "save_uploaded_file", save_spy)
+    settings_service = SimpleNamespace(settings=SimpleNamespace(max_file_size_upload=100))
+    upload = SimpleNamespace(size=1, filename="x.txt")
+
+    set_current_external_access_context(_viewer_ceiling())
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await endpoints.create_upload_file(
+                file=upload, flow=flow, current_user=owner, settings_service=settings_service
+            )
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    save_spy.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_deprecated_upload_owner_proceeds(monkeypatch, owner):
+    from pathlib import Path
+
+    from langflow.api.v1 import endpoints
+
+    flow = _make_flow(owner.id)
+    save_spy = MagicMock(return_value=Path("flow/x.txt"))
+    monkeypatch.setattr(endpoints, "save_uploaded_file", save_spy)
+    settings_service = SimpleNamespace(settings=SimpleNamespace(max_file_size_upload=100))
+    upload = SimpleNamespace(size=1, filename="x.txt")
+
+    result = await endpoints.create_upload_file(
+        file=upload, flow=flow, current_user=owner, settings_service=settings_service
+    )
+
+    save_spy.assert_called_once()
+    assert result.flow_id == str(flow.id)
+
+
+# --------------------------------------------------------------------------- #
+# mcp_projects.update_project_mcp_settings — project WRITE
+# --------------------------------------------------------------------------- #
+
+
+def _install_mcp_session(monkeypatch, project):
+    """Patch ``session_scope`` so the route's project fetch returns ``project``."""
+    from contextlib import asynccontextmanager
+
+    from langflow.api.v1 import mcp_projects
+
+    exec_result = SimpleNamespace(first=lambda: project, all=list)
+    session = SimpleNamespace(
+        exec=AsyncMock(return_value=exec_result),
+        flush=AsyncMock(),
+        add=MagicMock(),
+    )
+
+    @asynccontextmanager
+    async def _scope():
+        yield session
+
+    monkeypatch.setattr(mcp_projects, "session_scope", _scope)
+    return session
+
+
+@pytest.mark.anyio
+async def test_mcp_update_settings_viewer_denied(monkeypatch, owner):
+    from langflow.api.v1 import mcp_projects
+
+    project = SimpleNamespace(
+        id=uuid4(),
+        user_id=owner.id,
+        workspace_id=None,
+        auth_settings=None,
+        flows=[],
+        name="proj",
+    )
+    session = _install_mcp_session(monkeypatch, project)
+    request = SimpleNamespace(settings=[], auth_settings=None, model_fields_set=set())
+
+    set_current_external_access_context(_viewer_ceiling())
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await mcp_projects.update_project_mcp_settings(project_id=project.id, request=request, current_user=owner)
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    session.flush.assert_not_awaited()
+
+
+# --------------------------------------------------------------------------- #
+# models.py variable-mutating routes (variable WRITE / DELETE)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_update_enabled_models_viewer_denied(monkeypatch, owner):
+    from langflow.api.v1 import models
+
+    svc_spy = MagicMock()
+    monkeypatch.setattr(models, "get_variable_service", svc_spy)
+
+    set_current_external_access_context(_viewer_ceiling())
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await models.update_enabled_models(session=MagicMock(), current_user=owner, updates=[])
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    svc_spy.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_set_default_model_viewer_denied(monkeypatch, owner):
+    from langflow.api.v1 import models
+
+    svc_spy = MagicMock()
+    monkeypatch.setattr(models, "get_variable_service", svc_spy)
+    request = SimpleNamespace(model_type="language", model_name="m", provider="p")
+
+    set_current_external_access_context(_viewer_ceiling())
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await models.set_default_model(session=MagicMock(), current_user=owner, request=request)
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    svc_spy.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_clear_default_model_viewer_denied(monkeypatch, owner):
+    from langflow.api.v1 import models
+
+    svc_spy = MagicMock()
+    monkeypatch.setattr(models, "get_variable_service", svc_spy)
+
+    set_current_external_access_context(_viewer_ceiling())
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await models.clear_default_model(session=MagicMock(), current_user=owner, model_type="language")
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    svc_spy.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_set_default_model_owner_proceeds(monkeypatch, owner):
+    """Owner with no ceiling reaches the variable service (owner-override path)."""
+    from langflow.api.v1 import models
+
+    var_service = MagicMock(spec=models.DatabaseVariableService)
+    var_service.get_variable_object = AsyncMock(return_value=SimpleNamespace(id=uuid4()))
+    var_service.update_variable_fields = AsyncMock()
+    monkeypatch.setattr(models, "get_variable_service", lambda: var_service)
+    request = SimpleNamespace(model_type="language", model_name="m", provider="p")
+
+    result = await models.set_default_model(session=MagicMock(), current_user=owner, request=request)
+
+    var_service.update_variable_fields.assert_awaited_once()
+    assert result["default_model"]["model_name"] == "m"

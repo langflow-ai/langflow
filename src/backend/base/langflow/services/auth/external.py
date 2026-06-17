@@ -232,6 +232,12 @@ def access_context_from_identity(
     claim_name = auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM
     claim_value = _claim_as_str(identity.claims, claim_name)
     mapping = _access_claim_mapping(auth_settings)
+    # Gate the alias fallthrough on whether the operator CONFIGURED a mapping
+    # (the raw setting), not on whether it parsed to a non-empty dict. A
+    # configured-but-all-invalid mapping still parses empty; treating that as
+    # "no mapping" would let a raw "admin"/"editor" claim self-elevate via the
+    # alias table, re-opening the hole the authoritative-mapping rule closes.
+    raw_mapping_configured = bool((auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING or "").strip())
     mapped_level = None
     if claim_value is not None:
         mapped_level = mapping.get(claim_value.strip().lower())
@@ -239,8 +245,9 @@ def access_context_from_identity(
         # value absent from it must NOT be reinterpreted through the built-in
         # alias table (otherwise a raw "admin"/"editor" claim would silently
         # elevate without an explicit grant). Fall through to the default level
-        # instead. The alias interpretation is only used when NO mapping is set.
-        if mapped_level is None and not mapping:
+        # instead. The alias interpretation is only used when NO mapping is
+        # configured at all.
+        if mapped_level is None and not raw_mapping_configured:
             mapped_level = _normalize_access_level(claim_value)
     level = mapped_level or _normalize_access_level(auth_settings.EXTERNAL_AUTH_DEFAULT_ACCESS_LEVEL)
     if level is None:

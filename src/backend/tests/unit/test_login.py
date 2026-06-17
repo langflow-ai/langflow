@@ -255,6 +255,50 @@ async def test_external_access_ceiling_filters_effective_permissions(client, ext
     assert permissions["00000000-0000-0000-0000-000000000001"] == ["read"]
 
 
+async def test_session_external_recovers_despite_stale_native_cookie(client, external_auth_settings):  # noqa: ARG001
+    """A stale/invalid native cookie must not shadow a valid external credential on /session (P1)."""
+    token = _external_token(
+        sub="recover-subject",
+        preferred_username="recover-user",
+        email="recover@example.com",
+    )
+
+    response = await client.get(
+        "api/v1/session",
+        headers={
+            # A stale/invalid native cookie is present alongside the valid external header.
+            "Cookie": "access_token_lf=stale-invalid-native-token",
+            _EXTERNAL_AUTH_HEADER: f"Bearer {token}",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["authenticated"] is True
+    assert data["user"]["username"] == "recover-user"
+
+
+async def test_get_current_user_external_recovers_despite_stale_native_cookie(client, external_auth_settings):  # noqa: ARG001
+    """A get_current_user-protected endpoint accepts a valid external credential despite a stale cookie (P1)."""
+    token = _external_token(
+        sub="recover-subject-2",
+        preferred_username="recover-user-2",
+        email="recover2@example.com",
+    )
+
+    # /api/v1/users/whoami is guarded by CurrentActiveUser -> get_current_user.
+    response = await client.get(
+        "api/v1/users/whoami",
+        headers={
+            "Cookie": "access_token_lf=stale-invalid-native-token",
+            _EXTERNAL_AUTH_HEADER: f"Bearer {token}",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["username"] == "recover-user-2"
+
+
 async def test_external_access_ceiling_blocks_api_key_creation(client, external_auth_settings):
     external_auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
     external_auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM = "openrag_mode"
