@@ -36,8 +36,12 @@ from langflow.services.auth.exceptions import (
 )
 from langflow.services.auth.external import (
     ExternalIdentity,
+    _external_username_fallback,
+    access_context_from_identity,
+    clear_current_external_access_context,
     identity_from_claims,
     resolve_external_identity,
+    set_current_external_access_context,
 )
 from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
@@ -96,6 +100,7 @@ class AuthService(BaseAuthService):
             InactiveUserError: If user account is inactive
         """
         clear_current_auth_context()
+        clear_current_external_access_context()
 
         # Try token authentication first (if token provided)
         if token:
@@ -258,6 +263,7 @@ class AuthService(BaseAuthService):
         set_current_auth_context(
             AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider=identity.provider)
         )
+        set_current_external_access_context(access_context_from_identity(identity, self.settings.auth_settings))
         return await self._materialize_external_user(identity, db)
 
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
@@ -267,6 +273,10 @@ class AuthService(BaseAuthService):
             return None
 
         if isinstance(result.user, User):
+            if await self._external_access_ceiling_blocks_api_key_user(result.user, db):
+                logger.info("API key rejected for externally managed user while external access ceiling is enabled")
+                msg = "API key authentication is disabled for externally managed users"
+                raise InvalidCredentialsError(msg)
             user_read = UserRead.model_validate(result.user, from_attributes=True)
             if not user_read.is_active:
                 msg = "User account is inactive"
@@ -275,6 +285,24 @@ class AuthService(BaseAuthService):
             return user_read
 
         return None
+
+    async def _external_access_ceiling_blocks_api_key_user(self, user: User, db: AsyncSession) -> bool:
+        auth_settings = self.settings.auth_settings
+        if (
+            not auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED
+            or not auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS
+        ):
+            return False
+
+        from sqlmodel import select
+
+        from langflow.services.database.models.auth import SSOUserProfile
+
+        profile_stmt = select(SSOUserProfile).where(
+            SSOUserProfile.user_id == user.id,
+            SSOUserProfile.sso_provider == auth_settings.EXTERNAL_AUTH_PROVIDER,
+        )
+        return (await db.exec(profile_stmt)).first() is not None
 
     # ------------------------------------------------------------------
     # JIT user provisioning via BaseAuthService hook
@@ -378,17 +406,19 @@ class AuthService(BaseAuthService):
 
     @staticmethod
     async def _unique_external_username(db: AsyncSession, identity: ExternalIdentity) -> str:
-        import hashlib
-
         desired = identity.username
         if await get_user_by_username(db, desired) is None:
             return desired
-        digest = hashlib.sha256(f"{identity.provider}:{identity.subject}".encode()).hexdigest()[:12]
-        fallback = f"{identity.provider[:200] or 'external'}-{digest}"
+        fallback = _external_username_fallback(identity.provider, identity.subject)
         if await get_user_by_username(db, fallback) is None:
             return fallback
+        # Final tier: fold the desired name into the digest so two providers'
+        # subjects that collide on the helper's digest still resolve uniquely.
+        import hashlib
+
         long_digest = hashlib.sha256(f"{identity.provider}:{identity.subject}:{desired}".encode()).hexdigest()[:16]
-        return f"{identity.provider[:200] or 'external'}-{long_digest}"
+        normalized_provider = identity.provider[:200] or "external"
+        return f"{normalized_provider}-{long_digest}"
 
     @staticmethod
     async def _initialize_jit_user_defaults(user: User, db: AsyncSession) -> None:

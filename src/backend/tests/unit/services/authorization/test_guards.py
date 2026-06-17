@@ -13,6 +13,10 @@ from langflow.services.auth.context import (
     set_current_auth_context,
 )
 from langflow.services.authorization import guards as authz_guards
+from langflow.services.authorization.access_ceiling import (
+    ExternalAccessContext,
+    set_current_external_access_context,
+)
 from langflow.services.authorization.actions import (
     DeploymentAction,
     FileAction,
@@ -359,6 +363,56 @@ async def test_api_key_scope_plugin_sees_owner_resource_instead_of_owner_overrid
     assert len(service.calls) == 1
     assert service.calls[0]["context"]["flow_user_id"] == fake_user.id
     assert service.calls[0]["context"]["auth_method"] == "api_key"
+
+
+@pytest.mark.anyio
+async def test_external_viewer_ceiling_denies_before_owner_override(monkeypatch, fake_user):
+    """A viewer claim is a deny-only ceiling even when the user owns the flow."""
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="subject-1", level="viewer"))
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_flow_permission(
+                fake_user,
+                FlowAction.WRITE,
+                flow_id=uuid4(),
+                flow_user_id=fake_user.id,
+            )
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    assert "External credentials" in exc_info.value.detail
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "deny"
+    assert audit_calls[0]["details"]["external_access_level"] == "viewer"
+
+
+@pytest.mark.anyio
+async def test_external_editor_ceiling_allows_write_then_owner_override(monkeypatch, fake_user):
+    """Editor is still only a ceiling; normal owner/plugin logic continues after it passes."""
+    install_settings(monkeypatch, authz_enabled=True, audit_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="subject-1", level="editor"))
+
+    try:
+        await authz_guards.ensure_flow_permission(
+            fake_user,
+            FlowAction.WRITE,
+            flow_id=uuid4(),
+            flow_user_id=fake_user.id,
+        )
+    finally:
+        set_current_external_access_context(None)
+
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "owner_override"
 
 
 @pytest.mark.anyio

@@ -58,7 +58,11 @@ from langflow.services.deps import (
     get_telemetry_service,
     session_scope,
 )
-from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
+from langflow.services.job_queue.service import (
+    JobQueueBackendUnavailableError,
+    JobQueueNotFoundError,
+    JobQueueService,
+)
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -72,7 +76,10 @@ async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, qu
 
     Jobs with no registered owner (build_public_tmp) are accessible to any authenticated user.
     """
-    job_owner = await queue_service.get_job_owner(job_id)
+    try:
+        job_owner = await queue_service.get_job_owner(job_id)
+    except JobQueueBackendUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     if job_owner is not None and job_owner != current_user.id:
         await logger.awarning(
             "Ownership check failed: user %s tried to access job %s owned by %s",
@@ -81,6 +88,25 @@ async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, qu
             job_owner,
         )
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+
+
+async def _register_job_owner_or_cancel(queue_service: JobQueueService, job_id: str, user_id: uuid.UUID) -> None:
+    """Register the build's owner, cancelling the just-started build on backend outage.
+
+    By the time this runs, start_flow_build has already launched the build task.
+    If the Redis-backed queue is unreachable, the client never receives the
+    job_id, so cancel the build (best-effort) instead of leaving an unreachable
+    build running, then surface a clean 503 instead of a raw redis
+    ConnectionError 500.
+    """
+    try:
+        await queue_service.register_job_owner(job_id, user_id)
+    except JobQueueBackendUnavailableError as exc:
+        try:
+            await queue_service.cancel_job(job_id)
+        except Exception as cancel_exc:  # noqa: BLE001
+            await logger.awarning(f"Failed to cancel job {job_id} after owner registration failed: {cancel_exc!r}")
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post(
@@ -301,7 +327,7 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
-    await queue_service.register_job_owner(job_id, current_user.id)
+    await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
     if event_delivery != EventDeliveryType.DIRECT:

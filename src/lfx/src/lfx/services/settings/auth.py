@@ -202,6 +202,38 @@ class AuthSettings(BaseSettings):
         default="name",
         description="JWT claim containing the user's display name.",
     )
+    EXTERNAL_AUTH_ACCESS_CEILING_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Enable a coarse deny-only action ceiling for users authenticated by external trusted identity. "
+            "This is not an RBAC engine; it only caps actions above a mapped access level."
+        ),
+    )
+    EXTERNAL_AUTH_ACCESS_CLAIM: str | None = Field(
+        default=None,
+        description=(
+            "JWT claim used to derive the external access ceiling. Claim values are mapped through "
+            "EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING."
+        ),
+    )
+    EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING: str | None = Field(
+        default=None,
+        description=(
+            "JSON object or comma-separated value map from external claim values to one of: viewer, editor, admin. "
+            'Example: \'{"view":"viewer","edit":"editor"}\'. Built-in aliases cover common values.'
+        ),
+    )
+    EXTERNAL_AUTH_DEFAULT_ACCESS_LEVEL: str = Field(
+        default="viewer",
+        description="Fallback access level used when the access claim is missing or unmapped.",
+    )
+    EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS: bool = Field(
+        default=True,
+        description=(
+            "When the external access ceiling is enabled, reject Langflow API-key authentication for users mapped "
+            "through the configured external provider so API keys cannot bypass the JWT claim ceiling."
+        ),
+    )
 
     # Authorization (RBAC) feature flags — enforcement via authorization_service plugin
     AUTHZ_ENABLED: bool = Field(
@@ -231,6 +263,17 @@ class AuthSettings(BaseSettings):
             "(append-only — the table will grow without bound; pair with an external archival "
             "or partitioning job). The default of 90 days bounds steady-state size for typical "
             "enterprise deployments."
+        ),
+    )
+    AUTHZ_AUDIT_CLEANUP_INTERVAL: int = Field(
+        default=86400,
+        ge=300,
+        description=(
+            "Seconds between scheduled ``authz_audit_log`` retention sweeps. A sweep runs once at "
+            "startup; thereafter a background worker prunes rows older than "
+            "AUTHZ_AUDIT_RETENTION_DAYS every interval so a long-running instance stays bounded "
+            "between restarts. The worker only runs when AUTHZ_AUDIT_ENABLED is True and "
+            "AUTHZ_AUDIT_RETENTION_DAYS > 0. Default 86400 (daily); minimum 300 (5 minutes)."
         ),
     )
 

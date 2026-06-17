@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.auth.context import current_auth_context_for_authz
+from langflow.services.authorization.access_ceiling import filter_actions_by_external_access_ceiling
 from langflow.services.deps import get_authorization_service
 
 router = APIRouter(prefix="/authz/me", tags=["Authorization"])
@@ -133,6 +134,10 @@ async def get_effective_permissions(
             "is_superuser": current_user.is_superuser,
         },
     )
+    permissions = {
+        resource_id: filter_actions_by_external_access_ceiling(allowed_actions)
+        for resource_id, allowed_actions in permissions.items()
+    }
     return EffectivePermissionsResponse(
         resource_type=body.resource_type,
         permissions=permissions,

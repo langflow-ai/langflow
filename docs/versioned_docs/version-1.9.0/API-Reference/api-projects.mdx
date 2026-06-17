@@ -2,7 +2,7 @@
 title: Projects endpoints
 slug: /api-projects
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleApiProjectsReadProjects from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-projects/read-projects.sh';
 import resultApiProjectsResultReadProjects from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-projects/result-read-projects.json';
 import exampleApiProjectsCreateProject from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-projects/create-project.sh';
@@ -46,17 +46,17 @@ Get a list of Langflow projects, including project IDs, names, and descriptions.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiProjectsReadProjects} language="python" />
+<CodeBlock language="python">{examplePythonApiProjectsReadProjects}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiProjectsReadProjects} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiProjectsReadProjects}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiProjectsReadProjects} language="bash" />
+<CodeBlock language="bash">{exampleApiProjectsReadProjects}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -64,7 +64,7 @@ Get a list of Langflow projects, including project IDs, names, and descriptions.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiProjectsResultReadProjects} language="json" />
+<CodeBlock language="json">{resultApiProjectsResultReadProjects}</CodeBlock>
 
 </details>
 
@@ -75,17 +75,17 @@ Create a new project.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiProjectsCreateProject} language="python" />
+<CodeBlock language="python">{examplePythonApiProjectsCreateProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiProjectsCreateProject} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiProjectsCreateProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiProjectsCreateProject} language="bash" />
+<CodeBlock language="bash">{exampleApiProjectsCreateProject}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -93,7 +93,7 @@ Create a new project.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiProjectsResultCreateProject} language="json" />
+<CodeBlock language="json">{resultApiProjectsResultCreateProject}</CodeBlock>
 
 </details>
 
@@ -104,17 +104,17 @@ Adding a flow to a project moves the flow from its previous location. The flow i
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiProjectsCreateProject2} language="python" />
+<CodeBlock language="python">{examplePythonApiProjectsCreateProject2}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiProjectsCreateProject2} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiProjectsCreateProject2}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiProjectsCreateProject2} language="bash" />
+<CodeBlock language="bash">{exampleApiProjectsCreateProject2}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -128,17 +128,17 @@ To find the UUID of your project, call the [read projects](#read-projects) endpo
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiProjectsReadProject} language="python" />
+<CodeBlock language="python">{examplePythonApiProjectsReadProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiProjectsReadProject} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiProjectsReadProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiProjectsReadProject} language="bash" />
+<CodeBlock language="bash">{exampleApiProjectsReadProject}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -146,7 +146,7 @@ To find the UUID of your project, call the [read projects](#read-projects) endpo
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiProjectsResultReadProject} language="json" />
+<CodeBlock language="json">{resultApiProjectsResultReadProject}</CodeBlock>
 
 </details>
 
@@ -161,17 +161,17 @@ If you send the same values multiple times, the update is still processed, even 
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiProjectsUpdateProject} language="python" />
+<CodeBlock language="python">{examplePythonApiProjectsUpdateProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiProjectsUpdateProject} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiProjectsUpdateProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiProjectsUpdateProject} language="bash" />
+<CodeBlock language="bash">{exampleApiProjectsUpdateProject}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -179,7 +179,7 @@ If you send the same values multiple times, the update is still processed, even 
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiProjectsResultUpdateProject} language="json" />
+<CodeBlock language="json">{resultApiProjectsResultUpdateProject}</CodeBlock>
 
 </details>
 
@@ -190,17 +190,17 @@ Delete a specific project.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiProjectsDeleteProject} language="python" />
+<CodeBlock language="python">{examplePythonApiProjectsDeleteProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiProjectsDeleteProject} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiProjectsDeleteProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiProjectsDeleteProject} language="bash" />
+<CodeBlock language="bash">{exampleApiProjectsDeleteProject}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -208,7 +208,7 @@ Delete a specific project.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiProjectsResultDeleteProject} language="text" />
+<CodeBlock language="text">{resultApiProjectsResultDeleteProject}</CodeBlock>
 
 </details>
 
@@ -221,17 +221,17 @@ The `--output` flag is optional.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiProjectsExportAProject} language="python" />
+<CodeBlock language="python">{examplePythonApiProjectsExportAProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiProjectsExportAProject} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiProjectsExportAProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiProjectsExportAProject} language="bash" />
+<CodeBlock language="bash">{exampleApiProjectsExportAProject}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -243,17 +243,17 @@ Import a project and its flows by uploading a Langflow project zip file:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiProjectsImportAProject} language="python" />
+<CodeBlock language="python">{examplePythonApiProjectsImportAProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiProjectsImportAProject} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiProjectsImportAProject}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiProjectsImportAProject} language="bash" />
+<CodeBlock language="bash">{exampleApiProjectsImportAProject}</CodeBlock>
 
 </TabItem>
 </Tabs>

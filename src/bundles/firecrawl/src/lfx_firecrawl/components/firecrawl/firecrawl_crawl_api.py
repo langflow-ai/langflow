@@ -1,8 +1,20 @@
-import uuid
+import re
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
+
+_CAMEL_TO_SNAKE_RE = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+def _to_snake_case_kwargs(params: dict) -> dict:
+    """Convert camelCase option keys to snake_case keyword arguments.
+
+    The firecrawl-py v1 convention uses camelCase, while the v2 SDK expects
+    snake_case keyword arguments. Keys that are already snake_case are passed
+    through unchanged.
+    """
+    return {_CAMEL_TO_SNAKE_RE.sub("_", key).lower(): value for key, value in params.items()}
 
 
 class FirecrawlCrawlApi(Component):
@@ -56,33 +68,42 @@ class FirecrawlCrawlApi(Component):
 
     def crawl(self) -> Data:
         try:
-            from firecrawl import FirecrawlApp
+            from firecrawl import Firecrawl
+            from firecrawl.v2.types import ScrapeOptions
         except ImportError as e:
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
 
-        params = self.crawlerOptions.__dict__["data"] if self.crawlerOptions else {}
-        scrape_options_dict = self.scrapeOptions.__dict__["data"] if self.scrapeOptions else {}
-        if scrape_options_dict:
-            params["scrapeOptions"] = scrape_options_dict
+        params = dict(self.crawlerOptions.__dict__.get("data", {})) if self.crawlerOptions else {}
+        scrape_options_dict = dict(self.scrapeOptions.__dict__.get("data", {})) if self.scrapeOptions else {}
 
-        # Set default values for new parameters in v1
+        # Set default values for crawl parameters.
+        # Note: firecrawl-py v2 renamed several options. "maxDepth" -> "max_discovery_depth"
+        # and "allowBackwardLinks" -> "crawl_entire_domain".
         params.setdefault("maxDepth", 2)
         params.setdefault("limit", 10000)
         params.setdefault("allowExternalLinks", False)
         params.setdefault("allowBackwardLinks", False)
-        params.setdefault("ignoreSitemap", False)
         params.setdefault("ignoreQueryParameters", False)
 
-        # Ensure onlyMainContent is explicitly set if not provided
-        if "scrapeOptions" in params:
-            params["scrapeOptions"].setdefault("onlyMainContent", True)
-        else:
-            params["scrapeOptions"] = {"onlyMainContent": True}
+        # Ensure onlyMainContent is explicitly set if not provided.
+        scrape_options_dict.setdefault("onlyMainContent", True)
 
-        if not self.idempotency_key:
-            self.idempotency_key = str(uuid.uuid4())
+        # Translate legacy v1 camelCase option names to the firecrawl-py v2 keyword args.
+        kwargs = _to_snake_case_kwargs(params)
+        if "max_depth" in kwargs:
+            kwargs["max_discovery_depth"] = kwargs.pop("max_depth")
+        if "allow_backward_links" in kwargs:
+            kwargs["crawl_entire_domain"] = kwargs.pop("allow_backward_links")
+        # v2 removed "ignore_sitemap"; it is now the "sitemap" mode enum.
+        if kwargs.pop("ignore_sitemap", False):
+            kwargs["sitemap"] = "skip"
 
-        app = FirecrawlApp(api_key=self.api_key)
-        crawl_result = app.crawl_url(self.url, params=params, idempotency_key=self.idempotency_key)
-        return Data(data={"results": crawl_result})
+        # Build the typed ScrapeOptions object expected by v2 from the (snake_cased) dict.
+        scrape_kwargs = _to_snake_case_kwargs(scrape_options_dict)
+        kwargs["scrape_options"] = ScrapeOptions(**scrape_kwargs)
+
+        app = Firecrawl(api_key=self.api_key)
+        # v2 polls to completion and returns a typed CrawlJob object.
+        crawl_job = app.crawl(self.url, **kwargs)
+        return Data(data={"results": crawl_job.model_dump()})

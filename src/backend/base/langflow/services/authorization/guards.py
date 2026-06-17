@@ -14,6 +14,10 @@ from langflow.services.auth.context import (
     current_auth_is_api_key,
 )
 from langflow.services.authorization import audit as _audit
+from langflow.services.authorization.access_ceiling import (
+    external_access_allows,
+    get_current_external_access_context,
+)
 from langflow.services.authorization.actions import (
     DeploymentAction,
     FileAction,
@@ -201,6 +205,24 @@ async def _ensure_resource_permission(
 ) -> None:
     """Build object key, apply owner override, else delegate to ensure_permission."""
     obj = f"{resource_type}:{resource_id}" if resource_id else f"{resource_type}:*"
+
+    external_context = get_current_external_access_context()
+    if external_context is not None and not external_access_allows(act_str, external_context):
+        await _audit.audit_decision(
+            user_id=user.id,
+            action=f"{resource_type}:{act_str}",
+            obj=obj,
+            result=_audit.AUDIT_DENY,
+            details={
+                "domain": resolved_domain,
+                "external_auth_provider": external_context.provider,
+                "external_access_level": external_context.level,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="External credentials do not allow this action",
+        )
 
     if (
         owner_id is not None

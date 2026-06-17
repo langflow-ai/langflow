@@ -11,11 +11,16 @@ import pytest
 from langflow.services.auth import external
 from langflow.services.auth.exceptions import InvalidTokenError
 from langflow.services.auth.external import (
+    access_context_from_identity,
     decode_external_jwt,
+    external_access_allows,
     extract_bearer_or_raw_token,
     extract_external_token,
+    filter_actions_by_external_access_ceiling,
+    get_current_external_access_context,
     identity_from_claims,
     resolve_external_identity,
+    set_current_external_access_context,
 )
 from lfx.services.settings.auth import AuthSettings
 
@@ -140,6 +145,7 @@ async def test_decode_external_jwt_requires_jwks_when_not_trusted(tmp_path):
 # ---------------------------------------------------------------------------
 
 _JWKS_URL = "https://idp.example.com/.well-known/jwks.json"
+_JWKS_AUDIENCE = "langflow"
 
 
 def _jwks_settings(tmp_path) -> AuthSettings:
@@ -148,6 +154,7 @@ def _jwks_settings(tmp_path) -> AuthSettings:
         EXTERNAL_AUTH_TRUSTED_JWT_DECODE=False,
         EXTERNAL_AUTH_JWKS_URL=_JWKS_URL,
         EXTERNAL_AUTH_ALGORITHMS="HS256",
+        EXTERNAL_AUTH_AUDIENCE=_JWKS_AUDIENCE,
     )
 
 
@@ -198,14 +205,50 @@ async def test_jwks_decode_verifies_signature(tmp_path, monkeypatch):
     monkeypatch.setattr(external, "_jwks_cache", {})
     _install_fake_jwks_endpoint(monkeypatch, [{"keys": [_symmetric_jwk(_TEST_JWT_SECRET, kid="key-1")]}])
 
-    token = jwt.encode({"sub": "subject-1"}, _TEST_JWT_SECRET, algorithm="HS256", headers={"kid": "key-1"})
+    token = jwt.encode(
+        {"sub": "subject-1", "aud": _JWKS_AUDIENCE}, _TEST_JWT_SECRET, algorithm="HS256", headers={"kid": "key-1"}
+    )
     claims = await decode_external_jwt(token, settings)
     assert claims["sub"] == "subject-1"
 
     wrong_secret = "another-secret-that-did-not-sign-the-jwks-key"  # noqa: S105 # pragma: allowlist secret
-    tampered = jwt.encode({"sub": "subject-1"}, wrong_secret, algorithm="HS256", headers={"kid": "key-1"})
+    tampered = jwt.encode(
+        {"sub": "subject-1", "aud": _JWKS_AUDIENCE}, wrong_secret, algorithm="HS256", headers={"kid": "key-1"}
+    )
     with pytest.raises(InvalidTokenError, match="validation failed"):
         await decode_external_jwt(tampered, settings)
+
+
+@pytest.mark.anyio
+async def test_jwks_decode_requires_audience(tmp_path, monkeypatch):
+    """JWKS verification must reject the config when no expected audience is bound."""
+    settings = _jwks_settings(tmp_path)
+    settings.EXTERNAL_AUTH_AUDIENCE = None
+    monkeypatch.setattr(external, "_jwks_cache", {})
+    calls = _install_fake_jwks_endpoint(monkeypatch, [{"keys": [_symmetric_jwk(_TEST_JWT_SECRET, kid="key-1")]}])
+
+    token = jwt.encode({"sub": "subject-1"}, _TEST_JWT_SECRET, algorithm="HS256", headers={"kid": "key-1"})
+    with pytest.raises(InvalidTokenError, match="EXTERNAL_AUTH_AUDIENCE"):
+        await decode_external_jwt(token, settings)
+    # Misconfiguration is rejected before any network call to the JWKS endpoint.
+    assert calls == []
+
+
+@pytest.mark.anyio
+async def test_jwks_decode_rejects_token_for_another_audience(tmp_path, monkeypatch):
+    """A token the same IdP minted for a different relying party is rejected."""
+    settings = _jwks_settings(tmp_path)
+    monkeypatch.setattr(external, "_jwks_cache", {})
+    _install_fake_jwks_endpoint(monkeypatch, [{"keys": [_symmetric_jwk(_TEST_JWT_SECRET, kid="key-1")]}])
+
+    foreign = jwt.encode(
+        {"sub": "subject-1", "aud": "some-other-service"},
+        _TEST_JWT_SECRET,
+        algorithm="HS256",
+        headers={"kid": "key-1"},
+    )
+    with pytest.raises(InvalidTokenError, match="validation failed"):
+        await decode_external_jwt(foreign, settings)
 
 
 @pytest.mark.anyio
@@ -219,7 +262,9 @@ async def test_jwks_refetches_when_kid_is_newer_than_cache(tmp_path, monkeypatch
     monkeypatch.setattr(external, "_jwks_cache", {_JWKS_URL: (fetched_at + external.JWKS_CACHE_TTL_SECONDS, old_jwks)})
     calls = _install_fake_jwks_endpoint(monkeypatch, [new_jwks])
 
-    token = jwt.encode({"sub": "rotated"}, _TEST_JWT_SECRET, algorithm="HS256", headers={"kid": "new-key"})
+    token = jwt.encode(
+        {"sub": "rotated", "aud": _JWKS_AUDIENCE}, _TEST_JWT_SECRET, algorithm="HS256", headers={"kid": "new-key"}
+    )
     claims = await decode_external_jwt(token, settings)
 
     assert claims["sub"] == "rotated"
@@ -278,6 +323,51 @@ def test_identity_from_claims_falls_back_to_synthesized_username(tmp_path):
     assert identity.username.startswith("test-provider-")
     assert identity.email is None
     assert identity.name is None
+
+
+def test_external_access_context_uses_configured_claim_mapping(tmp_path):
+    settings = _auth_settings(
+        tmp_path,
+        EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=True,
+        EXTERNAL_AUTH_ACCESS_CLAIM="openrag_mode",
+        EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING='{"can_view":"viewer","can_edit":"editor"}',
+    )
+    identity = identity_from_claims({"sub": "subject-1", "openrag_mode": "can_edit"}, settings)
+
+    context = access_context_from_identity(identity, settings)
+
+    assert context is not None
+    assert context.level == "editor"
+    assert external_access_allows("write", context)
+    assert external_access_allows("execute", context)
+    assert not external_access_allows("delete", context)
+
+
+def test_external_access_context_defaults_to_viewer_for_missing_claim(tmp_path):
+    settings = _auth_settings(
+        tmp_path,
+        EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=True,
+        EXTERNAL_AUTH_ACCESS_CLAIM="openrag_mode",
+    )
+    identity = identity_from_claims({"sub": "subject-1"}, settings)
+
+    context = access_context_from_identity(identity, settings)
+
+    assert context is not None
+    assert context.level == "viewer"
+    assert external_access_allows("read", context)
+    assert not external_access_allows("write", context)
+
+
+def test_filter_actions_by_external_access_ceiling_uses_request_context():
+    set_current_external_access_context(
+        external.ExternalAccessContext(provider="test-provider", subject="subject-1", level="viewer")
+    )
+    try:
+        assert filter_actions_by_external_access_ceiling(["read", "write", "delete"]) == ["read"]
+        assert get_current_external_access_context() is not None
+    finally:
+        set_current_external_access_context(None)
 
 
 @pytest.mark.anyio

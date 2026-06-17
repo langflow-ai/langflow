@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import inspect
+import json
 import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
@@ -26,14 +27,73 @@ from lfx.log.logger import logger
 
 from langflow.services.auth.exceptions import InvalidTokenError as AuthInvalidTokenError
 
+# The request-scoped access ceiling is an authorization primitive. It lives in
+# the authorization package so guards can enforce it without importing the auth
+# layer; the auth layer (here) only *derives* the ceiling from an identity and
+# installs it. These re-exports keep ``langflow.services.auth.external`` a stable
+# import site for callers that derive/inspect the ceiling.
+from langflow.services.authorization.access_ceiling import (
+    EXTERNAL_ACCESS_ADMIN,
+    EXTERNAL_ACCESS_EDITOR,
+    EXTERNAL_ACCESS_LEVELS,
+    EXTERNAL_ACCESS_VIEWER,
+    ExternalAccessContext,
+    clear_current_external_access_context,
+    external_access_allows,
+    filter_actions_by_external_access_ceiling,
+    get_current_external_access_context,
+    set_current_external_access_context,
+)
+
 if TYPE_CHECKING:
     from lfx.services.settings.auth import AuthSettings
+
+__all__ = [
+    "EXTERNAL_ACCESS_ADMIN",
+    "EXTERNAL_ACCESS_EDITOR",
+    "EXTERNAL_ACCESS_LEVELS",
+    "EXTERNAL_ACCESS_VIEWER",
+    "ExternalAccessContext",
+    "ExternalIdentity",
+    "ExternalIdentityResolver",
+    "JwtExternalIdentityResolver",
+    "access_context_from_identity",
+    "clear_current_external_access_context",
+    "decode_external_jwt",
+    "external_access_allows",
+    "extract_bearer_or_raw_token",
+    "extract_external_token",
+    "filter_actions_by_external_access_ceiling",
+    "get_current_external_access_context",
+    "identity_from_claims",
+    "resolve_external_identity",
+    "set_current_external_access_context",
+]
 
 
 JWKS_CACHE_TTL_SECONDS = 300
 JWKS_MIN_REFRESH_INTERVAL_SECONDS = 30
 _jwks_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 T = TypeVar("T")
+
+# Maps raw external claim values to a normalized access level. The level
+# vocabulary and the deny-only enforcement live in the authorization package
+# (see ``access_ceiling``); this alias table is the auth-side interpretation of
+# provider-specific claim strings.
+_EXTERNAL_ACCESS_ALIASES = {
+    "view": EXTERNAL_ACCESS_VIEWER,
+    "viewer": EXTERNAL_ACCESS_VIEWER,
+    "read": EXTERNAL_ACCESS_VIEWER,
+    "readonly": EXTERNAL_ACCESS_VIEWER,
+    "read_only": EXTERNAL_ACCESS_VIEWER,
+    "read-only": EXTERNAL_ACCESS_VIEWER,
+    "edit": EXTERNAL_ACCESS_EDITOR,
+    "editor": EXTERNAL_ACCESS_EDITOR,
+    "write": EXTERNAL_ACCESS_EDITOR,
+    "developer": EXTERNAL_ACCESS_EDITOR,
+    "admin": EXTERNAL_ACCESS_ADMIN,
+    "administrator": EXTERNAL_ACCESS_ADMIN,
+}
 
 
 @dataclass(frozen=True)
@@ -119,6 +179,73 @@ def identity_from_claims(claims: Mapping[str, Any], auth_settings: AuthSettings)
     )
 
 
+def _normalize_access_level(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+    return _EXTERNAL_ACCESS_ALIASES.get(normalized, normalized if normalized in EXTERNAL_ACCESS_LEVELS else None)
+
+
+def _access_claim_mapping(auth_settings: AuthSettings) -> dict[str, str]:
+    raw_mapping = auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING
+    if not raw_mapping:
+        return {}
+
+    mapping: dict[str, str] = {}
+    try:
+        loaded = json.loads(raw_mapping)
+    except json.JSONDecodeError:
+        loaded = None
+
+    if isinstance(loaded, Mapping):
+        pairs = loaded.items()
+    else:
+        pairs = []
+        for item in raw_mapping.split(","):
+            key, separator, value = item.partition(":")
+            if not separator:
+                continue
+            pairs.append((key, value))
+
+    for key, value in pairs:
+        if not isinstance(key, str):
+            continue
+        normalized_level = _normalize_access_level(str(value))
+        if normalized_level is not None:
+            mapping[key.strip().lower()] = normalized_level
+    return mapping
+
+
+def access_context_from_identity(
+    identity: ExternalIdentity,
+    auth_settings: AuthSettings,
+) -> ExternalAccessContext | None:
+    """Return the request-local access ceiling for an external identity."""
+    if not auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED:
+        return None
+
+    claim_name = auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM
+    claim_value = _claim_as_str(identity.claims, claim_name)
+    mapped_level = None
+    if claim_value is not None:
+        mapped_level = _access_claim_mapping(auth_settings).get(claim_value.strip().lower())
+        if mapped_level is None:
+            mapped_level = _normalize_access_level(claim_value)
+    level = mapped_level or _normalize_access_level(auth_settings.EXTERNAL_AUTH_DEFAULT_ACCESS_LEVEL)
+    if level is None:
+        level = EXTERNAL_ACCESS_VIEWER
+
+    return ExternalAccessContext(
+        provider=identity.provider,
+        subject=identity.subject,
+        level=level,
+        claim_name=claim_name,
+        claim_value=claim_value,
+    )
+
+
 def _validate_trusted_time_claims(claims: Mapping[str, Any]) -> None:
     now = datetime.now(timezone.utc).timestamp()
     exp = claims.get("exp")
@@ -178,9 +305,12 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
 
     If ``EXTERNAL_AUTH_TRUSTED_JWT_DECODE`` is enabled, signature verification
     is skipped (the caller has stated an upstream proxy already validated it).
-    Otherwise ``EXTERNAL_AUTH_JWKS_URL`` is required and the signature is
-    verified against the fetched JWKS using ``EXTERNAL_AUTH_ALGORITHMS``.
-    ``exp`` / ``nbf`` are always checked.
+    Otherwise ``EXTERNAL_AUTH_JWKS_URL`` and ``EXTERNAL_AUTH_AUDIENCE`` are both
+    required: the signature is verified against the fetched JWKS using
+    ``EXTERNAL_AUTH_ALGORITHMS`` and the ``aud`` claim is bound to this
+    deployment so tokens the IdP minted for other services are rejected.
+    ``EXTERNAL_AUTH_ISSUER`` is verified when set. ``exp`` / ``nbf`` are always
+    checked.
     """
     if not auth_settings.EXTERNAL_AUTH_ENABLED:
         msg = "External authentication is not enabled"
@@ -205,6 +335,20 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
             msg = "External authentication requires EXTERNAL_AUTH_JWKS_URL unless trusted decode is enabled"
             raise AuthInvalidTokenError(msg)
 
+        audience = _split_csv(auth_settings.EXTERNAL_AUTH_AUDIENCE)
+        if not audience:
+            # Without audience binding, any token the IdP minted for a *different*
+            # relying party would verify here (same signing keys, valid exp).
+            # Audience is the control that stops cross-service token reuse, so it
+            # is required whenever signatures are checked against a JWKS.
+            msg = (
+                "External JWKS verification requires EXTERNAL_AUTH_AUDIENCE so tokens the IdP issued "
+                "for other services are rejected. Set EXTERNAL_AUTH_AUDIENCE to this deployment's "
+                "expected audience, or only enable EXTERNAL_AUTH_TRUSTED_JWT_DECODE behind a proxy "
+                "that already validates audience."
+            )
+            raise AuthInvalidTokenError(msg)
+
         jwks = await _fetch_jwks(auth_settings.EXTERNAL_AUTH_JWKS_URL)
         try:
             jwk = _select_jwk(jwks, token)
@@ -218,7 +362,6 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
                 raise
             jwk = _select_jwk(refreshed, token)
         signing_key = jwt.PyJWK.from_dict(jwk).key
-        audience = _split_csv(auth_settings.EXTERNAL_AUTH_AUDIENCE)
         issuer = auth_settings.EXTERNAL_AUTH_ISSUER or None
         algorithms = _split_csv(auth_settings.EXTERNAL_AUTH_ALGORITHMS) or ["RS256"]
 
@@ -226,10 +369,10 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
             token,
             signing_key,
             algorithms=algorithms,
-            audience=audience if audience else None,
+            audience=audience,
             issuer=issuer,
             options={
-                "verify_aud": bool(audience),
+                "verify_aud": True,
                 "verify_iss": bool(issuer),
             },
         )
