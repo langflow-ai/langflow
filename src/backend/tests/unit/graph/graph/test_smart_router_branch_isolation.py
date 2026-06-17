@@ -16,17 +16,12 @@ shared path with the same reconvergence scenario: it would have failed before th
 because the merge node was excluded along with the unselected branch and never ran.
 """
 
-import pytest
-
-try:
-    from lfx.components.flow_controls.conditional_router import ConditionalRouterComponent
-    from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
-    from lfx.custom.custom_component.component import Component
-    from lfx.graph.graph.base import Graph
-    from lfx.io import MessageTextInput, Output
-    from lfx.schema.message import Message
-except ImportError as e:
-    pytest.skip(f"Failed to import components in tests. Exception: {e}", allow_module_level=True)
+from lfx.components.flow_controls.conditional_router import ConditionalRouterComponent
+from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
+from lfx.custom.custom_component.component import Component
+from lfx.graph.graph.base import Graph
+from lfx.io import HandleInput, MessageTextInput, Output
+from lfx.schema.message import Message
 
 
 class _StubbedSmartRouter(SmartRouterComponent):
@@ -56,6 +51,21 @@ class _ThreeRouteSmartRouter(_StubbedSmartRouter):
         Output(display_name="Positive", name="category_1_result", method="process_case", group_outputs=True),
         Output(display_name="Neutral", name="category_2_result", method="process_case", group_outputs=True),
         Output(display_name="Negative", name="category_3_result", method="process_case", group_outputs=True),
+    ]
+
+
+class _ElseSmartRouter(_StubbedSmartRouter):
+    """Two routes plus an Else output, to exercise the ``default_result`` deactivation path.
+
+    Mirrors what ``update_outputs`` produces when ``enable_else_output=True``: the two
+    ``category_{i}_result`` outputs plus a ``default_result`` output bound to
+    ``default_response``.
+    """
+
+    outputs = [
+        Output(display_name="Positive", name="category_1_result", method="process_case", group_outputs=True),
+        Output(display_name="Negative", name="category_2_result", method="process_case", group_outputs=True),
+        Output(display_name="Else", name="default_result", method="default_response", group_outputs=True),
     ]
 
 
@@ -95,9 +105,33 @@ class MergeSink(Component):
         return Message(text="merged")
 
 
-def _make_router(router_cls, routes):
+class ListMergeSink(Component):
+    """Merge node with a single ``is_list=True`` input fed by several branches.
+
+    Records exactly what landed in the list so a stray contribution from an excluded
+    predecessor (the input's template default) is observable.
+    """
+
+    display_name = "List Merge Sink"
+    name = "ListMergeSink"
+
+    inputs = [HandleInput(name="items", display_name="Items", input_types=["Message"], is_list=True, required=False)]
+    outputs = [Output(display_name="Out", name="out", method="run_merge")]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.did_run = False
+        self.received_items: list = []
+
+    def run_merge(self) -> Message:
+        self.did_run = True
+        self.received_items = list(self.items or [])
+        return Message(text="merged")
+
+
+def _make_router(router_cls, routes, **extra):
     router = router_cls(_id="router")
-    router.set(input_text="I love this product!", routes=routes)
+    router.set(input_text="I love this product!", routes=routes, **extra)
     return router
 
 
@@ -157,6 +191,38 @@ async def test_unselected_branch_does_not_run_when_branches_reconverge():
     assert merge.did_run is True, "Merge node should execute from selected branch"
     assert "unselected" not in yielded
     assert "merge" in yielded
+
+
+async def test_list_input_merge_excludes_unselected_branch_contribution():
+    """A shared ``is_list=True`` input must not collect the excluded branch's template default.
+
+    When both the selected and the unselected branch feed the same list input, the excluded
+    predecessor is never built. Pulling a value for it would return the input's template
+    default (an empty ``Message``/``""``) and inject a stray element next to the real one.
+    Only the selected branch should contribute.
+    """
+    router = _make_router(_StubbedSmartRouter, _TWO_ROUTES)
+    selected, unselected = RecordingSink(_id="selected"), RecordingSink(_id="unselected")
+    merge = ListMergeSink(_id="merge")
+
+    graph = Graph()
+    graph.add_component(router, "router")
+    graph.add_component(selected, "selected")
+    graph.add_component(unselected, "unselected")
+    graph.add_component(merge, "merge")
+    graph.add_component_edge("router", ("category_1_result", "input_value"), "selected")
+    graph.add_component_edge("router", ("category_2_result", "input_value"), "unselected")
+    graph.add_component_edge("selected", ("out", "items"), "merge")
+    graph.add_component_edge("unselected", ("out", "items"), "merge")
+
+    await _run(graph)
+
+    assert selected.did_run is True
+    assert unselected.did_run is False
+    assert merge.did_run is True
+    # Only the selected branch contributes: exactly one element, no stray template-default ''.
+    texts = [getattr(item, "text", item) for item in merge.received_items]
+    assert texts == ["ran:selected"], f"merge collected a stray element: {merge.received_items!r}"
 
 
 def _make_if_else_router():
@@ -228,6 +294,83 @@ async def test_only_matched_branch_runs_with_three_routes():
     assert sink2.did_run is True, "Matched (middle) branch should run"
     assert sink1.did_run is False, "Unselected branch 1 should not run"
     assert sink3.did_run is False, "Unselected branch 3 should not run"
+
+
+async def test_else_branch_does_not_run_when_a_route_matches():
+    """With ``enable_else_output=True`` and a matched route, the Else branch must not run.
+
+    The ``default_result`` (Else) output feeds its own leaf. On a match the router excludes
+    that branch: ``process_case`` appends ``default_result`` to its deactivation list and
+    ``default_response`` also calls ``_deactivate_branches(["default_result"])``. Both paths
+    run, so this guards the *aggregate* Else-exclusion behavior (the two paths are redundant,
+    so it does not isolate either one). The Else leaf must stay unrun while the matched leaf
+    and the merge node fed by the selected branch still run.
+    """
+    router = _make_router(_ElseSmartRouter, _TWO_ROUTES, enable_else_output=True)
+    router.forced_category = "Positive"  # matches route 1 -> Else must be excluded
+
+    selected, unselected = RecordingSink(_id="selected"), RecordingSink(_id="unselected")
+    else_leaf = RecordingSink(_id="else_leaf")
+    merge = MergeSink(_id="merge")
+
+    graph = Graph()
+    for comp, cid in (
+        (router, "router"),
+        (selected, "selected"),
+        (unselected, "unselected"),
+        (else_leaf, "else_leaf"),
+        (merge, "merge"),
+    ):
+        graph.add_component(comp, cid)
+    graph.add_component_edge("router", ("category_1_result", "input_value"), "selected")
+    graph.add_component_edge("router", ("category_2_result", "input_value"), "unselected")
+    # The Else output feeds its own (dead-end) leaf.
+    graph.add_component_edge("router", ("default_result", "input_value"), "else_leaf")
+    # The selected branch reconverges with the (excluded) unselected branch on the merge node.
+    graph.add_component_edge("selected", ("out", "in1"), "merge")
+    graph.add_component_edge("unselected", ("out", "in2"), "merge")
+
+    yielded = await _run(graph)
+
+    assert selected.did_run is True
+    assert unselected.did_run is False, "Unselected route branch executed despite the match"
+    assert else_leaf.did_run is False, "Else branch executed despite a matched route"
+    assert merge.did_run is True, "Merge node should execute from the selected branch"
+    assert "else_leaf" not in yielded
+    assert "merge" in yielded
+
+
+async def test_else_branch_runs_when_no_route_matches():
+    """With ``enable_else_output=True`` and no matched route, only the Else branch runs.
+
+    Complements the match case: ``default_response`` takes its no-match path (returns the
+    input as default) so the Else leaf runs, while every ``category_{i}_result`` branch is
+    deactivated by ``process_case`` and stays unrun.
+    """
+    router = _make_router(_ElseSmartRouter, _TWO_ROUTES, enable_else_output=True)
+    router.forced_category = "NONE"  # no route matches -> Else is the only live branch
+
+    selected, unselected = RecordingSink(_id="selected"), RecordingSink(_id="unselected")
+    else_leaf = RecordingSink(_id="else_leaf")
+
+    graph = Graph()
+    for comp, cid in (
+        (router, "router"),
+        (selected, "selected"),
+        (unselected, "unselected"),
+        (else_leaf, "else_leaf"),
+    ):
+        graph.add_component(comp, cid)
+    graph.add_component_edge("router", ("category_1_result", "input_value"), "selected")
+    graph.add_component_edge("router", ("category_2_result", "input_value"), "unselected")
+    graph.add_component_edge("router", ("default_result", "input_value"), "else_leaf")
+
+    yielded = await _run(graph)
+
+    assert else_leaf.did_run is True, "Else branch should run when no route matches"
+    assert selected.did_run is False, "Route branch 1 should not run when no route matches"
+    assert unselected.did_run is False, "Route branch 2 should not run when no route matches"
+    assert "else_leaf" in yielded
 
 
 def test_update_outputs_names_match_routing_contract():
