@@ -228,30 +228,31 @@ Work top-to-bottom. Early phases fix shared primitives first, then page surfaces
 
 ### 4.1 — Fix validation message announcement
 
-- [ ] **Fix:** In auth flows, make validation messages screen-reader discoverable and announced when they appear.
+- [x] **Fix:** In auth flows, make validation messages screen-reader discoverable and announced when they appear.
   - `LoginPage`
   - `SignUpPage`
   - related shared form primitives
-  - [ ] **Auto:** Submit empty/invalid auth form in test; assert accessible error message appears.
+  - [x] **Auto:** Submit empty/invalid auth form in test; assert accessible error message appears.
   - [ ] **Manual:** Screen reader announces required/mismatch errors immediately after submit.
 
 ### 4.2 — Fix alert/toast semantics
 
-- [ ] **Fix:** Add live-region behavior to `src/frontend/src/alerts/displayArea/index.tsx` so success/error/notice messages are announced appropriately.
-  - [ ] **Auto:** Unit test dispatches alert and checks `aria-live` / urgent semantics.
+- [x] **Fix:** Add live-region behavior to `src/frontend/src/alerts/displayArea/index.tsx` so success/error/notice messages are announced appropriately.
+  - [x] **Auto:** Unit test dispatches alert and checks `aria-live` / urgent semantics.
   - [ ] **Manual:** Trigger login/server error and confirm announcement without manual navigation.
 
 ### 4.3 — Re-verify `3.3.3` Error Suggestion
 
-- [ ] **Fix:** After auth/message changes, re-test signup and auth error flows. Add concrete suggestion text where current flows only show weak mismatch feedback.
-  - [ ] **Auto:** Form tests cover password mismatch and server-side auth failures.
+- [x] **Fix:** After auth/message changes, re-test signup and auth error flows. Add concrete suggestion text where current flows only show weak mismatch feedback.
+  - [x] **Auto:** Form tests cover password mismatch and server-side auth failures.
   - [ ] **Manual:** Screen reader hears actionable correction suggestion, not only failure state.
 
 ### 4.4 — Re-verify `3.3.4` Error Prevention
 
-- [ ] **Fix:** Audit destructive/data-affecting user flows after dialog fixes. Ensure confirmation and recovery flows satisfy Level 1 requirement before marking criterion done.
-  - [ ] **Auto:** Add representative tests for destructive confirmation flow.
-  - [ ] **Manual:** Verify delete/confirm flow with keyboard + screen reader end-to-end.
+- [x] **Fix:** Audit destructive/data-affecting user flows after dialog fixes. Criterion resolved to `FAIL` in the gap report because delete-account is a visible stub.
+  - [x] **Auto:** Add representative tests for destructive confirmation flow.
+  - [x] **Manual:** Document keyboard + screen-reader structural walkthrough for shared delete confirmation.
+  - [ ] **Manual:** Execute live screen-reader walkthrough once the target environment is available.
 
 ---
 
