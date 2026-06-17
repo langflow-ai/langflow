@@ -171,7 +171,11 @@ def ensure_code_execution_enabled() -> None:
         from lfx.services.deps import get_settings_service
 
         settings_service = get_settings_service()
-    except Exception:  # noqa: BLE001 - no settings layer (lfx standalone) -> local/trusted, allow
+    except ImportError:
+        # Services layer absent (lfx standalone) -> local/trusted context, allow.
+        # Only ImportError is treated as "no settings layer": other exceptions from
+        # get_settings_service() must propagate rather than silently fail open and
+        # bypass the allow_custom_components gate (GHSA-8qpj-27x8-pwpq).
         return
     if settings_service is None:
         return
