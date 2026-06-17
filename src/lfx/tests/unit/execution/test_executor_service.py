@@ -29,10 +29,15 @@ def test_executor_service_preregisters_in_process():
 
 
 @pytest.mark.asyncio
-async def test_coordinator_uses_settings_executor_kind():
+async def test_coordinator_uses_settings_executor_kind(monkeypatch, request):
     """Behavioral assertion: coordinator dispatches to whichever kind the settings select."""
     settings_service = get_service(ServiceType.SETTINGS_SERVICE)
-    settings_service.settings.executor_kind = "kind-from-settings"
+    # monkeypatch restores the original kind even if an assertion below fails, so a
+    # mid-test failure can't poison the session-wide settings for later tests. The
+    # finalizer rebuilds the executor service after the kind reverts, so the service
+    # built from the patched kind doesn't linger either.
+    monkeypatch.setattr(settings_service.settings, "executor_kind", "kind-from-settings")
+    request.addfinalizer(lambda: get_service_manager().update(ServiceType.EXECUTOR_SERVICE))
 
     seen: list[str] = []
 
@@ -51,9 +56,6 @@ async def test_coordinator_uses_settings_executor_kind():
 
     assert seen == ["kind-from-settings"]
     assert outputs == ["ok"]
-
-    settings_service.settings.executor_kind = "in-process"
-    get_service_manager().update(ServiceType.EXECUTOR_SERVICE)
 
 
 def test_register_replaces_and_invalidates_cached_coordinator():

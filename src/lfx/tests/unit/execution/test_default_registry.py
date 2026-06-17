@@ -16,9 +16,14 @@ def test_default_coordinator_uses_default_registry():
 
 
 def test_set_default_coordinator_overrides_singleton():
+    original = get_default_coordinator()
     custom = Coordinator(registry=get_default_registry())
     set_default_coordinator(custom)
-    assert get_default_coordinator() is custom
+    try:
+        assert get_default_coordinator() is custom
+    finally:
+        # Restore the singleton so this override doesn't bleed into later tests.
+        set_default_coordinator(original)
 
 
 def test_default_coordinator_is_idempotent_within_a_test():

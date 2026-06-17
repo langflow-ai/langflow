@@ -35,6 +35,22 @@ def _make_coordinator() -> Coordinator:
     return Coordinator(registry=registry)
 
 
+def _build_simple_graph():
+    """Build a fresh single-use graph (mirror of the ``simple_graph`` fixture).
+
+    Tests that drive more than one run need a new graph each time, since a Graph
+    can't be re-driven after it finishes.
+    """
+    from lfx.components.input_output import ChatInput, ChatOutput
+    from lfx.graph import Graph
+
+    chat_input = ChatInput(_id="chat_input")
+    chat_input.set(should_store_message=False)
+    chat_output = ChatOutput(input_value="test", _id="chat_output")
+    chat_output.set(sender_name=chat_input.message_response)
+    return Graph(chat_input, chat_output)
+
+
 @pytest.mark.asyncio
 async def test_run_yields_step_results_then_terminal_run_complete(simple_graph):
     coordinator = _make_coordinator()
@@ -128,7 +144,7 @@ async def test_run_to_completion_returns_outputs_from_legacy_path(simple_graph):
 
 
 @pytest.mark.asyncio
-async def test_registry_returns_same_executor_instance_across_runs(simple_graph):
+async def test_registry_returns_same_executor_instance_across_runs():
     """The seam shares one executor instance per kind across all runs.
 
     Two sequential ``coordinator.run`` calls MUST resolve to the same instance;
@@ -149,8 +165,10 @@ async def test_registry_returns_same_executor_instance_across_runs(simple_graph)
     registry.register(_Recorder())
     coordinator = Coordinator(registry=registry, executor_kind="recorder")
 
-    [_ async for _ in coordinator.run(simple_graph, inputs=[{"input_value": "a"}])]
-    [_ async for _ in coordinator.run(simple_graph, inputs=[{"input_value": "b"}])]
+    # Build a fresh graph per run; a Graph is single-use once driven to completion,
+    # so reusing one across both runs would couple the second run to the first's state.
+    [_ async for _ in coordinator.run(_build_simple_graph(), inputs=[{"input_value": "a"}])]
+    [_ async for _ in coordinator.run(_build_simple_graph(), inputs=[{"input_value": "b"}])]
 
     assert len(instances) == 2
     assert instances[0] is instances[1], "registry must return the same instance per kind"

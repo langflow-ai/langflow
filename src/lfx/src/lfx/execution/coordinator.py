@@ -19,6 +19,7 @@ Callers pick the view they want:
 
 from __future__ import annotations
 
+from contextlib import aclosing
 from typing import TYPE_CHECKING, Any
 
 from lfx.execution.partitioner import identity_partition
@@ -91,17 +92,16 @@ class Coordinator:
         empty list here; callers that want final outputs from the streaming path
         should use ``stream()`` and collect what they need from payloads.
         """
-        async for item in self.run(graph, inputs=inputs, **runtime_options):
-            if isinstance(item, RunComplete):
-                return item.outputs
+        async with aclosing(self.run(graph, inputs=inputs, **runtime_options)) as stream:
+            async for item in stream:
+                if isinstance(item, RunComplete):
+                    return item.outputs
         msg = "Executor stream ended without a RunComplete"
         raise RuntimeError(msg)
 
     async def stream(
         self,
         graph: Any,
-        *,
-        inputs: list[dict[str, Any]] | None = None,
         **runtime_options: Any,
     ) -> AsyncIterator[Any]:
         """Yield ``StepResult.payload`` values only.
@@ -110,11 +110,14 @@ class Coordinator:
         exists for consumers that process events incrementally and have no use for
         the end-of-run envelope. If you need to know when the run ends, use
         ``run()`` directly.
+
+        Note there is no ``inputs`` parameter here. The in-process executor's
+        streaming path reads its inputs from ``runtime_options["initial_inputs"]``,
+        not from the seam-level ``inputs`` list (which only the legacy passthrough
+        in ``run_to_completion`` consumes). Pass ``initial_inputs=...`` to feed a
+        streaming run.
         """
-        inner = self.run(graph, inputs=inputs or [], **runtime_options)
-        try:
+        async with aclosing(self.run(graph, inputs=[], **runtime_options)) as inner:
             async for item in inner:
                 if isinstance(item, StepResult):
                     yield item.payload
-        finally:
-            await inner.aclose()
