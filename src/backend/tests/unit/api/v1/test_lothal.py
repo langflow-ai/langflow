@@ -589,6 +589,47 @@ async def test_chat_persists_turn_and_replays_suggestions(client: AsyncClient, l
     assert project["prd_content"] is None
 
 
+async def test_no_signal_chat_turn_bumps_updated_at_and_reorders_list(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """A no-signal clarification turn advances updated_at and reorders the list.
+
+    Regression for the audit finding that a turn changing neither the diagram nor
+    the phase left the project row untouched — freezing updated_at so an
+    actively-chatted project sank below idle ones in the updated_at-DESC list.
+    """
+    older = await _create_chat_project(client, logged_in_headers, name="Older")
+    newer = await _create_chat_project(client, logged_in_headers, name="Newer")
+
+    async def list_ids() -> list[str]:
+        resp = await client.get("api/v1/lothal/projects/", headers=logged_in_headers)
+        return [p["id"] for p in resp.json()]
+
+    # Freshly created: the newer project leads the updated_at-DESC list.
+    ids = await list_ids()
+    assert ids.index(newer) < ids.index(older)
+    before = (await client.get(f"api/v1/lothal/projects/{older}", headers=logged_in_headers)).json()["updated_at"]
+
+    async def fake_call_llm(_messages, **_kwargs):
+        return _clarification_reply("Who is it for?", ["Me", "Team"])
+
+    monkeypatch.setattr(clarification_engine, "call_llm", fake_call_llm)
+
+    # A no-signal clarification turn in the older project (phase stays put).
+    response = await client.post(
+        f"api/v1/lothal/projects/{older}/chat", json={"content": "a todo app"}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["phase"] == "CLARIFICATION"
+
+    after = (await client.get(f"api/v1/lothal/projects/{older}", headers=logged_in_headers)).json()["updated_at"]
+    assert after > before, "a no-signal chat turn must advance updated_at"
+
+    # The chatted project now leads the list ahead of the idle newer one.
+    ids = await list_ids()
+    assert ids.index(older) < ids.index(newer)
+
+
 async def test_chat_three_no_signal_turns_then_clarity_transition(
     client: AsyncClient, logged_in_headers: dict, monkeypatch
 ):
