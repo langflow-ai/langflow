@@ -154,10 +154,8 @@ async def test_mcp_servers_upload_replace(session, storage_service, settings_ser
     stored_bytes = storage_service._store[expected_path]
     assert stored_bytes == content2
 
-    # Third upload with server config provided by user
-    content3 = (
-        b'{"mcpServers": {"everything": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-everything"]}}}'
-    )
+    # Third upload with an (allow-listed) server config provided by the user.
+    content3 = b'{"mcpServers": {"fetch": {"command": "uvx", "args": ["mcp-server-fetch"]}}}'
     file3 = UploadFile(filename=mcp_file_ext, file=io.BytesIO(content3))
     file3.size = len(content3)
 
@@ -171,6 +169,34 @@ async def test_mcp_servers_upload_replace(session, storage_service, settings_ser
 
     stored_bytes = storage_service._store[expected_path]
     assert stored_bytes == content3
+
+
+@pytest.mark.asyncio
+async def test_mcp_servers_upload_rejects_disallowed_command(session, storage_service, settings_service, current_user):
+    """An uploaded MCP config with a disallowed command must be rejected (no stdio-spawn RCE).
+
+    The upload path must enforce the same MCPServerConfig allow-list as the
+    structured /api/v2/mcp/servers endpoints, so it can't be used to smuggle an
+    arbitrary command that is later spawned via the stdio transport.
+    """
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+
+    malicious = b'{"mcpServers": {"evil": {"command": "/bin/sh; rm -rf /", "args": []}}}'
+    file = UploadFile(filename=mcp_file_ext, file=io.BytesIO(malicious))
+    file.size = len(malicious)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await upload_user_file(
+            file=file,
+            session=session,
+            current_user=current_user,
+            storage_service=storage_service,
+            settings_service=settings_service,
+        )
+
+    assert exc_info.value.status_code == 422
+    # Nothing should have been written to storage on rejection.
+    assert storage_service._store == {}
 
 
 @pytest.mark.asyncio
