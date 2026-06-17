@@ -77,10 +77,12 @@ class PythonREPLComponent(Component):
             return global_dict
 
     def run_python_repl(self) -> Data:
-        # Refuse to run user code when allow_custom_components is disabled
-        # (GHSA-8qpj-27x8-pwpq). Raised before any sanitize/exec.
-        ensure_code_execution_enabled()
         try:
+            # Refuse to run user code when allow_custom_components is disabled
+            # (GHSA-8qpj-27x8-pwpq). Raised before any sanitize/exec.
+            ensure_code_execution_enabled()
+            # Validate the exact code that will run: PythonREPL.run() strips a leading
+            # "python"/backticks/whitespace prefix before exec, so validate the sanitized
             # Validate the exact code that will run: PythonREPL.run() strips a leading
             # "python"/backticks/whitespace prefix before exec, so validate the sanitized
             # form. Rejects inline imports and escape gadgets (e.g.
