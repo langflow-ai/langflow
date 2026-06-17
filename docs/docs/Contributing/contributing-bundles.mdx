@@ -8,40 +8,134 @@ import Icon from "@site/src/components/icon";
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) are groups of components that are related to a specific service provider.
 If you want to contribute your custom components back to the Langflow project, you must put them into a bundle.
 
-Follow these steps to add components to <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the Langflow visual editor.
+Follow these steps to package your components as a bundle and contribute them to Langflow.
 This example adds a bundle named `DarthVader`.
 
-For more information on creating custom components, see [Create custom Python components](/components-custom-components).
+## Create the bundle package
 
-## Add the bundle to the lfx components folder
+Each bundle lives in `src/bundles/<bundle_name>/` as a standalone Python package.
 
-1. Navigate to the lfx directory in the Langflow repository and create a new folder for your bundle.
-The path for your new component is `src/lfx/src/lfx/components/darth_vader`.
-You can view the [components folder](https://github.com/langflow-ai/langflow/tree/main/src/lfx/src/lfx/components) in the Langflow repository.
+1. Create the bundle directory and file structure:
 
-2. Within the newly created `darth_vader` folder, add the following files:
+    ```
+    src/bundles/darth_vader/
+    ├── README.md
+    ├── pyproject.toml
+    └── src/
+        └── lfx_darth_vader/
+            ├── __init__.py
+            ├── extension.json
+            └── components/
+                └── darth_vader/
+                    ├── __init__.py
+                    └── darth_vader_component.py
+    ```
 
-    * `darth_vader_component.py` — This file contains the backend logic for the new bundle. Create multiple `.py` files for multiple components.
-    * `__init__.py` — This file initializes the bundle components. You can use any existing `__init__.py` as an example to see how it should be structured.
+2. Create `src/bundles/darth_vader/pyproject.toml`.
+Copy from an existing bundle such as [`src/bundles/duckduckgo/pyproject.toml`](https://github.com/langflow-ai/langflow/blob/main/src/bundles/duckduckgo/pyproject.toml) and substitute the bundle name and runtime dependencies:
 
-    For an example of adding multiple components in a bundle, see the [Notion](https://github.com/langflow-ai/langflow/tree/main/src/lfx/src/lfx/components/Notion) bundle.
+    ```toml
+    [project]
+    name = "lfx-darth-vader"
+    version = "0.1.0"
+    description = "DarthVader component as a standalone Langflow Extension Bundle."
+    readme = "README.md"
+    requires-python = ">=3.10,<3.15"
+    license = { text = "MIT" }
 
+    dependencies = [
+        "lfx>=1.11.0.dev0,<2.0.0",
+        # add your runtime deps here
+    ]
+
+    [project.entry-points."langflow.extensions"]
+    lfx-darth-vader = "lfx_darth_vader"
+
+    [build-system]
+    requires = ["hatchling"]
+    build-backend = "hatchling.build"
+
+    [tool.hatch.build.targets.wheel]
+    packages = ["src/lfx_darth_vader"]
+    include = ["src/lfx_darth_vader/extension.json", "src/lfx_darth_vader/components/**/*.py"]
+    ```
+
+3. Create `src/bundles/darth_vader/src/lfx_darth_vader/extension.json`:
+
+    ```json
+    {
+      "$schema": "https://schemas.langflow.org/extension/v1.json",
+      "id": "lfx-darth-vader",
+      "version": "0.1.0",
+      "name": "DarthVader",
+      "description": "DarthVader component bundle.",
+      "lfx": { "compat": ["1"] },
+      "bundles": [
+        { "name": "darth_vader", "path": "components/darth_vader" }
+      ]
+    }
+    ```
+
+4. Create `src/bundles/darth_vader/src/lfx_darth_vader/__init__.py` to re-export your component class:
+
+    ```python
+    """lfx-darth-vader: DarthVader bundle."""
+
+    from lfx_darth_vader.components.darth_vader.darth_vader_component import DarthVaderAPIComponent
+
+    __all__ = ["DarthVaderAPIComponent"]
+    ```
+
+5. Create `src/bundles/darth_vader/src/lfx_darth_vader/components/darth_vader/__init__.py`:
+
+    ```python
+    from .darth_vader_component import DarthVaderAPIComponent
+
+    __all__ = ["DarthVaderAPIComponent"]
+    ```
+
+6. Create your component logic in `src/bundles/darth_vader/src/lfx_darth_vader/components/darth_vader/darth_vader_component.py`.
+For an example of adding multiple components in a bundle, see the [DuckDuckGo bundle](https://github.com/langflow-ai/langflow/tree/main/src/bundles/duckduckgo).
+
+## Wire the bundle into the workspace
+
+Add the bundle to the root [`pyproject.toml`](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml) in three places:
+
+1. Add to `[project] dependencies`:
+
+    ```toml
+    "lfx-darth-vader>=0.1.0",
+    ```
+
+2. Add to `[tool.uv.sources]`:
+
+    ```toml
+    lfx-darth-vader = { workspace = true }
+    ```
+
+3. Add to `[tool.uv.workspace] members`:
+
+    ```toml
+    "src/bundles/darth_vader",
+    ```
+
+Then run `uv lock` to update the lockfile.
 
 ## Add the bundle to the frontend folder
 
 1. Navigate to the frontend directory in the Langflow repository to add your bundle's icon.
-The path for your new component icon is `src/frontend/src/icons/DarthVader`
+The path for your new component icon is `src/frontend/src/icons/DarthVader`.
 You can view the [icons folder](https://github.com/langflow-ai/langflow/tree/main/src/frontend/src/icons) in the Langflow repository.
-To add your icon, create **three** files inside the `icons/darth_vader` folder.
+To add your icon, create **three** files inside the `icons/DarthVader` folder.
 
-2. In the `icons/darth_vader` folder, add the raw SVG file of your icon, such as `darth_vader-icon.svg`.
+2. In the `icons/DarthVader` folder, add the raw SVG file of your icon, such as `darth_vader-icon.svg`.
 
     :::tip
     To convert the SVG file to JSX format, you can use an online tool like SVG to JSX.
     It's highly recommended to use the original, lighter version of the SVG.
     :::
 
-3. In the `icons/darth_vader` folder, add the icon as a React component in JSX format, such as `DarthVaderIcon.jsx`.
+3. In the `icons/DarthVader` folder, add the icon as a React component in JSX format, such as `DarthVaderIcon.jsx`.
 
 4. Update the JSX file to include the correct component name and structure.
 Ensure you include the `{...props}` spread operator in your JSX file.
@@ -72,7 +166,7 @@ For example, here is `DarthVaderIcon.jsx`:
     export default DarthVaderIcon;
     ```
 
-5. In the `icons/darth_vader` folder, add the React component itself in TypeScript format, such as `index.tsx`.
+5. In the `icons/DarthVader` folder, add the React component itself in TypeScript format, such as `index.tsx`.
 Ensure the icon's React component name corresponds to the JSX component you just created, such as `DarthVaderIcon`:
 
     ```typescript
@@ -112,7 +206,7 @@ For example:
     Add an object to the array with the following keys:
 
     * `display_name`: The text label shown in the Langflow visual editor
-    * `name`: The name of the folder you created within the `/src/lfx/src/lfx/components` directory
+    * `name`: The bundle name declared in `extension.json` under `bundles[].name`
     * `icon`: The name of the bundle's icon that you defined in the previous steps
 
     For example:
@@ -130,7 +224,8 @@ In your component bundle, associate the icon variable with your new bundle.
 In your `darth_vader_component.py` file, in the component class, include the icon that you defined in the frontend.
 The `icon` must point to the directory you created for your icons within the `src/frontend/src/icons` directory.
 For example:
-```
+
+```python
 class DarthVaderAPIComponent(LCToolComponent):
     display_name: str = "Darth Vader Tools"
     description: str = "Use the force to run actions with your agent"
@@ -138,9 +233,15 @@ class DarthVaderAPIComponent(LCToolComponent):
     icon = "DarthVader"
 ```
 
-## Ensure the application builds your component bundle
+## Validate and build your bundle
 
-1. To rebuild the backend and frontend, run `make install_frontend && make build_frontend && make install_backend && uv run langflow run --port 7860`.
+1. Validate the bundle manifest:
 
-2. Refresh the frontend application.
+    ```bash
+    uv run lfx extension validate src/bundles/darth_vader/src/lfx_darth_vader
+    ```
+
+2. To rebuild the backend and frontend, run `make install_frontend && make build_frontend && make install_backend && uv run langflow run --port 7860`.
+
+3. Refresh the frontend application.
 Your new bundle called `DarthVader` is available in the <Icon name="Blocks" aria-hidden="true" /> **Bundles** menu in the visual editor.
