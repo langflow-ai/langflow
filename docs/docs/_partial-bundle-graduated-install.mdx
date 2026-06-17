@@ -1,22 +1,29 @@
 import Admonition from '@theme/Admonition';
 
 export const GraduatedBundleInstall = ({packageName}) => {
-  const providerNames = {
-    'lfx-openai': 'OpenAI',
-    'lfx-anthropic': 'Anthropic',
-    'lfx-amazon': 'Amazon',
-    'lfx-datastax': 'DataStax',
-    'lfx-cohere': 'Cohere',
+  const providers = {
+    'lfx-openai':    {name: 'OpenAI',         coreSupport: true},
+    'lfx-anthropic': {name: 'Anthropic',      coreSupport: true},
+    'lfx-amazon':    {name: 'Amazon Bedrock', coreSupport: true},
+    'lfx-cohere':    {name: 'Cohere',         coreSupport: true},
+    'lfx-datastax':  {name: 'DataStax',       coreSupport: false},
   };
-  const providerName = providerNames[packageName] ?? packageName;
+
+  const {name, coreSupport} = providers[packageName] ?? {name: packageName, coreSupport: false};
+
   return (
-    <Admonition type="note" title="Bundle installation required">
-      <p>The <strong>{providerName}</strong> bundle is a standalone partner package and is <strong>not</strong> included in a standard <code>uv pip install langflow</code> installation.</p>
-      <p>To install it, run:</p>
-      <pre><code>uv pip install {packageName}</code></pre>
-      <p>After installation, restart Langflow. To confirm the bundle loaded, run:</p>
-      <pre><code>lfx extension list</code></pre>
-      <p>For more information, see <a href="/get-started-installation#bundle-install">Install Langflow bundle components</a>.</p>
+    <Admonition type="info" title="Bundle installation required">
+      {coreSupport && (
+        <p>Basic {name} support is already included in all Langflow installations through the core <a href="/components-models">Language Model</a> component. This bundle adds an enhanced {name} component with additional provider-specific parameters.</p>
+      )}
+      <p>The <strong>{name}</strong> bundle is a standalone partner package and is <strong>not</strong> included in a standard <code>uv pip install langflow</code>.</p>
+      <p>To install it, do the following:</p>
+      <ol>
+        <li>Run <code>uv pip install {packageName}</code>.</li>
+        <li>Restart Langflow.</li>
+        <li>To confirm the bundle loaded, run <code>lfx extension list</code>.</li>
+      </ol>
+      <p>For more information, see <a href="/components-bundle-components#bundle-install">Install bundle components</a>.</p>
     </Admonition>
   );
 };
