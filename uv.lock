@@ -9643,6 +9643,7 @@ name = "lfx-datastax"
 version = "0.1.0"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
+    { name = "astrapy" },
     { name = "graph-retriever" },
     { name = "langchain-astradb" },
     { name = "langchain-graph-retriever" },
@@ -9652,6 +9653,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "astrapy", specifier = ">=2.1.0,<3.0.0" },
     { name = "graph-retriever", specifier = "==0.8.0" },
     { name = "langchain-astradb", specifier = "~=1.0.0" },
     { name = "langchain-graph-retriever", specifier = "==0.8.0" },
