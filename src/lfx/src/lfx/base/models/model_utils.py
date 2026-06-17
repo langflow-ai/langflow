@@ -42,6 +42,27 @@ MIN_DEFAULT_MODELS = 5
 _OLLAMA_MODEL_LIST_TTL_SECONDS = 30.0
 _ollama_model_list_cache: dict[tuple[str, str], tuple[float, list[str]]] = {}
 
+# Per-model capability cache, keyed by (base_url, model_name). A given
+# Ollama ``model:tag``'s capabilities (completion / embedding / tools / …)
+# are intrinsic to the model, so this lives longer than the model-*list*
+# cache above. It exists to kill the ``/api/show`` fan-out that made Ollama
+# Cloud's large public catalog crawl on every model toggle (issue #12399):
+# without it each catalog read cost ``N + 1`` upstream calls (one
+# ``/api/tags`` + one ``/api/show`` per model) and ``/enabled_models`` paid
+# that twice (llm + embeddings) on every refetch. With it:
+#   (1) the llm and embedding reads (``model_type=None``) share a single
+#       probe set instead of each fanning out over the whole catalog, and
+#   (2) a read after the short list-TTL expires re-probes only models we
+#       have never seen, not the full catalog.
+# TTL is bounded (not indefinite) because the key omits the model digest:
+# re-pulling the same tag to a different capability class (e.g. a
+# completion model swapped for an embedding one under ``:latest``) would
+# otherwise mis-route the model in the picker until expiry. 10 minutes
+# fully covers a toggle session — the #12399 symptom — while keeping any
+# post-re-pull staleness short and self-healing.
+_OLLAMA_CAPABILITY_TTL_SECONDS = 600.0
+_ollama_capability_cache: dict[tuple[str, str], tuple[float, list[str]]] = {}
+
 
 def _ollama_cache_get(key: tuple[str, str], *, now: float | None = None) -> list[str] | None:
     """Return the cached model list for *key* if still fresh; else None."""
@@ -61,9 +82,31 @@ def _ollama_cache_set(key: tuple[str, str], value: list[str], *, now: float | No
     _ollama_model_list_cache[key] = (current, list(value))
 
 
+def _ollama_capability_get(key: tuple[str, str], *, now: float | None = None) -> list[str] | None:
+    """Return the cached capability list for *key* if still fresh; else None.
+
+    An empty list is a valid cached value ("model reports no capabilities")
+    and is returned as-is — only a genuine miss/expiry returns ``None``.
+    """
+    entry = _ollama_capability_cache.get(key)
+    if entry is None:
+        return None
+    timestamp, value = entry
+    current = now if now is not None else time.monotonic()
+    if (current - timestamp) >= _OLLAMA_CAPABILITY_TTL_SECONDS:
+        return None
+    return list(value)
+
+
+def _ollama_capability_set(key: tuple[str, str], value: list[str], *, now: float | None = None) -> None:
+    current = now if now is not None else time.monotonic()
+    _ollama_capability_cache[key] = (current, list(value))
+
+
 def _ollama_cache_clear() -> None:
     """Drop every cached entry. Exposed for tests; not called in production."""
     _ollama_model_list_cache.clear()
+    _ollama_capability_cache.clear()
 
 
 # Extract model names from metadata for fallback defaults
@@ -164,12 +207,20 @@ async def get_ollama_models(
                 model.get(json_name_key) for model in models.get(json_models_key, []) if model.get(json_name_key)
             ]
 
-            async def _has_capability(model_name: str) -> str | None:
-                """Probe one model's capabilities. Returns its name on match, else None.
+            async def _capabilities_for(model_name: str) -> list[str] | None:
+                """Return one model's capability list, reusing the per-model cache.
 
-                Per-model failures are absorbed (logged at debug) so a single
-                bad model does not poison the whole catalog response.
+                A cache hit (including a cached empty list) skips the
+                ``/api/show`` round-trip entirely — this is what stops the
+                catalog read from fanning out over the whole catalog on every
+                refetch. A probe failure returns ``None`` and is *not* cached,
+                so a single bad model neither poisons the catalog nor sticks:
+                it is retried on the next read.
                 """
+                cap_key = (base_url_value, model_name)
+                cached_caps = _ollama_capability_get(cap_key)
+                if cached_caps is not None:
+                    return cached_caps
                 try:
                     show_response = await client.post(url=show_url, json={"model": model_name})
                     show_response.raise_for_status()
@@ -180,15 +231,19 @@ async def get_ollama_models(
                     await logger.adebug(f"Ollama /api/show failed for {model_name}: {e}")
                     return None
                 capabilities = json_data.get(json_capabilities_key) or []
-                if desired_capability in capabilities:
-                    return model_name
-                return None
+                _ollama_capability_set(cap_key, capabilities)
+                return capabilities
 
-            # Parallel fan-out: one POST /api/show per candidate, awaited
-            # together so latency is bounded by the slowest single request
-            # instead of N * avg-request-latency.
-            results = await asyncio.gather(*(_has_capability(n) for n in candidates))
-            model_ids = sorted(name for name in results if name)
+            # Parallel fan-out: one POST /api/show per *uncached* candidate,
+            # awaited together so latency is bounded by the slowest single
+            # request instead of N * avg-request-latency. Cached candidates
+            # resolve without any upstream call.
+            results = await asyncio.gather(*(_capabilities_for(n) for n in candidates))
+            model_ids = sorted(
+                name
+                for name, capabilities in zip(candidates, results, strict=True)
+                if capabilities is not None and desired_capability in capabilities
+            )
 
     except (httpx.RequestError, ValueError) as e:
         msg = "Could not get model names from Ollama."

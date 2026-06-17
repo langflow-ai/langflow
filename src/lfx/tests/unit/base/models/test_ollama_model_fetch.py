@@ -191,7 +191,14 @@ async def test_get_ollama_models_caches_result_for_ttl_window():
 
 @pytest.mark.asyncio
 async def test_get_ollama_models_cache_keyed_by_base_url_and_capability():
-    """Different base URLs or capability filters must not collide."""
+    """Different base URLs or capability filters must not collide.
+
+    The list cache is keyed by ``(base_url, capability)`` so each distinct
+    fetch still re-resolves its own ``/api/tags``. The *capability* cache,
+    however, is keyed by ``(base_url, model_name)`` and outlives a single
+    fetch, so the second capability filter on the same base URL reuses the
+    first fetch's ``/api/show`` probes instead of fanning out again.
+    """
     from lfx.base.models import model_utils
 
     tags = {"models": [{"name": "llama3"}, {"name": "mxbai-embed-large"}]}
@@ -227,10 +234,12 @@ async def test_get_ollama_models_cache_keyed_by_base_url_and_capability():
     assert llms == ["llama3"]
     assert embs == ["mxbai-embed-large"]
     assert other_base == ["llama3"]
-    # 3 distinct cache entries → 3 /api/tags round-trips and 6 /api/show
-    # round-trips (2 per fetch). If the cache key collided we'd see fewer.
+    # 3 distinct list-cache entries → 3 /api/tags round-trips. Only 4
+    # /api/show round-trips though, not 6: the embedding fetch on
+    # localhost reuses the 2 capability probes from the completion fetch,
+    # while other-host probes its 2 models fresh.
     assert client.get.await_count == 3
-    assert client.post.await_count == 6
+    assert client.post.await_count == 4
 
 
 @pytest.mark.asyncio
@@ -270,5 +279,48 @@ async def test_get_ollama_models_refetches_after_ttl_expires():
 
     assert first == ["llama3"]
     assert second == ["llama3"]
-    # Second call missed the cache → two /api/tags fetches total.
+    # Second call missed the short list cache → a second /api/tags fetch.
     assert client.get.await_count == 2
+    # …but the per-model capability cache has a much longer TTL, so the
+    # re-listed model is NOT re-probed: still only one /api/show overall.
+    assert client.post.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_llm_and_embedding_reads_share_one_show_fanout():
+    """The ``model_type=None`` path must not probe the catalog twice.
+
+    ``GET /enabled_models`` fetches both llm and embedding live models
+    (``replace_with_live_models(model_type=None)``) on every refetch. Before
+    the per-model capability cache that meant ``2 x (N + 1)`` upstream calls
+    per read on Ollama Cloud's large public catalog — the root cause of the
+    toggle slowness in issue #12399. The two reads must now share a single
+    ``/api/show`` fan-out: ``N`` probes total, not ``2N``.
+    """
+    from lfx.base.models import model_utils
+
+    tags = {
+        "models": [
+            {"name": "llama3"},
+            {"name": "qwen2"},
+            {"name": "mxbai-embed-large"},
+            {"name": "nomic-embed-text"},
+        ]
+    }
+    show = {
+        "llama3": {"capabilities": ["completion", "tools"]},
+        "qwen2": {"capabilities": ["completion"]},
+        "mxbai-embed-large": {"capabilities": ["embedding"]},
+        "nomic-embed-text": {"capabilities": ["embedding"]},
+    }
+    client = _build_async_client(tags_payload=tags, show_results=show)
+
+    with patch.object(model_utils.httpx, "AsyncClient", return_value=client):
+        llms = await model_utils.get_ollama_llm_models("http://ollama.com")
+        embs = await model_utils.get_ollama_embedding_models("http://ollama.com")
+
+    assert llms == ["llama3", "qwen2"]
+    assert embs == ["mxbai-embed-large", "nomic-embed-text"]
+    # 4 models probed exactly once across BOTH reads — the embedding read
+    # reused every capability the llm read already fetched.
+    assert client.post.await_count == len(tags["models"])
