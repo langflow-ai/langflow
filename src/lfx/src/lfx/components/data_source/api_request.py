@@ -826,8 +826,11 @@ class APIRequestComponent(Component):
                 # Normalize backslashes to forward slashes first so Windows-style
                 # separators (e.g. filename="..\..\tmp\evil.sh") are also stripped
                 # on POSIX, where "\\" is a valid filename character that
-                # Path(...).name would otherwise leave intact.
-                normalized_filename = filename_match.group(1).replace("\\", "/")
+                # Path(...).name would otherwise leave intact. NUL bytes are
+                # stripped too: they survive Path(...).name and would otherwise
+                # make the later .resolve() raise a cryptic "embedded null
+                # character" ValueError instead of failing cleanly here.
+                normalized_filename = filename_match.group(1).replace("\\", "/").replace("\x00", "")
                 extracted_filename = Path(normalized_filename).name
                 if extracted_filename and extracted_filename not in (".", ".."):
                     filename = extracted_filename
@@ -856,7 +859,7 @@ class APIRequestComponent(Component):
 
         # Defense-in-depth: ensure the resolved path stays within the component
         # temp dir even if filename derivation above is ever changed.
-        if component_temp_dir.resolve() not in file_path.resolve().parents:
+        if not file_path.resolve().is_relative_to(component_temp_dir.resolve()):
             msg = "Resolved output path escapes the component temporary directory"
             raise ValueError(msg)
 
