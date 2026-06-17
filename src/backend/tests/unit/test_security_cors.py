@@ -211,6 +211,122 @@ class TestCORSConfiguration:
         assert cors_middleware.kwargs["allow_origins"] == "*"
         assert cors_middleware.kwargs["allow_credentials"] is False  # wildcard => credentials disabled
 
+        # The override must be surfaced so an operator who set credentials on purpose
+        # can see why credentialed requests stopped working.
+        assert any(
+            "CORS" in str(call) and "wildcard" in str(call) and "credentials" in str(call) for call in warning_calls
+        ), f"Expected a wildcard-credentials override warning but got: {warning_calls}"
+
+    @pytest.mark.parametrize(
+        ("origins", "expected"),
+        [
+            ("*", True),
+            (["*"], True),
+            (["https://app.example.com", "*"], True),
+            ("https://app.example.com", False),
+            (["https://app.example.com"], False),
+            (["https://a.example.com", "https://b.example.com"], False),
+            ([], False),
+        ],
+    )
+    def test_cors_origins_contain_wildcard(self, origins, expected):
+        """The shared wildcard predicate detects every wildcard origin shape."""
+        from langflow.main import cors_origins_contain_wildcard
+
+        assert cors_origins_contain_wildcard(origins) is expected
+
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    @patch("langflow.main.get_settings_service")
+    @patch("langflow.main.logger")
+    def test_cors_list_wildcard_credentials_disabled_and_warned(
+        self, mock_logger, mock_get_settings, mock_add_sentry_middleware
+    ):
+        """A wildcard mixed into a list of specific origins must still disable credentials and warn.
+
+        This is the gap the string-only check missed: ``LANGFLOW_CORS_ORIGINS="https://app.com,*"``
+        parses to ``["https://app.com", "*"]``. Credentials must be force-disabled, and both the
+        permissive-defaults warning and the explicit override warning must fire so the operator is
+        not left guessing why credentialed requests stopped working.
+        """
+        from langflow.main import create_app
+
+        mock_settings = MagicMock()
+        mock_settings.settings.cors_origins = ["https://app.example.com", "*"]
+        mock_settings.settings.cors_allow_credentials = True  # Gets disabled for security
+        mock_settings.settings.cors_allow_methods = "*"
+        mock_settings.settings.cors_allow_headers = "*"
+        mock_settings.settings.prometheus_enabled = False
+        mock_settings.settings.mcp_server_enabled = False
+        mock_settings.settings.sentry_dsn = None  # Disable Sentry
+        mock_get_settings.return_value = mock_settings
+
+        mock_add_sentry_middleware.return_value = None  # Use the mock
+        app = create_app()
+
+        warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
+        # The shared predicate now makes the permissive-defaults warning fire for list-form wildcards.
+        assert any("CORS" in str(call) and "permissive" in str(call) for call in warning_calls), (
+            f"Expected CORS permissive-defaults warning but got: {warning_calls}"
+        )
+        # And the explicit override warning points at the wildcard as the cause.
+        assert any(
+            "CORS" in str(call) and "wildcard" in str(call) and "credentials" in str(call) for call in warning_calls
+        ), f"Expected a wildcard-credentials override warning but got: {warning_calls}"
+
+        cors_middleware = None
+        for middleware in app.user_middleware:
+            if middleware.cls == CORSMiddleware:
+                cors_middleware = middleware
+                break
+
+        assert cors_middleware is not None
+        assert cors_middleware.kwargs["allow_origins"] == ["https://app.example.com", "*"]
+        assert cors_middleware.kwargs["allow_credentials"] is False  # wildcard in list => credentials disabled
+
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    @patch("langflow.main.get_settings_service")
+    @patch("langflow.main.logger")
+    def test_cors_wildcard_without_credentials_no_override_warning(
+        self, mock_logger, mock_get_settings, mock_add_sentry_middleware
+    ):
+        """When credentials are already off, a wildcard origin must not log a spurious override warning.
+
+        The override warning is only meaningful when we actually flip ``allow_credentials`` from True
+        to False; otherwise there is nothing to surface.
+        """
+        from langflow.main import create_app
+
+        mock_settings = MagicMock()
+        mock_settings.settings.cors_origins = "*"
+        mock_settings.settings.cors_allow_credentials = False  # already disabled by the operator
+        mock_settings.settings.cors_allow_methods = "*"
+        mock_settings.settings.cors_allow_headers = "*"
+        mock_settings.settings.prometheus_enabled = False
+        mock_settings.settings.mcp_server_enabled = False
+        mock_settings.settings.sentry_dsn = None  # Disable Sentry
+        mock_get_settings.return_value = mock_settings
+
+        mock_add_sentry_middleware.return_value = None  # Use the mock
+        app = create_app()
+
+        warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
+        # No credentials => no permissive-defaults warning and no override warning.
+        assert not any("permissive" in str(call) for call in warning_calls), (
+            f"Did not expect a permissive-defaults warning but got: {warning_calls}"
+        )
+        assert not any("disabling credentials" in str(call) for call in warning_calls), (
+            f"Did not expect a wildcard-credentials override warning but got: {warning_calls}"
+        )
+
+        cors_middleware = None
+        for middleware in app.user_middleware:
+            if middleware.cls == CORSMiddleware:
+                cors_middleware = middleware
+                break
+
+        assert cors_middleware is not None
+        assert cors_middleware.kwargs["allow_credentials"] is False
+
 
 class TestRefreshTokenSecurity:
     """Test refresh token security improvements."""

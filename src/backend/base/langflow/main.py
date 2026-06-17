@@ -133,12 +133,26 @@ async def load_bundles_with_error_handling():
         return [], []
 
 
+def cors_origins_contain_wildcard(origins) -> bool:
+    """Return True if the configured CORS origins include a wildcard (`*`).
+
+    `LANGFLOW_CORS_ORIGINS="*"` is parsed as the raw string on some Python versions
+    and as a single-element list (`["*"]`) on others, and an operator may also mix a
+    wildcard into a list of specific origins (e.g. `"https://app.com,*"` ->
+    `["https://app.com", "*"]`). All of these mean "all origins"; treat them the same
+    so wildcard detection stays consistent everywhere it is used.
+    """
+    return origins == "*" or (isinstance(origins, list) and "*" in origins)
+
+
 def warn_about_future_cors_changes(settings):
     """Warn users about upcoming CORS security changes in version 1.7."""
-    # Check if using default (backward compatible) settings
-    using_defaults = settings.cors_origins == "*" and settings.cors_allow_credentials is True
+    # Check if using permissive (backward compatible) settings: a wildcard origin
+    # combined with credentials. Share the wildcard predicate with the middleware
+    # configuration so both fire for the same set of origins (string or list form).
+    using_permissive = cors_origins_contain_wildcard(settings.cors_origins) and settings.cors_allow_credentials is True
 
-    if using_defaults:
+    if using_permissive:
         logger.warning(
             "CORS: Using permissive defaults (all origins + credentials). "
             "Set LANGFLOW_CORS_ORIGINS for production. Stricter defaults in v2.0."
@@ -652,7 +666,18 @@ def create_app():
     # Access-Control-Allow-Credentials: true, letting any site make credentialed
     # cross-origin requests (CSRF / token theft). Force credentials off whenever
     # the origin list is a wildcard; specific origins keep credentials.
-    if origins == "*" or (isinstance(origins, list) and "*" in origins):
+    if cors_origins_contain_wildcard(origins):
+        if allow_credentials:
+            # Surface the override so an operator who set credentials on purpose can
+            # see why credentialed requests stopped working and points them at the
+            # wildcard origin as the cause.
+            logger.warning(
+                "CORS: wildcard origin ('*') is configured together with "
+                "LANGFLOW_CORS_ALLOW_CREDENTIALS=true; disabling credentials because a "
+                "wildcard origin with credentials enables cross-site credentialed "
+                "requests (CSRF / token theft) and is invalid per the CORS spec. "
+                "Set LANGFLOW_CORS_ORIGINS to explicit origins to keep credentials enabled."
+            )
         allow_credentials = False
     if isinstance(origins, str) and origins != "*":
         origins = [origins]
