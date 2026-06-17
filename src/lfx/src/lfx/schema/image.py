@@ -82,6 +82,13 @@ def get_file_paths(files: list[str | dict]):
         if not file_path_str:  # Skip empty paths
             continue
 
+        # An absolute path is a real filesystem path, not a logical
+        # "flow_id/filename" storage key; keep it as-is so downstream readers
+        # open it directly instead of rebuilding it under data_dir.
+        if Path(file_path_str).is_absolute():
+            file_paths.append(file_path_str)
+            continue
+
         flow_id, file_name = storage_service.parse_file_path(file_path_str)
 
         if not file_name:  # Skip if no filename
@@ -130,6 +137,26 @@ async def get_files(
     file_objects: list[str | bytes] = []
     for file in file_paths:
         if not file:  # Skip empty file paths
+            continue
+
+        # An absolute path that exists on disk is a real filesystem file, not a
+        # logical "flow_id/filename" storage key. Read it directly so plain
+        # local paths work even when a storage service is registered (routing
+        # them through the service would parse flow_id="/abs/dir" and fail).
+        # Non-existent absolute paths still fall through to the storage service,
+        # which owns paths under its data_dir.
+        local_path = Path(file)
+        if local_path.is_absolute() and local_path.exists():
+            try:
+                async with aiofiles.open(local_path, "rb") as f:
+                    file_content = await f.read()
+            except Exception as e:
+                msg = f"Error reading file {file}: {e}"
+                raise FileNotFoundError(msg) from e
+            if convert_to_base64:
+                file_objects.append(base64.b64encode(file_content).decode("utf-8"))
+            else:
+                file_objects.append(file_content)
             continue
 
         flow_id, file_name = storage_service.parse_file_path(file)
