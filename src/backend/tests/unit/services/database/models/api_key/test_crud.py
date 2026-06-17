@@ -10,6 +10,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.database.models.api_key.crud import (
     _check_key_from_db,
+    authenticate_api_key,
     create_api_key,
     hash_api_key,
 )
@@ -55,6 +56,7 @@ def mock_settings(monkeypatch):
     settings = SimpleNamespace(
         auth_settings=SimpleNamespace(
             SECRET_KEY=SimpleNamespace(get_secret_value=lambda: "a" * 43),
+            API_KEY_SOURCE="db",  # pragma: allowlist secret
             # Non-optional AuthSettings fields read directly by create_api_key.
             EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=False,
             EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS=True,
@@ -112,6 +114,32 @@ async def test_check_key_finds_by_hash(async_session, mock_settings):
     result = await _check_key_from_db(async_session, plaintext, mock_settings)
     assert result is not None
     assert result.id == user.id
+
+
+@pytest.mark.anyio
+async def test_authenticate_api_key_returns_db_key_metadata(async_session, mock_settings):  # noqa: ARG001
+    """The richer resolver preserves the DB API-key id for authorization context."""
+    user = _make_user()
+    async_session.add(user)
+    await async_session.flush()
+
+    plaintext = "sk-test-12345"  # pragma: allowlist secret
+    api_key = ApiKey(
+        api_key="encrypted-value",  # pragma: allowlist secret
+        api_key_hash=hash_api_key(plaintext),
+        name="test",
+        user_id=user.id,
+        created_at=datetime.now(timezone.utc),
+    )
+    async_session.add(api_key)
+    await async_session.flush()
+
+    result = await authenticate_api_key(async_session, plaintext)
+
+    assert result is not None
+    assert result.user.id == user.id
+    assert result.api_key_source == "db"  # pragma: allowlist secret
+    assert result.api_key_id == api_key.id
 
 
 @pytest.mark.anyio

@@ -8,6 +8,11 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
 
+from langflow.services.auth.context import (
+    current_auth_context_for_audit,
+    current_auth_context_for_authz,
+    current_auth_is_api_key,
+)
 from langflow.services.authorization import audit as _audit
 from langflow.services.authorization.access_ceiling import (
     external_access_allows,
@@ -60,7 +65,35 @@ _DEFAULT_DENY_DETAIL = "Permission denied"
 
 def _auth_context(user: User | UserRead) -> dict[str, Any]:
     """Build the base context dict passed to authorization enforce calls."""
-    return {"is_superuser": getattr(user, "is_superuser", False)}
+    return {
+        **current_auth_context_for_authz(),
+        "is_superuser": getattr(user, "is_superuser", False),
+    }
+
+
+def _auth_audit_details() -> dict[str, str]:
+    """Build JSON-friendly auth context for audit details."""
+    return current_auth_context_for_audit()
+
+
+async def _api_key_scopes_require_plugin_enforcement() -> bool:
+    """Return True when owner override must not hide API-key caveats."""
+    if not current_auth_is_api_key():
+        return False
+
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED:
+        return False
+
+    authz = get_authorization_service()
+    supports_api_key_scopes = getattr(authz, "supports_api_key_scopes", None)
+    if supports_api_key_scopes is None:
+        return False
+    try:
+        return bool(await supports_api_key_scopes())
+    except Exception:  # noqa: BLE001
+        logger.exception("Authorization plugin failed API-key scope capability check; preserving owner override")
+        return False
 
 
 def _coerce_action(
@@ -118,7 +151,7 @@ async def ensure_permission(
     merged_context = {**(context or {}), **_auth_context(user)}
     # Fail closed when enforce() raises (deny + audit, not HTTP 500).
     audit_action = f"{obj.split(':', 1)[0]}:{act}" if ":" in obj else act
-    audit_details: dict[str, Any] = {"domain": domain}
+    audit_details: dict[str, Any] = {"domain": domain, **_auth_audit_details()}
     for owner_key in _OWNER_CONTEXT_KEYS:
         if owner_key in merged_context and merged_context[owner_key] is not None:
             audit_details[owner_key] = str(merged_context[owner_key])
@@ -191,13 +224,17 @@ async def _ensure_resource_permission(
             detail="External credentials do not allow this action",
         )
 
-    if owner_id is not None and getattr(user, "id", None) == owner_id:
+    if (
+        owner_id is not None
+        and getattr(user, "id", None) == owner_id
+        and not await _api_key_scopes_require_plugin_enforcement()
+    ):
         await _audit.audit_decision(
             user_id=user.id,
             action=f"{resource_type}:{act_str}",
             obj=obj,
             result=_audit.AUDIT_OWNER_OVERRIDE,
-            details={"domain": resolved_domain},
+            details={"domain": resolved_domain, **_auth_audit_details()},
         )
         return
 

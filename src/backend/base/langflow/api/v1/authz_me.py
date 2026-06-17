@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
 from langflow.api.utils import CurrentActiveUser
+from langflow.services.auth.context import current_auth_context_for_authz
 from langflow.services.authorization.access_ceiling import filter_actions_by_external_access_ceiling
 from langflow.services.deps import get_authorization_service
 
@@ -128,7 +129,10 @@ async def get_effective_permissions(
         resource_ids=body.resource_ids,
         actions=actions,
         domain=body.domain,
-        context={"is_superuser": getattr(current_user, "is_superuser", False)},
+        context={
+            **current_auth_context_for_authz(),
+            "is_superuser": current_user.is_superuser,
+        },
     )
     permissions = {
         resource_id: filter_actions_by_external_access_ceiling(allowed_actions)
