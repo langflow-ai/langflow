@@ -85,8 +85,9 @@ def _ollama_cache_set(key: tuple[str, str], value: list[str], *, now: float | No
 def _ollama_capability_get(key: tuple[str, str], *, now: float | None = None) -> list[str] | None:
     """Return the cached capability list for *key* if still fresh; else None.
 
-    An empty list is a valid cached value ("model reports no capabilities")
-    and is returned as-is — only a genuine miss/expiry returns ``None``.
+    ``None`` means a genuine miss or expiry. Callers never store an empty
+    list (see ``_capabilities_for``), so a fresh hit is always a populated
+    capability list.
     """
     entry = _ollama_capability_cache.get(key)
     if entry is None:
@@ -101,6 +102,20 @@ def _ollama_capability_get(key: tuple[str, str], *, now: float | None = None) ->
 def _ollama_capability_set(key: tuple[str, str], value: list[str], *, now: float | None = None) -> None:
     current = now if now is not None else time.monotonic()
     _ollama_capability_cache[key] = (current, list(value))
+
+
+def _ollama_capability_prune(base_url: str, keep: set[str]) -> None:
+    """Drop capability entries for *base_url* whose model left the catalog.
+
+    The capability cache expires on read but is otherwise never evicted, so
+    without this it would retain one entry per distinct model ever seen for
+    the process lifetime — relevant for Ollama Cloud's large, evolving public
+    catalog. Pruning on each fresh catalog read bounds it to the live catalog
+    instead. Entries for other base URLs are left untouched.
+    """
+    stale = [key for key in _ollama_capability_cache if key[0] == base_url and key[1] not in keep]
+    for key in stale:
+        del _ollama_capability_cache[key]
 
 
 def _ollama_cache_clear() -> None:
@@ -207,15 +222,25 @@ async def get_ollama_models(
                 model.get(json_name_key) for model in models.get(json_models_key, []) if model.get(json_name_key)
             ]
 
+            # Keep the capability cache aligned with the live catalog so it
+            # can't accumulate entries for models that have dropped out.
+            _ollama_capability_prune(base_url_value, set(candidates))
+
             async def _capabilities_for(model_name: str) -> list[str] | None:
                 """Return one model's capability list, reusing the per-model cache.
 
-                A cache hit (including a cached empty list) skips the
-                ``/api/show`` round-trip entirely — this is what stops the
-                catalog read from fanning out over the whole catalog on every
-                refetch. A probe failure returns ``None`` and is *not* cached,
-                so a single bad model neither poisons the catalog nor sticks:
-                it is retried on the next read.
+                A cache hit skips the ``/api/show`` round-trip entirely — this
+                is what stops the catalog read from fanning out over the whole
+                catalog on every refetch. Two responses are deliberately left
+                *uncached* and retried on the next read:
+
+                  * a probe failure (``RequestError``/``HTTPStatusError``), so
+                    one bad model never poisons or sticks in the catalog; and
+                  * a 200 carrying no capabilities, so a transient empty
+                    response (e.g. a model still warming up on Ollama Cloud)
+                    can't hide a model from the picker for the full TTL. Real
+                    Ollama always returns a populated array, so this never
+                    re-probes a legitimately-capable model.
                 """
                 cap_key = (base_url_value, model_name)
                 cached_caps = _ollama_capability_get(cap_key)
@@ -231,7 +256,11 @@ async def get_ollama_models(
                     await logger.adebug(f"Ollama /api/show failed for {model_name}: {e}")
                     return None
                 capabilities = json_data.get(json_capabilities_key) or []
-                _ollama_capability_set(cap_key, capabilities)
+                # Only cache a populated list; an empty one carries no signal
+                # (it can never match a desired_capability) and may be
+                # transient, so leave it uncached like the failure path above.
+                if capabilities:
+                    _ollama_capability_set(cap_key, capabilities)
                 return capabilities
 
             # Parallel fan-out: one POST /api/show per *uncached* candidate,

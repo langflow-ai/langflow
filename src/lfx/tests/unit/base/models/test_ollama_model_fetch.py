@@ -287,6 +287,121 @@ async def test_get_ollama_models_refetches_after_ttl_expires():
 
 
 @pytest.mark.asyncio
+async def test_get_ollama_models_does_not_cache_empty_capabilities():
+    """A 200 /api/show with no capabilities is not cached, so it is re-probed.
+
+    Caching an empty/absent capability array would hide a model from the
+    picker for the full capability TTL if that empty response were transient
+    (e.g. a model still warming up on Ollama Cloud). Leaving it uncached
+    matches the error path: retried on the next catalog read.
+    """
+    from lfx.base.models import model_utils
+
+    tags = {"models": [{"name": "llama3"}, {"name": "warming-up"}]}
+    show = {
+        "llama3": {"capabilities": ["completion"]},
+        "warming-up": {},  # 200 with no capabilities key
+    }
+    client = _build_async_client(tags_payload=tags, show_results=show)
+
+    fake_now = 0.0
+
+    def monotonic_stub() -> float:
+        return fake_now
+
+    base = "http://localhost:11434"
+    with (
+        patch.object(model_utils.time, "monotonic", side_effect=monotonic_stub),
+        patch.object(model_utils.httpx, "AsyncClient", return_value=client),
+    ):
+        first = await model_utils.get_ollama_models(
+            base_url_value=base,
+            desired_capability="completion",
+            json_models_key="models",
+            json_name_key="name",
+            json_capabilities_key="capabilities",
+        )
+        # The empty response must not have been cached.
+        assert (base, "warming-up") not in model_utils._ollama_capability_cache
+        # The model finishes warming up and now reports a completion capability.
+        show["warming-up"] = {"capabilities": ["completion"]}
+        # Advance past the short list TTL so the catalog is re-listed.
+        fake_now = model_utils._OLLAMA_MODEL_LIST_TTL_SECONDS + 1
+        second = await model_utils.get_ollama_models(
+            base_url_value=base,
+            desired_capability="completion",
+            json_models_key="models",
+            json_name_key="name",
+            json_capabilities_key="capabilities",
+        )
+
+    assert first == ["llama3"]
+    # "warming-up" was re-probed (not stuck as cached-empty) and now appears.
+    assert second == ["llama3", "warming-up"]
+    # llama3 probed once total (cached across both reads); "warming-up" probed
+    # on BOTH reads because the empty first response was never cached:
+    # 1 (llama3) + 2 (warming-up) = 3 /api/show calls.
+    assert client.post.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_capability_cache_prunes_departed_models():
+    """Capability entries for models no longer in the catalog are evicted.
+
+    Without pruning the per-model cache would keep one entry per distinct
+    model ever seen for the process lifetime; on Ollama Cloud's large,
+    evolving catalog that is unnecessary retention. Pruning on each fresh
+    catalog read bounds it to the live catalog.
+    """
+    from lfx.base.models import model_utils
+
+    tags = {"models": [{"name": "llama3"}, {"name": "transient"}]}
+    show = {
+        "llama3": {"capabilities": ["completion"]},
+        "transient": {"capabilities": ["completion"]},
+    }
+    client = _build_async_client(tags_payload=tags, show_results=show)
+
+    fake_now = 0.0
+
+    def monotonic_stub() -> float:
+        return fake_now
+
+    base = "http://localhost:11434"
+    with (
+        patch.object(model_utils.time, "monotonic", side_effect=monotonic_stub),
+        patch.object(model_utils.httpx, "AsyncClient", return_value=client),
+    ):
+        first = await model_utils.get_ollama_models(
+            base_url_value=base,
+            desired_capability="completion",
+            json_models_key="models",
+            json_name_key="name",
+            json_capabilities_key="capabilities",
+        )
+        assert (base, "transient") in model_utils._ollama_capability_cache
+
+        # "transient" drops out of the catalog; advance past the list TTL so
+        # the catalog is actually re-fetched (and thus pruned).
+        tags["models"] = [{"name": "llama3"}]
+        fake_now = model_utils._OLLAMA_MODEL_LIST_TTL_SECONDS + 1
+        second = await model_utils.get_ollama_models(
+            base_url_value=base,
+            desired_capability="completion",
+            json_models_key="models",
+            json_name_key="name",
+            json_capabilities_key="capabilities",
+        )
+
+    assert first == ["llama3", "transient"]
+    assert second == ["llama3"]
+    # The departed model's capability entry was pruned on the second read.
+    assert (base, "transient") not in model_utils._ollama_capability_cache
+    # llama3's entry survives (still listed, still within the capability TTL).
+    assert (base, "llama3") in model_utils._ollama_capability_cache
+
+
+@pytest.mark.asyncio
 async def test_llm_and_embedding_reads_share_one_show_fanout():
     """The ``model_type=None`` path must not probe the catalog twice.
 
