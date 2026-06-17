@@ -12,6 +12,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from lfx.processing.process import apply_tweaks
+from lfx.utils.flow_validation import CODE_EXECUTION_COMPONENT_TYPES, CODE_EXECUTION_FIELD_NAMES
 
 
 def _template_node(template: dict, *, node_type: str | None = None) -> dict:
@@ -113,3 +114,62 @@ def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
 
     assert node["data"]["node"]["template"]["filter_instruction"]["value"] == "uppercase the text"
     assert node["data"]["node"]["template"]["sample_size"]["value"] == 25
+
+
+# The intended code/sandbox inputs for every code-execution component type, kept
+# independently from the production sets so this test acts as a checksum on the
+# comment-only sync between CODE_EXECUTION_COMPONENT_TYPES and
+# CODE_EXECUTION_FIELD_NAMES (see lfx/utils/flow_validation.py). "code" is the
+# conventional exec input that apply_tweaks() blocks globally by name, so it is
+# allowed here without being listed in CODE_EXECUTION_FIELD_NAMES.
+#   - PythonREPLComponent (Python Interpreter): python_code exec + global_imports sandbox
+#   - PythonREPLTool (Python REPL): code exec (global block) + global_imports sandbox
+#   - Smart Transform (LambdaFilterComponent): filter_instruction → eval()'d lambda
+#   - PythonCodeStructuredTool (removed): tool_code exec input, type retained
+_EXPECTED_CODE_FIELDS_BY_TYPE: dict[str, set[str]] = {
+    "PythonREPLComponent": {"python_code", "global_imports"},
+    "PythonREPLTool": {"code", "global_imports"},
+    "Smart Transform": {"filter_instruction"},
+    "PythonCodeStructuredTool": {"tool_code"},
+}
+
+# Field name globally blocked by apply_tweaks() regardless of component type.
+_GLOBALLY_BLOCKED_FIELD = "code"
+
+
+def test_every_code_execution_type_has_registered_code_fields():
+    """Tripwire: each registered code-exec type must declare its code fields here.
+
+    Forcing function for the "next person" who adds a fifth code-execution
+    component: adding a type to CODE_EXECUTION_COMPONENT_TYPES without an entry
+    here fails immediately, and the coverage assert below then fails until the
+    type's code input is actually added to CODE_EXECUTION_FIELD_NAMES. This is
+    what keeps the by-name half of the guard from silently going stale, since the
+    component classes themselves aren't importable in this unit env (optional deps).
+    """
+    assert set(_EXPECTED_CODE_FIELDS_BY_TYPE) == set(CODE_EXECUTION_COMPONENT_TYPES), (
+        "CODE_EXECUTION_COMPONENT_TYPES changed without updating _EXPECTED_CODE_FIELDS_BY_TYPE. "
+        "Register the new component's code/sandbox input field name(s) so the Tweaks guard covers it."
+    )
+
+    covered = set(CODE_EXECUTION_FIELD_NAMES) | {_GLOBALLY_BLOCKED_FIELD}
+    for component_type, code_fields in _EXPECTED_CODE_FIELDS_BY_TYPE.items():
+        missing = code_fields - covered
+        assert not missing, (
+            f"{component_type} exposes executable/sandbox field(s) {sorted(missing)} that the Tweaks "
+            f"guard would not block. Add them to CODE_EXECUTION_FIELD_NAMES in lfx/utils/flow_validation.py."
+        )
+
+
+def test_no_unclaimed_code_execution_field_names():
+    """Every CODE_EXECUTION_FIELD_NAMES entry must belong to a known code-exec type.
+
+    Guards against a stale frozenset entry left behind after a component is
+    removed or renamed (the inverse of the tripwire above).
+    """
+    claimed = set().union(*_EXPECTED_CODE_FIELDS_BY_TYPE.values())
+    unclaimed = set(CODE_EXECUTION_FIELD_NAMES) - claimed
+    assert not unclaimed, (
+        f"CODE_EXECUTION_FIELD_NAMES has entries {sorted(unclaimed)} not claimed by any code-execution "
+        "component type. Remove them or register the owning type in _EXPECTED_CODE_FIELDS_BY_TYPE."
+    )

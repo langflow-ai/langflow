@@ -54,8 +54,10 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
 # override them by name on a code-execution node. Kept beside
 # CODE_EXECUTION_COMPONENT_TYPES so the two consumers stay in sync — adding a new
 # code-execution component means registering both its type above and its code input
-# here (see test_apply_tweaks_* in test_process.py). The conventional "code" field
-# name is blocked globally in apply_tweaks() and so is intentionally omitted here.
+# here. This sync is enforced by test_every_code_execution_type_has_registered_code_fields
+# in test_process.py, which fails if a new type is added without its code field. The
+# conventional "code" field name is blocked globally in apply_tweaks() and so is
+# intentionally omitted here.
 #   - python_code:        Python Interpreter (PythonREPLComponent) exec input
 #   - tool_code:          removed PythonCodeStructuredTool exec input (type retained)
 #   - filter_instruction: Smart Transform instruction → LLM-generated, eval()'d lambda
