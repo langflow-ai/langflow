@@ -209,11 +209,11 @@ async def get_current_user_for_websocket(
     db: AsyncSession,
 ) -> User | UserRead:
     """Extracts credentials from WebSocket and delegates to auth service."""
-    token = (
-        websocket.cookies.get("access_token_lf")
-        or websocket.query_params.get("token")
-        or _get_external_token(websocket.headers, websocket.cookies)
-    )
+    # Keep the native token and the external credential separate so a present but
+    # invalid/expired native token cannot shadow a valid external credential; the
+    # auth service tries the external token as a fallback when native auth fails.
+    token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
+    external_token = _get_external_token(websocket.headers, websocket.cookies)
     api_key = (
         websocket.query_params.get("x-api-key")
         or websocket.query_params.get("api_key")
@@ -222,7 +222,7 @@ async def get_current_user_for_websocket(
     )
 
     try:
-        return await _auth_service().get_current_user_for_websocket(token, api_key, db)
+        return await _auth_service().get_current_user_for_websocket(token, api_key, db, external_token=external_token)
     except AuthenticationError as e:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
 
@@ -235,11 +235,15 @@ async def get_current_user_for_sse(
 
     Accepts cookie (access_token_lf) or API key (x-api-key query param).
     """
-    token = request.cookies.get("access_token_lf") or _get_external_token(request.headers, request.cookies)
+    # Keep the native token and the external credential separate (see
+    # get_current_user_for_websocket) so the external credential remains a usable
+    # fallback even when a stale native cookie is present.
+    token = request.cookies.get("access_token_lf")
+    external_token = _get_external_token(request.headers, request.cookies)
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db)
+        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
     except AuthenticationError as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -305,14 +309,15 @@ async def get_current_user_optional(
     if auth_header and auth_header.startswith("Bearer "):
         token = token or auth_header[len("Bearer ") :]
 
-    if not token:
-        token = _get_external_token(request.headers, request.cookies)
+    # Keep the external credential separate so it remains a usable fallback when a
+    # stale/invalid native token is present (see get_current_user_for_websocket).
+    external_token = _get_external_token(request.headers, request.cookies)
 
-    if not token and not api_key:
+    if not token and not external_token and not api_key:
         return None
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db)
+        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
     except (AuthenticationError, HTTPException):
         return None
 

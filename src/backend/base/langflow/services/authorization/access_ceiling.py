@@ -26,8 +26,14 @@ EXTERNAL_ACCESS_LEVELS = frozenset(
         EXTERNAL_ACCESS_ADMIN,
     }
 )
+# Action ceilings per external access level (deny-only caps):
+#   viewer -> {read}
+#   editor -> viewer + {write, create, delete, execute, ingest}
+#   admin  -> all actions (no ceiling)
+# ``deploy`` is intentionally admin-only and is therefore excluded from the
+# editor set: an editor cannot promote a flow to a deployment.
 _VIEWER_ALLOWED_ACTIONS = frozenset({"read"})
-_EDITOR_ALLOWED_ACTIONS = frozenset({"read", "write", "create", "execute", "ingest"})
+_EDITOR_ALLOWED_ACTIONS = frozenset({"read", "write", "create", "delete", "execute", "ingest"})
 
 
 @dataclass(frozen=True)

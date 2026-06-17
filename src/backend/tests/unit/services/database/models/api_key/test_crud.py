@@ -57,9 +57,11 @@ def mock_settings(monkeypatch):
         auth_settings=SimpleNamespace(
             SECRET_KEY=SimpleNamespace(get_secret_value=lambda: "a" * 43),
             API_KEY_SOURCE="db",  # pragma: allowlist secret
-            # Non-optional AuthSettings fields read directly by create_api_key.
+            # Non-optional AuthSettings fields read directly by create_api_key
+            # and the external-access-ceiling chokepoint.
             EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=False,
             EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS=True,
+            EXTERNAL_AUTH_PROVIDER="external",
         ),
         settings=SimpleNamespace(disable_track_apikey_usage=False),
     )
@@ -421,3 +423,116 @@ async def test_create_api_key_no_expires_at_is_none(async_session, mock_settings
     assert row is not None
     assert row.expires_at is None
     assert result.expires_at is None
+
+
+# =============================================================================
+# External access ceiling chokepoint (H1): API keys disabled for external users
+# =============================================================================
+
+
+async def _seed_external_user_with_key(async_session, *, provider: str = "external"):
+    """Create a user with an external SSO profile and an active API key."""
+    from langflow.services.database.models.auth import SSOUserProfile
+
+    user = _make_user(username=f"ext-{uuid4().hex[:8]}")
+    async_session.add(user)
+    await async_session.flush()
+
+    async_session.add(
+        SSOUserProfile(
+            user_id=user.id,
+            sso_provider=provider,
+            sso_user_id=f"subject-{uuid4().hex[:8]}",
+        )
+    )
+    plaintext = f"sk-ext-{uuid4().hex}"  # pragma: allowlist secret
+    async_session.add(
+        ApiKey(
+            api_key="encrypted-ext",  # pragma: allowlist secret
+            api_key_hash=hash_api_key(plaintext),
+            name="ext-key",
+            user_id=user.id,
+            created_at=datetime.now(timezone.utc),
+        )
+    )
+    await async_session.flush()
+    return user, plaintext
+
+
+@pytest.mark.anyio
+async def test_authenticate_api_key_rejects_external_user_when_ceiling_enabled(async_session, mock_settings):
+    """When ceiling + disable-keys are ON, an external user's API key fails at auth time."""
+    mock_settings.auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
+    mock_settings.auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS = True
+
+    _user, plaintext = await _seed_external_user_with_key(async_session)
+
+    # authenticate_api_key is the shared chokepoint used by every API-key caller.
+    assert await authenticate_api_key(async_session, plaintext) is None
+
+
+@pytest.mark.anyio
+async def test_authenticate_api_key_allows_external_user_when_ceiling_disabled(async_session, mock_settings):
+    """When the ceiling is OFF, the external user's API key still authenticates (no behavior change)."""
+    mock_settings.auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = False
+    mock_settings.auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS = True
+
+    user, plaintext = await _seed_external_user_with_key(async_session)
+
+    result = await authenticate_api_key(async_session, plaintext)
+    assert result is not None
+    assert result.user.id == user.id
+
+
+@pytest.mark.anyio
+async def test_authenticate_api_key_allows_external_user_when_disable_keys_disabled(async_session, mock_settings):
+    """Ceiling ON but disable-keys OFF must not block the external user (feature is opt-in)."""
+    mock_settings.auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
+    mock_settings.auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS = False
+
+    user, plaintext = await _seed_external_user_with_key(async_session)
+
+    result = await authenticate_api_key(async_session, plaintext)
+    assert result is not None
+    assert result.user.id == user.id
+
+
+@pytest.mark.anyio
+async def test_authenticate_api_key_allows_non_external_user_when_ceiling_enabled(async_session, mock_settings):
+    """A user with no external SSO profile is unaffected even with the ceiling fully enabled."""
+    mock_settings.auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
+    mock_settings.auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS = True
+
+    user = _make_user()
+    async_session.add(user)
+    await async_session.flush()
+    plaintext = "sk-native-key"  # pragma: allowlist secret
+    async_session.add(
+        ApiKey(
+            api_key="encrypted-native",  # pragma: allowlist secret
+            api_key_hash=hash_api_key(plaintext),
+            name="native-key",
+            user_id=user.id,
+            created_at=datetime.now(timezone.utc),
+        )
+    )
+    await async_session.flush()
+
+    result = await authenticate_api_key(async_session, plaintext)
+    assert result is not None
+    assert result.user.id == user.id
+
+
+@pytest.mark.anyio
+async def test_authenticate_api_key_ignores_profile_for_other_provider(async_session, mock_settings):
+    """A profile under a different provider key must not trip the configured-provider block."""
+    mock_settings.auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED = True
+    mock_settings.auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS = True
+    mock_settings.auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+
+    # Profile is stored under "some-other-provider", not the configured "external".
+    user, plaintext = await _seed_external_user_with_key(async_session, provider="some-other-provider")
+
+    result = await authenticate_api_key(async_session, plaintext)
+    assert result is not None
+    assert result.user.id == user.id

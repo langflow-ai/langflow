@@ -19,6 +19,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, TypeVar, cast
+from urllib.parse import urlparse
 
 import httpx
 import jwt
@@ -74,6 +75,8 @@ __all__ = [
 JWKS_CACHE_TTL_SECONDS = 300
 JWKS_MIN_REFRESH_INTERVAL_SECONDS = 30
 _jwks_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+# Loopback hosts allowed to use http:// for the JWKS URL in local development.
+_JWKS_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 T = TypeVar("T")
 
 # Maps raw external claim values to a normalized access level. The level
@@ -228,10 +231,16 @@ def access_context_from_identity(
 
     claim_name = auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM
     claim_value = _claim_as_str(identity.claims, claim_name)
+    mapping = _access_claim_mapping(auth_settings)
     mapped_level = None
     if claim_value is not None:
-        mapped_level = _access_claim_mapping(auth_settings).get(claim_value.strip().lower())
-        if mapped_level is None:
+        mapped_level = mapping.get(claim_value.strip().lower())
+        # When an explicit mapping is configured it is authoritative: a claim
+        # value absent from it must NOT be reinterpreted through the built-in
+        # alias table (otherwise a raw "admin"/"editor" claim would silently
+        # elevate without an explicit grant). Fall through to the default level
+        # instead. The alias interpretation is only used when NO mapping is set.
+        if mapped_level is None and not mapping:
             mapped_level = _normalize_access_level(claim_value)
     level = mapped_level or _normalize_access_level(auth_settings.EXTERNAL_AUTH_DEFAULT_ACCESS_LEVEL)
     if level is None:
@@ -249,7 +258,13 @@ def access_context_from_identity(
 def _validate_trusted_time_claims(claims: Mapping[str, Any]) -> None:
     now = datetime.now(timezone.utc).timestamp()
     exp = claims.get("exp")
-    if exp is not None and now > float(exp):
+    # A token that omits exp never expires. Require it on the trusted-decode
+    # path too so a credential without an expiry is rejected rather than
+    # accepted forever (mirrors the JWKS path's require=["exp"]).
+    if exp is None:
+        msg = "External credential is missing exp"
+        raise AuthInvalidTokenError(msg)
+    if now > float(exp):
         msg = "External credential has expired"
         raise AuthInvalidTokenError(msg)
 
@@ -259,7 +274,25 @@ def _validate_trusted_time_claims(claims: Mapping[str, Any]) -> None:
         raise AuthInvalidTokenError(msg)
 
 
+def _require_https_jwks_url(jwks_url: str) -> None:
+    """Reject a non-https JWKS URL (http allowed only for loopback hosts).
+
+    Belt-and-suspenders alongside the settings validator: an http:// JWKS lets a
+    network MITM swap the signing keys and forge tokens, so the fetch itself
+    refuses anything that is not https (or http to a loopback host for dev).
+    """
+    parsed = urlparse(jwks_url)
+    scheme = parsed.scheme.lower()
+    if scheme == "https":
+        return
+    if scheme == "http" and parsed.hostname in _JWKS_LOOPBACK_HOSTS:
+        return
+    msg = "External JWKS URL must use https (http is allowed only for localhost)"
+    raise AuthInvalidTokenError(msg)
+
+
 async def _fetch_jwks(jwks_url: str, *, force_refresh: bool = False) -> dict[str, Any]:
+    _require_https_jwks_url(jwks_url)
     cached = _jwks_cache.get(jwks_url)
     now = time.monotonic()
     if cached and cached[0] > now:
@@ -309,8 +342,9 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
     required: the signature is verified against the fetched JWKS using
     ``EXTERNAL_AUTH_ALGORITHMS`` and the ``aud`` claim is bound to this
     deployment so tokens the IdP minted for other services are rejected.
-    ``EXTERNAL_AUTH_ISSUER`` is verified when set. ``exp`` / ``nbf`` are always
-    checked.
+    ``EXTERNAL_AUTH_ISSUER`` is verified when set. ``exp`` is required and
+    verified on both paths (a token that omits it is rejected); ``nbf`` is
+    verified when present.
     """
     if not auth_settings.EXTERNAL_AUTH_ENABLED:
         msg = "External authentication is not enabled"
@@ -374,6 +408,11 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
             options={
                 "verify_aud": True,
                 "verify_iss": bool(issuer),
+                # PyJWT only rejects an *expired* exp; a token that omits exp
+                # otherwise passes and never expires. require=["exp"] forces the
+                # claim to be present so unbounded-lifetime tokens are rejected.
+                "verify_exp": True,
+                "require": ["exp"],
             },
         )
     except AuthInvalidTokenError:

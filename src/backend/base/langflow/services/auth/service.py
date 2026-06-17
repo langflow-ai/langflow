@@ -76,6 +76,7 @@ class AuthService(BaseAuthService):
         token: str | None,
         api_key: str | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User | UserRead:
         """Framework-agnostic authentication method.
 
@@ -86,6 +87,11 @@ class AuthService(BaseAuthService):
             token: Access token (JWT, OIDC token, etc.)
             api_key: API key for authentication
             db: Database session
+            external_token: Separately-extracted external credential to try as a
+                fallback when native token authentication fails for any reason
+                (expired, invalid, inactive user). When ``None`` behavior is
+                unchanged. This lets a valid external credential authenticate even
+                when a present-but-invalid native token would otherwise shadow it.
 
 
         Returns:
@@ -106,11 +112,24 @@ class AuthService(BaseAuthService):
         if token:
             try:
                 return await self._authenticate_with_token(token, db)
-            except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError):
-                # Re-raise our generic exceptions
-                raise
+            except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError) as e:
+                # Native auth failed. If a *distinct* external credential was
+                # extracted, try it before surfacing the native error so a present
+                # but invalid/expired native token can't shadow a valid external
+                # one. When external_token is None or identical to the token we
+                # already tried, behavior is unchanged.
+                if external_token and external_token != token:
+                    external_user = await self._authenticate_with_external_token(external_token, db)
+                    if external_user is not None:
+                        return external_user
+                raise e  # noqa: TRY201
             except Exception as e:
-                # Token auth failed; fall back to API key if provided
+                # Token auth failed for an unexpected reason; try the distinct
+                # external credential first, then fall back to API key if provided.
+                if external_token and external_token != token:
+                    external_user = await self._authenticate_with_external_token(external_token, db)
+                    if external_user is not None:
+                        return external_user
                 if api_key:
                     try:
                         user = await self._authenticate_with_api_key(api_key, db)
@@ -127,6 +146,13 @@ class AuthService(BaseAuthService):
                 logger.error(f"Unexpected error during token authentication: {e}")
                 msg = "Token authentication failed"
                 raise AuthInvalidTokenError(msg) from e
+
+        # No native token, but a separately-extracted external credential may be
+        # present (extractors no longer collapse native/external into one string).
+        if external_token:
+            external_user = await self._authenticate_with_external_token(external_token, db)
+            if external_user is not None:
+                return external_user
 
         # Try API key authentication
         if api_key:
@@ -267,16 +293,18 @@ class AuthService(BaseAuthService):
         return await self._materialize_external_user(identity, db)
 
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
-        """Internal method to authenticate with API key (raises generic exceptions)."""
+        """Internal method to authenticate with API key (raises generic exceptions).
+
+        The EXTERNAL_AUTH access ceiling block for externally-managed users is
+        enforced inside ``authenticate_api_key`` (the shared chokepoint), which
+        returns ``None`` for a blocked user so every caller treats it as an auth
+        failure. No additional ceiling check is needed here.
+        """
         result = await authenticate_api_key(db, api_key)
         if not result:
             return None
 
         if isinstance(result.user, User):
-            if await self._external_access_ceiling_blocks_api_key_user(result.user, db):
-                logger.info("API key rejected for externally managed user while external access ceiling is enabled")
-                msg = "API key authentication is disabled for externally managed users"
-                raise InvalidCredentialsError(msg)
             user_read = UserRead.model_validate(result.user, from_attributes=True)
             if not user_read.is_active:
                 msg = "User account is inactive"
@@ -285,24 +313,6 @@ class AuthService(BaseAuthService):
             return user_read
 
         return None
-
-    async def _external_access_ceiling_blocks_api_key_user(self, user: User, db: AsyncSession) -> bool:
-        auth_settings = self.settings.auth_settings
-        if (
-            not auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED
-            or not auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS
-        ):
-            return False
-
-        from sqlmodel import select
-
-        from langflow.services.database.models.auth import SSOUserProfile
-
-        profile_stmt = select(SSOUserProfile).where(
-            SSOUserProfile.user_id == user.id,
-            SSOUserProfile.sso_provider == auth_settings.EXTERNAL_AUTH_PROVIDER,
-        )
-        return (await db.exec(profile_stmt)).first() is not None
 
     # ------------------------------------------------------------------
     # JIT user provisioning via BaseAuthService hook
@@ -360,7 +370,11 @@ class AuthService(BaseAuthService):
                 msg = "User account is inactive"
                 raise InactiveUserError(msg)
             now = datetime.now(timezone.utc)
-            profile.email = identity.email
+            # Only overwrite the stored email when the token carries one; a later
+            # token that omits the email claim must not erase a previously stored
+            # address.
+            if identity.email is not None:
+                profile.email = identity.email
             profile.sso_last_login_at = now
             profile.updated_at = now
             await update_user_last_login_at(user.id, db)
@@ -573,6 +587,7 @@ class AuthService(BaseAuthService):
         query_param: str | None,
         header_param: str | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User | UserRead:
         # Handle coroutine token (FastAPI dependency injection)
         resolved_token: str | None = None
@@ -585,7 +600,7 @@ class AuthService(BaseAuthService):
         api_key = query_param or header_param
 
         # Delegate to framework-agnostic method
-        return await self.authenticate_with_credentials(resolved_token, api_key, db)
+        return await self.authenticate_with_credentials(resolved_token, api_key, db, external_token=external_token)
 
     async def get_current_user_from_access_token(
         self,
@@ -619,18 +634,20 @@ class AuthService(BaseAuthService):
         token: str | None,
         api_key: str | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User | UserRead:
         """Delegates to authenticate_with_credentials()."""
-        return await self.authenticate_with_credentials(token, api_key, db)
+        return await self.authenticate_with_credentials(token, api_key, db, external_token=external_token)
 
     async def get_current_user_for_sse(
         self,
         token: str | None,
         api_key: str | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User | UserRead:
         """Delegates to authenticate_with_credentials()."""
-        return await self.authenticate_with_credentials(token, api_key, db)
+        return await self.authenticate_with_credentials(token, api_key, db, external_token=external_token)
 
     async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active:

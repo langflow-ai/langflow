@@ -23,6 +23,7 @@ from langflow.services.auth.external import (
     set_current_external_access_context,
 )
 from lfx.services.settings.auth import AuthSettings
+from pydantic import ValidationError
 
 _TEST_JWT_SECRET = "external-test-secret-with-enough-length"  # noqa: S105 # pragma: allowlist secret
 _EXTERNAL_AUTH_HEADER = "X-External-Auth"
@@ -100,7 +101,11 @@ async def test_trusted_jwt_decode_validates_expiry(tmp_path):
 async def test_trusted_jwt_decode_validates_not_before(tmp_path):
     settings = _auth_settings(tmp_path)
     token = jwt.encode(
-        {"sub": "future-subject", "nbf": datetime.now(timezone.utc) + timedelta(minutes=5)},
+        {
+            "sub": "future-subject",
+            "nbf": datetime.now(timezone.utc) + timedelta(minutes=5),
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
+        },
         _TEST_JWT_SECRET,
         algorithm="HS256",
     )
@@ -113,7 +118,12 @@ async def test_trusted_jwt_decode_returns_claims_when_valid(tmp_path):
     settings = _auth_settings(tmp_path)
     expected_sub = "subject-1"
     token = jwt.encode(
-        {"sub": expected_sub, "preferred_username": "alice", "email": "alice@example.com"},
+        {
+            "sub": expected_sub,
+            "preferred_username": "alice",
+            "email": "alice@example.com",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        },
         _TEST_JWT_SECRET,
         algorithm="HS256",
     )
@@ -205,15 +215,22 @@ async def test_jwks_decode_verifies_signature(tmp_path, monkeypatch):
     monkeypatch.setattr(external, "_jwks_cache", {})
     _install_fake_jwks_endpoint(monkeypatch, [{"keys": [_symmetric_jwk(_TEST_JWT_SECRET, kid="key-1")]}])
 
+    valid_exp = datetime.now(timezone.utc) + timedelta(minutes=5)
     token = jwt.encode(
-        {"sub": "subject-1", "aud": _JWKS_AUDIENCE}, _TEST_JWT_SECRET, algorithm="HS256", headers={"kid": "key-1"}
+        {"sub": "subject-1", "aud": _JWKS_AUDIENCE, "exp": valid_exp},
+        _TEST_JWT_SECRET,
+        algorithm="HS256",
+        headers={"kid": "key-1"},
     )
     claims = await decode_external_jwt(token, settings)
     assert claims["sub"] == "subject-1"
 
     wrong_secret = "another-secret-that-did-not-sign-the-jwks-key"  # noqa: S105 # pragma: allowlist secret
     tampered = jwt.encode(
-        {"sub": "subject-1", "aud": _JWKS_AUDIENCE}, wrong_secret, algorithm="HS256", headers={"kid": "key-1"}
+        {"sub": "subject-1", "aud": _JWKS_AUDIENCE, "exp": valid_exp},
+        wrong_secret,
+        algorithm="HS256",
+        headers={"kid": "key-1"},
     )
     with pytest.raises(InvalidTokenError, match="validation failed"):
         await decode_external_jwt(tampered, settings)
@@ -242,7 +259,7 @@ async def test_jwks_decode_rejects_token_for_another_audience(tmp_path, monkeypa
     _install_fake_jwks_endpoint(monkeypatch, [{"keys": [_symmetric_jwk(_TEST_JWT_SECRET, kid="key-1")]}])
 
     foreign = jwt.encode(
-        {"sub": "subject-1", "aud": "some-other-service"},
+        {"sub": "subject-1", "aud": "some-other-service", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
         _TEST_JWT_SECRET,
         algorithm="HS256",
         headers={"kid": "key-1"},
@@ -263,7 +280,10 @@ async def test_jwks_refetches_when_kid_is_newer_than_cache(tmp_path, monkeypatch
     calls = _install_fake_jwks_endpoint(monkeypatch, [new_jwks])
 
     token = jwt.encode(
-        {"sub": "rotated", "aud": _JWKS_AUDIENCE}, _TEST_JWT_SECRET, algorithm="HS256", headers={"kid": "new-key"}
+        {"sub": "rotated", "aud": _JWKS_AUDIENCE, "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
+        _TEST_JWT_SECRET,
+        algorithm="HS256",
+        headers={"kid": "new-key"},
     )
     claims = await decode_external_jwt(token, settings)
 
@@ -340,7 +360,9 @@ def test_external_access_context_uses_configured_claim_mapping(tmp_path):
     assert context.level == "editor"
     assert external_access_allows("write", context)
     assert external_access_allows("execute", context)
-    assert not external_access_allows("delete", context)
+    # An editor may delete their own resources; only ``deploy`` stays admin-only.
+    assert external_access_allows("delete", context)
+    assert not external_access_allows("deploy", context)
 
 
 def test_external_access_context_defaults_to_viewer_for_missing_claim(tmp_path):
@@ -419,3 +441,184 @@ async def test_resolve_external_identity_default_uses_jwt(tmp_path):
     identity = await resolve_external_identity(token, settings)
     assert identity.subject == "subject-1"
     assert identity.username == "bob"
+
+
+# ---------------------------------------------------------------------------
+# F7: exp is required on both decode paths (a token without exp never expires)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_trusted_jwt_decode_rejects_missing_exp(tmp_path):
+    """Trusted-decode path must reject a token that omits exp (never expires)."""
+    settings = _auth_settings(tmp_path)
+    token = jwt.encode({"sub": "no-exp-subject"}, _TEST_JWT_SECRET, algorithm="HS256")
+    with pytest.raises(InvalidTokenError, match="missing exp"):
+        await decode_external_jwt(token, settings)
+
+
+@pytest.mark.anyio
+async def test_jwks_decode_rejects_missing_exp(tmp_path, monkeypatch):
+    """JWKS path must reject a validly-signed token that omits exp."""
+    settings = _jwks_settings(tmp_path)
+    monkeypatch.setattr(external, "_jwks_cache", {})
+    _install_fake_jwks_endpoint(monkeypatch, [{"keys": [_symmetric_jwk(_TEST_JWT_SECRET, kid="key-1")]}])
+
+    # Validly signed, correct audience, but no exp claim.
+    token = jwt.encode(
+        {"sub": "subject-1", "aud": _JWKS_AUDIENCE},
+        _TEST_JWT_SECRET,
+        algorithm="HS256",
+        headers={"kid": "key-1"},
+    )
+    with pytest.raises(InvalidTokenError, match="validation failed"):
+        await decode_external_jwt(token, settings)
+
+
+# ---------------------------------------------------------------------------
+# F8: EXTERNAL_AUTH_JWKS_URL must be https (http allowed only for loopback)
+# ---------------------------------------------------------------------------
+
+
+def test_jwks_url_rejects_http_scheme(tmp_path):
+    """An http:// JWKS URL is rejected (MITM could swap signing keys)."""
+    with pytest.raises(ValidationError, match="https"):
+        AuthSettings(
+            CONFIG_DIR=str(tmp_path),
+            EXTERNAL_AUTH_JWKS_URL="http://idp.example.com/.well-known/jwks.json",
+        )
+
+
+def test_jwks_url_accepts_https_scheme(tmp_path):
+    """An https:// JWKS URL is accepted."""
+    settings = AuthSettings(
+        CONFIG_DIR=str(tmp_path),
+        EXTERNAL_AUTH_JWKS_URL="https://idp.example.com/.well-known/jwks.json",
+    )
+    assert settings.EXTERNAL_AUTH_JWKS_URL == "https://idp.example.com/.well-known/jwks.json"
+
+
+def test_jwks_url_allows_http_for_localhost(tmp_path):
+    """http:// is permitted for loopback hosts to keep local development usable."""
+    for url in (
+        "http://localhost:8080/jwks.json",
+        "http://127.0.0.1:8080/jwks.json",
+        "http://[::1]:8080/jwks.json",
+    ):
+        settings = AuthSettings(CONFIG_DIR=str(tmp_path), EXTERNAL_AUTH_JWKS_URL=url)
+        assert url == settings.EXTERNAL_AUTH_JWKS_URL
+
+
+def test_jwks_url_none_is_allowed(tmp_path):
+    """JWKS URL is optional (None / empty) so the validator must not reject it."""
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path), EXTERNAL_AUTH_JWKS_URL=None)
+    assert settings.EXTERNAL_AUTH_JWKS_URL is None
+
+
+@pytest.mark.anyio
+async def test_fetch_jwks_guard_rejects_non_https(monkeypatch):
+    """Belt-and-suspenders: _fetch_jwks itself refuses a non-https URL."""
+    monkeypatch.setattr(external, "_jwks_cache", {})
+    calls = _install_fake_jwks_endpoint(monkeypatch, [{"keys": []}])
+    with pytest.raises(InvalidTokenError, match="https"):
+        await external._fetch_jwks("http://idp.example.com/jwks.json")
+    # No network call is made for a rejected scheme.
+    assert calls == []
+
+
+# ---------------------------------------------------------------------------
+# F11: EXTERNAL_AUTH_PROVIDER normalizes once at the config boundary
+# ---------------------------------------------------------------------------
+
+
+def test_external_auth_provider_empty_normalizes_to_external(tmp_path):
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path), EXTERNAL_AUTH_PROVIDER="")
+    assert settings.EXTERNAL_AUTH_PROVIDER == "external"
+
+
+def test_external_auth_provider_whitespace_normalizes_to_external(tmp_path):
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path), EXTERNAL_AUTH_PROVIDER="   ")
+    assert settings.EXTERNAL_AUTH_PROVIDER == "external"
+
+
+def test_external_auth_provider_strips_whitespace(tmp_path):
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path), EXTERNAL_AUTH_PROVIDER="  okta  ")
+    assert settings.EXTERNAL_AUTH_PROVIDER == "okta"
+
+
+def test_external_auth_provider_normalizes_on_assignment(tmp_path):
+    """validate_assignment=True means setattr must normalize too (the test helper path)."""
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.EXTERNAL_AUTH_PROVIDER = "  "
+    assert settings.EXTERNAL_AUTH_PROVIDER == "external"
+
+
+# ---------------------------------------------------------------------------
+# F12: a configured access-claim mapping is authoritative (no alias fallthrough)
+# ---------------------------------------------------------------------------
+
+
+def test_access_mapping_unmapped_value_does_not_elevate_via_aliases(tmp_path):
+    """Unmapped value falls to the default, not the built-in alias table.
+
+    With a non-empty mapping, a claim value absent from it falls to the default
+    (viewer) instead of being reinterpreted through the built-in alias table.
+    """
+    settings = _auth_settings(
+        tmp_path,
+        EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=True,
+        EXTERNAL_AUTH_ACCESS_CLAIM="role",
+        EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING='{"can_view":"viewer","can_edit":"editor"}',
+    )
+    # Raw "admin" is an alias for the admin level, but it is NOT a key in the
+    # configured mapping, so it must NOT elevate.
+    identity = identity_from_claims({"sub": "subject-1", "role": "admin"}, settings)
+
+    context = access_context_from_identity(identity, settings)
+
+    assert context is not None
+    assert context.level == "viewer"  # default, not admin
+    assert external_access_allows("read", context)
+    assert not external_access_allows("write", context)
+    assert not external_access_allows("delete", context)
+
+
+def test_access_mapping_unmapped_value_uses_configured_default(tmp_path):
+    """The configured default level is applied for an unmapped claim value.
+
+    The configured default level (not the viewer floor) is applied for an
+    unmapped claim value when a mapping is present.
+    """
+    settings = _auth_settings(
+        tmp_path,
+        EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=True,
+        EXTERNAL_AUTH_ACCESS_CLAIM="role",
+        EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING='{"can_edit":"editor"}',
+        EXTERNAL_AUTH_DEFAULT_ACCESS_LEVEL="editor",
+    )
+    identity = identity_from_claims({"sub": "subject-1", "role": "admin"}, settings)
+
+    context = access_context_from_identity(identity, settings)
+
+    assert context is not None
+    assert context.level == "editor"
+
+
+def test_no_mapping_still_interprets_raw_claim_via_aliases(tmp_path):
+    """With no mapping configured, built-in aliases still apply to the raw claim.
+
+    When NO mapping is configured the built-in aliases still apply to the raw
+    claim value, so a raw 'admin' claim maps to the admin level.
+    """
+    settings = _auth_settings(
+        tmp_path,
+        EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=True,
+        EXTERNAL_AUTH_ACCESS_CLAIM="role",
+    )
+    identity = identity_from_claims({"sub": "subject-1", "role": "admin"}, settings)
+
+    context = access_context_from_identity(identity, settings)
+
+    assert context is not None
+    assert context.level == "admin"
+    assert external_access_allows("delete", context)

@@ -152,6 +152,32 @@ async def authenticate_api_key(session: AsyncSession, api_key: str) -> ApiKeyAut
     return await _check_key_from_db_with_context(session, api_key, settings_service)
 
 
+async def _external_access_ceiling_blocks_user(session: AsyncSession, user: User, settings_service) -> bool:
+    """Return True when API-key auth must be denied for an externally-managed user.
+
+    Single chokepoint for the EXTERNAL_AUTH access ceiling: every DB-path API-key
+    authentication flows through ``_check_key_from_db_with_context``, so enforcing
+    here covers ``_api_key_security_impl`` (/run, v2 workflow, openai_responses),
+    ``ws_api_key_security``, ``get_webhook_user``, ``get_current_user_mcp`` and the
+    auth service. When the feature is OFF (ceiling disabled OR disable-keys
+    disabled) this is a no-op.
+    """
+    auth_settings = settings_service.auth_settings
+    if (
+        not auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED
+        or not auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS
+    ):
+        return False
+
+    from langflow.services.database.models.auth import SSOUserProfile
+
+    profile_stmt = select(SSOUserProfile).where(
+        SSOUserProfile.user_id == user.id,
+        SSOUserProfile.sso_provider == auth_settings.EXTERNAL_AUTH_PROVIDER,
+    )
+    return (await session.exec(profile_stmt)).first() is not None
+
+
 async def _check_key_from_db(session: AsyncSession, api_key: str, settings_service) -> User | None:
     """Validate API key against the database and return only the user."""
     result = await _check_key_from_db_with_context(session, api_key, settings_service)
@@ -188,6 +214,9 @@ async def _check_key_from_db_with_context(
             await session.flush()
         user = await session.get(User, api_key_obj.user_id)
         if user is None:
+            return None
+        if await _external_access_ceiling_blocks_user(session, user, settings_service):
+            logger.info("API key rejected for externally managed user while external access ceiling is enabled")
             return None
         return ApiKeyAuthResult(user=user, api_key_source="db", api_key_id=api_key_obj.id)  # pragma: allowlist secret
 
@@ -229,6 +258,9 @@ async def _check_key_from_db_with_context(
             await session.flush()
             user = await session.get(User, api_key_obj.user_id)
             if user is None:
+                return None
+            if await _external_access_ceiling_blocks_user(session, user, settings_service):
+                logger.info("API key rejected for externally managed user while external access ceiling is enabled")
                 return None
             return ApiKeyAuthResult(
                 user=user,

@@ -819,3 +819,168 @@ async def test_api_key_security_impl_auto_login_skip_rejects_inactive_superuser(
         )
 
     assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+
+
+# =============================================================================
+# External-user materialization (F1): email is never erased by an email-less token
+# =============================================================================
+
+
+def _external_jwt(auth_service: AuthService, claims: dict) -> str:
+    """Encode a trusted external JWT signed with the service secret.
+
+    A future ``exp`` is always supplied because the trusted-decode path requires
+    it (see external._validate_trusted_time_claims).
+    """
+    secret = auth_service.settings.auth_settings.SECRET_KEY.get_secret_value()
+    payload = {"exp": datetime.now(timezone.utc) + timedelta(minutes=5), **claims}
+    return jwt.encode(payload, secret, algorithm="HS256")
+
+
+@pytest.mark.anyio
+async def test_materialize_external_user_preserves_email_when_token_omits_it(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """A later token without an email claim must not erase the stored email (F1)."""
+    from langflow.services.auth.external import identity_from_claims
+    from langflow.services.database.models.auth import SSOUserProfile
+    from sqlmodel import select
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+
+    # First login carries an email and provisions the user + profile.
+    identity_with_email = identity_from_claims(
+        {"sub": "ext-subject-1", "email": "alice@example.com", "preferred_username": "alice"},
+        auth_settings,
+    )
+    user = await auth_service._materialize_external_user(identity_with_email, async_session)
+    await async_session.flush()
+
+    profile = (await async_session.exec(select(SSOUserProfile).where(SSOUserProfile.user_id == user.id))).first()
+    assert profile is not None
+    assert profile.email == "alice@example.com"
+
+    # Second login with the SAME subject but NO email claim must keep the stored email.
+    identity_without_email = identity_from_claims(
+        {"sub": "ext-subject-1", "preferred_username": "alice"},
+        auth_settings,
+    )
+    assert identity_without_email.email is None
+
+    same_user = await auth_service._materialize_external_user(identity_without_email, async_session)
+    await async_session.flush()
+    await async_session.refresh(profile)
+
+    assert same_user.id == user.id
+    assert profile.email == "alice@example.com"
+
+    # A later token that DOES carry an email still updates it.
+    identity_new_email = identity_from_claims(
+        {"sub": "ext-subject-1", "email": "alice2@example.com"},
+        auth_settings,
+    )
+    await auth_service._materialize_external_user(identity_new_email, async_session)
+    await async_session.flush()
+    await async_session.refresh(profile)
+    assert profile.email == "alice2@example.com"
+
+
+# =============================================================================
+# External fallback (F2/F14): a valid external credential is tried when native fails
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_invalid_native_token_falls_back_to_external_credential(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """An invalid native token plus a valid external credential authenticates via external (F2/F14)."""
+    from langflow.services.auth.external import identity_from_claims
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+
+    # Pre-provision the external user + profile so the resolver takes the
+    # existing-profile branch (no folder/variable service needed).
+    identity = identity_from_claims(
+        {"sub": "ext-subject-2", "email": "bob@example.com", "preferred_username": "bob"},
+        auth_settings,
+    )
+    user = await auth_service._materialize_external_user(identity, async_session)
+    await async_session.flush()
+
+    # A present-but-invalid native token must NOT shadow the valid external one.
+    external_token = _external_jwt(
+        auth_service, {"sub": "ext-subject-2", "email": "bob@example.com", "preferred_username": "bob"}
+    )
+
+    try:
+        result = await auth_service.authenticate_with_credentials(
+            token="not-a-valid-jwt",  # noqa: S106  # native decode fails
+            api_key=None,
+            db=async_session,
+            external_token=external_token,
+        )
+    finally:
+        clear_current_auth_context()
+
+    assert result.id == user.id
+
+
+@pytest.mark.anyio
+async def test_no_external_token_keeps_native_error(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """With external_token=None, an invalid native token still raises (no behavior change)."""
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+
+    with pytest.raises(InvalidTokenError):
+        await auth_service.authenticate_with_credentials(
+            token="not-a-valid-jwt",  # noqa: S106
+            api_key=None,
+            db=AsyncMock(),
+            external_token=None,
+        )
+
+
+@pytest.mark.anyio
+async def test_external_token_only_authenticates_without_native_token(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """When no native token is present, the separately-extracted external token still works."""
+    from langflow.services.auth.external import identity_from_claims
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+
+    identity = identity_from_claims(
+        {"sub": "ext-subject-3", "preferred_username": "carol"},
+        auth_settings,
+    )
+    user = await auth_service._materialize_external_user(identity, async_session)
+    await async_session.flush()
+
+    external_token = _external_jwt(auth_service, {"sub": "ext-subject-3", "preferred_username": "carol"})
+
+    try:
+        result = await auth_service.authenticate_with_credentials(
+            token=None,
+            api_key=None,
+            db=async_session,
+            external_token=external_token,
+        )
+    finally:
+        clear_current_auth_context()
+
+    assert result.id == user.id

@@ -2,6 +2,7 @@ import secrets
 from enum import Enum
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
 from passlib.context import CryptContext
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -334,6 +335,51 @@ class AuthSettings(BaseSettings):
             logger.debug("Saved secret key")
 
         return value if isinstance(value, SecretStr) else SecretStr(value).get_secret_value()
+
+    @field_validator("EXTERNAL_AUTH_PROVIDER", mode="before")
+    @classmethod
+    def normalize_external_auth_provider(cls, value):
+        """Normalize the external provider key once at the config boundary.
+
+        Every consumer (JIT provisioning, the API-key floor in the auth service,
+        SSOUserProfile.sso_provider lookups) reads this value directly, so an
+        empty/whitespace value must resolve to the same canonical string here.
+        Otherwise the value written ("external") and the value compared against
+        ("") would diverge and silently disable a security floor.
+        """
+        if value is None:
+            return "external"
+        normalized = str(value).strip()
+        return normalized or "external"
+
+    @field_validator("EXTERNAL_AUTH_JWKS_URL", mode="before")
+    @classmethod
+    def validate_external_auth_jwks_url(cls, value):
+        """Reject non-HTTPS JWKS URLs to stop a network MITM swapping signing keys.
+
+        An ``http://`` JWKS endpoint lets an on-path attacker substitute their own
+        keys and forge tokens. HTTPS is required; ``http`` is permitted only for
+        loopback hosts (localhost / 127.0.0.1 / ::1) to keep local development
+        usable.
+        """
+        if value is None:
+            return value
+        url = str(value).strip()
+        if not url:
+            return None
+
+        parsed = urlparse(url)
+        scheme = parsed.scheme.lower()
+        if scheme == "https":
+            return url
+        if scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
+            return url
+
+        msg = (
+            "EXTERNAL_AUTH_JWKS_URL must use https so a network attacker cannot swap the JWKS "
+            "signing keys and forge tokens. http is allowed only for localhost/127.0.0.1/::1."
+        )
+        raise ValueError(msg)
 
     @model_validator(mode="after")
     def setup_rsa_keys(self):
