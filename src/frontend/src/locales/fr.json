@@ -2066,5 +2066,13 @@
   "voiceAssistant.apiKeyError": "Vérifiez votre clé API et réessayez",
   "voiceAssistant.connected": "Connecté",
   "voiceAssistant.connectionError": "Erreur de connexion",
-  "voiceAssistant.connectionFailed": "Echec de la connexion"
+  "voiceAssistant.connectionFailed": "Echec de la connexion",
+  "header.home": "Go to home",
+  "flows.viewList": "List view",
+  "flows.viewGrid": "Grid view",
+  "flows.downloadSelected": "Download selected flows",
+  "flows.selectFlow": "Select {{name}}",
+  "flows.moreOptions": "More options for {{name}}",
+  "folder.optionsFor": "Options for {{name}}",
+  "paginator.pageLabel": "Page"
 }

@@ -18,7 +18,12 @@ jest.mock("@/components/common/shadTooltipComponent", () => ({
 }));
 
 jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, "aria-label": ariaLabel, disabled, ...props }: any) => (
+  Button: ({
+    children,
+    "aria-label": ariaLabel,
+    disabled,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode }) => (
     <button aria-label={ariaLabel} disabled={disabled} {...props}>
       {children}
     </button>

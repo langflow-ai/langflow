@@ -101,7 +101,6 @@ export default function AppHeader(): JSX.Element {
                   )
                 }
                 data-testid="notification_button"
-                aria-label={t("header.notifications")}
               >
                 <div className="hit-area-hover group relative items-center rounded-md px-2 py-2 text-muted-foreground">
                   <span className={getNotificationBadge()} />
