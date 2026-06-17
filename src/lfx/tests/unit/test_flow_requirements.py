@@ -1115,3 +1115,130 @@ class TestFormatMissingDependenciesError:
     def test_mentions_skip_flag(self):
         msg = format_missing_dependencies_error(["chromadb"])
         assert "--no-check-dependencies" in msg
+
+
+# ===================================================================
+# Bundle-separation validation (Watsonx Orchestrate deployment)
+# ===================================================================
+
+
+class TestBundleSeparationOrchestrate:
+    """Validate that the bundle split keeps dependency detection correct.
+
+    A Watsonx Orchestrate deployment ships ``requirements.txt = [lfx pin,
+    *generate_requirements_from_flow(...)]`` and the runner installs ONLY that
+    (bare ``lfx`` + detected third-party packages, no ``lfx-*`` bundles). The
+    flow's component code is embedded in each node's ``code`` field and exec'd
+    at runtime, and the unified Language Model / Embedding / Agent components
+    build the langchain class directly (see
+    ``lfx.base.models.unified_models.class_registry``) — so the runner needs
+    the langchain SDK, never the bundle. Because the bundle split removed the
+    langchain SDKs from ``lfx``'s own dependency tree, dependency detection is
+    now load-bearing: a provider missing from the resolution tables yields an
+    empty requirements set and a flow that fails to import on the runner.
+    """
+
+    def test_provider_fallback_covers_unified_catalog(self):
+        """Every provider a flow can persist via the unified components resolves to a package.
+
+        ``MODEL_PROVIDER_METADATA`` is the catalog backing the unified Language
+        Model / Embedding / Agent provider pickers; its keys are the exact
+        ``provider`` strings a saved flow carries. Each must resolve to at least
+        one PyPI package, otherwise the deployed flow imports its model class on
+        a bare ``lfx`` runner that lacks the langchain SDK. This is the guard
+        that catches a provider (e.g. OpenRouter) or a casing mismatch (e.g.
+        "IBM WatsonX" vs "IBM watsonx.ai") missing from the resolution tables.
+        """
+        try:
+            from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
+        except ImportError:
+            pytest.skip("MODEL_PROVIDER_METADATA not available")
+
+        empty: list[str] = []
+        for provider in MODEL_PROVIDER_METADATA:
+            node = _make_node(
+                "LanguageModel",
+                "from lfx.base.models.model import LCModelComponent",
+                template_extra={"model": {"value": [{"provider": provider, "name": "x"}]}},
+            )
+            result = generate_requirements_from_flow(_make_flow(node), include_lfx=False, pin_versions=False)
+            if not result:
+                empty.append(provider)
+        assert not empty, f"Unified-selectable providers resolved to no requirements: {empty}"
+
+    def test_openrouter_resolves_to_langchain_openai(self):
+        """OpenRouter is unified-selectable and routes through ChatOpenAI at runtime.
+
+        It is absent from MODEL_PROVIDERS_DICT, so only _PROVIDER_PACKAGE_FALLBACKS
+        can supply its package; without it the wxO runner ImportErrors on
+        ``langchain_openai``.
+        """
+        node = _make_node(
+            "LanguageModel",
+            "from lfx.base.models.model import LCModelComponent",
+            template_extra={"model": {"value": [{"provider": "OpenRouter", "name": "x"}]}},
+        )
+        result = generate_requirements_from_flow(_make_flow(node), pin_versions=False)
+        assert "langchain-openai" in result
+
+    def test_ibm_watsonx_catalog_casing_resolves(self):
+        """The catalog persists ``provider="IBM WatsonX"`` (not the legacy ``IBM watsonx.ai``).
+
+        Detection must resolve the catalog casing to ``langchain-ibm`` rather
+        than relying on the coincidental embedding-path alias match.
+        """
+        node = _make_node(
+            "LanguageModel",
+            "from lfx.base.models.model import LCModelComponent",
+            template_extra={"model": {"value": [{"provider": "IBM WatsonX", "name": "x"}]}},
+        )
+        result = generate_requirements_from_flow(_make_flow(node), pin_versions=False)
+        assert "langchain-ibm" in result
+
+    def test_bundle_distributions_not_in_lfx_transitive_tree(self):
+        """Bundle dists must never be folded into lfx's transitive tree.
+
+        If a bundle were re-added as a core ``lfx`` dependency, every provider
+        import it carries would be filtered out as "lfx-provided" and silently
+        dropped from every wxO requirements.txt. lfx declares bundles only under
+        the ``bundles`` optional-extra (skipped by ``_get_lfx_transitive_dists``).
+        """
+        lfx_dists = _get_lfx_transitive_dists()
+        for dist in ("lfx-openai", "lfx-anthropic", "lfx-amazon", "lfx-ibm", "lfx-bundles", "lfx-datastax"):
+            assert dist not in lfx_dists, f"{dist} must not be in lfx's transitive dependency tree"
+
+    def test_provider_langchain_imports_not_lfx_provided(self):
+        """The langchain provider SDKs must not be treated as lfx-provided.
+
+        These are the packages dependency detection has to emit for the runner;
+        if any were in lfx's tree it would be filtered and the deployed flow
+        would fail to import its model class.
+        """
+        provided = _get_lfx_provided_imports()
+        for import_name in (
+            "langchain_openai",
+            "langchain_anthropic",
+            "langchain_aws",
+            "langchain_ibm",
+            "langchain_google_genai",
+            "langchain_groq",
+            "langchain_ollama",
+        ):
+            assert import_name not in provided, f"{import_name} must not be filtered as lfx-provided"
+
+    def test_bundle_provider_flow_emits_langchain_not_bundle(self):
+        """A bundle-resident provider flow yields the langchain SDK, never the bundle dist.
+
+        The wxO runner builds the model from the langchain class directly, so it
+        needs ``langchain-openai`` — installing ``lfx-openai``/``lfx-bundles``
+        would be wrong (they are not on the runner and not required).
+        """
+        node = _make_node(
+            "LanguageModel",
+            "from lfx.base.models.model import LCModelComponent",
+            template_extra={"model": {"value": [{"provider": "OpenAI", "name": "gpt-4o"}]}},
+        )
+        result = generate_requirements_from_flow(_make_flow(node), pin_versions=False)
+        assert "langchain-openai" in result
+        assert "lfx-openai" not in result
+        assert "lfx-bundles" not in result

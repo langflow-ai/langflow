@@ -92,15 +92,33 @@ _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 # only in-tree providers there and the dynamic source-inspection path cannot
 # run. These static entries keep requirements inference working for flows
 # configured with those providers; a MODEL_PROVIDERS_DICT hit still wins.
+#
+# CRITICAL: every provider string a flow can persist via the unified Language
+# Model / Embedding Model / Agent components (the keys of
+# ``MODEL_PROVIDER_METADATA``) MUST have an entry here, keyed by the *exact*
+# catalog string. After the bundle split the langchain SDKs no longer ship with
+# a bare ``lfx`` install, so a provider missing from this table (or keyed by the
+# wrong casing) yields an empty requirements set and the deployed flow fails to
+# import its model class on the runner. ``test_provider_fallback_covers_unified_catalog``
+# guards this invariant. Some keys below (Amazon Bedrock, SambaNova, NVIDIA via
+# ``MODEL_PROVIDERS_DICT``) are not unified-selectable but back the dedicated
+# provider components / legacy flows.
 _PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
     "Amazon Bedrock": {"langchain-aws"},
     "Anthropic": {"langchain-anthropic"},
     "Azure OpenAI": {"langchain-openai"},
     "Google Generative AI": {"langchain-google-genai"},
     "Groq": {"langchain-groq"},
+    # Both spellings: "IBM WatsonX" is the unified-catalog string a flow persists
+    # (MODEL_PROVIDER_METADATA), "IBM watsonx.ai" is the MODEL_PROVIDERS_DICT alias.
+    "IBM WatsonX": {"langchain-ibm"},
     "IBM watsonx.ai": {"langchain-ibm"},
     "Ollama": {"langchain-ollama"},
     "OpenAI": {"langchain-openai"},
+    # OpenRouter is unified-selectable and routes through ChatOpenAI at runtime
+    # (get_provider_param_mapping -> model_class "ChatOpenAI" -> langchain_openai),
+    # but is not in MODEL_PROVIDERS_DICT, so only this fallback can supply its package.
+    "OpenRouter": {"langchain-openai"},
     "SambaNova": {"langchain-sambanova"},
 }
 
