@@ -12,86 +12,20 @@ You add them to your flows and configure them in the same way as Langflow's core
 
 To browse bundles, click <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
 
-## Install bundle components {#bundle-install}
+## Core components and bundles
 
-`uv pip install langflow` installs the Langflow web UI and a curated set of bundle components.
-Many provider integrations ship as separate packages and are not installed by default.
+:::tip
+The Langflow documentation doesn't list all bundles or components in bundles.
+For the most accurate and up-to-date list of bundles and components for your version of Langflow, check <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
 
-| Install command | What is installed |
-|---|---|
-| `uv pip install langflow` | Langflow web UI + core components + [select bundles](#bundles-included-by-default) |
-| `uv pip install lfx-bundles` | All [long-tail provider bundles](#long-tail-bundles) (~45 providers), added to an existing Langflow install |
-| `uv pip install "lfx[bundles]"` | The `lfx` engine + all long-tail bundles in one step — for [CLI-only use](#engine-only) |
-| `uv pip install lfx-<provider>` | A [standalone partner bundle](#graduated-partner-bundles), such as `lfx-openai` |
-| `uv pip install lfx` | The `lfx` engine only — no UI, no bundles. For [headless / CLI-only use](#engine-only). |
+If you can't find a component that you used in an earlier version of Langflow, it may have been removed or marked as a [legacy component](#legacy-bundles).
+:::
 
-### Bundles included by default {#bundles-included-by-default}
+Langflow offers generic <Icon name="Component" aria-hidden="true" /> **Core components** in addition to third-party, provider-specific bundles.
 
-These bundles are included when you run `uv pip install langflow`:
+If you are looking for a specific service or integration, you can <Icon name="Search" aria-hidden="true" /> **Search** components in the visual editor.
 
-| Bundle | Package |
-|---|---|
-| DuckDuckGo | `lfx-duckduckgo` |
-| Arxiv | `lfx-arxiv` |
-| IBM | `lfx-ibm` |
-| Docling | `lfx-docling` |
-
-### Long-tail bundles {#long-tail-bundles}
-
-About 45 provider bundles — including Chroma, Groq, Ollama, Mistral, Qdrant, and others — are distributed in the **`lfx-bundles`** metapackage.
-
-**Already have Langflow installed?** Add just the bundle components:
-
-```bash
-uv pip install lfx-bundles
-```
-
-`langflow` already includes the `lfx` engine as a dependency, so installing `lfx-bundles` alone is enough. The engine discovers the new components automatically on the next restart.
-
-**Starting from scratch with the `lfx` CLI?** Install the engine and all bundles together:
-
-```bash
-uv pip install "lfx[bundles]"
-```
-
-This is for environments where `langflow` is not installed and you only need the `lfx run` CLI to execute flows headlessly.
-
-After installation, restart Langflow and confirm the bundles loaded:
-
-```bash
-lfx extension list
-```
-
-### Graduated partner bundles {#graduated-partner-bundles}
-
-These flagship providers ship as standalone packages and must be installed individually:
-
-| Provider | Package |
-|---|---|
-| OpenAI | `lfx-openai` |
-| Anthropic | `lfx-anthropic` |
-| Amazon | `lfx-amazon` |
-| DataStax | `lfx-datastax` |
-| Cohere | `lfx-cohere` |
-
-For example:
-
-```bash
-uv pip install lfx-openai
-```
-
-After installation, restart Langflow.
-
-### Install without bundles {#engine-only}
-
-To install only the `lfx` execution engine — useful for headless deployments, CI pipelines, or embedding flow execution in another application without the web UI:
-
-```bash
-uv pip install lfx
-```
-
-This gives you the `lfx run` CLI for executing saved flows programmatically.
-To add provider bundles later, see [Long-tail bundles](#long-tail-bundles) or [Graduated partner bundles](#graduated-partner-bundles) above.
+If all else fails, you can always create your own [custom components](/components-custom-components).
 
 ## Bundle maintenance and documentation
 
@@ -111,26 +45,79 @@ The Langflow documentation focuses on using bundles within flows.
 For that reason, it focuses on the Langflow-specific configuration steps for bundled components.
 For information about provider-specific features or APIs, see the provider's documentation.
 
-## Component parameters
+## Install bundle components {#bundle-install}
 
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+Not all bundle components are included with `uv pip install langflow`.
 
-<PartialParams />
+| Bundle | Included with `uv pip install langflow`? | To install separately |
+|---|---|---|
+| DuckDuckGo, arXiv, IBM, Docling | Yes | — |
+| Long-tail bundles (~45 providers) | No | `uv pip install lfx-bundles` |
+| OpenAI, Anthropic, Amazon, Cohere | Core LLM support included; bundle adds enhanced parameters | `uv pip install lfx-<name>` |
+| DataStax | No | `uv pip install lfx-datastax` |
 
-## Core components and bundles
+See the sections below for full package names and install details.
 
-:::tip
-The Langflow documentation doesn't list all bundles or components in bundles.
-For the most accurate and up-to-date list of bundles and components for your version of Langflow, check <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
 
-If you can't find a component that you used in an earlier version of Langflow, it may have been removed or marked as a [legacy component](#legacy-bundles).
-:::
+### Bundles included by default {#bundles-included-by-default}
 
-Langflow offers generic <Icon name="Component" aria-hidden="true" /> **Core components** in addition to third-party, provider-specific bundles.
+The following bundles are included when you run `uv pip install langflow`:
 
-If you are looking for a specific service or integration, you can <Icon name="Search" aria-hidden="true" /> **Search** components in the visual editor.
+| Bundle | Package |
+|---|---|
+| DuckDuckGo | `lfx-duckduckgo` |
+| Arxiv | `lfx-arxiv` |
+| IBM | `lfx-ibm` |
+| Docling | `lfx-docling` |
 
-If all else fails, you can always create your own [custom components](/components-custom-components).
+### Long-tail bundles {#long-tail-bundles}
+
+About 45 provider bundles are distributed in the `lfx-bundles` metapackage.
+
+If you already have Langflow installed, add the `lfx-bundles` package:
+
+```bash
+uv pip install lfx-bundles
+```
+
+`langflow` already includes the `lfx` engine as a dependency, so installing `lfx-bundles` alone is enough. The engine discovers the new components automatically on the next restart.
+
+If you're starting from scratch with the `lfx` CLI, install the `lfx` engine and all bundles together:
+
+```bash
+uv pip install "lfx[bundles]"
+```
+
+This is for environments where `langflow` is not installed and you only need the `lfx run` CLI to execute flows headlessly.
+
+After installation, restart Langflow and confirm the bundles loaded:
+
+```bash
+lfx extension list
+```
+
+### Graduated partner bundles {#graduated-partner-bundles}
+
+These providers have standalone bundle packages with enhanced, provider-specific components.
+For OpenAI, Anthropic, Amazon Bedrock, and Cohere, basic LLM support is already included in all Langflow installations through the core [Language Model](/components-models) component.
+The bundle adds an enhanced component with additional provider-specific parameters.
+
+To install a graduated bundle:
+
+1. Run `uv pip install lfx-<name>` (for example, `uv pip install lfx-openai`).
+2. Restart Langflow.
+3. To confirm the bundle loaded, run `lfx extension list`.
+
+### Install without bundles {#engine-only}
+
+To install only the `lfx` execution engine — useful for headless deployments, CI pipelines, or embedding flow execution in another application without the web UI:
+
+```bash
+uv pip install lfx
+```
+
+This gives you the `lfx run` CLI for executing saved flows programmatically.
+To add provider bundles later, see [Long-tail bundles](#long-tail-bundles) or [Graduated partner bundles](#graduated-partner-bundles) above.
 
 ## Legacy bundles
 
