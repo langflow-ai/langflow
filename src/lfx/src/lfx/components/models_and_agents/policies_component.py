@@ -345,17 +345,24 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         attrs[...]["value"]) — these are NOT covered by the custom-component hash
         gate. So when an operator locks the deployment down with
         allow_custom_components=False, running that code must be refused too.
-        When no settings service is present (lfx standalone CLI),
-        execution is allowed: that context is local/trusted.
+
+        Fails closed to match validate_flow_for_current_settings: when the
+        settings layer is present but the service is unavailable (returns None),
+        execution is denied. Fail-open is reserved for the truly standalone case
+        where the settings layer cannot be imported at all (lfx used as a bare
+        library), which is a local/trusted context.
         """
         try:
             from lfx.services.deps import get_settings_service
+        except ImportError:
+            # No settings layer at all (lfx used as a bare library) -> local/trusted.
+            return True
 
-            settings_service = get_settings_service()
-        except Exception:  # noqa: BLE001 - no settings layer (lfx standalone) -> local/trusted
-            return True
+        settings_service = get_settings_service()
         if settings_service is None:
-            return True
+            # Settings layer present but service unavailable: fail closed, matching
+            # validate_flow_for_current_settings (which raises in this case).
+            return False
         return bool(getattr(settings_service.settings, "allow_custom_components", True))
 
     async def guard_tools(self) -> list[Tool]:

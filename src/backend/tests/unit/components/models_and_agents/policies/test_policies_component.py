@@ -75,8 +75,43 @@ async def test_guard_tools_blocked_when_custom_components_disabled(mock_componen
         lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
     )
 
-    with pytest.raises(ValueError, match="allow_custom_components"):
+    # The refusal must happen before any toolguard runtime is imported/exec'd.
+    with (
+        patch.object(PoliciesComponent, "_import_toolguard") as mock_import,
+        pytest.raises(ValueError, match="allow_custom_components"),
+    ):
         await mock_component.guard_tools()
+    mock_import.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_guard_tools_allowed_when_custom_components_enabled(mock_component, monkeypatch):
+    """ToolGuard guard execution must reach the runtime when allow_custom_components=True.
+
+    Pins the allow side of the gate: with the flag enabled, guard_tools() must get
+    past _code_execution_allowed() and import the toolguard runtime. Without this,
+    a future flip of the default would silently bypass the security gate and only
+    the blocked path would be covered.
+    """
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True)),
+    )
+
+    fake_tg = _make_fake_tg()
+    fake_tg["load_toolguards_from_memory"].return_value = MagicMock()
+    fake_tg["GuardedTool"].return_value = MagicMock()
+
+    with (
+        patch.object(Path, "exists", return_value=True),
+        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg) as mock_import,
+        patch.object(mock_component, "make_toolguard_result", return_value=MagicMock()),
+    ):
+        await mock_component.guard_tools()
+
+    mock_import.assert_called()
 
 
 async def test_cache_mode_success(mock_component, mock_tool):
