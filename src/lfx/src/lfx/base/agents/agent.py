@@ -55,8 +55,22 @@ class LCAgentComponent(Component):
         # The stdout chain markers this used to enable now follow the LANGCHAIN_VERBOSE
         # env var (off by default) via resolve_agent_verbose(); see run_agent /
         # get_agent_kwargs. The input value alone no longer attaches LangChain's
-        # StdOutCallbackHandler.
-        BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True),
+        # StdOutCallbackHandler. The info string surfaces this in the UI so the toggle
+        # and its (now env-gated) behavior agree.
+        BoolInput(
+            name="verbose",
+            display_name="Verbose",
+            value=True,
+            advanced=True,
+            info=(
+                "Legacy toggle. The '> Entering new ... chain' / '> Finished chain.' "
+                "markers it used to print to stdout are now gated on the "
+                "LANGCHAIN_VERBOSE environment variable (off by default); set "
+                "LANGCHAIN_VERBOSE=true to emit them. Toggling this input on its own no "
+                "longer attaches LangChain's stdout handler. Agent steps remain visible "
+                "in the UI regardless of this setting."
+            ),
+        ),
         IntInput(
             name="max_iterations",
             display_name="Max Iterations",
