@@ -51,6 +51,10 @@ class ConcreteTestExecutor(BaseExecutor):
         return component_info.get("instance"), component_info.get("name", "test")
 
 
+# Pydantic renders a non-empty SecretStr field as this mask under model_dump(mode="json").
+MASKED_SECRET = "**********"  # pragma: allowlist secret
+
+
 class TestBaseModelOutputHandler:
     """Test cases for BaseModelOutputHandler serialization."""
 
@@ -84,8 +88,8 @@ class TestBaseModelOutputHandler:
         assert serialized["__module_name__"] == "tests.unit.test_type_converter"
 
     @pytest.mark.asyncio
-    async def test_secret_str_serialization_with_actual_secret(self):
-        """Test that SecretStr fields are properly serialized with actual values."""
+    async def test_secret_str_fields_are_masked(self):
+        """SecretStr fields serialize masked -- the plaintext value is never emitted."""
         secret_value = "test-api-key-12345"  # pragma: allowlist secret
         model = SecretTestModel(
             name="test",
@@ -95,49 +99,32 @@ class TestBaseModelOutputHandler:
 
         serialized = await self.handler.process(model)
 
-        # Check that secret values are properly extracted
         assert serialized["name"] == "test"
-        assert serialized["api_key"] == secret_value  # pragma: allowlist secret
-        assert serialized["optional_secret"] == "optional-secret-value"  # pragma: allowlist secret
+        assert serialized["api_key"] == MASKED_SECRET
+        assert serialized["optional_secret"] == MASKED_SECRET
+        assert secret_value not in serialized.values()
 
-        # Check class metadata
         assert serialized["__class_name__"] == "SecretTestModel"
         assert serialized["__module_name__"] == "tests.unit.test_type_converter"
 
     @pytest.mark.asyncio
-    async def test_secret_str_serialization_with_env_var_resolution(self):
-        """Test that SecretStr fields with environment variable names are resolved."""
-        # Set up environment variable
+    async def test_env_var_name_secret_is_not_resolved(self):
+        """A SecretStr holding an env var name must NOT be resolved onto the output edge."""
         test_api_key = "actual-api-key-from-env"  # pragma: allowlist secret
 
         with patch.dict(os.environ, {"TEST_API_KEY": test_api_key}):
-            # Create model with environment variable name as secret
-            model = SecretTestModel(
-                name="test",
-                api_key=SecretStr("TEST_API_KEY"),  # Environment variable name
-            )
+            model = SecretTestModel(name="test", api_key=SecretStr("TEST_API_KEY"))
 
             serialized = await self.handler.process(model)
 
-            # Check that environment variable was resolved
-            assert serialized["api_key"] == test_api_key
+            # Neither the env var value nor its name should leak; the field stays masked.
+            assert serialized["api_key"] == MASKED_SECRET
+            assert test_api_key not in serialized.values()
             assert serialized["name"] == "test"
 
     @pytest.mark.asyncio
-    async def test_secret_str_serialization_no_env_var_fallback(self):
-        """Test SecretStr serialization when environment variable doesn't exist."""
-        # Create model with non-existent environment variable name
-        model = SecretTestModel(name="test", api_key=SecretStr("NON_EXISTENT_ENV_VAR"))
-
-        serialized = await self.handler.process(model)
-
-        # Should keep the original value if env var doesn't exist
-        assert serialized["api_key"] == "NON_EXISTENT_ENV_VAR"  # pragma: allowlist secret
-        assert serialized["name"] == "test"
-
-    @pytest.mark.asyncio
-    async def test_openai_embeddings_like_serialization(self):
-        """Test serialization of OpenAI-like embeddings model."""
+    async def test_openai_embeddings_like_serialization_masks_key(self):
+        """OpenAI-like embeddings model serializes with its api key masked, others intact."""
         api_key = "real-openai-key-12345"  # pragma: allowlist secret
         model = MockOpenAIEmbeddings(
             model="text-embedding-3-small",
@@ -148,33 +135,19 @@ class TestBaseModelOutputHandler:
 
         serialized = await self.handler.process(model)
 
-        # Check all fields are properly serialized
         assert serialized["model"] == "text-embedding-3-small"
-        assert serialized["openai_api_key"] == api_key  # SecretStr unwrapped
+        assert serialized["openai_api_key"] == MASKED_SECRET
+        assert api_key not in serialized.values()
         assert serialized["chunk_size"] == 500
         assert serialized["max_retries"] == 3  # Default value
         assert serialized["dimensions"] == 1536
 
-        # Check class metadata for reconstruction
         assert serialized["__class_name__"] == "MockOpenAIEmbeddings"
         assert serialized["__module_name__"] == "tests.unit.test_type_converter"
 
     @pytest.mark.asyncio
-    async def test_openai_api_key_env_var_resolution(self):
-        """Test that OPENAI_API_KEY environment variable is properly resolved."""
-        real_api_key = "proj-real-openai-key-from-environment"  # pragma: allowlist secret
-
-        with patch.dict(os.environ, {"OPENAI_API_KEY": real_api_key}):
-            model = MockOpenAIEmbeddings(openai_api_key=SecretStr("OPENAI_API_KEY"))
-
-            serialized = await self.handler.process(model)
-
-            # Verify the actual API key value is serialized, not the env var name
-            assert serialized["openai_api_key"] == real_api_key
-
-    @pytest.mark.asyncio
     async def test_mixed_secret_and_regular_fields(self):
-        """Test model with both secret and regular fields."""
+        """Model with both secret and regular fields: secret masked, regular fields intact."""
         api_key = "secret-key-value"  # pragma: allowlist secret
         model = SecretTestModel(
             name="production-model",
@@ -184,37 +157,11 @@ class TestBaseModelOutputHandler:
 
         serialized = await self.handler.process(model)
 
-        # Regular field should be unchanged
         assert serialized["name"] == "production-model"
-        # Secret field should be unwrapped
-        assert serialized["api_key"] == api_key
+        assert serialized["api_key"] == MASKED_SECRET
+        assert api_key not in serialized.values()
         # None secret field should remain None
         assert serialized["optional_secret"] is None
-
-    @pytest.mark.asyncio
-    @patch.dict(os.environ, {}, clear=True)  # Clear environment
-    async def test_secret_str_with_no_env_vars(self):
-        """Test SecretStr serialization when no environment variables are set."""
-        model = SecretTestModel(name="test", api_key=SecretStr("MISSING_API_KEY"))
-
-        serialized = await self.handler.process(model)
-
-        # Should keep original value if env var resolution fails
-        assert serialized["api_key"] == "MISSING_API_KEY"  # pragma: allowlist secret
-
-    @pytest.mark.asyncio
-    async def test_serialized_data_structure_debugging(self):
-        """Test to show what serialized data looks like for debugging."""
-        api_key = "debug-key-12345"  # pragma: allowlist secret
-        model = MockOpenAIEmbeddings(model="test-model", openai_api_key=SecretStr(api_key), chunk_size=123)
-
-        serialized = await self.handler.process(model)
-
-        # Verify the structure
-        assert "openai_api_key" in serialized
-        assert serialized["openai_api_key"] == api_key
-        assert "__class_name__" in serialized
-        assert "__module_name__" in serialized
 
 
 class TestBaseModelInputHandler:
@@ -241,8 +188,13 @@ class TestBaseModelInputHandler:
         assert deserialized.enabled is False
 
     @pytest.mark.asyncio
-    async def test_openai_embeddings_like_deserialization(self):
-        """Test deserialization of OpenAI-like embeddings model."""
+    async def test_secret_round_trip_stays_masked(self):
+        """Across the worker boundary a secret survives only as its mask, not the real value.
+
+        Masking on the output edge is intentional (see BaseModelOutputHandler): the plaintext
+        is never serialized, so a serialize->deserialize round trip reconstructs the masked
+        SecretStr. A component needing the real value must resolve it on its own input edge.
+        """
         api_key = "real-openai-key-12345"  # pragma: allowlist secret
         model = MockOpenAIEmbeddings(
             model="text-embedding-ada-002",
@@ -261,27 +213,10 @@ class TestBaseModelInputHandler:
         assert deserialized.chunk_size == 750
         assert deserialized.max_retries == 3  # Default
 
-        # Check that SecretStr field is reconstructed properly
+        # The real key never crossed the boundary; only the mask round-trips.
         assert isinstance(deserialized.openai_api_key, SecretStr)
-        assert deserialized.openai_api_key.get_secret_value() == api_key
-
-    @pytest.mark.asyncio
-    async def test_openai_api_key_env_var_round_trip(self):
-        """Test that OPENAI_API_KEY environment variable is properly resolved."""
-        real_api_key = "proj-real-openai-key-from-environment"  # pragma: allowlist secret
-
-        with patch.dict(os.environ, {"OPENAI_API_KEY": real_api_key}):
-            model = MockOpenAIEmbeddings(openai_api_key=SecretStr("OPENAI_API_KEY"))
-
-            serialized = await self.output_handler.process(model)
-
-            # Test full round-trip
-            fields = {"param": (serialized, {})}
-            result = await self.input_handler.prepare(fields, None)
-
-            deserialized = result["param"]
-            assert isinstance(deserialized.openai_api_key, SecretStr)
-            assert deserialized.openai_api_key.get_secret_value() == real_api_key
+        assert deserialized.openai_api_key.get_secret_value() == MASKED_SECRET
+        assert deserialized.openai_api_key.get_secret_value() != api_key
 
     def test_deserialization_without_class_metadata(self):
         """Test that regular dicts without markers don't match."""
@@ -377,8 +312,8 @@ class TestOutputTreeWalker:
             pytest.skip("Langflow not available for testing")
 
     @pytest.mark.asyncio
-    async def test_real_openai_embeddings_serialization(self):
-        """Test with actual OpenAI embeddings class if available."""
+    async def test_real_openai_embeddings_serialization_masks_key(self):
+        """Real OpenAIEmbeddings serializes with its api key masked, not unwrapped."""
         try:
             from langchain_openai import OpenAIEmbeddings
             from pydantic import SecretStr
@@ -394,9 +329,10 @@ class TestOutputTreeWalker:
             # Serialize
             serialized = await self.executor._apply_output_handlers(embeddings, self.handlers)
 
-            # Check that API key is properly extracted
+            # The plaintext key must never reach the serialized output edge.
             assert "openai_api_key" in serialized
-            assert serialized["openai_api_key"] == api_key
+            assert serialized["openai_api_key"] == MASKED_SECRET
+            assert api_key not in serialized.values()
             assert serialized["model"] == "text-embedding-3-small"
             assert serialized["chunk_size"] == 500
 
@@ -404,7 +340,7 @@ class TestOutputTreeWalker:
             assert serialized["__class_name__"] == "OpenAIEmbeddings"
             assert "langchain_openai" in serialized["__module_name__"]
 
-            # Test deserialization
+            # Round-trips as the mask, never the real key.
             input_handler = BaseModelInputHandler()
             fields = {"param": (serialized, {})}
             result = await input_handler.prepare(fields, None)
@@ -414,13 +350,12 @@ class TestOutputTreeWalker:
             assert deserialized.model == "text-embedding-3-small"
             assert deserialized.chunk_size == 500
 
-            # Check that SecretStr is properly reconstructed
             assert hasattr(deserialized, "openai_api_key")
             if isinstance(deserialized.openai_api_key, SecretStr):
-                assert deserialized.openai_api_key.get_secret_value() == api_key
+                assert deserialized.openai_api_key.get_secret_value() == MASKED_SECRET
+                assert deserialized.openai_api_key.get_secret_value() != api_key
             else:
-                # In some versions, it might be a string after deserialization
-                assert deserialized.openai_api_key == api_key
+                assert deserialized.openai_api_key == MASKED_SECRET
 
         except ImportError:
             pytest.skip("langchain_openai not available for real OpenAI embeddings test")
