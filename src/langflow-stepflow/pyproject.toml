@@ -55,6 +55,9 @@ dev = [
     "httpx>=0.25.0",
 ]
 
+[project.entry-points."lfx.executors"]
+stepflow = "langflow_stepflow.executor:StepflowExecutor"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
