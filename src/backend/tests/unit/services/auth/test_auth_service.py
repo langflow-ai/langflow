@@ -318,7 +318,7 @@ def test_encrypt_decrypt_roundtrip_with_base64_encoded_32_byte_key(tmp_path):
 
 
 def test_encrypt_decrypt_roundtrip_with_short_key(tmp_path):
-    """Keys shorter than 32 chars use the random.seed path and must work."""
+    """Keys shorter than 32 chars use the SHA-256 derivation and must work."""
     raw_key = "short-key"
 
     settings = AuthSettings(CONFIG_DIR=str(tmp_path))
@@ -365,6 +365,42 @@ def test_ensure_fernet_key_with_44_char_key():
     fernet = Fernet(ensure_fernet_key(raw_key))
     encrypted = fernet.encrypt(b"test-value")
     assert fernet.decrypt(encrypted) == b"test-value"
+
+
+def test_ensure_fernet_key_short_key_uses_sha256_derivation():
+    """Short-key derivation must be the SHA-256 hash, not the old PRNG output.
+
+    Regression for GHSA-jxw3-mjmx-3pqm: the key was previously derived with
+    ``random.seed(secret_key)`` + ``random.getrandbits`` — a predictable,
+    non-cryptographic PRNG. The guard that catches that regression is the
+    SHA-256 equality below: the derived key must equal
+    ``base64.urlsafe_b64encode(sha256(secret))``, which the old PRNG path could
+    never produce.
+
+    The random-state perturbation between the two calls is only a determinism
+    sanity check. On its own it would *not* catch the old bug — the vulnerable
+    code re-seeded with the secret on every call, so it was deterministic per
+    secret too; the SHA-256 assertion is what proves the path actually changed.
+    """
+    import base64
+    import hashlib
+    import random
+
+    from langflow.services.auth.utils import ensure_fernet_key
+
+    raw_key = "short-key"  # < 32 chars -> derivation branch
+
+    random.seed(0)
+    key_a = ensure_fernet_key(raw_key)
+    random.seed(123456789)
+    _ = [random.random() for _ in range(100)]  # noqa: S311  # perturb global PRNG state
+    key_b = ensure_fernet_key(raw_key)
+
+    # Determinism sanity check (held under the old impl too — not the regression guard).
+    assert key_a == key_b
+    # Regression guard: the key must be the SHA-256 derivation, not random.getrandbits output.
+    expected = base64.urlsafe_b64encode(hashlib.sha256(raw_key.encode()).digest())
+    assert key_a == expected
 
 
 def test_password_helpers_roundtrip(auth_service: AuthService):
