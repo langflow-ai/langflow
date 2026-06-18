@@ -8,6 +8,8 @@ export { CanvasLegend } from "./CanvasLegend";
 export { CanvasPlaceholder } from "./CanvasPlaceholder";
 export { CanvasSurface } from "./CanvasSurface";
 export { ChatBubble } from "./ChatBubble";
+export type { ChatComposerHandle } from "./ChatComposer";
+export { ChatComposer } from "./ChatComposer";
 export { ChatDock } from "./ChatDock";
 export { CodeView } from "./CodeView";
 export { D2Canvas } from "./D2Canvas";

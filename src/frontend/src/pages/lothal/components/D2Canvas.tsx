@@ -146,7 +146,17 @@ export function D2Canvas({
   const onDoubleClick = useCallback(
     (e: React.MouseEvent) => {
       if (!holder.current || !onAnchor) return;
-      const anchor = resolveAnchor(e.target as Element, holder.current);
+      // The pan gesture captures the pointer (setPointerCapture), which retargets
+      // the compatibility mouse events — so `e.target` is this viewport div, not
+      // the diagram shape under the cursor. Hit-test by geometry instead to find
+      // the real SVG element the user double-clicked (guarded for jsdom, which
+      // has no elementFromPoint; there `e.target` is already the shape).
+      const hit =
+        typeof document.elementFromPoint === "function"
+          ? document.elementFromPoint(e.clientX, e.clientY)
+          : null;
+      const target = hit ?? (e.target as Element);
+      const anchor = resolveAnchor(target, holder.current);
       if (anchor) onAnchor(anchor);
     },
     [onAnchor],

@@ -9,10 +9,24 @@ jest.mock("@/controllers/API/queries/lothal", () => ({
 }));
 
 // Stub the live D2 canvas — it drives DOM layout/pointer gestures and isn't the
-// unit under test. We only care that CanvasSurface routes to it with the SVG.
+// unit under test. We care that CanvasSurface routes to it with the SVG and
+// forwards the onAnchor handler (a double-click → chip; D.7). The stub fires
+// onAnchor when its button is clicked so we can assert the wiring.
 jest.mock("../D2Canvas", () => ({
-  D2Canvas: ({ svg }: { svg: string }) => (
-    <div data-testid="d2-canvas" data-svg={svg} />
+  D2Canvas: ({
+    svg,
+    onAnchor,
+  }: {
+    svg: string;
+    onAnchor?: (a: unknown) => void;
+  }) => (
+    <button
+      type="button"
+      data-testid="d2-canvas"
+      data-svg={svg}
+      data-has-onanchor={onAnchor ? "yes" : "no"}
+      onClick={() => onAnchor?.({ kind: "node", id: "checkout" })}
+    />
   ),
 }));
 
@@ -155,5 +169,24 @@ describe("CanvasSurface", () => {
       "data-svg",
       "<svg>hi</svg>",
     );
+  });
+
+  it("forwards onAnchor through to the D2 canvas (D.7)", () => {
+    const onAnchor = jest.fn();
+    mockUseDiagram.mockReturnValue({
+      data: diagram({ d2: "a -> b", svg: "<svg>hi</svg>" }),
+      isLoading: false,
+      isError: false,
+    });
+    render(
+      <CanvasSurface
+        project={project({ phase: "DIAGRAM_REFINEMENT" })}
+        onAnchor={onAnchor}
+      />,
+    );
+    const canvas = screen.getByTestId("d2-canvas");
+    expect(canvas).toHaveAttribute("data-has-onanchor", "yes");
+    canvas.click();
+    expect(onAnchor).toHaveBeenCalledWith({ kind: "node", id: "checkout" });
   });
 });

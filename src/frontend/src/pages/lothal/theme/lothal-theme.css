@@ -311,3 +311,83 @@
   background: var(--surface-2);
   color: var(--ink);
 }
+
+/* --- Chat composer + anchor chips (Epic D.7) ------------------------------
+ * A rich (contentEditable) composer: double-clicking a diagram element drops an
+ * inline reference chip at the caret, serialized to the LLM as an exact D2
+ * anchor id. Mirrors the <ChatDock> shell so the two read as one component. */
+.lothal-composer {
+  border-top: 1px solid var(--border);
+  background: var(--paper);
+  padding: 12px var(--pad) 14px;
+}
+.lothal-composer-box {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+}
+.lothal-composer-editor {
+  flex: 1;
+  min-height: 24px;
+  max-height: 160px;
+  overflow-y: auto;
+  outline: none;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 4px;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+.lothal-composer-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+.lothal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 1px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: nowrap;
+  user-select: none;
+  cursor: default;
+}
+.lothal-composer-send {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: var(--accent-fg);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.lothal-composer-send:disabled {
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+.lothal-composer-hint {
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: var(--ink-soft);
+}
