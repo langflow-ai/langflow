@@ -26,9 +26,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
+from lfx.log.logger import logger
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.lothal.d2_compile import D2CompilerUnavailableError, render_d2
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError, call_llm
 from langflow.lothal.router import process_turn
 from langflow.lothal.schemas import (
@@ -363,30 +365,54 @@ async def get_prd(project: OwnedProject) -> PRDResponse:
 # --- Diagram -----------------------------------------------------------------
 
 
+async def _render_diagram_svg(d2: str, project_id) -> str | None:
+    """Render stored D2 to SVG for the read, degrading to `None` (never raising).
+
+    A render problem must not 500 the canvas: stored D2 was compile-validated at
+    generation (D.3), so this normally succeeds, but an unavailable compiler or a
+    render failure logs and returns `None` (the frontend shows "no diagram yet"
+    rather than an error).
+    """
+    try:
+        result = await render_d2(d2)
+    except D2CompilerUnavailableError:
+        logger.warning(f"d2 compiler unavailable; returning diagram for project {project_id} without an SVG.")
+        return None
+    if not result.ok:
+        # Don't log the compiler stderr: it can echo fragments of the user's D2
+        # (their project's content). The project id is enough to reproduce.
+        logger.warning(f"Stored D2 for project {project_id} failed to render; returning it without an SVG.")
+        return None
+    return result.svg
+
+
 @router.get(
     "/projects/{project_id}/diagram",
-    summary="Get the diagram (D2 source)",
+    summary="Get the diagram (D2 source + server-rendered SVG)",
 )
 async def get_diagram(project: OwnedProject) -> DiagramResponse:
-    """Return the project's diagram as D2 source (Epic D.4, supersedes Story 2.3).
+    """Return the project's diagram as D2 source plus a server-rendered SVG (D.4/D.6).
 
-    The diagram artifact is D2 source text now — the generator emits it (D.2) and
-    we persist it verbatim to `lothal_project.diagram_d2` (D2 owns its own
-    layout). This read hands that source straight back; the frontend compiles it
-    to SVG in-browser (D.5), so the `svg` slot stays `null` today.
+    The diagram artifact is D2 source text — the generator emits it (D.2) and we
+    persist it verbatim to `lothal_project.diagram_d2` (D2 owns its own layout).
+    This read hands that source back and, alongside it, the SVG the backend
+    renders from it via the `d2` compiler (D.6): the frontend just displays the
+    SVG and ships no D2 compiler of its own. The SVG is rendered on read (the
+    source is the single stored truth — there is no SVG to keep in sync).
 
     Phase-gated to `DIAGRAM_GENERATION` and later: the diagram doesn't exist
     during CLARIFICATION, so a read there is a `403` (ownership is checked first
     by `OwnedProject`, so an unowned project still 404s regardless of phase).
     Once the project enters generation but before the generator has emitted
-    anything, `diagram_d2` is `null` and an empty payload (`d2: null`) is
-    returned — never an error. A blank or whitespace-only store is treated the
+    anything, `diagram_d2` is `null` and an empty payload (`d2: null, svg: null`)
+    is returned — never an error. A blank or whitespace-only store is treated the
     same way (normalised to `null`): it is no diagram, not a renderable one.
 
-    Real D2 source is returned untouched (verbatim) — there is nothing to parse
-    and no malformed-row path that could 500 the canvas. Legacy projects that
-    only have the old `diagram_json` xyflow graph read as empty here until they
-    are migrated to D2 (Epic D.13).
+    Rendering never 500s the canvas: stored D2 was compile-validated at
+    generation (D.3) so it renders, but if the compiler is unavailable or the
+    render fails we return the `d2` with `svg: null` and log it, rather than
+    failing the read. Legacy projects that only have the old `diagram_json`
+    xyflow graph read as empty here until they are migrated to D2 (Epic D.13).
     """
     if project.phase not in _DIAGRAM_VISIBLE_PHASES:
         raise HTTPException(
@@ -394,10 +420,13 @@ async def get_diagram(project: OwnedProject) -> DiagramResponse:
             detail="The diagram is not available until diagram generation begins.",
         )
 
-    # Blank/whitespace-only is "no diagram" → null; real source is returned
-    # verbatim (D2 owns its own layout, so we never trim meaningful content).
+    # Blank/whitespace-only is "no diagram" → empty payload; real source is
+    # returned verbatim (D2 owns its own layout, so we never trim meaningful
+    # content) plus the SVG rendered from it.
     d2 = project.diagram_d2
-    return DiagramResponse(d2=d2 if d2 and d2.strip() else None)
+    if not (d2 and d2.strip()):
+        return DiagramResponse(d2=None)
+    return DiagramResponse(d2=d2, svg=await _render_diagram_svg(d2, project.id))
 
 
 @router.post(

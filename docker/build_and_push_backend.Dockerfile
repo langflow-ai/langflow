@@ -71,6 +71,18 @@ RUN ARCH=$(dpkg --print-architecture) \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1
 
+# Install the d2 compiler (Epic D.3 / D.6). The DIAGRAM_GENERATION engine shells
+# out to `d2` to compile-validate generated D2 before persisting it, and the
+# /diagram endpoint renders stored D2 to SVG server-side (lothal/d2_compile.py).
+# Pinned for reproducibility; kept in lockstep with docker/dev.Dockerfile.
+ENV D2_VERSION=v0.7.1
+RUN ARCH=$(dpkg --print-architecture) \
+    && curl -fsSL "https://github.com/terrastruct/d2/releases/download/${D2_VERSION}/d2-${D2_VERSION}-linux-${ARCH}.tar.gz" \
+       | tar -xz -C /tmp \
+    && install "/tmp/d2-${D2_VERSION}/bin/d2" /usr/local/bin/d2 \
+    && rm -rf "/tmp/d2-${D2_VERSION}" \
+    && d2 --version
+
 # Create non-root user
 RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
 
