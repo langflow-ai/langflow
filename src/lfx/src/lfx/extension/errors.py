@@ -91,9 +91,14 @@ ERROR_CODES: frozenset[str] = frozenset(
         # (never aborts startup) so a broken third-party declaration degrades
         # to "that bundle root is skipped".
         "bundle-discovery-malformed",
-        # lfx.bundles tier intra-tier diagnostics, mirroring the inline
-        # tier's split (inline-bundle-name-invalid / inline-path-unreadable /
-        # duplicate-inline-bundle).  All warning-only: never abort startup.
+        # lfx.bundles tier intra-tier diagnostics.  Every code here is
+        # warning-only: a broken manifest-less declaration degrades to "that
+        # provider/root is skipped" and never aborts startup.  This is *not* a
+        # full mirror of the inline tier -- there inline-bundle-name-invalid and
+        # inline-path-unreadable are hard errors (ok=False).  Only the duplicate
+        # case lines up: duplicate-lfx-bundles-provider and duplicate-inline-bundle
+        # are both warnings ("first wins"); the name-invalid / root-unreadable
+        # pair is intentionally a warning here where its inline counterpart errors.
         "bundles-provider-name-invalid",
         "bundles-root-unreadable",
         "duplicate-lfx-bundles-provider",

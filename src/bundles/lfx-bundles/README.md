@@ -35,27 +35,17 @@ manifest-less metapackage, a provider can graduate with **no lockstep release**.
 
 ## Installing
 
-Available today (`lfx-bundles` is an empty skeleton until the bulk move
-populates it):
-
 ```bash
-pip install langflow                 # everything (langflow pins lfx-bundles[all])
-pip install lfx                      # engine only, no bundles
-```
-
-Once the long-tail providers move in (and the `lfx[bundles]` extra ships with
-the engine-only `lfx` split), these become available:
-
-```bash
+pip install langflow                   # everything (langflow pins lfx-bundles[all])
+pip install lfx                        # engine only, no bundles
 pip install "lfx[bundles]"             # engine + this metapackage (deployment footnote)
-pip install "lfx-bundles[<provider>]"  # provider code + that provider's SDK deps
+pip install "lfx-bundles[<provider>]"  # one provider's code + that provider's SDK deps
 ```
 
 `lfx-bundles` itself depends only on `lfx`. Each provider's third-party SDKs are
-**optional extras** (PEP 685-normalized keys, e.g. `lfx-bundles[google-genai]`);
-the generated `all` extra (empty until the first provider tranche lands) pulls
-every provider's deps and is what `langflow` depends on so `pip install langflow`
-is unchanged.
+**optional extras** (PEP 685-normalized keys, e.g. `lfx-bundles[google]`); the
+generated `all` extra pulls every provider's deps and is what `langflow` depends
+on, so `pip install langflow` is unchanged.
 
 ## Adding a provider
 

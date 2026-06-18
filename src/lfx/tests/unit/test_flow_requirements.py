@@ -22,6 +22,7 @@ from lfx.utils.flow_requirements import (
     _resolve_provider_packages,
     find_missing_dependencies,
     format_missing_dependencies_error,
+    format_missing_module_error,
     generate_requirements_from_file,
     generate_requirements_from_flow,
     generate_requirements_txt,
@@ -1115,6 +1116,27 @@ class TestFormatMissingDependenciesError:
     def test_mentions_skip_flag(self):
         msg = format_missing_dependencies_error(["chromadb"])
         assert "--no-check-dependencies" in msg
+
+       
+class TestFormatMissingModuleError:
+    def test_maps_import_name_to_package(self):
+        # langchain_chroma -> langchain-chroma via the underscore->hyphen fallback.
+        msg = format_missing_module_error("langchain_chroma")
+        assert "pip install langchain-chroma" in msg
+        assert "langchain_chroma" in msg
+
+    def test_dotted_module_resolves_on_top_level(self):
+        # A submodule import resolves on its top-level package but still shows
+        # the full module name the build hit.
+        msg = format_missing_module_error("langchain_chroma.vectorstores")
+        assert "pip install langchain-chroma" in msg
+        assert "langchain_chroma.vectorstores" in msg
+
+    def test_does_not_mention_cli_only_skip_flag(self):
+        # This message is for the server path; the CLI preflight skip flag is
+        # not applicable here.
+        msg = format_missing_module_error("langchain_chroma")
+        assert "--no-check-dependencies" not in msg
 
 
 # ===================================================================
