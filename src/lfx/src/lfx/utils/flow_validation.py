@@ -47,6 +47,32 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
     }
 )
 
+# Template field (input) names on CODE_EXECUTION_COMPONENT_TYPES nodes that carry
+# executable code or define the code sandbox boundary. These are plain-text inputs
+# (StrInput / MultilineInput → template type "str"), so the field-type=="code" guard
+# in apply_tweaks() does NOT catch them; the Tweaks API must additionally refuse to
+# override them by name on a code-execution node. Kept beside
+# CODE_EXECUTION_COMPONENT_TYPES so the two consumers stay in sync — adding a new
+# code-execution component means registering both its type above and its code input
+# here. This sync is enforced by test_every_code_execution_type_has_registered_code_fields
+# in test_process.py, which fails if a new type is added without its code field. The
+# conventional "code" field name is blocked globally in apply_tweaks() and so is
+# intentionally omitted here.
+#   - python_code:        Python Interpreter (PythonREPLComponent) exec input
+#   - tool_code:          removed PythonCodeStructuredTool exec input (type retained)
+#   - filter_instruction: Smart Transform instruction → LLM-generated, eval()'d lambda
+#   - global_imports:     import allow-list that populates the exec() namespace; the
+#                         documented sandbox boundary (powerful modules must be opted
+#                         into here), so it must not be widened via tweaks
+CODE_EXECUTION_FIELD_NAMES: frozenset[str] = frozenset(
+    {
+        "python_code",
+        "tool_code",
+        "filter_instruction",
+        "global_imports",
+    }
+)
+
 # Component node ``type`` values that load and execute *another* saved flow by
 # id or name at build/run time. On the unauthenticated public path these are an
 # indirect code-execution primitive: a public wrapper flow with none of the
