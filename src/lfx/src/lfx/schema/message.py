@@ -22,7 +22,6 @@ from pydantic import (
     field_serializer,
     field_validator,
     model_serializer,
-    model_validator,
 )
 
 if TYPE_CHECKING:
@@ -113,20 +112,11 @@ class Message(Data):
     duration: int | None = None
     session_metadata: dict | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def _fold_text_into_content_blocks(cls, data):
-        if not isinstance(data, dict):
-            return data
-        text = data.get("text")
-        if text and not isinstance(text, str):
-            # AsyncIterator/Iterator for streaming -- leave in data for model_post_init
-            return data
-        # Don't auto-wrap text into content_blocks. Text-only messages keep
-        # content_blocks empty for backwards compatibility with the frontend.
-        # content_blocks is populated explicitly by components that produce
-        # rich content (agents, multimodal, etc.).
-        return data
+    # Text is intentionally NOT auto-folded into content_blocks. Text-only
+    # messages keep content_blocks empty for frontend backwards compatibility;
+    # content_blocks is populated explicitly by components that produce rich
+    # content (agents, multimodal, etc.). Streaming text (AsyncIterator/Iterator)
+    # is left in data for model_post_init to handle.
 
     @computed_field
     @property
@@ -197,13 +187,6 @@ class Message(Data):
             value = str(value)
         return value
 
-    @field_validator("text", mode="before")
-    @classmethod
-    def validate_text(cls, value):
-        if is_secret_value(value):
-            return str(value)
-        return value
-
     @field_validator("content_blocks", mode="before")
     @classmethod
     def validate_content_blocks(cls, value):
@@ -268,8 +251,14 @@ class Message(Data):
         return value
 
     def model_post_init(self, /, _context: Any) -> None:
-        # If text in data dict is an iterator/stream, move it to __dict__ for direct access
+        # If text in data dict is an iterator/stream, move it to __dict__ for direct access.
+        # Coerce SecretStr first so a secret value isn't mistaken for a stream
+        # (``text`` is now a computed_field, so the old before-validator that
+        # did this coercion no longer runs).
         text_val = self.data.get("text")
+        if is_secret_value(text_val):
+            text_val = str(text_val)
+            self.data[self.text_key] = text_val
         if text_val is not None and not isinstance(text_val, str):
             self.data.pop("text", None)
             self.__dict__["_text_stream"] = text_val
@@ -390,6 +379,14 @@ class Message(Data):
                             blocks.append(ImageContent(base64=b64, mime_type=mime))
                         elif url:
                             blocks.append(ImageContent(urls=[url]))
+                        else:
+                            # Log shape only, never the payload, so a provider
+                            # emitting an undecodable image part leaves a trace
+                            # instead of silently dropping content.
+                            logger.debug(
+                                "from_lc_message: dropping image item with no usable url/base64 "
+                                f"(keys={sorted(item.keys())})"
+                            )
                     else:
                         logger.debug(f"from_lc_message: skipping unsupported content type '{item_type}'")
 
@@ -743,7 +740,7 @@ class MessageResponse(DefaultModel):
 
     properties: Properties | None = None
     category: str | None = None
-    content_blocks: list[ContentType | ContentBlock] | None = None
+    content_blocks: list[ContentType] | None = None
     session_metadata: dict | None = None
 
     @field_validator("content_blocks", mode="before")
@@ -754,10 +751,17 @@ class MessageResponse(DefaultModel):
         if isinstance(v, list):
             return [cls.validate_content_blocks(block) for block in v]
         if isinstance(v, dict):
-            # Flat ContentType (has "type" but no "contents") vs grouped ContentBlock
-            if "type" in v and "contents" not in v:
+            # Route every tagged dict through the discriminated-union adapter.
+            # Stored blocks always serialize ``contents: []`` (default_factory),
+            # so an "absence of contents" guard would misfire and force flat
+            # ContentTypes into ContentBlock.model_validate (which requires a
+            # title) on the DB read path. The grouped ContentBlock carries
+            # type="group" and is itself a member of the union.
+            if "type" in v:
                 return _CONTENT_TYPE_ADAPTER.validate_python(v)
-            return ContentBlock.model_validate(v)
+            if "title" in v and "contents" in v:
+                return ContentBlock.model_validate(v)
+            return _CONTENT_TYPE_ADAPTER.validate_python(v)
         return v
 
     @field_validator("properties", mode="before")
