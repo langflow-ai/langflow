@@ -101,6 +101,88 @@ class TestValidateLambda(TestLambdaFilterComponent):
         assert result is True
 
 
+class TestCompileLambdaSecurity(TestLambdaFilterComponent):
+    """Security regression tests for restricted lambda compilation.
+
+    The Smart Transform component evaluates a model-generated lambda. These
+    tests pin the boundary between legitimate data-shaping lambdas (which must
+    keep working) and lambdas that attempt arbitrary code execution / sandbox
+    escape (which must be rejected before they can run).
+    """
+
+    # Lambdas that legitimately reshape data and must continue to work.
+    LEGITIMATE_LAMBDAS = [
+        ("lambda x: [i for i in x if i > 1]", [1, 2, 3], [2, 3]),
+        ("lambda text: text.upper()", "hello", "HELLO"),
+        ("lambda x: x['items']", {"items": [1, 2]}, [1, 2]),
+        ("lambda text: text[:3]", "abcdef", "abc"),
+        ("lambda x: len(x)", [1, 2, 3], 3),
+        ("lambda x: {k: v * 2 for k, v in x.items()}", {"a": 1}, {"a": 2}),
+        ("lambda x: sorted(x)", [3, 1, 2], [1, 2, 3]),
+    ]
+
+    # Model-emitted lambdas that attempt code execution or sandbox escape.
+    # These must be rejected (ValueError) rather than executed.
+    MALICIOUS_LAMBDAS = [
+        'lambda x: __import__("os").getcwd()',
+        "lambda x: ().__class__.__bases__[0].__subclasses__()",
+        'lambda x: open("/etc/passwd").read()',
+        'lambda x: eval("1+1")',
+        'lambda x: exec("import os")',
+        "lambda x: globals()",
+        "lambda x: vars()",
+        'lambda x: getattr(x, "__class__")',
+        "lambda x: x.__class__",
+        "lambda x: __builtins__",
+    ]
+
+    @pytest.mark.parametrize(("lambda_text", "arg", "expected"), LEGITIMATE_LAMBDAS)
+    def test_should_execute_legitimate_lambda(self, component_class, lambda_text, arg, expected):
+        # Arrange
+        component = component_class()
+
+        # Act
+        fn = component._parse_lambda_from_response(lambda_text)
+
+        # Assert
+        assert fn(arg) == expected
+
+    @pytest.mark.parametrize("lambda_text", MALICIOUS_LAMBDAS)
+    def test_should_reject_code_execution_lambda(self, component_class, lambda_text):
+        # Arrange
+        component = component_class()
+
+        # Act & Assert: must be rejected at parse time, never compiled/executed.
+        with pytest.raises(ValueError, match=r"not allowed|not a single lambda|Could not parse"):
+            component._parse_lambda_from_response(lambda_text)
+
+    def test_should_block_import_side_effect_during_processing(self, component_class):
+        """End-to-end: a malicious model response must not execute side effects.
+
+        Mirrors the fuzz target: stub the model so it returns an import-capable
+        lambda; the component must raise instead of importing ``os`` and running
+        ``getcwd()`` inside the server process.
+        """
+        # Arrange
+        component = component_class()
+        component.data = Data(data={"items": [1, 2, 3]})
+        malicious = 'lambda x: __import__("os").getcwd()'
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="not allowed"):
+            component._parse_lambda_from_response(malicious)
+
+    def test_restricted_builtins_exclude_dangerous_callables(self):
+        # Arrange / Act
+        from lfx.components.llm_operations.lambda_filter import _SAFE_LAMBDA_BUILTINS
+
+        # Assert: safe data helpers present, dangerous primitives absent.
+        assert "len" in _SAFE_LAMBDA_BUILTINS
+        assert "sorted" in _SAFE_LAMBDA_BUILTINS
+        for forbidden in ("open", "eval", "exec", "__import__", "compile", "getattr", "globals"):
+            assert forbidden not in _SAFE_LAMBDA_BUILTINS
+
+
 class TestGetDataStructure(TestLambdaFilterComponent):
     """Tests for get_data_structure method."""
 
