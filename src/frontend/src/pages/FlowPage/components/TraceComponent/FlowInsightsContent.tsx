@@ -182,17 +182,14 @@ export function FlowInsightsContent({
     setTracePanelOpen(true);
   }, []);
 
-  const handleCellKeyDown = useCallback(
-    (event: CellKeyDownEvent) => {
-      const keyboardEvent = event.event as KeyboardEvent | undefined;
-      if (keyboardEvent?.key === "Enter") {
-        const rowData = event.data as TraceListItem | undefined;
-        setTracePanelTraceId(rowData?.id ?? null);
-        setTracePanelOpen(true);
-      }
-    },
-    [],
-  );
+  const handleCellKeyDown = useCallback((event: CellKeyDownEvent) => {
+    const keyboardEvent = event.event as KeyboardEvent | undefined;
+    if (keyboardEvent?.key === "Enter") {
+      const rowData = event.data as TraceListItem | undefined;
+      setTracePanelTraceId(rowData?.id ?? null);
+      setTracePanelOpen(true);
+    }
+  }, []);
 
   const traceTableRef = useRef<HTMLDivElement>(null);
 
@@ -447,9 +444,7 @@ export function FlowInsightsContent({
               onFirstDataRendered={() =>
                 applyRowTabIndices(traceTableRef.current)
               }
-              onRowDataUpdated={() =>
-                applyRowTabIndices(traceTableRef.current)
-              }
+              onRowDataUpdated={() => applyRowTabIndices(traceTableRef.current)}
             />
           )}
         </div>
