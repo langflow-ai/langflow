@@ -20,8 +20,8 @@ import type {
   MarkerType,
 } from "@xyflow/react";
 import type {
-  Diagram,
   DiagramEdge,
+  DiagramGraph,
   DiagramNode,
   EdgeKind,
   NodeKind,
@@ -117,6 +117,6 @@ export function toFlowEdges(edges: DiagramEdge[]): FlowEdge[] {
 }
 
 /** True when the diagram has no nodes to render (not generated yet). */
-export function isEmptyDiagram(diagram: Diagram | undefined): boolean {
+export function isEmptyDiagram(diagram: DiagramGraph | undefined): boolean {
   return !diagram || diagram.nodes.length === 0;
 }

@@ -32,13 +32,23 @@ export type Message = {
   created_at: string;
 };
 
-// --- Diagram (xyflow render layer) -----------------------------------------
-// Mirrors the canonical `GET /diagram` contract (`lothal/diagram.py`'s
-// `DiagramGraph`) verbatim — xyflow end to end, no Mermaid, no conversion. A
-// node's `data.label` is its only guaranteed field; `kind`/`note` are optional
-// render hints. An edge always carries `data.order`; its message text lives in
-// `data.label`, and `data.kind` (sync/async/return) plus the top-level
-// `animated` flag are the optional style hints the model emits.
+// --- Diagram (D2 source + server-rendered SVG, Epic D) ----------------------
+// The diagram artifact is D2 source text now, not an xyflow graph (Epic D). The
+// generator emits D2 (D.2), the backend persists it verbatim and renders it to
+// SVG on read (D.3/D.6); `GET /diagram` hands back both. `d2` is `null` once a
+// project is past CLARIFICATION but before the generator has emitted anything;
+// `svg` is `null` when there is no `d2` or rendering failed. The frontend just
+// displays the SVG and ships no D2 compiler of its own.
+
+export type Diagram = {
+  d2: string | null;
+  svg: string | null;
+};
+
+// --- Legacy xyflow render layer (Story 2.x / B.4) --------------------------
+// The pre-D2 graph shape. Still consumed by the decorative <DiagramCanvas> on
+// the Landing / Design-System pages (seeded literals, not the live endpoint).
+// Removed wholesale once the xyflow canvas path is deleted (Epic D.15).
 
 export type NodeKind = "person" | "service" | "ui" | "data";
 export type EdgeKind = "sync" | "async" | "return";
@@ -58,7 +68,7 @@ export type DiagramEdge = {
   data: { order: number; label?: string; kind?: EdgeKind };
 };
 
-export type Diagram = {
+export type DiagramGraph = {
   nodes: DiagramNode[];
   edges: DiagramEdge[];
 };

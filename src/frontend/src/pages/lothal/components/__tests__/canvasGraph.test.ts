@@ -1,6 +1,6 @@
 import type {
-  Diagram,
   DiagramEdge,
+  DiagramGraph,
   DiagramNode,
 } from "@/controllers/API/queries/lothal";
 import {
@@ -136,7 +136,7 @@ describe("toFlowEdges", () => {
 });
 
 describe("isEmptyDiagram", () => {
-  const diagram = (nodes: DiagramNode[]): Diagram => ({
+  const diagram = (nodes: DiagramNode[]): DiagramGraph => ({
     nodes,
     edges: [],
   });
