@@ -1,10 +1,17 @@
-"""Unit tests for ToolWrapperInputHandler."""
+"""Unit tests for ToolWrapperInputHandler and its pure helpers.
+
+Real-component execution is covered in ``test_tool_wrapper_execution.py``; this
+file covers the calculator fast-path, schema/blob reshaping helpers, ``matches``,
+and failed-wrapper handling, none of which need a running component.
+"""
 
 import pytest
 from langchain_core.tools import StructuredTool
 
 from langflow_stepflow.worker.handlers.tool_wrapper import (
     ToolWrapperInputHandler,
+    _build_blob_data,
+    _build_input_schema,
     _create_tool_from_wrapper,
     _execute_calculator_tool,
 )
@@ -37,6 +44,13 @@ def _make_tool_wrapper(
     return wrapper
 
 
+def _calculator_wrapper() -> dict:
+    return _make_tool_wrapper(
+        name="evaluate_expression",
+        properties={"expression": {"type": "string", "default": ""}},
+    )
+
+
 # ---------------------------------------------------------------------------
 # _execute_calculator_tool
 # ---------------------------------------------------------------------------
@@ -62,12 +76,65 @@ class TestExecuteCalculatorTool:
         assert _execute_calculator_tool("1 / 3") == "0.333333"
 
     def test_invalid_expression(self):
-        result = _execute_calculator_tool("not_valid")
-        assert "Calculator error" in result
+        assert "Calculator error" in _execute_calculator_tool("not_valid")
 
     def test_division_by_zero(self):
-        result = _execute_calculator_tool("1 / 0")
-        assert "Calculator error" in result
+        assert "Calculator error" in _execute_calculator_tool("1 / 0")
+
+
+# ---------------------------------------------------------------------------
+# _build_blob_data
+# ---------------------------------------------------------------------------
+
+
+class TestBuildBlobData:
+    def test_reshapes_raw_component_into_enhanced_blob(self):
+        node_info = {
+            "template": {
+                "code": {"value": "print('x')"},
+                "text_input": {"type": "str", "value": "hi"},
+            },
+            "outputs": [{"name": "result", "method": "process_text"}],
+            "display_name": "My Comp",
+        }
+
+        blob = _build_blob_data(node_info, "MyComponent")
+
+        assert blob["code"] == "print('x')"
+        # Code is lifted to the top level and dropped from the template.
+        assert "code" not in blob["template"]
+        assert blob["template"]["text_input"]["value"] == "hi"
+        assert blob["component_type"] == "MyComponent"
+        assert blob["outputs"] == [{"name": "result", "method": "process_text"}]
+        assert blob["selected_output"] == "result"
+        assert blob["display_name"] == "My Comp"
+
+    def test_no_outputs_yields_none_selected_output(self):
+        blob = _build_blob_data({"template": {"code": {"value": "x"}}}, "C")
+        assert blob["selected_output"] is None
+        # component_type is the display_name fallback.
+        assert blob["display_name"] == "C"
+
+
+# ---------------------------------------------------------------------------
+# _build_input_schema
+# ---------------------------------------------------------------------------
+
+
+class TestBuildInputSchema:
+    def test_builds_model_with_declared_properties(self):
+        schema = _build_input_schema({"properties": {"query": {"default": ""}, "limit": {"default": "10"}}})
+        instance = schema(query="a", limit="b")
+        assert instance.query == "a"
+        assert instance.limit == "b"
+
+    def test_default_values_applied(self):
+        schema = _build_input_schema({"properties": {"limit": {"default": "10"}}})
+        assert schema().limit == "10"
+
+    def test_empty_properties_yields_constructible_schema(self):
+        schema = _build_input_schema({})
+        assert schema() is not None
 
 
 # ---------------------------------------------------------------------------
@@ -76,87 +143,37 @@ class TestExecuteCalculatorTool:
 
 
 class TestCreateToolFromWrapper:
-    def test_creates_structured_tool(self):
-        wrapper = _make_tool_wrapper(name="my_tool", description="does stuff")
-        tool = _create_tool_from_wrapper(wrapper)
-
+    @pytest.mark.asyncio
+    async def test_calculator_tool_creates_structured_tool(self):
+        tool = await _create_tool_from_wrapper(_calculator_wrapper())
         assert isinstance(tool, StructuredTool)
-        assert tool.name == "my_tool"
-        assert tool.description == "does stuff"
+        assert tool.name == "evaluate_expression"
 
-    def test_creates_tool_with_code_blob_id(self):
-        wrapper = _make_tool_wrapper(
-            component_code=None,
-            code_blob_id="abc123",
-        )
-        tool = _create_tool_from_wrapper(wrapper)
-        assert isinstance(tool, StructuredTool)
-
-    def test_tool_with_input_schema(self):
-        wrapper = _make_tool_wrapper(
-            properties={
-                "query": {"type": "string", "default": ""},
-                "limit": {"type": "integer", "default": "10"},
-            },
-        )
-        tool = _create_tool_from_wrapper(wrapper)
-        assert isinstance(tool, StructuredTool)
-
-    def test_calculator_tool_execution(self):
-        wrapper = _make_tool_wrapper(
-            name="evaluate_expression",
-            properties={"expression": {"type": "string", "default": ""}},
-        )
-        tool = _create_tool_from_wrapper(wrapper)
-        result = tool.invoke({"expression": "2 + 3"})
+    @pytest.mark.asyncio
+    async def test_calculator_tool_execution(self):
+        tool = await _create_tool_from_wrapper(_calculator_wrapper())
+        result = await tool.ainvoke({"expression": "2 + 3"})
         assert result == {"result": "5"}
 
-    def test_non_calculator_tool_execution(self):
-        wrapper = _make_tool_wrapper(
-            name="search_tool",
-            properties={"query": {"type": "string", "default": ""}},
-            static_inputs={"api_key": "test_key"},  # pragma: allowlist secret
-            component_type="SearchComponent",
-            session_id="sess_1",
-        )
-        tool = _create_tool_from_wrapper(wrapper)
-        result = tool.invoke({"query": "hello"})
-
-        assert result["component_type"] == "SearchComponent"
-        assert result["inputs"]["query"] == "hello"
-        assert result["inputs"]["api_key"] == "test_key"  # pragma: allowlist secret
-        assert result["inputs"]["session_id"] == "sess_1"
-        assert result["status"] == "tool_wrapper_execution"
-
-    def test_tool_with_code_blob_id_in_result(self):
-        wrapper = _make_tool_wrapper(
-            name="blob_tool",
-            component_code=None,
-            code_blob_id="blob_abc",
-        )
-        tool = _create_tool_from_wrapper(wrapper)
-        result = tool.invoke({})
-        assert result["code_blob_id"] == "blob_abc"
-
-    def test_tool_with_component_code_in_result(self):
-        wrapper = _make_tool_wrapper(
-            name="code_tool",
-            component_code="def run(): pass",
-        )
-        tool = _create_tool_from_wrapper(wrapper)
-        result = tool.invoke({})
-        assert result["has_component_code"] is True
-
-    def test_missing_both_code_sources_returns_failed_wrapper(self):
+    @pytest.mark.asyncio
+    async def test_missing_both_code_sources_returns_failed_wrapper(self):
         wrapper = _make_tool_wrapper(component_code=None, code_blob_id=None)
-        tool = _create_tool_from_wrapper(wrapper)
+        tool = await _create_tool_from_wrapper(wrapper)
 
-        # Should be a FailedToolWrapper, not a StructuredTool
         assert not isinstance(tool, StructuredTool)
-        assert hasattr(tool, "name")
         assert tool.name == "test_tool"
         result = tool.invoke({})
-        assert "error" in result
+        assert "Tool creation failed" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_code_blob_id_without_context_returns_failed_wrapper(self):
+        # The real-execution path needs a context to fetch the component blob;
+        # without one the wrapper degrades to a failed tool rather than faking a result.
+        wrapper = _make_tool_wrapper(component_code=None, code_blob_id="abc123")
+        tool = await _create_tool_from_wrapper(wrapper, context=None)
+
+        assert not isinstance(tool, StructuredTool)
+        result = tool.invoke({})
         assert "Tool creation failed" in result["error"]
 
 
@@ -170,16 +187,13 @@ class TestToolWrapperInputHandlerMatches:
         self.handler = ToolWrapperInputHandler()
 
     def test_matches_dict_with_tool_wrapper_marker(self):
-        wrapper = _make_tool_wrapper()
-        assert self.handler.matches(template_field={}, value=wrapper) is True
+        assert self.handler.matches(template_field={}, value=_make_tool_wrapper()) is True
 
     def test_matches_list_with_tool_wrapper(self):
-        wrapper = _make_tool_wrapper()
-        assert self.handler.matches(template_field={}, value=[wrapper]) is True
+        assert self.handler.matches(template_field={}, value=[_make_tool_wrapper()]) is True
 
     def test_matches_list_with_mixed_items(self):
-        wrapper = _make_tool_wrapper()
-        assert self.handler.matches(template_field={}, value=[wrapper, "other"]) is True
+        assert self.handler.matches(template_field={}, value=[_make_tool_wrapper(), "other"]) is True
 
     def test_no_match_plain_dict(self):
         assert self.handler.matches(template_field={}, value={"key": "value"}) is False
@@ -201,7 +215,7 @@ class TestToolWrapperInputHandlerMatches:
 
 
 # ---------------------------------------------------------------------------
-# ToolWrapperInputHandler.prepare
+# ToolWrapperInputHandler.prepare (no-context paths)
 # ---------------------------------------------------------------------------
 
 
@@ -210,64 +224,17 @@ class TestToolWrapperInputHandlerPrepare:
         self.handler = ToolWrapperInputHandler()
 
     @pytest.mark.asyncio
-    async def test_prepare_single_wrapper(self):
-        wrapper = _make_tool_wrapper(name="my_tool")
-        fields = {"tools": (wrapper, {})}
-        result = await self.handler.prepare(fields, None)
-
-        assert "tools" in result
+    async def test_prepare_calculator_wrapper_without_context(self):
+        result = await self.handler.prepare({"tools": (_calculator_wrapper(), {})}, None)
         assert isinstance(result["tools"], StructuredTool)
-        assert result["tools"].name == "my_tool"
-
-    @pytest.mark.asyncio
-    async def test_prepare_list_of_wrappers(self):
-        wrapper_a = _make_tool_wrapper(name="tool_a")
-        wrapper_b = _make_tool_wrapper(name="tool_b")
-        fields = {"tools": ([wrapper_a, wrapper_b], {})}
-        result = await self.handler.prepare(fields, None)
-
-        assert "tools" in result
-        assert len(result["tools"]) == 2
-        assert isinstance(result["tools"][0], StructuredTool)
-        assert isinstance(result["tools"][1], StructuredTool)
-        assert result["tools"][0].name == "tool_a"
-        assert result["tools"][1].name == "tool_b"
-
-    @pytest.mark.asyncio
-    async def test_prepare_mixed_list(self):
-        wrapper = _make_tool_wrapper(name="real_tool")
-        fields = {"tools": ([wrapper, "not_a_wrapper", 42], {})}
-        result = await self.handler.prepare(fields, None)
-
-        assert "tools" in result
-        assert len(result["tools"]) == 3
-        assert isinstance(result["tools"][0], StructuredTool)
-        assert result["tools"][1] == "not_a_wrapper"
-        assert result["tools"][2] == 42
-
-    @pytest.mark.asyncio
-    async def test_prepare_multiple_fields(self):
-        wrapper_a = _make_tool_wrapper(name="tool_a")
-        wrapper_b = _make_tool_wrapper(name="tool_b")
-        fields = {
-            "primary_tool": (wrapper_a, {}),
-            "secondary_tool": (wrapper_b, {}),
-        }
-        result = await self.handler.prepare(fields, None)
-
-        assert isinstance(result["primary_tool"], StructuredTool)
-        assert isinstance(result["secondary_tool"], StructuredTool)
-        assert result["primary_tool"].name == "tool_a"
-        assert result["secondary_tool"].name == "tool_b"
+        assert result["tools"].name == "evaluate_expression"
 
     @pytest.mark.asyncio
     async def test_prepare_failed_wrapper_in_list(self):
-        good_wrapper = _make_tool_wrapper(name="good_tool")
-        bad_wrapper = _make_tool_wrapper(name="bad_tool", component_code=None, code_blob_id=None)
-        fields = {"tools": ([good_wrapper, bad_wrapper], {})}
-        result = await self.handler.prepare(fields, None)
+        good = _calculator_wrapper()
+        bad = _make_tool_wrapper(name="bad_tool", component_code=None, code_blob_id=None)
+        result = await self.handler.prepare({"tools": ([good, bad], {})}, None)
 
         assert isinstance(result["tools"][0], StructuredTool)
-        # Bad wrapper becomes FailedToolWrapper
         assert not isinstance(result["tools"][1], StructuredTool)
         assert result["tools"][1].name == "bad_tool"
