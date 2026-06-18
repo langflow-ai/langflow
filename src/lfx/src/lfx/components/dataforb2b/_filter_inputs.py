@@ -18,13 +18,14 @@ from lfx.io import (
 from ._client import OPERATORS
 
 NUM_SLOTS = 5
+VISIBLE_SLOTS = 2  # first slots shown by default, the rest collapsed under "advanced"
 
 
 def filter_slot_inputs(columns: list[str]) -> list:
     """Build the (column, operator, value) dropdown/text inputs for each slot."""
     inputs: list = []
     for i in range(1, NUM_SLOTS + 1):
-        advanced = i > 2  # first two slots visible, rest collapsed
+        advanced = i > VISIBLE_SLOTS  # first slots visible, rest collapsed
         inputs.append(
             DropdownInput(
                 name=f"filter_{i}_column",
@@ -106,13 +107,11 @@ def common_search_inputs() -> list:
 
 def read_slots(component) -> list[tuple]:
     """Read the five (column, operator, value) slots off a component instance."""
-    slots: list[tuple] = []
-    for i in range(1, NUM_SLOTS + 1):
-        slots.append(
-            (
-                getattr(component, f"filter_{i}_column", ""),
-                getattr(component, f"filter_{i}_operator", "like"),
-                getattr(component, f"filter_{i}_value", ""),
-            )
+    return [
+        (
+            getattr(component, f"filter_{i}_column", ""),
+            getattr(component, f"filter_{i}_operator", "like"),
+            getattr(component, f"filter_{i}_value", ""),
         )
-    return slots
+        for i in range(1, NUM_SLOTS + 1)
+    ]

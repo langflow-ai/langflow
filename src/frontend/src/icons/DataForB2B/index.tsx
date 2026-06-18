@@ -1,11 +1,10 @@
-import React, { forwardRef } from "react";
-import SvgDataForB2B from "./DataForB2BIcon";
+import type React from "react";
+import { forwardRef } from "react";
+import DataForB2BLogo from "./dataforb2b_logo.png";
 
 export const DataForB2BIcon = forwardRef<
-  HTMLImageElement,
-  React.ComponentProps<"img">
+  SVGSVGElement,
+  React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <SvgDataForB2B ref={ref} {...props} />;
+  return <img src={DataForB2BLogo} alt="DataForB2B Logo" {...props} />;
 });
-
-DataForB2BIcon.displayName = "DataForB2BIcon";

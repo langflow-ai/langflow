@@ -77,6 +77,8 @@ class DataForB2BClient:
 
 OPERATORS = ["=", "!=", "like", "not_like", "in", "not_in", ">", ">=", "<", "<=", "between"]
 
+BETWEEN_VALUE_COUNT = 2  # 'between' needs exactly a min and a max
+
 PEOPLE_COLUMNS = [
     # Profile
     "first_name",
@@ -221,7 +223,7 @@ def build_slot_condition(column: Any, operator: Any, raw: Any) -> dict | None:
 
     if op == "between":
         parts = [x.strip() for x in str(raw).split(",") if x.strip()]
-        if len(parts) < 2:
+        if len(parts) < BETWEEN_VALUE_COUNT:
             msg = f"Operator 'between' on '{column}' needs two comma-separated values, e.g. 3,7"
             raise ValueError(msg)
         return {
@@ -274,8 +276,10 @@ def parse_json_filters(raw: Any) -> Any:
 
 
 def build_filters(slots: list, match: Any, filters_json_raw: Any) -> dict:
-    """Build the search ``filters`` object from (column, operator, value) slots
-    and/or a raw advanced-JSON filter. Raises if nothing was provided.
+    """Build the search ``filters`` object from filter slots and advanced JSON.
+
+    Combines the (column, operator, value) slots with an optional raw
+    advanced-JSON filter. Raises if nothing was provided.
     """
     conditions: list[dict] = []
     for column, operator, value in slots:
