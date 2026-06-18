@@ -517,7 +517,7 @@ message_tasks: dict[str, asyncio.Task] = {}
 last_sender_by_session: defaultdict[str, str | None] = defaultdict(lambda: None)
 
 
-async def get_flow_desc_from_db(flow_id: str, user_id: UUID | None = None) -> Flow:
+async def get_flow_desc_from_db(flow_id: str, user_id: UUID | None = None) -> str | None:
     async with session_scope() as session:
         stmt = select(Flow).where(Flow.id == UUID(flow_id))
         if user_id is not None:
