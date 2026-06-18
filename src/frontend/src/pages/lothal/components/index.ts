@@ -10,7 +10,10 @@ export { CanvasSurface } from "./CanvasSurface";
 export { ChatBubble } from "./ChatBubble";
 export { ChatDock } from "./ChatDock";
 export { CodeView } from "./CodeView";
+export { D2Canvas } from "./D2Canvas";
 export { DiagramCanvas } from "./DiagramCanvas";
+export type { Anchor } from "./d2/anchor";
+export { decodeElementId, resolveAnchor } from "./d2/anchor";
 export { EmptyHint } from "./EmptyHint";
 export { LothalMark } from "./LothalMark";
 export {

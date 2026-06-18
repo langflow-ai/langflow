@@ -6,17 +6,17 @@
 //   DIAGRAM_GENERATION onward  → fetch /diagram, then:
 //       501 (stub)             → NotReady (the canvas backend isn't live yet)
 //       other error            → NotReady ("couldn't load")
-//       empty diagram          → placeholder ("sketching…")
-//       nodes present          → the real <DiagramCanvas>
+//       no D2 source yet        → placeholder ("sketching…")
+//       D2 but no SVG           → NotReady ("couldn't render")
+//       SVG present             → the live <D2Canvas>
 //
-// Contract-first: while /diagram is a 501 stub (Epic 2) every advanced project
-// shows NotReady; it "goes live" with no UI change once 2.3 lands.
+// The diagram artifact is D2 source now (Epic D): the backend renders it to SVG
+// on read (D.3/D.6) and we just display that SVG — no D2 compiler in the browser.
 
 import type { Project } from "@/controllers/API/queries/lothal";
 import { useDiagram } from "@/controllers/API/queries/lothal";
 import { CanvasPlaceholder } from "./CanvasPlaceholder";
-import { isEmptyDiagram } from "./canvasGraph";
-import { DiagramCanvas } from "./DiagramCanvas";
+import { D2Canvas } from "./D2Canvas";
 import { isNotImplemented, NotReady } from "./NotReady";
 import { phaseIndex } from "./phases";
 
@@ -69,11 +69,24 @@ export function CanvasSurface({ project }: { project: Project }) {
     );
   }
 
-  // Endpoint is live but the diagram hasn't been generated yet. The `!diagram`
-  // guard also narrows the type so the render below needs no assertion.
-  if (!diagram || isEmptyDiagram(diagram)) {
+  // Endpoint is live but the generator hasn't emitted any D2 yet → still
+  // sketching. (`!diagram` also narrows the type for the renders below.)
+  if (!diagram || !diagram.d2) {
     return <CanvasPlaceholder phase={project.phase} />;
   }
 
-  return <DiagramCanvas nodes={diagram.nodes} edges={diagram.edges} />;
+  // D2 source exists but the backend couldn't render it to SVG (compiler
+  // unavailable or render failure — logged server-side). Stored D2 is
+  // compile-validated at generation (D.3), so this is an environment fault, not
+  // a bad diagram: surface it as NotReady rather than a blank canvas.
+  if (!diagram.svg) {
+    return (
+      <NotReady
+        title="Couldn't render the diagram"
+        detail="The diagram is ready but couldn't be drawn just now. Try again in a moment."
+      />
+    );
+  }
+
+  return <D2Canvas svg={diagram.svg} />;
 }

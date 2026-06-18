@@ -1,10 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import type {
-  Diagram,
-  DiagramEdge,
-  DiagramNode,
-  Project,
-} from "@/controllers/API/queries/lothal";
+import type { Diagram, Project } from "@/controllers/API/queries/lothal";
 
 // Capture the diagram-query call so we can assert the phase gate (no fetch
 // before DIAGRAM_GENERATION).
@@ -13,21 +8,11 @@ jest.mock("@/controllers/API/queries/lothal", () => ({
   useDiagram: (...args: unknown[]) => mockUseDiagram(...args),
 }));
 
-// Stub the real ReactFlow canvas — it needs layout/ResizeObserver and isn't the
-// unit under test. We only care that CanvasSurface routes to it with the payload.
-jest.mock("../DiagramCanvas", () => ({
-  DiagramCanvas: ({
-    nodes,
-    edges,
-  }: {
-    nodes: DiagramNode[];
-    edges: DiagramEdge[];
-  }) => (
-    <div
-      data-testid="diagram-canvas"
-      data-nodes={nodes.length}
-      data-edges={edges.length}
-    />
+// Stub the live D2 canvas — it drives DOM layout/pointer gestures and isn't the
+// unit under test. We only care that CanvasSurface routes to it with the SVG.
+jest.mock("../D2Canvas", () => ({
+  D2Canvas: ({ svg }: { svg: string }) => (
+    <div data-testid="d2-canvas" data-svg={svg} />
   ),
 }));
 
@@ -57,28 +42,10 @@ const error501 = {
 };
 
 const diagram = (over: Partial<Diagram> = {}): Diagram => ({
-  nodes: [],
-  edges: [],
+  d2: null,
+  svg: null,
   ...over,
 });
-
-const sampleNodes: DiagramNode[] = [
-  {
-    id: "u",
-    type: "actorNode",
-    position: { x: 0, y: 0 },
-    data: { label: "User" },
-  },
-  {
-    id: "s",
-    type: "systemNode",
-    position: { x: 0, y: 0 },
-    data: { label: "API" },
-  },
-];
-const sampleEdges: DiagramEdge[] = [
-  { id: "e1", source: "u", target: "s", data: { order: 1, label: "go" } },
-];
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -133,7 +100,7 @@ describe("CanvasSurface", () => {
     expect(
       screen.getByText("The diagram endpoint isn't built yet."),
     ).toBeInTheDocument();
-    expect(screen.queryByTestId("diagram-canvas")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("d2-canvas")).not.toBeInTheDocument();
   });
 
   it("shows a generic NotReady on a non-501 failure", () => {
@@ -149,9 +116,9 @@ describe("CanvasSurface", () => {
     expect(screen.getByText("Couldn't load the diagram")).toBeInTheDocument();
   });
 
-  it("shows the placeholder when the endpoint is live but the diagram is empty", () => {
+  it("shows the placeholder when the endpoint is live but no D2 has been emitted", () => {
     mockUseDiagram.mockReturnValue({
-      data: diagram({ nodes: [], edges: [] }),
+      data: diagram({ d2: null, svg: null }),
       isLoading: false,
       isError: false,
     });
@@ -159,20 +126,34 @@ describe("CanvasSurface", () => {
       <CanvasSurface project={project({ phase: "DIAGRAM_GENERATION" })} />,
     );
     expect(screen.getByText("Sketching the diagram")).toBeInTheDocument();
-    expect(screen.queryByTestId("diagram-canvas")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("d2-canvas")).not.toBeInTheDocument();
   });
 
-  it("renders the canvas with the diagram's node/edge counts when present", () => {
+  it("shows NotReady when D2 exists but the server couldn't render an SVG", () => {
     mockUseDiagram.mockReturnValue({
-      data: diagram({ nodes: sampleNodes, edges: sampleEdges }),
+      data: diagram({ d2: "a -> b", svg: null }),
       isLoading: false,
       isError: false,
     });
     render(
       <CanvasSurface project={project({ phase: "DIAGRAM_REFINEMENT" })} />,
     );
-    const canvas = screen.getByTestId("diagram-canvas");
-    expect(canvas).toHaveAttribute("data-nodes", "2");
-    expect(canvas).toHaveAttribute("data-edges", "1");
+    expect(screen.getByText("Couldn't render the diagram")).toBeInTheDocument();
+    expect(screen.queryByTestId("d2-canvas")).not.toBeInTheDocument();
+  });
+
+  it("renders the D2 canvas with the server SVG when present", () => {
+    mockUseDiagram.mockReturnValue({
+      data: diagram({ d2: "a -> b", svg: "<svg>hi</svg>" }),
+      isLoading: false,
+      isError: false,
+    });
+    render(
+      <CanvasSurface project={project({ phase: "DIAGRAM_REFINEMENT" })} />,
+    );
+    expect(screen.getByTestId("d2-canvas")).toHaveAttribute(
+      "data-svg",
+      "<svg>hi</svg>",
+    );
   });
 });
