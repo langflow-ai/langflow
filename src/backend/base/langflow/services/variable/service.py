@@ -230,9 +230,16 @@ class DatabaseVariableService(VariableService, Service):
         for variable in variables:
             value = None
             if variable.type == GENERIC_TYPE:
+                if not variable.value:
+                    await logger.awarning("Variable '%s' has no stored value — skipping.", variable.name)
+                    continue
                 value = auth_utils.decrypt_api_key(variable.value)
                 if not value:
-                    # If decryption fails (likely due to encryption by different key), skip this variable
+                    await logger.awarning(
+                        "Variable '%s' could not be decrypted — likely encrypted with a different "
+                        "LANGFLOW_SECRET_KEY. Skipping.",
+                        variable.name,
+                    )
                     continue
 
             # Model validate will set value to None if credential type

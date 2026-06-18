@@ -1,5 +1,5 @@
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -353,6 +353,67 @@ async def test_update_generic_variable_with_fernet_signature_fails(service, sess
     # Try to update it to a value starting with gAAAAA
     with pytest.raises(ValueError, match="cannot start with 'gAAAAA'"):
         await service.update_variable(user_id, "TEST_VAR", "gAAAAABthis-looks-like-encrypted", session=session)
+
+
+async def test_get_all__empty_value_warns_and_skips(service, session: AsyncSession):
+    """get_all warns and skips GENERIC variables whose stored value is None or empty."""
+    user_id = uuid4()
+
+    # Create a normal generic variable, then manually blank its value to simulate a bad DB row.
+    var = await service.create_variable(user_id, "EMPTY_VAR", "initial", type_=GENERIC_TYPE, session=session)
+    var.value = ""
+    session.add(var)
+    await session.flush()
+
+    mock_logger = MagicMock()
+    mock_logger.awarning = AsyncMock()
+    with patch("langflow.services.variable.service.logger", mock_logger):
+        result = await service.get_all(user_id, session=session)
+
+    # Variable should be excluded from results.
+    assert not any(v.name == "EMPTY_VAR" for v in result)
+    # Warning must name the variable and mention empty value.
+    warning_calls = [str(c) for c in mock_logger.awarning.call_args_list]
+    assert any("EMPTY_VAR" in c for c in warning_calls)
+    assert any("no stored value" in c for c in warning_calls)
+
+
+async def test_get_all__decrypt_failure_warns_and_skips(service, session: AsyncSession):
+    """get_all warns with a key-mismatch message when decrypt returns empty for a non-empty value."""
+    user_id = uuid4()
+
+    await service.create_variable(user_id, "MY_VAR", "real_value", type_=GENERIC_TYPE, session=session)
+
+    mock_logger = MagicMock()
+    mock_logger.awarning = AsyncMock()
+    # Simulate decrypt returning "" (key mismatch) without touching the stored value.
+    with (
+        patch("langflow.services.variable.service.auth_utils.decrypt_api_key", return_value=""),
+        patch("langflow.services.variable.service.logger", mock_logger),
+    ):
+        result = await service.get_all(user_id, session=session)
+
+    # Variable should be excluded from results.
+    assert not any(v.name == "MY_VAR" for v in result)
+    # Warning must name the variable and mention SECRET_KEY.
+    warning_calls = [str(c) for c in mock_logger.awarning.call_args_list]
+    assert any("MY_VAR" in c for c in warning_calls)
+    assert any("SECRET_KEY" in c for c in warning_calls)
+
+
+async def test_get_all__healthy_generic_variable_included(service, session: AsyncSession):
+    """get_all includes GENERIC variables that decrypt successfully — no warnings emitted."""
+    user_id = uuid4()
+
+    await service.create_variable(user_id, "GOOD_VAR", "good_value", type_=GENERIC_TYPE, session=session)
+
+    mock_logger = MagicMock()
+    mock_logger.awarning = AsyncMock()
+    with patch("langflow.services.variable.service.logger", mock_logger):
+        result = await service.get_all(user_id, session=session)
+
+    assert any(v.name == "GOOD_VAR" for v in result)
+    mock_logger.awarning.assert_not_called()
 
 
 async def test_create_credential_variable_with_fernet_signature_succeeds(service, session: AsyncSession):
