@@ -14,7 +14,9 @@ adds the cross-field rules a single model can't see — unique ids, edges that p
 at real nodes, and the minimum graph size a sequence diagram needs to be useful.
 
 Position *repair* (cramped/overlapping/missing coordinates) is deliberately not
-here — that is the `auto_layout` safety net (Story 2.5). This module only judges
+here. It was to be the `auto_layout` safety net (Story 2.5), but Epic D.14 retired
+that need: under D2 the model emits no positions and D2 owns layout, so there is
+nothing to repair and `auto_layout` was never built. This module only judges
 validity; it never moves a node.
 """
 
@@ -61,9 +63,10 @@ class DiagramNodeData(BaseModel):
 class NodePosition(BaseModel):
     """Canvas coordinates. Required and numeric on every node.
 
-    Garbage values (overlapping, off-canvas) are *not* rejected here — repairing
-    them is `auto_layout`'s job (Story 2.5); this only guarantees the field is
-    present and numeric.
+    Garbage values (overlapping, off-canvas) are *not* rejected here. Repairing
+    them would have been `auto_layout`'s job (Story 2.5), retired by Epic D.14
+    (D2 owns layout, so no position-repair step exists); this only guarantees the
+    field is present and numeric.
     """
 
     x: float

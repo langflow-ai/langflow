@@ -203,3 +203,15 @@ async def test_compiler_unavailable_skips_gate_and_stores(fake_llm, fake_compile
 def test_system_prompt_states_the_minimum_diagram_size():
     assert str(MIN_PARTICIPANTS) in diagram_generation.SYSTEM_PROMPT
     assert str(MIN_MESSAGES) in diagram_generation.SYSTEM_PROMPT
+
+
+def test_system_prompt_forbids_positions_so_no_auto_layout_is_needed():
+    """D.14: the prompt must forbid positions so the `auto_layout` fallback stays obsolete.
+
+    D2 owns layout and the model emits no positions, so the position-repair
+    fallback (`auto_layout`, Story 2.5) is unnecessary. Pin the prompt instruction
+    so a future edit can't reintroduce position output and quietly revive that need.
+    """
+    prompt = diagram_generation.SYSTEM_PROMPT.lower()
+    assert "never write positions" in prompt
+    assert "d2 owns layout" in prompt
