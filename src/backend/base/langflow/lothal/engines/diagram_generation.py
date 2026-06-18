@@ -6,37 +6,27 @@ the model is asked for a single D2 sequence diagram — participants and the
 messages between them — and emits raw D2 text, no positions (D2 owns layout).
 
 The engine returns that text on `LLMResponse.diagram_d2` and the chat endpoint
-persists it to `lothal_project.diagram_d2`. `next_phase` stays `None` — generating
-a diagram keeps the project in DIAGRAM_GENERATION; refining and approving it are
-Epic D.8+. The engine never touches the DB.
+persists it to `lothal_project.diagram_d2`. Having drafted the first diagram the
+engine hands off — `next_phase` is `DIAGRAM_REFINEMENT` (Epic D.8), so the next
+turn refines the diagram the user is now looking at rather than regenerating it
+from scratch. The engine never touches the DB.
 
-Validation (D.3): the gate is "does the D2 compile?" — we run the model's reply
-through the `d2` compiler (`d2_compile.compile_d2`). On a compile failure we retry
-**once**, feeding the compiler's error back as a correction (the same shape as
-2.1's validator-feedback retry); a second failure fails the turn as a bad model
-round-trip (`LLMConnectionError` → 502). If the compiler binary is unavailable we
-log and store the source unvalidated rather than break generation — the gate is
-best-effort, not a hard dependency. The legacy xyflow path (`diagram.py`,
-`diagram_json`) is untouched — it stays for transitional reads until D.13.
+Validation (D.3): the gate is "does the D2 compile?" — the reply is run through
+the `d2` compiler with one corrective retry (the shared `d2_gate` the refinement
+engine reuses). The legacy xyflow path (`diagram.py`, `diagram_json`) is
+untouched — it stays for transitional reads until D.13.
 """
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
-from lfx.log.logger import logger
-
 from langflow.lothal.context import build_messages
-from langflow.lothal.d2_compile import D2CompilerUnavailableError, compile_d2
-from langflow.lothal.engines.parsing import strip_code_fences
-from langflow.lothal.llm import LLMConnectionError, call_llm
+from langflow.lothal.engines.d2_gate import compile_validated_d2, count_messages
 from langflow.lothal.router import LLMResponse, PhaseEngine, register_engine
 from langflow.services.database.models.lothal_project.model import ProjectPhase
 
 if TYPE_CHECKING:
-    from langflow.lothal.d2_compile import D2CompileResult
-    from langflow.lothal.llm.base import Message as LLMMessage
     from langflow.services.database.models.lothal_project.model import Message
 
 # Minimum scope we ask the model for, mirrored into the prompt so the request is
@@ -81,26 +71,6 @@ messages. Cover the core flow end to end; keep it focused, not exhaustive.
 
 Emit raw D2 only."""
 
-# Connection operators D2 uses between participants; counted to ground the
-# assistant's reply in the actual diagram without a full D2 parse.
-_CONNECTION_RE = re.compile(r"<->|<-|-->|->|--")
-
-# Fed back verbatim on the one retry so the model sees exactly what the D2
-# compiler rejected and can correct it, rather than guessing (mirrors 2.1).
-_RETRY_TEMPLATE = (
-    "That D2 did not compile:\n{error}\n"
-    "Reply again with corrected D2 source only — same structure, no commentary or fences."
-)
-
-
-def _count_messages(d2: str) -> int:
-    """Crudely count interaction lines (those with a D2 connection operator).
-
-    A grounding heuristic for the assistant text, not a validator: it strips a
-    trailing `#` comment per line and counts lines carrying a connection arrow.
-    """
-    return sum(1 for line in d2.splitlines() if _CONNECTION_RE.search(line.split("#", 1)[0]))
-
 
 def _assistant_text(d2: str) -> str:
     """The human-facing reply stored alongside the generated D2.
@@ -108,7 +78,7 @@ def _assistant_text(d2: str) -> str:
     Grounded in the actual diagram (message count) so the chat reads as a real
     result, while the D2 itself rides on `LLMResponse.diagram_d2`.
     """
-    messages = _count_messages(d2)
+    messages = count_messages(d2)
     if messages:
         return (
             f"I've drafted a sequence diagram with {messages} interactions from your spec. "
@@ -119,65 +89,19 @@ def _assistant_text(d2: str) -> str:
 
 @register_engine
 class DiagramGenerationEngine(PhaseEngine):
-    """Generates the first D2 diagram from the clarified spec."""
+    """Generates the first D2 diagram from the clarified spec, then hands off to refinement."""
 
     phase = ProjectPhase.DIAGRAM_GENERATION
 
-    async def process(self, history: list[Message], user_message: str) -> LLMResponse:
+    async def process(self, history: list[Message], user_message: str, **_kwargs) -> LLMResponse:
+        # `**_kwargs` absorbs the refinement inputs (`prd`/`current_d2`, see
+        # `PhaseEngine.process`); generation reads the spec from `history` and
+        # starts the diagram fresh, so it ignores them.
         messages = build_messages(SYSTEM_PROMPT, history, user_message)
-        d2 = await self._generate(messages)
-        return LLMResponse(text=_assistant_text(d2), suggestions=[], next_phase=None, diagram_d2=d2)
-
-    async def _generate(self, messages: list[LLMMessage]) -> str:
-        """Call the model, compile-validate the D2, and retry once on failure.
-
-        Strips any stray markdown fence and rejects an empty reply as a bad model
-        round-trip (`LLMConnectionError` → 502). The reply is then run through the
-        `d2` compiler: if it doesn't compile, we resend the conversation plus the
-        invalid reply and the compiler's complaint so the second attempt is a
-        correction rather than a blind redo. A second compile failure raises
-        `LLMConnectionError` (→ 502); the user retries the turn.
-        """
-        raw = await call_llm(messages)
-        d2 = self._extract_d2(raw)
-        result = await self._compile(d2)
-        if result is None or result.ok:
-            return d2  # compiled, or the compiler is unavailable (gate skipped)
-
-        retry_messages = [
-            *messages,
-            {"role": "assistant", "content": raw},
-            {"role": "user", "content": _RETRY_TEMPLATE.format(error=result.error)},
-        ]
-        raw = await call_llm(retry_messages)
-        d2 = self._extract_d2(raw)
-        result = await self._compile(d2)
-        if result is None or result.ok:
-            return d2
-        msg = f"Model returned D2 that failed to compile twice: {result.error}"
-        raise LLMConnectionError(msg)
-
-    @staticmethod
-    def _extract_d2(raw: str) -> str:
-        """Strip a stray markdown fence; reject an empty reply as a bad round-trip."""
-        d2 = strip_code_fences(raw).strip()
-        if not d2:
-            msg = "Model returned an empty diagram."
-            raise LLMConnectionError(msg)
-        return d2
-
-    @staticmethod
-    async def _compile(d2: str) -> D2CompileResult | None:
-        """Compile-check `d2`, returning the result — or `None` if the compiler is unavailable.
-
-        A missing binary is an environment fault, not a verdict on the source, so
-        we log and let the caller treat it as "gate skipped" (store the D2 as-is)
-        rather than wrongly failing the turn or blaming the model.
-        """
-        try:
-            return await compile_d2(d2)
-        except D2CompilerUnavailableError:
-            logger.warning(
-                "d2 compiler unavailable; storing generated D2 without compile-validation (D.3 gate skipped)."
-            )
-            return None
+        d2 = await compile_validated_d2(messages)
+        return LLMResponse(
+            text=_assistant_text(d2),
+            suggestions=[],
+            next_phase=ProjectPhase.DIAGRAM_REFINEMENT,
+            diagram_d2=d2,
+        )

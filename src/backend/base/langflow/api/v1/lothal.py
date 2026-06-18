@@ -282,7 +282,12 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
     session.add(Message(project_id=project.id, role=MessageRole.USER, content=content, phase=turn_phase))
 
     try:
-        response = await process_turn(turn_phase, history, content)
+        # `prd`/`current_d2` give the refinement engine (D.8) the state it edits:
+        # the synthesised spec and the diagram the user is looking at. Other phases
+        # ignore them.
+        response = await process_turn(
+            turn_phase, history, content, prd=project.prd_content, current_d2=project.diagram_d2
+        )
     except (LLMConfigError, LLMConnectionError) as exc:
         raise _llm_error_to_http(exc) from exc
 

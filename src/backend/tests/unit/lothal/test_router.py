@@ -55,7 +55,7 @@ async def test_process_turn_routes_to_registered_engine():
     class FakeEngine(PhaseEngine):
         phase = "CLARIFICATION"
 
-        async def process(self, _history, _user_message):
+        async def process(self, _history, _user_message, **_kwargs):
             return LLMResponse(text="hello", suggestions=[], next_phase="NEXT_PHASE")
 
     result = await process_turn("CLARIFICATION", [], "build me a todo app")
@@ -73,16 +73,21 @@ async def test_process_turn_passes_history_and_message_to_engine():
     class CapturingEngine(PhaseEngine):
         phase = "CLARIFICATION"
 
-        async def process(self, history, user_message):
+        async def process(self, history, user_message, *, prd=None, current_d2=None):
             captured["history"] = history
             captured["user_message"] = user_message
+            captured["prd"] = prd
+            captured["current_d2"] = current_d2
             return LLMResponse(text="ok")
 
     history = ["turn-1", "turn-2"]  # opaque to the router; engines interpret them
-    await process_turn("CLARIFICATION", history, "go")
+    await process_turn("CLARIFICATION", history, "go", prd="the spec", current_d2="a -> b")
 
     assert captured["history"] is history
     assert captured["user_message"] == "go"
+    # The router threads the project's PRD and current D2 straight through to the engine.
+    assert captured["prd"] == "the spec"
+    assert captured["current_d2"] == "a -> b"
 
 
 async def test_unknown_phase_raises_value_error():
@@ -95,7 +100,7 @@ async def test_engine_returning_non_response_raises_type_error():
     class BadEngine(PhaseEngine):
         phase = "CLARIFICATION"
 
-        async def process(self, _history, _user_message):
+        async def process(self, _history, _user_message, **_kwargs):
             return "just a string"  # type: ignore[return-value]
 
     with pytest.raises(TypeError, match="expected LLMResponse"):
@@ -110,14 +115,14 @@ def test_registering_a_second_engine_does_not_disturb_the_first():
     class EngineA(PhaseEngine):
         phase = "CLARIFICATION"
 
-        async def process(self, _history, _user_message):
+        async def process(self, _history, _user_message, **_kwargs):
             return LLMResponse(text="a")
 
     @register_engine
     class EngineB(PhaseEngine):
         phase = "DIAGRAM_GENERATION"
 
-        async def process(self, _history, _user_message):
+        async def process(self, _history, _user_message, **_kwargs):
             return LLMResponse(text="b")
 
     assert available_phases() == ["CLARIFICATION", "DIAGRAM_GENERATION"]
@@ -130,7 +135,7 @@ def test_get_engine_caches_the_instance():
     class CountingEngine(PhaseEngine):
         phase = "CLARIFICATION"
 
-        async def process(self, _history, _user_message):
+        async def process(self, _history, _user_message, **_kwargs):
             return LLMResponse(text="x")
 
     assert get_engine("CLARIFICATION") is get_engine("CLARIFICATION")
@@ -141,7 +146,7 @@ def test_duplicate_phase_registration_is_rejected():
     class First(PhaseEngine):
         phase = "CLARIFICATION"
 
-        async def process(self, _history, _user_message):
+        async def process(self, _history, _user_message, **_kwargs):
             return LLMResponse(text="1")
 
     with pytest.raises(ValueError, match="already has an engine"):
@@ -150,7 +155,7 @@ def test_duplicate_phase_registration_is_rejected():
         class Second(PhaseEngine):
             phase = "CLARIFICATION"
 
-            async def process(self, _history, _user_message):
+            async def process(self, _history, _user_message, **_kwargs):
                 return LLMResponse(text="2")
 
 
@@ -161,5 +166,5 @@ def test_engine_without_phase_is_rejected():
         class NoPhase(PhaseEngine):
             phase = "  "
 
-            async def process(self, _history, _user_message):
+            async def process(self, _history, _user_message, **_kwargs):
                 return LLMResponse(text="x")
