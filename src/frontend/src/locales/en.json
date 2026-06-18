@@ -1325,6 +1325,8 @@
   "trace.dateRangeLabel": "{{start}} - {{end}}",
   "trace.invalidDateRangeMessage": "End date cannot be earlier than start date.",
   "trace.clearDates": "Clear dates",
+  "trace.tableAriaLabel": "Trace runs table",
+  "trace.statusFilterLabel": "Filter by status",
   "flow.restoreVersion": "Restore this version of your flow",
   "flow.saveVersion": "Save a version of your flow",
   "flow.moreOptions": "More options",

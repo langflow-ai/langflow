@@ -1938,6 +1938,8 @@
   "trace.clearAll": "Effacer tout",
   "trace.clearAllConfirm": "Êtes-vous sûr de vouloir effacer tous les enregistrements? Cette opération supprimera définitivement toutes les traces d'activité de flux associées et ne pourra pas être annulée.",
   "trace.clearAllRecords": "Effacer tous les enregistrements",
+  "trace.tableAriaLabel": "Trace runs table",
+  "trace.statusFilterLabel": "Filter by status",
   "trace.clearDates": "Effacer les dates",
   "trace.clearError": "Erreur lors de la suppression des enregistrements",
   "trace.clearedSuccess": "Les enregistrements ont été effacés avec succès",

@@ -1,5 +1,5 @@
-import type { CellClickedEvent } from "ag-grid-community";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CellClickedEvent, CellKeyDownEvent } from "ag-grid-community";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
@@ -182,6 +182,30 @@ export function FlowInsightsContent({
     setTracePanelOpen(true);
   }, []);
 
+  const handleCellKeyDown = useCallback(
+    (event: CellKeyDownEvent) => {
+      const keyboardEvent = event.event as KeyboardEvent | undefined;
+      if (keyboardEvent?.key === "Enter") {
+        const rowData = event.data as TraceListItem | undefined;
+        setTracePanelTraceId(rowData?.id ?? null);
+        setTracePanelOpen(true);
+      }
+    },
+    [],
+  );
+
+  const traceTableRef = useRef<HTMLDivElement>(null);
+
+  const applyRowTabIndices = useCallback((containerEl: HTMLElement | null) => {
+    if (!containerEl) return;
+    const bodyRows = containerEl.querySelectorAll<HTMLElement>(
+      ".ag-center-cols-container [role='row']",
+    );
+    bodyRows.forEach((row, idx) => {
+      row.setAttribute("tabindex", idx === 0 ? "0" : "-1");
+    });
+  }, []);
+
   const totalRuns = tracesData?.total ?? rows.length;
   const totalPages = Math.max(
     1,
@@ -306,7 +330,10 @@ export function FlowInsightsContent({
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 w-[130px] [&>span]:truncate">
+              <SelectTrigger
+                className="h-8 w-[130px] [&>span]:truncate"
+                aria-label={t("trace.statusFilterLabel")}
+              >
                 <SelectValue placeholder={t("trace.allStatus")} />
               </SelectTrigger>
               <SelectContent>
@@ -391,7 +418,10 @@ export function FlowInsightsContent({
           </div>
         </div>
 
-        <div className="ag-flush-mode flex-1 overflow-hidden">
+        <div
+          ref={traceTableRef}
+          className="ag-flush-mode flex-1 overflow-hidden"
+        >
           {groupBySession ? (
             renderGroupedSessionContent({
               groupedRows,
@@ -404,6 +434,7 @@ export function FlowInsightsContent({
             <TableComponent
               key="Executions"
               readOnlyEdit
+              aria-label={t("trace.tableAriaLabel")}
               className="h-max-full h-full w-full"
               data-testid="flow-insights-trace-table"
               pagination={false}
@@ -412,6 +443,13 @@ export function FlowInsightsContent({
               rowData={rows}
               headerHeight={rows.length === 0 ? 0 : undefined}
               onCellClicked={handleCellClicked}
+              onCellKeyDown={handleCellKeyDown}
+              onFirstDataRendered={() =>
+                applyRowTabIndices(traceTableRef.current)
+              }
+              onRowDataUpdated={() =>
+                applyRowTabIndices(traceTableRef.current)
+              }
             />
           )}
         </div>
