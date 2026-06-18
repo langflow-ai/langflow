@@ -26,12 +26,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
-from lfx.log.logger import logger
-from pydantic import ValidationError
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.lothal.diagram import DiagramGraph
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError, call_llm
 from langflow.lothal.router import process_turn
 from langflow.lothal.schemas import (
@@ -40,6 +37,7 @@ from langflow.lothal.schemas import (
     DebugLLMRequest,
     DebugLLMResponse,
     DiagramApproveResponse,
+    DiagramResponse,
     DiagramSaveRequest,
     DiagramSaveResponse,
     MessageRead,
@@ -367,24 +365,28 @@ async def get_prd(project: OwnedProject) -> PRDResponse:
 
 @router.get(
     "/projects/{project_id}/diagram",
-    summary="Get the diagram (xyflow graph)",
+    summary="Get the diagram (D2 source)",
 )
-async def get_diagram(project: OwnedProject) -> DiagramGraph:
-    """Return the project's xyflow diagram graph (Story 2.3).
+async def get_diagram(project: OwnedProject) -> DiagramResponse:
+    """Return the project's diagram as D2 source (Epic D.4, supersedes Story 2.3).
 
-    The diagram *is* an xyflow graph — there is no Mermaid and no conversion. The
-    stored `diagram_json` (the canonical `DiagramGraph` written by the generator,
-    Story 2.1) is returned straight through as `{nodes, edges}`.
+    The diagram artifact is D2 source text now — the generator emits it (D.2) and
+    we persist it verbatim to `lothal_project.diagram_d2` (D2 owns its own
+    layout). This read hands that source straight back; the frontend compiles it
+    to SVG in-browser (D.5), so the `svg` slot stays `null` today.
 
     Phase-gated to `DIAGRAM_GENERATION` and later: the diagram doesn't exist
     during CLARIFICATION, so a read there is a `403` (ownership is checked first
     by `OwnedProject`, so an unowned project still 404s regardless of phase).
-    Once the project enters generation but before a graph is produced,
-    `diagram_json` is `null` and an empty `{nodes: [], edges: []}` is returned.
+    Once the project enters generation but before the generator has emitted
+    anything, `diagram_d2` is `null` and an empty payload (`d2: null`) is
+    returned — never an error. A blank or whitespace-only store is treated the
+    same way (normalised to `null`): it is no diagram, not a renderable one.
 
-    A malformed stored graph is logged and exposed as the empty graph rather than
-    failing the read — one bad row must never 500 the canvas (mirrors the
-    `ProjectRead.diagram_json` parse boundary).
+    Real D2 source is returned untouched (verbatim) — there is nothing to parse
+    and no malformed-row path that could 500 the canvas. Legacy projects that
+    only have the old `diagram_json` xyflow graph read as empty here until they
+    are migrated to D2 (Epic D.13).
     """
     if project.phase not in _DIAGRAM_VISIBLE_PHASES:
         raise HTTPException(
@@ -392,14 +394,10 @@ async def get_diagram(project: OwnedProject) -> DiagramGraph:
             detail="The diagram is not available until diagram generation begins.",
         )
 
-    if not project.diagram_json:
-        return DiagramGraph()
-
-    try:
-        return DiagramGraph.model_validate(json.loads(project.diagram_json))
-    except (TypeError, ValueError, ValidationError):
-        logger.warning(f"Ignoring malformed diagram_json for project {project.id}; returning empty graph.")
-        return DiagramGraph()
+    # Blank/whitespace-only is "no diagram" → null; real source is returned
+    # verbatim (D2 owns its own layout, so we never trim meaningful content).
+    d2 = project.diagram_d2
+    return DiagramResponse(d2=d2 if d2 and d2.strip() else None)
 
 
 @router.post(
