@@ -65,5 +65,12 @@ include = [
     "pyproject.toml",
 ]
 
+[tool.ruff]
+# This file defines a [tool.ruff.lint.*] table, which makes ruff treat this
+# directory as a standalone config root. Without restating line-length, ruff
+# falls back to its default of 88 here, which conflicts with the repo-wide 120
+# enforced by the pre-commit ruff-format hook (run with --config pyproject.toml).
+line-length = 120
+
 [tool.ruff.lint.per-file-ignores]
 "src/lfx_datastax/components/datastax/astradb_vectorstore.py" = ["S110"]
