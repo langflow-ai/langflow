@@ -11,6 +11,7 @@ export { ChatBubble } from "./ChatBubble";
 export { ChatDock } from "./ChatDock";
 export { CodeView } from "./CodeView";
 export { DiagramCanvas } from "./DiagramCanvas";
+export { compileD2, type D2Compiled } from "./d2/render";
 export { EmptyHint } from "./EmptyHint";
 export { LothalMark } from "./LothalMark";
 export {
