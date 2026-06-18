@@ -193,6 +193,33 @@ async def test_unselected_branch_does_not_run_when_branches_reconverge():
     assert "merge" in yielded
 
 
+async def test_unselected_branch_does_not_run_when_outputs_share_node_directly():
+    """Regression for the exact shape in LE-1427 / Alice's report.
+
+    Both router outputs connect *directly* to the same downstream node (no intermediate
+    branch nodes): ``router.category_1_result -> shared.in1`` and
+    ``router.category_2_result -> shared.in2``. The matched output feeds the shared node;
+    the unselected output is excluded but must not stop the shared node from running once.
+
+    This complements ``test_unselected_branch_does_not_run_when_branches_reconverge`` (which
+    routes through intermediate nodes): here the router is the immediate predecessor of the
+    merge, so the shared node is reachable from a sibling output of the *router itself*.
+    """
+    router = _make_router(_StubbedSmartRouter, _TWO_ROUTES)
+    shared = MergeSink(_id="shared")
+
+    graph = Graph()
+    graph.add_component(router, "router")
+    graph.add_component(shared, "shared")
+    graph.add_component_edge("router", ("category_1_result", "in1"), "shared")
+    graph.add_component_edge("router", ("category_2_result", "in2"), "shared")
+
+    yielded = await _run(graph)
+
+    assert shared.did_run is True, "Shared node should run once from the matched output"
+    assert "shared" in yielded
+
+
 async def test_list_input_merge_excludes_unselected_branch_contribution():
     """A shared ``is_list=True`` input must not collect the excluded branch's template default.
 
