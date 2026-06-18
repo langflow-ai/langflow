@@ -79,46 +79,102 @@ OPERATORS = ["=", "!=", "like", "not_like", "in", "not_in", ">", ">=", "<", "<="
 
 PEOPLE_COLUMNS = [
     # Profile
-    "first_name", "last_name", "profile_location", "profile_country",
-    "profile_industry", "follower_count", "keyword",
+    "first_name",
+    "last_name",
+    "profile_location",
+    "profile_country",
+    "profile_industry",
+    "follower_count",
+    "keyword",
     # Current job
-    "current_company", "current_title", "current_job_location",
-    "current_company_industry", "current_company_category", "current_company_size",
-    "current_company_id", "current_employment_type", "years_in_current_position",
-    "years_at_current_company", "current_company_has_funding",
-    "current_company_funding_stage", "current_company_investor",
+    "current_company",
+    "current_title",
+    "current_job_location",
+    "current_company_industry",
+    "current_company_category",
+    "current_company_size",
+    "current_company_id",
+    "current_employment_type",
+    "years_in_current_position",
+    "years_at_current_company",
+    "current_company_has_funding",
+    "current_company_funding_stage",
+    "current_company_investor",
     # Past jobs
-    "past_company", "past_title", "past_job_location", "past_company_industry",
-    "past_company_size", "past_company_id", "past_employment_type",
+    "past_company",
+    "past_title",
+    "past_job_location",
+    "past_company_industry",
+    "past_company_size",
+    "past_company_id",
+    "past_employment_type",
     "years_at_past_company",
     # Skills / education / languages / certifications / experience
-    "skill", "school", "degree", "degree_level", "field_of_study", "language",
-    "language_iso", "language_proficiency", "certification",
-    "certification_authority", "years_of_experience", "num_total_jobs",
+    "skill",
+    "school",
+    "degree",
+    "degree_level",
+    "field_of_study",
+    "language",
+    "language_iso",
+    "language_proficiency",
+    "certification",
+    "certification_authority",
+    "years_of_experience",
+    "num_total_jobs",
     "is_currently_employed",
 ]
 
 COMPANY_COLUMNS = [
     # Basic
-    "name", "tagline", "description", "domain", "universal_name", "keyword", "industry",
+    "name",
+    "tagline",
+    "description",
+    "domain",
+    "universal_name",
+    "keyword",
+    "industry",
     # Size
     "employee_count",
     # HQ / offices
-    "country_iso_code", "city", "region", "office_country", "office_city", "office_region",
+    "country_iso_code",
+    "city",
+    "region",
+    "office_country",
+    "office_city",
+    "office_region",
     # Growth
-    "employee_growth_1m", "employee_growth_6m", "employee_growth_12m", "recent_hires_count",
+    "employee_growth_1m",
+    "employee_growth_6m",
+    "employee_growth_12m",
+    "recent_hires_count",
     # Metadata
-    "founded_year", "company_type", "follower_count", "page_verified", "category",
+    "founded_year",
+    "company_type",
+    "follower_count",
+    "page_verified",
+    "category",
     # Funding
-    "last_funding_amount_usd", "last_funding_date", "funding_stage_normalized", "has_funding",
+    "last_funding_amount_usd",
+    "last_funding_date",
+    "funding_stage_normalized",
+    "has_funding",
 ]
 
 TYPEAHEAD_TYPES = [
-    "company", "industry", "title", "skill", "school", "investor", "location", "category",
+    "company",
+    "industry",
+    "title",
+    "skill",
+    "school",
+    "investor",
+    "location",
+    "category",
 ]
 
 
 # --- Filter building (ported from the AutoGPT / Dify integrations) ----------
+
 
 def _to_str(x: Any) -> str:
     if isinstance(x, Enum):
@@ -219,7 +275,8 @@ def parse_json_filters(raw: Any) -> Any:
 
 def build_filters(slots: list, match: Any, filters_json_raw: Any) -> dict:
     """Build the search ``filters`` object from (column, operator, value) slots
-    and/or a raw advanced-JSON filter. Raises if nothing was provided."""
+    and/or a raw advanced-JSON filter. Raises if nothing was provided.
+    """
     conditions: list[dict] = []
     for column, operator, value in slots:
         cond = build_slot_condition(column, operator, value)

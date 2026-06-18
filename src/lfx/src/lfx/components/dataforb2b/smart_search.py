@@ -80,7 +80,7 @@ class DataForB2BSmartSearchComponent(Component):
             display_name="Answers (JSON)",
             value="",
             advanced=True,
-            info="Answers to clarifying questions, e.g. {\"question_id\": \"answer\"}.",
+            info='Answers to clarifying questions, e.g. {"question_id": "answer"}.',
         ),
     ]
 
