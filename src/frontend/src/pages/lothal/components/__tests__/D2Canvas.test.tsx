@@ -41,6 +41,35 @@ describe("D2Canvas", () => {
     );
   });
 
+  it("resolves the element under the cursor when pointer capture retargets the dblclick", () => {
+    // The pan gesture's setPointerCapture retargets the dblclick to the viewport
+    // div (not the shape), so the handler must geometry hit-test via
+    // elementFromPoint. jsdom has none, so stub it to return the real shape.
+    const onAnchor = jest.fn();
+    const { container } = render(
+      <D2Canvas
+        svg={`<svg><g class="shape ${b64("checkout")}"><rect/></g></svg>`}
+        onAnchor={onAnchor}
+      />,
+    );
+    const shape = container.querySelector("g.shape") as Element;
+    const viewport = container.querySelector(".lothal-d2-canvas") as Element;
+    const efp = jest.fn(() => shape);
+    (document as unknown as { elementFromPoint: unknown }).elementFromPoint =
+      efp;
+    try {
+      // Fire on the viewport (the retargeted target), not the shape.
+      fireEvent.dblClick(viewport);
+    } finally {
+      delete (document as unknown as { elementFromPoint?: unknown })
+        .elementFromPoint;
+    }
+    expect(efp).toHaveBeenCalled();
+    expect(onAnchor).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "node", id: "checkout" }),
+    );
+  });
+
   it("does not throw on double-click when no element is hit", () => {
     const onAnchor = jest.fn();
     const { container } = render(
