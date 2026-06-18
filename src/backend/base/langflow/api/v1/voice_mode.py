@@ -24,6 +24,7 @@ from lfx.utils.secrets import secret_value_to_str
 from openai import OpenAI
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
+from websockets.asyncio.client import ClientConnection
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow_and_stream
@@ -306,8 +307,8 @@ async def process_message_queue(queue_key, session):
 
 
 class SendQueues:
-    def __init__(self, openai_ws: websockets.WebSocketClientProtocol, client_ws: WebSocket, log_event):
-        self.openai_ws: websockets.WebSocketClientProtocol = openai_ws
+    def __init__(self, openai_ws: ClientConnection, client_ws: WebSocket, log_event):
+        self.openai_ws: ClientConnection = openai_ws
         self.openai_send_q: asyncio.Queue[tuple] = asyncio.Queue()
         self.openai_writer_task: asyncio.Task = asyncio.create_task(self.__openai_writer())
 
@@ -770,7 +771,7 @@ async def flow_as_tool_websocket(
             session_dict["tools"] = [flow_tool]
             return session_dict
 
-        async with websockets.connect(url, extra_headers=headers) as openai_ws:
+        async with websockets.connect(url, additional_headers=headers) as openai_ws:
             msg_handler = SendQueues(openai_ws, client_websocket, log_event)
 
             openai_realtime_session = init_session_dict()
@@ -1217,7 +1218,7 @@ async def flow_tts_websocket(
         }
 
         tts_config = get_tts_config(session_id, openai_key, current_user.id)
-        async with websockets.connect(url, extra_headers=headers) as openai_ws:
+        async with websockets.connect(url, additional_headers=headers) as openai_ws:
             openai_writer_task = asyncio.create_task(openai_writer())
             client_writer_task = asyncio.create_task(client_writer())
 
