@@ -867,31 +867,24 @@ async def test_prd_404_for_unowned_project(client: AsyncClient, logged_in_header
                 await session.delete(leftover)
 
 
-# --- Diagram endpoint (Story 2.3) ---------------------------------------------
+# --- Diagram endpoint (Epic D.4, supersedes Story 2.3) ------------------------
 
-# A valid canonical xyflow graph (the shape `diagram.py`'s `DiagramGraph`
-# defines and the generator persists): 2 nodes, 3 ordered edges, positions
-# present. Seeded straight into `diagram_json` — the save/generate endpoints
-# that will write it are still stubs / a later story.
-_SEED_GRAPH = {
-    "nodes": [
-        {"id": "user", "type": "actorNode", "position": {"x": 0, "y": 0}, "data": {"label": "User"}},
-        {"id": "api", "type": "systemNode", "position": {"x": 240, "y": 0}, "data": {"label": "API"}},
-    ],
-    "edges": [
-        {"id": "e1", "source": "user", "target": "api", "data": {"order": 1, "label": "request"}},
-        {"id": "e2", "source": "api", "target": "user", "animated": True, "data": {"order": 2, "label": "response"}},
-        {"id": "e3", "source": "user", "target": "api", "data": {"order": 3, "label": "ack"}},
-    ],
-}
+# The diagram artifact is D2 source now, not an xyflow graph. This is the shape
+# the generator emits (Epic D.2) and the chat endpoint persists verbatim to
+# `lothal_project.diagram_d2`. Seeded straight into the column here — the read
+# never compiles or validates it.
+_SEED_D2 = (
+    "shape: sequence_diagram\nuser: User\napi: API\n\n"
+    "user -> api: request\napi -> user: response\nuser -> api: ack"
+)
 
 
-async def _set_phase_and_diagram(project_pk: UUID, *, phase: str, diagram_json: str | None) -> None:
-    """Seed a project's phase and raw `diagram_json` directly (no live writer yet)."""
+async def _set_phase_and_d2(project_pk: UUID, *, phase: str, diagram_d2: str | None) -> None:
+    """Seed a project's phase and raw `diagram_d2` source directly (no live writer yet)."""
     async with session_scope() as session:
         project = await session.get(Project, project_pk)
         project.phase = phase
-        project.diagram_json = diagram_json
+        project.diagram_d2 = diagram_d2
 
 
 async def test_diagram_403_in_clarification(client: AsyncClient, logged_in_headers: dict):
@@ -902,60 +895,71 @@ async def test_diagram_403_in_clarification(client: AsyncClient, logged_in_heade
 
 
 async def test_diagram_empty_before_generation_completes(client: AsyncClient, logged_in_headers: dict):
-    """Past CLARIFICATION but before a graph is produced → empty `{nodes, edges}`."""
+    """Past CLARIFICATION but before the generator emits → empty payload (`d2: null`), not 500."""
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
-    await _set_phase_and_diagram(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_json=None)
+    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=None)
 
     response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"nodes": [], "edges": []}
+    assert response.json() == {"d2": None, "svg": None}
 
 
-async def test_diagram_returns_seeded_graph(client: AsyncClient, logged_in_headers: dict):
-    """A seeded `diagram_json` comes back straight through with the right shape and counts."""
+async def test_diagram_returns_seeded_d2(client: AsyncClient, logged_in_headers: dict):
+    """A seeded `diagram_d2` comes back as the D2 source verbatim, with `svg` reserved as null."""
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
-    await _set_phase_and_diagram(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_json=json.dumps(_SEED_GRAPH))
+    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=_SEED_D2)
 
     response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
     body = response.json()
 
-    # No `mermaid` field — xyflow is the only format.
-    assert set(body) == {"nodes", "edges"}
-
-    # Node count matches and the graph is returned verbatim (ids, types, labels, positions).
-    assert len(body["nodes"]) == 2
-    assert {n["id"] for n in body["nodes"]} == {"user", "api"}
-    assert {n["data"]["label"] for n in body["nodes"]} == {"User", "API"}
-    assert body["nodes"][0]["position"] == {"x": 0, "y": 0}
-
-    # Edge count matches; order/label/animated round-trip.
-    assert len(body["edges"]) == 3
-    assert [e["data"]["order"] for e in body["edges"]] == [1, 2, 3]
-    assert {e["data"]["label"] for e in body["edges"]} == {"request", "response", "ack"}
-    by_id = {e["id"]: e for e in body["edges"]}
-    assert by_id["e2"]["animated"] is True
-    assert by_id["e1"]["animated"] is False
+    # The D2 shape: source text plus a reserved (null today) server-render slot —
+    # no xyflow `nodes`/`edges`.
+    assert set(body) == {"d2", "svg"}
+    assert body["d2"] == _SEED_D2
+    assert body["svg"] is None
 
 
 async def test_diagram_readable_in_later_phases(client: AsyncClient, logged_in_headers: dict):
-    """The diagram stays readable through refinement, code generation, and done."""
+    """The D2 source stays readable through refinement, code generation, and done."""
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
     for phase in ("DIAGRAM_REFINEMENT", "CODE_GENERATION", "DONE"):
-        await _set_phase_and_diagram(UUID(project_id), phase=phase, diagram_json=json.dumps(_SEED_GRAPH))
+        await _set_phase_and_d2(UUID(project_id), phase=phase, diagram_d2=_SEED_D2)
         response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK, phase
-        assert len(response.json()["nodes"]) == 2
+        assert response.json()["d2"] == _SEED_D2, phase
 
 
-async def test_diagram_malformed_json_reads_as_empty_not_500(client: AsyncClient, logged_in_headers: dict):
-    """A corrupted stored graph must never 500 the canvas — it reads as the empty graph."""
+async def test_diagram_source_returned_verbatim_never_500(client: AsyncClient, logged_in_headers: dict):
+    """D2 is opaque text returned untouched — the read never parses it, so it can never 500.
+
+    Whatever was stored (even content that would not compile) comes straight back;
+    an empty/whitespace-only store normalises to the empty payload (`d2: null`).
+    """
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
-    for raw in ("not json", "   ", "[1, 2]", '{"nodes": [{"id": "x"}]}'):
-        await _set_phase_and_diagram(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_json=raw)
+    for raw, expected in (
+        ("not valid d2 {{{", "not valid d2 {{{"),
+        ("shape: sequence_diagram\na -> b: hi", "shape: sequence_diagram\na -> b: hi"),
+        ("", None),
+    ):
+        await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=raw)
         response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK, raw
-        assert response.json() == {"nodes": [], "edges": []}, raw
+        assert response.json() == {"d2": expected, "svg": None}, raw
+
+
+async def test_diagram_legacy_xyflow_only_reads_empty(client: AsyncClient, logged_in_headers: dict):
+    """A pre-Epic-D project with only `diagram_json` (no D2) reads as empty until migrated (D.13)."""
+    project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "DIAGRAM_GENERATION"
+        project.diagram_json = json.dumps({"nodes": [{"id": "x"}], "edges": []})
+        project.diagram_d2 = None
+
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"d2": None, "svg": None}
 
 
 async def test_diagram_404_for_unowned_project(client: AsyncClient, logged_in_headers: dict, user_two):
