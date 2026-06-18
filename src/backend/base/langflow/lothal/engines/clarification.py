@@ -122,7 +122,9 @@ class ClarificationEngine(PhaseEngine):
 
     phase = ProjectPhase.CLARIFICATION
 
-    async def process(self, history: list[Message], user_message: str) -> LLMResponse:
+    async def process(self, history: list[Message], user_message: str, **_kwargs) -> LLMResponse:
+        # `**_kwargs` absorbs the refinement inputs (`prd`/`current_d2`, see
+        # `PhaseEngine.process`); clarification predates the diagram and ignores them.
         messages = build_messages(SYSTEM_PROMPT, history, user_message)
         raw = await call_llm(messages)
         return _parse_reply(raw)

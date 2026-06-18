@@ -20,7 +20,7 @@ from httpx import AsyncClient
 from langflow.api.v1 import lothal as lothal_api
 from langflow.lothal.d2_compile import D2CompilerUnavailableError
 from langflow.lothal.engines import clarification as clarification_engine
-from langflow.lothal.engines import diagram_generation as diagram_engine
+from langflow.lothal.engines import d2_gate
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError
 from langflow.services.database.models.lothal_project.model import CodeFile, Message, Project
 from langflow.services.deps import session_scope
@@ -720,15 +720,17 @@ def _diagram_reply() -> str:
     return "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok\nuser -> api: poll"
 
 
-async def test_diagram_generation_turn_persists_graph_and_holds_phase(
+async def test_diagram_generation_turn_persists_graph_and_hands_off_to_refinement(
     client: AsyncClient, logged_in_headers: dict, monkeypatch
 ):
-    """Backlog acceptance for Epic D.2 (fake LLM).
+    """Backlog acceptance for Epic D.2 + the D.8 hand-off (fake LLM).
 
     A chat turn while the project is in DIAGRAM_GENERATION runs the generator
     engine for real (only the model call is faked): the injected D2 source is
-    persisted verbatim to `lothal_project.diagram_d2`, the turn does not
-    transition the project, and the legacy `diagram_json` stays null.
+    persisted verbatim to `lothal_project.diagram_d2`, the legacy `diagram_json`
+    stays null, and — having drafted the first diagram — the project advances to
+    DIAGRAM_REFINEMENT (D.8) so the next turn refines it. Both messages are still
+    stamped with the phase the turn ran under (DIAGRAM_GENERATION).
     """
     project_id = await _create_chat_project(client, logged_in_headers)
 
@@ -741,7 +743,7 @@ async def test_diagram_generation_turn_persists_graph_and_holds_phase(
     async def fake_call_llm(_messages, **_kwargs):
         return _diagram_reply()
 
-    monkeypatch.setattr(diagram_engine, "call_llm", fake_call_llm)
+    monkeypatch.setattr(d2_gate, "call_llm", fake_call_llm)
 
     response = await client.post(
         f"api/v1/lothal/projects/{project_id}/chat",
@@ -751,14 +753,14 @@ async def test_diagram_generation_turn_persists_graph_and_holds_phase(
     assert response.status_code == status.HTTP_200_OK
     reply = response.json()
     assert reply["role"] == "ASSISTANT"
-    assert reply["phase"] == "DIAGRAM_GENERATION"  # the turn ran under (and stays in) this phase
+    assert reply["phase"] == "DIAGRAM_GENERATION"  # the turn ran under this phase
     assert reply["suggestions"] == []
     assert "3 interactions" in reply["content"]  # text grounded in the generated D2
 
-    # The phase is held (next_phase was None) and the D2 lands in `diagram_d2`
-    # verbatim while the legacy `diagram_json` stays null (D.4 re-points the read).
+    # The diagram lands in `diagram_d2` verbatim (the legacy `diagram_json` stays
+    # null) and the project advances to DIAGRAM_REFINEMENT for the next turn (D.8).
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "DIAGRAM_GENERATION"
+    assert project["phase"] == "DIAGRAM_REFINEMENT"
     assert project["diagram_json"] is None
     async with session_scope() as session:
         stored = await session.get(Project, UUID(project_id))
@@ -783,7 +785,7 @@ async def test_diagram_generation_empty_reply_is_502_and_rolls_back(
     async def fake_call_llm(_messages, **_kwargs):
         return "   \n  "  # empty after fences/whitespace are stripped
 
-    monkeypatch.setattr(diagram_engine, "call_llm", fake_call_llm)
+    monkeypatch.setattr(d2_gate, "call_llm", fake_call_llm)
 
     response = await client.post(
         f"api/v1/lothal/projects/{project_id}/chat",
@@ -799,6 +801,69 @@ async def test_diagram_generation_empty_reply_is_502_and_rolls_back(
         assert stored.diagram_json is None
     messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
     assert messages == []
+
+
+# --- Diagram refinement (Epic D.8) --------------------------------------------
+
+
+def _refined_d2() -> str:
+    """The updated D2 a refinement turn's (faked) model returns."""
+    return "shape: sequence_diagram\nbrowser: Browser\napi: API\n\nbrowser -> api: submit\napi -> browser: ok"
+
+
+async def test_refinement_turn_updates_d2_and_holds_phase(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Backlog acceptance for Epic D.8 (fake LLM).
+
+    A chat turn while the project is in DIAGRAM_REFINEMENT runs the refinement
+    engine for real (only the model call is faked): the turn the model receives
+    carries the project's current D2, its PRD, and the anchored element id; the
+    model's updated D2 is persisted verbatim to `diagram_d2`, `GET /diagram`
+    reflects it, and the project stays in DIAGRAM_REFINEMENT (approval is D.11).
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+    seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "DIAGRAM_REFINEMENT"
+        project.prd_content = "## Overview\nA todo app for individuals."
+        project.diagram_d2 = seed_d2
+        session.add(project)
+
+    captured: dict = {}
+
+    async def fake_call_llm(messages, **_kwargs):
+        captured["messages"] = messages
+        return _refined_d2()
+
+    monkeypatch.setattr(d2_gate, "call_llm", fake_call_llm)
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat",
+        json={"content": "rename `user` to Browser"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    reply = response.json()
+    assert reply["role"] == "ASSISTANT"
+    assert reply["phase"] == "DIAGRAM_REFINEMENT"
+    assert reply["suggestions"] == []
+
+    # The refinement turn the model saw carried the current D2, the PRD, and the
+    # anchored element id (the D.7 composer serialises it backtick-wrapped).
+    composed = captured["messages"][-1]["content"]
+    assert "user -> api: submit" in composed  # the current diagram to edit
+    assert "A todo app for individuals." in composed  # the PRD
+    assert "`user`" in composed  # the referenced element id
+
+    # The updated D2 is persisted and reflected by GET /diagram; the phase holds.
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "DIAGRAM_REFINEMENT"
+    async with session_scope() as session:
+        stored = await session.get(Project, UUID(project_id))
+        assert stored.diagram_d2 == _refined_d2()
+
+    diagram = (await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)).json()
+    assert diagram["d2"] == _refined_d2()
 
 
 # --- PRD endpoint (Story 1.3) -------------------------------------------------

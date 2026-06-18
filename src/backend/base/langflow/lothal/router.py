@@ -75,12 +75,25 @@ class PhaseEngine(ABC):
     phase: ClassVar[str]
 
     @abstractmethod
-    async def process(self, history: list[Message], user_message: str) -> LLMResponse:
+    async def process(
+        self,
+        history: list[Message],
+        user_message: str,
+        *,
+        prd: str | None = None,
+        current_d2: str | None = None,
+    ) -> LLMResponse:
         """Handle one turn and return the assistant reply for it.
 
         `history` is the project's prior turns (oldest first, the ORM `Message`
         rows); `user_message` is the turn the user just sent. Engines typically
         call `build_messages` (Story 0.2) then `call_llm` (Story 0.1).
+
+        `prd` and `current_d2` are the project's synthesised PRD and current D2
+        diagram source, threaded through by the chat endpoint for engines that
+        edit existing state (the refinement engine, Epic D.8); conversation-only
+        engines ignore them. Both are keyword-only with `None` defaults so an
+        engine declares only the inputs it uses.
         """
 
 
@@ -130,16 +143,26 @@ def get_engine(phase: str) -> PhaseEngine:
     return engine
 
 
-async def process_turn(phase: str, history: list[Message], user_message: str) -> LLMResponse:
+async def process_turn(
+    phase: str,
+    history: list[Message],
+    user_message: str,
+    *,
+    prd: str | None = None,
+    current_d2: str | None = None,
+) -> LLMResponse:
     """Route one turn to its phase engine and return the engine's `LLMResponse`.
 
     `phase` is the project's current phase; `history` is its prior turns (oldest
-    first) and `user_message` is the new turn. An unknown phase raises
-    `ValueError`. The router stays unchanged as engines are added (open/closed):
-    each engine decides whether to return `suggestions` and/or a `next_phase`.
+    first) and `user_message` is the new turn. `prd` and `current_d2` are the
+    project's current PRD and D2 source, passed straight through to the engine
+    for the phases that edit existing state (refinement, D.8). An unknown phase
+    raises `ValueError`. The router stays unchanged as engines are added
+    (open/closed): each engine decides whether to return `suggestions` and/or a
+    `next_phase`, and which of these inputs it reads.
     """
     engine = get_engine(phase)
-    response = await engine.process(history, user_message)
+    response = await engine.process(history, user_message, prd=prd, current_d2=current_d2)
     if not isinstance(response, LLMResponse):
         msg = f"Engine for phase {phase!r} returned {type(response).__name__}, expected LLMResponse."
         raise TypeError(msg)

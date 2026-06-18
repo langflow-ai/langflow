@@ -18,7 +18,7 @@ deterministically without the binary.
 
 import pytest
 from langflow.lothal.d2_compile import D2CompileResult, D2CompilerUnavailableError
-from langflow.lothal.engines import diagram_generation
+from langflow.lothal.engines import d2_gate, diagram_generation
 from langflow.lothal.engines.diagram_generation import (
     MIN_MESSAGES,
     MIN_PARTICIPANTS,
@@ -49,7 +49,8 @@ def fake_llm(monkeypatch):
         captured["calls"].append({"messages": messages, "kwargs": kwargs})
         return captured["replies"][len(captured["calls"]) - 1]
 
-    monkeypatch.setattr(diagram_generation, "call_llm", _call_llm)
+    # The engine drives the model through the shared `d2_gate`, so patch it there.
+    monkeypatch.setattr(d2_gate, "call_llm", _call_llm)
     return captured
 
 
@@ -72,7 +73,7 @@ def fake_compile(monkeypatch):
             raise outcome
         return outcome
 
-    monkeypatch.setattr(diagram_generation, "compile_d2", _compile_d2)
+    monkeypatch.setattr(d2_gate, "compile_d2", _compile_d2)
     return captured
 
 
@@ -88,13 +89,14 @@ def test_engine_is_registered_under_diagram_generation():
 # --- happy path --------------------------------------------------------------
 
 
-async def test_valid_reply_yields_d2_and_no_transition(fake_llm, fake_compile):
+async def test_valid_reply_yields_d2_and_hands_off_to_refinement(fake_llm, fake_compile):
     fake_llm["replies"] = [D2_SOURCE]
 
     response = await DiagramGenerationEngine().process([], "build it")
 
     assert isinstance(response, LLMResponse)
-    assert response.next_phase is None  # generating keeps the project in DIAGRAM_GENERATION
+    # Having drafted the first diagram, generation hands off to refinement (D.8).
+    assert response.next_phase == ProjectPhase.DIAGRAM_REFINEMENT
     assert response.suggestions == []
     # The D2 rides on `.diagram_d2`, stored verbatim; the legacy xyflow field is unused.
     assert response.diagram_d2 == D2_SOURCE

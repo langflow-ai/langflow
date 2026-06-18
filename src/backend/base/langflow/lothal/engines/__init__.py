@@ -11,4 +11,5 @@ this package (the router imports it last, after its names are defined).
 from langflow.lothal.engines import (
     clarification,  # noqa: F401  -- registers the CLARIFICATION engine
     diagram_generation,  # noqa: F401  -- registers the DIAGRAM_GENERATION engine
+    diagram_refinement,  # noqa: F401  -- registers the DIAGRAM_REFINEMENT engine
 )
