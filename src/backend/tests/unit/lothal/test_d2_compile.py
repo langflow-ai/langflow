@@ -11,6 +11,7 @@ the DIAGRAM_GENERATION gate. Two layers are tested here:
   the suite depend on it.
 """
 
+import asyncio
 import shutil
 
 import pytest
@@ -66,6 +67,44 @@ async def test_render_missing_binary_raises_unavailable(monkeypatch):
     monkeypatch.setattr(d2_compile.shutil, "which", lambda _: None)
     with pytest.raises(D2CompilerUnavailableError):
         await render_d2(VALID_D2)
+
+
+# --- timeout (no binary; fake hanging process) -------------------------------
+
+
+async def test_compile_timeout_kills_process_and_raises_unavailable(monkeypatch):
+    """A compiler that never finishes is killed and reported as unavailable.
+
+    Exercises the real `asyncio.wait_for` timeout path with a tiny timeout and a
+    fake process whose `communicate` hangs: the process must be killed and a
+    `D2CompilerUnavailableError` raised (an environment fault, not a verdict on
+    the source — so the engine skips the gate rather than blaming the model).
+    """
+    monkeypatch.setattr(d2_compile, "_D2_TIMEOUT_SECONDS", 0.05)
+    monkeypatch.setattr(d2_compile.shutil, "which", lambda _: "/usr/local/bin/d2")
+
+    killed = {"called": False}
+
+    class _HangingProc:
+        returncode = None
+
+        async def communicate(self, _input):
+            await asyncio.sleep(10)  # never returns within the 0.05s timeout
+
+        def kill(self):
+            killed["called"] = True
+
+        async def wait(self):
+            return -9
+
+    async def _fake_exec(*_args, **_kwargs):
+        return _HangingProc()
+
+    monkeypatch.setattr(d2_compile.asyncio, "create_subprocess_exec", _fake_exec)
+
+    with pytest.raises(D2CompilerUnavailableError, match="did not finish"):
+        await compile_d2(VALID_D2)
+    assert killed["called"] is True  # the runaway process was reaped, not leaked
 
 
 # --- real compiler round-trip (requires d2) ----------------------------------

@@ -18,6 +18,7 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1 import lothal as lothal_api
+from langflow.lothal.d2_compile import D2CompilerUnavailableError
 from langflow.lothal.engines import clarification as clarification_engine
 from langflow.lothal.engines import diagram_generation as diagram_engine
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError
@@ -1002,6 +1003,49 @@ async def test_diagram_server_renders_svg_real(client: AsyncClient, logged_in_he
     response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"d2": "not valid d2 {{{", "svg": None}
+
+
+async def test_diagram_render_failure_degrades_to_null_svg(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """A render failure returns the `d2` with `svg: null` and a 200 — never a 500 (hermetic).
+
+    Mirrors the gated real test's failure branch without needing the `d2` binary,
+    so CI exercises the fail-closed path regardless of the environment.
+    """
+    from langflow.lothal.d2_compile import D2RenderResult
+
+    async def _failing_render(_src):
+        return D2RenderResult(error="1:1: connection missing destination")
+
+    monkeypatch.setattr(lothal_api, "render_d2", _failing_render)
+
+    project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
+    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=_SEED_D2)
+
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"d2": _SEED_D2, "svg": None}
+
+
+async def test_diagram_compiler_unavailable_degrades_to_null_svg(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """If the `d2` compiler is unavailable, the read still 200s with the `d2` and `svg: null`.
+
+    A missing compiler is an environment fault, not a broken diagram — the source
+    is still returned so nothing is lost; the canvas just shows no SVG.
+    """
+
+    async def _unavailable_render(_src):
+        raise D2CompilerUnavailableError
+
+    monkeypatch.setattr(lothal_api, "render_d2", _unavailable_render)
+
+    project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
+    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=_SEED_D2)
+
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"d2": _SEED_D2, "svg": None}
 
 
 async def test_diagram_legacy_xyflow_only_reads_empty(client: AsyncClient, logged_in_headers: dict):
