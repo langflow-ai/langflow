@@ -98,4 +98,38 @@ describe("ChatComposer", () => {
     fireEvent.keyDown(editor, { key: "Enter" });
     expect(onSend).not.toHaveBeenCalled();
   });
+
+  it("does not insert a chip while disabled", () => {
+    const ref = createRef<ChatComposerHandle>();
+    const { container } = render(
+      <ChatComposer ref={ref} onSend={jest.fn()} disabled />,
+    );
+    ref.current!.insertAnchor({
+      kind: "node",
+      id: "checkout",
+      label: "Checkout",
+    });
+    expect(editorOf(container).querySelector(".lothal-chip")).toBeNull();
+  });
+
+  it("preserves newlines (Shift+Enter) and serializes chips nested in a block", () => {
+    const onSend = jest.fn();
+    const { container } = render(<ChatComposer onSend={onSend} />);
+    const editor = editorOf(container);
+    // Mimic the DOM a contentEditable produces for "line one\nrename [chip]":
+    // a <br> then a block container holding text + a chip.
+    editor.appendChild(document.createTextNode("line one"));
+    editor.appendChild(document.createElement("br"));
+    const block = document.createElement("div");
+    block.appendChild(document.createTextNode("rename "));
+    const chip = document.createElement("span");
+    chip.className = "lothal-chip";
+    chip.dataset.id = "checkout";
+    chip.textContent = "▭ Checkout";
+    block.appendChild(chip);
+    editor.appendChild(block);
+
+    fireEvent.click(container.querySelector(".lothal-composer-send")!);
+    expect(onSend).toHaveBeenCalledWith("line one\nrename `checkout`");
+  });
 });

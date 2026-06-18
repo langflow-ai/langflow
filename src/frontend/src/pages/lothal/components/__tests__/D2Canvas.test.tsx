@@ -55,14 +55,16 @@ describe("D2Canvas", () => {
     const shape = container.querySelector("g.shape") as Element;
     const viewport = container.querySelector(".lothal-d2-canvas") as Element;
     const efp = jest.fn(() => shape);
-    (document as unknown as { elementFromPoint: unknown }).elementFromPoint =
-      efp;
+    const doc = document as unknown as { elementFromPoint?: unknown };
+    const prev = doc.elementFromPoint;
+    doc.elementFromPoint = efp;
     try {
       // Fire on the viewport (the retargeted target), not the shape.
       fireEvent.dblClick(viewport);
     } finally {
-      delete (document as unknown as { elementFromPoint?: unknown })
-        .elementFromPoint;
+      // Restore whatever was there (jsdom has none today, but don't assume).
+      if (prev === undefined) delete doc.elementFromPoint;
+      else doc.elementFromPoint = prev;
     }
     expect(efp).toHaveBeenCalled();
     expect(onAnchor).toHaveBeenCalledWith(

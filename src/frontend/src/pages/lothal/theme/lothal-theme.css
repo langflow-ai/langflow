@@ -342,7 +342,8 @@
   line-height: 1.5;
   padding: 4px;
   white-space: pre-wrap;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 .lothal-composer-editor:empty::before {
   content: attr(data-placeholder);

@@ -64,37 +64,42 @@ export const ChatComposer = forwardRef<
     }
   }, []);
 
-  const insertAnchor = useCallback((a: Anchor) => {
-    const el = editor.current;
-    if (!el) return;
+  const insertAnchor = useCallback(
+    (a: Anchor) => {
+      const el = editor.current;
+      // The field is non-editable while a reply is in flight; the canvas
+      // onAnchor stays live, so guard against dropping a chip into it then.
+      if (!el || disabled) return;
 
-    const chip = document.createElement("span");
-    chip.className = "lothal-chip";
-    chip.contentEditable = "false";
-    chip.dataset.id = a.id;
-    chip.dataset.kind = a.kind;
-    chip.textContent = chipGlyph(a.kind) + a.label;
+      const chip = document.createElement("span");
+      chip.className = "lothal-chip";
+      chip.contentEditable = "false";
+      chip.dataset.id = a.id;
+      chip.dataset.kind = a.kind;
+      chip.textContent = chipGlyph(a.kind) + a.label;
 
-    el.focus();
-    // Restore the saved caret, or fall back to the end of the field (e.g. the
-    // user never typed — they double-clicked an element first).
-    let range = savedRange.current;
-    if (!range || !el.contains(range.commonAncestorContainer)) {
-      range = document.createRange();
-      range.selectNodeContents(el);
-      range.collapse(false);
-    }
-    range.insertNode(chip);
-    const space = document.createTextNode(NBSP);
-    range.setStartAfter(chip);
-    range.insertNode(space);
-    range.setStartAfter(space);
-    range.collapse(true);
-    const sel = window.getSelection();
-    sel?.removeAllRanges();
-    sel?.addRange(range);
-    savedRange.current = range.cloneRange();
-  }, []);
+      el.focus();
+      // Restore the saved caret, or fall back to the end of the field (e.g. the
+      // user never typed — they double-clicked an element first).
+      let range = savedRange.current;
+      if (!range || !el.contains(range.commonAncestorContainer)) {
+        range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+      }
+      range.insertNode(chip);
+      const space = document.createTextNode(NBSP);
+      range.setStartAfter(chip);
+      range.insertNode(space);
+      range.setStartAfter(space);
+      range.collapse(true);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      savedRange.current = range.cloneRange();
+    },
+    [disabled],
+  );
 
   useImperativeHandle(
     ref,
@@ -106,19 +111,34 @@ export const ChatComposer = forwardRef<
   );
 
   // Serialize the editor: plain text verbatim, each chip as its exact D2 anchor
-  // id in backticks. Returns "" when the field is effectively empty.
+  // id in backticks. Walk the tree (not just top-level nodes) so chips nested in
+  // a block survive as their id, and the structural breaks a contentEditable
+  // makes for Shift+Enter (<br> / block containers) become newlines rather than
+  // silently flattening. Returns "" when the field is effectively empty.
   const serialize = useCallback((): string => {
     const el = editor.current;
     if (!el) return "";
+    const walk = (n: Node): string => {
+      if (n.nodeType === Node.TEXT_NODE) {
+        return (n.textContent ?? "").replace(/\u00a0/g, " ");
+      }
+      if (n.nodeType !== Node.ELEMENT_NODE) return "";
+      const e = n as HTMLElement;
+      if (e.dataset?.id) return `\`${e.dataset.id}\``;
+      if (e.tagName === "BR") return "\n";
+      let s = "";
+      e.childNodes.forEach((c) => {
+        s += walk(c);
+      });
+      // A block container ends a line; don't double up if it already did.
+      if (["DIV", "P", "LI"].includes(e.tagName) && s && !s.endsWith("\n")) {
+        s += "\n";
+      }
+      return s;
+    };
     let out = "";
     el.childNodes.forEach((n) => {
-      if (n.nodeType === Node.TEXT_NODE) {
-        out += (n.textContent ?? "").replace(/\u00a0/g, " ");
-      } else if (n.nodeType === Node.ELEMENT_NODE) {
-        const e = n as HTMLElement;
-        if (e.dataset?.id) out += `\`${e.dataset.id}\``;
-        else out += (e.textContent ?? "").replace(/\u00a0/g, " ");
-      }
+      out += walk(n);
     });
     return out;
   }, []);
