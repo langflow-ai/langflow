@@ -9,10 +9,12 @@
 // handler the layer is inert. Panning is pointer-drag; zooming is the wheel or
 // the corner controls.
 
+import DOMPurify from "dompurify";
 import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -34,6 +36,19 @@ export function D2Canvas({
   /** Called with the resolved element when a box/arrow is double-clicked. */
   onAnchor?: (anchor: Anchor) => void;
 }) {
+  // The SVG is server-rendered from LLM-authored D2, so treat it as untrusted
+  // before injecting it: sanitize to the SVG profile and drop the script /
+  // foreignObject vectors. D2's diagram output is plain SVG shapes + <text>, so
+  // this preserves the rendered markup (and the base64 anchor classes / viewBox
+  // we read back) while neutralising any injected scripting.
+  const safeSvg = useMemo(
+    () =>
+      DOMPurify.sanitize(svg, {
+        USE_PROFILES: { svg: true, svgFilters: true },
+        FORBID_TAGS: ["script", "foreignObject"],
+      }),
+    [svg],
+  );
   const viewport = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
   const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 });
@@ -176,7 +191,7 @@ export function D2Canvas({
           height: natural ? `${natural.h}px` : undefined,
           transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
         }}
-        dangerouslySetInnerHTML={{ __html: svg }}
+        dangerouslySetInnerHTML={{ __html: safeSvg }}
       />
       <div className="lothal-d2-controls">
         <button

@@ -9,6 +9,14 @@ describe("D2Canvas", () => {
     expect(container.querySelector("svg g")?.textContent).toBe("hi");
   });
 
+  it("sanitizes the server SVG, stripping injected scripts", () => {
+    const { container } = render(
+      <D2Canvas svg='<svg><script>alert(1)</script><g class="a">ok</g></svg>' />,
+    );
+    expect(container.querySelector("script")).toBeNull();
+    expect(container.querySelector("svg g")?.textContent).toBe("ok");
+  });
+
   it("sizes the holder to the SVG's viewBox so it renders at natural size", () => {
     const { container } = render(
       <D2Canvas svg='<svg viewBox="0 0 320 240"></svg>' />,
