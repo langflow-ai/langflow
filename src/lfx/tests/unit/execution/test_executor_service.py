@@ -188,12 +188,15 @@ def test_entry_point_load_failure_does_not_break_discovery(monkeypatch):
 
 
 def test_entry_point_returning_non_executor_is_skipped(monkeypatch):
-    """An entry point whose loaded object lacks `kind` must not crash discovery."""
+    """An entry point whose loaded object is not an Executor must be skipped, not registered."""
     from lfx.execution.backends.in_process import InProcessExecutor
     from lfx.services.executor import service as service_module
 
     class NotAnExecutor:
-        pass
+        # Carries a `kind` (so it would survive registry.register's attribute read) but is
+        # not an Executor. Without the isinstance guard it would register and only blow up
+        # later at execute() time; discovery must reject it up front.
+        kind = "not-really"
 
     class _BadEntryPoint:
         name = "bad"
@@ -210,6 +213,9 @@ def test_entry_point_returning_non_executor_is_skipped(monkeypatch):
     settings_service = get_service(ServiceType.SETTINGS_SERVICE)
     fresh = ExecutorService(settings_service=settings_service)
 
+    # The bad plugin is rejected outright...
+    assert not fresh.has("not-really")
+    # ...and the built-in executor still works.
     assert isinstance(fresh.get("in-process"), InProcessExecutor)
 
 

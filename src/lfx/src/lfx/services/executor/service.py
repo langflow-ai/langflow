@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 
 from lfx.execution.backends.in_process import InProcessExecutor
 from lfx.execution.coordinator import Coordinator
+from lfx.execution.executor import Executor
 from lfx.execution.registry import ExecutorKindCollisionError, ExecutorRegistry
 from lfx.log.logger import logger
 from lfx.services.base import Service
 
 if TYPE_CHECKING:
-    from lfx.execution.executor import Executor
     from lfx.services.settings.service import SettingsService
 
 
@@ -89,6 +89,13 @@ class ExecutorService(Service):
             try:
                 obj = ep.load()
                 executor = obj() if isinstance(obj, type) else obj
+                if not isinstance(executor, Executor):
+                    logger.warning(
+                        "Skipping entry point %r: loaded object of type %r is not an Executor.",
+                        ep.name,
+                        type(executor).__name__,
+                    )
+                    continue
                 kind = getattr(executor, "kind", "<unknown>")
                 self._registry.register(executor, replace=False)
                 logger.debug("Loaded executor from entry point: %s -> %s", ep.name, kind)
@@ -108,10 +115,9 @@ class ExecutorService(Service):
     async def teardown(self) -> None:
         """Reset the service to its post-init state.
 
-        ServiceManager.teardown() does not evict the cached service instance, so we must
-        leave the registry usable: the built-in InProcessExecutor is re-registered and
-        plugin discovery re-runs so a post-teardown access still returns a working
-        coordinator.
+        Rebuilds the registry (built-in InProcessExecutor + plugin discovery) and clears
+        the cached coordinator, so the service stays usable if it is accessed again before
+        the service manager evicts it.
         """
         self._coordinator = None
         self._registry = ExecutorRegistry()

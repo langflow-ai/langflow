@@ -58,6 +58,11 @@ class Coordinator:
 
         ``runtime_options`` are forwarded as-is into ``Unit.runtime_options``;
         consult the active executor's documentation for which keys it honors.
+
+        ``identity_partition`` currently yields exactly one ``Unit``, so this emits a
+        single terminal ``RunComplete``. A future partitioner returning multiple units
+        would emit one ``RunComplete`` per unit; consumers relying on a single terminal
+        envelope (notably ``run_to_completion``) would need updating first.
         """
         units = identity_partition(graph, inputs=inputs, runtime_options=runtime_options)
         executor = self._registry.get(self._executor_kind)
