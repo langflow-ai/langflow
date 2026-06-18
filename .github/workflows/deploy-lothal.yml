@@ -185,6 +185,29 @@ jobs:
       contents: read
       packages: read
     steps:
+      - name: Checkout (for the compose file)
+        uses: actions/checkout@v6
+        with:
+          # Pin to the exact commit being deployed (not the default branch), so the
+          # compose shipped to the box always matches the images built from this ref.
+          ref: ${{ needs.refs.outputs.full_sha }}
+          persist-credentials: false
+
+      # Ship the topology (compose) from the deployed commit BEFORE deploying, so the
+      # box never drifts from the repo. Only docker-compose.prod.yml is delivered —
+      # /opt/lothal/.env (secrets + tunables) is server-owned and deliberately never
+      # touched here. The compose holds no secrets, only ${VAR} references resolved
+      # from that .env, so shipping it can never carry or overwrite a value.
+      - name: Sync compose to box
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: docker-compose.prod.yml
+          target: /opt/lothal/
+          overwrite: true
+
       - name: SSH → pull, migrate, up, health-check
         uses: appleboy/ssh-action@v1
         env:
