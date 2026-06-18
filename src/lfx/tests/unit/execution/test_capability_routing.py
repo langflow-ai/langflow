@@ -227,7 +227,7 @@ async def test_stream_close_finalizes_capability_selected_executor() -> None:
         capability_service=capability_service,
     )
 
-    stream = coordinator.stream(SimpleNamespace(), inputs=[{}])
+    stream = coordinator.stream(SimpleNamespace())
     assert await anext(stream) == "tick"
     await stream.aclose()
     await asyncio.sleep(0)
