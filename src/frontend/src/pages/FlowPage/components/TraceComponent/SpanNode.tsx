@@ -73,7 +73,13 @@ export function SpanNode({
         }}
         tabIndex={-1}
         aria-hidden={!hasChildren}
-        aria-label={hasChildren ? (isExpanded ? t("trace.collapseSpan") : t("trace.expandSpan")) : undefined}
+        aria-label={
+          hasChildren
+            ? isExpanded
+              ? t("trace.collapseSpan")
+              : t("trace.expandSpan")
+            : undefined
+        }
       >
         <IconComponent
           name={isExpanded ? "ChevronDown" : "ChevronRight"}
