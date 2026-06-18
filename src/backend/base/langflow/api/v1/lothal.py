@@ -380,12 +380,13 @@ async def get_diagram(project: OwnedProject) -> DiagramResponse:
     by `OwnedProject`, so an unowned project still 404s regardless of phase).
     Once the project enters generation but before the generator has emitted
     anything, `diagram_d2` is `null` and an empty payload (`d2: null`) is
-    returned — never an error.
+    returned — never an error. A blank or whitespace-only store is treated the
+    same way (normalised to `null`): it is no diagram, not a renderable one.
 
-    The store is plain text returned untouched, so there is nothing to parse and
-    no malformed-row path that could 500 the canvas. Legacy projects that only
-    have the old `diagram_json` xyflow graph read as empty here until they are
-    migrated to D2 (Epic D.13).
+    Real D2 source is returned untouched (verbatim) — there is nothing to parse
+    and no malformed-row path that could 500 the canvas. Legacy projects that
+    only have the old `diagram_json` xyflow graph read as empty here until they
+    are migrated to D2 (Epic D.13).
     """
     if project.phase not in _DIAGRAM_VISIBLE_PHASES:
         raise HTTPException(
@@ -393,7 +394,10 @@ async def get_diagram(project: OwnedProject) -> DiagramResponse:
             detail="The diagram is not available until diagram generation begins.",
         )
 
-    return DiagramResponse(d2=project.diagram_d2 or None)
+    # Blank/whitespace-only is "no diagram" → null; real source is returned
+    # verbatim (D2 owns its own layout, so we never trim meaningful content).
+    d2 = project.diagram_d2
+    return DiagramResponse(d2=d2 if d2 and d2.strip() else None)
 
 
 @router.post(

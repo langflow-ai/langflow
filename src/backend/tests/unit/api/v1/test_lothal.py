@@ -933,14 +933,18 @@ async def test_diagram_readable_in_later_phases(client: AsyncClient, logged_in_h
 async def test_diagram_source_returned_verbatim_never_500(client: AsyncClient, logged_in_headers: dict):
     """D2 is opaque text returned untouched — the read never parses it, so it can never 500.
 
-    Whatever was stored (even content that would not compile) comes straight back;
-    an empty/whitespace-only store normalises to the empty payload (`d2: null`).
+    Whatever real source was stored (even content that would not compile) comes
+    straight back verbatim; a blank or whitespace-only store is "no diagram" and
+    normalises to the empty payload (`d2: null`).
     """
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
     for raw, expected in (
         ("not valid d2 {{{", "not valid d2 {{{"),
         ("shape: sequence_diagram\na -> b: hi", "shape: sequence_diagram\na -> b: hi"),
+        ("  shape: sequence_diagram  ", "  shape: sequence_diagram  "),  # real content kept verbatim, not trimmed
         ("", None),
+        ("   ", None),  # whitespace-only → no diagram
+        (" \n\t ", None),
     ):
         await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=raw)
         response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
