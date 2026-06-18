@@ -9,9 +9,13 @@ registers the bundle's components under the namespaced IDs
 from lfx_datastax.components.datastax.astradb_cql import AstraDBCQLToolComponent
 from lfx_datastax.components.datastax.astradb_chatmemory import AstraDBChatMemory
 from lfx_datastax.components.datastax.astradb_data_api import AstraDBDataAPIComponent
-from lfx_datastax.components.datastax.astradb_graph import AstraDBGraphVectorStoreComponent
+from lfx_datastax.components.datastax.astradb_graph import (
+    AstraDBGraphVectorStoreComponent,
+)
 from lfx_datastax.components.datastax.astradb_tool import AstraDBToolComponent
-from lfx_datastax.components.datastax.astradb_vectorstore import AstraDBVectorStoreComponent
+from lfx_datastax.components.datastax.astradb_vectorstore import (
+    AstraDBVectorStoreComponent,
+)
 from lfx_datastax.components.datastax.astradb_vectorize import AstraVectorizeComponent
 from lfx_datastax.components.datastax.dotenv import Dotenv
 from lfx_datastax.components.datastax.graph_rag import GraphRAGComponent

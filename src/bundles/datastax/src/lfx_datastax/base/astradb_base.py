@@ -30,7 +30,11 @@ class AstraDBBaseComponent(Component):
                         "name": "create_database",
                         "description": "Please allow several minutes for creation to complete.",
                         "display_name": "Create new database",
-                        "field_order": ["01_new_database_name", "02_cloud_provider", "03_region"],
+                        "field_order": [
+                            "01_new_database_name",
+                            "02_cloud_provider",
+                            "03_region",
+                        ],
                         "template": {
                             "01_new_database_name": StrInput(
                                 name="new_database_name",
@@ -185,7 +189,9 @@ class AstraDBBaseComponent(Component):
         return environment
 
     @classmethod
-    def map_cloud_providers(cls, token: str, environment: str | None = None) -> dict[str, dict[str, Any]]:
+    def map_cloud_providers(
+        cls, token: str, environment: str | None = None
+    ) -> dict[str, dict[str, Any]]:
         """Fetch all available cloud providers and regions."""
         try:
             # Get the admin object
@@ -193,7 +199,9 @@ class AstraDBBaseComponent(Component):
             admin_client = client.get_admin(token=token)
 
             # Get the list of available regions
-            available_regions = admin_client.find_available_regions(only_org_enabled_regions=True)
+            available_regions = admin_client.find_available_regions(
+                only_org_enabled_regions=True
+            )
 
             provider_mapping: dict[str, dict[str, str]] = {
                 "AWS": {"name": "Amazon Web Services", "id": "aws"},
@@ -221,7 +229,9 @@ class AstraDBBaseComponent(Component):
             return result
 
     @classmethod
-    def get_vectorize_providers(cls, token: str, environment: str | None = None, api_endpoint: str | None = None):
+    def get_vectorize_providers(
+        cls, token: str, environment: str | None = None, api_endpoint: str | None = None
+    ):
         try:
             # Get the admin object
             client = DataAPIClient(environment=cls.get_environment(environment))
@@ -233,7 +243,10 @@ class AstraDBBaseComponent(Component):
 
             vectorize_providers_mapping = {}
             # Map the provider display name to the provider key and models
-            for provider_key, provider_data in embedding_providers.embedding_providers.items():
+            for (
+                provider_key,
+                provider_data,
+            ) in embedding_providers.embedding_providers.items():
                 # Get the provider display name and models
                 display_name = provider_data.display_name
                 models = [model.name for model in provider_data.models]
@@ -273,7 +286,9 @@ class AstraDBBaseComponent(Component):
         # Call the create database function
         return await admin_client.async_create_database(
             name=new_database_name,
-            cloud_provider=cls.map_cloud_providers(token=token, environment=my_env)[cloud_provider]["id"],
+            cloud_provider=cls.map_cloud_providers(token=token, environment=my_env)[
+                cloud_provider
+            ]["id"],
             region=region,
             keyspace=keyspace,
             wait_until_active=False,
@@ -305,7 +320,9 @@ class AstraDBBaseComponent(Component):
                 raise ImportError(msg) from e
 
             environment = cls.get_environment(environment)
-            providers = cls.get_vectorize_providers(token=token, environment=environment, api_endpoint=api_endpoint)
+            providers = cls.get_vectorize_providers(
+                token=token, environment=environment, api_endpoint=api_endpoint
+            )
             vectorize_options = VectorServiceOptions(
                 provider=providers.get(embedding_generation_provider, [None, []])[0],
                 model_name=embedding_generation_model,
@@ -371,7 +388,9 @@ class AstraDBBaseComponent(Component):
                         "org_id": db.org_id if db.org_id else None,
                     }
                 except Exception as e:  # noqa: BLE001
-                    logger.debug("Failed to get metadata for database %s: %s", db.name, e)
+                    logger.debug(
+                        "Failed to get metadata for database %s: %s", db.name, e
+                    )
         except Exception as e:  # noqa: BLE001
             logger.debug("Error fetching database list: %s", e)
             return {}
@@ -406,7 +425,9 @@ class AstraDBBaseComponent(Component):
 
         # Grab the database object
         environment = cls.get_environment(environment)
-        db = cls.get_database_list_static(token=token, environment=environment).get(database_name)
+        db = cls.get_database_list_static(token=token, environment=environment).get(
+            database_name
+        )
         if not db:
             return None
 
@@ -494,7 +515,9 @@ class AstraDBBaseComponent(Component):
             return []
 
     @classmethod
-    def get_provider_icon(cls, collection=None, provider_name: str | None = None) -> str:
+    def get_provider_icon(
+        cls, collection=None, provider_name: str | None = None
+    ) -> str:
         # Get the provider name from the collection
         provider_name = provider_name or (
             collection.definition.vector.service.provider
@@ -525,7 +548,11 @@ class AstraDBBaseComponent(Component):
         }
 
         # Adjust the casing on some like nvidia
-        return case_map[provider_name.lower()] if provider_name.lower() in case_map else provider_name.title()
+        return (
+            case_map[provider_name.lower()]
+            if provider_name.lower() in case_map
+            else provider_name.title()
+        )
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         # Nothing to generate if we don't have an API endpoint yet
@@ -543,7 +570,9 @@ class AstraDBBaseComponent(Component):
         return [
             {
                 "name": col.name,
-                "records": self.collection_data(collection_name=col.name, database=database),
+                "records": self.collection_data(
+                    collection_name=col.name, database=database
+                ),
                 "provider": (
                     col.definition.vector.service.provider
                     if col.definition.vector and col.definition.vector.service
@@ -562,7 +591,9 @@ class AstraDBBaseComponent(Component):
     def reset_provider_options(self, build_config: dict) -> dict:
         """Reset provider options and related configurations in the build_config dictionary."""
         # Extract template path for cleaner access
-        template = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
+        template = build_config["collection_name"]["dialog_inputs"]["fields"]["data"][
+            "node"
+        ]["template"]
 
         # Get vectorize providers
         vectorize_providers_api = self.get_vectorize_providers(
@@ -589,12 +620,15 @@ class AstraDBBaseComponent(Component):
 
         # Add metadata for each provider option
         template[provider_field]["options_metadata"] = [
-            {"icon": self.get_provider_icon(provider_name=provider)} for provider in template[provider_field]["options"]
+            {"icon": self.get_provider_icon(provider_name=provider)}
+            for provider in template[provider_field]["options"]
         ]
 
         # Get selected embedding provider
         embedding_provider = template[provider_field]["value"]
-        is_bring_your_own = embedding_provider and embedding_provider == "Bring your own"
+        is_bring_your_own = (
+            embedding_provider and embedding_provider == "Bring your own"
+        )
 
         # Configure embedding model field
         model_field = "03_embedding_generation_model"
@@ -614,16 +648,22 @@ class AstraDBBaseComponent(Component):
     def reset_dimension_field(self, build_config: dict) -> dict:
         """Reset dimension field options based on provided configuration."""
         # Extract template path for cleaner access
-        template = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
+        template = build_config["collection_name"]["dialog_inputs"]["fields"]["data"][
+            "node"
+        ]["template"]
 
         # Get selected embedding model
         provider_field = "02_embedding_generation_provider"
         embedding_provider = template[provider_field]["value"]
-        is_bring_your_own = embedding_provider and embedding_provider == "Bring your own"
+        is_bring_your_own = (
+            embedding_provider and embedding_provider == "Bring your own"
+        )
 
         # Configure dimension field
         dimension_field = "04_dimension"
-        dimension_value = 1024 if not is_bring_your_own else None  # TODO: Dynamically figure this out
+        dimension_value = (
+            1024 if not is_bring_your_own else None
+        )  # TODO: Dynamically figure this out
         template[dimension_field].update(
             {
                 "placeholder": dimension_value,
@@ -638,13 +678,18 @@ class AstraDBBaseComponent(Component):
     def reset_collection_list(self, build_config: dict) -> dict:
         """Reset collection list options based on provided configuration."""
         # Get collection options
-        collection_options = self._initialize_collection_options(api_endpoint=build_config["api_endpoint"]["value"])
+        collection_options = self._initialize_collection_options(
+            api_endpoint=build_config["api_endpoint"]["value"]
+        )
         # Update collection configuration
         collection_config = build_config["collection_name"]
         collection_config.update(
             {
                 "options": [col["name"] for col in collection_options],
-                "options_metadata": [{k: v for k, v in col.items() if k != "name"} for col in collection_options],
+                "options_metadata": [
+                    {k: v for k, v in col.items() if k != "name"}
+                    for col in collection_options
+                ],
             }
         )
 
@@ -663,7 +708,9 @@ class AstraDBBaseComponent(Component):
         database_options = self._initialize_database_options()
 
         # Update cloud provider options
-        template = build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
+        template = build_config["database_name"]["dialog_inputs"]["fields"]["data"][
+            "node"
+        ]["template"]
         template["02_cloud_provider"]["options"] = list(
             self.map_cloud_providers(
                 token=self.token,
@@ -676,7 +723,10 @@ class AstraDBBaseComponent(Component):
         database_config.update(
             {
                 "options": [db["name"] for db in database_options],
-                "options_metadata": [{k: v for k, v in db.items() if k != "name"} for db in database_options],
+                "options_metadata": [
+                    {k: v for k, v in db.items() if k != "name"}
+                    for db in database_options
+                ],
             }
         )
 
@@ -696,13 +746,17 @@ class AstraDBBaseComponent(Component):
         """Reset all build configuration options to default empty state."""
         # Reset database configuration
         database_config = build_config["database_name"]
-        database_config.update({"options": [], "options_metadata": [], "value": "", "show": False})
+        database_config.update(
+            {"options": [], "options_metadata": [], "value": "", "show": False}
+        )
         build_config["api_endpoint"]["options"] = []
         build_config["api_endpoint"]["value"] = ""
 
         # Reset collection configuration
         collection_config = build_config["collection_name"]
-        collection_config.update({"options": [], "options_metadata": [], "value": "", "show": False})
+        collection_config.update(
+            {"options": [], "options_metadata": [], "value": "", "show": False}
+        )
 
         return build_config
 
@@ -740,7 +794,11 @@ class AstraDBBaseComponent(Component):
                 return self.reset_dimension_field(build_config)
 
         # Initial execution or token/environment change
-        first_run = field_name == "embedding_model" and not field_value and not build_config["database_name"]["options"]
+        first_run = (
+            field_name == "embedding_model"
+            and not field_value
+            and not build_config["database_name"]["options"]
+        )
         if first_run or field_name in {"token", "environment"}:
             return self.reset_database_list(build_config)
 
@@ -773,7 +831,9 @@ class AstraDBBaseComponent(Component):
             msg = f"Error creating database: {e}"
             raise ValueError(msg) from e
 
-        build_config["database_name"]["options"].append(field_value["01_new_database_name"])
+        build_config["database_name"]["options"].append(
+            field_value["01_new_database_name"]
+        )
         build_config["database_name"]["options_metadata"].append(
             {
                 "status": "PENDING",
@@ -789,7 +849,9 @@ class AstraDBBaseComponent(Component):
         cloud_provider = field_value["02_cloud_provider"]
 
         # Update the region options based on the selected cloud provider
-        template = build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
+        template = build_config["database_name"]["dialog_inputs"]["fields"]["data"][
+            "node"
+        ]["template"]
         template["03_region"]["options"] = self.map_cloud_providers(
             token=self.token,
             environment=self.environment,
@@ -801,7 +863,9 @@ class AstraDBBaseComponent(Component):
 
         return build_config
 
-    async def _create_new_collection(self, build_config: dict, field_value: dict) -> None:
+    async def _create_new_collection(
+        self, build_config: dict, field_value: dict
+    ) -> None:
         """Create a new collection and update build config options."""
         embedding_provider = field_value.get("02_embedding_generation_provider")
         try:
@@ -811,19 +875,28 @@ class AstraDBBaseComponent(Component):
                 api_endpoint=build_config["api_endpoint"]["value"],
                 environment=self.environment,
                 keyspace=self.get_keyspace(),
-                dimension=field_value.get("04_dimension") if embedding_provider == "Bring your own" else None,
+                dimension=field_value.get("04_dimension")
+                if embedding_provider == "Bring your own"
+                else None,
                 embedding_generation_provider=embedding_provider,
-                embedding_generation_model=field_value.get("03_embedding_generation_model"),
+                embedding_generation_model=field_value.get(
+                    "03_embedding_generation_model"
+                ),
             )
         except Exception as e:
             msg = f"Error creating collection: {e}"
             raise ValueError(msg) from e
 
-        provider = embedding_provider.lower() if embedding_provider and embedding_provider != "Bring your own" else None
+        provider = (
+            embedding_provider.lower()
+            if embedding_provider and embedding_provider != "Bring your own"
+            else None
+        )
         build_config["collection_name"].update(
             {
                 "value": field_value["01_new_collection_name"],
-                "options": build_config["collection_name"]["options"] + [field_value["01_new_collection_name"]],
+                "options": build_config["collection_name"]["options"]
+                + [field_value["01_new_collection_name"]],
             }
         )
 
@@ -848,12 +921,12 @@ class AstraDBBaseComponent(Component):
 
         # Get the api endpoint for the selected database
         index = build_config["database_name"]["options"].index(field_value)
-        build_config["api_endpoint"]["options"] = build_config["database_name"]["options_metadata"][index][
-            "api_endpoints"
-        ]
-        build_config["api_endpoint"]["value"] = build_config["database_name"]["options_metadata"][index][
-            "api_endpoints"
-        ][0]
+        build_config["api_endpoint"]["options"] = build_config["database_name"][
+            "options_metadata"
+        ][index]["api_endpoints"]
+        build_config["api_endpoint"]["value"] = build_config["database_name"][
+            "options_metadata"
+        ][index]["api_endpoints"][0]
 
         # Get the org_id for the selected database
         org_id = build_config["database_name"]["options_metadata"][index]["org_id"]
@@ -861,19 +934,27 @@ class AstraDBBaseComponent(Component):
             return build_config
 
         # Update the list of keyspaces based on the db info
-        build_config["keyspace"]["options"] = build_config["database_name"]["options_metadata"][index]["keyspaces"]
+        build_config["keyspace"]["options"] = build_config["database_name"][
+            "options_metadata"
+        ][index]["keyspaces"]
         build_config["keyspace"]["value"] = (
-            build_config["keyspace"]["options"] and build_config["keyspace"]["options"][0]
-            if build_config["keyspace"]["value"] not in build_config["keyspace"]["options"]
+            build_config["keyspace"]["options"]
+            and build_config["keyspace"]["options"][0]
+            if build_config["keyspace"]["value"]
+            not in build_config["keyspace"]["options"]
             else build_config["keyspace"]["value"]
         )
 
         # Get the database id for the selected database
-        db_id = self.get_database_id_static(api_endpoint=build_config["api_endpoint"]["value"])
+        db_id = self.get_database_id_static(
+            api_endpoint=build_config["api_endpoint"]["value"]
+        )
         keyspace = self.get_keyspace()
 
         # Update the helper text for the embedding provider field
-        template = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
+        template = build_config["collection_name"]["dialog_inputs"]["fields"]["data"][
+            "node"
+        ]["template"]
         template["02_embedding_generation_provider"]["helper_text"] = (
             "To create collections with more embedding provider options, go to "
             f'<a class="underline" target="_blank" rel="noopener noreferrer" '
@@ -886,13 +967,18 @@ class AstraDBBaseComponent(Component):
 
         return self.reset_collection_list(build_config)
 
-    def _handle_collection_selection(self, build_config: dict, field_value: str) -> dict:
+    def _handle_collection_selection(
+        self, build_config: dict, field_value: str
+    ) -> dict:
         """Handle collection selection and update embedding options."""
         build_config["autodetect_collection"]["value"] = True
         build_config = self.reset_collection_list(build_config)
 
         # Reset embedding model if collection selection changes
-        if field_value and field_value not in build_config["collection_name"]["options"]:
+        if (
+            field_value
+            and field_value not in build_config["collection_name"]["options"]
+        ):
             build_config["collection_name"]["options"].append(field_value)
             build_config["collection_name"]["options_metadata"].append(
                 {

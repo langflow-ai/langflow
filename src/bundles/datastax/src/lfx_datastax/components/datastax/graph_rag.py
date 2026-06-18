@@ -6,7 +6,13 @@ from langchain_graph_retriever import GraphRetriever
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent
 from lfx.helpers.data import docs_to_data
-from lfx.inputs.inputs import DropdownInput, HandleInput, MultilineInput, NestedDictInput, StrInput
+from lfx.inputs.inputs import (
+    DropdownInput,
+    HandleInput,
+    MultilineInput,
+    NestedDictInput,
+    StrInput,
+)
 from lfx.schema.data import Data
 
 

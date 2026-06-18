@@ -7,7 +7,9 @@ from lfx.template.field.base import Output
 
 class AstraVectorizeComponent(Component):
     display_name: str = "Astra Vectorize"
-    description: str = "Configuration options for Astra Vectorize server-side embeddings. "
+    description: str = (
+        "Configuration options for Astra Vectorize server-side embeddings. "
+    )
     documentation: str = "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html"
     legacy = True
     icon = "AstraDB"
@@ -15,8 +17,18 @@ class AstraVectorizeComponent(Component):
     replacement = ["datastax.AstraDB"]
 
     VECTORIZE_PROVIDERS_MAPPING = {
-        "Azure OpenAI": ["azureOpenAI", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
-        "Hugging Face - Dedicated": ["huggingfaceDedicated", ["endpoint-defined-model"]],
+        "Azure OpenAI": [
+            "azureOpenAI",
+            [
+                "text-embedding-3-small",
+                "text-embedding-3-large",
+                "text-embedding-ada-002",
+            ],
+        ],
+        "Hugging Face - Dedicated": [
+            "huggingfaceDedicated",
+            ["endpoint-defined-model"],
+        ],
         "Hugging Face - Serverless": [
             "huggingface",
             [
@@ -40,15 +52,31 @@ class AstraVectorizeComponent(Component):
         ],
         "Mistral AI": ["mistral", ["mistral-embed"]],
         "NVIDIA": ["nvidia", ["NV-Embed-QA"]],
-        "OpenAI": ["openai", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
+        "OpenAI": [
+            "openai",
+            [
+                "text-embedding-3-small",
+                "text-embedding-3-large",
+                "text-embedding-ada-002",
+            ],
+        ],
         "Upstage": ["upstageAI", ["solar-embedding-1-large"]],
         "Voyage AI": [
             "voyageAI",
-            ["voyage-large-2-instruct", "voyage-law-2", "voyage-code-2", "voyage-large-2", "voyage-2"],
+            [
+                "voyage-large-2-instruct",
+                "voyage-law-2",
+                "voyage-code-2",
+                "voyage-large-2",
+                "voyage-2",
+            ],
         ],
     }
     VECTORIZE_MODELS_STR = "\n\n".join(
-        [provider + ": " + (", ".join(models[1])) for provider, models in VECTORIZE_PROVIDERS_MAPPING.items()]
+        [
+            provider + ": " + (", ".join(models[1]))
+            for provider, models in VECTORIZE_PROVIDERS_MAPPING.items()
+        ]
     )
 
     inputs = [
@@ -101,7 +129,12 @@ class AstraVectorizeComponent(Component):
         ),
     ]
     outputs = [
-        Output(display_name="Vectorize", name="config", method="build_options", types=["dict"]),
+        Output(
+            display_name="Vectorize",
+            name="config",
+            method="build_options",
+            types=["dict"],
+        ),
     ]
 
     def build_options(self) -> dict[str, Any]:

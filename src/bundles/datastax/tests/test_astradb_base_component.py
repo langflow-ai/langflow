@@ -141,7 +141,11 @@ class TestCloudProviderMapping:
         mock_region3.cloud_provider = "Azure"
         mock_region3.name = "eastus"
 
-        mock_admin.find_available_regions.return_value = [mock_region1, mock_region2, mock_region3]
+        mock_admin.find_available_regions.return_value = [
+            mock_region1,
+            mock_region2,
+            mock_region3,
+        ]
 
         mock_client = mock_client_class.return_value
         mock_client.get_admin.return_value = mock_admin
@@ -171,7 +175,12 @@ class TestCloudProviderMapping:
         mock_region4.cloud_provider = "Azure"
         mock_region4.name = "eastus"
 
-        mock_admin.find_available_regions.return_value = [mock_region1, mock_region2, mock_region3, mock_region4]
+        mock_admin.find_available_regions.return_value = [
+            mock_region1,
+            mock_region2,
+            mock_region3,
+            mock_region4,
+        ]
 
         mock_client = mock_client_class.return_value
         mock_client.get_admin.return_value = mock_admin
@@ -216,7 +225,9 @@ class TestDatabaseIdExtraction:
 
     def test_get_database_id_static_valid_uuid(self):
         """Test extracting valid UUID from API endpoint."""
-        api_endpoint = "https://12345678-1234-1234-1234-123456789abc.apps.astra.datastax.com"
+        api_endpoint = (
+            "https://12345678-1234-1234-1234-123456789abc.apps.astra.datastax.com"
+        )
         db_id = AstraDBBaseComponent.get_database_id_static(api_endpoint)
 
         assert db_id == "12345678-1234-1234-1234-123456789abc"
@@ -230,7 +241,9 @@ class TestDatabaseIdExtraction:
 
     def test_get_database_id_static_case_insensitive(self):
         """Test UUID extraction is case insensitive."""
-        api_endpoint = "https://ABCDEF12-ABCD-ABCD-ABCD-ABCDEFABCDEF.apps.astra.datastax.com"
+        api_endpoint = (
+            "https://ABCDEF12-ABCD-ABCD-ABCD-ABCDEFABCDEF.apps.astra.datastax.com"
+        )
         db_id = AstraDBBaseComponent.get_database_id_static(api_endpoint)
 
         assert db_id == "ABCDEF12-ABCD-ABCD-ABCD-ABCDEFABCDEF"
@@ -275,7 +288,9 @@ class TestCollectionDataRetrieval:
         mock_collection.estimated_document_count.return_value = 100
         mock_database.get_collection.return_value = mock_collection
 
-        count = mock_component.collection_data("test_collection", database=mock_database)
+        count = mock_component.collection_data(
+            "test_collection", database=mock_database
+        )
         assert count == 100
         mock_database.get_collection.assert_called_once_with("test_collection")
         mock_collection.estimated_document_count.assert_called_once()
@@ -288,7 +303,9 @@ class TestCollectionDataRetrieval:
 
         mock_database.get_collection.return_value = mock_collection
 
-        count = mock_component.collection_data("test_collection", database=mock_database)
+        count = mock_component.collection_data(
+            "test_collection", database=mock_database
+        )
         assert count == 50
 
     def test_collection_data_error_handling(self, mock_component):
@@ -296,7 +313,9 @@ class TestCollectionDataRetrieval:
         mock_database = Mock()
         mock_database.get_collection.side_effect = Exception("Connection error")
 
-        result = mock_component.collection_data("test_collection", database=mock_database)
+        result = mock_component.collection_data(
+            "test_collection", database=mock_database
+        )
         assert result is None
         mock_component.log.assert_called_once()
 
@@ -339,7 +358,9 @@ class TestCollectionCreation:
     @pytest.mark.asyncio
     @patch("lfx_datastax.base.astradb_base._AstraDBCollectionEnvironment")
     @patch.object(AstraDBBaseComponent, "get_vectorize_providers")
-    async def test_create_collection_api_with_vectorize(self, mock_get_providers, mock_env_class):
+    async def test_create_collection_api_with_vectorize(
+        self, mock_get_providers, mock_env_class
+    ):
         """Test collection creation with vectorize options."""
         mock_get_providers.return_value = defaultdict(
             list,
@@ -395,10 +416,14 @@ class TestUpdateBuildConfig:
     """Tests for update_build_config method."""
 
     @pytest.mark.asyncio
-    async def test_update_build_config_no_token(self, mock_component, mock_build_config):
+    async def test_update_build_config_no_token(
+        self, mock_component, mock_build_config
+    ):
         """Test update_build_config with no token resets config."""
         mock_component.token = None
-        result = await mock_component.update_build_config(mock_build_config, "", "database_name")
+        result = await mock_component.update_build_config(
+            mock_build_config, "", "database_name"
+        )
 
         assert result["database_name"]["options"] == []
         assert result["database_name"]["show"] is False
@@ -433,17 +458,23 @@ class TestUpdateBuildConfig:
             }
         ]
 
-        result = await mock_component.update_build_config(mock_build_config, "", "embedding_model")
+        result = await mock_component.update_build_config(
+            mock_build_config, "", "embedding_model"
+        )
 
         assert "db1" in result["database_name"]["options"]
         mock_init_db.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_build_config_search_method_change_to_hybrid(self, mock_component, mock_build_config):
+    async def test_update_build_config_search_method_change_to_hybrid(
+        self, mock_component, mock_build_config
+    ):
         """Test base update_build_config doesn't handle search_method."""
         # The base AstraDBBaseComponent doesn't handle search_method changes
         # This functionality is in the AstraDBVectorStoreComponent subclass
-        result = await mock_component.update_build_config(mock_build_config, "Hybrid Search", "search_method")
+        result = await mock_component.update_build_config(
+            mock_build_config, "Hybrid Search", "search_method"
+        )
 
         # Base component should return config unchanged for search_method
         assert result["lexical_terms"]["show"] is False  # Default value from fixture
@@ -461,21 +492,33 @@ class TestGetDatabaseObject:
         mock_client.get_database.return_value = mock_database
 
         with (
-            patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"),
-            patch.object(mock_component, "get_keyspace", return_value="default_keyspace"),
+            patch.object(
+                mock_component,
+                "get_api_endpoint",
+                return_value="https://test.endpoint.com",
+            ),
+            patch.object(
+                mock_component, "get_keyspace", return_value="default_keyspace"
+            ),
         ):
             db = mock_component.get_database_object()
             assert db == mock_database
 
     @patch("lfx_datastax.base.astradb_base.DataAPIClient")
-    def test_get_database_object_with_custom_endpoint(self, mock_client_class, mock_component):
+    def test_get_database_object_with_custom_endpoint(
+        self, mock_client_class, mock_component
+    ):
         """Test database object retrieval with custom endpoint."""
         mock_database = Mock()
         mock_client = mock_client_class.return_value
         mock_client.get_database.return_value = mock_database
 
-        with patch.object(mock_component, "get_keyspace", return_value="default_keyspace"):
-            db = mock_component.get_database_object(api_endpoint="https://custom.endpoint.com")
+        with patch.object(
+            mock_component, "get_keyspace", return_value="default_keyspace"
+        ):
+            db = mock_component.get_database_object(
+                api_endpoint="https://custom.endpoint.com"
+            )
             assert db == mock_database
 
     @patch("lfx_datastax.base.astradb_base.DataAPIClient")
@@ -484,7 +527,11 @@ class TestGetDatabaseObject:
         mock_client_class.side_effect = Exception("Connection error")
 
         with (
-            patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"),
+            patch.object(
+                mock_component,
+                "get_api_endpoint",
+                return_value="https://test.endpoint.com",
+            ),
             pytest.raises(ValueError, match="Error fetching database object"),
         ):
             mock_component.get_database_object()

@@ -90,7 +90,14 @@ OPERATION_ICONS: dict[str, str] = {
 # Groups of inputs that each operation needs. Centralising this makes the
 # dynamic show/hide logic trivial to audit and extend.
 OPERATION_FIELDS: dict[str, set[str]] = {
-    OP_FIND: {"filter_query", "projection", "sort", "limit", "skip", "include_similarity"},
+    OP_FIND: {
+        "filter_query",
+        "projection",
+        "sort",
+        "limit",
+        "skip",
+        "include_similarity",
+    },
     OP_FIND_ONE: {"filter_query", "projection", "sort", "include_similarity"},
     OP_INSERT_ONE: {"document"},
     OP_INSERT_MANY: {"documents", "ordered"},
@@ -138,7 +145,9 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
         "Run Data API operations (find, filter, insert, update, delete, "
         "count) against an Astra DB collection using astrapy directly."
     )
-    documentation: str = "https://docs.datastax.com/en/astra-db-serverless/api-reference/overview.html"
+    documentation: str = (
+        "https://docs.datastax.com/en/astra-db-serverless/api-reference/overview.html"
+    )
     icon: str = "AstraDB"
     name: str = "AstraDBDataAPI"
     beta: bool = True
@@ -172,7 +181,9 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
         NestedDictInput(
             name="projection",
             display_name="Projection",
-            info=('Fields to include (``1``/``true``) or exclude (``0``/``false``), e.g. {"name": 1, "email": 1}.'),
+            info=(
+                'Fields to include (``1``/``true``) or exclude (``0``/``false``), e.g. {"name": 1, "email": 1}.'
+            ),
             advanced=True,
         ),
         NestedDictInput(
@@ -320,8 +331,13 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
         vector_options: CollectionVectorOptions | None = None
         if dimension:
             vector_options = CollectionVectorOptions(dimension=dimension)
-        elif embedding_generation_provider and embedding_generation_provider != "Bring your own":
-            providers = cls.get_vectorize_providers(token=token, environment=env, api_endpoint=api_endpoint)
+        elif (
+            embedding_generation_provider
+            and embedding_generation_provider != "Bring your own"
+        ):
+            providers = cls.get_vectorize_providers(
+                token=token, environment=env, api_endpoint=api_endpoint
+            )
             provider_key = providers.get(embedding_generation_provider, [None, []])[0]
             if provider_key is None:
                 msg = (
@@ -337,7 +353,9 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
                 ),
             )
 
-        definition = CollectionDefinition(vector=vector_options) if vector_options else None
+        definition = (
+            CollectionDefinition(vector=vector_options) if vector_options else None
+        )
         return database.create_collection(
             new_collection_name,
             definition=definition,
@@ -355,12 +373,18 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
         field_name: str | None = None,
     ) -> dict:
         """Keep the base Astra DB selector behavior and toggle operation fields."""
-        build_config = await super().update_build_config(build_config, field_value, field_name)
+        build_config = await super().update_build_config(
+            build_config, field_value, field_name
+        )
 
         # On operation change (or first render), toggle visibility of
         # operation-specific inputs.
         if field_name == "operation" or field_name is None:
-            op_value = field_value if field_name == "operation" else build_config.get("operation", {}).get("value")
+            op_value = (
+                field_value
+                if field_name == "operation"
+                else build_config.get("operation", {}).get("value")
+            )
             self._apply_operation_visibility(build_config, op_value or OP_FIND)
 
         return build_config
@@ -383,8 +407,12 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
             msg = "No collection selected. Choose or create a collection first."
             raise ValueError(msg)
 
-        database: Database = self.get_database_object(api_endpoint=self.get_api_endpoint())
-        return database.get_collection(self.collection_name, keyspace=self.get_keyspace())
+        database: Database = self.get_database_object(
+            api_endpoint=self.get_api_endpoint()
+        )
+        return database.get_collection(
+            self.collection_name, keyspace=self.get_keyspace()
+        )
 
     # ----------------------------------------------------------------------
     # Operation dispatch
@@ -490,19 +518,25 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
         return [Data(data=payload)]
 
     def _op_update_one(self, collection: Collection, *, raw: bool) -> Any:
-        filter_q = self._require_mapping("filter_query", self.filter_query, allow_empty=False)
+        filter_q = self._require_mapping(
+            "filter_query", self.filter_query, allow_empty=False
+        )
         update_doc = self._require_mapping("update", self.update, allow_empty=False)
         result = collection.update_one(filter_q, update_doc, upsert=bool(self.upsert))
         return self._format_update_result(result, raw=raw)
 
     def _op_update_many(self, collection: Collection, *, raw: bool) -> Any:
-        filter_q = self._require_mapping("filter_query", self.filter_query, allow_empty=False)
+        filter_q = self._require_mapping(
+            "filter_query", self.filter_query, allow_empty=False
+        )
         update_doc = self._require_mapping("update", self.update, allow_empty=False)
         result = collection.update_many(filter_q, update_doc, upsert=bool(self.upsert))
         return self._format_update_result(result, raw=raw)
 
     def _op_delete_one(self, collection: Collection, *, raw: bool) -> Any:
-        filter_q = self._require_mapping("filter_query", self.filter_query, allow_empty=False)
+        filter_q = self._require_mapping(
+            "filter_query", self.filter_query, allow_empty=False
+        )
         result = collection.delete_one(filter_q)
         payload = {"deleted_count": result.deleted_count}
         if raw:
@@ -510,7 +544,9 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
         return [Data(data=payload)]
 
     def _op_delete_many(self, collection: Collection, *, raw: bool) -> Any:
-        filter_q = self._require_mapping("filter_query", self.filter_query, allow_empty=False)
+        filter_q = self._require_mapping(
+            "filter_query", self.filter_query, allow_empty=False
+        )
         result = collection.delete_many(filter_q)
         payload = {"deleted_count": result.deleted_count}
         if raw:
@@ -567,7 +603,9 @@ class AstraDBDataAPIComponent(AstraDBBaseComponent):
         return [Data(data=payload)]
 
     @staticmethod
-    def _require_mapping(field_name: str, value: Any, *, allow_empty: bool = True) -> dict:
+    def _require_mapping(
+        field_name: str, value: Any, *, allow_empty: bool = True
+    ) -> dict:
         """Validate that a field contains a mapping; raise a clear error otherwise."""
         if value is None or value == "":
             if allow_empty:

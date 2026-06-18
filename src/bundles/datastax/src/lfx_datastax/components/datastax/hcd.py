@@ -1,4 +1,7 @@
-from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from lfx.base.vectorstores.model import (
+    LCVectorStoreComponent,
+    check_cached_vector_store,
+)
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import DictInput, FloatInput
 from lfx.io import (
@@ -143,7 +146,11 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             name="search_type",
             display_name="Search Type",
             info="Search type to use",
-            options=["Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)"],
+            options=[
+                "Similarity",
+                "Similarity with score threshold",
+                "MMR (Max Marginal Relevance)",
+            ],
             value="Similarity",
             advanced=True,
         ),
@@ -199,13 +206,25 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
 
             dict_options = self.embedding.get("collection_vector_service_options", {})
             dict_options["authentication"] = {
-                k: v for k, v in dict_options.get("authentication", {}).items() if k and v
+                k: v
+                for k, v in dict_options.get("authentication", {}).items()
+                if k and v
             }
-            dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
-            embedding_dict = {"collection_vector_service_options": VectorServiceOptions.from_dict(dict_options)}
-            collection_embedding_api_key = self.embedding.get("collection_embedding_api_key")
+            dict_options["parameters"] = {
+                k: v for k, v in dict_options.get("parameters", {}).items() if k and v
+            }
+            embedding_dict = {
+                "collection_vector_service_options": VectorServiceOptions.from_dict(
+                    dict_options
+                )
+            }
+            collection_embedding_api_key = self.embedding.get(
+                "collection_embedding_api_key"
+            )
             if collection_embedding_api_key:
-                embedding_dict["collection_embedding_api_key"] = collection_embedding_api_key
+                embedding_dict["collection_embedding_api_key"] = (
+                    collection_embedding_api_key
+                )
 
         token_provider = UsernamePasswordTokenProvider(self.username, self.password)
         vector_store_kwargs = {
@@ -217,7 +236,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             "metric": self.metric or None,
             "batch_size": self.batch_size or None,
             "bulk_insert_batch_concurrency": self.bulk_insert_batch_concurrency or None,
-            "bulk_insert_overwrite_concurrency": self.bulk_insert_overwrite_concurrency or None,
+            "bulk_insert_overwrite_concurrency": self.bulk_insert_overwrite_concurrency
+            or None,
             "bulk_delete_concurrency": self.bulk_delete_concurrency or None,
             "setup_mode": setup_mode_value,
             "pre_delete_collection": self.pre_delete_collection or False,
@@ -225,11 +245,17 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         }
 
         if self.metadata_indexing_include:
-            vector_store_kwargs["metadata_indexing_include"] = self.metadata_indexing_include
+            vector_store_kwargs["metadata_indexing_include"] = (
+                self.metadata_indexing_include
+            )
         elif self.metadata_indexing_exclude:
-            vector_store_kwargs["metadata_indexing_exclude"] = self.metadata_indexing_exclude
+            vector_store_kwargs["metadata_indexing_exclude"] = (
+                self.metadata_indexing_exclude
+            )
         elif self.collection_indexing_policy:
-            vector_store_kwargs["collection_indexing_policy"] = self.collection_indexing_policy
+            vector_store_kwargs["collection_indexing_policy"] = (
+                self.collection_indexing_policy
+            )
 
         try:
             vector_store = AstraDBVectorStore(**vector_store_kwargs)
@@ -288,12 +314,18 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         self.log(f"Search type: {self.search_type}")
         self.log(f"Number of results: {self.number_of_results}")
 
-        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
+        if (
+            self.search_query
+            and isinstance(self.search_query, str)
+            and self.search_query.strip()
+        ):
             try:
                 search_type = self._map_search_type()
                 search_args = self._build_search_args()
 
-                docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
+                docs = vector_store.search(
+                    query=self.search_query, search_type=search_type, **search_args
+                )
             except Exception as e:
                 msg = f"Error performing search in AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e

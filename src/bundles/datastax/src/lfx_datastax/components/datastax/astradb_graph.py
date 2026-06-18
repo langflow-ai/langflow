@@ -1,7 +1,10 @@
 import orjson
 
 from lfx_datastax.base.astradb_base import AstraDBBaseComponent
-from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from lfx.base.vectorstores.model import (
+    LCVectorStoreComponent,
+    check_cached_vector_store,
+)
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import (
     DictInput,
@@ -96,21 +99,32 @@ class AstraDBGraphVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreCompon
             vector_store = AstraDBGraphVectorStore(
                 embedding=self.embedding_model,
                 collection_name=self.collection_name,
-                metadata_incoming_links_key=self.metadata_incoming_links_key or "incoming_links",
+                metadata_incoming_links_key=self.metadata_incoming_links_key
+                or "incoming_links",
                 token=self.token,
                 api_endpoint=self.get_api_endpoint(),
                 namespace=self.get_keyspace(),
                 environment=self.environment,
                 metric=self.metric or None,
                 batch_size=self.batch_size or None,
-                bulk_insert_batch_concurrency=self.bulk_insert_batch_concurrency or None,
-                bulk_insert_overwrite_concurrency=self.bulk_insert_overwrite_concurrency or None,
+                bulk_insert_batch_concurrency=self.bulk_insert_batch_concurrency
+                or None,
+                bulk_insert_overwrite_concurrency=self.bulk_insert_overwrite_concurrency
+                or None,
                 bulk_delete_concurrency=self.bulk_delete_concurrency or None,
                 setup_mode=setup_mode_value,
                 pre_delete_collection=self.pre_delete_collection,
-                metadata_indexing_include=[s for s in self.metadata_indexing_include if s] or None,
-                metadata_indexing_exclude=[s for s in self.metadata_indexing_exclude if s] or None,
-                collection_indexing_policy=orjson.loads(self.collection_indexing_policy.encode("utf-8"))
+                metadata_indexing_include=[
+                    s for s in self.metadata_indexing_include if s
+                ]
+                or None,
+                metadata_indexing_exclude=[
+                    s for s in self.metadata_indexing_exclude if s
+                ]
+                or None,
+                collection_indexing_policy=orjson.loads(
+                    self.collection_indexing_policy.encode("utf-8")
+                )
                 if self.collection_indexing_policy
                 else None,
             )
@@ -180,12 +194,18 @@ class AstraDBGraphVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreCompon
         self.log(f"Search type: {self.search_type}")
         self.log(f"Number of results: {self.number_of_results}")
 
-        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
+        if (
+            self.search_query
+            and isinstance(self.search_query, str)
+            and self.search_query.strip()
+        ):
             try:
                 search_type = self._map_search_type()
                 search_args = self._build_search_args()
 
-                docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
+                docs = vector_store.search(
+                    query=self.search_query, search_type=search_type, **search_args
+                )
 
                 # Drop links from the metadata. At this point the links don't add any value for building the
                 # context and haven't been restored to json which causes the conversion to fail.

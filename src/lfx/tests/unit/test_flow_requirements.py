@@ -1117,7 +1117,7 @@ class TestFormatMissingDependenciesError:
         msg = format_missing_dependencies_error(["chromadb"])
         assert "--no-check-dependencies" in msg
 
-       
+
 class TestFormatMissingModuleError:
     def test_maps_import_name_to_package(self):
         # langchain_chroma -> langchain-chroma via the underscore->hyphen fallback.
