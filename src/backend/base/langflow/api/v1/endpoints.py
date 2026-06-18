@@ -61,6 +61,10 @@ from langflow.services.auth.utils import (
     get_optional_user,
 )
 from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization.access_ceiling import (
+    external_access_allows,
+    get_current_external_access_context,
+)
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
@@ -1226,6 +1230,7 @@ async def get_task_status(_task_id: str) -> TaskStatusResponse:
 async def create_upload_file(
     file: UploadFile,
     flow: Annotated[Flow, Depends(get_flow)],
+    current_user: CurrentActiveUser,
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
     """Upload a file for a specific flow (Deprecated).
@@ -1237,6 +1242,17 @@ async def create_upload_file(
     ``/api/v1/files/upload/{flow_id}`` so authenticated callers can't fill
     disk through this route either.
     """
+    # Writing a file to a flow's storage is a flow mutation: enforce WRITE so
+    # the external access ceiling (e.g. a "viewer") cannot upload via this
+    # deprecated route. Mirrors the non-deprecated twin in files.py.
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.WRITE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     try:
         max_file_size_upload = settings_service.settings.max_file_size_upload
     except Exception as exc:
@@ -1273,6 +1289,19 @@ async def custom_component(
     user: CurrentActiveUser,
     request: Request,
 ) -> CustomComponentResponse:
+    # Building a custom component instantiates (and partially executes) posted
+    # code. That is a create/write-class action, so enforce the external access
+    # ceiling directly: a "viewer" external identity is denied while
+    # editor/admin (and all non-external users) pass unchanged. This route is
+    # not tied to a single owned resource, so the deny-only primitive is used
+    # instead of an ``ensure_*_permission`` guard.
+    external_context = get_current_external_access_context()
+    if external_context is not None and not external_access_allows("create", external_context):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="External credentials do not allow this action",
+        )
+
     settings_service = get_settings_service()
     settings = settings_service.settings
     all_known = None
@@ -1348,6 +1377,17 @@ async def custom_component_update(
         HTTPException: If an error occurs during component building or updating.
         SerializationError: If serialization of the updated component node fails.
     """
+    # Updating a custom component instantiates (and partially executes) posted
+    # code, a create/write-class action. Enforce the external access ceiling
+    # directly so a "viewer" external identity is denied; editor/admin (and all
+    # non-external users) pass unchanged. Same action string as ``custom_component``.
+    external_context = get_current_external_access_context()
+    if external_context is not None and not external_access_allows("create", external_context):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="External credentials do not allow this action",
+        )
+
     settings_service = get_settings_service()
     all_known = None
     if _requires_component_hash_lookups(settings_service.settings, user):

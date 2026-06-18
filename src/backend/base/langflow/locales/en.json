@@ -6130,6 +6130,8 @@
   "components.urlcomponent.inputs.continue_on_failure.info.635413d8": "If enabled, continues crawling even if some requests fail.",
   "components.urlcomponent.inputs.filter_text_html.display_name.ee58d47a": "Filter Text/HTML",
   "components.urlcomponent.inputs.filter_text_html.info.ea4adc6c": "If enabled, filters out text/css content type from the results.",
+  "components.urlcomponent.inputs.follow_redirects.display_name.0bbacd03": "Follow Redirects",
+  "components.urlcomponent.inputs.follow_redirects.info.580bb301": "If enabled, follows HTTP redirects such as http→https or www/non-www normalization, which most sites rely on to serve their content. When SSRF protection is enabled (the default), every redirect hop is re-validated against the same blocked-IP denylist and DNS-pinned before it is fetched, so following redirects cannot be used to reach internal resources. Disable to capture the first response as-is without following redirects.",
   "components.urlcomponent.inputs.format.display_name.ef22a51c": "Output Format",
   "components.urlcomponent.inputs.format.info.e5559996": "Output Format. Use 'Text' to extract the text from the HTML, 'Markdown' to parse the HTML into Markdown format, or 'HTML' for the raw HTML content.",
   "components.urlcomponent.inputs.headers.display_name.194e9fe6": "Headers",

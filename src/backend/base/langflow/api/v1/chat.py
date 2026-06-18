@@ -887,9 +887,26 @@ async def build_public_tmp(
             queue_service=queue_service,
             flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
         )
+        # Gate the public events/cancel endpoints to jobs that were actually
+        # started through this public build path, preventing unauthenticated
+        # callers from reading or cancelling private-flow builds by job_id.
+        await queue_service.register_public_job(job_id)
     except CustomComponentValidationError as exc:
         await logger.awarning(f"Public flow validation failed: {exc}")
         raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc
+    except JobQueueBackendUnavailableError as exc:
+        # The public marker could not be persisted to the shared (Redis) backend.
+        # Returning the job_id anyway would hand back an un-shareable id: on a
+        # multi-worker deployment every other worker's public events/cancel
+        # endpoints would 404 it. Cancel the just-started build (best-effort) and
+        # surface a clean 503 instead of a 500 / an unusable job_id.
+        try:
+            await queue_service.cancel_job(job_id)
+        except Exception as cancel_exc:  # noqa: BLE001
+            await logger.awarning(
+                f"Failed to cancel public job {job_id} after marker persistence failed: {cancel_exc!r}"
+            )
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -906,6 +923,20 @@ async def build_public_tmp(
     )
 
 
+async def _assert_public_job(job_id: str, queue_service: JobQueueService) -> None:
+    """Raise HTTP 404 if job_id was not registered through the public build endpoint.
+
+    Prevents unauthenticated callers from reading or cancelling private-flow
+    builds by guessing or leaking a job_id.
+
+    Why 404 not 403: returning 403 would confirm the job exists under a different
+    access tier, leaking information about private builds. 404 is neutral.
+    """
+    if not await queue_service.is_public_job_async(job_id):
+        # Static detail — do not reflect job_id back; avoid confirming which IDs exist.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+
 @router.get("/build_public_tmp/{job_id}/events")
 async def get_build_events_public(
     job_id: str,
@@ -918,6 +949,7 @@ async def get_build_events_public(
     This endpoint does not require authentication, matching the public build endpoint.
     It is used by the shareable playground to consume build events.
     """
+    await _assert_public_job(job_id, queue_service)
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
@@ -938,6 +970,7 @@ async def cancel_build_public(
     This endpoint does not require authentication, matching the public build endpoint.
     It is used by the shareable playground to cancel builds.
     """
+    await _assert_public_job(job_id, queue_service)
     try:
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
 

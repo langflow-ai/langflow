@@ -131,8 +131,8 @@ jest.mock("short-unique-id", () => {
   };
 });
 
-import { AssistantMessageBody } from "../assistant-message-body";
 import { useAssistantChat } from "../../hooks/use-assistant-chat";
+import { AssistantMessageBody } from "../assistant-message-body";
 
 const TEST_MODEL = {
   id: "openai/gpt-4o-mini",
