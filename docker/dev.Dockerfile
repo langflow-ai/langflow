@@ -31,6 +31,18 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install the d2 compiler (Epic D.3). The DIAGRAM_GENERATION engine shells out to
+# `d2` to compile-validate generated D2 before persisting it (lothal/d2_compile.py).
+# Pinned to track the `@terrastruct/d2` WASM build the frontend renders with (D.5);
+# kept in lockstep with docker/build_and_push_backend.Dockerfile (the prod image).
+ENV D2_VERSION=v0.7.1
+RUN ARCH=$(dpkg --print-architecture) \
+    && curl -fsSL "https://github.com/terrastruct/d2/releases/download/${D2_VERSION}/d2-${D2_VERSION}-linux-${ARCH}.tar.gz" \
+       | tar -xz -C /tmp \
+    && install "/tmp/d2-${D2_VERSION}/bin/d2" /usr/local/bin/d2 \
+    && rm -rf "/tmp/d2-${D2_VERSION}" \
+    && d2 --version
+
 COPY . /app
 
 # Install dependencies using uv

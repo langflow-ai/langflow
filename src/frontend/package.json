@@ -51,7 +51,6 @@
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/line-clamp": "^0.4.4",
     "@tanstack/react-query": "^5.49.2",
-    "@terrastruct/d2": "^0.1.33",
     "@types/axios": "^0.14.0",
     "@types/mustache": "^4.2.6",
     "@xyflow/react": "^12.3.6",

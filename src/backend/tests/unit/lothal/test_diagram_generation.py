@@ -1,17 +1,23 @@
-"""The DIAGRAM_GENERATION phase engine (Story 2.1, re-pointed to D2 in Epic D.2).
+"""The DIAGRAM_GENERATION phase engine (Story 2.1; D2 in D.2; compile-validation in D.3).
 
 Following the backlog's testing philosophy, these tests inject a fake `call_llm`
-and assert *our* behaviour: the engine asks the model for D2 source and carries
-the returned D2 verbatim on `LLMResponse.diagram_d2` with `next_phase` None and a
-grounded assistant message; a markdown fence is stripped; an empty reply fails as
-a bad model round-trip. No real LLM, no DB — the engine is pure generation logic
-and never persists (that is the chat endpoint's job).
+(and a controllable `compile_d2`) and assert *our* behaviour: the engine asks the
+model for D2 source and carries the returned D2 verbatim on
+`LLMResponse.diagram_d2` with `next_phase` None and a grounded assistant message;
+a markdown fence is stripped; an empty reply fails as a bad model round-trip. No
+real LLM, no DB — the engine is pure generation logic and never persists (that is
+the chat endpoint's job).
 
-The "does the D2 compile?" validation gate with one corrective retry is D.3 (it
-needs the D2 compiler, D.5), so it is exercised there, not here.
+D.3's validation gate is exercised here: D2 that fails to compile triggers one
+corrective retry carrying the compiler's error; a second failure raises
+`LLMConnectionError` (→ 502); an unavailable compiler degrades to storing the
+source unvalidated. The compiler itself (the `d2` subprocess) is covered in
+`test_d2_compile.py`; here `compile_d2` is stubbed so the engine logic is tested
+deterministically without the binary.
 """
 
 import pytest
+from langflow.lothal.d2_compile import D2CompileResult, D2CompilerUnavailableError
 from langflow.lothal.engines import diagram_generation
 from langflow.lothal.engines.diagram_generation import (
     MIN_MESSAGES,
@@ -47,6 +53,29 @@ def fake_llm(monkeypatch):
     return captured
 
 
+@pytest.fixture
+def fake_compile(monkeypatch):
+    """Replace `compile_d2` with a stub returning queued results and capturing calls.
+
+    Queue `results` with `D2CompileResult`s (or a `D2CompilerUnavailableError`
+    instance to simulate a missing binary). Any call past the queue's end returns
+    a successful compile, so happy-path tests need not configure it.
+    """
+    captured = {"calls": [], "results": []}
+
+    async def _compile_d2(src):
+        captured["calls"].append(src)
+        results = captured["results"]
+        idx = len(captured["calls"]) - 1
+        outcome = results[idx] if idx < len(results) else D2CompileResult(ok=True)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    monkeypatch.setattr(diagram_generation, "compile_d2", _compile_d2)
+    return captured
+
+
 # --- registration ------------------------------------------------------------
 
 
@@ -59,7 +88,7 @@ def test_engine_is_registered_under_diagram_generation():
 # --- happy path --------------------------------------------------------------
 
 
-async def test_valid_reply_yields_d2_and_no_transition(fake_llm):
+async def test_valid_reply_yields_d2_and_no_transition(fake_llm, fake_compile):
     fake_llm["replies"] = [D2_SOURCE]
 
     response = await DiagramGenerationEngine().process([], "build it")
@@ -72,11 +101,14 @@ async def test_valid_reply_yields_d2_and_no_transition(fake_llm):
     assert response.diagram is None
     # The assistant message is grounded in the actual diagram (its 4 interactions).
     assert "4 interactions" in response.text
-    assert len(fake_llm["calls"]) == 1  # no retry on the D.2 path
+    assert len(fake_llm["calls"]) == 1  # compiled first time → no retry
+    # The gate ran against the extracted D2 (not the raw reply).
+    assert fake_compile["calls"] == [D2_SOURCE]
 
 
-async def test_prompt_asks_the_model_for_d2(fake_llm):
+async def test_prompt_asks_the_model_for_d2(fake_llm, fake_compile):
     fake_llm["replies"] = [D2_SOURCE]
+    fake_compile["results"] = [D2CompileResult(ok=True)]
 
     await DiagramGenerationEngine().process([], "build it")
 
@@ -86,26 +118,83 @@ async def test_prompt_asks_the_model_for_d2(fake_llm):
     assert "shape: sequence_diagram" in system_message["content"]
 
 
-async def test_reply_wrapped_in_code_fence_is_unwrapped(fake_llm):
+async def test_reply_wrapped_in_code_fence_is_unwrapped(fake_llm, fake_compile):
     fake_llm["replies"] = [f"```d2\n{D2_SOURCE}\n```"]
 
     response = await DiagramGenerationEngine().process([], "build it")
 
-    # The fence is stripped; the stored D2 is the bare source, ready to compile.
+    # The fence is stripped; the stored D2 is the bare source, and the compile
+    # gate sees that bare source — not the fenced reply.
     assert response.diagram_d2 == D2_SOURCE
+    assert fake_compile["calls"] == [D2_SOURCE]
     assert len(fake_llm["calls"]) == 1
 
 
 # --- empty round-trip --------------------------------------------------------
 
 
-async def test_empty_reply_raises_connection_error(fake_llm):
+async def test_empty_reply_raises_connection_error(fake_llm, fake_compile):
     fake_llm["replies"] = ["   \n  "]
 
     with pytest.raises(LLMConnectionError, match="empty diagram"):
         await DiagramGenerationEngine().process([], "build it")
 
     assert len(fake_llm["calls"]) == 1
+    assert fake_compile["calls"] == []  # empty reply is rejected before the compile gate
+
+
+# --- compile-validation gate (D.3) -------------------------------------------
+
+
+async def test_uncompilable_d2_retries_once_then_succeeds(fake_llm, fake_compile):
+    bad_d2 = "user -> : broken"
+    fake_llm["replies"] = [bad_d2, D2_SOURCE]
+    fake_compile["results"] = [
+        D2CompileResult(ok=False, error="1:1: connection missing destination"),
+        D2CompileResult(ok=True),
+    ]
+
+    response = await DiagramGenerationEngine().process([], "build it")
+
+    # Second, compilable attempt is what gets stored.
+    assert response.diagram_d2 == D2_SOURCE
+    assert len(fake_llm["calls"]) == 2
+    assert fake_compile["calls"] == [bad_d2, D2_SOURCE]
+
+    # The retry resends the conversation plus the bad reply and the compiler error
+    # as a correction, so attempt two is a fix rather than a blind redo.
+    retry_messages = fake_llm["calls"][1]["messages"]
+    assert {"role": "assistant", "content": bad_d2} in retry_messages
+    correction = retry_messages[-1]
+    assert correction["role"] == "user"
+    assert "connection missing destination" in correction["content"]
+
+
+async def test_uncompilable_twice_raises_connection_error(fake_llm, fake_compile):
+    fake_llm["replies"] = ["first bad", "second bad"]
+    fake_compile["results"] = [
+        D2CompileResult(ok=False, error="1:1: connection missing destination"),
+        D2CompileResult(ok=False, error="2:1: missing value after colon"),
+    ]
+
+    with pytest.raises(LLMConnectionError, match="failed to compile twice"):
+        await DiagramGenerationEngine().process([], "build it")
+
+    # Exactly one corrective retry; the final (second) compiler error is surfaced.
+    assert len(fake_llm["calls"]) == 2
+    assert len(fake_compile["calls"]) == 2
+
+
+async def test_compiler_unavailable_skips_gate_and_stores(fake_llm, fake_compile):
+    # A missing binary is an environment fault, not a bad diagram: store the source
+    # unvalidated rather than fail the turn or wrongly trigger a retry.
+    fake_llm["replies"] = [D2_SOURCE]
+    fake_compile["results"] = [D2CompilerUnavailableError("no d2 on PATH")]
+
+    response = await DiagramGenerationEngine().process([], "build it")
+
+    assert response.diagram_d2 == D2_SOURCE
+    assert len(fake_llm["calls"]) == 1  # no retry — the gate was skipped, not failed
 
 
 # --- prompt sanity -----------------------------------------------------------

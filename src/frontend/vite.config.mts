@@ -43,10 +43,6 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "build",
     },
-    // The D2 WASM build (@terrastruct/d2) embeds its worker + wasm as a base64
-    // blob; esbuild's dep-optimization mangles that, so keep it un-prebundled.
-    // See src/pages/lothal/components/d2/render.ts (Epic D.5).
-    optimizeDeps: { exclude: ["@terrastruct/d2"] },
     define: {
       "import.meta.env.BACKEND_URL": JSON.stringify(
         envLangflow.BACKEND_URL ?? "http://localhost:7860",

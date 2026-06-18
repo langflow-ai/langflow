@@ -181,14 +181,16 @@ class PRDResponse(BaseModel):
 
 
 class DiagramResponse(BaseModel):
-    """`GET /projects/{id}/diagram` — the D2 source for the project (Epic D.4).
+    """`GET /projects/{id}/diagram` — D2 source + server-rendered SVG (Epic D.4/D.6).
 
     The diagram artifact is D2 source text now, not an xyflow graph (that was
     Story 2.3). `d2` is the stored `lothal_project.diagram_d2`, returned verbatim:
     `null` while the project is past CLARIFICATION but before the generator has
-    emitted anything (an empty payload, not an error). The frontend compiles the
-    source to SVG in-browser (Epic D.5), so `svg` is a reserved optional slot for
-    a future server-rendered SVG and is `null` today.
+    emitted anything (an empty payload, not an error). `svg` is that source
+    rendered to SVG by the backend `d2` compiler (D.6) — the frontend displays it
+    and ships no D2 compiler of its own. `svg` is `null` when there is no `d2`, or
+    if rendering was not possible (compiler unavailable / render failure), which
+    is logged but never fails the read.
     """
 
     d2: str | None = None

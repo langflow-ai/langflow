@@ -10,6 +10,7 @@ Common to both: every endpoint requires auth and appears in the OpenAPI schema.
 """
 
 import json
+import shutil
 from importlib.util import find_spec
 from uuid import UUID, uuid4
 
@@ -874,8 +875,7 @@ async def test_prd_404_for_unowned_project(client: AsyncClient, logged_in_header
 # `lothal_project.diagram_d2`. Seeded straight into the column here — the read
 # never compiles or validates it.
 _SEED_D2 = (
-    "shape: sequence_diagram\nuser: User\napi: API\n\n"
-    "user -> api: request\napi -> user: response\nuser -> api: ack"
+    "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: request\napi -> user: response\nuser -> api: ack"
 )
 
 
@@ -885,6 +885,28 @@ async def _set_phase_and_d2(project_pk: UUID, *, phase: str, diagram_d2: str | N
         project = await session.get(Project, project_pk)
         project.phase = phase
         project.diagram_d2 = diagram_d2
+
+
+_STUB_SVG = "<svg data-stub='diagram'></svg>"
+
+
+@pytest.fixture
+def stub_diagram_render(monkeypatch):
+    """Make GET /diagram's server-side SVG render deterministic, regardless of `d2`.
+
+    The endpoint renders stored D2 to SVG via the `d2` binary (D.6). These read
+    tests assert the d2/phase/ownership contract, not the compiler, so we stub the
+    render to a fixed SVG so they pass identically whether or not `d2` is installed
+    in the test environment. The real compile→SVG path is covered by the gated
+    `test_diagram_server_renders_svg_real` below and in `test_d2_compile.py`.
+    """
+    from langflow.lothal.d2_compile import D2RenderResult
+
+    async def _render(_src: str) -> D2RenderResult:
+        return D2RenderResult(svg=_STUB_SVG)
+
+    monkeypatch.setattr(lothal_api, "render_d2", _render)
+    return _STUB_SVG
 
 
 async def test_diagram_403_in_clarification(client: AsyncClient, logged_in_headers: dict):
@@ -904,8 +926,8 @@ async def test_diagram_empty_before_generation_completes(client: AsyncClient, lo
     assert response.json() == {"d2": None, "svg": None}
 
 
-async def test_diagram_returns_seeded_d2(client: AsyncClient, logged_in_headers: dict):
-    """A seeded `diagram_d2` comes back as the D2 source verbatim, with `svg` reserved as null."""
+async def test_diagram_returns_seeded_d2(client: AsyncClient, logged_in_headers: dict, stub_diagram_render):
+    """A seeded `diagram_d2` comes back as the D2 source verbatim plus the rendered SVG."""
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
     await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=_SEED_D2)
 
@@ -913,11 +935,11 @@ async def test_diagram_returns_seeded_d2(client: AsyncClient, logged_in_headers:
     assert response.status_code == status.HTTP_200_OK
     body = response.json()
 
-    # The D2 shape: source text plus a reserved (null today) server-render slot —
-    # no xyflow `nodes`/`edges`.
+    # The D2 shape: source text plus the server-rendered SVG (D.6) — no xyflow
+    # `nodes`/`edges`.
     assert set(body) == {"d2", "svg"}
     assert body["d2"] == _SEED_D2
-    assert body["svg"] is None
+    assert body["svg"] == stub_diagram_render
 
 
 async def test_diagram_readable_in_later_phases(client: AsyncClient, logged_in_headers: dict):
@@ -930,15 +952,19 @@ async def test_diagram_readable_in_later_phases(client: AsyncClient, logged_in_h
         assert response.json()["d2"] == _SEED_D2, phase
 
 
-async def test_diagram_source_returned_verbatim_never_500(client: AsyncClient, logged_in_headers: dict):
-    """D2 is opaque text returned untouched — the read never parses it, so it can never 500.
+async def test_diagram_source_returned_verbatim_never_500(
+    client: AsyncClient, logged_in_headers: dict, stub_diagram_render
+):
+    """D2 is opaque text returned as the `d2` field untouched — the read never 500s.
 
     Whatever real source was stored (even content that would not compile) comes
-    straight back verbatim; a blank or whitespace-only store is "no diagram" and
-    normalises to the empty payload (`d2: null`).
+    straight back verbatim on `d2`; a blank or whitespace-only store is "no
+    diagram" and normalises to the empty payload (`d2: null, svg: null`). The SVG
+    render is stubbed here (its real behaviour is tested separately), so this
+    focuses on the `d2` verbatim + never-500 contract.
     """
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
-    for raw, expected in (
+    for raw, expected_d2 in (
         ("not valid d2 {{{", "not valid d2 {{{"),
         ("shape: sequence_diagram\na -> b: hi", "shape: sequence_diagram\na -> b: hi"),
         ("  shape: sequence_diagram  ", "  shape: sequence_diagram  "),  # real content kept verbatim, not trimmed
@@ -949,7 +975,33 @@ async def test_diagram_source_returned_verbatim_never_500(client: AsyncClient, l
         await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=raw)
         response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK, raw
-        assert response.json() == {"d2": expected, "svg": None}, raw
+        body = response.json()
+        assert body["d2"] == expected_d2, raw
+        # No diagram → no SVG; real source → the (stubbed) server render.
+        assert body["svg"] == (None if expected_d2 is None else stub_diagram_render), raw
+
+
+@pytest.mark.skipif(shutil.which("d2") is None, reason="the `d2` binary is not installed")
+async def test_diagram_server_renders_svg_real(client: AsyncClient, logged_in_headers: dict):
+    """With the real `d2` compiler present, GET /diagram returns a server-rendered SVG (D.6).
+
+    Valid stored D2 → `svg` is real SVG markup the frontend displays directly;
+    non-compilable stored D2 → `svg` is null (logged, never 500). Not stubbed —
+    this is the end-to-end backend-render contract.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
+
+    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=_SEED_D2)
+    body = (await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)).json()
+    assert body["d2"] == _SEED_D2
+    assert body["svg"] is not None
+    assert "<svg" in body["svg"]
+
+    # Non-compilable source still 200s; the render fails closed to svg: null.
+    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2="not valid d2 {{{")
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"d2": "not valid d2 {{{", "svg": None}
 
 
 async def test_diagram_legacy_xyflow_only_reads_empty(client: AsyncClient, logged_in_headers: dict):
