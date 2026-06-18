@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
@@ -22,6 +23,7 @@ export function SpanNode({
   onToggle,
   onSelect,
 }: SpanNodeProps) {
+  const { t } = useTranslation();
   const nodes = useFlowStore((state) => state.nodes);
   const componentIconMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -71,6 +73,7 @@ export function SpanNode({
         }}
         tabIndex={-1}
         aria-hidden={!hasChildren}
+        aria-label={hasChildren ? (isExpanded ? t("trace.collapseSpan") : t("trace.expandSpan")) : undefined}
       >
         <IconComponent
           name={isExpanded ? "ChevronDown" : "ChevronRight"}
