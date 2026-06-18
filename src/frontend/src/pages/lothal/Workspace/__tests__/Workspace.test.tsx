@@ -198,13 +198,14 @@ describe("Lothal Workspace", () => {
   it("sends a typed message and clears the input", async () => {
     mockUseProject.mockReturnValue({ data: project, isLoading: false });
     render(<Workspace />);
-    const input = screen.getByLabelText("Message") as HTMLTextAreaElement;
-    fireEvent.change(input, { target: { value: "A tide app" } });
+    // The composer is a contentEditable field (Epic D.7), so drive its DOM.
+    const input = screen.getByLabelText("Message") as HTMLDivElement;
+    input.appendChild(document.createTextNode("A tide app"));
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await waitFor(() =>
       expect(mockSendMutate).toHaveBeenCalledWith("A tide app"),
     );
-    expect(input.value).toBe("");
+    expect(input.textContent).toBe("");
   });
 
   // --- Code surface (right pane in code phases) ---

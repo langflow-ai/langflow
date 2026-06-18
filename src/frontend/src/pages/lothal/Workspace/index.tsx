@@ -4,10 +4,17 @@
 // the real `/messages` + `/chat` endpoints — no scripted playback. While those
 // are 501 stubs (Epic 1) the chat column shows the uniform NotReady state; it
 // "goes live" with no UI change once the clarification backend lands. The right
-// pane is the real @xyflow/react sequence-diagram canvas (Story B.4), or the
-// generated-code surface (Story B.5) once the build reaches a code phase.
+// pane is the live D2 diagram canvas (Epic D.6) — double-click an element to
+// reference it inline in the composer (Epic D.7) — or the generated-code surface
+// (Story B.5) once the build reaches a code phase.
 
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   type Message,
@@ -23,7 +30,8 @@ import {
   Button,
   CanvasSurface,
   ChatBubble,
-  ChatDock,
+  ChatComposer,
+  type ChatComposerHandle,
   CodeView,
   EmptyHint,
   isCodePhase,
@@ -115,10 +123,17 @@ function ThinkingBubble() {
 
 // --- Chat --------------------------------------------------------------------
 
-function ChatPanel({ project }: { project: Project }) {
+function ChatPanel({
+  project,
+  composerRef,
+}: {
+  project: Project;
+  // Held by the Workspace so a double-clicked canvas element can drop a chip in
+  // the composer (Epic D.7).
+  composerRef: RefObject<ChatComposerHandle | null>;
+}) {
   const { data: messages, isLoading, isError, error } = useMessages(project.id);
   const send = useSendMessage(project.id);
-  const [input, setInput] = useState("");
   // The user's in-flight turn, shown optimistically until the refetched thread
   // (which now includes it) replaces it.
   const [pending, setPending] = useState<string | null>(null);
@@ -150,13 +165,6 @@ function ChatPanel({ project }: { project: Project }) {
       setPending(null);
       setSendFailed(true);
     }
-  };
-
-  const handleSend = () => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-    setInput("");
-    submit(trimmed);
   };
 
   if (isLoading) {
@@ -271,10 +279,9 @@ function ChatPanel({ project }: { project: Project }) {
         <div ref={bottomRef} />
       </div>
 
-      <ChatDock
-        value={input}
-        onChange={setInput}
-        onSend={handleSend}
+      <ChatComposer
+        ref={composerRef}
+        onSend={submit}
         disabled={send.isPending}
       />
     </div>
@@ -356,6 +363,10 @@ function WorkspaceView() {
   } = useProject(projectId ?? "");
   const username = useAuthStore((s) => s.userData?.username);
   const initial = username ? username.charAt(0).toUpperCase() : "";
+  // Bridges the right-pane canvas to the left-pane composer: a double-clicked
+  // diagram element resolves to an anchor and drops an inline chip at the caret
+  // (Epic D.7).
+  const composerRef = useRef<ChatComposerHandle>(null);
 
   // Tab title carries the open project ("Tide Tracker — Lothal"); restored on
   // the way out.
@@ -546,18 +557,22 @@ function WorkspaceView() {
             minHeight: 0,
           }}
         >
-          <ChatPanel project={project} />
+          <ChatPanel project={project} composerRef={composerRef} />
         </div>
 
         {/* Right pane — the code surface once generation begins (Story B.5),
-            otherwise the real @xyflow/react sequence-diagram canvas (Story B.4),
-            which itself falls back to a phase-aware placeholder before a diagram
-            exists and to NotReady while /diagram is a 501 stub. */}
+            otherwise the live D2 canvas (Epic D.6): double-clicking a box or
+            arrow drops an inline reference chip in the composer (Epic D.7). It
+            falls back to a phase-aware placeholder before a diagram exists and
+            to NotReady while /diagram can't render. */}
         <div style={{ flex: 1, minWidth: 0, background: "var(--paper-deep)" }}>
           {isCodePhase(project.phase) ? (
             <CodePanel project={project} />
           ) : (
-            <CanvasSurface project={project} />
+            <CanvasSurface
+              project={project}
+              onAnchor={(a) => composerRef.current?.insertAnchor(a)}
+            />
           )}
         </div>
       </div>

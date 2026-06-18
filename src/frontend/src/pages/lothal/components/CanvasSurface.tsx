@@ -17,6 +17,7 @@ import type { Project } from "@/controllers/API/queries/lothal";
 import { useDiagram } from "@/controllers/API/queries/lothal";
 import { CanvasPlaceholder } from "./CanvasPlaceholder";
 import { D2Canvas } from "./D2Canvas";
+import type { Anchor } from "./d2/anchor";
 import { isNotImplemented, NotReady } from "./NotReady";
 import { phaseIndex } from "./phases";
 
@@ -37,7 +38,15 @@ function CanvasLoading() {
   );
 }
 
-export function CanvasSurface({ project }: { project: Project }) {
+export function CanvasSurface({
+  project,
+  onAnchor,
+}: {
+  project: Project;
+  /** Forwarded to <D2Canvas>: a double-clicked element drops a chip in the
+   *  composer (Epic D.7). */
+  onAnchor?: (anchor: Anchor) => void;
+}) {
   // The diagram only exists from DIAGRAM_GENERATION onward; before that the
   // endpoint is phase-gated, so we don't even fetch it.
   const hasDiagramPhase = phaseIndex(project.phase) >= 1;
@@ -88,5 +97,5 @@ export function CanvasSurface({ project }: { project: Project }) {
     );
   }
 
-  return <D2Canvas svg={diagram.svg} />;
+  return <D2Canvas svg={diagram.svg} onAnchor={onAnchor} />;
 }
