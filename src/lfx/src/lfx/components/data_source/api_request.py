@@ -819,8 +819,21 @@ class APIRequestComponent(Component):
             content_disposition = response.headers["Content-Disposition"]
             filename_match = re.search(r'filename="(.+?)"', content_disposition)
             if filename_match:
-                extracted_filename = filename_match.group(1)
-                filename = extracted_filename
+                # Reduce to the basename to prevent path traversal: the response
+                # (and therefore this header) is fully attacker-influenced, so a
+                # value like filename="../../../../tmp/evil.sh" must not escape
+                # component_temp_dir. Path(...).name strips any directory parts.
+                # Normalize backslashes to forward slashes first so Windows-style
+                # separators (e.g. filename="..\..\tmp\evil.sh") are also stripped
+                # on POSIX, where "\\" is a valid filename character that
+                # Path(...).name would otherwise leave intact. NUL bytes are
+                # stripped too: they survive Path(...).name and would otherwise
+                # make the later .resolve() raise a cryptic "embedded null
+                # character" ValueError instead of failing cleanly here.
+                normalized_filename = filename_match.group(1).replace("\\", "/").replace("\x00", "")
+                extracted_filename = Path(normalized_filename).name
+                if extracted_filename and extracted_filename not in (".", ".."):
+                    filename = extracted_filename
 
         # Step 3: Infer file extension or use part of the request URL if no filename
         if not filename:
@@ -843,6 +856,12 @@ class APIRequestComponent(Component):
 
         # Step 4: Define the full file path
         file_path = component_temp_dir / filename
+
+        # Defense-in-depth: ensure the resolved path stays within the component
+        # temp dir even if filename derivation above is ever changed.
+        if not file_path.resolve().is_relative_to(component_temp_dir.resolve()):
+            msg = "Resolved output path escapes the component temporary directory"
+            raise ValueError(msg)
 
         # Step 5: Check if file exists asynchronously and handle accordingly
         try:
