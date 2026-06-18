@@ -312,8 +312,18 @@ def format_syntax_error_message(exc: SyntaxError) -> str:
 
 
 def get_causing_exception(exc: BaseException) -> BaseException:
-    """Get the causing exception from an exception."""
-    if hasattr(exc, "__cause__") and exc.__cause__:
+    """Get the causing exception from an exception.
+
+    Walks the ``__cause__`` chain to the root, but stops at a bundle-shim
+    ``ModuleNotFoundError`` whose curated "components moved to ..." message is
+    raised ``from`` the raw ``No module named '<x>'`` it wraps, so the curated
+    message wins instead of unwrapping past it to the bare cause underneath.
+    """
+    # A raw import error reads "No module named '<x>'"; anything else is a
+    # curated message (e.g. a bundle shim) that should win over its cause.
+    if isinstance(exc, ModuleNotFoundError) and not str(exc).startswith("No module named"):
+        return exc
+    if getattr(exc, "__cause__", None):
         return get_causing_exception(exc.__cause__)
     return exc
 
