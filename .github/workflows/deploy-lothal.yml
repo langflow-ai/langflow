@@ -187,6 +187,11 @@ jobs:
     steps:
       - name: Checkout (for the compose file)
         uses: actions/checkout@v6
+        with:
+          # Pin to the exact commit being deployed (not the default branch), so the
+          # compose shipped to the box always matches the images built from this ref.
+          ref: ${{ needs.refs.outputs.full_sha }}
+          persist-credentials: false
 
       # Ship the topology (compose) from the deployed commit BEFORE deploying, so the
       # box never drifts from the repo. Only docker-compose.prod.yml is delivered —
