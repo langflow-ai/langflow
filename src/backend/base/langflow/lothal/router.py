@@ -30,16 +30,21 @@ class LLMResponse:
     `text` is the assistant message and is always present. `suggestions` are
     clarification chips and stay `[]` for phases that don't offer them.
     `next_phase` is the transition target, or `None` when the turn keeps the
-    project in its current phase. `diagram` is a validated xyflow graph
-    (`{nodes, edges}` as a plain dict) the diagram generator emits for the chat
-    endpoint to persist to `lothal_project.diagram_json`; `None` for every phase
-    that doesn't touch the diagram (the engine itself never writes the DB).
+    project in its current phase.
+
+    A turn carries at most one diagram artifact for the chat endpoint to persist:
+    `diagram_d2` is **D2 source text** (the Epic D artifact, persisted to
+    `lothal_project.diagram_d2`); `diagram` is the legacy xyflow graph
+    (`{nodes, edges}` as a plain dict → `diagram_json`) kept for transitional
+    reads. Both are `None` for every phase that doesn't touch the diagram (the
+    engine itself never writes the DB).
     """
 
     text: str
     suggestions: list[str] = field(default_factory=list)
     next_phase: str | None = None
     diagram: dict | None = None
+    diagram_d2: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.text, str) or not self.text.strip():
@@ -53,6 +58,9 @@ class LLMResponse:
             raise ValueError(msg)
         if self.diagram is not None and not isinstance(self.diagram, dict):
             msg = "LLMResponse.diagram must be a dict or None."
+            raise ValueError(msg)
+        if self.diagram_d2 is not None and not isinstance(self.diagram_d2, str):
+            msg = "LLMResponse.diagram_d2 must be a string or None."
             raise ValueError(msg)
 
 

@@ -295,10 +295,17 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
     )
     session.add(assistant_message)
 
+    if response.diagram_d2 is not None:
+        # Epic D.2: the diagram generator emits D2 source for us to persist;
+        # `diagram_d2` is the canonical store going forward (D.4 re-points
+        # `GET /diagram` at it). Stored verbatim — D2 owns its own layout.
+        project.diagram_d2 = response.diagram_d2
+        session.add(project)
+
     if response.diagram is not None:
-        # The diagram generator (Story 2.1) emits a validated xyflow graph for us
-        # to persist; `diagram_json` is the canonical store (a JSON string of the
-        # full graph), parsed back to an object at the `ProjectRead` boundary.
+        # Legacy xyflow path (Story 2.1): kept for transitional reads until D.13.
+        # `diagram_json` is a JSON string of the full graph, parsed back to an
+        # object at the `ProjectRead` boundary.
         project.diagram_json = json.dumps(response.diagram)
         session.add(project)
 

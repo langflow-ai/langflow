@@ -710,35 +710,23 @@ async def test_chat_three_no_signal_turns_then_clarity_transition(
     assert "Overview" in project["prd_content"]
 
 
-# --- Diagram generation (Story 2.1) ------------------------------------------
+# --- Diagram generation (Story 2.1, re-pointed to D2 in Epic D.2) -------------
 
 
 def _diagram_reply() -> str:
-    """A valid xyflow graph in the canonical shape the generator emits."""
-    return json.dumps(
-        {
-            "nodes": [
-                {"id": "user", "type": "actorNode", "position": {"x": 0, "y": 0}, "data": {"label": "User"}},
-                {"id": "api", "type": "systemNode", "position": {"x": 240, "y": 0}, "data": {"label": "API"}},
-            ],
-            "edges": [
-                {"id": "e1", "source": "user", "target": "api", "data": {"order": 1, "label": "submit"}},
-                {"id": "e2", "source": "api", "target": "user", "animated": True, "data": {"order": 2, "label": "ok"}},
-                {"id": "e3", "source": "user", "target": "api", "data": {"order": 3, "label": "poll"}},
-            ],
-        }
-    )
+    """A D2 sequence diagram in the shape the generator now emits (Epic D.2)."""
+    return "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok\nuser -> api: poll"
 
 
 async def test_diagram_generation_turn_persists_graph_and_holds_phase(
     client: AsyncClient, logged_in_headers: dict, monkeypatch
 ):
-    """Backlog acceptance for Story 2.1 (fake LLM).
+    """Backlog acceptance for Epic D.2 (fake LLM).
 
     A chat turn while the project is in DIAGRAM_GENERATION runs the generator
-    engine for real (only the model call is faked): the injected xyflow graph is
-    validated and persisted to `lothal_project.diagram_json`, the turn does not
-    transition the project, and the stored graph is readable back as an object.
+    engine for real (only the model call is faked): the injected D2 source is
+    persisted verbatim to `lothal_project.diagram_d2`, the turn does not
+    transition the project, and the legacy `diagram_json` stays null.
     """
     project_id = await _create_chat_project(client, logged_in_headers)
 
@@ -763,23 +751,26 @@ async def test_diagram_generation_turn_persists_graph_and_holds_phase(
     assert reply["role"] == "ASSISTANT"
     assert reply["phase"] == "DIAGRAM_GENERATION"  # the turn ran under (and stays in) this phase
     assert reply["suggestions"] == []
+    assert "3 interactions" in reply["content"]  # text grounded in the generated D2
 
-    # The project read exposes the persisted graph as a parsed object, phase held.
+    # The phase is held (next_phase was None) and the D2 lands in `diagram_d2`
+    # verbatim while the legacy `diagram_json` stays null (D.4 re-points the read).
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "DIAGRAM_GENERATION"  # next_phase was None — no transition
-    diagram = project["diagram_json"]
-    assert diagram is not None
-    assert [n["id"] for n in diagram["nodes"]] == ["user", "api"]
-    assert [e["data"]["order"] for e in diagram["edges"]] == [1, 2, 3]
+    assert project["phase"] == "DIAGRAM_GENERATION"
+    assert project["diagram_json"] is None
+    async with session_scope() as session:
+        stored = await session.get(Project, UUID(project_id))
+        assert stored.diagram_d2 == _diagram_reply()
 
 
-async def test_diagram_generation_invalid_twice_is_502_and_rolls_back(
+async def test_diagram_generation_empty_reply_is_502_and_rolls_back(
     client: AsyncClient, logged_in_headers: dict, monkeypatch
 ):
-    """Two invalid graphs fail the turn as a bad model round-trip and persist nothing.
+    """An empty D2 reply fails the turn as a bad model round-trip and persists nothing.
 
     The whole turn is one transaction, so the user message is rolled back too and
-    `diagram_json` stays null — the user can resend cleanly.
+    `diagram_d2` stays null — the user can resend cleanly. (Compile-validation
+    with a corrective retry is Epic D.3.)
     """
     project_id = await _create_chat_project(client, logged_in_headers)
     async with session_scope() as session:
@@ -788,7 +779,7 @@ async def test_diagram_generation_invalid_twice_is_502_and_rolls_back(
         session.add(project)
 
     async def fake_call_llm(_messages, **_kwargs):
-        return json.dumps({"nodes": [], "edges": []})  # too few nodes/edges — always invalid
+        return "   \n  "  # empty after fences/whitespace are stripped
 
     monkeypatch.setattr(diagram_engine, "call_llm", fake_call_llm)
 
@@ -800,8 +791,10 @@ async def test_diagram_generation_invalid_twice_is_502_and_rolls_back(
     assert response.status_code == status.HTTP_502_BAD_GATEWAY
 
     # Nothing persisted: no diagram, and the user turn rolled back with it.
-    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["diagram_json"] is None
+    async with session_scope() as session:
+        stored = await session.get(Project, UUID(project_id))
+        assert stored.diagram_d2 is None
+        assert stored.diagram_json is None
     messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
     assert messages == []
 

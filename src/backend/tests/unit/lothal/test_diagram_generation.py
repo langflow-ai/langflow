@@ -1,37 +1,37 @@
-"""Story 2.1 — the DIAGRAM_GENERATION phase engine.
+"""The DIAGRAM_GENERATION phase engine (Story 2.1, re-pointed to D2 in Epic D.2).
 
 Following the backlog's testing philosophy, these tests inject a fake `call_llm`
-and assert *our* behaviour: a valid xyflow graph reply becomes an `LLMResponse`
-carrying that graph on `.diagram` with `next_phase` None; an invalid first reply
-is retried exactly once with the validator's complaint fed back; two invalid
-replies fail as a bad model round-trip. No real LLM, no DB — the engine is pure
-generation logic and never persists (that is the chat endpoint's job).
+and assert *our* behaviour: the engine asks the model for D2 source and carries
+the returned D2 verbatim on `LLMResponse.diagram_d2` with `next_phase` None and a
+grounded assistant message; a markdown fence is stripped; an empty reply fails as
+a bad model round-trip. No real LLM, no DB — the engine is pure generation logic
+and never persists (that is the chat endpoint's job).
+
+The "does the D2 compile?" validation gate with one corrective retry is D.3 (it
+needs the D2 compiler, D.5), so it is exercised there, not here.
 """
 
-import json
-
 import pytest
-from langflow.lothal.diagram import MIN_EDGES, MIN_NODES, validate_diagram
 from langflow.lothal.engines import diagram_generation
-from langflow.lothal.engines.diagram_generation import DiagramGenerationEngine
+from langflow.lothal.engines.diagram_generation import (
+    MIN_MESSAGES,
+    MIN_PARTICIPANTS,
+    DiagramGenerationEngine,
+)
 from langflow.lothal.llm import LLMConnectionError
 from langflow.lothal.router import LLMResponse, get_engine
 from langflow.services.database.models.lothal_project.model import ProjectPhase
 
+D2_SOURCE = """\
+shape: sequence_diagram
+user: User
+api: API
+db: Database
 
-def _graph() -> dict:
-    """A minimal valid xyflow graph: 2 nodes, 3 ordered edges, full positions."""
-    return {
-        "nodes": [
-            {"id": "user", "type": "actorNode", "position": {"x": 0, "y": 0}, "data": {"label": "User"}},
-            {"id": "api", "type": "systemNode", "position": {"x": 240, "y": 0}, "data": {"label": "API"}},
-        ],
-        "edges": [
-            {"id": "e1", "source": "user", "target": "api", "data": {"order": 1, "label": "submit"}},
-            {"id": "e2", "source": "api", "target": "user", "animated": True, "data": {"order": 2, "label": "200 OK"}},
-            {"id": "e3", "source": "user", "target": "api", "data": {"order": 3, "label": "poll"}},
-        ],
-    }
+user -> api: submit form
+api -> db: insert row
+db -> api: ok
+api -> user: 200 OK"""
 
 
 @pytest.fixture
@@ -59,77 +59,58 @@ def test_engine_is_registered_under_diagram_generation():
 # --- happy path --------------------------------------------------------------
 
 
-async def test_valid_reply_yields_diagram_and_no_transition(fake_llm):
-    fake_llm["replies"] = [json.dumps(_graph())]
+async def test_valid_reply_yields_d2_and_no_transition(fake_llm):
+    fake_llm["replies"] = [D2_SOURCE]
 
     response = await DiagramGenerationEngine().process([], "build it")
 
     assert isinstance(response, LLMResponse)
     assert response.next_phase is None  # generating keeps the project in DIAGRAM_GENERATION
     assert response.suggestions == []
-    assert response.text.strip()  # a grounded, storable assistant message
-    # The graph rides on `.diagram` as a plain dict and round-trips the validator.
-    assert response.diagram is not None
-    parsed = validate_diagram(response.diagram)
-    assert [n.id for n in parsed.nodes] == ["user", "api"]
-    assert [e.data.order for e in parsed.edges] == [1, 2, 3]
-    assert len(fake_llm["calls"]) == 1  # a valid first reply needs no retry
+    # The D2 rides on `.diagram_d2`, stored verbatim; the legacy xyflow field is unused.
+    assert response.diagram_d2 == D2_SOURCE
+    assert response.diagram is None
+    # The assistant message is grounded in the actual diagram (its 4 interactions).
+    assert "4 interactions" in response.text
+    assert len(fake_llm["calls"]) == 1  # no retry on the D.2 path
 
 
-async def test_reply_wrapped_in_code_fence_is_parsed(fake_llm):
-    fake_llm["replies"] = [f"```json\n{json.dumps(_graph())}\n```"]
+async def test_prompt_asks_the_model_for_d2(fake_llm):
+    fake_llm["replies"] = [D2_SOURCE]
+
+    await DiagramGenerationEngine().process([], "build it")
+
+    system_message = fake_llm["calls"][0]["messages"][0]
+    assert system_message["role"] == "system"
+    assert "D2" in system_message["content"]
+    assert "shape: sequence_diagram" in system_message["content"]
+
+
+async def test_reply_wrapped_in_code_fence_is_unwrapped(fake_llm):
+    fake_llm["replies"] = [f"```d2\n{D2_SOURCE}\n```"]
 
     response = await DiagramGenerationEngine().process([], "build it")
 
-    assert response.diagram is not None
+    # The fence is stripped; the stored D2 is the bare source, ready to compile.
+    assert response.diagram_d2 == D2_SOURCE
     assert len(fake_llm["calls"]) == 1
 
 
-# --- retry-once on invalid output --------------------------------------------
+# --- empty round-trip --------------------------------------------------------
 
 
-async def test_invalid_first_reply_is_retried_once_then_succeeds(fake_llm):
-    # First reply has too few edges (1 < MIN_EDGES); the retry returns a valid graph.
-    too_few = _graph()
-    too_few["edges"] = too_few["edges"][:1]
-    fake_llm["replies"] = [json.dumps(too_few), json.dumps(_graph())]
+async def test_empty_reply_raises_connection_error(fake_llm):
+    fake_llm["replies"] = ["   \n  "]
 
-    response = await DiagramGenerationEngine().process([], "build it")
-
-    assert response.diagram is not None
-    assert validate_diagram(response.diagram).edges  # the valid retry graph won
-    assert len(fake_llm["calls"]) == 2  # exactly one retry
-
-    # The retry resends the invalid reply and the validator's complaint as a nudge.
-    retry_messages = fake_llm["calls"][1]["messages"]
-    assert retry_messages[-2]["role"] == "assistant"
-    assert retry_messages[-1]["role"] == "user"
-    assert "validator" in retry_messages[-1]["content"]
-
-
-async def test_two_invalid_replies_raise_connection_error(fake_llm):
-    dangling = _graph()
-    dangling["edges"][0]["target"] = "ghost"  # edge points at a non-existent node
-    fake_llm["replies"] = [json.dumps(dangling), json.dumps(dangling)]
-
-    with pytest.raises(LLMConnectionError, match="invalid diagram twice"):
+    with pytest.raises(LLMConnectionError, match="empty diagram"):
         await DiagramGenerationEngine().process([], "build it")
 
-    assert len(fake_llm["calls"]) == 2  # tried once, retried once, then gave up
-
-
-async def test_non_json_reply_is_retried(fake_llm):
-    fake_llm["replies"] = ["Sure! Here is your diagram:", json.dumps(_graph())]
-
-    response = await DiagramGenerationEngine().process([], "build it")
-
-    assert response.diagram is not None
-    assert len(fake_llm["calls"]) == 2
+    assert len(fake_llm["calls"]) == 1
 
 
 # --- prompt sanity -----------------------------------------------------------
 
 
-def test_system_prompt_states_the_minimum_graph_size():
-    assert str(MIN_NODES) in diagram_generation.SYSTEM_PROMPT
-    assert str(MIN_EDGES) in diagram_generation.SYSTEM_PROMPT
+def test_system_prompt_states_the_minimum_diagram_size():
+    assert str(MIN_PARTICIPANTS) in diagram_generation.SYSTEM_PROMPT
+    assert str(MIN_MESSAGES) in diagram_generation.SYSTEM_PROMPT
