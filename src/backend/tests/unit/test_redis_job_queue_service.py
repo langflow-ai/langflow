@@ -909,9 +909,28 @@ async def test_redis_service_cancel_marker_closes_signal_before_subscribe_race()
     producer, _ = await _make_service(shared_client=shared_client)
     try:
         job_id = str(uuid.uuid4())
-        # Publish a cancel BEFORE the producer has registered the job.  The
-        # pubsub publish reaches no relevant owner; only the marker key matters.
+        # Publish a cancel BEFORE the producer has registered the job.
         await publisher.signal_cancel(job_id)
+
+        # In production there is real elapsed time between the publish and this
+        # worker registering the job, so the producer's cancel dispatcher receives
+        # the publish while it owns no matching queue and discards it (counted as a
+        # "foreign" dispatch). Wait for that to happen before create_queue/start_job
+        # so this single-process test reproduces the real ordering: the pubsub
+        # signal is spent before the job exists, leaving only the persistent marker
+        # to surface the cancel during start_job's marker check. Without this, the
+        # buffered publish can land in the window after start_job registers the task
+        # but before that task runs its first step, cancelling it before the build
+        # coroutine ever starts — a scheduling-order artifact of the shared loop, not
+        # the marker mechanism under test.
+        async def _dispatcher_discarded_publish() -> None:
+            # Poll the dispatcher's stat counter: it is mutated by an opaque
+            # background task, so there is no Event to await (asyncio.wait_for
+            # below bounds the wait).
+            while producer._cancel_stats["dispatched_foreign"] < 1:  # noqa: ASYNC110
+                await asyncio.sleep(0.01)
+
+        await asyncio.wait_for(_dispatcher_discarded_publish(), timeout=2)
 
         producer.create_queue(job_id)
         cancelled = asyncio.Event()
