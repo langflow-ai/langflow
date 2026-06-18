@@ -69,6 +69,25 @@ async def test_render_missing_binary_raises_unavailable(monkeypatch):
         await render_d2(VALID_D2)
 
 
+async def test_launch_failure_after_which_raises_unavailable(monkeypatch):
+    """A binary that `which` finds but that fails to launch is still "unavailable".
+
+    `shutil.which` can succeed yet the exec fail (the file vanished, lost its
+    execute bit, fork limits, …). Those `OSError`s (incl. `FileNotFoundError`/
+    `PermissionError`) must be normalised to `D2CompilerUnavailableError`, not
+    bubble up as a raw 500.
+    """
+    monkeypatch.setattr(d2_compile.shutil, "which", lambda _: "/usr/local/bin/d2")
+
+    async def _boom(*_args, **_kwargs):
+        raise FileNotFoundError
+
+    monkeypatch.setattr(d2_compile.asyncio, "create_subprocess_exec", _boom)
+
+    with pytest.raises(D2CompilerUnavailableError, match="launch"):
+        await compile_d2(VALID_D2)
+
+
 # --- timeout (no binary; fake hanging process) -------------------------------
 
 

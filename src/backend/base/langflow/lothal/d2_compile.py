@@ -109,13 +109,20 @@ async def _run_d2(src: str, *, capture_svg: bool) -> tuple[int, bytes, str]:
         msg = "The `d2` compiler binary was not found on PATH."
         raise D2CompilerUnavailableError(msg)
 
-    proc = await asyncio.create_subprocess_exec(
-        binary,
-        *_D2_ARGS,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE if capture_svg else asyncio.subprocess.DEVNULL,
-        stderr=asyncio.subprocess.PIPE,
-    )
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            binary,
+            *_D2_ARGS,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE if capture_svg else asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    except OSError as exc:
+        # `which` found the binary, but launch can still fail (it vanished, lost
+        # the execute bit, fork limits, …). That's an environment fault, not a
+        # verdict on the source — keep the unavailable-compiler contract.
+        msg = f"Could not launch the `d2` compiler ({binary})."
+        raise D2CompilerUnavailableError(msg) from exc
     try:
         stdout, stderr = await asyncio.wait_for(proc.communicate(src.encode()), timeout=_D2_TIMEOUT_SECONDS)
     except TimeoutError as exc:

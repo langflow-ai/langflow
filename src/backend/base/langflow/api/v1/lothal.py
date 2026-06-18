@@ -379,7 +379,9 @@ async def _render_diagram_svg(d2: str, project_id) -> str | None:
         logger.warning(f"d2 compiler unavailable; returning diagram for project {project_id} without an SVG.")
         return None
     if not result.ok:
-        logger.warning(f"Stored D2 for project {project_id} failed to render: {result.error}")
+        # Don't log the compiler stderr: it can echo fragments of the user's D2
+        # (their project's content). The project id is enough to reproduce.
+        logger.warning(f"Stored D2 for project {project_id} failed to render; returning it without an SVG.")
         return None
     return result.svg
 
