@@ -662,3 +662,29 @@ def format_missing_dependencies_error(missing: list[str]) -> str:
         "exported flow can require packages that a bare `pip install lfx` does not "
         "include. Skip this preflight with --no-check-dependencies."
     )
+
+
+def format_missing_module_error(module_name: str) -> str:
+    """Build actionable install guidance for a single missing import module.
+
+    Maps the top-level import name to its PyPI distribution name (reusing the
+    same resolver as the requirements analyzer) and returns a message that
+    mirrors the ``lfx run`` dependency preflight. This lets a bare
+    ``ModuleNotFoundError`` raised deep in a server-side component build (the
+    UI/API run path, which has no preflight) surface the same ``pip install ...``
+    guidance the CLI already gives, instead of a cryptic "No module named ..."
+    string.
+    """
+    # A dotted import (e.g. ``langchain_chroma.vectorstores``) maps via its
+    # top-level package, so resolve on the first segment while still showing
+    # the user the full module name they hit.
+    top_level = module_name.split(".", 1)[0]
+    package = _import_to_package(top_level)
+    return (
+        f"No module named '{module_name}'. This flow needs a Python package that is "
+        "not installed in this environment.\n\n"
+        "Install it and re-run:\n"
+        f"  pip install {package}\n\n"
+        "Provider components moved out of the lfx engine in the bundle split, so a "
+        "flow can require packages that a bare `pip install lfx` does not include."
+    )

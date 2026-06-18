@@ -322,9 +322,14 @@ def format_exception_message(exc: Exception) -> str:
     """Format an exception message for returning to the frontend."""
     # We need to check if the __cause__ is a SyntaxError
     # If it is, we need to return the message of the SyntaxError
+    from lfx.utils.exceptions import module_not_found_hint
+
     causing_exception = get_causing_exception(exc)
     if isinstance(causing_exception, SyntaxError):
         return format_syntax_error_message(causing_exception)
+    hint = module_not_found_hint(causing_exception)
+    if hint is not None:
+        return hint
     return str(exc)
 
 
