@@ -268,6 +268,29 @@ async def test_delete_project_cascades_to_messages_and_code_files(client: AsyncC
         assert code_files == []
 
 
+async def test_project_round_trips_diagram_d2(client: AsyncClient, logged_in_headers: dict):
+    # D2 source is the Epic D diagram artifact, persisted to the new nullable
+    # `diagram_d2` column. Create via the API (null by default), write D2 through
+    # the ORM, and confirm it survives a reload with the legacy `diagram_json`
+    # column left untouched alongside it.
+    response = await client.post("api/v1/lothal/projects/", json={"name": "D2 Roundtrip"}, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    project_pk = UUID(response.json()["id"])
+
+    d2_source = "direction: right\nclient -> api: request\napi -> db: query"
+    async with session_scope() as session:
+        created = await session.get(Project, project_pk)
+        assert created.diagram_d2 is None  # a fresh project has no D2 yet
+        created.diagram_d2 = d2_source
+        session.add(created)
+
+    async with session_scope() as session:
+        reloaded = await session.get(Project, project_pk)
+        assert reloaded.diagram_d2 == d2_source
+        assert reloaded.diagram_json is None  # legacy column untouched by the D2 write
+        await session.delete(reloaded)
+
+
 def test_message_requires_phase_at_construction():
     # SQLModel table models skip pydantic validation, so without the __init__
     # guard a missing phase only surfaces as an IntegrityError at flush time —
