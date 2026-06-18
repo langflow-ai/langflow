@@ -187,9 +187,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
                 if isinstance(model_value, list) and model_value:
                     provider = model_value[0].get("provider", "")
                     if provider:
-                        build_config = apply_provider_variable_config_to_build_config(
-                            build_config, provider
-                        )
+                        build_config = apply_provider_variable_config_to_build_config(build_config, provider)
 
             # Ensure the API key field is always visible
             if "api_key" in build_config:
@@ -203,19 +201,10 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         )
 
         # Set embedding model display based on provider selection
-        if (
-            isinstance(field_value, dict)
-            and "02_embedding_generation_provider" in field_value
-        ):
+        if isinstance(field_value, dict) and "02_embedding_generation_provider" in field_value:
             embedding_provider = field_value.get("02_embedding_generation_provider")
-            is_custom_provider = (
-                embedding_provider and embedding_provider != "Bring your own"
-            )
-            provider = (
-                embedding_provider.lower()
-                if is_custom_provider and embedding_provider is not None
-                else None
-            )
+            is_custom_provider = embedding_provider and embedding_provider != "Bring your own"
+            provider = embedding_provider.lower() if is_custom_provider and embedding_provider is not None else None
 
             build_config["embedding_model"]["show"] = not bool(provider)
             build_config["embedding_model"]["required"] = not bool(provider)
@@ -233,22 +222,15 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         hybrid_capabilities = self._detect_hybrid_capabilities()
 
         # Return if we haven't selected a collection
-        if (
-            not build_config["collection_name"]["options"]
-            or not build_config["collection_name"]["value"]
-        ):
+        if not build_config["collection_name"]["options"] or not build_config["collection_name"]["value"]:
             return build_config
 
         # Get collection options
         collection_options = self._get_collection_options(build_config)
 
         # Get the selected collection index
-        index = build_config["collection_name"]["options"].index(
-            build_config["collection_name"]["value"]
-        )
-        provider = build_config["collection_name"]["options_metadata"][index][
-            "provider"
-        ]
+        index = build_config["collection_name"]["options"].index(build_config["collection_name"]["value"])
+        provider = build_config["collection_name"]["options_metadata"][index]["provider"]
         build_config["embedding_model"]["show"] = not bool(provider)
         build_config["embedding_model"]["required"] = not bool(provider)
 
@@ -263,18 +245,12 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
                 "Hybrid Search",
                 "Vector Search",
             ]
-            build_config["search_method"]["value"] = build_config["search_method"].get(
-                "value", "Hybrid Search"
-            )
+            build_config["search_method"]["value"] = build_config["search_method"].get("value", "Hybrid Search")
 
             build_config["reranker"]["options"] = hybrid_capabilities["reranker_models"]
-            build_config["reranker"]["options_metadata"] = hybrid_capabilities[
-                "reranker_metadata"
-            ]
+            build_config["reranker"]["options_metadata"] = hybrid_capabilities["reranker_metadata"]
             if hybrid_capabilities["reranker_models"]:
-                build_config["reranker"]["value"] = hybrid_capabilities[
-                    "reranker_models"
-                ][0]
+                build_config["reranker"]["value"] = hybrid_capabilities["reranker_models"][0]
         else:
             build_config["search_method"]["show"] = False
             build_config["search_method"]["options"] = ["Vector Search"]
@@ -284,8 +260,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
         # Configure reranker visibility and state
         hybrid_enabled = (
-            collection_options["rerank_enabled"]
-            and build_config["search_method"]["value"] == "Hybrid Search"
+            collection_options["rerank_enabled"] and build_config["search_method"]["value"] == "Hybrid Search"
         )
 
         build_config["reranker"]["show"] = hybrid_enabled
@@ -295,9 +270,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         # Configure lexical terms
         lexical_visible = collection_options["lexical_enabled"] and not is_vector_search
         build_config["lexical_terms"]["show"] = lexical_visible
-        build_config["lexical_terms"]["value"] = (
-            "" if is_vector_search else build_config["lexical_terms"]["value"]
-        )
+        build_config["lexical_terms"]["value"] = "" if is_vector_search else build_config["lexical_terms"]["value"]
 
         # Configure search type and score threshold
         build_config["search_type"]["show"] = is_vector_search
@@ -314,16 +287,12 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         environment = self.get_environment(self.environment)
         client = DataAPIClient(environment=environment)
         admin_client = client.get_admin()
-        db_admin = admin_client.get_database_admin(
-            self.get_api_endpoint(), token=self.token
-        )
+        db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)
 
         try:
             providers = db_admin.find_reranking_providers()
             reranker_models = [
-                model.name
-                for provider_data in providers.reranking_providers.values()
-                for model in provider_data.models
+                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models
             ]
             reranker_metadata = [
                 {"icon": self.get_provider_icon(provider_name=model.name.split("/")[0])}
@@ -346,9 +315,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
     def _get_collection_options(self, build_config: dict) -> dict:
         """Retrieve collection-level search options."""
-        database = self.get_database_object(
-            api_endpoint=build_config["api_endpoint"]["value"]
-        )
+        database = self.get_database_object(api_endpoint=build_config["api_endpoint"]["value"])
         collection = database.get_collection(
             name=build_config["collection_name"]["value"],
             keyspace=build_config["keyspace"]["value"],
@@ -358,9 +325,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
         return {
             "rerank_enabled": bool(col_options.rerank and col_options.rerank.enabled),
-            "lexical_enabled": bool(
-                col_options.lexical and col_options.lexical.enabled
-            ),
+            "lexical_enabled": bool(col_options.lexical and col_options.lexical.enabled),
         }
 
     @check_cached_vector_store
@@ -396,10 +361,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
         # Get the database object
         database = self.get_database_object()
-        autodetect = (
-            self.collection_name in database.list_collection_names()
-            and self.autodetect_collection
-        )
+        autodetect = self.collection_name in database.list_collection_names() and self.autodetect_collection
 
         # Bundle up the auto-detect parameters
         autodetect_params = {
@@ -410,10 +372,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
                 else (
                     "page_content"
                     if embedding_params
-                    and self.collection_data(
-                        collection_name=self.collection_name, database=database
-                    )
-                    == 0
+                    and self.collection_data(collection_name=self.collection_name, database=database) == 0
                     else None
                 )
             ),
@@ -421,11 +380,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         }
 
         # Choose HybridSearchMode based on the selected param
-        hybrid_search_mode = (
-            HybridSearchMode.DEFAULT
-            if self.search_method == "Hybrid Search"
-            else HybridSearchMode.OFF
-        )
+        hybrid_search_mode = HybridSearchMode.DEFAULT if self.search_method == "Hybrid Search" else HybridSearchMode.OFF
 
         # Attempt to build the Vector Store object
         try:
@@ -477,18 +432,10 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             self.log(f"Deleting documents where {self.deletion_field}")
             try:
                 database = self.get_database_object()
-                collection = database.get_collection(
-                    self.collection_name, keyspace=database.keyspace
-                )
-                delete_values = list(
-                    {doc.metadata[self.deletion_field] for doc in documents}
-                )
-                self.log(
-                    f"Deleting documents where {self.deletion_field} matches {delete_values}."
-                )
-                collection.delete_many(
-                    {f"metadata.{self.deletion_field}": {"$in": delete_values}}
-                )
+                collection = database.get_collection(self.collection_name, keyspace=database.keyspace)
+                delete_values = list({doc.metadata[self.deletion_field] for doc in documents})
+                self.log(f"Deleting documents where {self.deletion_field} matches {delete_values}.")
+                collection.delete_many({f"metadata.{self.deletion_field}": {"$in": delete_values}})
             except ValueError as e:
                 msg = f"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}"
                 raise ValueError(msg) from e
@@ -513,11 +460,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
     def _build_search_args(self):
         # Clean up the search query
-        query = (
-            self.search_query
-            if isinstance(self.search_query, str) and self.search_query.strip()
-            else None
-        )
+        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None
         lexical_terms = self.lexical_terms or None
 
         # Check if we have a search query, and if so set the args

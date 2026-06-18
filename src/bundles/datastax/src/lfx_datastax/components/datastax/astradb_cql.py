@@ -18,9 +18,7 @@ from lfx.schema.table import EditMode
 
 class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
     display_name: str = "Astra DB CQL"
-    description: str = (
-        "Create a tool to get transactional data from DataStax Astra DB CQL Table"
-    )
+    description: str = "Create a tool to get transactional data from DataStax Astra DB CQL Table"
     documentation: str = "https://docs.langflow.org/bundles-datastax"
     icon: str = "AstraDB"
 
@@ -228,9 +226,7 @@ class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
             elif param["operator"] in ["$in", "$nin", "$all"]:
                 where[field_name] = {
                     **where.get(field_name, {}),
-                    param["operator"]: field_value.split(",")
-                    if isinstance(field_value, str)
-                    else field_value,
+                    param["operator"]: field_value.split(",") if isinstance(field_value, str) else field_value,
                 }
             else:
                 where[field_name] = {
@@ -242,9 +238,7 @@ class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
         url += f"&where={json.dumps(where)}"
 
         if self.projection_fields != "*":
-            url += (
-                f"&fields={urllib.parse.quote(self.projection_fields.replace(' ', ''))}"
-            )
+            url += f"&fields={urllib.parse.quote(self.projection_fields.replace(' ', ''))}"
 
         res = requests.request("GET", url=url, headers=headers, timeout=10)
 

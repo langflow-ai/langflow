@@ -44,9 +44,7 @@ def component() -> AstraDBDataAPIComponent:
     comp.token = "test_token"  # noqa: S105
     comp.environment = "prod"
     comp.database_name = "test_db"
-    comp.api_endpoint = (
-        "https://abcd1234-1234-1234-1234-1234567890ab.apps.astra.datastax.com"
-    )
+    comp.api_endpoint = "https://abcd1234-1234-1234-1234-1234567890ab.apps.astra.datastax.com"
     comp.keyspace = "default_keyspace"
     comp.collection_name = "test_coll"
     comp.operation = OP_FIND
@@ -101,9 +99,7 @@ class TestStaticConfiguration:
         input_names = {inp.name for inp in AstraDBDataAPIComponent.inputs}
         for op, fields in OPERATION_FIELDS.items():
             for field in fields:
-                assert field in input_names, (
-                    f"Operation '{op}' references unknown input field '{field}'"
-                )
+                assert field in input_names, f"Operation '{op}' references unknown input field '{field}'"
 
     def test_component_metadata(self):
         """Component metadata is sensible."""
@@ -119,11 +115,7 @@ class TestStaticConfiguration:
 
     def test_tool_mode_inputs(self):
         """Key agent-controllable inputs expose ``tool_mode=True``."""
-        tool_mode_names = {
-            inp.name
-            for inp in AstraDBDataAPIComponent.inputs
-            if getattr(inp, "tool_mode", False)
-        }
+        tool_mode_names = {inp.name for inp in AstraDBDataAPIComponent.inputs if getattr(inp, "tool_mode", False)}
         expected = {
             "operation",
             "filter_query",
@@ -245,9 +237,7 @@ class TestOperationVisibility:
         config = self._make_build_config()
         AstraDBDataAPIComponent._apply_operation_visibility(config, OP_ESTIMATED_COUNT)
         for key, value in config.items():
-            assert value["show"] is False, (
-                f"Field '{key}' should be hidden for Estimated Count"
-            )
+            assert value["show"] is False, f"Field '{key}' should be hidden for Estimated Count"
 
 
 # ----------------------------------------------------------------------
@@ -256,12 +246,8 @@ class TestOperationVisibility:
 
 
 class TestFindOperation:
-    def test_find_returns_list_of_data(
-        self, component_with_collection, mock_collection
-    ):
-        mock_collection.find.return_value = iter(
-            [{"_id": "1", "name": "Ada"}, {"_id": "2", "name": "Grace"}]
-        )
+    def test_find_returns_list_of_data(self, component_with_collection, mock_collection):
+        mock_collection.find.return_value = iter([{"_id": "1", "name": "Ada"}, {"_id": "2", "name": "Grace"}])
         component_with_collection.operation = OP_FIND
         component_with_collection.filter_query = {"active": True}
         component_with_collection.limit = 10
@@ -290,9 +276,7 @@ class TestFindOperation:
         assert "skip" not in kwargs
         assert "include_similarity" not in kwargs
 
-    def test_find_respects_skip_projection_sort(
-        self, component_with_collection, mock_collection
-    ):
+    def test_find_respects_skip_projection_sort(self, component_with_collection, mock_collection):
         mock_collection.find.return_value = iter([])
         component_with_collection.operation = OP_FIND
         component_with_collection.projection = {"name": 1}
@@ -338,9 +322,7 @@ class TestFindOneOperation:
         assert len(result) == 1
         assert result[0].data == {"_id": "1", "name": "Ada"}
 
-    def test_find_one_no_match_returns_empty(
-        self, component_with_collection, mock_collection
-    ):
+    def test_find_one_no_match_returns_empty(self, component_with_collection, mock_collection):
         mock_collection.find_one.return_value = None
         component_with_collection.operation = OP_FIND_ONE
         component_with_collection.filter_query = {"_id": "missing"}
@@ -383,9 +365,7 @@ class TestInsertManyOperation:
 
         result = component_with_collection.run_operation()
 
-        mock_collection.insert_many.assert_called_once_with(
-            [{"a": 1}, {"a": 2}, {"a": 3}], ordered=True
-        )
+        mock_collection.insert_many.assert_called_once_with([{"a": 1}, {"a": 2}, {"a": 3}], ordered=True)
         assert result[0].data == {
             "inserted_ids": ["id-1", "id-2", "id-3"],
             "inserted_count": 3,
@@ -430,9 +410,7 @@ class TestUpdateOperations:
 
         result = component_with_collection.run_operation()
 
-        mock_collection.update_one.assert_called_once_with(
-            {"_id": "1"}, {"$set": {"status": "active"}}, upsert=True
-        )
+        mock_collection.update_one.assert_called_once_with({"_id": "1"}, {"$set": {"status": "active"}}, upsert=True)
         assert result[0].data["matched_count"] == 1
         assert result[0].data["modified_count"] == 1
         assert result[0].data["upserted_id"] is None
@@ -450,9 +428,7 @@ class TestUpdateOperations:
 
         result = component_with_collection.run_operation()
 
-        mock_collection.update_many.assert_called_once_with(
-            {"active": True}, {"$inc": {"version": 1}}, upsert=False
-        )
+        mock_collection.update_many.assert_called_once_with({"active": True}, {"$inc": {"version": 1}}, upsert=False)
         assert result[0].data["modified_count"] == 5
 
 
@@ -501,9 +477,7 @@ class TestCountOperations:
 
         result = component_with_collection.run_operation()
 
-        mock_collection.count_documents.assert_called_once_with(
-            {"active": True}, upper_bound=500
-        )
+        mock_collection.count_documents.assert_called_once_with({"active": True}, upper_bound=500)
         assert result[0].data == {"count": 17, "upper_bound": 500}
 
     def test_estimated_count(self, component_with_collection, mock_collection):
@@ -630,9 +604,7 @@ class TestUpdateBuildConfig:
         ):
             # Swap to a non-managed field so we don't trigger the full base reset,
             # then directly invoke the visibility helper via the operation branch.
-            result = await component.update_build_config(
-                build_config, OP_INSERT_ONE, "operation"
-            )
+            result = await component.update_build_config(build_config, OP_INSERT_ONE, "operation")
 
         assert result["document"]["show"] is True
         assert result["filter_query"]["show"] is False

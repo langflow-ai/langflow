@@ -7,9 +7,7 @@ from lfx.template.field.base import Output
 
 class AstraVectorizeComponent(Component):
     display_name: str = "Astra Vectorize"
-    description: str = (
-        "Configuration options for Astra Vectorize server-side embeddings. "
-    )
+    description: str = "Configuration options for Astra Vectorize server-side embeddings. "
     documentation: str = "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html"
     legacy = True
     icon = "AstraDB"
@@ -73,10 +71,7 @@ class AstraVectorizeComponent(Component):
         ],
     }
     VECTORIZE_MODELS_STR = "\n\n".join(
-        [
-            provider + ": " + (", ".join(models[1]))
-            for provider, models in VECTORIZE_PROVIDERS_MAPPING.items()
-        ]
+        [provider + ": " + (", ".join(models[1])) for provider, models in VECTORIZE_PROVIDERS_MAPPING.items()]
     )
 
     inputs = [

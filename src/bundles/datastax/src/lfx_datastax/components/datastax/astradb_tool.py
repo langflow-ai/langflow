@@ -15,9 +15,7 @@ from lfx.schema.table import EditMode
 
 class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
     display_name: str = "Astra DB Tool"
-    description: str = (
-        "Tool to run hybrid vector and metadata search on DataStax Astra DB Collection"
-    )
+    description: str = "Tool to run hybrid vector and metadata search on DataStax Astra DB Collection"
     documentation: str = "https://docs.langflow.org/bundles-datastax"
     icon: str = "AstraDB"
     legacy: bool = True
@@ -83,9 +81,7 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
                     "display_name": "Is Metadata",
                     "type": "boolean",
                     "edit_mode": EditMode.INLINE,
-                    "description": (
-                        "Indicate if the field is included in the metadata field."
-                    ),
+                    "description": ("Indicate if the field is included in the metadata field."),
                     "options": ["True", "False"],
                     "default": "False",
                 },
@@ -187,9 +183,7 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
 
         It is keep only for backward compatibility.
         """
-        logger.warning(
-            "This is the old way to define the tool parameters. Please use the new way."
-        )
+        logger.warning("This is the old way to define the tool parameters. Please use the new way.")
         args: dict[str, tuple[Any, Field] | list[str]] = {}
 
         for key in self.tool_params:
@@ -204,9 +198,7 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
         if self.use_search_query:
             args["search_query"] = (
                 str | None,
-                Field(
-                    description="Search query to find relevant documents.", default=None
-                ),
+                Field(description="Search query to find relevant documents.", default=None),
             )
 
         model = create_model("ToolInput", **args, __base__=BaseModel)
@@ -243,11 +235,7 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
         Returns:
             Tool: The built Astra DB tool.
         """
-        schema_dict = (
-            self.create_args_schema()
-            if len(self.tool_params.keys()) > 0
-            else self.create_args_schema_v2()
-        )
+        schema_dict = self.create_args_schema() if len(self.tool_params.keys()) > 0 else self.create_args_schema_v2()
 
         tool = StructuredTool.from_function(
             name=self.tool_name,
@@ -337,20 +325,10 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
             if key == "search_query":
                 continue
 
-            filter_setting = next(
-                (x for x in filter_settings if x["name"] == key), None
-            )
+            filter_setting = next((x for x in filter_settings if x["name"] == key), None)
             if filter_setting and value is not None:
-                field_name = (
-                    filter_setting["attribute_name"]
-                    if filter_setting["attribute_name"]
-                    else key
-                )
-                filter_key = (
-                    field_name
-                    if not filter_setting["metadata"]
-                    else f"metadata.{field_name}"
-                )
+                field_name = filter_setting["attribute_name"] if filter_setting["attribute_name"] else key
+                filter_key = field_name if not filter_setting["metadata"] else f"metadata.{field_name}"
                 if filter_setting["operator"] == "$exists":
                     filters[filter_key] = {
                         **filters.get(filter_key, {}),
@@ -359,9 +337,7 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
                 elif filter_setting["operator"] in ["$in", "$nin", "$all"]:
                     filters[filter_key] = {
                         **filters.get(filter_key, {}),
-                        filter_setting["operator"]: value.split(",")
-                        if isinstance(value, str)
-                        else value,
+                        filter_setting["operator"]: value.split(",") if isinstance(value, str) else value,
                     }
                 elif filter_setting["is_timestamp"] == True:  # noqa: E712
                     try:
@@ -388,11 +364,7 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
         filters = self.build_filter(args, self.tools_params_v2)
 
         # Build the vector search on
-        if (
-            self.use_search_query
-            and args["search_query"] is not None
-            and args["search_query"] != ""
-        ):
+        if self.use_search_query and args["search_query"] is not None and args["search_query"] != "":
             if self.use_vectorize:
                 sort["$vectorize"] = args["search_query"]
             else:
