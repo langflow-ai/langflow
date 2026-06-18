@@ -51,4 +51,10 @@ describe("loadLanguage", () => {
     expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
     expect(i18n.hasResourceBundle("ja", "translation")).toBe(true);
   });
+
+  it("loads and registers the Polish language bundle", async () => {
+    expect(i18n.hasResourceBundle("pl", "translation")).toBe(false);
+    await loadLanguage("pl");
+    expect(i18n.hasResourceBundle("pl", "translation")).toBe(true);
+  });
 });
