@@ -230,6 +230,13 @@ async def get_messages(
     order: Annotated[str | None, Query()] = "ASC",
     limit: Annotated[int | None, Query()] = None,
 ) -> list[MessageResponse]:
+    if order_by and order_by not in {"id", "timestamp", "sender", "sender_name", "session_id", "text", "flow_id"}:
+        raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+    if order and order.upper() not in {"ASC", "DESC"}:
+        raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
+    if limit is not None and (limit < 1 or limit > 1000):
+        raise HTTPException(status_code=400, detail="Limit must be between 1 and 1000")
+
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
         # share-aware path lets a non-owner with a read grant see the flow's
