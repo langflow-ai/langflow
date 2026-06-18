@@ -429,7 +429,15 @@ the deserialize half is covered by
   carries the same typed `bundle-shadowed` diagnostic (on `errors`, matching
   the resolver) so filtering by code never mixes severities.  Namespace
   packages are walked across **all portions**, and resolved roots are
-  deduplicated by path so duplicate declarations never self-shadow.  New
+  deduplicated by path so duplicate declarations never self-shadow.  This
+  precedence is a **startup-time** property: `load_lfx_bundles_extensions`
+  runs in the component-loading path, not in `discover_all_extensions`, so
+  `lfx extension list` -- which walks only the installed and seed
+  (manifest-bearing) sources -- does **not** enumerate manifest-less
+  metapackage providers.  A live `lfx.bundles` provider is therefore
+  invisible at list-time, and its shadowing against a manifest-shipping
+  package is resolved only when the server assembles the
+  `_lfx_ext.official.<bundle>.*` namespace at startup.  New
   warning-only codes added to `ERROR_CODES` (additive), one per discovery
   failure mode and none of which abort startup: `bundle-discovery-malformed`
   (declaration does not resolve to an importable package directory --
