@@ -23,6 +23,21 @@ jest.mock("@/controllers/API/queries/lothal", () => ({
   useSendMessage: () => ({ mutateAsync: mockSendMutate, isPending: false }),
 }));
 
+// Stub the live D2 canvas (real one needs SVG layout/pointer gestures). It fires
+// onAnchor when clicked, so the integration test can drive the canvas → composer
+// chip wiring (D.7) without the real pan/zoom surface.
+jest.mock("../../components/D2Canvas", () => ({
+  D2Canvas: ({ onAnchor }: { onAnchor?: (a: unknown) => void }) => (
+    <button
+      type="button"
+      data-testid="d2-canvas"
+      onClick={() =>
+        onAnchor?.({ kind: "node", id: "checkout", label: "Checkout" })
+      }
+    />
+  ),
+}));
+
 import Workspace from "../index";
 
 const project = {
@@ -206,6 +221,35 @@ describe("Lothal Workspace", () => {
       expect(mockSendMutate).toHaveBeenCalledWith("A tide app"),
     );
     expect(input.textContent).toBe("");
+  });
+
+  it("drops a composer chip when a canvas element is anchored, and serializes it on send (D.7)", async () => {
+    // Diagram phase so the right pane renders the (stubbed) D2 canvas.
+    mockUseProject.mockReturnValue({
+      data: { ...project, phase: "DIAGRAM_REFINEMENT" },
+      isLoading: false,
+    });
+    mockUseDiagram.mockReturnValue({
+      data: { d2: "user -> api", svg: "<svg>x</svg>" },
+      isLoading: false,
+      isError: false,
+    });
+    render(<Workspace />);
+
+    // Double-clicking a canvas element resolves an anchor → the workspace routes
+    // it to the composer, which drops an inline chip.
+    fireEvent.click(screen.getByTestId("d2-canvas"));
+    const editor = screen.getByLabelText("Message") as HTMLDivElement;
+    const chip = editor.querySelector(".lothal-chip") as HTMLElement;
+    expect(chip).toBeInTheDocument();
+    expect(chip.dataset.id).toBe("checkout");
+    expect(chip.textContent).toContain("Checkout");
+
+    // On send the chip serializes to its exact anchor id, backtick-wrapped.
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() =>
+      expect(mockSendMutate).toHaveBeenCalledWith("`checkout`"),
+    );
   });
 
   // --- Code surface (right pane in code phases) ---
