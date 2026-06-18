@@ -34,9 +34,12 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+const MAX_DIALOG_CHILD_SCAN_DEPTH = 4;
+
 const hasChildOfType = (
   children: React.ReactNode,
   targetType: React.ElementType,
+  depth = 0,
 ): boolean =>
   React.Children.toArray(children).some((child) => {
     if (!React.isValidElement<{ children?: React.ReactNode }>(child)) {
@@ -45,7 +48,10 @@ const hasChildOfType = (
     if (child.type === targetType) {
       return true;
     }
-    return hasChildOfType(child.props.children, targetType);
+    if (depth >= MAX_DIALOG_CHILD_SCAN_DEPTH) {
+      return false;
+    }
+    return hasChildOfType(child.props.children, targetType, depth + 1);
   });
 
 // Create a VisuallyHidden component for accessibility

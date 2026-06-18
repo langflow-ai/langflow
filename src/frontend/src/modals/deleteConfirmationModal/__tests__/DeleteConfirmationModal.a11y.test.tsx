@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import DeleteConfirmationModal from "../index";
 
 describe("DeleteConfirmationModal accessibility", () => {
@@ -38,5 +39,29 @@ describe("DeleteConfirmationModal accessibility", () => {
 
     fireEvent.click(screen.getByTestId("btn_cancel_delete_confirmation_modal"));
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("keeps_trigger_reachable_by_keyboard_tab", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <DeleteConfirmationModal
+        onConfirm={jest.fn()}
+        description="folder"
+        asChild
+      >
+        <button type="button">Open delete dialog</button>
+      </DeleteConfirmationModal>,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Open delete dialog",
+    });
+
+    expect(trigger).not.toHaveAttribute("tabindex", "-1");
+
+    await user.tab();
+
+    expect(trigger).toHaveFocus();
   });
 });
