@@ -53,10 +53,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             autoComplete ?? getSuppressedAutoComplete(type === "password"),
           ...PASSWORD_MANAGER_IGNORE_PROPS,
         };
-          autoComplete:
-            autoComplete ?? getSuppressedAutoComplete(type === "password"),
-          ...PASSWORD_MANAGER_IGNORE_PROPS,
-        };
 
     // Support legacy string endIcon (icon name) for backwards compatibility
     const resolvedEndIcon =

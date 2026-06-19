@@ -41,9 +41,11 @@ describe("Input — autofill suppression", () => {
     }
   });
 
-  it("opts back into autofill (no password-manager opt-outs) when allowAutofill is set", () => {
+  it("opts back into autofill (no autocomplete attr, no password-manager opt-outs) when allowAutofill is set", () => {
     const input = getInput(<Input allowAutofill placeholder="username" />);
-    expect(input.getAttribute("autocomplete")).toBe("off");
+    // With no explicit autoComplete, an opted-in field emits no attribute so
+    // the browser applies its normal (wanted) autofill behavior.
+    expect(input.getAttribute("autocomplete")).toBeNull();
     for (const attr of IGNORE_ATTRS) {
       expect(input.hasAttribute(attr)).toBe(false);
     }
@@ -55,6 +57,13 @@ describe("Input — autofill suppression", () => {
     for (const attr of IGNORE_ATTRS) {
       expect(input.hasAttribute(attr)).toBe(false);
     }
+  });
+
+  it("honors an explicit autoComplete on an allowAutofill field (e.g. username/current-password)", () => {
+    const input = getInput(
+      <Input allowAutofill autoComplete="current-password" />,
+    );
+    expect(input.getAttribute("autocomplete")).toBe("current-password");
   });
 
   it("lets a caller-provided autoComplete win over the suppressed default", () => {
