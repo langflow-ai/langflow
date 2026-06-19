@@ -1,5 +1,14 @@
 from .model_metadata import create_model_metadata
 
+# Adding a custom model: append a ``create_model_metadata(...)`` entry below (for
+# chat models) or a name to ``OPENAI_EMBEDDING_MODEL_NAMES`` (for embeddings).
+# Custom entries survive the models.dev catalog override
+# (``apply_models_dev_overrides``) — any name models.dev doesn't cover is carried
+# over rather than discarded. The ``openai_api_base`` / ``OPENAI_API_BASE``
+# setting (for OpenAI-compatible servers) is configured separately per-component
+# and is independent of this catalog. Embedding dropdowns have no free-text
+# combobox, so a custom embedding must appear here to be selectable.
+
 # Unified model metadata - single source of truth
 OPENAI_MODELS_DETAILED = [
     # GPT-5.4 Series
