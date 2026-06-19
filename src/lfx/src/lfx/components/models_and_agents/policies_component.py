@@ -323,7 +323,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         self._verify_cached_guards(code_dir)
 
     @staticmethod
-    def _template_field_key(file_name) -> str:
+    def _template_field_key(file_name: str | Path) -> str:
         r"""Normalize a generated file name to its node-template field key.
 
         ``sync_generated_guard_code_inputs`` keys every generated CodeInput by the
@@ -347,9 +347,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         tg = self._import_toolguard()
         attrs = self.get_vertex().data["node"]["template"]
         if not attrs:
-            raise ValueError
+            msg = "Policies: component template data is missing. This may indicate a corrupted flow state."
+            raise ValueError(msg)
 
-        def read_content(file_name) -> str:
+        def read_content(file_name: str | Path) -> str:
             """Fetch a generated file's stored source from the node template.
 
             Raises a clear, actionable error when the field is absent instead of
