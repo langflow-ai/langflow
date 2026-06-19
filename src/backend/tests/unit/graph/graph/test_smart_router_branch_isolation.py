@@ -99,9 +99,15 @@ class MergeSink(Component):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.did_run = False
+        self.received: dict[str, object] = {}
 
     def run_merge(self) -> Message:
         self.did_run = True
+        self.received = {
+            "in1": getattr(self, "in1", None),
+            "in2": getattr(self, "in2", None),
+            "in3": getattr(self, "in3", None),
+        }
         return Message(text="merged")
 
 
@@ -217,6 +223,8 @@ async def test_unselected_branch_does_not_run_when_outputs_share_node_directly()
     yielded = await _run(graph)
 
     assert shared.did_run is True, "Shared node should run once from the matched output"
+    assert getattr(shared.received["in1"], "text", shared.received["in1"]) == "I love this product!"
+    assert getattr(shared.received["in2"], "text", shared.received["in2"]) == ""
     assert "shared" in yielded
 
 

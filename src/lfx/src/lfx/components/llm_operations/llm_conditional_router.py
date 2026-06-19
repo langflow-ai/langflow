@@ -319,6 +319,9 @@ class SmartRouterComponent(Component):
 
             route_category = categories[matched_category].get("route_category", f"Category {matched_category + 1}")
             self.status = f"Categorized as {route_category}"
+            matched_output_name = f"category_{matched_category + 1}_result"
+            if self._current_output and self._current_output != matched_output_name:
+                return Message(text="")
 
             # Check if there's an override output (takes precedence over everything)
             override_output = getattr(self, "message", None)
