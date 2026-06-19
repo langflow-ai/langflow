@@ -6,17 +6,22 @@ import type { ChatMessageType } from "@/types/chat";
 import type { Message } from "@/types/messages";
 import { isMessageForSession } from "../../utils/session-filter";
 import sortSenderMessages from "../utils/sort-sender-messages";
-
+import usePlaygroundStore from "@/stores/playgroundStore";
+import useFlowStore from "@/stores/flowStore";
 export const useChatHistory = (visibleSession: string | null) => {
   const currentFlowId = useGetFlowId();
   const queryClient = useQueryClient();
+  const isPlaygroundOpen = usePlaygroundStore((state) => state.isOpen);
+  const playgroundPage = useFlowStore((state) => state.playgroundPage);
 
-  // Fetch messages from backend for initial load
+  // Fetch messages from backend for initial load, only if playground is visible
   const messageQueryParams: Parameters<typeof useGetMessagesQuery>[0] = {
     id: currentFlowId,
     mode: "union",
   };
-  const { data: queryData } = useGetMessagesQuery(messageQueryParams);
+  const { data: queryData } = useGetMessagesQuery(messageQueryParams, { 
+    enabled: isPlaygroundOpen || playgroundPage 
+  });
 
   // Session cache key - this is the single source of truth for messages
   const sessionCacheKey = useMemo(

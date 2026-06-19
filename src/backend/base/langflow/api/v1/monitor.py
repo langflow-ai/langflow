@@ -227,6 +227,9 @@ async def get_messages(
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    order: Annotated[str | None, Query()] = "desc",
+    limit: Annotated[int | None, Query()] = 30,
+    offset: Annotated[int | None, Query()] = 0,
 ) -> list[MessageResponse]:
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
@@ -255,8 +258,17 @@ async def get_messages(
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
         if order_by:
-            order_col = getattr(MessageTable, order_by).asc()
+            order_col = getattr(MessageTable, order_by)
+            if order and order.lower() == "desc":
+                order_col = order_col.desc()
+            else:
+                order_col = order_col.asc()
             stmt = stmt.order_by(order_col)
+        if offset:
+            stmt = stmt.offset(offset)
+        if limit:
+            stmt = stmt.limit(limit)
+            
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
     except Exception as e:
@@ -520,6 +532,9 @@ async def get_shared_messages(
     source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
     session_id: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    order: Annotated[str | None, Query()] = "desc",
+    limit: Annotated[int | None, Query()] = 30,
+    offset: Annotated[int | None, Query()] = 0,
 ) -> list[MessageResponse]:
     """Get messages for a shared/public flow, scoped to the authenticated user.
 
@@ -540,8 +555,16 @@ async def get_shared_messages(
         if order_by:
             if order_by not in allowed_order_fields:
                 raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by).asc()
+            order_col = getattr(MessageTable, order_by)
+            if order and order.lower() == "desc":
+                order_col = order_col.desc()
+            else:
+                order_col = order_col.asc()
             stmt = stmt.order_by(order_col)
+        if offset:
+            stmt = stmt.offset(offset)
+        if limit:
+            stmt = stmt.limit(limit)
 
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
