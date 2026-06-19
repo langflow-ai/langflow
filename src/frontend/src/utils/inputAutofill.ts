@@ -36,3 +36,20 @@ export const PASSWORD_MANAGER_IGNORE_PROPS = {
 export function getSuppressedAutoComplete(isPassword: boolean): string {
   return isPassword ? "new-password" : "off";
 }
+
+/**
+ * Stamps the autofill-suppression attributes onto a raw input/textarea element.
+ *
+ * For inputs that React props cannot reach — e.g. ag-grid cell editors, which
+ * render their own `<input>`/`<textarea>` outside React when a cell enters edit
+ * mode. Idempotent; safe to call on every editing-started event.
+ */
+export function suppressAutofillOnElement(
+  element: HTMLInputElement | HTMLTextAreaElement | null | undefined,
+): void {
+  if (!element) return;
+  element.setAttribute("autocomplete", "off");
+  for (const [key, value] of Object.entries(PASSWORD_MANAGER_IGNORE_PROPS)) {
+    element.setAttribute(key, value);
+  }
+}
