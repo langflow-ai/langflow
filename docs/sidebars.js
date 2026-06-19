@@ -316,6 +316,33 @@ module.exports = {
       ],
     },
     {
+      type: "category",
+      label: "LFX",
+      className: "sidebar-category-with-icon sidebar-icon-terminal",
+      items: [
+        {
+          type: "doc",
+          id: "Lfx/lfx-overview",
+          label: "About LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-install",
+          label: "Install LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-run",
+          label: "Run flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "API-Reference/flow-devops-sdk",
+          label: "Flow DevOps Toolkit SDK"
+        },
+      ],
+    },
+    {
       type: "html",
       value: `<div class="sidebar-group-label">Reference</div>`,
       className: "sidebar-group-divider",

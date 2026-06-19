@@ -33,6 +33,12 @@ Instead of manually exporting, sharing, and importing flow JSON files from the L
       Alternatively, you can run `uvx lfx` commands, or run LFX from the `src/lfx` directory in a cloned Langflow repo.
       For more information, see the [Langflow LFX README](https://github.com/langflow-ai/langflow/blob/main/src/lfx/README.md).
 
+   :::tip
+   `uv pip install lfx` installs the core LFX executor but does not include components that ship as separate bundle packages.
+   If your flows use those components, install the required bundles in the same virtual environment.
+   For more information, see [About bundles](/components-bundle-components).
+   :::
+
 ## Create a project and version a flow
 
 1. Create a flow in the Langflow UI, such as the Simple Agent starter flow in the [Quickstart](/get-started-quickstart).

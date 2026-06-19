@@ -1,0 +1,116 @@
+---
+title: Install LFX
+slug: /lfx-install
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+LFX can be installed from PyPI, cloned from the Langflow repository, or run without installing using `uvx`.
+
+If you have installed Langflow OSS version 1.6 or later, `lfx` is already included in your environment.
+
+## Prerequisites
+
+- [Python](https://www.python.org/downloads/) 3.10–3.14
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.4 or later
+
+## Install from PyPI
+
+1. Create and activate a virtual environment:
+
+   ```bash
+   uv venv lfx-venv
+   source lfx-venv/bin/activate
+   ```
+
+2. Install LFX:
+
+   ```bash
+   uv pip install lfx
+   ```
+
+   To install the latest nightly (pre-release) version:
+
+   ```bash
+   uv pip install --pre lfx
+   ```
+
+## Install with bundle components
+
+`uv pip install lfx` installs the core LFX executor.
+It does not include components that ship as separate bundle packages, such as those for Chroma, Groq, Mistral, and others.
+
+If your flows use bundle components, install the required bundles in the same virtual environment.
+
+To install all long-tail bundles:
+
+```bash
+uv pip install lfx "lfx[bundles]"
+```
+
+To install a specific bundle:
+
+```bash
+uv pip install lfx-<provider>
+```
+
+For example:
+
+```bash
+uv pip install lfx-openai
+```
+
+For the full list of available bundles, see [About bundles](/components-bundle-components).
+
+## Clone the Langflow repository
+
+To run LFX from source without a PyPI install:
+
+1. Clone the Langflow repository:
+
+   ```bash
+   git clone https://github.com/langflow-ai/langflow
+   ```
+
+2. Change directory to `src/lfx`:
+
+   ```bash
+   cd langflow/src/lfx
+   ```
+
+3. Run `lfx` commands using `uv run`:
+
+   ```bash
+   uv run lfx serve my-flow.json
+   ```
+
+## Run without installing
+
+Use `uvx` to run LFX in a temporary environment without a permanent install:
+
+```bash
+uvx lfx serve my-flow.json
+```
+
+`uvx` downloads and caches LFX automatically.
+This is useful for one-off flow runs or CI pipelines where you do not want to manage a virtual environment.
+
+## Verify the installation
+
+After installing, confirm LFX is available:
+
+```bash
+lfx --version
+```
+
+To list available commands:
+
+```bash
+lfx --help
+```
+
+## Next steps
+
+- [Run flows with LFX](./lfx-run)
+- [Flow DevOps Toolkit SDK](/flow-devops-sdk)
