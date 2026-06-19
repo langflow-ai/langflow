@@ -133,12 +133,26 @@ async def load_bundles_with_error_handling():
         return [], []
 
 
+def cors_origins_contain_wildcard(origins) -> bool:
+    """Return True if the configured CORS origins include a wildcard (`*`).
+
+    `LANGFLOW_CORS_ORIGINS="*"` is parsed as the raw string on some Python versions
+    and as a single-element list (`["*"]`) on others, and an operator may also mix a
+    wildcard into a list of specific origins (e.g. `"https://app.com,*"` ->
+    `["https://app.com", "*"]`). All of these mean "all origins"; treat them the same
+    so wildcard detection stays consistent everywhere it is used.
+    """
+    return origins == "*" or (isinstance(origins, list) and "*" in origins)
+
+
 def warn_about_future_cors_changes(settings):
     """Warn users about upcoming CORS security changes in version 1.7."""
-    # Check if using default (backward compatible) settings
-    using_defaults = settings.cors_origins == "*" and settings.cors_allow_credentials is True
+    # Check if using permissive (backward compatible) settings: a wildcard origin
+    # combined with credentials. Share the wildcard predicate with the middleware
+    # configuration so both fire for the same set of origins (string or list form).
+    using_permissive = cors_origins_contain_wildcard(settings.cors_origins) and settings.cors_allow_credentials is True
 
-    if using_defaults:
+    if using_permissive:
         logger.warning(
             "CORS: Using permissive defaults (all origins + credentials). "
             "Set LANGFLOW_CORS_ORIGINS for production. Stricter defaults in v2.0."
@@ -165,6 +179,12 @@ def get_lifespan(*, fix_migration=False, version=None):
         sync_flows_from_fs_task = None
         mcp_init_task = None
         models_dev_refresh_task = None
+        # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
+        # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
+        # when startup fails before bundle loading assigns it below. Otherwise an
+        # early failure (e.g. an unresolvable LANGFLOW_DATABASE_URL) is masked by a
+        # secondary error during cleanup. See issue #13634.
+        temp_dirs: list = []
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -646,6 +666,25 @@ def create_app():
 
     # Configure CORS using settings (with backward compatible defaults)
     origins = settings.cors_origins
+    allow_credentials = settings.cors_allow_credentials
+    # Security: a wildcard origin combined with credentials is unsafe (and invalid
+    # per the CORS spec). Starlette would reflect the caller's Origin and return
+    # Access-Control-Allow-Credentials: true, letting any site make credentialed
+    # cross-origin requests (CSRF / token theft). Force credentials off whenever
+    # the origin list is a wildcard; specific origins keep credentials.
+    if cors_origins_contain_wildcard(origins):
+        if allow_credentials:
+            # Surface the override so an operator who set credentials on purpose can
+            # see why credentialed requests stopped working and points them at the
+            # wildcard origin as the cause.
+            logger.warning(
+                "CORS: wildcard origin ('*') is configured together with "
+                "LANGFLOW_CORS_ALLOW_CREDENTIALS=true; disabling credentials because a "
+                "wildcard origin with credentials enables cross-site credentialed "
+                "requests (CSRF / token theft) and is invalid per the CORS spec. "
+                "Set LANGFLOW_CORS_ORIGINS to explicit origins to keep credentials enabled."
+            )
+        allow_credentials = False
     if isinstance(origins, str) and origins != "*":
         origins = [origins]
 
@@ -653,7 +692,7 @@ def create_app():
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=settings.cors_allow_credentials,
+        allow_credentials=allow_credentials,
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )

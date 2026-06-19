@@ -452,7 +452,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "1.4.7"
+                    "version": "1.4.8"
                   },
                   {
                     "name": "lfx",
@@ -464,7 +464,7 @@
                   },
                   {
                     "name": "OpenDsStar",
-                    "version": "1.0.26"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
@@ -1093,7 +1093,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.4.7"
+                    "version": "1.4.8"
                   },
                   {
                     "name": "pydantic",
@@ -2101,7 +2101,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.137.1"
+                    "version": "0.137.2"
                   },
                   {
                     "name": "lfx",
@@ -5231,7 +5231,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.137.1"
+                    "version": "0.137.2"
                   },
                   {
                     "name": "lfx",

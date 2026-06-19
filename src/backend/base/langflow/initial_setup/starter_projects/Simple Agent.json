@@ -658,7 +658,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.137.1"
+                    "version": "0.137.2"
                   },
                   {
                     "name": "lfx",
@@ -945,7 +945,7 @@
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.2.18"
+                    "version": "1.3.10"
                   },
                   {
                     "name": "lfx",
@@ -953,7 +953,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.4.7"
+                    "version": "1.4.8"
                   }
                 ],
                 "total_dependencies": 3
