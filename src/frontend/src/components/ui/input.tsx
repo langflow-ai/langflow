@@ -45,8 +45,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     // opt back in via `allowAutofill`. A caller-provided `autoComplete` always
     // wins. See utils/inputAutofill.ts for the rationale.
     const autofillProps = allowAutofill
-      ? { autoComplete: autoComplete ?? "off" }
+      ? autoComplete !== undefined
+        ? { autoComplete }
+        : {}
       : {
+          autoComplete:
+            autoComplete ?? getSuppressedAutoComplete(type === "password"),
+          ...PASSWORD_MANAGER_IGNORE_PROPS,
+        };
           autoComplete:
             autoComplete ?? getSuppressedAutoComplete(type === "password"),
           ...PASSWORD_MANAGER_IGNORE_PROPS,
