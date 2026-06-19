@@ -487,11 +487,13 @@ async def test_mcp_servers_file_replacement(files_client, files_created_api_key,
 
     mcp_file_ext = await get_mcp_file(files_active_user, extension=True)
     mcp_file = await get_mcp_file(files_active_user)
+    first_mcp_config = b'{"mcpServers": {"fetch": {"command": "uvx", "args": ["mcp-server-fetch"]}}}'
+    second_mcp_config = b'{"mcpServers": {"everything": {}}}'
 
     # Upload first _mcp_servers file
     response1 = await files_client.post(
         "api/v2/files",
-        files={"file": (mcp_file_ext, b'{"servers": ["server1"]}')},
+        files={"file": (mcp_file_ext, first_mcp_config)},
         headers=headers,
     )
     assert response1.status_code == 201
@@ -501,7 +503,7 @@ async def test_mcp_servers_file_replacement(files_client, files_created_api_key,
     # Upload second _mcp_servers file - should replace the first one
     response2 = await files_client.post(
         "api/v2/files",
-        files={"file": (mcp_file_ext, b'{"servers": ["server2"]}')},
+        files={"file": (mcp_file_ext, second_mcp_config)},
         headers=headers,
     )
     assert response2.status_code == 201
@@ -519,7 +521,7 @@ async def test_mcp_servers_file_replacement(files_client, files_created_api_key,
     # Verify the second file can be downloaded with the updated content
     download2 = await files_client.get(f"api/v2/files/{file2['id']}", headers=headers)
     assert download2.status_code == 200
-    assert download2.content == b'{"servers": ["server2"]}'
+    assert download2.content == second_mcp_config
 
     # Verify the first file no longer exists (should return 404)
     download1 = await files_client.get(f"api/v2/files/{file1['id']}", headers=headers)
