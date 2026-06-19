@@ -219,7 +219,15 @@ class DatabaseVariableService(VariableService, Service):
         if variable.type == CREDENTIAL_TYPE:
             from pydantic import SecretStr
 
-            return SecretStr(auth_utils.decrypt_api_key(variable.value))
+            decrypted = auth_utils.decrypt_api_key(variable.value)
+            if not decrypted:
+                msg = (
+                    f"Could not decrypt credential variable '{name}'. The stored value cannot be "
+                    "decrypted with the current LANGFLOW_SECRET_KEY — it may have been encrypted "
+                    "with a different key."
+                )
+                raise ValueError(msg)
+            return SecretStr(decrypted)
         # GENERIC type - return as-is
         return variable.value
 

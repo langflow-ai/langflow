@@ -18,7 +18,8 @@ from langflow.services.auth.exceptions import (
     InvalidCredentialsError,
     MissingCredentialsError,
 )
-from langflow.services.deps import get_auth_service
+from langflow.services.auth.external import extract_external_token
+from langflow.services.deps import get_auth_service, get_settings_service
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -38,6 +39,8 @@ class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
     This allows the application to work with HttpOnly cookies while supporting
     explicit Authorization headers for backward compatibility and testing scenarios.
     If an explicit Authorization header is provided, it takes precedence over cookies.
+    When external trusted auth is enabled, the configured external header/cookie
+    is consulted last so the native JWT path is always tried first.
     """
 
     async def __call__(self, request: Request) -> str | None:
@@ -52,9 +55,22 @@ class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
         if token:
             return token
 
+        # Final fallback: external trusted credential (validated downstream).
+        if external := _get_external_token(request.headers, request.cookies):
+            return external
+
         # If auto_error is True, this would raise an exception
         # Since we set auto_error=False, return None
         return None
+
+
+def _get_external_token(headers, cookies) -> str | None:
+    """Return the configured external credential, swallowing transient failures."""
+    try:
+        auth_settings = get_settings_service().auth_settings
+    except Exception:  # noqa: BLE001
+        return None
+    return extract_external_token(headers, cookies, auth_settings)
 
 
 oauth2_login = OAuth2PasswordBearerCookie(tokenUrl="api/v1/login", auto_error=False)
@@ -158,13 +174,22 @@ def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
 
 
 async def get_current_user(
+    request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope),
 ) -> User:
+    # Keep the native token (resolved by oauth2_login, which may already have
+    # collapsed to the external credential) separate from a freshly-extracted
+    # external credential so a present-but-invalid native cookie cannot shadow a
+    # valid external one. The auth service tries the native token first and only
+    # falls back to the external credential when it differs from the token.
+    external_token = _get_external_token(request.headers, request.cookies)
     try:
-        return await _auth_service().get_current_user(token, query_param, header_param, db)
+        return await _auth_service().get_current_user(
+            token, query_param, header_param, db, external_token=external_token
+        )
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 
@@ -172,18 +197,21 @@ async def get_current_user(
 async def get_current_user_from_access_token(
     token: str | Coroutine | None,
     db: AsyncSession,
+    external_token: str | None = None,
 ) -> User:
     """Compatibility helper to resolve a user from an access token.
 
     This simply delegates to the active auth service's
-    `get_current_user_from_access_token` implementation.
+    `get_current_user_from_access_token` implementation. ``external_token`` is an
+    optional, separately-extracted external credential tried as a fallback when
+    native token authentication fails; when ``None`` behavior is unchanged.
 
     **For new code, prefer calling
     `get_auth_service().get_current_user_from_access_token(...)` directly**
     instead of importing this function.
     """
     try:
-        return await _auth_service().get_current_user_from_access_token(token, db)
+        return await _auth_service().get_current_user_from_access_token(token, db, external_token=external_token)
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 
@@ -196,7 +224,11 @@ async def get_current_user_for_websocket(
     db: AsyncSession,
 ) -> User | UserRead:
     """Extracts credentials from WebSocket and delegates to auth service."""
+    # Keep the native token and the external credential separate so a present but
+    # invalid/expired native token cannot shadow a valid external credential; the
+    # auth service tries the external token as a fallback when native auth fails.
     token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
+    external_token = _get_external_token(websocket.headers, websocket.cookies)
     api_key = (
         websocket.query_params.get("x-api-key")
         or websocket.query_params.get("api_key")
@@ -205,7 +237,7 @@ async def get_current_user_for_websocket(
     )
 
     try:
-        return await _auth_service().get_current_user_for_websocket(token, api_key, db)
+        return await _auth_service().get_current_user_for_websocket(token, api_key, db, external_token=external_token)
     except AuthenticationError as e:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
 
@@ -218,11 +250,15 @@ async def get_current_user_for_sse(
 
     Accepts cookie (access_token_lf) or API key (x-api-key query param).
     """
+    # Keep the native token and the external credential separate (see
+    # get_current_user_for_websocket) so the external credential remains a usable
+    # fallback even when a stale native cookie is present.
     token = request.cookies.get("access_token_lf")
+    external_token = _get_external_token(request.headers, request.cookies)
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db)
+        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
     except AuthenticationError as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -288,11 +324,15 @@ async def get_current_user_optional(
     if auth_header and auth_header.startswith("Bearer "):
         token = token or auth_header[len("Bearer ") :]
 
-    if not token and not api_key:
+    # Keep the external credential separate so it remains a usable fallback when a
+    # stale/invalid native token is present (see get_current_user_for_websocket).
+    external_token = _get_external_token(request.headers, request.cookies)
+
+    if not token and not external_token and not api_key:
         return None
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db)
+        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
     except (AuthenticationError, HTTPException):
         return None
 
