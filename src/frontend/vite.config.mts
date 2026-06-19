@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
   }, {});
 
   return {
-    base: BASENAME || "",
+    base: env.VITE_BASENAME || "",
     build: {
       outDir: "build",
     },
