@@ -26,7 +26,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-# Core components as (module, class) pairs, derived from the 33 shipped starter templates.
+# Core components as (module, class) pairs, assumed from standard usage. This list
+# can and should evolve if we want to warm more or less components.
 # Importing the class (not just the package) is what loads the heavy submodule + deps.
 DEFAULT_CORE_COMPONENTS: tuple[tuple[str, str], ...] = (
     ("lfx.components.input_output", "ChatInput"),
@@ -38,13 +39,10 @@ DEFAULT_CORE_COMPONENTS: tuple[tuple[str, str], ...] = (
     ("lfx.components.processing", "ParserComponent"),
     ("lfx.components.utilities", "CalculatorComponent"),
 )
-# StructuredOutputComponent (5/33 templates) is intentionally excluded: it pulls the
-# optional `trustcall` dependency that is not part of base lfx. A deployment that uses it
-# (and has the dep installed) can warm it by passing it via the ``components`` argument.
 
 
 class PrewarmError(RuntimeError):
-    """Raised when a required core component fails to import."""
+    """Raised when a required core component fails to import, or fork-safety teardown fails."""
 
 
 @dataclass
@@ -55,6 +53,7 @@ class PrewarmResult:
     failed: dict[str, str] = field(default_factory=dict)
     warmup_ran: bool = False
     froze: bool = False
+    services_torn_down: bool = False
     elapsed_s: float = 0.0
 
 
@@ -65,6 +64,7 @@ class FlowPrewarmResult:
     built: bool = False
     ran: bool = False
     froze: bool = False
+    services_torn_down: bool = False
     elapsed_s: float = 0.0
     error: str | None = None
     # Fork-hostile state left behind by a `run` (empty unless `run=True`). Non-empty here
@@ -77,6 +77,31 @@ def freeze_heap() -> None:
     """Collect, then freeze the heap so GC stops scanning it (preserves CoW sharing)."""
     gc.collect()
     gc.freeze()
+
+
+def teardown_warm_services() -> None:
+    """Dispose every service instantiated during warming, before a fork/snapshot.
+
+    Warming triggers lazy service discovery + instantiation (settings, tracing, and
+    anything a registered ``lfx.services`` plugin replaces). The bundled lfx services are
+    fork-safe no-ops, but a real plugin (a DB pool, an external cache socket, a telemetry
+    thread) opened in ``__init__`` would be inherited live by every process forked from
+    this one (Gunicorn ``--preload``). This tears those down — mirroring Langflow's
+    ``engine.dispose()`` / cache ``teardown()`` before its master fork.
+
+    A teardown failure is fatal: it raises :class:`PrewarmError` rather than let a
+    half-disposed process be captured into a fork. Do NOT call this on the Firecracker
+    ``--unsafe-run`` path, where live connections across snapshot/restore are intentional.
+    """
+    import asyncio
+
+    from lfx.services.manager import get_service_manager
+
+    try:
+        asyncio.run(get_service_manager().teardown(raise_on_error=True))
+    except Exception as exc:
+        msg = f"service teardown before fork/snapshot failed: {exc}"
+        raise PrewarmError(msg) from exc
 
 
 def _component_key(module: str, attr: str) -> str:
@@ -117,6 +142,7 @@ def prewarm_core_imports(
     required: Sequence[tuple[str, str]] | None = None,
     warmup_run: bool = True,
     freeze: bool = False,
+    teardown_services: bool = True,
 ) -> PrewarmResult:
     """Warm core component imports (and optionally the execution machinery).
 
@@ -131,6 +157,10 @@ def prewarm_core_imports(
         freeze: When true, run ``gc.collect()`` then ``gc.freeze()`` after warming, taking
             the warmed objects out of GC's scan set to preserve copy-on-write sharing
             across VMs restored from the same snapshot.
+        teardown_services: When true (default), dispose any services instantiated during
+            warming (see :func:`teardown_warm_services`) so the process is fork-safe. A
+            teardown failure raises :class:`PrewarmError`. Set false to keep warmed live
+            service instances (Firecracker snapshot, which tolerates live state).
 
     Returns:
         A :class:`PrewarmResult` describing what imported, what failed, whether the
@@ -155,6 +185,12 @@ def prewarm_core_imports(
     if warmup_run:
         _run_hermetic_warmup()
         result.warmup_ran = True
+
+    # Dispose warmed service instances BEFORE freezing, so a fork-hostile plugin service
+    # is not captured into a preload fork (and gc.collect during freeze can reclaim them).
+    if teardown_services:
+        teardown_warm_services()
+        result.services_torn_down = True
 
     if freeze:
         freeze_heap()
@@ -181,6 +217,7 @@ def prewarm_flow(
     run: bool = False,
     input_value: str = "prewarm",
     freeze: bool = False,
+    teardown_services: bool = True,
 ) -> FlowPrewarmResult:
     """Warm a specific flow by building it, and optionally running it end-to-end.
 
@@ -195,6 +232,10 @@ def prewarm_flow(
             When false, only the build path is warmed (no execution, no side effects).
         input_value: Input passed to the flow when ``run`` is true.
         freeze: When true, freeze the heap after warming (see :func:`freeze_heap`).
+        teardown_services: When true (default), dispose services instantiated while building
+            so the process stays fork-safe (raises :class:`PrewarmError` on teardown failure).
+            Ignored when ``run`` is true — that path intentionally leaks live connections for
+            Firecracker snapshot/restore, so tearing services down would defeat it.
 
     Returns:
         A :class:`FlowPrewarmResult`. Load/build/run failures are captured in ``error``
@@ -230,6 +271,12 @@ def prewarm_flow(
             report = fork_safety_report()
             result.ghost_threads = report.ghost_threads
             result.ghost_connections = report.ghost_connections
+
+    # Build-only (fork-safe) path: dispose services opened during the build before freezing.
+    # A `run` deliberately keeps live state (Firecracker), so never tear down there.
+    if teardown_services and not run and result.error is None:
+        teardown_warm_services()
+        result.services_torn_down = True
 
     if freeze:
         freeze_heap()

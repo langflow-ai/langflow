@@ -52,13 +52,19 @@ def register(app: typer.Typer) -> None:
         fork-safe. The ``--unsafe-run-may-leak-connections`` flag fully executes each ``--flow``
         (Firecracker only — never before a fork); see the warning on that flag.
         """
-        from lfx.preload import PrewarmError, freeze_heap, prewarm_core_imports, prewarm_flow
+        from lfx.preload import PrewarmError, freeze_heap, prewarm_core_imports, prewarm_flow, teardown_warm_services
 
         failed = False
 
+        # Service teardown is centralized below (one pass after ALL warming) so the
+        # per-flow layer doesn't re-instantiate services the base layer just disposed.
+        # The --unsafe-run path intentionally leaves live connections (Firecracker), so
+        # it skips teardown entirely.
+        do_teardown = not unsafe_run
+
         # Base layer: common component imports + model-free execution machinery.
         try:
-            core = prewarm_core_imports(warmup_run=not skip_run, freeze=False)
+            core = prewarm_core_imports(warmup_run=not skip_run, freeze=False, teardown_services=False)
         except PrewarmError as exc:
             typer.echo(f"prewarm failed: {exc}", err=True)
             raise typer.Exit(1) from exc
@@ -73,7 +79,7 @@ def register(app: typer.Typer) -> None:
 
         # Per-flow layer: warm exactly the supplied flows (optionally executing them).
         for flow_path in flow or []:
-            fr = prewarm_flow(flow_path, run=unsafe_run, freeze=False)
+            fr = prewarm_flow(flow_path, run=unsafe_run, freeze=False, teardown_services=False)
             if fr.error:
                 failed = True
                 typer.echo(f"  FAIL flow {flow_path}: {fr.error}", err=True)
@@ -87,6 +93,17 @@ def register(app: typer.Typer) -> None:
                         f"OK for Firecracker restore; do NOT capture this before a Gunicorn/preload fork.",
                         err=True,
                     )
+
+        # Dispose any services warming instantiated so a Gunicorn/preload fork can't
+        # inherit a real plugin's live pool/socket/thread. Fatal on failure — a
+        # half-disposed process must never be captured into a fork.
+        if do_teardown:
+            try:
+                teardown_warm_services()
+            except PrewarmError as exc:
+                typer.echo(f"prewarm failed: {exc}", err=True)
+                raise typer.Exit(1) from exc
+            typer.echo("Disposed warm services (fork-safe).")
 
         if freeze:
             freeze_heap()

@@ -254,3 +254,116 @@ def test_prewarm_flow_freeze():
         assert gc.get_freeze_count() > before
     finally:
         gc.unfreeze()
+
+
+# ---------------------------------------------------------------------------
+# Service teardown before fork/snapshot (fork-safety for pluggable services)
+# ---------------------------------------------------------------------------
+
+
+from lfx.services.base import Service  # noqa: E402
+
+
+class _PreloadSpyService(Service):
+    """Minimal Service that records teardown and can be flipped to raise.
+
+    Stands in for a real pluggable service (DB/cache/telemetry) whose teardown
+    must run before a fork. Injected directly into the global service manager.
+    """
+
+    def __init__(self, name: str, *, fail: bool = False) -> None:
+        super().__init__()
+        self._name = name
+        self._fail = fail
+        self.torn_down = False
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    async def teardown(self) -> None:
+        self.torn_down = True
+        if self._fail:
+            msg = f"{self._name} teardown boom"
+            raise RuntimeError(msg)
+
+
+def _inject_spy(name: str = "tracing_spy", *, fail: bool = False) -> _PreloadSpyService:
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    spy = _PreloadSpyService(name, fail=fail)
+    # Occupy a real slot so a warmup run's lazy get() won't recreate over it.
+    get_service_manager().services[ServiceType.TRACING_SERVICE] = spy
+    return spy
+
+
+def _drop_spy() -> None:
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    get_service_manager().services.pop(ServiceType.TRACING_SERVICE, None)
+
+
+def test_core_imports_tears_down_services_by_default():
+    """The fork-safe base path disposes services instantiated during warming."""
+    from lfx.preload import prewarm_core_imports
+
+    spy = _inject_spy()
+    try:
+        result = prewarm_core_imports(warmup_run=False)
+        assert result.services_torn_down is True
+        assert spy.torn_down is True
+    finally:
+        _drop_spy()
+
+
+def test_core_imports_keeps_services_when_opted_out():
+    """teardown_services=False keeps warmed live instances (Firecracker snapshot)."""
+    from lfx.preload import prewarm_core_imports
+
+    spy = _inject_spy()
+    try:
+        result = prewarm_core_imports(warmup_run=False, teardown_services=False)
+        assert result.services_torn_down is False
+        assert spy.torn_down is False
+    finally:
+        _drop_spy()
+
+
+def test_teardown_warm_services_raises_on_failure():
+    """A fork-safety-critical teardown failure is fatal (PrewarmError)."""
+    from lfx.preload import PrewarmError, teardown_warm_services
+
+    _inject_spy("bad_service", fail=True)
+    try:
+        with pytest.raises(PrewarmError, match="teardown before fork/snapshot failed"):
+            teardown_warm_services()
+    finally:
+        _drop_spy()
+
+
+def test_flow_build_only_tears_down_services():
+    """prewarm_flow(run=False) is fork-safe and disposes services."""
+    from lfx.preload import prewarm_flow
+
+    spy = _inject_spy()
+    try:
+        result = prewarm_flow(_hermetic_flow_payload(), run=False)
+        assert result.services_torn_down is True
+        assert spy.torn_down is True
+    finally:
+        _drop_spy()
+
+
+def test_flow_run_does_not_tear_down_services():
+    """prewarm_flow(run=True) intentionally leaves live connections (Firecracker)."""
+    from lfx.preload import prewarm_flow
+
+    spy = _inject_spy()
+    try:
+        result = prewarm_flow(_hermetic_flow_payload(), run=True)
+        assert result.services_torn_down is False
+        assert spy.torn_down is False
+    finally:
+        _drop_spy()
