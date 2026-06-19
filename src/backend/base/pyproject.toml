@@ -108,7 +108,6 @@ dependencies = [
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
     "transformers>=5.6.0,<6.0.0",
-    "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
 
 [tool.uv]
@@ -264,6 +263,9 @@ pytube = ["pytube==15.0.0"]
 # crewai is commented out due to httpx version conflict
 # crewai = ["crewai>=0.126.0"]
 smolagents = ["smolagents>=1.8.0"]
+opendsstar = [
+    "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
+]
 
 # Individual tools
 beautifulsoup = ["beautifulsoup4==4.12.3"]
@@ -450,6 +452,7 @@ complete = [
     "langflow-base[pytube]",
     # "langflow-base[crewai]",  # commented out due to httpx version conflict
     "langflow-base[smolagents]",
+    "langflow-base[opendsstar]",
     "langflow-base[beautifulsoup]",
     "langflow-base[serpapi]",
     "langflow-base[google-api]",
