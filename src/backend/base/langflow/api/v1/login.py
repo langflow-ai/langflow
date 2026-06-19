@@ -4,16 +4,55 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from limits import parse
 from pydantic import BaseModel
+from slowapi.errors import RateLimitExceeded
+from slowapi.wrappers import Limit
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.services.auth.exceptions import AuthenticationError
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
+from langflow.services.rate_limit import get_rate_limit_string
 
 router = APIRouter(tags=["Login"])
+
+
+def get_limiter_from_app(request: Request):
+    """Get the rate limiter from app state (initialized after settings load)."""
+    return request.app.state.limiter
+
+
+def check_rate_limit(request: Request) -> None:
+    """Check and enforce rate limit for the request.
+
+    Retrieves the limiter from app.state (initialized after settings load in main.py)
+    and manually checks the rate limit using the limits library.
+
+    Raises:
+        RateLimitExceeded: If the rate limit is exceeded
+    """
+    limiter = get_limiter_from_app(request)
+
+    # Parse the rate limit string and check if limit is exceeded
+    limit_item = parse(get_rate_limit_string())
+    if not limiter._limiter.hit(limit_item, limiter._key_func(request)):  # noqa: SLF001
+        # Limit exceeded - raise RateLimitExceeded with proper wrapper
+        limit_wrapper = Limit(
+            limit=limit_item,
+            key_func=limiter._key_func,  # noqa: SLF001
+            scope=None,
+            per_method=False,
+            methods=None,
+            error_message=None,
+            exempt_when=None,
+            cost=1,
+            override_defaults=False,
+        )
+        raise RateLimitExceeded(limit_wrapper)
 
 
 class SessionResponse(BaseModel):
@@ -31,6 +70,10 @@ async def login_to_get_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: DbSession,
 ):
+    """Login endpoint with rate limiting applied via app.state.limiter."""
+    # Check rate limit (limiter is initialized in main.py after settings load)
+    check_rate_limit(request)
+
     auth_settings = get_settings_service().auth_settings
     try:
         auth = get_auth_service()
@@ -193,16 +236,22 @@ async def get_session(
     It does not raise an error if unauthenticated, allowing the frontend to gracefully
     handle the session state.
     """
-    from langflow.services.auth.utils import oauth2_login
+    from langflow.services.auth.utils import _get_external_token, oauth2_login
 
     # Try to get the token from the request (cookie or Authorization header)
     try:
         token = await oauth2_login(request)
-        if not token:
+        # Extract the external credential separately so a present-but-invalid
+        # native cookie can't shadow a valid external one (mirrors get_current_user
+        # and the WS/SSE paths). oauth2_login may already have collapsed to the
+        # external credential, in which case the service's dedup guard makes the
+        # fallback a no-op.
+        external_token = _get_external_token(request.headers, request.cookies)
+        if not token and not external_token:
             return SessionResponse(authenticated=False)
 
         # Validate the token and get user
-        user = await get_auth_service().get_current_user_from_access_token(token, db)
+        user = await get_auth_service().get_current_user_from_access_token(token, db, external_token=external_token)
         if not user or not user.is_active:
             return SessionResponse(authenticated=False)
 
@@ -210,7 +259,7 @@ async def get_session(
             authenticated=True,
             user=UserRead.model_validate(user, from_attributes=True),
         )
-    except (HTTPException, ValueError) as _:
+    except (AuthenticationError, HTTPException, ValueError) as _:
         # Any authentication error means not authenticated
         return SessionResponse(authenticated=False)
 

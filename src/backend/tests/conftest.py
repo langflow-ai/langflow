@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import shutil
 
 # we need to import tmpdir
@@ -39,6 +40,29 @@ from typer.testing import CliRunner
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_rate_limiting():
+    """Disable rate limiting for all tests to prevent 429 errors during test execution."""
+    os.environ["LANGFLOW_RATE_LIMIT_ENABLED"] = "false"
+    yield
+    os.environ.pop("LANGFLOW_RATE_LIMIT_ENABLED", None)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_models_dev_refresh():
+    """Keep the models.dev background refresh out of tests.
+
+    Every app boot otherwise launches a lifespan task that fetches
+    https://models.dev/api.json mid-test, which both hits the network and
+    trips event-loop-block detectors (pyleak) in whatever test happens to be
+    running when the request lands. The bundled static model lists are used
+    instead, which is also deterministic.
+    """
+    os.environ["LANGFLOW_MODELS_DEV_REFRESH"] = "false"
+    yield
+    os.environ.pop("LANGFLOW_MODELS_DEV_REFRESH", None)
 
 
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
@@ -409,6 +433,16 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture(autouse=True)
+def disable_telemetry_writer(monkeypatch):
+    # Tests assert on freshly-written transactions / vertex_builds rows. The
+    # batched writer is a production optimization; in tests we want the
+    # synchronous legacy DB path so reads-after-writes are visible.
+    monkeypatch.setenv("LANGFLOW_TELEMETRY_WRITER_ENABLED", "false")
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture
 def use_noop_session(monkeypatch):
     monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
@@ -436,6 +470,7 @@ async def client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("DO_NOT_TRACK", "true")
             if "load_flows" in request.keywords:
                 shutil.copyfile(
                     pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"

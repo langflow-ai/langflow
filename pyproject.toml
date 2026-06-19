@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.10.0"
+version = "1.11.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,12 +17,14 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.10.0",
+    "langflow-base[complete]>=0.11.0",
     # langflow-extensions:bundle-deps-start
     "lfx-duckduckgo>=0.1.0",
     "lfx-arxiv>=0.1.0",
     "lfx-ibm>=0.1.0",
     "lfx-docling>=0.1.0",
+    "lfx-firecrawl>=0.1.0",
+    "lfx-nextplaid>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -84,6 +86,8 @@ lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
 lfx-docling = { workspace = true }
+lfx-firecrawl = { workspace = true }
+lfx-nextplaid = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -100,6 +104,8 @@ members = [
     "src/bundles/arxiv",
     "src/bundles/ibm",
     "src/bundles/docling",
+    "src/bundles/firecrawl",
+    "src/bundles/nextplaid",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -285,6 +291,13 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"src/backend/tests/stress/*" = [
+    "D1",     # Docstrings: this is a manual CLI tool, not a test target
+    "INP001", # Stress tests live outside the unit test package
+    "S101",   # Asserts ok in stress harness
+    "S311",   # Standard PRNG is fine for stress payload jitter
+    "T201",   # Print statements: this is a CLI script
+]
 "scripts/gp/tests/*" = [
     "D1",      # Missing docstrings
     "PLR2004", # Magic value comparisons
@@ -332,6 +345,9 @@ external = ["RUF027"]
 "src/lfx/src/lfx/cli/common.py" = [
     "S104",  # Intentional binding to all interfaces for server
     "S105",  # False positive: GITHUB_TOKEN_ENV is an env var name
+]
+"src/lfx/src/lfx/cli/upgrade.py" = [
+    "TC003",  # Path is used at runtime, not just in type hints
 ]
 "src/lfx/src/lfx/components/__init__.py" = [
     "SLF001",  # Accessing _dynamic_imports from modules

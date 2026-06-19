@@ -5,7 +5,6 @@ import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
-import { GradientSave } from "@/icons/GradientSparkles";
 
 const iconCache = new Map<string, React.ComponentType>();
 
@@ -316,7 +315,7 @@ export const SIDEBAR_CATEGORIES = [
   {
     display_name: "sidebar.category.saved",
     name: "saved_components",
-    icon: "GradientSave",
+    icon: "Save",
   },
   {
     display_name: "sidebar.category.inputOutput",
@@ -487,6 +486,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "MistralAI", name: "mistral", icon: "MistralAI" },
   { display_name: "MongoDB", name: "mongodb", icon: "MongoDB" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
+  { display_name: "NextPlaid", name: "nextplaid", icon: "NextPlaid" },
   { display_name: "Not Diamond", name: "notdiamond", icon: "NotDiamond" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Novita", name: "novita", icon: "Novita" },
@@ -529,7 +529,7 @@ export const SIDEBAR_BUNDLES = [
 ];
 
 export const categoryIcons: Record<string, string> = {
-  saved_components: "GradientSave",
+  saved_components: "Save",
   input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
@@ -620,9 +620,9 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   FAISS: "Meta",
   FaissSearch: "Meta",
   FirecrawlCrawlApi: "Firecrawl",
-  FirecrawlExtractApi: "Firecrawl",
   FirecrawlMapApi: "Firecrawl",
   FirecrawlScrapeApi: "Firecrawl",
+  FirecrawlSearchApi: "Firecrawl",
   GitbookLoader: "GitBook",
   GoogleGenerativeAI: "GoogleGenerativeAI",
   Googlesheets: "Googlesheets",
@@ -670,7 +670,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   model_specs: "FileSliders",
   advanced: "Laptop2",
   chat: "MessageCircle",
-  saved_components: "GradientSave",
+  saved_components: "Save",
   vectorsearch: "TextSearch",
   wrappers: "Gift",
   unknown: "HelpCircle",
@@ -706,7 +706,6 @@ const iconMappingsPromise = import("../icons/lazyIconImports").then(
 
 export const eagerLoadedIconsMap = {
   // Custom icons
-  GradientSave: GradientSave,
   BotMessageSquareIcon: BotMessageSquareIcon,
 
   // React icon

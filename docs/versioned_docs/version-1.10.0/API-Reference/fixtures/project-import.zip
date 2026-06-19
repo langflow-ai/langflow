@@ -1,0 +1,3 @@
+Placeholder zip fixture.
+When using scripts/test-api-examples-local.sh in execute mode, this is replaced
+by a real exported project archive via PROJECT_IMPORT_FILE.

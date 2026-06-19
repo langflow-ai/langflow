@@ -505,6 +505,7 @@ def register_all_service_factories() -> None:
     from langflow.services.store import factory as store_factory
     from langflow.services.task import factory as task_factory
     from langflow.services.telemetry import factory as telemetry_factory
+    from langflow.services.telemetry_writer import factory as telemetry_writer_factory
     from langflow.services.tracing import factory as tracing_factory
     from langflow.services.transaction import factory as transaction_factory
     from langflow.services.variable import factory as variable_factory
@@ -520,6 +521,7 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(telemetry_factory.TelemetryServiceFactory())
     service_manager.register_factory(tracing_factory.TracingServiceFactory())
     service_manager.register_factory(transaction_factory.TransactionServiceFactory())
+    service_manager.register_factory(telemetry_writer_factory.TelemetryWriterServiceFactory())
     service_manager.register_factory(state_factory.StateServiceFactory())
     service_manager.register_factory(job_queue_factory.JobQueueServiceFactory())
     service_manager.register_factory(task_factory.TaskServiceFactory())
@@ -595,6 +597,23 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     if isinstance(cache_service, ExternalAsyncBaseCacheService) and not (await cache_service.is_connected()):
         msg = "Cache service failed to connect to external database"
         raise ConnectionError(msg)
+
+    # Fail fast if the Redis-backed job queue is selected but Redis is unreachable.
+    # Otherwise Langflow boots "fine" and emits confusing connection errors only
+    # when a flow is executed. Only probes when the redis backend is selected, so
+    # the default asyncio backend is unaffected.
+    if get_settings_service().settings.job_queue_type == "redis":
+        from langflow.services.job_queue.factory import JobQueueServiceFactory
+        from langflow.services.job_queue.service import RedisJobQueueService
+
+        queue_service = get_service(ServiceType.JOB_QUEUE_SERVICE, default=JobQueueServiceFactory())
+        if isinstance(queue_service, RedisJobQueueService) and not (await queue_service.is_connected()):
+            msg = (
+                f"Job queue backend 'redis' is selected (LANGFLOW_JOB_QUEUE_TYPE=redis) but Redis is "
+                f"not reachable at {queue_service.connection_target}. Start Redis, fix the "
+                "LANGFLOW_REDIS_QUEUE_* settings, or set LANGFLOW_JOB_QUEUE_TYPE=asyncio."
+            )
+            raise ConnectionError(msg)
 
     # Setup the superuser
     await initialize_database(fix_migration=fix_migration)

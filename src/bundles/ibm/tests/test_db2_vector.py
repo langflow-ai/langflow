@@ -131,11 +131,53 @@ class TestDB2VectorStoreComponent:
     # Note: Integration tests requiring actual DB2 database removed
     # The component logic is tested through validation tests above
 
-    def test_search_documents_no_query(self, component):
-        """Test search with no query returns empty list."""
+    def test_search_documents_no_query(self, component, mock_embedding):
+        """Test search with no query returns an empty list but still builds the store.
+
+        Ingestion happens inside ``build_vector_store``; an empty search query
+        must not short-circuit that, so the store is still built (ingested)
+        and only the *search* is skipped.
+        """
+        component.embedding = mock_embedding
         component.search_query = None
-        results = component.search_documents()
-        assert results == []
+        with patch.object(component, "build_vector_store") as mock_build:
+            mock_build.return_value = MagicMock()
+            results = component.search_documents()
+            # Vector store is still built (ingestion runs) even without a query...
+            mock_build.assert_called_once()
+            # ...but no search is performed, so no results come back.
+            assert results == []
+
+    def test_ingestion_occurs_without_search_query(self, component, mock_embedding):
+        """Regression: ingestion must happen even when no search query is set.
+
+        Previously ``search_documents`` returned early on an empty query *before*
+        building the vector store, so connected ingest data was silently dropped
+        unless a search query was also provided. Ingestion and search are
+        independent.
+        """
+        component.embedding = mock_embedding
+        component.search_query = None
+        component.ingest_data = [Data(text="Doc to ingest")]
+
+        with patch("ibm_db_dbi.connect") as mock_connect:
+            mock_connect.return_value = MagicMock()
+
+            from lfx_ibm.components.ibm.db2vs import DB2VS
+
+            with (
+                patch.object(DB2VS, "__init__", return_value=None),
+                patch.object(DB2VS, "add_documents") as mock_add_docs,
+            ):
+                results = component.search_documents()
+
+                # No query -> no search results...
+                assert results == []
+                # ...but the document was still ingested into the store.
+                mock_add_docs.assert_called_once()
+                added_docs = mock_add_docs.call_args[0][0]
+                assert len(added_docs) == 1
+                assert added_docs[0].page_content == "Doc to ingest"
 
     def test_similarity_search(self, component, mock_embedding):
         """Test similarity search functionality through the component."""

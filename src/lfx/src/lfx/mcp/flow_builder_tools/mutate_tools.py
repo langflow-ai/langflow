@@ -186,18 +186,15 @@ class ConnectComponents(Component):
     ]
 
     def connect_components(self) -> Data:
-        # B3: model-input mirroring and selected-output reconciliation extracted
-        # to module-private helpers above — keeps this orchestrator flat (CC ≤ 3,
-        # nesting ≤ 2). Each helper is independently testable via its observable
-        # effect on the working flow + emitted events.
+        # B3: model-input mirroring + selected-output reconciliation live in
+        # module-private helpers above so this orchestrator stays flat (CC ≤ 3).
         flow = _ensure_working_flow()
         try:
             fb_add_connection(flow, self.source_id, self.source_output, self.target_id, self.target_input)
             layout_flow(flow)
             _sync_model_input_connection_mode(flow, self.target_id, self.target_input)
-            # Surface a tool-mode flip BEFORE the edge so the canvas re-renders
-            # the source node with its `component_as_tool` handle first —
-            # otherwise the edge has nowhere to attach and never shows.
+            # Flip tool-mode BEFORE emitting the edge, else the source node has
+            # no `component_as_tool` handle yet and the edge never attaches.
             _emit_source_tool_mode_if_flipped(flow, self.source_id, self.source_output)
             edge = flow["data"]["edges"][-1]
             _emit("connect", edge=edge)
@@ -249,15 +246,8 @@ class ConfigureComponent(Component):
             except json.JSONDecodeError:
                 return Data(data={"error": f'Invalid JSON in params: {raw!r}. Use format: {{"key": "value"}}'})
 
-        # Deterministic review gate (Bug B): on a PURE-edit turn (no run),
-        # changing a TEXT-content field on a component that ALREADY existed at
-        # the start of the turn is surfaced as a reviewable ``edit_field``
-        # proposal instead of being auto-applied — regardless of whether the
-        # LLM chose configure_component or propose_field_edit. This makes
-        # "improve the prompt" / "update the system prompt" ALWAYS show a diff
-        # card. Non-string params (model list, numbers, bools) and the model
-        # selector still apply live; freshly-added components (not pre-existing)
-        # and run-bearing turns are untouched (the flag is off for those).
+        # Deterministic review gate (Bug B): editing a TEXT field on a pre-existing
+        # component is surfaced as a reviewable diff; model/number/bool still apply live.
         if should_propose_existing_edits() and node_existed_at_start(self.component_id):
             text_params = {k: v for k, v in params.items() if isinstance(v, str) and k != "model"}
             if text_params:
@@ -266,9 +256,9 @@ class ConfigureComponent(Component):
                 ]
                 remaining = {k: v for k, v in params.items() if k not in proposed}
                 if remaining:
-                    # Apply the non-text remainder (model/number/bool) live.
                     try:
                         fb_configure(flow, self.component_id, remaining)
+                        _fill_missing_model_names(flow, self.component_id, remaining)
                         _mirror_model_value_into_options(flow, self.component_id, remaining)
                         _emit("configure", component_id=self.component_id, params=remaining)
                     except (ValueError, KeyError) as e:
@@ -284,18 +274,12 @@ class ConfigureComponent(Component):
                     )
 
         try:
-            # Model-spec normalization (JSON / YAML / dict / list) is handled
-            # inside ``fb_configure`` so every caller path (this tool +
-            # ``build_flow_from_spec``) shares one choke point. The helper
-            # mutates ``params`` in place, so the post-configure mirror step
-            # below reads the canonical list[dict] shape.
+            # fb_configure normalizes the model spec (JSON/YAML/dict/list) in place;
+            # the fill + mirror steps below then read the canonical list[dict].
             fb_configure(flow, self.component_id, params)
-            # Special case: ModelInput (`type='model'`) has a frontend dropdown
-            # that displays via `options.find(o.name === value[0].name)`. If
-            # the new model isn't in `options`, the dropdown silently falls
-            # back to the previous selection — making the swap invisible to
-            # the user. Mirror the new value into `options` so the match
-            # succeeds and the canvas reflects the change immediately.
+            # Provider-only selections get the catalog default name, then mirror
+            # into `options` so the dropdown matches instead of its own fallback.
+            _fill_missing_model_names(flow, self.component_id, params)
             _mirror_model_value_into_options(flow, self.component_id, params)
             _emit("configure", component_id=self.component_id, params=params)
             summary = ", ".join(f"{k}={v!r}" for k, v in params.items())
@@ -337,3 +321,48 @@ def _mirror_model_value_into_options(flow: dict, component_id: str, params: dict
             continue
         options.append({"name": new_name, "provider": new_provider})
         field["options"] = options
+
+
+def _resolve_default_model_name(provider: str) -> str | None:
+    """Return the provider's catalog default model name, or None if unknown."""
+    from lfx.base.models.unified_models import get_unified_models_detailed
+
+    detailed = get_unified_models_detailed(
+        providers=[provider],
+        only_defaults=True,
+        include_unsupported=False,
+        include_deprecated=False,
+    )
+    for entry in detailed:
+        for model in entry.get("models", []):
+            name = model.get("model_name")
+            if name:
+                return name
+    return None
+
+
+def _fill_missing_model_names(flow: dict, component_id: str, params: dict) -> None:
+    """Fill a provider-only model selection with the provider's default model.
+
+    A bare ``[{"provider": X}]`` (no name) otherwise leaves the canvas dropdown
+    to silently pick the provider's newest model, diverging from what the
+    assistant reported. Resolving the default keeps value, options and the
+    result text on the same concrete model. ``params`` shares the value object
+    set by ``fb_configure``, so mutating it updates the node template too.
+    """
+    node = _find_node(flow, component_id)
+    if node is None:
+        return
+    template = node.get("data", {}).get("node", {}).get("template", {})
+    for field_name, value in params.items():
+        field = template.get(field_name)
+        if not isinstance(field, dict) or field.get("type") != "model":
+            continue
+        if not isinstance(value, list) or not value or not isinstance(value[0], dict):
+            continue
+        entry = value[0]
+        if entry.get("name") or not entry.get("provider"):
+            continue
+        default_name = _resolve_default_model_name(entry["provider"])
+        if default_name:
+            entry["name"] = default_name

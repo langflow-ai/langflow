@@ -1,22 +1,85 @@
+.theme-code-block {
+  box-shadow: none !important;
+  border: 1px solid #1e2128;
+  border-radius: var(--ifm-global-radius);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+/* Keep inline code vertically aligned with surrounding text */
+:not(pre) > code {
+  vertical-align: baseline;
+}
+
+html[data-theme="light"] :not(pre) > code {
+  border: none;
+}
+
+/* =====================================================================
+   Langflow custom code theme — CSS variables (dark/light switching).
+   ===================================================================== */
+:root,
+html[data-theme="dark"] {
+  --lf-ch-bg: #18181a;
+  --lf-ch-fg: #c8ccd4;
+  --lf-ch-line-num: #798197;
+  --lf-ch-selection: #264f78;
+  --lf-ch-border: #1e2128;
+  --lf-ch-title-bg: #0b0d10;
+  --lf-ch-comment: #798197;
+  --lf-ch-string: #51d0a5;
+  --lf-ch-number: #ff9b7d;
+  --lf-ch-boolean: #f7c93e;
+  --lf-ch-import: #c791f1;
+  --lf-ch-keyword: #ffffff;
+  --lf-ch-function: #ed86bf;
+  --lf-ch-decorator: #e45287;
+  --lf-ch-variable: #c8ccd4;
+}
+
+html[data-theme="light"] {
+  --lf-ch-bg: #f9f9fd;
+  --lf-ch-fg: #64748b;
+  --lf-ch-line-num: #607491;
+  --lf-ch-selection: #e2e8f0;
+  --lf-ch-border: #e2e4f0;
+  --lf-ch-title-bg: #f0f0f8;
+  --lf-ch-comment: #607491;
+  --lf-ch-string: #04835c;
+  --lf-ch-number: #c74b0a;
+  --lf-ch-boolean: #ae5f05;
+  --lf-ch-import: #7c3aed;
+  --lf-ch-keyword: #077d9a;
+  --lf-ch-function: #d82474;
+  --lf-ch-decorator: #be185d;
+  --lf-ch-variable: #64748b;
+}
+
+
+/* Light mode: Prism / theme-code-block overrides */
+html[data-theme="light"] .theme-code-block {
+  border-color: #e2e4f0;
+}
+
+html[data-theme="light"] .theme-code-block pre {
+  background-color: #f9f9fd !important;
+}
+
+html[data-theme="light"] .theme-code-block code {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] .theme-code-block div[class*="codeBlockTitle"] {
+  background: #f0f0f8;
+  border-bottom-color: #e2e4f0;
+  color: #64748b;
+}
+
 .docusaurus-highlight-code-line {
   background-color: rgba(0, 0, 0, 0.1);
   display: block;
   margin: 0 calc(-1 * var(--ifm-pre-padding));
   padding: 0 var(--ifm-pre-padding);
-}
-
-.ch-scrollycoding-content {
-  max-width: 55% !important;
-  min-width: 40% !important;
-}
-
-.ch-scrollycoding-sticker {
-  max-width: 60% !important;
-  min-width: 45% !important;
-}
-
-.ch-scrollycoding-step-content {
-  min-height: 70px;
 }
 
 /* ========================================
@@ -38,16 +101,14 @@
   border-bottom-color: #303038;
 }
 
-/* Code block container */
-.theme-code-block {
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: var(--ifm-global-radius);
-  overflow: hidden;
-  margin-bottom: 1.5rem;
+
+.theme-code-block pre,
+.theme-code-block code {
+  line-height: 1.7;
 }
 
 [data-theme="dark"] .theme-code-block {
-  border-color: #303038;
+  border-color: #1e2128;
 }
 
 /* Line highlighting in code blocks */
@@ -57,35 +118,4 @@
   margin: 0 calc(-1 * var(--ifm-pre-padding));
   padding: 0 var(--ifm-pre-padding);
   border-left: 3px solid var(--ifm-color-primary);
-}
-
-/* Code Hike + CodeSnippet: Code Hike uses height:100% on .ch-codeblock > * and omits overflow on the
-   wrapper when measured; we shrink-wrap the block (fixes <details>/Collapsible height) and put
-   overflow on <code> only so the copy button stays in the corner while scrolling long lines. */
-.markdown .ch-codeblock {
-  min-width: 0;
-  max-width: 100%;
-  height: fit-content;
-  align-self: flex-start;
-}
-
-.markdown .ch-codeblock .ch-code-wrapper {
-  min-width: 0;
-  box-sizing: border-box;
-  height: fit-content !important;
-  max-height: none !important;
-  min-height: 0;
-}
-
-.markdown .ch-codeblock .ch-code-wrapper > .ch-code-scroll-parent {
-  display: block;
-  overflow-x: auto;
-  overflow-y: auto;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.markdown .ch-codeblock .ch-code-button {
-  right: calc(10px + 0.75rem);
-  z-index: 2;
 }

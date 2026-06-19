@@ -2,6 +2,8 @@
 
 import typer
 
+from lfx.upgrade.cli_gate import UpgradeFlowMode
+
 
 def register(app: typer.Typer) -> None:
     """Register running-stage commands on *app*."""
@@ -68,6 +70,15 @@ def register(app: typer.Typer) -> None:
                 "Agent and Memory Components will use this to track conversation history."
             ),
         ),
+        upgrade_flow: UpgradeFlowMode | None = typer.Option(
+            None,
+            "--upgrade-flow",
+            help=(
+                "Component compatibility mode. "
+                "'check' refuses to run if any component is outdated or blocked. "
+                "'safe' auto-applies safe upgrades; aborts on breaking or blocked components."
+            ),
+        ),
     ) -> None:
         """Run a flow directly (lazy-loaded)."""
         from pathlib import Path
@@ -90,6 +101,7 @@ def register(app: typer.Typer) -> None:
             verbose_full=verbose_full,
             timing=timing,
             session_id=session_id,
+            upgrade_flow=upgrade_flow,
         )
 
     @app.command(name="serve", help="Serve a flow as an API", rich_help_panel="Running")
@@ -178,6 +190,15 @@ def register(app: typer.Typer) -> None:
             "--check-variables/--no-check-variables",
             help="Check global variables for environment compatibility",
         ),
+        upgrade_flow: UpgradeFlowMode | None = typer.Option(
+            None,
+            "--upgrade-flow",
+            help=(
+                "Component compatibility mode before serving. "
+                "'check' refuses to serve if any component is outdated or blocked. "
+                "'safe' auto-applies safe upgrades; aborts on breaking or blocked components."
+            ),
+        ),
         no_env_fallback: bool = typer.Option(
             False,
             "--no-env-fallback/--env-fallback",
@@ -227,6 +248,7 @@ def register(app: typer.Typer) -> None:
             flow_dir=flow_dir_path,
             stdin=stdin,
             check_variables=check_variables,
+            upgrade_flow=upgrade_flow,
             no_env_fallback=no_env_fallback,
             max_requests=max_requests,
             limit_concurrency=limit_concurrency,

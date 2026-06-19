@@ -1102,3 +1102,285 @@ def test_serve_command_no_warning_when_workers_gt1_with_flow_dir(tmp_path):
             )
 
     assert not any("--flow-dir" in msg for msg in stderr_output)
+
+
+# ---------------------------------------------------------------------------
+# --upgrade-flow gate parity with `lfx run`
+#
+# `serve` and `run` share lfx.upgrade.cli_gate.apply_upgrade_gate; these tests
+# mirror TestUpgradeFlowOption in tests/unit/run/test_base.py so the two entry
+# points can't silently diverge. They target the release-1.10.0 registry-based
+# serve: flows load via lfx.cli.commands.load_flow_from_json (which receives the
+# parsed temp-file payload) and the server starts via uvicorn.run. The
+# --upgrade-flow scope here is inline JSON, stdin, and a single .json file.
+# ---------------------------------------------------------------------------
+
+_UPGRADE_REGISTRY_CODE = "class MyComp:\n    pass  # v2"
+_UPGRADE_NODE_CODE = "class MyComp:\n    pass  # v1"
+
+
+def _upgrade_registry():
+    return {
+        "Cat": {
+            "MyComp": {
+                "template": {"code": {"value": _UPGRADE_REGISTRY_CODE}},
+                "outputs": [{"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}],
+                "metadata": {},
+            }
+        }
+    }
+
+
+def _upgrade_flow_json(code=_UPGRADE_NODE_CODE, type_="MyComp"):
+    return json.dumps(
+        {
+            "nodes": [
+                {
+                    "id": "n1",
+                    "data": {
+                        "id": "n1",
+                        "type": type_,
+                        "node": {
+                            "display_name": "My Component",
+                            "template": {"code": {"value": code}},
+                            "outputs": [
+                                {"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}
+                            ],
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        }
+    )
+
+
+def _upgrade_flow_json_enveloped(code=_UPGRADE_NODE_CODE, type_="MyComp"):
+    """An exported-flow envelope wrapping the inner graph: {"name", "description", "data": {...}}."""
+    inner = json.loads(_upgrade_flow_json(code=code, type_=type_))
+    return json.dumps({"name": "My Flow", "description": "the flow", "data": inner})
+
+
+def _upgrade_serve_app():
+    import typer
+    from lfx.cli.commands import serve_command
+
+    app = typer.Typer()
+    app.command()(serve_command)
+    return app
+
+
+def _upgrade_capturing_loader(captured: dict):
+    """Side effect for a patched lfx.cli.commands.load_flow_from_json.
+
+    The registry builder calls ``load_flow_from_json(raw_json)`` with the parsed temp-file
+    payload, so capturing the first positional arg records exactly what serve wrote to disk
+    for the loader (the real loader does ``flow_graph["data"]``, so the payload must be
+    enveloped).
+    """
+
+    def _side_effect(payload, *_args, **_kwargs):
+        captured["payload"] = payload
+        graph = MagicMock()
+        graph.prepare = MagicMock()
+        graph.flow_id = None
+        graph.nodes = {}
+        graph.edges = []
+        return graph
+
+    return _side_effect
+
+
+def test_serve_upgrade_flow_check_aborts_on_incompatible():
+    """`serve --upgrade-flow=check` refuses to serve an outdated flow and never starts uvicorn."""
+    from typer.testing import CliRunner
+
+    with (
+        patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=_upgrade_registry()),
+        patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        args = ["--flow-json", _upgrade_flow_json(), "--upgrade-flow", "check"]
+        result = CliRunner().invoke(_upgrade_serve_app(), args)
+        assert result.exit_code != 0
+        assert not mock_uvicorn.called
+
+
+def test_serve_upgrade_flow_safe_blocked_aborts():
+    """`serve --upgrade-flow=safe` aborts when a component is blocked (not in the registry)."""
+    from typer.testing import CliRunner
+
+    with (
+        patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value={}),
+        patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        args = ["--flow-json", _upgrade_flow_json(), "--upgrade-flow", "safe"]
+        result = CliRunner().invoke(_upgrade_serve_app(), args)
+        assert result.exit_code != 0
+        assert not mock_uvicorn.called
+
+
+def test_serve_upgrade_flow_bad_value_rejected():
+    """An unrecognized --upgrade-flow value is rejected before serving."""
+    from typer.testing import CliRunner
+
+    with (
+        patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=_upgrade_registry()),
+        patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        args = ["--flow-json", _upgrade_flow_json(), "--upgrade-flow", "typo"]
+        result = CliRunner().invoke(_upgrade_serve_app(), args)
+        assert result.exit_code != 0
+        assert not mock_uvicorn.called
+
+
+def test_serve_upgrade_flow_safe_proceeds_to_serve():
+    """`serve --upgrade-flow=safe` applies safe upgrades and proceeds to start the server."""
+    from typer.testing import CliRunner
+
+    captured: dict = {}
+    with (
+        patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=_upgrade_registry()),
+        patch("lfx.cli.commands.load_flow_from_json", side_effect=_upgrade_capturing_loader(captured)),
+        patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        args = ["--flow-json", _upgrade_flow_json(), "--upgrade-flow", "safe"]
+        result = CliRunner().invoke(_upgrade_serve_app(), args)
+        assert result.exit_code == 0, result.stdout
+        assert mock_uvicorn.called
+
+    # Bare inline graph gets wrapped by the gate so the loader can read flow_graph["data"],
+    # and the node's v1 code was upgraded to the registry's v2 code.
+    payload = captured["payload"]
+    assert "data" in payload, payload
+    assert payload["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == _UPGRADE_REGISTRY_CODE
+
+
+def test_serve_upgrade_safe_inline_envelope_preserved_and_upgraded():
+    """`serve --flow-json <enveloped> --upgrade-flow=safe` keeps outer metadata and upgrades the inner graph."""
+    from typer.testing import CliRunner
+
+    captured: dict = {}
+    with (
+        patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=_upgrade_registry()),
+        patch("lfx.cli.commands.load_flow_from_json", side_effect=_upgrade_capturing_loader(captured)),
+        patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        args = ["--flow-json", _upgrade_flow_json_enveloped(), "--upgrade-flow", "safe"]
+        result = CliRunner().invoke(_upgrade_serve_app(), args)
+        assert result.exit_code == 0, result.stdout
+        assert mock_uvicorn.called
+
+    payload = captured["payload"]
+    assert payload["name"] == "My Flow"  # outer metadata preserved through the upgrade
+    assert payload["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == _UPGRADE_REGISTRY_CODE
+
+
+def test_serve_upgrade_safe_stdin_envelope_preserved():
+    """`serve --stdin <enveloped> --upgrade-flow=safe` keeps outer metadata and writes a loadable payload."""
+    from typer.testing import CliRunner
+
+    captured: dict = {}
+    with (
+        patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=_upgrade_registry()),
+        patch("lfx.cli.commands.load_flow_from_json", side_effect=_upgrade_capturing_loader(captured)),
+        patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        result = CliRunner().invoke(
+            _upgrade_serve_app(), ["--stdin", "--upgrade-flow", "safe"], input=_upgrade_flow_json_enveloped()
+        )
+        assert result.exit_code == 0, result.stdout
+        assert mock_uvicorn.called
+
+    payload = captured["payload"]
+    assert "data" in payload, payload
+    assert "nodes" in payload["data"], payload
+    assert payload["name"] == "My Flow"
+
+
+def test_serve_file_upgrade_safe_writes_enveloped_payload():
+    """`serve <file.json> --upgrade-flow=safe` unwraps the file, upgrades, and feeds a loadable payload."""
+    from typer.testing import CliRunner
+
+    envelope = json.loads(_upgrade_flow_json_enveloped())
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump(envelope, f)
+        flow_path = f.name
+
+    captured: dict = {}
+    try:
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=_upgrade_registry()),
+            patch("lfx.cli.commands.load_flow_from_json", side_effect=_upgrade_capturing_loader(captured)),
+            patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        ):
+            result = CliRunner().invoke(_upgrade_serve_app(), [flow_path, "--upgrade-flow", "safe"])
+            assert result.exit_code == 0, result.stdout
+            assert mock_uvicorn.called
+    finally:
+        Path(flow_path).unlink(missing_ok=True)
+
+    payload = captured["payload"]
+    assert payload["name"] == "My Flow"  # outer metadata preserved
+    assert payload["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == _UPGRADE_REGISTRY_CODE
+
+
+def test_serve_file_upgrade_rejects_py_script():
+    """`serve <file.py> --upgrade-flow=...` is rejected — only JSON flows can be upgrade-checked."""
+    from typer.testing import CliRunner
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("graph = None\n")
+        py_path = f.name
+
+    try:
+        with (
+            patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        ):
+            result = CliRunner().invoke(_upgrade_serve_app(), [py_path, "--upgrade-flow", "check"])
+            assert result.exit_code != 0
+            assert not mock_uvicorn.called
+    finally:
+        Path(py_path).unlink(missing_ok=True)
+
+
+def test_serve_upgrade_rejects_multiple_paths():
+    """`--upgrade-flow` with more than one path is rejected (single .json only)."""
+    from typer.testing import CliRunner
+
+    paths = []
+    try:
+        for _ in range(2):
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                json.dump(json.loads(_upgrade_flow_json_enveloped()), f)
+                paths.append(f.name)
+        with (
+            patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        ):
+            result = CliRunner().invoke(_upgrade_serve_app(), [*paths, "--upgrade-flow", "safe"])
+            assert result.exit_code != 0
+            assert not mock_uvicorn.called
+    finally:
+        for p in paths:
+            Path(p).unlink(missing_ok=True)
+
+
+def test_serve_upgrade_requires_a_flow_source():
+    """`--upgrade-flow` with no flow source (no paths, --flow-json, or --stdin) is rejected."""
+    from typer.testing import CliRunner
+
+    with (
+        patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        result = CliRunner().invoke(_upgrade_serve_app(), ["--upgrade-flow", "check"])
+        assert result.exit_code != 0
+        assert not mock_uvicorn.called

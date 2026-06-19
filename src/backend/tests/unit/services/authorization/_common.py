@@ -28,9 +28,16 @@ from langflow.services.authorization import listing as authz_listing
 class _StubAuthorizationService:
     """Minimal stand-in for BaseAuthorizationService that records calls."""
 
-    def __init__(self, *, allow: bool = True, batch_results: list[bool] | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        allow: bool = True,
+        batch_results: list[bool] | None = None,
+        supports_api_key_scopes: bool = False,
+    ) -> None:
         self.allow = allow
         self.batch_results = batch_results
+        self._supports_api_key_scopes = supports_api_key_scopes
         self.calls: list[dict] = []
         self.batch_calls: list[dict] = []
 
@@ -43,6 +50,9 @@ class _StubAuthorizationService:
         if self.batch_results is not None:
             return self.batch_results
         return [self.allow] * len(kwargs.get("requests", []))
+
+    async def supports_api_key_scopes(self) -> bool:
+        return self._supports_api_key_scopes
 
 
 def install_settings(monkeypatch, *, authz_enabled: bool, audit_enabled: bool = False) -> None:

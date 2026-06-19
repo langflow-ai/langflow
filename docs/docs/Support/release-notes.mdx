@@ -221,6 +221,24 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     Available languages include English, French (Français), Spanish (Español), German (Deutsch), Portuguese (Português), Japanese (日本語), and Chinese (中文).
 
+- Login endpoint rate limiting
+
+    Langflow now applies IP-based rate limiting to the `/login` endpoint to protect against brute-force attacks.
+
+    For more information, see [Login rate limiting](/api-keys-and-authentication#login-rate-limiting).
+
+- Code Agents bundle (beta)
+
+    The **Code Agents** bundle adds new beta agent components for code generation with the `smolagents` and `OpenDsStar` libraries.
+
+    For more information, see [Code Agents bundle](./bundles-codeagents).
+
+- File Processing bundle (beta)
+
+    The **File Processing** bundle adds components for ingesting and retrieving file content in agent workflows.
+
+    For more information, see [File Processing bundle](./bundles-files-ingestion).
+
 ### Deprecations
 
 - **Text Input** and **Text Output** components are legacy

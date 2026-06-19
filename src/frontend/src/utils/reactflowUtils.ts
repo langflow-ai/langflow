@@ -2370,7 +2370,7 @@ export function getRandomElement<T>(array: T[]): T {
 }
 
 export function getRandomDescription(): string {
-  return getRandomElement(DESCRIPTIONS);
+  return i18n.t(getRandomElement(DESCRIPTIONS));
 }
 
 export const createNewFlow = (

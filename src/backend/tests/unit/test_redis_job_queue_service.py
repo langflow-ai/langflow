@@ -2406,3 +2406,477 @@ async def test_polling_watchdog_runs_when_cancel_channel_disabled():
                 with contextlib.suppress(asyncio.CancelledError):
                     await bridge
         await fake_client.aclose()
+
+
+# ── Public job registry — Redis-specific tests ───────────────────────────────
+# Complement the base-class unit tests in test_chat_endpoint.py.
+# These tests verify the Redis-specific paths: cross-worker fallback (#6)
+# and cleanup deleting the Redis key (#7).
+
+
+async def test_redis_public_job_cross_worker_fallback():
+    """is_public_job_async returns True for Worker B even when its in-memory set is empty.
+
+    Why: Worker A registers the job (writes local memory + Redis key via background task).
+    Worker B has no local memory entry — it must fall back to Redis.
+    This is the multi-worker correctness guarantee of RedisJobQueueService.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    # Worker A — registers the public job
+    svc_a, _ = await _make_service(shared_client=fake_client, cancel_channel_enabled=False)
+    # Worker B — shares same Redis, but has empty local memory
+    svc_b, _ = await _make_service(shared_client=fake_client, cancel_channel_enabled=False)
+
+    try:
+        job_id = str(uuid.uuid4())
+        # register_public_job awaits the Redis write directly (no background task
+        # to drain) — see Why comment on RedisJobQueueService.register_public_job.
+        await svc_a.register_public_job(job_id)
+
+        # Worker B must have no in-memory entry (no shared memory between workers)
+        assert not svc_b.is_public_job(job_id), "Worker B must have no in-memory entry"
+
+        # Why: is_public_job_async on Worker B must hit Redis fallback and return True
+        assert await svc_b.is_public_job_async(job_id) is True
+    finally:
+        await _stop_service(svc_a)
+        await _stop_service(svc_b)
+        await fake_client.aclose()
+
+
+async def test_redis_cleanup_removes_public_job_key():
+    """cleanup_job deletes the public_job Redis key so the job_id cannot be reused cross-worker.
+
+    Why: after cleanup the in-memory discard is proven by the base-class test in
+    test_chat_endpoint.py. This test proves the Redis key (cross-worker marker) is
+    also removed. A missing delete would let a cross-worker is_public_job_async
+    return True for a finished/evicted job.
+    """
+    svc, fake_client = await _make_service(cancel_channel_enabled=False)
+
+    try:
+        job_id = str(uuid.uuid4())
+        # register_public_job awaits the Redis write directly (no background task
+        # to drain) — see Why comment on RedisJobQueueService.register_public_job.
+        await svc.register_public_job(job_id)
+
+        # Confirm the key exists in Redis before cleanup
+        pub_key = svc._public_job_key(job_id)
+        assert await fake_client.exists(pub_key), "public_job Redis key must exist after registration"
+
+        # Seed a minimal queue entry so cleanup_job doesn't early-return
+        svc._queues[job_id] = (asyncio.Queue(), None, None, None)  # type: ignore[arg-type]
+        await svc.cleanup_job(job_id)
+
+        # Drain any background tasks spawned by cleanup
+        for task in list(svc._background_tasks):
+            with contextlib.suppress(Exception):
+                await task
+
+        # Why: if cleanup_job's Redis DEL call ever drops public_job_key, this catches it
+        assert not await fake_client.exists(pub_key), "public_job Redis key must be deleted after cleanup"
+        # In-memory also cleared
+        assert svc.is_public_job(job_id) is False
+    finally:
+        await _stop_service(svc)
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_register_public_job_raises_backend_unavailable_when_marker_write_fails() -> None:
+    """register_public_job must surface (not swallow) a failed Redis marker write.
+
+    Swallowing the failure would let build_public_tmp return a job_id that only
+    this worker recognizes — on a multi-worker deployment the public events/cancel
+    endpoints would 404 it on every other worker. With a Redis client configured,
+    the failure must raise JobQueueBackendUnavailableError.
+    """
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.register_public_job(str(uuid.uuid4()))
+
+
+@pytest.mark.asyncio
+async def test_register_public_job_is_noop_success_for_in_memory_backend() -> None:
+    """The in-memory base class stays a pure no-op success (no shared marker to persist).
+
+    Single-worker deployments have no Redis client; there is no shared marker, so
+    register_public_job must not raise and must record the job locally.
+    """
+    service = JobQueueService()
+    job_id = str(uuid.uuid4())
+    await service.register_public_job(job_id)  # must not raise
+    assert service.is_public_job(job_id) is True
+
+
+@pytest.mark.asyncio
+async def test_build_public_tmp_returns_503_when_public_marker_persist_fails(monkeypatch) -> None:
+    """build_public_tmp returns 503 (not an un-shareable job_id) when the marker write fails.
+
+    The build task is started before the public marker is persisted. If the shared
+    backend write fails, the handler must cancel the just-started build and surface
+    a clean 503 instead of returning a job_id that other workers cannot resolve.
+    """
+    from fastapi import HTTPException
+    from langflow.api.v1 import chat as chat_module
+
+    service, fake_client = await _make_service(cancel_channel_enabled=False)
+    service._POST_CANCEL_CLEANUP_TIMEOUT_S = 0.5
+    try:
+        flow_id = uuid.uuid4()
+        new_flow_id = uuid.uuid4()
+        job_id = str(uuid.uuid4())
+        service.create_queue(job_id)
+
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        async def _build() -> None:
+            started.set()
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        class _Owner:
+            id = uuid.uuid4()
+
+        async def _fake_verify_public_flow_and_get_user(**_kwargs):
+            return _Owner(), new_flow_id
+
+        async def _fake_start_flow_build(**_kwargs):
+            service.start_job(job_id, _build())
+            await asyncio.wait_for(started.wait(), timeout=5)
+            return job_id
+
+        class _FakeFlow:
+            data = None
+
+        class _FakeSession:
+            async def get(self, *_args, **_kwargs):
+                return _FakeFlow()
+
+        @contextlib.asynccontextmanager
+        async def _fake_session_scope():
+            yield _FakeSession()
+
+        class _FakeSettingsService:
+            class auth_settings:  # noqa: N801
+                AUTO_LOGIN = True
+
+        monkeypatch.setattr(chat_module, "verify_public_flow_and_get_user", _fake_verify_public_flow_and_get_user)
+        monkeypatch.setattr(chat_module, "start_flow_build", _fake_start_flow_build)
+        monkeypatch.setattr(chat_module, "session_scope", _fake_session_scope)
+        monkeypatch.setattr(chat_module, "get_settings_service", lambda: _FakeSettingsService())
+
+        # Redis marker write fails: register_public_job raises JobQueueBackendUnavailableError.
+        service._client = _PingFailRedis()
+
+        class _FakeRequest:
+            cookies: dict[str, str] = {"client_id": "test-client"}
+
+        with pytest.raises(HTTPException) as exc_info:
+            await chat_module.build_public_tmp(
+                background_tasks=None,
+                flow_id=flow_id,
+                inputs=None,
+                files=None,
+                stop_component_id=None,
+                start_component_id=None,
+                log_builds=False,
+                flow_name=None,
+                request=_FakeRequest(),
+                queue_service=service,
+                authenticated_user=None,
+                event_delivery=EventDeliveryType.POLLING,
+            )
+        assert exc_info.value.status_code == 503
+        # The just-started build must have been cancelled, not left running unreachable.
+        await asyncio.wait_for(cancelled.wait(), timeout=5)
+    finally:
+        await _stop_service(service)
+        await fake_client.aclose()
+
+
+# ---------------------------------------------------------------------------
+# Startup connectivity probe + runtime backstop (LE-1396)
+# ---------------------------------------------------------------------------
+
+
+class _PingFailRedis:
+    """Minimal async Redis stand-in whose every op raises a redis ConnectionError."""
+
+    @staticmethod
+    def _boom() -> None:
+        from redis.exceptions import ConnectionError as RedisConnectionError
+
+        raise RedisConnectionError
+
+    async def ping(self) -> None:
+        self._boom()
+
+    async def set(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def get(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def delete(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def expire(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def xadd(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def publish(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def aclose(self) -> None:
+        return None
+
+
+@pytest.mark.asyncio
+async def test_is_connected_true_with_reachable_redis() -> None:
+    """is_connected() returns True when the backing Redis responds to ping."""
+    fake_client = fakeredis_aio.FakeRedis()
+    service = RedisJobQueueService()
+    service._client = fake_client
+    try:
+        assert await service.is_connected() is True
+    finally:
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_is_connected_false_when_redis_unreachable() -> None:
+    """is_connected() returns False (after bounded retry) when Redis is down."""
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    # Two quick attempts, no real waiting, so the bounded retry exits fast.
+    assert await service.is_connected(attempts=2, backoff_s=0.0) is False
+
+
+@pytest.mark.asyncio
+async def test_is_connected_probes_temp_client_before_start() -> None:
+    """Before start() creates the worker client, is_connected() probes a temporary client.
+
+    Guards the startup fail-fast in initialize_services(): the probe runs before the
+    per-worker start(), so it must not depend on started service state. A probe that
+    returns False whenever ``_client is None`` would reject every redis boot,
+    healthy or not.
+    """
+    closed = asyncio.Event()
+
+    class _ClosableFakeRedis(fakeredis_aio.FakeRedis):
+        async def aclose(self) -> None:
+            closed.set()
+            await super().aclose()
+
+    class _Service(RedisJobQueueService):
+        def _make_client(self):
+            return _ClosableFakeRedis()
+
+    service = _Service()
+    assert service._client is None
+    assert await service.is_connected(attempts=1, backoff_s=0.0) is True
+    # The temporary probe client is closed and not retained: start() must create
+    # the real client on the worker's own event loop.
+    assert service._client is None
+    assert closed.is_set()
+
+
+@pytest.mark.asyncio
+async def test_is_connected_false_before_start_when_redis_unreachable() -> None:
+    """Pre-start probe returns False when nothing is listening at the configured endpoint."""
+    service = RedisJobQueueService(host="127.0.0.1", port=6390, db=1)  # nothing listening
+    assert service._client is None
+    assert await service.is_connected(attempts=1, backoff_s=0.0) is False
+    assert service._client is None
+
+
+@pytest.mark.asyncio
+async def test_register_job_owner_raises_backend_unavailable_when_redis_down() -> None:
+    """register_job_owner raises a typed error (not a raw redis ConnectionError) when Redis is down."""
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.register_job_owner(str(uuid.uuid4()), uuid.uuid4())
+
+
+@pytest.mark.asyncio
+async def test_register_job_owner_failure_leaves_no_local_owner() -> None:
+    """A failed Redis owner write must not leave a local _job_owners entry.
+
+    A stale local entry would let same-worker ownership checks pass while every
+    other worker sees the job as unowned, and the refresh task would never start.
+    """
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    job_id = str(uuid.uuid4())
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.register_job_owner(job_id, uuid.uuid4())
+    assert job_id not in service._job_owners
+
+
+@pytest.mark.asyncio
+async def test_connection_target_describes_endpoint() -> None:
+    """connection_target gives an actionable host:port/db (or url) string for error messages."""
+    service = RedisJobQueueService(host="db.example", port=6380, db=2)
+    target = service.connection_target
+    assert "db.example" in target
+    assert "6380" in target
+
+    service_url = RedisJobQueueService(url="redis://cache:6379/3")
+    assert "redis://cache:6379/3" in service_url.connection_target
+
+
+@pytest.mark.asyncio
+async def test_connection_target_redacts_url_credentials() -> None:
+    """Credentials in the queue URL never reach connection_target.
+
+    connection_target is embedded in startup errors and in the 503 detail
+    returned to API clients, so a URL carrying userinfo must not leak it.
+    """
+    service = RedisJobQueueService(url="redis://admin:s3cret@cache:6379/3")  # pragma: allowlist secret
+    target = service.connection_target
+    assert "s3cret" not in target
+    assert "admin" not in target
+    assert "cache:6379" in target
+    assert "s3cret" not in service._backend_unavailable_message()
+
+
+@pytest.mark.asyncio
+async def test_start_creates_client_and_is_connected_false_when_unreachable() -> None:
+    """start() creates a real client; is_connected() then probes it and returns False when down.
+
+    Guards against a regression where the startup probe runs against an un-started
+    service (``_client is None``) and would reject every redis boot, healthy or not.
+    """
+    service = RedisJobQueueService(
+        host="127.0.0.1",
+        port=6390,  # nothing listening
+        db=1,
+        cancel_channel_enabled=False,
+        polling_stale_threshold_s=0,
+    )
+    service.start()
+    try:
+        assert service.is_started() is True
+        assert service._client is not None
+        assert await service.is_connected(attempts=1, backoff_s=0.0) is False
+    finally:
+        await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_get_job_owner_raises_backend_unavailable_when_redis_down() -> None:
+    """get_job_owner raises the typed error (not a raw redis ConnectionError) when Redis is down."""
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.get_job_owner(str(uuid.uuid4()))
+
+
+@pytest.mark.asyncio
+async def test_verify_job_ownership_maps_backend_unavailable_to_503() -> None:
+    """The ownership-check chokepoint maps a backend-unavailable error to HTTP 503."""
+    from fastapi import HTTPException
+    from langflow.api.v1.chat import _verify_job_ownership
+
+    class _User:
+        id = uuid.uuid4()
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(HTTPException) as exc_info:
+        await _verify_job_ownership(str(uuid.uuid4()), _User(), service)
+    assert exc_info.value.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_register_job_owner_or_cancel_cancels_started_build_and_raises_503() -> None:
+    """When owner registration fails after the build started, the build is cancelled.
+
+    The build endpoint launches the build task before registering the owner. If
+    Redis dies in between, the client never receives the job_id, so the
+    just-started build must be cancelled (not left running unreachable) before
+    the 503 is raised.
+    """
+    from fastapi import HTTPException
+    from langflow.api.v1.chat import _register_job_owner_or_cancel
+
+    service, fake_client = await _make_service(cancel_channel_enabled=False)
+    # Keep cancel_job fast: with Redis down the bridge can never flush the
+    # sentinel, so don't wait out the full post-cancel cleanup window.
+    service._POST_CANCEL_CLEANUP_TIMEOUT_S = 0.5
+    try:
+        job_id = str(uuid.uuid4())
+        service.create_queue(job_id)
+
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        async def _build() -> None:
+            started.set()
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        service.start_job(job_id, _build())
+        await asyncio.wait_for(started.wait(), timeout=5)
+
+        # Redis goes down between start_flow_build and owner registration.
+        service._client = _PingFailRedis()
+        with pytest.raises(HTTPException) as exc_info:
+            await _register_job_owner_or_cancel(service, job_id, uuid.uuid4())
+        assert exc_info.value.status_code == 503
+        await asyncio.wait_for(cancelled.wait(), timeout=5)
+    finally:
+        await _stop_service(service)
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(30)
+async def test_initialize_services_fails_fast_when_redis_queue_unreachable(monkeypatch, tmp_path) -> None:
+    """initialize_services() aborts boot with an actionable error when the redis queue backend is down.
+
+    Exercises the real startup path: the probe runs before the per-worker
+    start() creates the service's client, so it must reach (or fail to reach)
+    Redis on its own.
+    """
+    from langflow.services.utils import initialize_services
+    from lfx.services.manager import get_service_manager
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("LANGFLOW_JOB_QUEUE_TYPE", "redis")
+    monkeypatch.setenv("LANGFLOW_REDIS_QUEUE_HOST", "127.0.0.1")
+    monkeypatch.setenv("LANGFLOW_REDIS_QUEUE_PORT", "6390")  # nothing listening
+    # Single fast probe attempt so the test doesn't wait out the retry window.
+    monkeypatch.setattr(RedisJobQueueService, "_STARTUP_PROBE_ATTEMPTS", 1)
+    monkeypatch.setattr(RedisJobQueueService, "_STARTUP_PROBE_BACKOFF_S", 0.0)
+
+    manager = get_service_manager()
+    manager.factories.clear()
+    manager.services.clear()
+    try:
+        with pytest.raises(ConnectionError, match="not reachable"):
+            await initialize_services()
+    finally:
+        manager.factories.clear()
+        manager.services.clear()

@@ -2,9 +2,10 @@
 // Note: type annotations allow type checking and IDEs autocompletion
 
 const path = require("path");
-const lightCodeTheme = require("prism-react-renderer/themes/github");
-const darkCodeTheme = require("prism-react-renderer/themes/dracula");
-const { remarkCodeHike } = require("@code-hike/mdx");
+
+
+const { lightNeonPrismTheme, grafiteNeonTheme } = require("./src/prismThemes");
+
 const rehypeWbrUnderscore = require("./src/plugins/rehypeWbrUnderscore");
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -112,31 +113,25 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
           // Versioning configuration
-          lastVersion: "1.9.0",
+          lastVersion: "1.10.0",
           versions: {
             current: {
-              label: "1.10.x (Next)",
+              label: "1.11.x (Next)",
               path: "next",
+            },
+            "1.10.0": {
+              label: "1.10.x",
+              path: "",
             },
             "1.9.0": {
               label: "1.9.x",
-              path: "",
+              path: "1.9.0",
             },
             "1.8.0": {
               label: "1.8.x",
               path: "1.8.0",
             },
           },
-          beforeDefaultRemarkPlugins: [
-            [
-              remarkCodeHike,
-              {
-                theme: "github-dark",
-                showCopyButton: true,
-                lineNumbers: true,
-              },
-            ],
-          ],
           rehypePlugins: [rehypeWbrUnderscore],
         },
         sitemap: {
@@ -152,10 +147,7 @@ const config = {
         },
         blog: false,
         theme: {
-          customCss: [
-            require.resolve("@code-hike/mdx/styles.css"),
-            require.resolve("./css/custom.css"),
-          ],
+          customCss: [require.resolve("./css/custom.css")],
         },
       }),
     ],
@@ -179,7 +171,51 @@ const config = {
           },
         ],
         theme: {
-          primaryColor: "#7528FC",
+          primaryColor: "#F471B5",
+          options: {
+            disableSearch: true,
+          },
+          theme: {
+            sidebar: {
+              backgroundColor: "transparent",
+            },
+            colors: {
+              // Badge backgrounds carry white text — all pass WCAG AA (4.5:1)
+              http: {
+                get: "#1e6ff5",
+                post: "#0c875e",
+                put: "#a56a07",
+                delete: "#eb1616",
+                patch: "#8655f6",
+                head: "#6265f1",
+                options: "#6b7280",
+              },
+              // Response chips (2xx green / 4xx-5xx red) — darkened from Redoc
+              // defaults (#1d8127 / #d41f1c) to pass 4.5:1 on their tinted bg
+              success: {
+                main: "#186a20",
+              },
+              error: {
+                main: "#ce1e1b",
+              },
+            },
+            schema: {
+              linesColor: "#F471B5",
+              requireLabelColor: "#F471B5",
+            },
+            rightPanel: {
+              backgroundColor: "#00000000", // transparent — "transparent" not accepted by Redoc theme parser
+              textColor: "#c6c6d1",
+            },
+            typography: {
+              code: {
+                color: "#F471B5",
+              },
+            },
+            codeBlock: {
+              backgroundColor: "#161618",
+            },
+          },
         },
       },
     ],
@@ -441,7 +477,11 @@ const config = {
       };
     },
   ],
-  clientModules: [require.resolve("./src/clientModules/tocProgress.js")],
+  clientModules: [
+    require.resolve("./src/clientModules/tocProgress.js"),
+    require.resolve("./src/clientModules/redocA11y.js"),
+    require.resolve("./src/clientModules/codeBlockA11y.js"),
+  ],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
@@ -510,8 +550,9 @@ const config = {
         respectPrefersColorScheme: true,
       },
       prism: {
-        theme: lightCodeTheme,
-        darkTheme: darkCodeTheme,
+        theme: lightNeonPrismTheme,
+        darkTheme: grafiteNeonTheme,
+        additionalLanguages: ["bash", "docker", "nginx", "powershell", "batch"],
       },
       zoom: {
         selector: ".markdown :not(a) > img:not(.no-zoom)",

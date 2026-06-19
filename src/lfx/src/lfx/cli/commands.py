@@ -28,6 +28,7 @@ from lfx.cli.common import (
 from lfx.cli.script_loader import find_graph_variable, load_graph_from_script
 from lfx.cli.serve_app import FlowAlreadyRegisteredError, FlowMeta, FlowRegistry, create_multi_serve_app
 from lfx.load import load_flow_from_json
+from lfx.utils.flow_envelope import merge_flow_envelope, split_flow_envelope
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -41,6 +42,39 @@ console = Console()
 API_KEY_MASK_LENGTH = 8
 
 
+def _gate_flow_for_serve(
+    payload: dict,
+    upgrade_flow: str,
+    *,
+    verbose: bool,
+) -> dict:
+    """Run the shared ``--upgrade-flow`` gate on a parsed flow payload.
+
+    Splits any outer ``{"data": ...}`` envelope, runs ``apply_upgrade_gate`` on the inner
+    graph (the same gate ``lfx run`` uses), then re-attaches the envelope so the result is
+    loader-ready — ``aload_flow_from_json`` requires the ``{"data": ...}`` wrapper.
+
+    Raises:
+        typer.Exit: if the payload is not a JSON object, or the gate aborts (incompatible in
+            ``check`` mode, or blocked/breaking in ``safe`` mode).
+    """
+    from lfx.upgrade.cli_gate import UpgradeFlowError, apply_upgrade_gate
+
+    try:
+        outer_envelope, inner = split_flow_envelope(payload)
+    except TypeError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
+    try:
+        inner, applied = apply_upgrade_gate(inner, mode=upgrade_flow)
+    except UpgradeFlowError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
+    if applied and verbose:
+        typer.echo(f"Applied {applied} safe component upgrade(s).")
+    return merge_flow_envelope(outer_envelope, inner, wrap_bare=True)
+
+
 async def _build_serve_registry(
     *,
     script_paths: list[str] | None,
@@ -50,11 +84,17 @@ async def _build_serve_registry(
     no_env_fallback: bool,
     flow_store: FlowStore,
     verbose_print: Callable[[str], None],
+    upgrade_flow: str | None = None,
+    verbose: bool = False,
 ) -> tuple[FlowRegistry, str | None]:
     """Build the FlowRegistry from startup inputs.
 
     Returns (registry, temp_file_path_or_None). Caller must unlink the temp
     file if not None.
+
+    When ``upgrade_flow`` is set, the flow is run through the shared ``--upgrade-flow`` gate
+    before the registry is built. This is supported for inline JSON, stdin, and a single
+    ``.json`` file path; directories, multiple paths, and ``.py`` scripts are rejected.
     """
     temp_file_to_cleanup: str | None = None
 
@@ -75,6 +115,8 @@ async def _build_serve_registry(
             except json.JSONDecodeError as e:
                 typer.echo(f"Error: Invalid JSON content from stdin: {e}", err=True)
                 raise typer.Exit(1) from e
+        if upgrade_flow:
+            json_data = _gate_flow_for_serve(json_data, upgrade_flow, verbose=verbose)
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
             json.dump(json_data, tmp, indent=2)
             temp_file_to_cleanup = tmp.name
@@ -98,7 +140,38 @@ async def _build_serve_registry(
                 typer.echo(f"Error: Path '{m}' does not exist.", err=True)
             raise typer.Exit(1)
 
-        if len(resolved) == 1 and resolved[0].is_dir():
+        if upgrade_flow:
+            # --upgrade-flow with a path supports exactly one .json flow file: directories,
+            # multiple files, and .py scripts can't be safely upgraded in place here.
+            if len(resolved) != 1 or resolved[0].is_dir() or resolved[0].suffix.lower() != ".json":
+                typer.echo(
+                    "Error: --upgrade-flow with a path supports exactly one .json flow file "
+                    "(not directories, multiple files, or .py scripts).",
+                    err=True,
+                )
+                raise typer.Exit(1)
+            try:
+                payload = json.loads(resolved[0].read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError) as e:
+                typer.echo(f"Error: --upgrade-flow: could not read flow file '{resolved[0]}': {e}", err=True)
+                raise typer.Exit(1) from e
+            gated = _gate_flow_for_serve(payload, upgrade_flow, verbose=verbose)
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
+                json.dump(gated, tmp, indent=2)
+                temp_file_to_cleanup = tmp.name
+            try:
+                registry = await build_registry_from_paths(
+                    [Path(temp_file_to_cleanup)],
+                    verbose_print,
+                    check_variables=check_variables,
+                    no_env_fallback=no_env_fallback,
+                    store=flow_store,
+                )
+            except ValueError as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1) from e
+
+        elif len(resolved) == 1 and resolved[0].is_dir():
             dir_path = resolved[0]
             try:
                 registry = await build_registry_from_directory(
@@ -131,6 +204,12 @@ async def _build_serve_registry(
                 raise typer.Exit(1) from e
 
     else:
+        if upgrade_flow:
+            typer.echo(
+                "Error: --upgrade-flow requires a JSON flow source (--flow-json, --stdin, or a .json file path).",
+                err=True,
+            )
+            raise typer.Exit(1)
         registry = FlowRegistry(no_env_fallback=no_env_fallback, store=flow_store)
         verbose_print("Starting with empty registry — flows can be uploaded at runtime")
 
@@ -250,6 +329,7 @@ def serve_command(
             "Off by default (async worker)."
         ),
     ),
+    upgrade_flow: str | None = None,
 ) -> None:
     """Serve LFX flows as a web API.
 
@@ -352,6 +432,8 @@ def serve_command(
                 no_env_fallback=no_env_fallback,
                 flow_store=flow_store,
                 verbose_print=verbose_print,
+                upgrade_flow=upgrade_flow,
+                verbose=verbose,
             )
         )
 

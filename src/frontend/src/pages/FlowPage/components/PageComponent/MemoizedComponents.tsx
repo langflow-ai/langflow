@@ -17,9 +17,6 @@ export const MemoizedBackground = memo(() => (
 ));
 
 interface MemoizedCanvasControlsProps {
-  setIsAddingNote: (value: boolean) => void;
-  shadowBoxWidth: number;
-  shadowBoxHeight: number;
   selectedNode: AllNodeType | null;
   isAgentWorking?: boolean;
 }
@@ -57,7 +54,7 @@ export const MemoizedSidebarTrigger = memo(() => {
             iconName={item.icon}
             iconClasses={item.id === "mcp" ? "h-8 w-8" : ""}
             key={item.id}
-            tooltipText={item.tooltip}
+            tooltipText={t(item.tooltip)}
             onClick={() => {
               setActiveSection(item.id);
               if (!open) {
