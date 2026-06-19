@@ -240,14 +240,32 @@ class DatabaseService(Service):
         elif Path(alembic_log_file).is_absolute():
             self.alembic_log_path = Path(alembic_log_file)
         else:
-            self.alembic_log_path = Path(langflow_dir) / alembic_log_file
+            # Resolve relative log paths against the writable runtime config
+            # directory, not the installed package directory. The package dir is
+            # read-only in hardened deployments (non-root containers, read-only
+            # root filesystems, Kubernetes), where writing into it raises OSError
+            # and crashes startup. config_dir is always writable (it defaults to
+            # platformdirs' user cache dir and is created on startup).
+            config_dir = getattr(self.settings_service.settings, "config_dir", None)
+            base_dir = Path(config_dir) if config_dir else langflow_dir
+            self.alembic_log_path = base_dir / alembic_log_file
 
     async def initialize_alembic_log_file(self):
-        if self.alembic_log_to_stdout:
+        log_path = self.alembic_log_path
+        if self.alembic_log_to_stdout or log_path is None:
             return
-        # Ensure the directory and file for the alembic log file exists
-        await anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
-        await anyio.Path(self.alembic_log_path).touch(exist_ok=True)
+        # Ensure the directory and file for the alembic log file exists. The
+        # migration log is diagnostic-only, so a read-only filesystem (hardened
+        # containers / Kubernetes) must never abort startup: warn and move on.
+        try:
+            await anyio.Path(log_path.parent).mkdir(parents=True, exist_ok=True)
+            await anyio.Path(log_path).touch(exist_ok=True)
+        except OSError as exc:
+            await logger.awarning(
+                f"Could not initialize the Alembic migration log at '{log_path}' ({exc}). "
+                "Migration output falls back to stdout. Set LANGFLOW_ALEMBIC_LOG_FILE to a writable path "
+                "or LANGFLOW_ALEMBIC_LOG_TO_STDOUT=true to silence this warning."
+            )
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
@@ -518,6 +536,33 @@ class DatabaseService(Service):
         # alembic_cfg.attributes["connection"].commit()
         command.upgrade(alembic_cfg, "head")
 
+    def _open_alembic_log_buffer(self):
+        """Open the Alembic migration log for writing, falling back to stdout.
+
+        The migration log is diagnostic-only output. If the target path cannot
+        be written -- e.g. the installed package directory or the root
+        filesystem is read-only, as in hardened container/Kubernetes deployments
+        (non-root user or read-only root filesystem) -- startup must not abort.
+        Fall back to stdout rather than letting OSError propagate through the
+        FastAPI lifespan. Returns a context manager yielding the buffer Alembic
+        writes its output to.
+        """
+        log_path = self.alembic_log_path
+        if self.alembic_log_to_stdout or log_path is None:
+            return nullcontext(sys.stdout)
+        try:
+            # _run_migrations can run before initialize_alembic_log_file(), so
+            # make sure the parent directory exists before opening for writing.
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            return log_path.open("w", encoding="utf-8")
+        except OSError as exc:
+            logger.warning(
+                f"Could not open the Alembic migration log at '{log_path}' ({exc}). "
+                "Falling back to stdout. Set LANGFLOW_ALEMBIC_LOG_FILE to a writable path "
+                "or LANGFLOW_ALEMBIC_LOG_TO_STDOUT=true to silence this warning."
+            )
+            return nullcontext(sys.stdout)
+
     def _run_migrations(self, should_initialize_alembic, fix) -> None:
         # First we need to check if alembic has been initialized
         # If not, we need to initialize it
@@ -528,9 +573,7 @@ class DatabaseService(Service):
         # which is a buffer
         # I don't want to output anything
         # subprocess.DEVNULL is an int
-        buffer_context = (
-            nullcontext(sys.stdout) if self.alembic_log_to_stdout else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
-        )
+        buffer_context = self._open_alembic_log_buffer()
         # The advisory lock serialises concurrent migration runs across workers
         # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
         with _postgres_migration_lock(self.database_url), buffer_context as buffer:

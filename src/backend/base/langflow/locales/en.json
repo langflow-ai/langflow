@@ -4411,7 +4411,7 @@
   "components.loopcomponent.description.dc14755d": "Iterates through Data or Message objects, processing items individually and aggregating results from loop inputs.",
   "components.loopcomponent.display_name.f2f6a018": "Loop",
   "components.loopcomponent.inputs.data.display_name.7abc49df": "Inputs",
-  "components.loopcomponent.inputs.data.info.bb8c0783": "The initial DataFrame to iterate over.",
+  "components.loopcomponent.inputs.data.info.cb3819f9": "Data to iterate over. Accepts DataFrame, Table, Data, or Message.",
   "components.loopcomponent.outputs.done.display_name.11a6767d": "Done",
   "components.loopcomponent.outputs.item.display_name.652bcc3a": "Item",
   "components.maritalk.description.f2ad2e6b": "Generates text using MariTalk LLMs.",

@@ -1,15 +1,122 @@
+import sys
+import types
 from typing import Any
 from uuid import uuid4
 
 import pytest
 from langflow.custom import Component
-from lfx.components.cuga import CugaComponent
+from lfx.components.cuga.cuga_agent import (
+    _CUGA_CODE_AGENT_GUARD_ATTR,
+    CugaComponent,
+    _install_cuga_code_agent_security_guard,
+    _validate_cuga_code_agent_source,
+)
 from lfx.components.tools.calculator import CalculatorToolComponent
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
 # Load environment variables from .env file
+
+
+def _get_cuga_code_agent_security_classes() -> tuple[Any, Any]:
+    code_executor_module = pytest.importorskip("cuga.backend.cuga_graph.nodes.cuga_lite.executors.code_executor")
+    security_module = pytest.importorskip("cuga.backend.cuga_graph.nodes.cuga_lite.executors.common")
+    return code_executor_module.CodeExecutor, security_module.SecurityValidator
+
+
+def test_cuga_code_agent_guard_allows_safe_codeagent_source():
+    code_executor_cls, security_validator_cls = _get_cuga_code_agent_security_classes()
+
+    safe_code = 'import json\nprint(json.dumps({"variable_name": "answer", "value": 42}))'
+
+    _validate_cuga_code_agent_source(code_executor_cls, security_validator_cls, safe_code)
+
+
+def test_cuga_code_agent_guard_blocks_object_graph_escape():
+    code_executor_cls, security_validator_cls = _get_cuga_code_agent_security_classes()
+
+    exploit_code = """
+import json
+mod = None
+for cls in ().__class__.__mro__[1].__subclasses__():
+    globals_dict = getattr(getattr(cls, "__init__", None), "__globals__", None)
+    if isinstance(globals_dict, dict) and globals_dict.get("os") is not None:
+        mod = globals_dict["os"]
+        break
+mod.system("mkdir -p /tmp/langflow-poc")
+print(json.dumps({"variable_name": "proof", "value": "escaped"}))
+"""
+
+    with pytest.raises((ImportError, PermissionError), match=r"not allowed|Security violation|Suspicious"):
+        _validate_cuga_code_agent_source(code_executor_cls, security_validator_cls, exploit_code)
+
+
+@pytest.mark.asyncio
+async def test_cuga_code_agent_security_guard_validates_before_original_executor(monkeypatch):
+    validations: list[tuple[str, str]] = []
+    calls: list[tuple[str, Any, Any]] = []
+
+    class FakeSecurityValidator:
+        @staticmethod
+        def validate_imports(code: str) -> None:
+            validations.append(("imports", code))
+
+        @staticmethod
+        def validate_wrapped_code(wrapped_code: str) -> None:
+            validations.append(("wrapped", wrapped_code))
+            if "BLOCK" in wrapped_code:
+                msg = "blocked before execution"
+                raise PermissionError(msg)
+
+    class FakeCodeExecutor:
+        @classmethod
+        def _wrap_code_for_code_agent(cls, code: str) -> str:
+            return f"wrapped:{code}"
+
+        @classmethod
+        async def eval_for_code_agent(cls, code: str, state: Any, mode: Any = None) -> tuple[str, dict[str, Any]]:
+            calls.append((code, state, mode))
+            return "executed", {}
+
+    def package_module(name: str) -> types.ModuleType:
+        module = types.ModuleType(name)
+        module.__path__ = []
+        return module
+
+    package_names = [
+        "cuga",
+        "cuga.backend",
+        "cuga.backend.cuga_graph",
+        "cuga.backend.cuga_graph.nodes",
+        "cuga.backend.cuga_graph.nodes.cuga_lite",
+        "cuga.backend.cuga_graph.nodes.cuga_lite.executors",
+    ]
+    for package_name in package_names:
+        monkeypatch.setitem(sys.modules, package_name, package_module(package_name))
+
+    code_executor_module = types.ModuleType("cuga.backend.cuga_graph.nodes.cuga_lite.executors.code_executor")
+    code_executor_module.CodeExecutor = FakeCodeExecutor
+    common_module = types.ModuleType("cuga.backend.cuga_graph.nodes.cuga_lite.executors.common")
+    common_module.SecurityValidator = FakeSecurityValidator
+    monkeypatch.setitem(sys.modules, code_executor_module.__name__, code_executor_module)
+    monkeypatch.setitem(sys.modules, common_module.__name__, common_module)
+
+    _install_cuga_code_agent_security_guard()
+    _install_cuga_code_agent_security_guard()
+
+    assert getattr(FakeCodeExecutor, _CUGA_CODE_AGENT_GUARD_ATTR) is True
+    assert await FakeCodeExecutor.eval_for_code_agent("safe", state="state", mode="local") == ("executed", {})
+    with pytest.raises(PermissionError, match="blocked before execution"):
+        await FakeCodeExecutor.eval_for_code_agent("BLOCK", state="state", mode="local")
+
+    assert calls == [("safe", "state", "local")]
+    assert validations == [
+        ("imports", "safe"),
+        ("wrapped", "wrapped:safe"),
+        ("imports", "BLOCK"),
+        ("wrapped", "wrapped:BLOCK"),
+    ]
 
 
 class TestCugaComponent(ComponentTestBaseWithoutClient):
