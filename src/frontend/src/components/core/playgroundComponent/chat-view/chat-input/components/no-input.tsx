@@ -3,10 +3,10 @@ import {
   type TransProps,
   useTranslation,
 } from "react-i18next";
-
-const Trans = TransComponent as unknown as React.FC<TransProps<string>>;
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/ui/loading";
+
+const Trans = TransComponent as unknown as React.FC<TransProps<string>>;
 
 interface NoInputViewProps {
   isBuilding: boolean;
