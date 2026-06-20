@@ -73,9 +73,62 @@ class TestGroundRouteSearchComponent(ComponentTestBaseWithoutClient):
         assert len(data) == 2
         assert {d.data["source_engine"] for d in data} == {"serper", "exa"}
 
+    def test_search_dataframe_has_rows_and_source_engine_column(
+        self, component_class: type[Any], default_kwargs: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Arrange: same 200 body, two results (the dual-output DataFrame contract).
+        component = component_class(**default_kwargs)
+        sample = {
+            "request_id": "r1",
+            "results": [
+                {"url": "https://ex.com/a", "title": "A", "snippet": "s", "source_engine": "serper"},
+                {"url": "https://ex.com/b", "title": "B", "snippet": "s2", "source_engine": "exa"},
+            ],
+            "answer": None,
+            "citations": [],
+            "degraded": False,
+            "cache_meta": {"cache_tier": "miss"},
+            "usage_meta": {"cost_usd": 0.001},
+        }
+
+        class _Resp:
+            status_code = 200
+            text = "ok"
+
+            def json(self) -> dict[str, Any]:
+                return sample
+
+        monkeypatch.setattr(httpx, "post", lambda *_a, **_k: _Resp())
+
+        # Act
+        df = component.search_dataframe()
+
+        # Assert: one row per result, source_engine surfaced as a column.
+        assert len(df) == 2
+        assert "source_engine" in df.columns
+        assert set(df["source_engine"]) == {"serper", "exa"}
+
     def test_missing_key_returns_error_not_crash(self, component_class: type[Any]) -> None:
         # Arrange / Act: no API key supplied.
         component = component_class(api_key="", query="x", _session_id="s")
         out = component.search_data()
         # Assert: graceful error Data, never an exception.
         assert "error" in out[0].data
+
+    def test_empty_query_returns_error_without_request(
+        self, component_class: type[Any], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Arrange: a key but a blank query; httpx.post must never be reached.
+        def _boom(*_a: Any, **_k: Any) -> None:
+            msg = "httpx.post should not be called for an empty query"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(httpx, "post", _boom)
+        component = component_class(api_key="gr_live_test_key", query="   ", _session_id="s")
+
+        # Act
+        out = component.search_data()
+
+        # Assert: local validation error, no external call.
+        assert "error" in out[0].data
+        assert "query" in out[0].data["error"].lower()

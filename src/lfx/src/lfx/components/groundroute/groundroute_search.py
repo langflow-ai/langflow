@@ -181,6 +181,8 @@ class GroundRouteSearchComponent(Component):
         """
         if not self.api_key:
             return self._error("GroundRoute API key is required. Get one at https://groundroute.ai/keys")
+        if not (self.query or "").strip():
+            return self._error("GroundRoute search query is required.")
 
         try:
             response = httpx.post(
