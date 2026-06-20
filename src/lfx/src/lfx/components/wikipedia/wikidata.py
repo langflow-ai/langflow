@@ -8,6 +8,8 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
 
+WIKIDATA_API_TIMEOUT = 10.0
+
 
 class WikidataComponent(Component):
     display_name = "Wikidata"
@@ -43,7 +45,7 @@ class WikidataComponent(Component):
 
             # Send request to Wikidata API
             wikidata_api_url = "https://www.wikidata.org/w/api.php"
-            response = httpx.get(wikidata_api_url, params=params)
+            response = httpx.get(wikidata_api_url, params=params, timeout=WIKIDATA_API_TIMEOUT)
             response.raise_for_status()
             response_json = response.json()
 
