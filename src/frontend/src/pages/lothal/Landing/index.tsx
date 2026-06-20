@@ -9,17 +9,15 @@
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type {
-  DiagramEdge,
-  DiagramNode,
-} from "@/controllers/API/queries/lothal";
 import {
   Button,
-  DiagramCanvas,
   LOTHAL_VERSION,
   LothalMark,
   type LothalPhaseId,
   PHASES,
+  SampleDiagram,
+  type SampleMessage,
+  type SampleParticipant,
 } from "../components";
 import { LothalSurface } from "../theme/LothalSurface";
 
@@ -44,62 +42,24 @@ const SECTION_IDS = {
 } as const;
 
 // --- The sample bakery project ("larder") --------------------------------------
-// The same mini system the design mocks up, rendered on the real canvas: a
-// customer submits an order, the order service reserves stock, inventory
-// reports back, and the kitchen board pings the customer.
+// The same mini system the design mocks up, drawn as a sequence diagram (the
+// product's real output, Epic D): a customer submits an order, the order service
+// reserves stock, inventory reports back, and the kitchen board pings the
+// customer. Decorative — <SampleDiagram> is a static illustration, not the live
+// <D2Canvas>.
 
-const LARDER_NODES: DiagramNode[] = [
-  {
-    id: "customer",
-    type: "actorNode",
-    position: { x: 20, y: 50 },
-    data: { label: "Customer" },
-  },
-  {
-    id: "order",
-    type: "systemNode",
-    position: { x: 330, y: 50 },
-    data: { label: "Order Service" },
-  },
-  {
-    id: "inventory",
-    type: "systemNode",
-    position: { x: 330, y: 230 },
-    data: { label: "Inventory" },
-  },
-  {
-    id: "kitchen",
-    type: "systemNode",
-    position: { x: 20, y: 230 },
-    data: { label: "Kitchen Board", kind: "ui" },
-  },
+const LARDER_PARTICIPANTS: SampleParticipant[] = [
+  { id: "customer", label: "Customer" },
+  { id: "order", label: "Order Service" },
+  { id: "inventory", label: "Inventory" },
+  { id: "kitchen", label: "Kitchen Board" },
 ];
 
-const LARDER_EDGES: DiagramEdge[] = [
-  {
-    id: "e1",
-    source: "customer",
-    target: "order",
-    data: { order: 1, label: "submit order", kind: "sync" },
-  },
-  {
-    id: "e2",
-    source: "order",
-    target: "inventory",
-    data: { order: 2, label: "reserve stock", kind: "sync" },
-  },
-  {
-    id: "e3",
-    source: "inventory",
-    target: "kitchen",
-    data: { order: 3, label: "stock status", kind: "return" },
-  },
-  {
-    id: "e4",
-    source: "kitchen",
-    target: "customer",
-    data: { order: 4, label: "ready for pickup", kind: "async" },
-  },
+const LARDER_MESSAGES: SampleMessage[] = [
+  { from: "customer", to: "order", label: "submit order" },
+  { from: "order", to: "inventory", label: "reserve stock" },
+  { from: "inventory", to: "kitchen", label: "stock status", dashed: true },
+  { from: "kitchen", to: "customer", label: "ready for pickup", dashed: true },
 ];
 
 // --- Hero product preview -------------------------------------------------------
@@ -352,16 +312,17 @@ function HeroScene() {
               className="mono"
               style={{ fontSize: 10, color: "var(--ink-faint)" }}
             >
-              {LARDER_NODES.length} nodes · {LARDER_EDGES.length} edges
+              {LARDER_PARTICIPANTS.length} participants ·{" "}
+              {LARDER_MESSAGES.length} messages
             </span>
           </div>
-          <DiagramCanvas
-            id="landing-hero"
-            nodes={LARDER_NODES}
-            edges={LARDER_EDGES}
-            chrome={false}
-            zoomOnScroll={false}
-          />
+          <div style={{ position: "absolute", inset: 0, padding: 16 }}>
+            <SampleDiagram
+              participants={LARDER_PARTICIPANTS}
+              messages={LARDER_MESSAGES}
+              title="Sample sequence diagram: a bakery order flow"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -943,12 +904,11 @@ function LandingView() {
                   120%
                 </span>
               </div>
-              <div style={{ position: "relative", height: 300 }}>
-                <DiagramCanvas
-                  id="landing-showcase"
-                  nodes={LARDER_NODES}
-                  edges={LARDER_EDGES}
-                  zoomOnScroll={false}
+              <div style={{ position: "relative", height: 300, padding: 16 }}>
+                <SampleDiagram
+                  participants={LARDER_PARTICIPANTS}
+                  messages={LARDER_MESSAGES}
+                  title="Sample sequence diagram: a bakery order flow"
                 />
               </div>
             </div>

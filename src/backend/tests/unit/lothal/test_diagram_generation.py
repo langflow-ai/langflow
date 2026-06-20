@@ -98,9 +98,10 @@ async def test_valid_reply_yields_d2_and_hands_off_to_refinement(fake_llm, fake_
     # Having drafted the first diagram, generation hands off to refinement (D.8).
     assert response.next_phase == ProjectPhase.DIAGRAM_REFINEMENT
     assert response.suggestions == []
-    # The D2 rides on `.diagram_d2`, stored verbatim; the legacy xyflow field is unused.
+    # The D2 rides on `.diagram_d2`, stored verbatim.
     assert response.diagram_d2 == D2_SOURCE
-    assert response.diagram is None
+    # Generation drafts; it doesn't run the D.10 coherence validator (that's refinement).
+    assert response.warning is None
     # The assistant message is grounded in the actual diagram (its 4 interactions).
     assert "4 interactions" in response.text
     assert len(fake_llm["calls"]) == 1  # compiled first time → no retry

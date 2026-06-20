@@ -37,8 +37,9 @@ class Project(SQLModel, table=True):  # type: ignore[call-arg]
     # Synthesised PRD; null until clarification completes. Primary LLM context source.
     prd_content: str | None = Field(default=None, sa_column=Column(Text))
     # Canonical xyflow diagram as a JSON string ({nodes, edges} incl. positions);
-    # null until generated. Legacy artifact, kept for existing data + transitional
-    # read during the D2 migration (Epic D); removal handled in D.13.
+    # null until generated. Legacy artifact: D.13 converts any populated value into
+    # ``diagram_d2`` so all projects render on the D2 canvas. The column is kept for
+    # historical reference; dropping it is a later, separate migration (post-D.15).
     diagram_json: str | None = Field(default=None, sa_column=Column(Text))
     # D2 source text — the diagram artifact going forward (Epic D). Null until
     # generated; D2 owns layout, so no positions are stored. The LLM reads/writes it.

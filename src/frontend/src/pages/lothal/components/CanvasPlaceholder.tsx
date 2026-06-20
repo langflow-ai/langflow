@@ -1,7 +1,7 @@
-// The right pane before a diagram exists. The real @xyflow/react canvas is
-// Story B.4; until then this is the honest placeholder — a faint sequence-
-// diagram glyph and a phase-aware line about what's coming. Shown during
-// CLARIFICATION (no diagram yet); other phases get a neutral fallback.
+// The right pane before a diagram exists. The live diagram surface is <D2Canvas>
+// (Epic D.6); until a project has D2 to show, this is the honest placeholder — a
+// faint sequence-diagram glyph and a phase-aware line about what's coming. Shown
+// during CLARIFICATION (no diagram yet); other phases get a neutral fallback.
 
 const COPY: Record<string, { title: string; sub: string }> = {
   CLARIFICATION: {

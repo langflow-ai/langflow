@@ -19,6 +19,7 @@ import {
   type CodeFile,
   type Message,
   type Project,
+  useApproveDiagram,
   useCode,
   useCreateProject,
   useDeleteProject,
@@ -245,6 +246,31 @@ describe("lothal queries", () => {
       });
 
       // Expected: messages, projects, AND diagram are all refreshed.
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "diagram", "p1"],
+      });
+    });
+  });
+
+  describe("useApproveDiagram", () => {
+    it("POSTs approve and invalidates the projects + diagram caches (D.11)", async () => {
+      mockApiPost.mockResolvedValue({ data: { phase: "CODE_GENERATION" } });
+      const { wrapper, invalidateSpy } = setup();
+      const { result } = renderHook(() => useApproveDiagram("p1"), { wrapper });
+
+      let returned: { phase: string } | undefined;
+      await act(async () => {
+        returned = await result.current.mutateAsync();
+      });
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/api/v1/lothal/projects/p1/diagram/approve",
+      );
+      expect(returned).toEqual({ phase: "CODE_GENERATION" });
+      // Approving flips the phase (canvas → code) and re-reads the retained D2.
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "projects"],
+      });
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["lothal", "diagram", "p1"],
       });

@@ -19,8 +19,7 @@ owned by the caller or 404s, so an endpoint going live can never forget the
 check.
 """
 
-import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from uuid import UUID
 
@@ -32,7 +31,7 @@ from sqlmodel import select
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.lothal.d2_compile import D2CompilerUnavailableError, render_d2
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError, call_llm
-from langflow.lothal.router import process_turn
+from langflow.lothal.router import available_phases, process_turn
 from langflow.lothal.schemas import (
     ChatRequest,
     CodeResponse,
@@ -40,8 +39,6 @@ from langflow.lothal.schemas import (
     DebugLLMResponse,
     DiagramApproveResponse,
     DiagramResponse,
-    DiagramSaveRequest,
-    DiagramSaveResponse,
     MessageRead,
     NotImplementedResponse,
     PRDResponse,
@@ -275,6 +272,17 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
 
     turn_phase = project.phase
 
+    # Not every phase has a conversation step: CODE_GENERATION and DONE have no
+    # registered engine. Approving a diagram (D.11) is the first in-app path into
+    # CODE_GENERATION, so this is now reachable — reject it as a clean 409 rather
+    # than letting `process_turn` raise an uncaught `ValueError` (a 500 that also
+    # leaks the engine registry, and 500s again on every retry — a stuck state).
+    if turn_phase not in available_phases():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This project's current phase has no conversation step.",
+        )
+
     # Prior turns only — loaded before the new user message is added so the engine
     # sees the history that preceded this turn (it appends `content` itself).
     history = await _project_messages(session, project.id)
@@ -300,18 +308,31 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
     )
     session.add(assistant_message)
 
+    if response.warning is not None:
+        # Epic D.10: the refinement engine ran a coherence check of the edited D2
+        # against the PRD and flagged a contradiction. Surface it as its own
+        # ASSISTANT turn right after the reply so it shows in `/messages` — a
+        # valid edit returns `warning=None` and adds no message. Stamp its
+        # `created_at` one tick past the reply's so `/messages` (ordered by
+        # created_at, then a random uuid4 id) always replays the warning *below*
+        # the reply it annotates — `datetime.now()` is not strictly monotonic, so
+        # relying on wall-clock distinctness alone could invert the two on a tie.
+        session.add(
+            Message(
+                project_id=project.id,
+                role=MessageRole.ASSISTANT,
+                content=response.warning,
+                suggestions=[],
+                phase=turn_phase,
+                created_at=assistant_message.created_at + timedelta(microseconds=1),
+            )
+        )
+
     if response.diagram_d2 is not None:
         # Epic D.2: the diagram generator emits D2 source for us to persist;
         # `diagram_d2` is the canonical store going forward (D.4 re-points
         # `GET /diagram` at it). Stored verbatim — D2 owns its own layout.
         project.diagram_d2 = response.diagram_d2
-        session.add(project)
-
-    if response.diagram is not None:
-        # Legacy xyflow path (Story 2.1): kept for transitional reads until D.13.
-        # `diagram_json` is a JSON string of the full graph, parsed back to an
-        # object at the `ProjectRead` boundary.
-        project.diagram_json = json.dumps(response.diagram)
         session.add(project)
 
     if response.next_phase is not None and response.next_phase != turn_phase:
@@ -435,23 +456,49 @@ async def get_diagram(project: OwnedProject) -> DiagramResponse:
 
 
 @router.post(
-    "/projects/{project_id}/diagram/save",
-    response_model=DiagramSaveResponse,
-    responses=_NOT_IMPLEMENTED,
-    summary="Save the canvas (xyflow → Mermaid + validate)",
-)
-async def save_diagram(project: OwnedProject, body: DiagramSaveRequest) -> JSONResponse:
-    return stub("Saving the diagram is not implemented yet.")
-
-
-@router.post(
     "/projects/{project_id}/diagram/approve",
-    response_model=DiagramApproveResponse,
-    responses=_NOT_IMPLEMENTED,
     summary="Approve the diagram and advance to code generation",
 )
-async def approve_diagram(project: OwnedProject) -> JSONResponse:
-    return stub("Approving the diagram is not implemented yet.")
+async def approve_diagram(*, session: DbSession, project: OwnedProject) -> DiagramApproveResponse:
+    """Approve the current diagram and advance to CODE_GENERATION (Epic D.11).
+
+    The diagram surface has no canvas-save path (Epic D.9 retired it): the user
+    shapes the D2 by conversation (the refinement engine, D.8), and *approving*
+    is the single forward action that ends refinement. Approval is therefore only
+    valid in DIAGRAM_REFINEMENT — calling it in any other phase is a `409`
+    (a no-op transition the UI shouldn't have offered) rather than silently
+    re-approving. The approved D2 is retained verbatim in `lothal_project.diagram_d2`
+    (code generation reads it, D.12), so `GET /diagram` keeps returning it
+    unchanged across the transition.
+
+    Serialized against concurrent turns the same way `chat` is: re-read the row
+    under a `FOR UPDATE` lock before deciding, so a refine turn and an approve
+    can't interleave and double-apply or skip the transition.
+    """
+    await session.refresh(project, with_for_update=True)
+
+    if project.phase != ProjectPhase.DIAGRAM_REFINEMENT.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The diagram can only be approved while it is being refined.",
+        )
+
+    # There must be a diagram to approve. On the happy path generation always
+    # populates `diagram_d2` before refinement, but guard against advancing into
+    # CODE_GENERATION with nothing for code generation to read (e.g. a legacy
+    # project whose only diagram was the dropped xyflow graph).
+    if not (project.diagram_d2 and project.diagram_d2.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="There is no diagram to approve yet.",
+        )
+
+    project.phase = ProjectPhase.CODE_GENERATION.value
+    project.updated_at = datetime.now(timezone.utc)
+    session.add(project)
+    await session.flush()
+    await session.refresh(project)
+    return DiagramApproveResponse(phase=project.phase)
 
 
 # --- Code --------------------------------------------------------------------
@@ -464,6 +511,13 @@ async def approve_diagram(project: OwnedProject) -> JSONResponse:
     summary="Get generated code files",
 )
 async def get_code(project: OwnedProject) -> JSONResponse:
+    # Epic 4 (code generation) is not built yet, so this is still a 501 stub.
+    # When it lands, its diagram input is the **D2 source** in
+    # `lothal_project.diagram_d2` (or a graph compiled from it) — Epic D.12.
+    # Not Mermaid (dropped in migration a6ba6bdf00b7) and not the legacy
+    # `diagram_json` xyflow graph (the xyflow path was removed in D.15). There is
+    # no stale diagram-input wiring here to migrate — only this contract to honour
+    # once code-gen is implemented.
     return stub("The code endpoint is not implemented yet.")
 
 
@@ -482,6 +536,13 @@ async def get_code(project: OwnedProject) -> JSONResponse:
     summary="Download the project as a ZIP",
 )
 async def download_project(project: OwnedProject) -> JSONResponse:
+    # Epics 5.1 (ZIP) / 5.2 (GitHub export) are not built yet, so this is still a
+    # 501 stub. When the delivery bundle lands, it carries the **D2 source** from
+    # `lothal_project.diagram_d2` (e.g. `diagrams/diagram.d2`, optionally plus a
+    # rendered `.svg`) alongside `prd.md` and `code/` — Epic D.16. It must NOT
+    # bundle a Mermaid `diagrams/sequence.mmd` (the `diagram_mmd` column was
+    # dropped in migration a6ba6bdf00b7). No `.mmd` wiring exists here to remove —
+    # only this contract to honour once delivery is implemented.
     return stub("Downloading the project is not implemented yet.")
 
 

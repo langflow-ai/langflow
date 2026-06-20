@@ -15,8 +15,10 @@ export type Project = {
   name: string;
   phase: Phase;
   prd_content: string | null;
-  // The canonical xyflow graph ({nodes, edges} incl. positions) parsed from the
-  // stored JSON string; null until DIAGRAM_GENERATION produces one.
+  // Legacy xyflow graph column, retained for pre-D2 projects until a later
+  // column-drop migration (Epic D backfills it into D2 via D.13). No frontend
+  // code reads it any more — the diagram is D2 source, fetched via `useDiagram`
+  // (GET /diagram). Null for every project created after the D2 pivot.
   diagram_json: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -45,32 +47,10 @@ export type Diagram = {
   svg: string | null;
 };
 
-// --- Legacy xyflow render layer (Story 2.x / B.4) --------------------------
-// The pre-D2 graph shape. Still consumed by the decorative <DiagramCanvas> on
-// the Landing / Design-System pages (seeded literals, not the live endpoint).
-// Removed wholesale once the xyflow canvas path is deleted (Epic D.15).
-
-export type NodeKind = "person" | "service" | "ui" | "data";
-export type EdgeKind = "sync" | "async" | "return";
-
-export type DiagramNode = {
-  id: string;
-  type: "actorNode" | "systemNode";
-  data: { label: string; kind?: NodeKind; note?: string };
-  position: { x: number; y: number };
-};
-
-export type DiagramEdge = {
-  id: string;
-  source: string;
-  target: string;
-  animated?: boolean;
-  data: { order: number; label?: string; kind?: EdgeKind };
-};
-
-export type DiagramGraph = {
-  nodes: DiagramNode[];
-  edges: DiagramEdge[];
+// `POST /diagram/approve` (Epic D.11) advances DIAGRAM_REFINEMENT →
+// CODE_GENERATION and returns the project's phase afterwards.
+export type DiagramApprove = {
+  phase: Phase;
 };
 
 // A single generated file. Mirrors `CodeFile` / `CodeResponse` in the contract
@@ -212,6 +192,26 @@ export function useDiagram(projectId: string, enabled = true) {
     enabled,
     retry: retrySkipping(501, 403),
     staleTime: STUB_STALE_MS,
+  });
+}
+
+// Approve the current diagram (Epic D.11): advances DIAGRAM_REFINEMENT →
+// CODE_GENERATION on the server and retains the D2. Invalidates the project
+// queries so the phase badge, stepper, and right-pane (canvas → code) update,
+// and the diagram so the approved D2 is re-read under the new phase.
+export function useApproveDiagram(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post<DiagramApprove>(
+        `${BASE}${projectId}/diagram/approve`,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      qc.invalidateQueries({ queryKey: diagramKey(projectId) });
+    },
   });
 }
 

@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 
 from langflow.lothal.context import build_messages
 from langflow.lothal.engines.d2_gate import compile_validated_d2, count_messages
+from langflow.lothal.engines.d2_validator import validate_d2_against_prd
 from langflow.lothal.router import LLMResponse, PhaseEngine, register_engine
 from langflow.services.database.models.lothal_project.model import ProjectPhase
 
@@ -119,5 +120,12 @@ class DiagramRefinementEngine(PhaseEngine):
         composed = _compose_turn(prd, current_d2, user_message)
         messages = build_messages(SYSTEM_PROMPT, history, composed)
         d2 = await compile_validated_d2(messages)
+        # D.10: the edit compiles (D.3 gate) — now check it didn't drift from the
+        # spec. A contradiction becomes a user-facing warning the chat endpoint
+        # stores as its own message; a coherent edit yields `None` (no message).
+        # Advisory only: `validate_d2_against_prd` swallows every fault and returns
+        # `None`, so it never raises here — the verdict can't block the compiled
+        # edit from being returned (and then persisted by the endpoint).
+        warning = await validate_d2_against_prd(prd, d2)
         # Refining keeps the project in DIAGRAM_REFINEMENT; approval (→ CODE_GENERATION) is D.11.
-        return LLMResponse(text=_assistant_text(d2), suggestions=[], next_phase=None, diagram_d2=d2)
+        return LLMResponse(text=_assistant_text(d2), suggestions=[], next_phase=None, diagram_d2=d2, warning=warning)

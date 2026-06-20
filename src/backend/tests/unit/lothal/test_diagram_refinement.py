@@ -14,7 +14,7 @@ through it. No real LLM, no DB — the engine never persists.
 """
 
 import pytest
-from langflow.lothal.engines import d2_gate, diagram_refinement
+from langflow.lothal.engines import d2_gate, d2_validator, diagram_refinement
 from langflow.lothal.engines.diagram_refinement import DiagramRefinementEngine
 from langflow.lothal.llm import LLMConnectionError
 from langflow.lothal.router import LLMResponse, get_engine
@@ -85,6 +85,30 @@ def fake_compile(monkeypatch):
     return captured
 
 
+@pytest.fixture(autouse=True)
+def stub_validator(monkeypatch):
+    """Stub the D.10 coherence validator's own `call_llm`, defaulting to `VALID`.
+
+    The engine runs `validate_d2_against_prd` (in `d2_validator`) after every
+    compile-validated edit; that module has its OWN `call_llm` seam, independent
+    of the editor's (`d2_gate.call_llm`). Autoused so the edit tests above never
+    reach a real model and assert no warning by default; the D.10 tests below set
+    `reply["value"]` to a `WARNING:` line to exercise the contradiction path, and
+    capture the messages the validator saw.
+    """
+    state = {"value": "VALID", "calls": []}
+
+    async def _call_llm(messages, **_kwargs):
+        state["calls"].append(messages)
+        value = state["value"]
+        if isinstance(value, Exception):
+            raise value
+        return value
+
+    monkeypatch.setattr(d2_validator, "call_llm", _call_llm)
+    return state
+
+
 def _composed(fake_llm) -> str:
     """The composed refinement turn the model saw (the last user message)."""
     return fake_llm["calls"][0]["messages"][-1]["content"]
@@ -113,7 +137,8 @@ async def test_anchored_edit_carries_updated_d2_without_transition(fake_llm, fak
     assert response.diagram_d2 == UPDATED_D2
     assert response.next_phase is None
     assert response.suggestions == []
-    assert response.diagram is None
+    # A coherent edit (the default `VALID` stub) raises no D.10 warning.
+    assert response.warning is None
     # The assistant text is grounded in the refined diagram (its 4 interactions).
     assert "4 interactions" in response.text
     # The gate ran against the extracted D2 reply.
@@ -174,6 +199,69 @@ async def test_empty_current_d2_is_labelled_for_the_model(fake_llm):
     await DiagramRefinementEngine().process([], "start with a login flow", prd=PRD, current_d2=None)
 
     assert "the diagram is empty" in _composed(fake_llm)
+
+
+# --- D.10 coherence validator -------------------------------------------------
+
+
+@pytest.mark.usefixtures("fake_compile")
+async def test_contradiction_surfaces_as_warning(fake_llm, stub_validator):
+    """A `WARNING:` verdict from the validator rides on `LLMResponse.warning`."""
+    fake_llm["replies"] = [UPDATED_D2]
+    stub_validator["value"] = "WARNING: the diagram drops the Database the spec requires"
+
+    response = await DiagramRefinementEngine().process([], "rename `user` to Browser", prd=PRD, current_d2=CURRENT_D2)
+
+    # The edit still succeeds and is carried; the warning is advisory, not a gate.
+    assert response.diagram_d2 == UPDATED_D2
+    assert response.warning is not None
+    assert "drops the Database the spec requires" in response.warning
+
+
+@pytest.mark.usefixtures("fake_compile")
+async def test_valid_verdict_adds_no_warning(fake_llm, stub_validator):
+    fake_llm["replies"] = [UPDATED_D2]
+    stub_validator["value"] = "VALID"
+
+    response = await DiagramRefinementEngine().process([], "rename `user` to Browser", prd=PRD, current_d2=CURRENT_D2)
+
+    assert response.warning is None
+
+
+@pytest.mark.usefixtures("fake_compile")
+async def test_validator_sees_prd_and_updated_d2(fake_llm, stub_validator):
+    """The validator round-trip carries the PRD and the freshly edited D2."""
+    fake_llm["replies"] = [UPDATED_D2]
+
+    await DiagramRefinementEngine().process([], "rename `user` to Browser", prd=PRD, current_d2=CURRENT_D2)
+
+    assert stub_validator["calls"], "the validator should run after a successful edit"
+    validator_turn = stub_validator["calls"][0][-1]["content"]
+    assert "A todo app for individuals." in validator_turn  # the PRD
+    assert "browser -> api: submit form" in validator_turn  # the UPDATED D2, not the old one
+
+
+@pytest.mark.usefixtures("fake_compile")
+async def test_no_prd_skips_validation(fake_llm, stub_validator):
+    """With no PRD there is nothing to validate against — the validator never runs."""
+    fake_llm["replies"] = [UPDATED_D2]
+
+    response = await DiagramRefinementEngine().process([], "rename `user` to Browser", prd=None, current_d2=CURRENT_D2)
+
+    assert response.warning is None
+    assert stub_validator["calls"] == []
+
+
+@pytest.mark.usefixtures("fake_compile")
+async def test_validator_fault_does_not_fail_the_edit(fake_llm, stub_validator):
+    """An LLM fault in the advisory validator is swallowed — the edit still lands."""
+    fake_llm["replies"] = [UPDATED_D2]
+    stub_validator["value"] = LLMConnectionError("validator round-trip failed")
+
+    response = await DiagramRefinementEngine().process([], "rename `user` to Browser", prd=PRD, current_d2=CURRENT_D2)
+
+    assert response.diagram_d2 == UPDATED_D2
+    assert response.warning is None
 
 
 # --- fence + empty round-trip -------------------------------------------------

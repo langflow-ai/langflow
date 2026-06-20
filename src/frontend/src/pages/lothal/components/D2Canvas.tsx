@@ -8,6 +8,13 @@
 // hands it to `onAnchor` (the chat composer wires this up in D.7); without a
 // handler the layer is inert. Panning is pointer-drag; zooming is the wheel or
 // the corner controls.
+//
+// Streaming (Epic D.17, superseding S.2): D2 compiles as a whole and can't be
+// partial-rendered the way Mermaid segments could, so there is deliberately no
+// mid-stream/partial diagram render. The chat tokens stream (S.1, when built);
+// the diagram appears once the turn completes and `/diagram` is re-read (the
+// `useSendMessage` mutation invalidates the diagram query on success) — render
+// on compile-complete, never on a half-finished diagram.
 
 import DOMPurify from "dompurify";
 import {
