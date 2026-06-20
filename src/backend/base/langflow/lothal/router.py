@@ -32,19 +32,20 @@ class LLMResponse:
     `next_phase` is the transition target, or `None` when the turn keeps the
     project in its current phase.
 
-    A turn carries at most one diagram artifact for the chat endpoint to persist:
-    `diagram_d2` is **D2 source text** (the Epic D artifact, persisted to
-    `lothal_project.diagram_d2`); `diagram` is the legacy xyflow graph
-    (`{nodes, edges}` as a plain dict → `diagram_json`) kept for transitional
-    reads. Both are `None` for every phase that doesn't touch the diagram (the
-    engine itself never writes the DB).
+    `diagram_d2` is the turn's diagram artifact when it touches the diagram: **D2
+    source text** (the Epic D artifact, persisted to `lothal_project.diagram_d2`),
+    and `None` otherwise. `warning` is an optional coherence warning the
+    refinement engine raises when the edited D2 contradicts the PRD (Epic D.10);
+    the chat endpoint stores it as a second ASSISTANT message, and it is `None`
+    when the edit is coherent (or for phases that don't validate). The engine
+    itself never writes the DB.
     """
 
     text: str
     suggestions: list[str] = field(default_factory=list)
     next_phase: str | None = None
-    diagram: dict | None = None
     diagram_d2: str | None = None
+    warning: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.text, str) or not self.text.strip():
@@ -56,11 +57,11 @@ class LLMResponse:
         if self.next_phase is not None and not isinstance(self.next_phase, str):
             msg = "LLMResponse.next_phase must be a string or None."
             raise ValueError(msg)
-        if self.diagram is not None and not isinstance(self.diagram, dict):
-            msg = "LLMResponse.diagram must be a dict or None."
-            raise ValueError(msg)
         if self.diagram_d2 is not None and not isinstance(self.diagram_d2, str):
             msg = "LLMResponse.diagram_d2 must be a string or None."
+            raise ValueError(msg)
+        if self.warning is not None and (not isinstance(self.warning, str) or not self.warning.strip()):
+            msg = "LLMResponse.warning must be a non-empty string or None."
             raise ValueError(msg)
 
 

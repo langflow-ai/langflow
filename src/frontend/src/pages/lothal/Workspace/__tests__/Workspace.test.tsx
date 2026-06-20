@@ -15,12 +15,17 @@ const mockUseMessages = jest.fn();
 const mockUseDiagram = jest.fn();
 const mockUseCode = jest.fn();
 const mockSendMutate = jest.fn();
+const mockApproveMutate = jest.fn();
 jest.mock("@/controllers/API/queries/lothal", () => ({
   useProject: () => mockUseProject(),
   useMessages: () => mockUseMessages(),
   useDiagram: () => mockUseDiagram(),
   useCode: () => mockUseCode(),
   useSendMessage: () => ({ mutateAsync: mockSendMutate, isPending: false }),
+  useApproveDiagram: () => ({
+    mutateAsync: mockApproveMutate,
+    isPending: false,
+  }),
 }));
 
 // Stub the live D2 canvas (real one needs SVG layout/pointer gestures). It fires
@@ -90,6 +95,7 @@ describe("Lothal Workspace", () => {
     jest.clearAllMocks();
     mockParams = { projectId: "p1" };
     mockSendMutate.mockResolvedValue(msg({ id: "reply", content: "ok" }));
+    mockApproveMutate.mockResolvedValue({ phase: "CODE_GENERATION" });
     // Default: messages load fine and empty.
     mockUseMessages.mockReturnValue({
       data: [],
@@ -250,6 +256,43 @@ describe("Lothal Workspace", () => {
     await waitFor(() =>
       expect(mockSendMutate).toHaveBeenCalledWith("`checkout`"),
     );
+  });
+
+  // --- Approve diagram (Epic D.11) ---
+
+  it("offers Approve only in DIAGRAM_REFINEMENT and approving calls the mutation", async () => {
+    mockUseProject.mockReturnValue({
+      data: { ...project, phase: "DIAGRAM_REFINEMENT" },
+      isLoading: false,
+    });
+    mockUseDiagram.mockReturnValue({
+      data: { d2: "user -> api", svg: "<svg>x</svg>" },
+      isLoading: false,
+      isError: false,
+    });
+    render(<Workspace />);
+
+    const approve = screen.getByRole("button", {
+      name: "Approve & generate code",
+    });
+    fireEvent.click(approve);
+    await waitFor(() => expect(mockApproveMutate).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not offer Approve before refinement (DIAGRAM_GENERATION)", () => {
+    mockUseProject.mockReturnValue({
+      data: { ...project, phase: "DIAGRAM_GENERATION" },
+      isLoading: false,
+    });
+    mockUseDiagram.mockReturnValue({
+      data: { d2: null, svg: null },
+      isLoading: false,
+      isError: false,
+    });
+    render(<Workspace />);
+    expect(
+      screen.queryByRole("button", { name: "Approve & generate code" }),
+    ).not.toBeInTheDocument();
   });
 
   // --- Code surface (right pane in code phases) ---

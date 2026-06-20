@@ -1,10 +1,8 @@
 // Shared lothal design-system atoms. Import from "@/pages/lothal/components".
 
-export { ActorNode } from "./ActorNode";
 export { AssistantQuestion } from "./AssistantQuestion";
 export type { ButtonProps, ButtonSize, ButtonVariant } from "./Button";
 export { Button } from "./Button";
-export { CanvasLegend } from "./CanvasLegend";
 export { CanvasPlaceholder } from "./CanvasPlaceholder";
 export { CanvasSurface } from "./CanvasSurface";
 export { ChatBubble } from "./ChatBubble";
@@ -13,7 +11,6 @@ export { ChatComposer } from "./ChatComposer";
 export { ChatDock } from "./ChatDock";
 export { CodeView } from "./CodeView";
 export { D2Canvas } from "./D2Canvas";
-export { DiagramCanvas } from "./DiagramCanvas";
 export type { Anchor } from "./d2/anchor";
 export { decodeElementId, resolveAnchor } from "./d2/anchor";
 export { EmptyHint } from "./EmptyHint";
@@ -35,6 +32,11 @@ export {
   phaseLabel,
   phaseStatus,
 } from "./phases";
+export {
+  SampleDiagram,
+  type SampleMessage,
+  type SampleParticipant,
+} from "./SampleDiagram";
 export { StatusDot } from "./StatusDot";
 export { SystemBlock } from "./SystemBlock";
 export {

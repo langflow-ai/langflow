@@ -214,44 +214,6 @@
   animation: lothal-fade-in-up 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-/* --- Canvas (@xyflow/react) ------------------------------------------------
- * The base xyflow stylesheet ships light controls/edges; re-skin them with the
- * rust + aubergine tokens so the canvas reads correctly in both themes. Scoped
- * under .lothal-surface so the main Langflow flow editor is untouched. */
-.lothal-surface .react-flow {
-  background: var(--paper-deep);
-}
-.lothal-surface .react-flow__edge-text {
-  fill: var(--ink-mute);
-  font-family: var(--sans);
-  font-size: 10px;
-}
-.lothal-surface .react-flow__edge-textbg {
-  fill: var(--paper-deep);
-}
-.lothal-surface .react-flow__controls {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.lothal-surface .react-flow__controls-button {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  color: var(--ink-mute);
-  fill: var(--ink-mute);
-}
-.lothal-surface .react-flow__controls-button:hover {
-  background: var(--surface-2);
-  color: var(--ink);
-  fill: var(--ink);
-}
-.lothal-surface .react-flow__controls-button svg {
-  fill: currentcolor;
-}
-.lothal-surface .react-flow__attribution {
-  display: none;
-}
-
 /* --- D2 canvas (Epic D.6) --------------------------------------------------
  * The live diagram surface: a server-rendered D2 SVG, pannable and zoomable.
  * The SVG sits on a light paper panel so D2's default (light) theme always
@@ -379,7 +341,9 @@
   background: var(--accent);
   color: var(--accent-fg);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 .lothal-composer-send:disabled {
   background: var(--surface-2);

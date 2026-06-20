@@ -3,10 +3,6 @@
 // state from a sample structured 501 — the B.1 verification surface.
 
 import { type ReactNode, useState } from "react";
-import type {
-  DiagramEdge,
-  DiagramNode,
-} from "@/controllers/API/queries/lothal";
 import {
   AssistantQuestion,
   Button,
@@ -14,13 +10,15 @@ import {
   ChatBubble,
   ChatDock,
   CodeView,
-  DiagramCanvas,
   EmptyHint,
   LothalMark,
   NotReady,
   PHASES,
   PhaseStepper,
   type PhaseStepperStyle,
+  SampleDiagram,
+  type SampleMessage,
+  type SampleParticipant,
   StatusDot,
   SystemBlock,
   TopBar,
@@ -42,66 +40,22 @@ const SAMPLE_501 = {
   },
 };
 
-// A seeded `/diagram` payload — the same shape the endpoint returns once live
-// (Epic 2.3). It exercises both node types and all three edge kinds, and is how
-// the B.4 canvas is verified visually while /diagram is still a 501 stub.
-const SAMPLE_NODES: DiagramNode[] = [
-  {
-    id: "user",
-    type: "actorNode",
-    position: { x: 40, y: 150 },
-    data: { label: "User" },
-  },
-  {
-    id: "chat",
-    type: "systemNode",
-    position: { x: 280, y: 60 },
-    data: { label: "Chat Interface" },
-  },
-  {
-    id: "llm",
-    type: "systemNode",
-    position: { x: 560, y: 60 },
-    data: { label: "LLM Engine", note: "Claude" },
-  },
-  {
-    id: "store",
-    type: "systemNode",
-    position: { x: 560, y: 250 },
-    data: { label: "Spec Store", kind: "data" },
-  },
+// A sample sequence diagram for the gallery's <SampleDiagram> showcase — the
+// product's diagram shape (Epic D). The live workspace canvas is <D2Canvas>
+// (it displays a server-rendered D2 SVG); this static illustration is how the
+// gallery shows the diagram visual without a backend round-trip.
+const SAMPLE_PARTICIPANTS: SampleParticipant[] = [
+  { id: "user", label: "User" },
+  { id: "chat", label: "Chat Interface" },
+  { id: "llm", label: "LLM Engine" },
+  { id: "store", label: "Spec Store" },
 ];
-const SAMPLE_EDGES: DiagramEdge[] = [
-  {
-    id: "e1",
-    source: "user",
-    target: "chat",
-    data: { order: 1, label: "submit spec", kind: "sync" },
-  },
-  {
-    id: "e2",
-    source: "chat",
-    target: "llm",
-    data: { order: 2, label: "clarify", kind: "sync" },
-  },
-  {
-    id: "e3",
-    source: "llm",
-    target: "chat",
-    data: { order: 3, label: "questions", kind: "return" },
-  },
-  {
-    id: "e4",
-    source: "chat",
-    target: "store",
-    data: { order: 4, label: "persist spec", kind: "async" },
-  },
-  {
-    id: "e5",
-    source: "chat",
-    target: "user",
-    data: { order: 5, label: "ask", kind: "return" },
-  },
+const SAMPLE_MESSAGES: SampleMessage[] = [
+  { from: "user", to: "chat", label: "submit spec" },
+  { from: "chat", to: "llm", label: "clarify" },
+  { from: "llm", to: "chat", label: "questions", dashed: true },
+  { from: "chat", to: "store", label: "persist spec", dashed: true },
+  { from: "chat", to: "user", label: "ask", dashed: true },
 ];
 
 // A sample `/code` payload — the shape the contract returns — so the populated
@@ -457,7 +411,7 @@ function Gallery() {
           <ChatShowcase />
         </Section>
 
-        <Section title="Canvas — sequence diagram (seeded /diagram payload)">
+        <Section title="Sample diagram (decorative sequence sketch)">
           <div
             style={{
               width: "100%",
@@ -465,9 +419,14 @@ function Gallery() {
               border: "1px solid var(--border)",
               borderRadius: "var(--radius-lg)",
               overflow: "hidden",
+              padding: 20,
             }}
           >
-            <DiagramCanvas nodes={SAMPLE_NODES} edges={SAMPLE_EDGES} />
+            <SampleDiagram
+              participants={SAMPLE_PARTICIPANTS}
+              messages={SAMPLE_MESSAGES}
+              title="Sample sequence diagram"
+            />
           </div>
         </Section>
 

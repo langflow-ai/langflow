@@ -5,8 +5,9 @@
 // are 501 stubs (Epic 1) the chat column shows the uniform NotReady state; it
 // "goes live" with no UI change once the clarification backend lands. The right
 // pane is the live D2 diagram canvas (Epic D.6) — double-click an element to
-// reference it inline in the composer (Epic D.7) — or the generated-code surface
-// (Story B.5) once the build reaches a code phase.
+// reference it inline in the composer (Epic D.7), and approve it to advance to
+// code generation (Epic D.11) — or the generated-code surface (Story B.5) once
+// the build reaches a code phase.
 
 import {
   type ReactNode,
@@ -19,6 +20,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   type Message,
   type Project,
+  useApproveDiagram,
   useCode,
   useMessages,
   useProject,
@@ -346,6 +348,98 @@ function CodePanel({ project }: { project: Project }) {
   return <CodeView files={files} />;
 }
 
+// --- Diagram pane (canvas + approve) -----------------------------------------
+
+// The right pane while shaping the diagram: the live <CanvasSurface>, plus — only
+// in DIAGRAM_REFINEMENT — an Approve action (Epic D.11). Approving advances the
+// project to CODE_GENERATION on the server; the project query then invalidates,
+// the phase flips, and the parent swaps this pane for <CodePanel>. The button is
+// deliberately absent in DIAGRAM_GENERATION (no diagram to approve yet) — the
+// backend also rejects an approve outside refinement with a 409.
+function DiagramPane({
+  project,
+  composerRef,
+}: {
+  project: Project;
+  composerRef: RefObject<ChatComposerHandle | null>;
+}) {
+  const approve = useApproveDiagram(project.id);
+  const [failed, setFailed] = useState(false);
+  // Latches on a successful approve so the button stays disabled in the brief
+  // window before the project refetch flips the phase and unmounts this pane —
+  // otherwise a quick second click hits the server (now CODE_GENERATION) and
+  // 409s, flashing a spurious failure after a success.
+  const [approved, setApproved] = useState(false);
+  const canApprove = project.phase === "DIAGRAM_REFINEMENT";
+
+  // Clear the latched approve state when the workspace switches projects, so a
+  // new project's button isn't left disabled by the previous one's success.
+  useEffect(() => {
+    setApproved(false);
+    setFailed(false);
+  }, [project.id]);
+
+  const onApprove = async () => {
+    if (approve.isPending || approved) return;
+    setFailed(false);
+    try {
+      await approve.mutateAsync();
+      setApproved(true);
+    } catch {
+      setFailed(true);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+      }}
+    >
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <CanvasSurface
+          project={project}
+          onAnchor={(a) => composerRef.current?.insertAnchor(a)}
+        />
+      </div>
+      {canApprove && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 12,
+            padding: "10px var(--pad)",
+            borderTop: "1px solid var(--border)",
+            background: "var(--paper)",
+          }}
+        >
+          {failed && (
+            <span style={{ fontSize: 12, color: "var(--warn)" }}>
+              Couldn’t approve just now — try again.
+            </span>
+          )}
+          <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
+            Happy with the diagram?
+          </span>
+          <Button
+            variant="accent"
+            onClick={onApprove}
+            disabled={approve.isPending || approved}
+          >
+            {approve.isPending || approved
+              ? "Approving…"
+              : "Approve & generate code"}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Page --------------------------------------------------------------------
 
 function WorkspaceView() {
@@ -569,10 +663,7 @@ function WorkspaceView() {
           {isCodePhase(project.phase) ? (
             <CodePanel project={project} />
           ) : (
-            <CanvasSurface
-              project={project}
-              onAnchor={(a) => composerRef.current?.insertAnchor(a)}
-            />
+            <DiagramPane project={project} composerRef={composerRef} />
           )}
         </div>
       </div>

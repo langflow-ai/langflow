@@ -20,7 +20,7 @@ from httpx import AsyncClient
 from langflow.api.v1 import lothal as lothal_api
 from langflow.lothal.d2_compile import D2CompilerUnavailableError
 from langflow.lothal.engines import clarification as clarification_engine
-from langflow.lothal.engines import d2_gate
+from langflow.lothal.engines import d2_gate, d2_validator
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError
 from langflow.services.database.models.lothal_project.model import CodeFile, Message, Project
 from langflow.services.deps import session_scope
@@ -36,8 +36,6 @@ PROJECT_ID = "00000000-0000-0000-0000-000000000000"
 # shared ownership check (404), or the stub itself (501) — never validation
 # (422).
 STUB_TEMPLATES = [
-    ("POST", "api/v1/lothal/projects/{project_id}/diagram/save", {"nodes": [], "edges": []}),
-    ("POST", "api/v1/lothal/projects/{project_id}/diagram/approve", None),
     ("GET", "api/v1/lothal/projects/{project_id}/code", None),
     ("GET", "api/v1/lothal/projects/{project_id}/download", None),
 ]
@@ -49,8 +47,10 @@ PROJECT_SCOPED_STUB_TEMPLATES = [t for t in STUB_TEMPLATES if "{project_id}" in 
 STUBBED_ENDPOINTS = [(m, p.format(project_id=PROJECT_ID), b) for m, p, b in STUB_TEMPLATES]
 
 # The routes that have gone live: project CRUD (B.2), the LLM debug round-trip
-# (0.4), chat routing + message history (1.2), the PRD read (1.3), and the
-# diagram read (2.3). Still require auth, but no longer return `501`.
+# (0.4), chat routing + message history (1.2), the PRD read (1.3), the diagram
+# read (2.3), and diagram approve (D.11). Still require auth, but no longer
+# return `501`. (POST /diagram/save was retired in D.9 — the route no longer
+# exists; `test_diagram_save_route_is_gone` pins its removal.)
 LIVE_ENDPOINTS = [
     ("POST", "api/v1/lothal/projects/", {"name": "My App"}),
     ("GET", "api/v1/lothal/projects/", None),
@@ -60,6 +60,7 @@ LIVE_ENDPOINTS = [
     ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/messages", None),
     ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/prd", None),
     ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/diagram", None),
+    ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/diagram/approve", None),
     ("POST", "api/v1/lothal/debug/llm", {"message": "ping"}),
 ]
 
@@ -142,7 +143,6 @@ async def test_openapi_lists_full_lothal_surface(client: AsyncClient):
         "/api/v1/lothal/projects/{project_id}/messages",
         "/api/v1/lothal/projects/{project_id}/prd",
         "/api/v1/lothal/projects/{project_id}/diagram",
-        "/api/v1/lothal/projects/{project_id}/diagram/save",
         "/api/v1/lothal/projects/{project_id}/diagram/approve",
         "/api/v1/lothal/projects/{project_id}/code",
         "/api/v1/lothal/projects/{project_id}/download",
@@ -150,10 +150,15 @@ async def test_openapi_lists_full_lothal_surface(client: AsyncClient):
     }
     assert expected <= set(paths)
 
+    # D.9 retired the canvas-save endpoint: it must no longer appear in the surface.
+    assert "/api/v1/lothal/projects/{project_id}/diagram/save" not in paths
+
     # A still-stubbed route documents the structured 501 in its responses; the
-    # routes that have gone live (chat, debug, prd, diagram) no longer advertise it.
-    assert "501" in paths["/api/v1/lothal/projects/{project_id}/diagram/save"]["post"]["responses"]
+    # routes that have gone live (chat, debug, prd, diagram, approve) no longer
+    # advertise it.
+    assert "501" in paths["/api/v1/lothal/projects/{project_id}/code"]["get"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/diagram"]["get"]["responses"]
+    assert "501" not in paths["/api/v1/lothal/projects/{project_id}/diagram/approve"]["post"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/chat"]["post"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/prd"]["get"]["responses"]
     assert "501" not in paths["/api/v1/lothal/debug/llm"]["post"]["responses"]
@@ -336,8 +341,10 @@ async def test_lothal_fks_cascade_on_delete(client: AsyncClient):  # noqa: ARG00
 
 async def test_malformed_diagram_json_reads_as_null(client: AsyncClient, logged_in_headers: dict):
     # One corrupted row must never 500 a project read — or, worse, the whole
-    # list. Graphs are seeded straight into the DB: the save endpoint that
-    # will write them (story 3.2) is still a stub.
+    # list. The legacy `diagram_json` column survives the D2 migration for
+    # existing data (D.13 converts it to `diagram_d2`; the column drop is a later
+    # migration), so its read-boundary parsing still has to tolerate junk. Seeded
+    # straight into the DB — nothing writes `diagram_json` any more.
     response = await client.post("api/v1/lothal/projects/", json={"name": "Graph"}, headers=logged_in_headers)
     assert response.status_code == status.HTTP_201_CREATED
     project_pk = UUID(response.json()["id"])
@@ -836,6 +843,9 @@ async def test_refinement_turn_updates_d2_and_holds_phase(client: AsyncClient, l
         return _refined_d2()
 
     monkeypatch.setattr(d2_gate, "call_llm", fake_call_llm)
+    # The refinement engine also runs the D.10 coherence validator (its own
+    # call_llm seam); a coherent edit returns VALID and adds no extra message.
+    monkeypatch.setattr(d2_validator, "call_llm", _stub_validator_reply("VALID"))
 
     response = await client.post(
         f"api/v1/lothal/projects/{project_id}/chat",
@@ -864,6 +874,186 @@ async def test_refinement_turn_updates_d2_and_holds_phase(client: AsyncClient, l
 
     diagram = (await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)).json()
     assert diagram["d2"] == _refined_d2()
+
+    # A coherent edit adds no extra warning message — just the user + reply turns.
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert [m["role"] for m in messages] == ["USER", "ASSISTANT"]
+
+
+def _stub_validator_reply(reply: str):
+    """An async `call_llm` stub for the D.10 validator that returns a fixed reply."""
+
+    async def _call_llm(_messages, **_kwargs):
+        return reply
+
+    return _call_llm
+
+
+async def test_refinement_contradiction_surfaces_as_warning_message(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Backlog acceptance for Epic D.10 (fake LLM): a coherence WARNING becomes an ASSISTANT message.
+
+    The refinement engine compiles the edit (D.3) then validates it against the
+    PRD (D.10). When the validator flags a contradiction, the chat endpoint stores
+    the warning as its own ASSISTANT turn — so `/messages` shows the reply *and*
+    the warning. A `VALID` verdict (covered above) adds no message.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+    seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "DIAGRAM_REFINEMENT"
+        project.prd_content = "## Overview\nA todo app that must persist tasks in a database."
+        project.diagram_d2 = seed_d2
+        session.add(project)
+
+    monkeypatch.setattr(d2_gate, "call_llm", _stub_validator_reply(_refined_d2()))
+    monkeypatch.setattr(
+        d2_validator, "call_llm", _stub_validator_reply("WARNING: the diagram no longer writes to the database")
+    )
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat",
+        json={"content": "drop the database"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # /messages carries the user turn, the assistant reply, then the warning, in order.
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert [m["role"] for m in messages] == ["USER", "ASSISTANT", "ASSISTANT"]
+    warning = messages[-1]
+    assert "no longer writes to the database" in warning["content"]
+    assert warning["phase"] == "DIAGRAM_REFINEMENT"
+    # The edit still landed despite the warning (advisory, not a gate).
+    async with session_scope() as session:
+        stored = await session.get(Project, UUID(project_id))
+        assert stored.diagram_d2 == _refined_d2()
+
+
+# --- Diagram approve (Epic D.11) ----------------------------------------------
+
+
+async def test_diagram_save_route_is_gone(client: AsyncClient, logged_in_headers: dict):
+    """D.9: the canvas-save endpoint was retired — POSTing to it is a 404, not a 501."""
+    project_id = await _create_chat_project(client, logged_in_headers)
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/diagram/save",
+        json={"nodes": [], "edges": []},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_approve_in_refinement_advances_to_code_generation_and_keeps_d2(
+    client: AsyncClient, logged_in_headers: dict
+):
+    """Backlog acceptance for Epic D.11: approve transitions REFINEMENT → CODE_GENERATION, D2 retained."""
+    project_id = await _create_chat_project(client, logged_in_headers)
+    seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "DIAGRAM_REFINEMENT"
+        project.diagram_d2 = seed_d2
+        session.add(project)
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/diagram/approve", headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"phase": "CODE_GENERATION"}
+
+    # The phase advanced and the approved D2 is retained verbatim; /diagram still serves it.
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "CODE_GENERATION"
+    diagram = (await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)).json()
+    assert diagram["d2"] == seed_d2
+
+
+@pytest.mark.parametrize("phase", ["CLARIFICATION", "DIAGRAM_GENERATION", "CODE_GENERATION", "DONE"])
+async def test_approve_rejected_outside_refinement(
+    client: AsyncClient, logged_in_headers: dict, phase: str
+):
+    """Approve is only valid in DIAGRAM_REFINEMENT; any other phase is a 409 and a no-op."""
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = phase
+        session.add(project)
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/diagram/approve", headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+    # The phase is unchanged — a rejected approve never advances the project.
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == phase
+
+
+async def test_approve_unowned_project_is_404(client: AsyncClient, logged_in_headers: dict, user_two):
+    """Ownership is checked first: approving another user's project 404s, never 409/200."""
+    async with session_scope() as session:
+        foreign = Project(name="Theirs", user_id=user_two.id, phase="DIAGRAM_REFINEMENT")
+        session.add(foreign)
+        await session.flush()
+        foreign_pk = foreign.id
+
+    try:
+        response = await client.post(
+            f"api/v1/lothal/projects/{foreign_pk}/diagram/approve", headers=logged_in_headers
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+    finally:
+        async with session_scope() as session:
+            leftover = await session.get(Project, foreign_pk)
+            if leftover:
+                await session.delete(leftover)
+
+
+@pytest.mark.parametrize("diagram_d2", [None, "   \n  "])
+async def test_approve_with_no_diagram_is_409(client: AsyncClient, logged_in_headers: dict, diagram_d2):
+    """Approve guards against advancing to CODE_GENERATION with no diagram to hand code-gen.
+
+    Covers both an absent diagram (`None`, e.g. a legacy project) and a blank /
+    whitespace-only one — the handler rejects both via its `.strip()` check.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "DIAGRAM_REFINEMENT"
+        project.diagram_d2 = diagram_d2
+        session.add(project)
+
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/diagram/approve", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "DIAGRAM_REFINEMENT"  # not advanced
+
+
+@pytest.mark.parametrize("phase", ["CODE_GENERATION", "DONE"])
+async def test_chat_in_engineless_phase_is_clean_409_not_500(client: AsyncClient, logged_in_headers: dict, phase: str):
+    """Chatting in a phase with no engine (reachable since D.11's approve) is a clean 409, not a 500.
+
+    Regression: `process_turn` raises a plain ValueError for an unregistered phase;
+    without the guard the chat endpoint's `except (LLMConfigError, LLMConnectionError)`
+    misses it → 500 that leaks the engine registry and 500s on every retry.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = phase
+        session.add(project)
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat", json={"content": "hello?"}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+    # No turn was recorded — the guard runs before any message is stored.
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert messages == []
 
 
 # --- PRD endpoint (Story 1.3) -------------------------------------------------

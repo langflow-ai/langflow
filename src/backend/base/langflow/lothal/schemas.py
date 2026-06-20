@@ -12,7 +12,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from lfx.log.logger import logger
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 Phase = Literal[
     "CLARIFICATION",
@@ -35,55 +35,6 @@ class NotImplementedResponse(BaseModel):
     status: Literal["not_implemented"] = "not_implemented"
 
 
-# --- xyflow render layer -----------------------------------------------------
-
-
-class Position(BaseModel):
-    """Canvas coordinates for a node."""
-
-    x: float
-    y: float
-
-
-class NodeData(BaseModel):
-    """Node payload. `label` is the only guaranteed field.
-
-    The Mermaid↔xyflow converter may add optional render hints (`kind`, `note`)
-    that are not part of the LLM contract, so extra keys are permitted.
-    """
-
-    model_config = ConfigDict(extra="allow")
-
-    label: str
-
-
-class Node(BaseModel):
-    """An xyflow node (`actorNode` or `systemNode`)."""
-
-    id: str
-    type: Literal["actorNode", "systemNode"]
-    data: NodeData
-    position: Position
-
-
-class EdgeData(BaseModel):
-    """Edge payload. `order` is the line index; optional `kind` is a render hint."""
-
-    model_config = ConfigDict(extra="allow")
-
-    order: int
-
-
-class Edge(BaseModel):
-    """An xyflow edge between two participants."""
-
-    id: str
-    source: str
-    target: str
-    label: str
-    data: EdgeData
-
-
 # --- core resources ----------------------------------------------------------
 
 
@@ -104,12 +55,13 @@ class ProjectRead(BaseModel):
     def _parse_diagram_json(cls, value: Any) -> Any:
         """Parse the stored JSON string once, at the schema boundary.
 
-        The ORM stores `diagram_json` as a JSON string (the full xyflow graph —
+        The ORM stores `diagram_json` as a JSON string (the legacy xyflow graph —
         nodes-with-positions + edges); every reader receives the parsed object
-        from here, and the diagram-save story must serialize back through this
-        same boundary. A malformed or non-object value is logged and exposed as
-        `null` — one bad row must never fail a whole project read or list
-        response.
+        from here. Nothing writes this column any more (Epic D made D2 the diagram
+        artifact and D.13 backfills the legacy data into `diagram_d2`); it is kept
+        for pre-D2 projects until a later column-drop migration. A malformed or
+        non-object value is logged and exposed as `null` — one bad row must never
+        fail a whole project read or list response.
         """
         if value is None or isinstance(value, dict):
             return value
@@ -158,13 +110,6 @@ class ChatRequest(BaseModel):
     content: str
 
 
-class DiagramSaveRequest(BaseModel):
-    """`POST /projects/{id}/diagram/save` body — the current canvas state."""
-
-    nodes: list[Node]
-    edges: list[Edge]
-
-
 class DebugLLMRequest(BaseModel):
     """`POST /debug/llm` body."""
 
@@ -195,13 +140,6 @@ class DiagramResponse(BaseModel):
 
     d2: str | None = None
     svg: str | None = None
-
-
-class DiagramSaveResponse(BaseModel):
-    """`POST /projects/{id}/diagram/save` — serialized Mermaid plus any validation warning."""
-
-    mermaid: str
-    validation_message: str | None
 
 
 class DiagramApproveResponse(BaseModel):

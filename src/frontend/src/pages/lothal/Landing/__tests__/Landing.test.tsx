@@ -1,31 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import type {
-  DiagramEdge,
-  DiagramNode,
-} from "@/controllers/API/queries/lothal";
 
 const mockNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
-// Stub the real ReactFlow canvas — it needs layout/ResizeObserver and isn't
-// the unit under test. We only assert the landing feeds it the sample graph.
-jest.mock("../../components/DiagramCanvas", () => ({
-  DiagramCanvas: ({
-    nodes,
-    edges,
-  }: {
-    nodes: DiagramNode[];
-    edges: DiagramEdge[];
-  }) => (
-    <div
-      data-testid="diagram-canvas"
-      data-nodes={nodes.length}
-      data-edges={edges.length}
-    />
-  ),
-}));
+// <SampleDiagram> (Epic D.15, replacing the old xyflow <DiagramCanvas>) is a
+// plain static SVG — no layout/ResizeObserver dependency — so it renders fine in
+// jsdom and needs no mock.
 
 import { LOTHAL_VERSION } from "../../components";
 import Landing from "../index";
@@ -42,7 +24,7 @@ describe("Lothal Landing", () => {
     expect(document.title).toBe("Lothal — build software by describing it");
   });
 
-  it("shows the larder sample: bakery chat plus two live canvas renders", () => {
+  it("shows the larder sample: bakery chat plus two sample-diagram renders", () => {
     render(<Landing />);
     expect(
       screen.getByText(
@@ -53,12 +35,11 @@ describe("Lothal Landing", () => {
       screen.getByText("Who places orders, and how do they reach you?"),
     ).toBeInTheDocument();
     expect(screen.getByText("Phone + a webpage")).toBeInTheDocument();
-    const canvases = screen.getAllByTestId("diagram-canvas");
-    expect(canvases).toHaveLength(2);
-    for (const canvas of canvases) {
-      expect(canvas).toHaveAttribute("data-nodes", "4");
-      expect(canvas).toHaveAttribute("data-edges", "4");
-    }
+    // The hero + showcase each render a <SampleDiagram> (an accessible SVG figure).
+    const diagrams = screen.getAllByRole("img", {
+      name: /bakery order flow/i,
+    });
+    expect(diagrams).toHaveLength(2);
   });
 
   it("lists all five steps from the shared phase metadata", () => {
