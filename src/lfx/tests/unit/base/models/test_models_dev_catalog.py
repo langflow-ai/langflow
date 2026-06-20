@@ -196,10 +196,16 @@ def test_apply_overrides_replaces_covered_provider():
 
     result = apply_models_dev_overrides([_anthropic_group(), _watsonx_group()], snapshot)
 
-    # Anthropic group must be replaced with 2 new entries; WatsonX preserved.
+    # Anthropic group is replaced with the 2 models.dev entries; the custom
+    # static "claude-old-1" (absent from the snapshot) is carried over so
+    # user-added models survive the override. WatsonX is preserved.
     assert len(result) == 2
     anthropic_models = result[0]
-    assert {m["name"] for m in anthropic_models} == {"claude-opus-4-1-20250805", "claude-sonnet-4-5"}
+    assert {m["name"] for m in anthropic_models} == {
+        "claude-opus-4-1-20250805",
+        "claude-sonnet-4-5",
+        "claude-old-1",
+    }
 
     opus = next(m for m in anthropic_models if m["name"] == "claude-opus-4-1-20250805")
     assert opus["provider"] == "Anthropic"
@@ -221,6 +227,48 @@ def test_apply_overrides_replaces_covered_provider():
 
     # WatsonX (not in snapshot, not in MODELS_DEV_PROVIDER_KEYS) is untouched.
     assert result[1] == _watsonx_group()
+
+
+def test_apply_overrides_preserves_custom_static_entries_for_covered_provider():
+    """Custom static models survive the override; models.dev rows still win.
+
+    A model added to a bundled ``*_constants.py`` list whose name models.dev
+    does not cover must be carried over (appended after the models.dev rows)
+    rather than discarded. Names models.dev *does* cover keep the fresher
+    models.dev translation.
+    """
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    static_anthropic = [
+        # In the snapshot below → replaced by the models.dev translation.
+        {"provider": "Anthropic", "name": "claude-old-1", "tool_calling": False},
+        # Not in the snapshot → must be preserved verbatim.
+        {"provider": "Anthropic", "name": "claude-custom", "tool_calling": True},
+    ]
+    snapshot = {
+        "anthropic": {
+            "id": "anthropic",
+            "models": {
+                "claude-opus-4-1-20250805": {"id": "claude-opus-4-1-20250805", "tool_call": True},
+                "claude-old-1": {"id": "claude-old-1", "tool_call": False},
+            },
+        },
+    }
+
+    result = apply_models_dev_overrides([static_anthropic], snapshot)
+
+    anthropic_models = result[0]
+    # models.dev rows first (in snapshot order), then any custom carry-overs.
+    assert [m["name"] for m in anthropic_models] == [
+        "claude-opus-4-1-20250805",
+        "claude-old-1",
+        "claude-custom",
+    ]
+    # The custom entry is preserved exactly as authored (not re-translated).
+    assert anthropic_models[-1] == {"provider": "Anthropic", "name": "claude-custom", "tool_calling": True}
+    # The name models.dev covers keeps the models.dev translation, not the static row.
+    old_one = next(m for m in anthropic_models if m["name"] == "claude-old-1")
+    assert old_one.get("created") is not None  # came through _translate_model_entry
 
 
 def test_apply_overrides_handles_missing_or_invalid_release_date():
@@ -534,6 +582,9 @@ def test_apply_overrides_drops_subsequent_static_groups_for_overridden_provider(
     static_openai_embeddings = [
         {"provider": "OpenAI", "name": "text-embedding-3-large", "model_type": "embeddings"},
         {"provider": "OpenAI", "name": "text-embedding-3-small", "model_type": "embeddings"},
+        # Custom embedding absent from models.dev — must be carried over, not
+        # dropped with the rest of this (already-consumed) trailing group.
+        {"provider": "OpenAI", "name": "text-embedding-custom", "model_type": "embeddings"},
     ]
     snapshot = {
         "openai": {
@@ -566,6 +617,8 @@ def test_apply_overrides_drops_subsequent_static_groups_for_overridden_provider(
         "embedding row must not be duplicated by the trailing static embedding group"
     )
     assert seen.get("text-embedding-3-small") == 1
+    # Custom embedding survives exactly once despite living in the dropped group.
+    assert seen.get("text-embedding-custom") == 1
 
 
 def test_apply_overrides_appends_new_provider_when_no_static_group():
@@ -643,15 +696,18 @@ def test_get_unified_models_detailed_sorts_provider_lists():
         anthropic = next(p for p in unified if p["provider"] == "Anthropic")
         names = [m["model_name"] for m in anthropic["models"]]
 
-        # Non-deprecated dated rows first (newest first), then undated rows
-        # in their original order, then deprecated last.
-        assert names == [
-            "claude-newest",
-            "claude-mid",
-            "claude-undated-a",
-            "claude-undated-b",
-            "claude-old-deprecated",
-        ]
+        # The real bundled Anthropic constants are now carried over alongside
+        # the synthetic snapshot rows (custom static entries survive the
+        # override), so assert on the synthetic rows' presence and their
+        # relative ordering rather than an exact, exhaustive list.
+        synthetic = {"claude-newest", "claude-mid", "claude-undated-a", "claude-undated-b", "claude-old-deprecated"}
+        assert synthetic.issubset(set(names)), f"missing synthetic models: {synthetic - set(names)}"
+
+        # Non-deprecated dated rows first (newest first), then undated rows in
+        # their original order, then the deprecated row last.
+        idx = {n: names.index(n) for n in synthetic}
+        assert idx["claude-newest"] < idx["claude-mid"] < idx["claude-old-deprecated"]
+        assert idx["claude-undated-a"] < idx["claude-undated-b"] < idx["claude-old-deprecated"]
     finally:
         models_dev_catalog.set_active_snapshot(prior)
         models_dev_catalog.invalidate_catalog_cache()
@@ -684,7 +740,9 @@ def test_install_snapshot_invalidates_get_models_detailed_cache():
         anthropic_groups = [g for g in live_view if any(m.get("provider") == "Anthropic" for m in g)]
         assert anthropic_groups, "Anthropic group missing after override install"
         names = {m["name"] for m in anthropic_groups[0]}
-        assert names == {"synthetic-claude"}
+        # The snapshot row is present; the real bundled Anthropic constants are
+        # also carried over now that custom static entries survive the override.
+        assert "synthetic-claude" in names, "synthetic-claude missing after cache invalidation"
     finally:
         # Restore prior state so subsequent tests aren't polluted.
         models_dev_catalog.set_active_snapshot(prior)
