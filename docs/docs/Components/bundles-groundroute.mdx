@@ -1,0 +1,49 @@
+---
+title: GroundRoute
+slug: /bundles-groundroute
+---
+
+import Icon from "@site/src/components/icon";
+
+[GroundRoute](https://groundroute.ai) is a multi-engine web-search API for AI agents. Bundle components are listed under the bundle's name in the <Icon name="Blocks" aria-hidden="true"/> **Bundles** section of the component sidebar.
+
+For more information about GroundRoute, see the [GroundRoute documentation](https://groundroute.ai/docs).
+
+## GroundRoute Search
+
+The **GroundRoute Search** component runs a web search across six engines (Serper, Brave, Exa, Tavily, Firecrawl, and Perplexity) through a single tool. It routes each query to the cheapest engine that clears a quality bar, caches repeats, and fails over automatically, so an agent gets broad coverage without wiring up six separate search APIs or overpaying one premium engine.
+
+It works as a standalone search component or, with **Tool mode** enabled, as a tool an `Agent` can call.
+
+### Get a GroundRoute API key
+
+1. Create an account at [groundroute.ai/keys](https://groundroute.ai/keys). New accounts include free starting credit, no card required.
+2. Create an API key and paste it into the component's **GroundRoute API Key** field.
+
+Pricing is gain-share: you keep about half of the cache savings, so it never costs more than calling the engines directly. Bring your own engine keys (BYOK) or let GroundRoute manage them.
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Your GroundRoute API key. Required. |
+| query | String | The search query. Tool-mode enabled. |
+| mode | Dropdown | `auto` (default), `web`, `news`, `academic`, `answer`, or `page`. |
+| max_results | Integer | Number of results to return (1-50, default 10). Advanced. |
+| freshness | Dropdown | `fresh`, `semi`, or `static`. Blank auto-detects. Advanced. |
+| domains | String | Comma-separated domains to restrict the search to. Advanced. |
+| lang | String | ISO 639-1 language code, for example `en`. Advanced. |
+| country | String | ISO 3166-1 alpha-2 country code, for example `us`. Advanced. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| data | Data | One `Data` object per result (url, title, snippet, content, source_engine, published_at), plus a synthesized answer record in answer mode. |
+| dataframe | DataFrame | The same results as a `DataFrame`. |
+
+Each result includes `source_engine`, the engine GroundRoute routed it to, so you can see the routing.
+
+### How it works
+
+GroundRoute sits in front of six search engines with price-led routing, caching, and automatic failover. It was benchmarked across all six engines on 170 real agent queries (LLM-judge validated). See the [State of AI Search report](https://groundroute.ai/state-of-ai-search) for the per-engine methodology and results.
