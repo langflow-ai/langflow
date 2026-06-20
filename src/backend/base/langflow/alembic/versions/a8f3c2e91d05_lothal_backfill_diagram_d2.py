@@ -67,6 +67,9 @@ def _compiles(d2_source: str) -> bool | None:
     render. A missing binary is an environment fault, not a verdict on the data
     (returns None → the caller stores best-effort, same as the d2_gate policy);
     a non-zero exit means the converted D2 is broken and the row should be skipped.
+    A timeout is treated as a definite failure (False, not None): a compile that
+    hangs on this input is not a diagram we want to persist, and it would also
+    stall the whole migration if retried — so skip the row.
     """
     d2_bin = shutil.which("d2")
     if not d2_bin:
@@ -79,6 +82,12 @@ def _compiles(d2_source: str) -> bool | None:
             timeout=30,
             check=False,
         )
+    except subprocess.TimeoutExpired:
+        # A hang is a failed validation, not an unavailable validator — return
+        # False so the caller's `is False` check skips the row (returning None
+        # here would store the unvalidated diagram).
+        logger.warning("[D.13 migration] d2 compile-check timed out; treating as a compile failure.")
+        return False
     except (OSError, subprocess.SubprocessError) as exc:
         logger.warning("[D.13 migration] d2 compile-check unavailable (%s); storing without validation.", exc)
         return None

@@ -423,6 +423,27 @@ def test_non_object_json_raises_value_error(bad):
         xyflow_graph_to_d2(bad)
 
 
+@pytest.mark.parametrize("bad_data", [["not", "a", "dict"], "a string", 42])
+def test_edge_with_non_dict_data_does_not_crash(bad_data):
+    """A truthy non-dict edge.data must not raise AttributeError; the edge converts best-effort."""
+    graph = {
+        "nodes": [{"id": "a", "data": {"label": "A"}}, {"id": "b", "data": {"label": "B"}}],
+        "edges": [{"source": "a", "target": "b", "data": bad_data}],
+    }
+    d2 = xyflow_graph_to_d2(graph)  # must not raise
+    msgs = _messages(d2)
+    assert msgs == ["a -> b: "]  # no kind/order/label readable → plain sync edge, empty label
+
+
+def test_node_with_non_dict_data_does_not_crash():
+    graph = {
+        "nodes": [{"id": "a", "data": "oops"}, {"id": "b", "data": {"label": "B"}}],
+        "edges": [{"source": "a", "target": "b", "data": {"order": 1, "label": "go"}}],
+    }
+    d2 = xyflow_graph_to_d2(graph)  # must not raise
+    assert "a: a" in d2  # label unreadable → falls back to the id
+
+
 def test_non_int_order_does_not_crash():
     """A non-int order (e.g. a string) must not raise a TypeError mid-sort; it sorts as unordered."""
     graph = {

@@ -105,6 +105,37 @@ def test_upgrade_backfills_only_legacy_rows():
         assert rows["p5"] is None
 
 
+def test_compiles_treats_timeout_as_failure(monkeypatch):
+    """A compile-check timeout returns False (skip the row), not None (store unvalidated)."""
+    import subprocess
+
+    migration = _load_migration()
+    monkeypatch.setattr(migration.shutil, "which", lambda _name: "/usr/local/bin/d2")
+
+    def _raise_timeout(*_args, **_kwargs):
+        raise subprocess.TimeoutExpired(cmd="d2", timeout=30)
+
+    monkeypatch.setattr(migration.subprocess, "run", _raise_timeout)
+    assert migration._compiles("shape: sequence_diagram\na: A") is False
+
+
+def test_upgrade_skips_rows_that_fail_compile_check(monkeypatch):
+    """When the converted D2 doesn't compile, the row is skipped (diagram_d2 stays NULL)."""
+    migration = _load_migration()
+    # Force every compile-check to "definitely failed" so the converted (otherwise
+    # valid) D2 is rejected — proves the gate, not the converter, drives the skip.
+    monkeypatch.setattr(migration, "_compiles", lambda _d2: False)
+
+    engine = sa.create_engine("sqlite://")
+    with engine.connect() as conn:
+        _seed(conn)
+        with Operations.context(MigrationContext.configure(conn)):
+            migration.upgrade()
+        rows = _d2_by_id(conn)
+        assert rows["p1"] is None  # convertible, but compile-check failed → not stored
+        assert rows["p3"] == "EXISTING D2"  # still never touched
+
+
 def test_upgrade_is_idempotent():
     migration = _load_migration()
     engine = sa.create_engine("sqlite://")

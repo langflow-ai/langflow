@@ -372,6 +372,13 @@ function DiagramPane({
   const [approved, setApproved] = useState(false);
   const canApprove = project.phase === "DIAGRAM_REFINEMENT";
 
+  // Clear the latched approve state when the workspace switches projects, so a
+  // new project's button isn't left disabled by the previous one's success.
+  useEffect(() => {
+    setApproved(false);
+    setFailed(false);
+  }, [project.id]);
+
   const onApprove = async () => {
     if (approve.isPending || approved) return;
     setFailed(false);

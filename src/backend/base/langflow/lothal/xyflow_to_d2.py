@@ -67,6 +67,18 @@ import re
 _UNSAFE_ID_CHARS = re.compile(r"[^a-z0-9_-]+")
 
 
+def _data(item: dict) -> dict:
+    """The node/edge ``data`` payload as a dict, or ``{}`` when absent or malformed.
+
+    Legacy ``diagram_json`` is unbounded: ``data`` is usually a dict but could be a
+    truthy non-dict (a list or string). Coercing it here keeps the converter on its
+    documented bad-input path (best-effort output the migration then compile-checks)
+    instead of raising ``AttributeError`` from a ``.get()`` on a non-dict.
+    """
+    data = item.get("data")
+    return data if isinstance(data, dict) else {}
+
+
 def _slug(raw: object, fallback: str) -> str:
     """Slugify a free-form id to a safe lowercase D2 token, or `fallback` if empty."""
     slug = _UNSAFE_ID_CHARS.sub("-", str(raw).strip().lower()).strip("-")
@@ -95,7 +107,7 @@ def _is_dashed(edge: dict) -> bool:
     """
     if edge.get("animated"):
         return True
-    kind = (edge.get("data") or {}).get("kind") or ""
+    kind = _data(edge).get("kind") or ""
     return kind in ("async", "return")
 
 
@@ -107,7 +119,7 @@ def _order_key(edge: dict) -> tuple[int, int]:
     *after* every explicitly-ordered edge, and a legitimate ``order: 0`` stays
     first. Python's sort is stable, so unordered edges keep their relative order.
     """
-    value = (edge.get("data") or {}).get("order")
+    value = _data(edge).get("order")
     if isinstance(value, int) and not isinstance(value, bool):
         return (0, value)
     return (1, 0)
@@ -175,7 +187,7 @@ def xyflow_graph_to_d2(graph: dict | str) -> str:
         used.add(unique)
         if raw_id is not None:
             id_map[str(raw_id)] = unique
-        lines.append(f"{unique}: {_clean_label((node.get('data') or {}).get('label'), unique)}")
+        lines.append(f"{unique}: {_clean_label(_data(node).get('label'), unique)}")
 
     # Blank line separates declarations from messages (matches the generation engine).
     lines.append("")
@@ -187,7 +199,7 @@ def xyflow_graph_to_d2(graph: dict | str) -> str:
             continue  # a connection needs both endpoints
         source = id_map.get(str(src_raw)) or _slug(src_raw, "n")
         target = id_map.get(str(tgt_raw)) or _slug(tgt_raw, "n")
-        label = _clean_label((edge.get("data") or {}).get("label"), "")
+        label = _clean_label(_data(edge).get("label"), "")
         arrow = "-->" if _is_dashed(edge) else "->"
         lines.append(f"{source} {arrow} {target}: {label}")
 

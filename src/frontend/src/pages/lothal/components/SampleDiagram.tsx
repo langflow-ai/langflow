@@ -9,6 +9,8 @@
 // static SVG (CSS variables, so it tracks light/dark). No @xyflow/react, no D2
 // compiler, no embedded fonts; purely cosmetic.
 
+import { useId } from "react";
+
 export type SampleParticipant = { id: string; label: string };
 export type SampleMessage = {
   from: string;
@@ -35,10 +37,19 @@ export function SampleDiagram({
   /** Accessible name for the figure. */
   title?: string;
 }) {
-  const colX = (id: string) => {
-    const idx = participants.findIndex((p) => p.id === id);
-    const i = idx < 0 ? 0 : idx;
-    return SIDE_PAD + COL_WIDTH / 2 + i * COL_WIDTH;
+  // Unique per instance so two <SampleDiagram>s on one page (the Landing mounts
+  // two) don't share a marker id — duplicate SVG ids make `url(#…)` resolution
+  // brittle. `useId()` yields colon-bearing ids; strip them for a valid url() ref.
+  const markerId = `sample-arrow-${useId().replace(/:/g, "")}`;
+
+  const colByIndex = (i: number) => SIDE_PAD + COL_WIDTH / 2 + i * COL_WIDTH;
+  const indexById = new Map(participants.map((p, i) => [p.id, i]));
+  // An unknown participant id returns null rather than silently snapping to
+  // column 0 (which would draw a wrong arrow and mask a bad input); the caller
+  // skips drawing that message.
+  const colX = (id: string): number | null => {
+    const i = indexById.get(id);
+    return i === undefined ? null : colByIndex(i);
   };
 
   const width = SIDE_PAD * 2 + COL_WIDTH * Math.max(participants.length, 1);
@@ -58,7 +69,7 @@ export function SampleDiagram({
     >
       <defs>
         <marker
-          id="sample-diagram-arrow"
+          id={markerId}
           viewBox="0 0 8 8"
           refX="7"
           refY="4"
@@ -71,8 +82,8 @@ export function SampleDiagram({
       </defs>
 
       {/* Lifelines + participant heads */}
-      {participants.map((p) => {
-        const x = colX(p.id);
+      {participants.map((p, i) => {
+        const x = colByIndex(i);
         return (
           <g key={p.id}>
             <line
@@ -114,6 +125,9 @@ export function SampleDiagram({
         const y = firstRowY + ROW_HEIGHT * i + ROW_HEIGHT / 2;
         const x1 = colX(m.from);
         const x2 = colX(m.to);
+        // Skip a message that references a participant not in the list rather
+        // than drawing it from/to column 0.
+        if (x1 === null || x2 === null) return null;
         const labelX = (x1 + x2) / 2;
         return (
           <g key={`${m.from}-${m.to}-${i}`}>
@@ -134,7 +148,7 @@ export function SampleDiagram({
               stroke="var(--ink-soft, #888)"
               strokeWidth="1.5"
               strokeDasharray={m.dashed ? "5 4" : undefined}
-              markerEnd="url(#sample-diagram-arrow)"
+              markerEnd={`url(#${markerId})`}
             />
           </g>
         );

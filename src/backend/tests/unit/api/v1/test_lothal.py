@@ -1012,13 +1012,18 @@ async def test_approve_unowned_project_is_404(client: AsyncClient, logged_in_hea
                 await session.delete(leftover)
 
 
-async def test_approve_with_no_diagram_is_409(client: AsyncClient, logged_in_headers: dict):
-    """Approve guards against advancing to CODE_GENERATION with no diagram to hand code-gen."""
+@pytest.mark.parametrize("diagram_d2", [None, "   \n  "])
+async def test_approve_with_no_diagram_is_409(client: AsyncClient, logged_in_headers: dict, diagram_d2):
+    """Approve guards against advancing to CODE_GENERATION with no diagram to hand code-gen.
+
+    Covers both an absent diagram (`None`, e.g. a legacy project) and a blank /
+    whitespace-only one — the handler rejects both via its `.strip()` check.
+    """
     project_id = await _create_chat_project(client, logged_in_headers)
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
         project.phase = "DIAGRAM_REFINEMENT"
-        project.diagram_d2 = None  # no diagram (e.g. a legacy project)
+        project.diagram_d2 = diagram_d2
         session.add(project)
 
     response = await client.post(f"api/v1/lothal/projects/{project_id}/diagram/approve", headers=logged_in_headers)
