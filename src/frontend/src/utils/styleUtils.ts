@@ -465,6 +465,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Glean", name: "glean", icon: "Glean" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   { display_name: "Google", name: "google", icon: "Google" },
+  { display_name: "GroundRoute", name: "groundroute", icon: "GroundRoute" },
   { display_name: "Groq", name: "groq", icon: "Groq" },
   {
     display_name: "Home Assistant",
@@ -627,6 +628,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   GoogleGenerativeAI: "GoogleGenerativeAI",
   Googlesheets: "Googlesheets",
   GoogleSearchAPI: "Google",
+  GroundRouteSearch: "GroundRoute",
   GoogleSearchAPIWrapper: "Google",
   Googlemeet: "Googlemeet",
   GoogleTasks: "GoogleTasks",

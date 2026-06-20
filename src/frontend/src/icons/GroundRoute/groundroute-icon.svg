@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="1em" height="1em">
+  <!-- light background glyph (default) -->
+  <g class="groundroute-light">
+    <circle cx="8.5" cy="21.25" r="2.25" fill="none" stroke="currentColor" stroke-width="1.62" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="23.5" cy="10.75" r="2.25" fill="none" stroke="currentColor" stroke-width="1.62" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M10.75 21.25h3a3 3 0 0 0 3-3V14" fill="none" stroke="currentColor" stroke-width="1.62" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M21.25 10.75h-3a3 3 0 0 0-3 3v4.5" fill="none" stroke="currentColor" stroke-width="1.62" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

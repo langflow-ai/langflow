@@ -212,6 +212,10 @@ export const lazyIconsMapping = {
     import("@/icons/Glean").then((mod) => ({ default: mod.GleanIcon })),
   GlobeOk: () =>
     import("@/icons/globe-ok").then((mod) => ({ default: mod.GlobeOkIcon })),
+  GroundRoute: () =>
+    import("@/icons/GroundRoute").then((mod) => ({
+      default: mod.GroundRouteIcon,
+    })),
   Google: () =>
     import("@/icons/Google").then((mod) => ({ default: mod.GoogleIcon })),
   GoogleDrive: () =>
