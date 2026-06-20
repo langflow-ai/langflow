@@ -1,5 +1,5 @@
-const GroundRouteIcon = ({ isdark, ...props }) => {
-  const stroke = isdark === "true" ? "#ffffff" : "#0a0a0a";
+const GroundRouteIcon = ({ isDark, ...props }) => {
+  const stroke = isDark ? "#ffffff" : "#0a0a0a";
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
