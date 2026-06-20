@@ -111,8 +111,8 @@ class GroundRouteSearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="search_data"),
-        Output(display_name="DataFrame", name="dataframe", method="search_dataframe"),
+        Output(display_name="JSON", name="data", method="search_data"),
+        Output(display_name="Table", name="dataframe", method="search_dataframe"),
     ]
 
     # ── request / response mapping ─────────────────────────────────────────────
