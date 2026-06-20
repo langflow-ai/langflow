@@ -92,6 +92,12 @@ def teardown_warm_services() -> None:
     A teardown failure is fatal: it raises :class:`PrewarmError` rather than let a
     half-disposed process be captured into a fork. Do NOT call this on the Firecracker
     ``--unsafe-run`` path, where live connections across snapshot/restore are intentional.
+
+    Note: the warm-up runs flows in throwaway ``asyncio.run`` loops, so teardown happens
+    in a *new* loop here. A plugin service that binds an async resource to the loop it was
+    created on (e.g. an asyncpg pool) may fail to dispose cross-loop; that surfaces as a
+    fatal :class:`PrewarmError` (fail-safe — the process is refused for fork rather than
+    captured dirty), never silent corruption. Bundled lfx service teardowns are loop-free.
     """
     import asyncio
 
@@ -274,9 +280,15 @@ def prewarm_flow(
 
     # Build-only (fork-safe) path: dispose services opened during the build before freezing.
     # A `run` deliberately keeps live state (Firecracker), so never tear down there.
+    # Capture a teardown failure into ``error`` instead of raising: this function's contract
+    # is that one bad flow never aborts a multi-flow warming loop, so teardown — which raises
+    # PrewarmError — must be funneled into ``error`` like load/build/run failures above.
     if teardown_services and not run and result.error is None:
-        teardown_warm_services()
-        result.services_torn_down = True
+        try:
+            teardown_warm_services()
+            result.services_torn_down = True
+        except PrewarmError as exc:
+            result.error = str(exc)
 
     if freeze:
         freeze_heap()

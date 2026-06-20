@@ -367,3 +367,21 @@ def test_flow_run_does_not_tear_down_services():
         assert spy.torn_down is False
     finally:
         _drop_spy()
+
+
+def test_flow_teardown_failure_is_captured_in_error_not_raised():
+    """A teardown failure during build-only warming goes into .error, never raised.
+
+    prewarm_flow's contract is that one bad flow can't abort a multi-flow loop, so a
+    teardown PrewarmError must be funneled into result.error like build/run failures.
+    """
+    from lfx.preload import prewarm_flow
+
+    _inject_spy("bad_service", fail=True)
+    try:
+        result = prewarm_flow(_hermetic_flow_payload(), run=False)  # must NOT raise
+        assert result.error is not None
+        assert "teardown" in result.error.lower()
+        assert result.services_torn_down is False
+    finally:
+        _drop_spy()
