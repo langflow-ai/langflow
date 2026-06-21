@@ -26,7 +26,10 @@ export interface Anchor {
 /** Decode a D2 base64 element-id class (UTF-8 safe). `null` if it isn't one. */
 export function decodeElementId(s: string): string | null {
   try {
-    return decodeURIComponent(escape(window.atob(s)));
+    const bytes = Uint8Array.from(window.atob(s), (c) => c.charCodeAt(0));
+    // `fatal` rejects invalid UTF-8 (and atob rejects non-base64) → null, so an
+    // ordinary class name that isn't a real D2 id is never taken as one.
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
     return null;
   }
@@ -43,12 +46,14 @@ export function resolveAnchor(target: Element, root: Element): Anchor | null {
   let edgeEl: Element | null = null;
   let node: string | null = null;
 
+  // A plain for-of (not classList.forEach) keeps the assignments in this scope,
+  // so `if (edge)` below narrows `edge` to a string without a cast.
   while (el && el !== root) {
-    el.classList?.forEach((c) => {
+    for (const c of Array.from(el.classList ?? [])) {
       // D2 ids are base64; skip ordinary class names cheaply before decoding.
       if (c.length >= 4 && /^[A-Za-z0-9+/]+={0,2}$/.test(c)) {
         const d = decodeElementId(c);
-        if (!d) return;
+        if (!d) continue;
         if (/-&gt;|->/.test(d)) {
           if (!edge) {
             edge = d;
@@ -58,25 +63,21 @@ export function resolveAnchor(target: Element, root: Element): Anchor | null {
           node = node ?? d;
         }
       }
-    });
+    }
     el = el.parentElement;
   }
 
   if (edge) {
-    const m = (edge as string)
-      .replace(/&gt;/g, ">")
-      .match(/([\w.-]+)\s*->\s*([\w.-]+)/);
+    const m = edge.replace(/&gt;/g, ">").match(/([\w.-]+)\s*->\s*([\w.-]+)/);
     if (m) {
       // Prefer the message LABEL (e.g. "POST /sync") over the "src → dst"
       // relation: D2 puts the base64 id on the connection group, which contains
       // the label <text>, so read it from within that group.
-      const txt = (edgeEl as Element | null)
-        ?.querySelector?.("text")
-        ?.textContent?.trim();
+      const txt = edgeEl?.querySelector?.("text")?.textContent?.trim();
       const label = txt || `${m[1]} → ${m[2]}`;
       // D2 disambiguates parallel edges with a [index]; keep it so two edges
       // between the same pair don't collapse to one anchor.
-      const idxM = (edge as string).match(/\)\[(\d+)\]/);
+      const idxM = edge.match(/\)\[(\d+)\]/);
       const index = idxM ? parseInt(idxM[1], 10) : 0;
       const id =
         index > 0 ? `${m[1]} → ${m[2]} #${index + 1}` : `${m[1]} → ${m[2]}`;
