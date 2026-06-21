@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { D2Canvas } from "../D2Canvas";
 
 const b64 = (s: string) => window.btoa(s);
@@ -129,5 +129,53 @@ describe("D2Canvas", () => {
     const { getByLabelText } = render(<D2Canvas svg="<svg></svg>" />);
     expect(getByLabelText("Zoom in")).toBeInTheDocument();
     expect(getByLabelText("Zoom out")).toBeInTheDocument();
+  });
+
+  it("re-fits the diagram when the viewport resizes (ResizeObserver)", () => {
+    // jsdom has neither ResizeObserver nor real layout boxes. Provide a mock
+    // observer whose callback we can fire on demand, so we can prove a resize
+    // re-runs the fit.
+    const fires: Array<() => void> = [];
+    class MockResizeObserver {
+      constructor(private cb: () => void) {}
+      observe() {
+        fires.push(() => this.cb());
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    const g = globalThis as { ResizeObserver?: unknown };
+    g.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+    try {
+      const { container } = render(
+        <D2Canvas svg='<svg viewBox="0 0 400 300"></svg>' />,
+      );
+      const surface = container.querySelector(
+        ".lothal-d2-canvas",
+      ) as HTMLElement;
+      const holder = container.querySelector(
+        ".lothal-d2-holder",
+      ) as HTMLElement;
+      // On mount the viewport has zero size (jsdom), so the fit no-ops and the
+      // transform stays at its default.
+      expect(holder.style.transform).toBe("translate(0px, 0px) scale(1)");
+
+      // Give the viewport a real size and fire the observer: the 400×300 diagram
+      // now fits a 800×600 viewport at scale 1, centred.
+      Object.defineProperty(surface, "clientWidth", {
+        configurable: true,
+        value: 800,
+      });
+      Object.defineProperty(surface, "clientHeight", {
+        configurable: true,
+        value: 600,
+      });
+      act(() => {
+        for (const fire of fires) fire();
+      });
+      expect(holder.style.transform).toBe("translate(200px, 150px) scale(1)");
+    } finally {
+      g.ResizeObserver = undefined;
+    }
   });
 });
