@@ -77,7 +77,13 @@ export function D2Canvas({
 
   useLayoutEffect(() => {
     const vb = holder.current?.querySelector("svg")?.getAttribute("viewBox");
-    const p = vb?.split(/\s+/).map(Number);
+    // viewBox values are whitespace- and/or comma-separated and may be padded
+    // (both valid per the SVG spec); normalise before parsing so a stray comma
+    // or leading space doesn't collapse the diagram to 0×0.
+    const p = vb
+      ?.trim()
+      .split(/[\s,]+/)
+      .map(Number);
     if (p && p.length === 4 && p[2] > 0 && p[3] > 0) {
       setNatural({ w: p[2], h: p[3] });
     } else {
@@ -122,7 +128,10 @@ export function D2Canvas({
   }, []);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
-    if (e.button !== 0) return;
+    // Only the primary button, and only one pointer at a time: a second finger
+    // landing mid-drag must not hijack `drag.current`, or the first pointer's
+    // move/up stop matching and its capture is never released.
+    if (e.button !== 0 || drag.current) return;
     drag.current = {
       pointerId: e.pointerId,
       startX: e.clientX,

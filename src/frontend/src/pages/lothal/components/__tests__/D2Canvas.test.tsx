@@ -3,6 +3,21 @@ import { D2Canvas } from "../D2Canvas";
 
 const b64 = (s: string) => window.btoa(s);
 
+// jsdom has no PointerEvent and drops the init dict on fireEvent.pointer*, so
+// build a MouseEvent (which carries clientX/button) and graft pointerId on.
+function pointer(
+  type: string,
+  init: { pointerId: number; clientX?: number; button?: number },
+): MouseEvent {
+  const ev = new MouseEvent(type, {
+    bubbles: true,
+    clientX: init.clientX ?? 0,
+    button: init.button ?? 0,
+  });
+  Object.defineProperty(ev, "pointerId", { value: init.pointerId });
+  return ev;
+}
+
 describe("D2Canvas", () => {
   it("injects the server SVG markup", () => {
     const { container } = render(<D2Canvas svg="<svg><g>hi</g></svg>" />);
@@ -24,6 +39,35 @@ describe("D2Canvas", () => {
     const holder = container.querySelector(".lothal-d2-holder") as HTMLElement;
     expect(holder.style.width).toBe("320px");
     expect(holder.style.height).toBe("240px");
+  });
+
+  it("sizes the holder from a comma-separated, padded viewBox", () => {
+    const { container } = render(
+      <D2Canvas svg='<svg viewBox=" 0,0,320,240 "></svg>' />,
+    );
+    const holder = container.querySelector(".lothal-d2-holder") as HTMLElement;
+    expect(holder.style.width).toBe("320px");
+    expect(holder.style.height).toBe("240px");
+  });
+
+  it("ignores a second pointer landing mid-drag", () => {
+    const { container } = render(<D2Canvas svg="<svg></svg>" />);
+    const surface = container.querySelector(".lothal-d2-canvas") as HTMLElement;
+    const holder = container.querySelector(".lothal-d2-holder") as HTMLElement;
+    surface.setPointerCapture = jest.fn();
+    surface.releasePointerCapture = jest.fn();
+
+    // First pointer starts a pan and drags 40px right.
+    fireEvent(surface, pointer("pointerdown", { pointerId: 1, clientX: 0 }));
+    fireEvent(surface, pointer("pointermove", { pointerId: 1, clientX: 40 }));
+    // A second finger lands — it must not hijack the active drag.
+    fireEvent(surface, pointer("pointerdown", { pointerId: 2, clientX: 200 }));
+    fireEvent(surface, pointer("pointermove", { pointerId: 1, clientX: 60 }));
+    expect(holder.style.transform).toContain("translate(60px, 0px)");
+
+    // The first pointer releases cleanly (its capture, not the second's).
+    fireEvent(surface, pointer("pointerup", { pointerId: 1 }));
+    expect(surface.releasePointerCapture).toHaveBeenCalledWith(1);
   });
 
   it("calls onAnchor with the resolved element on double-click", () => {
