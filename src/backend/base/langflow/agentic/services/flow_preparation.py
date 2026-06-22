@@ -10,12 +10,8 @@ from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider
 import lfx
 from langflow.agentic.helpers.assistant_workspace import resolve_assistant_fs_root
 
-# Relative path embedded in the bundled LangflowAssistant.json flow for the
-# Directory component that scans built-in lfx components. It only resolves
-# correctly when the process CWD is the monorepo root, which is never the
-# case for a packaged install (Langflow Desktop, `pip install langflow`,
-# Docker, etc.). inject_lfx_components_path rewrites it to an absolute path
-# derived from the installed lfx package at runtime.
+# Resolves only from the monorepo root; inject_lfx_components_path rewrites it to
+# an absolute path at runtime so packaged installs (Desktop, pip, Docker) work.
 LFX_COMPONENTS_PATH_SENTINEL = "./src/lfx/src/lfx/components/"
 
 logger = logging.getLogger(__name__)
@@ -86,17 +82,15 @@ def inject_model_into_flow(
         raise ValueError(msg)
     param_mapping = get_provider_param_mapping(provider)
 
-    # Use provided api_key_var or default from config
     api_key_var = api_key_var or provider_config.get("variable_name")
 
     metadata = {
         "api_key_param": param_mapping.get("api_key_param", provider_config.get("api_key_param", "api_key")),
         "context_length": 128000,
         "model_class": param_mapping.get("model_class", provider_config.get("model_class", "ChatOpenAI")),
-        "model_name_param": param_mapping.get("model_name_param", provider_config.get("model_name_param", "model")),
+        "model_name_param": param_mapping.get("model_param", provider_config.get("model_param", "model")),
     }
 
-    # Add extra params from param mapping (url_param, project_id_param, base_url_param)
     for extra_param in ("url_param", "project_id_param", "base_url_param"):
         if extra_param in param_mapping:
             metadata[extra_param] = param_mapping[extra_param]
@@ -113,7 +107,6 @@ def inject_model_into_flow(
         }
     ]
 
-    # Resolve provider-specific template fields to inject into Agent nodes
     provider_fields: dict[str, str] = {}
     pv = provider_vars or {}
 
@@ -129,7 +122,6 @@ def inject_model_into_flow(
         if pv.get("OLLAMA_BASE_URL"):
             provider_fields["base_url_ollama"] = pv["OLLAMA_BASE_URL"]
 
-    # Inject into all Agent nodes
     for node in flow_data.get("data", {}).get("nodes", []):
         node_data = node.get("data", {})
         if node_data.get("type") != "Agent":
@@ -137,9 +129,7 @@ def inject_model_into_flow(
         template = node_data.get("node", {}).get("template", {})
 
         if "model" not in template:
-            # Silent skip here means the run later fails with an
-            # opaque "No model selected" — leave a diagnostic with
-            # the node id so the cause is traceable.
+            # Silent skip surfaces later as an opaque "No model selected"; log the node id.
             logger.warning(
                 "assistant.inject_model.agent_missing_model_field node_id=%s provider=%s",
                 node.get("id", "<unknown>"),
@@ -155,14 +145,8 @@ def inject_model_into_flow(
         existing_provider = existing_entry.get("provider")
 
         if not overwrite_existing_model and existing_name:
-            # Preserve the user's/agent's explicit model — NEVER silently swap
-            # it for our verified model. When it's the SAME provider, REBUILD a
-            # COMPLETE value carrying the user's model NAME but the full,
-            # well-formed metadata/icon (the value the agent set via
-            # configure_component is often a bare ``{provider, name}`` with no
-            # metadata, which can make the run fail to resolve the model). Also
-            # top up the credential so the run authenticates. Cross-provider, we
-            # don't hold that provider's verified key, so leave it untouched.
+            # Keep the user's explicit model. Same provider: rebuild a complete value (full
+            # metadata + credential) since the agent's may be a bare {provider,name}; else leave it.
             if existing_provider == provider:
                 template["model"]["value"] = [{**model_value[0], "name": existing_name}]
                 for field_name, field_value in provider_fields.items():
@@ -171,7 +155,6 @@ def inject_model_into_flow(
             continue
 
         template["model"]["value"] = model_value
-        # Inject provider-specific fields (API key, URLs, project IDs)
         for field_name, field_value in provider_fields.items():
             if field_name in template:
                 template[field_name]["value"] = field_value
@@ -242,10 +225,8 @@ def inject_assistant_fs_root(flow_data: dict) -> dict:
     return flow_data
 
 
-# Parsed bundled-flow templates, keyed by path → ((mtime_ns, size),
-# parsed dict). The raw template is stable per file; re-reading +
-# json.loads on every request (and x4 on validation retries) was
-# blocking the event loop. A genuine file change (mtime/size) re-parses.
+# Cache parsed templates by path+stat: re-reading + json.loads on every request
+# (x4 on validation retries) blocked the event loop; mtime/size change re-parses.
 _FLOW_TEMPLATE_CACHE: dict[str, tuple[tuple[int, int], dict]] = {}
 
 
