@@ -28,6 +28,12 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.table import EditMode
+from lfx.utils.ssrf_httpx import (
+    ssrf_protected_httpx_client_kwargs_for_url,
+    ssrf_safe_async_get,
+    ssrf_safe_async_post,
+)
+from lfx.utils.ssrf_protection import SSRFProtectionError
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -263,6 +269,8 @@ class ChatOllamaComponent(LCModelComponent):
                 "Learn more at https://docs.ollama.com/openai#openai-compatibility"
             )
 
+        sync_client_kwargs, async_client_kwargs = ssrf_protected_httpx_client_kwargs_for_url(transformed_base_url)
+
         try:
             output_format = self._parse_format_field(self.format) if self.enable_structured_output else None
         except Exception as e:
@@ -297,6 +305,10 @@ class ChatOllamaComponent(LCModelComponent):
         headers = self.headers
         if headers is not None:
             llm_params["client_kwargs"] = {"headers": headers}
+        if sync_client_kwargs:
+            llm_params["sync_client_kwargs"] = sync_client_kwargs
+        if async_client_kwargs:
+            llm_params["async_client_kwargs"] = async_client_kwargs
 
         # Remove parameters with None values
         llm_params = {k: v for k, v in llm_params.items() if v is not None}
@@ -314,19 +326,21 @@ class ChatOllamaComponent(LCModelComponent):
 
     async def is_valid_ollama_url(self, url: str) -> bool:
         try:
-            async with httpx.AsyncClient() as client:
-                url = transform_localhost_url(url)
-                if not url:
-                    return False
-                # Strip /v1 suffix if present, as Ollama API endpoints are at root level
-                url = url.rstrip("/").removesuffix("/v1")
-                if not url.endswith("/"):
-                    url = url + "/"
-                return (
-                    await client.get(url=urljoin(url, "api/tags"), headers=self.headers)
-                ).status_code == HTTP_STATUS_OK
+            url = transform_localhost_url(url)
+            if not url:
+                return False
+            # Strip /v1 suffix if present, as Ollama API endpoints are at root level
+            url = url.rstrip("/").removesuffix("/v1")
+            if not url.endswith("/"):
+                url = url + "/"
+            response = await ssrf_safe_async_get(urljoin(url, "api/tags"), headers=self.headers)
+        except SSRFProtectionError as e:
+            msg = f"SSRF Protection: {e}"
+            raise ValueError(msg) from e
         except httpx.RequestError:
             return False
+        else:
+            return response.status_code == HTTP_STATUS_OK
 
     async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "enable_structured_output":  # bind enable_structured_output boolean to format show value
@@ -409,44 +423,46 @@ class ChatOllamaComponent(LCModelComponent):
             # Ollama REST API to return model capabilities
             show_url = urljoin(base_url, "api/show")
 
-            async with httpx.AsyncClient() as client:
-                headers = self.headers
-                # Fetch available models
-                tags_response = await client.get(url=tags_url, headers=headers)
-                tags_response.raise_for_status()
-                models = tags_response.json()
-                if asyncio.iscoroutine(models):
-                    models = await models
-                await logger.adebug(f"Available models: {models}")
+            headers = self.headers
+            # Fetch available models
+            tags_response = await ssrf_safe_async_get(tags_url, headers=headers)
+            tags_response.raise_for_status()
+            models = tags_response.json()
+            if asyncio.iscoroutine(models):
+                models = await models
+            await logger.adebug(f"Available models: {models}")
 
-                # Filter models that are NOT embedding models
-                model_ids = []
-                for model in models[self.JSON_MODELS_KEY]:
-                    model_name = model[self.JSON_NAME_KEY]
-                    await logger.adebug(f"Checking model: {model_name}")
+            # Filter models that are NOT embedding models
+            model_ids = []
+            for model in models[self.JSON_MODELS_KEY]:
+                model_name = model[self.JSON_NAME_KEY]
+                await logger.adebug(f"Checking model: {model_name}")
 
-                    payload = {"model": model_name}
-                    show_response = await client.post(url=show_url, json=payload, headers=headers)
-                    show_response.raise_for_status()
-                    json_data = show_response.json()
-                    if asyncio.iscoroutine(json_data):
-                        json_data = await json_data
+                payload = {"model": model_name}
+                show_response = await ssrf_safe_async_post(show_url, json=payload, headers=headers)
+                show_response.raise_for_status()
+                json_data = show_response.json()
+                if asyncio.iscoroutine(json_data):
+                    json_data = await json_data
 
-                    capabilities = json_data.get(self.JSON_CAPABILITIES_KEY)
-                    await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
+                capabilities = json_data.get(self.JSON_CAPABILITIES_KEY)
+                await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
 
-                    # If capabilities not provided, assume it's a completion model (backwards compatibility
-                    # with older Ollama versions that don't return capabilities from /api/show)
-                    if capabilities is None:
-                        if not tool_model_enabled:
-                            model_ids.append(model_name)
-                        # If tool_model_enabled is True but no capabilities info, skip the model
-                        # since we can't verify tool support
-                    elif self.DESIRED_CAPABILITY in capabilities and (
-                        not tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities
-                    ):
+                # If capabilities not provided, assume it's a completion model (backwards compatibility
+                # with older Ollama versions that don't return capabilities from /api/show)
+                if capabilities is None:
+                    if not tool_model_enabled:
                         model_ids.append(model_name)
+                    # If tool_model_enabled is True but no capabilities info, skip the model
+                    # since we can't verify tool support
+                elif self.DESIRED_CAPABILITY in capabilities and (
+                    not tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities
+                ):
+                    model_ids.append(model_name)
 
+        except SSRFProtectionError as e:
+            msg = f"SSRF Protection: {e}"
+            raise ValueError(msg) from e
         except (httpx.RequestError, ValueError) as e:
             msg = "Could not get model names from Ollama."
             raise ValueError(msg) from e

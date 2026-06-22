@@ -22,6 +22,101 @@ async def test_add_user_public_signup(client: AsyncClient):
     assert result["is_superuser"] is False, "New users should not be superusers"
 
 
+async def test_add_user_signup_refused_when_disabled(client: AsyncClient):
+    """Public registration must be refused (403) when ENABLE_SIGNUP is False."""
+    from langflow.services.deps import get_settings_service
+
+    auth_settings = get_settings_service().auth_settings
+    original_signup = auth_settings.ENABLE_SIGNUP
+    original_auto_login = auth_settings.AUTO_LOGIN
+    # Pin AUTO_LOGIN to a permissive value so the 403 can only come from ENABLE_SIGNUP=False.
+    auth_settings.AUTO_LOGIN = False
+    auth_settings.ENABLE_SIGNUP = False
+    try:
+        response = await client.post("api/v1/users/", json={"username": "signupblocked", "password": "newpassword123"})
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+    finally:
+        auth_settings.ENABLE_SIGNUP = original_signup
+        auth_settings.AUTO_LOGIN = original_auto_login
+
+
+async def test_add_user_signup_refused_when_auto_login(client: AsyncClient):
+    """Public registration must be refused (403) when AUTO_LOGIN is enabled."""
+    from langflow.services.deps import get_settings_service
+
+    auth_settings = get_settings_service().auth_settings
+    original_auto_login = auth_settings.AUTO_LOGIN
+    original_signup = auth_settings.ENABLE_SIGNUP
+    # Pin ENABLE_SIGNUP to a permissive value so the 403 can only come from AUTO_LOGIN=True.
+    auth_settings.ENABLE_SIGNUP = True
+    auth_settings.AUTO_LOGIN = True
+    try:
+        response = await client.post(
+            "api/v1/users/", json={"username": "autologinblocked", "password": "newpassword123"}
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+    finally:
+        auth_settings.AUTO_LOGIN = original_auto_login
+        auth_settings.ENABLE_SIGNUP = original_signup
+
+
+async def test_add_user_superuser_succeeds_when_signup_disabled(client: AsyncClient, logged_in_headers_super_user):
+    """An authenticated superuser can still create users when public signup is disabled.
+
+    Disabling public sign up must only block the anonymous path; it must not break the
+    admin "add user" flow (AdminPage -> useAddUser -> POST /api/v1/users/).
+    """
+    from langflow.services.deps import get_settings_service
+
+    auth_settings = get_settings_service().auth_settings
+    original_signup = auth_settings.ENABLE_SIGNUP
+    original_auto_login = auth_settings.AUTO_LOGIN
+    auth_settings.AUTO_LOGIN = False
+    auth_settings.ENABLE_SIGNUP = False
+    try:
+        # Superuser-authenticated request is allowed through despite signup being disabled.
+        admin_response = await client.post(
+            "api/v1/users/",
+            json={"username": "adminmade", "password": "newpassword123"},
+            headers=logged_in_headers_super_user,
+        )
+        assert admin_response.status_code == status.HTTP_201_CREATED
+
+        # The anonymous path is still refused. Clear the cookie jar first: the shared
+        # AsyncClient persists the superuser's access_token_lf cookie set by the login
+        # fixture, which would otherwise authenticate this "anonymous" request too.
+        client.cookies.clear()
+        anon_response = await client.post("api/v1/users/", json={"username": "anonmade", "password": "newpassword123"})
+        assert anon_response.status_code == status.HTTP_403_FORBIDDEN
+    finally:
+        auth_settings.ENABLE_SIGNUP = original_signup
+        auth_settings.AUTO_LOGIN = original_auto_login
+
+
+async def test_add_user_non_superuser_refused_when_signup_disabled(client: AsyncClient, logged_in_headers):
+    """A regular authenticated (non-superuser) user cannot create users when signup is disabled.
+
+    Only superusers may bypass the gate; being merely authenticated is not enough.
+    """
+    from langflow.services.deps import get_settings_service
+
+    auth_settings = get_settings_service().auth_settings
+    original_signup = auth_settings.ENABLE_SIGNUP
+    original_auto_login = auth_settings.AUTO_LOGIN
+    auth_settings.AUTO_LOGIN = False
+    auth_settings.ENABLE_SIGNUP = False
+    try:
+        response = await client.post(
+            "api/v1/users/",
+            json={"username": "regularmade", "password": "newpassword123"},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+    finally:
+        auth_settings.ENABLE_SIGNUP = original_signup
+        auth_settings.AUTO_LOGIN = original_auto_login
+
+
 async def test_add_user_duplicate_username(client: AsyncClient):
     """Test that duplicate usernames are rejected."""
     basic_case = {"username": "duplicateuser", "password": "password123"}
