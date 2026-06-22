@@ -267,15 +267,16 @@ def prewarm_flow(
             result.ghost_threads = report.ghost_threads
             result.ghost_connections = report.ghost_connections
 
-    # Build-only is the fork-safe path: dispose services before freezing. A `run` keeps live
-    # state for Firecracker, so never tear down there. Funnel teardown failures into .error
-    # (not raise) so one bad flow doesn't abort a multi-flow loop.
-    if teardown_services and not run and result.error is None:
+    # Build-only is the fork-safe path: dispose services before freezing, even if the build
+    # failed — a partial build can leave services live and the process fork-unsafe. A `run`
+    # keeps live state for Firecracker, so never tear down there. Funnel teardown failures
+    # into .error (not raise) so one bad flow doesn't abort a multi-flow loop.
+    if teardown_services and not run:
         try:
             teardown_warm_services()
             result.services_torn_down = True
         except PrewarmError as exc:
-            result.error = str(exc)
+            result.error = f"{result.error}; teardown failed: {exc}" if result.error else str(exc)
 
     if freeze:
         freeze_heap()

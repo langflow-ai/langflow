@@ -524,3 +524,32 @@ def test_flow_teardown_failure_is_captured_in_error_not_raised():
         assert result.services_torn_down is False
     finally:
         _drop_spy()
+
+
+def test_flow_build_failure_still_tears_down_services():
+    """A failed build must not skip teardown — partial state would leave the process fork-unsafe."""
+    from lfx.preload import prewarm_flow
+
+    spy = _inject_spy()
+    try:
+        result = prewarm_flow("/nonexistent/flow_xyz.json", run=False)  # build fails
+        assert result.built is False
+        assert result.error is not None
+        # Teardown is still attempted despite the build error, so the process stays fork-safe.
+        assert spy.torn_down is True
+        assert result.services_torn_down is True
+    finally:
+        _drop_spy()
+
+
+def test_flow_build_and_teardown_failures_are_both_reported():
+    """When both the build and teardown fail, .error preserves both, not just the last."""
+    from lfx.preload import prewarm_flow
+
+    _inject_spy("bad_service", fail=True)
+    try:
+        result = prewarm_flow("/nonexistent/flow_xyz.json", run=False)
+        assert "FileNotFoundError" in result.error or "No such file" in result.error
+        assert "teardown failed" in result.error
+    finally:
+        _drop_spy()
