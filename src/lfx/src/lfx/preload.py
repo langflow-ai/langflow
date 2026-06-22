@@ -20,6 +20,7 @@ from __future__ import annotations
 import gc
 import importlib
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -122,6 +123,30 @@ def _run_flow_once(graph, input_value: str) -> None:
     asyncio.run(_run())
 
 
+@contextmanager
+def _tracing_disabled():
+    """Force ``get_tracing_service()`` to return None for the duration.
+
+    The graph and each component resolve the tracing service independently via the shared
+    lfx/Langflow service manager, so blanking it at the manager is the only reliable way to
+    keep the warm-up run from tracing. Restores the prior value (or lazy-uncreated state).
+    """
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    manager = get_service_manager()
+    sentinel = object()
+    previous = manager.services.get(ServiceType.TRACING_SERVICE, sentinel)
+    manager.services[ServiceType.TRACING_SERVICE] = None
+    try:
+        yield
+    finally:
+        if previous is sentinel:
+            manager.services.pop(ServiceType.TRACING_SERVICE, None)
+        else:
+            manager.services[ServiceType.TRACING_SERVICE] = previous
+
+
 def _run_hermetic_warmup() -> None:
     """Build and run one model-free flow to warm the execution machinery.
 
@@ -141,7 +166,15 @@ def _run_hermetic_warmup() -> None:
     graph = Graph(chat_input, chat_output)
     graph.prepare()
 
-    _run_flow_once(graph, "prewarm")
+    # Run with tracing disabled. lfx and Langflow share one service manager, so in a Langflow
+    # process the graph AND each component would otherwise resolve the real tracer and ship a
+    # junk "prewarm" trace to a configured provider (LangSmith/Langfuse/...) — and open a
+    # socket, breaking fork-safety. Blanking the service at the source makes every
+    # get_tracing_service() return None, so the run takes the no-tracing path. (No DB writes
+    # either: message store needs a session_id and vertex-build logging a flow_id, and this
+    # hermetic graph has neither.)
+    with _tracing_disabled():
+        _run_flow_once(graph, "prewarm")
 
 
 def prewarm_core_imports(

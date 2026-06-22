@@ -66,6 +66,88 @@ def test_warmup_run_opens_no_socket(monkeypatch):
     assert result.warmup_ran is True
 
 
+def test_warmup_run_does_not_start_tracers():
+    """The warm-up run must not emit a trace, even when a tracing service is registered.
+
+    lfx and Langflow share one service manager, so in a Langflow process the hermetic graph
+    would otherwise resolve the real tracer and ship a junk "prewarm" trace to a configured
+    provider. The run disables tracing on its graph, so start_tracers is never called.
+    """
+    from lfx.preload import prewarm_core_imports
+    from lfx.services.base import Service
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    class _TracingSpy(Service):
+        name = "tracing_service"
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.started = False
+            self.deactivated = False
+
+        async def start_tracers(self, *_args, **_kwargs) -> None:
+            self.started = True
+
+        async def teardown(self) -> None:
+            pass
+
+    spy = _TracingSpy()
+    get_service_manager().services[ServiceType.TRACING_SERVICE] = spy
+
+    prewarm_core_imports()
+
+    assert spy.started is False
+
+
+def test_tracing_disabled_blanks_during_and_restores_absent_key():
+    """Prior state #1: key absent -> None during the block, absent again after."""
+    from lfx.preload import _tracing_disabled
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    services = get_service_manager().services
+    services.pop(ServiceType.TRACING_SERVICE, None)  # ensure absent
+
+    with _tracing_disabled():
+        assert services[ServiceType.TRACING_SERVICE] is None  # blanked during
+    assert ServiceType.TRACING_SERVICE not in services  # absence restored (popped, not left as None)
+
+
+def test_tracing_disabled_restores_existing_service():
+    """Prior state #2: key present with a real service -> restored to that exact object after."""
+    from lfx.preload import _tracing_disabled
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    services = get_service_manager().services
+    existing = object()  # stand-in service; restore is an identity check
+    services[ServiceType.TRACING_SERVICE] = existing
+
+    with _tracing_disabled():
+        assert services[ServiceType.TRACING_SERVICE] is None
+    assert services[ServiceType.TRACING_SERVICE] is existing
+
+
+def test_tracing_disabled_restores_present_none():
+    """Prior state #3: key present mapping to None -> stays present-None (NOT popped).
+
+    This is the case the object() sentinel exists for: a plain .get() can't tell it from
+    'absent', so without the sentinel the restore would wrongly pop the key.
+    """
+    from lfx.preload import _tracing_disabled
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    services = get_service_manager().services
+    services[ServiceType.TRACING_SERVICE] = None
+
+    with _tracing_disabled():
+        assert services[ServiceType.TRACING_SERVICE] is None
+    assert ServiceType.TRACING_SERVICE in services  # key kept, not popped
+    assert services[ServiceType.TRACING_SERVICE] is None
+
+
 def test_warmup_run_can_be_skipped():
     """warmup_run=False imports only, with no execution at all."""
     from lfx.preload import prewarm_core_imports
