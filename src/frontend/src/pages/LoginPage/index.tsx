@@ -93,6 +93,7 @@ export default function LoginPage(): JSX.Element {
               <Form.Control asChild>
                 <Input
                   type="username"
+                  allowAutofill
                   onChange={({ target: { value } }) => {
                     handleInput({ target: { name: "username", value } });
                   }}
@@ -121,6 +122,7 @@ export default function LoginPage(): JSX.Element {
                 }}
                 value={password}
                 isForm
+                allowAutofill
                 password={true}
                 required
                 placeholder={t("auth.passwordPlaceholder")}
