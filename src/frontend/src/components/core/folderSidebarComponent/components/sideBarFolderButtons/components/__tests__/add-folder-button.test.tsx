@@ -24,7 +24,13 @@ jest.mock("@/components/ui/button", () => ({
     disabled,
     loading,
     ...props
-  }: any) => (
+  }: {
+    children: React.ReactNode;
+    "aria-label"?: string;
+    disabled?: boolean;
+    loading?: boolean;
+    [key: string]: unknown;
+  }) => (
     <button
       aria-label={ariaLabel}
       disabled={disabled}

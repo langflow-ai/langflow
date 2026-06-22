@@ -40,8 +40,17 @@ jest.mock("../../../ui/select", () => {
       children: React.ReactNode;
       value: string;
     }) => <option value={value}>{children}</option>,
-    SelectTrigger: ({ children, ...rest }: any) => (
-      <div data-testid="page-select-trigger" aria-label={rest["aria-label"]}>
+    SelectTrigger: ({
+      children,
+      ...rest
+    }: {
+      children: React.ReactNode;
+      [key: string]: unknown;
+    }) => (
+      <div
+        data-testid="page-select-trigger"
+        aria-label={rest["aria-label"] as string}
+      >
         {children}
       </div>
     ),
