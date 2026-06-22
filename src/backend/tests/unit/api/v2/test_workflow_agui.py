@@ -345,6 +345,7 @@ class TestV2WorkflowAdmission:
     async def test_private_route_applies_component_policy_gate(self, monkeypatch: pytest.MonkeyPatch):
         """The authenticated v2 route must run server-side component policy validation."""
         from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_validation as wf_val
         from lfx.schema.workflow import WorkflowRunRequest
         from lfx.utils.flow_validation import CustomComponentValidationError
 
@@ -364,7 +365,7 @@ class TestV2WorkflowAdmission:
 
         monkeypatch.setattr(workflow_module, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
         monkeypatch.setattr(workflow_module, "ensure_flow_permission", AsyncMock(return_value=None))
-        monkeypatch.setattr(workflow_module, "validate_flow_for_current_settings", _reject)
+        monkeypatch.setattr(wf_val, "validate_flow_for_current_settings", _reject)
 
         with pytest.raises(HTTPException) as exc_info:
             await workflow_module.execute_workflow(
@@ -383,9 +384,9 @@ class TestAGUIStreaming:
 
     async def test_stream_event_queue_ignores_late_sentinel_after_overflow(self):
         """A normal completion sentinel must not race ahead of the overflow error."""
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_execution as wf_exec
 
-        queue = workflow_module._WorkflowEventQueue(maxsize=1)
+        queue = wf_exec._WorkflowEventQueue(maxsize=1)
         try:
             payload = json.dumps({"event": "token", "data": {"chunk": "0"}}).encode()
             queue.put_nowait(("token-0", payload, time.time()))
@@ -397,7 +398,7 @@ class TestAGUIStreaming:
 
     async def test_stream_event_handoff_overflow_emits_error(self, monkeypatch: pytest.MonkeyPatch):
         """EventManager put_nowait must not silently drop frames when the stream buffer fills."""
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_execution as wf_exec
         from langflow.api.v2.adapters import StreamEvent
         from langflow.api.v2.converters import ParsedWorkflowRun
 
@@ -423,12 +424,12 @@ class TestAGUIStreaming:
             def translate(self, event_type, _event_data):
                 return [StreamEvent(type=event_type, data_json="{}")]
 
-        monkeypatch.setattr(workflow_module, "_EVENT_QUEUE_MAX_SIZE", 2)
-        monkeypatch.setattr(workflow_module, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_exec, "_EVENT_QUEUE_MAX_SIZE", 2)
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
 
         event_types = [
             event_type
-            async for _frame, event_type in workflow_module._stream_event_frames(
+            async for _frame, event_type in wf_exec._stream_event_frames(
                 adapter=FakeAdapter(),
                 flow_id=uuid4(),
                 flow_name="flow",
@@ -442,6 +443,45 @@ class TestAGUIStreaming:
         assert event_types == ["token", "token", "error"]
 
     @pytest.mark.parametrize(("stream_protocol", "terminal_type"), [("agui", "RUN_ERROR"), ("langflow", "error")])
+    async def test_stream_enforces_execution_timeout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stream_protocol: str,
+        terminal_type: str,
+    ):
+        """A run that exceeds the wall-clock ceiling ends in a sanitized terminal error, not a hang."""
+        from langflow.api.v2 import workflow_execution as wf_exec
+        from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
+        from langflow.api.v2.converters import ParsedWorkflowRun
+
+        async def hanging_generate_flow_events(**_kwargs):
+            await asyncio.sleep(5)
+
+        # Tiny ceiling + a producer that never returns: the timeout must fire.
+        monkeypatch.setattr(wf_exec, "_resolve_execution_timeout", lambda: 0.05)
+        monkeypatch.setattr(wf_exec, "generate_flow_events", hanging_generate_flow_events)
+
+        adapter = get_stream_adapter(stream_protocol, StreamAdapterContext(run_id="run", thread_id="thread"))
+
+        collected: list[tuple[bytes, str]] = [
+            (frame, event_type)
+            async for frame, event_type in wf_exec._stream_event_frames(
+                adapter=adapter,
+                flow_id=uuid4(),
+                flow_name="flow",
+                background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
+                parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="stream"),
+                current_user=SimpleNamespace(id=uuid4()),
+            )
+        ]
+
+        event_types = [event_type for _frame, event_type in collected]
+        body = b"".join(frame for frame, _event_type in collected).decode()
+        # Exactly one terminal error, carrying the sanitized message (no internal detail).
+        assert event_types.count(terminal_type) == 1
+        assert "Workflow execution timed out." in body
+
+    @pytest.mark.parametrize(("stream_protocol", "terminal_type"), [("agui", "RUN_ERROR"), ("langflow", "error")])
     async def test_stream_error_path_emits_one_terminal_error(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -449,7 +489,7 @@ class TestAGUIStreaming:
         terminal_type: str,
     ):
         """A producer that reports on_error then raises must not triple-emit terminal errors."""
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_execution as wf_exec
         from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
         from langflow.api.v2.converters import ParsedWorkflowRun
 
@@ -458,7 +498,7 @@ class TestAGUIStreaming:
             message = "outer"
             raise RuntimeError(message)
 
-        monkeypatch.setattr(workflow_module, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
 
         adapter = get_stream_adapter(
             stream_protocol,
@@ -466,7 +506,7 @@ class TestAGUIStreaming:
         )
         event_types = [
             event_type
-            async for _frame, event_type in workflow_module._stream_event_frames(
+            async for _frame, event_type in wf_exec._stream_event_frames(
                 adapter=adapter,
                 flow_id=uuid4(),
                 flow_name="flow",
@@ -487,7 +527,7 @@ class TestAGUIStreaming:
         terminal_type: str,
     ):
         """A producer that raises before on_error still emits one terminal error."""
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_execution as wf_exec
         from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
         from langflow.api.v2.converters import ParsedWorkflowRun
 
@@ -495,7 +535,7 @@ class TestAGUIStreaming:
             message = "early boom"
             raise RuntimeError(message)
 
-        monkeypatch.setattr(workflow_module, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
 
         adapter = get_stream_adapter(
             stream_protocol,
@@ -503,7 +543,7 @@ class TestAGUIStreaming:
         )
         frames = [
             frame
-            async for frame, _event_type in workflow_module._stream_event_frames(
+            async for frame, _event_type in wf_exec._stream_event_frames(
                 adapter=adapter,
                 flow_id=uuid4(),
                 flow_name="flow",
@@ -521,7 +561,7 @@ class TestAGUIStreaming:
 
     async def test_agui_stream_emits_end_side_channel_for_build_duration(self, monkeypatch: pytest.MonkeyPatch):
         """The AG-UI stream must preserve v1 end payloads for chat build-duration persistence."""
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_execution as wf_exec
         from langflow.api.v2.converters import ParsedWorkflowRun
 
         async def fake_generate_flow_events(**kwargs):
@@ -542,11 +582,11 @@ class TestAGUIStreaming:
             def translate(self, _event_type, _event_data):
                 return []
 
-        monkeypatch.setattr(workflow_module, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
 
         frames = [
             frame
-            async for frame, _event_type in workflow_module._stream_event_frames(
+            async for frame, _event_type in wf_exec._stream_event_frames(
                 adapter=FakeAdapter(),
                 flow_id=uuid4(),
                 flow_name="flow",
@@ -967,7 +1007,7 @@ class TestAGUIBackgroundJobStatus:
 
     async def test_background_buffer_binds_build_rows_to_returned_job_id(self, monkeypatch: pytest.MonkeyPatch):
         """Status reconstruction needs vertex_build rows logged under the public background job id."""
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
         from langflow.api.v2.converters import ParsedWorkflowRun
 
         job_id = uuid4()
@@ -983,12 +1023,12 @@ class TestAGUIBackgroundJobStatus:
             captured.update(kwargs)
             yield b"data: {}\n\n", "RUN_FINISHED"
 
-        monkeypatch.setattr(workflow_module, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
-        monkeypatch.setattr(workflow_module, "_stream_event_frames", fake_stream_event_frames)
-        monkeypatch.setattr(workflow_module, "_finalize_job_status", AsyncMock())
+        monkeypatch.setattr(wf_bg, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
+        monkeypatch.setattr(wf_bg, "_stream_event_frames", fake_stream_event_frames)
+        monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
 
-        bg_run = workflow_module._BackgroundRun(user_id=str(uuid4()))
-        await workflow_module._buffer_background_run(
+        bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()))
+        await wf_bg._buffer_background_run(
             bg_run=bg_run,
             flow=SimpleNamespace(id=uuid4(), name="flow"),
             parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
@@ -1003,6 +1043,7 @@ class TestAGUIBackgroundJobStatus:
     async def test_background_buffer_marks_job_in_progress(self, monkeypatch: pytest.MonkeyPatch):
         """A background job should leave QUEUED once its buffer task starts executing."""
         from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
         from langflow.api.v2.converters import ParsedWorkflowRun
 
         job_id = uuid4()
@@ -1022,13 +1063,13 @@ class TestAGUIBackgroundJobStatus:
         async def fake_stream_event_frames(**_kwargs):
             yield b"data: {}\n\n", "RUN_FINISHED"
 
-        monkeypatch.setattr(workflow_module, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
-        monkeypatch.setattr(workflow_module, "get_job_service", lambda: FakeJobService())
-        monkeypatch.setattr(workflow_module, "_stream_event_frames", fake_stream_event_frames)
-        monkeypatch.setattr(workflow_module, "_finalize_job_status", AsyncMock())
+        monkeypatch.setattr(wf_bg, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
+        monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
+        monkeypatch.setattr(wf_bg, "_stream_event_frames", fake_stream_event_frames)
+        monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
 
-        bg_run = workflow_module._BackgroundRun(user_id=str(uuid4()))
-        await workflow_module._buffer_background_run(
+        bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()))
+        await wf_bg._buffer_background_run(
             bg_run=bg_run,
             flow=SimpleNamespace(id=uuid4(), name="flow"),
             parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
@@ -1043,7 +1084,8 @@ class TestAGUIBackgroundJobStatus:
         self, monkeypatch: pytest.MonkeyPatch
     ):
         """The owner task must append cancellation before marking replay done."""
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
+        from langflow.api.v2 import workflow_execution as wf_exec
         from langflow.api.v2.converters import ParsedWorkflowRun
 
         started = asyncio.Event()
@@ -1061,13 +1103,13 @@ class TestAGUIBackgroundJobStatus:
             tail = bg_run.base_index + len(bg_run.frames)
             return [frame async for frame in bg_run.replay(tail)]
 
-        monkeypatch.setattr(workflow_module, "get_job_service", lambda: FakeJobService())
-        monkeypatch.setattr(workflow_module, "_finalize_job_status", AsyncMock())
-        monkeypatch.setattr(workflow_module, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
+        monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
 
-        bg_run = workflow_module._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
+        bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
         buffer_task = asyncio.create_task(
-            workflow_module._buffer_background_run(
+            wf_bg._buffer_background_run(
                 bg_run=bg_run,
                 flow=SimpleNamespace(id=uuid4(), name="flow"),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
@@ -1107,7 +1149,8 @@ class TestAGUIBackgroundJobStatus:
         self, monkeypatch: pytest.MonkeyPatch
     ):
         """Cancellation framing must stay protocol-native outside AG-UI too."""
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
+        from langflow.api.v2 import workflow_execution as wf_exec
         from langflow.api.v2.converters import ParsedWorkflowRun
 
         started = asyncio.Event()
@@ -1125,13 +1168,13 @@ class TestAGUIBackgroundJobStatus:
             tail = bg_run.base_index + len(bg_run.frames)
             return [frame async for frame in bg_run.replay(tail)]
 
-        monkeypatch.setattr(workflow_module, "get_job_service", lambda: FakeJobService())
-        monkeypatch.setattr(workflow_module, "_finalize_job_status", AsyncMock())
-        monkeypatch.setattr(workflow_module, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
+        monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
 
-        bg_run = workflow_module._BackgroundRun(user_id=str(uuid4()), stream_protocol="langflow")
+        bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="langflow")
         buffer_task = asyncio.create_task(
-            workflow_module._buffer_background_run(
+            wf_bg._buffer_background_run(
                 bg_run=bg_run,
                 flow=SimpleNamespace(id=uuid4(), name="flow"),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
@@ -1164,7 +1207,8 @@ class TestAGUIBackgroundJobStatus:
         self, monkeypatch: pytest.MonkeyPatch
     ):
         """The stop fallback must not wake replay readers before cancellation is buffered."""
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
+        from langflow.api.v2 import workflow_execution as wf_exec
         from langflow.api.v2.converters import ParsedWorkflowRun
 
         job_id = str(uuid4())
@@ -1183,15 +1227,15 @@ class TestAGUIBackgroundJobStatus:
             tail = bg_run.base_index + len(bg_run.frames)
             return [frame async for frame in bg_run.replay(tail)]
 
-        monkeypatch.setattr(workflow_module, "get_job_service", lambda: FakeJobService())
-        monkeypatch.setattr(workflow_module, "_finalize_job_status", AsyncMock())
-        monkeypatch.setattr(workflow_module, "generate_flow_events", fake_generate_flow_events)
-        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
+        monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
+        monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
-        bg_run = workflow_module._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
-        workflow_module._BACKGROUND_RUNS[job_id] = bg_run
+        bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
+        wf_bg._BACKGROUND_RUNS[job_id] = bg_run
         buffer_task = asyncio.create_task(
-            workflow_module._buffer_background_run(
+            wf_bg._buffer_background_run(
                 bg_run=bg_run,
                 flow=SimpleNamespace(id=uuid4(), name="flow"),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
@@ -1213,7 +1257,7 @@ class TestAGUIBackgroundJobStatus:
             tail_task = asyncio.create_task(collect_tail(bg_run))
             await asyncio.sleep(0)
 
-            await workflow_module._finish_cancelled_background_run(job_id)
+            await wf_bg._finish_cancelled_background_run(job_id)
             tail_frames = await asyncio.wait_for(tail_task, timeout=2)
 
             tail_payloads = _sse_payloads(tail_frames)
@@ -1236,7 +1280,7 @@ class TestAGUIBackgroundJobStatus:
                 buffer_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await buffer_task
-            await workflow_module._clear_background_run(job_id)
+            await wf_bg._clear_background_run(job_id)
 
     async def test_message_text_containing_run_error_literal_does_not_fail_job(
         self,
@@ -1619,7 +1663,7 @@ class TestAGUIBackgroundTasksLifecycle:
         monkeypatch: pytest.MonkeyPatch,
     ):
         """After a background run ends, the BackgroundTasks queue must be invoked."""
-        from langflow.api.v2 import workflow as _workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
         from starlette.background import BackgroundTasks as _Real
 
         instances: list[_Real] = []
@@ -1636,7 +1680,7 @@ class TestAGUIBackgroundTasksLifecycle:
                 self.called = True
                 return await super().__call__(*args, **kwargs)
 
-        monkeypatch.setattr(_workflow_module, "BackgroundTasks", RecordingBackgroundTasks)
+        monkeypatch.setattr(wf_bg, "BackgroundTasks", RecordingBackgroundTasks)
 
         headers = {"x-api-key": created_api_key.api_key}
         start = await client.post(
@@ -1992,10 +2036,10 @@ class TestBackgroundRunsRegistryEviction:
     """
 
     async def test_eviction_prefers_completed_runs_over_running_ones(self, monkeypatch):
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
 
-        monkeypatch.setattr(workflow_module, "_MAX_BACKGROUND_RUNS", 3)
-        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
+        monkeypatch.setattr(wf_bg, "_MAX_BACKGROUND_RUNS", 3)
+        monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
         # Evicting a completed run has no live writer to stop, so the cancel path
         # must not fire; record any call to prove it doesn't.
@@ -2005,27 +2049,25 @@ class TestBackgroundRunsRegistryEviction:
             cancelled.append(job_id)
             return True
 
-        monkeypatch.setattr(workflow_module, "_cancel_workflow_queue_job", fake_cancel)
+        monkeypatch.setattr(wf_bg, "_cancel_workflow_queue_job", fake_cancel)
 
-        long_running = workflow_module._BackgroundRun(user_id="u")
+        long_running = wf_bg._BackgroundRun(user_id="u")
         # done stays False; this is the run we must protect.
-        await workflow_module._register_background_run("long", long_running)
+        await wf_bg._register_background_run("long", long_running)
 
         # Fill the rest with completed runs.
         for job_id in ("done1", "done2"):
-            done_run = workflow_module._BackgroundRun(user_id="u")
+            done_run = wf_bg._BackgroundRun(user_id="u")
             done_run.done = True
-            await workflow_module._register_background_run(job_id, done_run)
+            await wf_bg._register_background_run(job_id, done_run)
 
         # Registry is now at the cap (3): [long, done1, done2]. Adding a new
         # entry must evict a completed run, not the still-running ``long``.
-        new_run = workflow_module._BackgroundRun(user_id="u")
-        await workflow_module._register_background_run("new", new_run)
+        new_run = wf_bg._BackgroundRun(user_id="u")
+        await wf_bg._register_background_run("new", new_run)
 
-        assert "long" in workflow_module._BACKGROUND_RUNS, (
-            "Still-running background run was evicted in favor of a completed one"
-        )
-        assert "new" in workflow_module._BACKGROUND_RUNS
+        assert "long" in wf_bg._BACKGROUND_RUNS, "Still-running background run was evicted in favor of a completed one"
+        assert "new" in wf_bg._BACKGROUND_RUNS
         assert cancelled == [], "Evicting a completed run must not cancel a queue job"
 
     async def test_eviction_falls_back_to_oldest_when_every_run_is_active(self, monkeypatch):
@@ -2036,10 +2078,10 @@ class TestBackgroundRunsRegistryEviction:
         buffer writer is cancelled so it stops appending into a run no reader can
         find (the bounded-memory guarantee the registry exists to provide).
         """
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
 
-        monkeypatch.setattr(workflow_module, "_MAX_BACKGROUND_RUNS", 2)
-        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
+        monkeypatch.setattr(wf_bg, "_MAX_BACKGROUND_RUNS", 2)
+        monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
         cancelled: list[str] = []
 
@@ -2047,19 +2089,19 @@ class TestBackgroundRunsRegistryEviction:
             cancelled.append(job_id)
             return True
 
-        monkeypatch.setattr(workflow_module, "_cancel_workflow_queue_job", fake_cancel)
+        monkeypatch.setattr(wf_bg, "_cancel_workflow_queue_job", fake_cancel)
 
         for job_id in ("a", "b"):
-            run = workflow_module._BackgroundRun(user_id="u")
-            await workflow_module._register_background_run(job_id, run)
+            run = wf_bg._BackgroundRun(user_id="u")
+            await wf_bg._register_background_run(job_id, run)
 
         # All running; adding a third must evict the oldest (a) and cancel it.
-        third = workflow_module._BackgroundRun(user_id="u")
-        await workflow_module._register_background_run("c", third)
+        third = wf_bg._BackgroundRun(user_id="u")
+        await wf_bg._register_background_run("c", third)
 
-        assert "a" not in workflow_module._BACKGROUND_RUNS
-        assert "b" in workflow_module._BACKGROUND_RUNS
-        assert "c" in workflow_module._BACKGROUND_RUNS
+        assert "a" not in wf_bg._BACKGROUND_RUNS
+        assert "b" in wf_bg._BACKGROUND_RUNS
+        assert "c" in wf_bg._BACKGROUND_RUNS
         assert cancelled == ["a"], "Evicted still-running run's buffer writer was not cancelled"
 
 
@@ -2073,26 +2115,26 @@ class TestClearBackgroundRun:
     """
 
     async def test_clear_pops_registry_entry_and_finishes_buffer(self, monkeypatch):
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
 
-        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
+        monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
-        bg_run = workflow_module._BackgroundRun(user_id="u")
-        await workflow_module._register_background_run("job-1", bg_run)
+        bg_run = wf_bg._BackgroundRun(user_id="u")
+        await wf_bg._register_background_run("job-1", bg_run)
         assert bg_run.done is False
 
-        await workflow_module._clear_background_run("job-1")
+        await wf_bg._clear_background_run("job-1")
 
-        assert "job-1" not in workflow_module._BACKGROUND_RUNS
+        assert "job-1" not in wf_bg._BACKGROUND_RUNS
         assert bg_run.done is True
 
     async def test_clear_is_a_noop_for_unknown_job_id(self, monkeypatch):
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
 
-        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
+        monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
         # Must not raise even when nothing is registered.
-        await workflow_module._clear_background_run("nope")
+        await wf_bg._clear_background_run("nope")
 
 
 class TestBackgroundRunReplayConcurrentReaders:
@@ -2108,9 +2150,9 @@ class TestBackgroundRunReplayConcurrentReaders:
     async def test_two_concurrent_readers_each_receive_all_frames(self):
         import asyncio as _asyncio
 
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
 
-        bg_run = workflow_module._BackgroundRun(user_id="u")
+        bg_run = wf_bg._BackgroundRun(user_id="u")
 
         async def consume() -> list[bytes]:
             return [frame async for frame in bg_run.replay(start_index=0)]
@@ -2145,9 +2187,9 @@ class TestBackgroundRunReplayConcurrentReaders:
         """
         import asyncio as _asyncio
 
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
 
-        bg_run = workflow_module._BackgroundRun(user_id="u")
+        bg_run = wf_bg._BackgroundRun(user_id="u")
 
         # Buffer two frames before any reader attaches.
         await bg_run.append(b"early-1")
@@ -2169,9 +2211,9 @@ class TestBackgroundRunReplayConcurrentReaders:
         """``start_index`` honors the Last-Event-ID hand-off semantics."""
         import asyncio as _asyncio
 
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
 
-        bg_run = workflow_module._BackgroundRun(user_id="u")
+        bg_run = wf_bg._BackgroundRun(user_id="u")
         await bg_run.append(b"f0")
         await bg_run.append(b"f1")
         await bg_run.append(b"f2")
@@ -2213,7 +2255,7 @@ class TestBufferBackgroundRunUnknownProtocolGuard:
         """The defensive UnknownStreamProtocolError path finalizes job + buffer cleanly."""
         from uuid import uuid4 as _uuid4
 
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
         from langflow.api.v2.adapters import STREAM_ADAPTERS as _REGISTRY
         from langflow.api.v2.converters import ParsedWorkflowRun
         from langflow.services.database.models.flow.model import Flow, FlowRead
@@ -2236,16 +2278,16 @@ class TestBufferBackgroundRunUnknownProtocolGuard:
             user_row = await session.get(_User, created_api_key.user_id)
             user = UserRead.model_validate(user_row, from_attributes=True)
 
-        bg_run = workflow_module._BackgroundRun(user_id=str(created_api_key.user_id))
+        bg_run = wf_bg._BackgroundRun(user_id=str(created_api_key.user_id))
 
         # ``get_stream_adapter`` reads the registry dict from
         # ``adapters.registry`` directly. Rebinding the imported reference on
-        # ``workflow_module`` has no effect on the lookup; we have to mutate the
+        # ``workflow_background`` has no effect on the lookup; we have to mutate the
         # shared dict in place and restore it afterwards.
         snapshot = dict(_REGISTRY)
         _REGISTRY.clear()
         try:
-            await workflow_module._buffer_background_run(
+            await wf_bg._buffer_background_run(
                 bg_run=bg_run,
                 flow=flow,
                 parsed=ParsedWorkflowRun(flow_id=str(empty_flow), mode="background"),
@@ -2268,7 +2310,7 @@ class TestBufferBackgroundRunUnknownProtocolGuard:
         """The coroutine is fire-and-forget; it must swallow the registry mismatch cleanly."""
         from uuid import uuid4 as _uuid4
 
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
         from langflow.api.v2.adapters import STREAM_ADAPTERS as _REGISTRY
         from langflow.api.v2.converters import ParsedWorkflowRun
         from langflow.services.database.models.flow.model import Flow, FlowRead
@@ -2289,13 +2331,13 @@ class TestBufferBackgroundRunUnknownProtocolGuard:
             user_row = await session.get(_User, created_api_key.user_id)
             user = UserRead.model_validate(user_row, from_attributes=True)
 
-        bg_run = workflow_module._BackgroundRun(user_id=str(created_api_key.user_id))
+        bg_run = wf_bg._BackgroundRun(user_id=str(created_api_key.user_id))
 
         snapshot = dict(_REGISTRY)
         _REGISTRY.clear()
         try:
             # Must not raise, even though the protocol is unknown.
-            await workflow_module._buffer_background_run(
+            await wf_bg._buffer_background_run(
                 bg_run=bg_run,
                 flow=flow,
                 parsed=ParsedWorkflowRun(flow_id=str(empty_flow), mode="background"),
@@ -2317,7 +2359,7 @@ class TestExecuteWorkflowBackgroundQueueOwnership:
         via the queue cancel side-channel plus the persisted workflow Job row,
         so registering them would let the polling watchdog reclaim long runs.
         """
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
         from langflow.api.v2.converters import ParsedWorkflowRun
 
         job_id = uuid4()
@@ -2342,11 +2384,11 @@ class TestExecuteWorkflowBackgroundQueueOwnership:
                 started_jobs.append(seen_job_id)
                 task_coro.close()
 
-        monkeypatch.setattr(workflow_module, "get_job_service", lambda: FakeJobService())
-        monkeypatch.setattr(workflow_module, "get_queue_service", lambda: FakeQueueService())
-        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
+        monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
+        monkeypatch.setattr(wf_bg, "get_queue_service", lambda: FakeQueueService())
+        monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
-        response = await workflow_module.execute_workflow_background(
+        response = await wf_bg.execute_workflow_background(
             parsed=ParsedWorkflowRun(flow_id=str(flow_id), mode="background"),
             flow=SimpleNamespace(id=flow_id, name="Background Flow"),
             job_id=job_id,
@@ -2380,6 +2422,7 @@ class TestStopWorkflowEndToEnd:
         from uuid import UUID as _UUID
 
         from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
         from langflow.services.database.models.jobs.model import Job, JobStatus
 
         headers = {"x-api-key": created_api_key.api_key}
@@ -2423,7 +2466,7 @@ class TestStopWorkflowEndToEnd:
             assert row is not None
             assert row.status == JobStatus.CANCELLED
         finally:
-            await workflow_module._clear_background_run(job_id)
+            await wf_bg._clear_background_run(job_id)
 
     async def test_stop_cancels_queue_owned_background_task_when_task_service_noops(
         self,
@@ -2433,7 +2476,8 @@ class TestStopWorkflowEndToEnd:
         monkeypatch,
     ):
         """The v2 background runner is owned by the queue service, not TaskService."""
-        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
+        from langflow.api.v2 import workflow_execution as wf_exec
         from langflow.services.deps import get_queue_service
         from langflow.services.job_queue.service import JobQueueNotFoundError
 
@@ -2453,8 +2497,8 @@ class TestStopWorkflowEndToEnd:
             async def revoke_task(self, _task_id):
                 return True
 
-        monkeypatch.setattr(workflow_module, "_buffer_background_run", _never_finishes)
-        monkeypatch.setattr(workflow_module, "get_task_service", lambda: NoopTaskService())
+        monkeypatch.setattr(wf_bg, "_buffer_background_run", _never_finishes)
+        monkeypatch.setattr(wf_exec, "get_task_service", lambda: NoopTaskService())
 
         headers = {"x-api-key": created_api_key.api_key}
         try:
@@ -2484,7 +2528,7 @@ class TestStopWorkflowEndToEnd:
             if job_id is not None:
                 with contextlib.suppress(BaseException):
                     await get_queue_service().cleanup_job(job_id)
-                await workflow_module._clear_background_run(job_id)
+                await wf_bg._clear_background_run(job_id)
 
     async def test_stop_signals_cross_worker_queue_owner_before_marking_cancelled(
         self,
@@ -2492,6 +2536,7 @@ class TestStopWorkflowEndToEnd:
     ):
         """Redis-backed jobs owned by another worker must be cancelled by pub/sub signal."""
         from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_background as wf_bg
 
         job_id = uuid4()
         current_user_id = uuid4()
@@ -2535,7 +2580,7 @@ class TestStopWorkflowEndToEnd:
         job_service = FakeJobService()
         queue_service = CrossWorkerQueueService()
         monkeypatch.setattr(workflow_module, "get_job_service", lambda: job_service)
-        monkeypatch.setattr(workflow_module, "get_queue_service", lambda: queue_service)
+        monkeypatch.setattr(wf_bg, "get_queue_service", lambda: queue_service)
 
         response = await workflow_module.stop_workflow(
             workflow_module.WorkflowStopRequest(job_id=job_id),

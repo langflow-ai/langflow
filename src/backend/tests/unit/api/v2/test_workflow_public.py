@@ -40,7 +40,7 @@ def _stub_generate_flow_events(monkeypatch, captured: dict) -> None:
     impersonation, and source_flow_id propagation without needing the
     full streaming pipeline.
     """
-    import langflow.api.v2.workflow as workflow_module
+    from langflow.api.v2 import workflow_execution
 
     async def _fake_generate_flow_events(**kwargs: Any) -> None:
         captured.update(kwargs)
@@ -49,7 +49,7 @@ def _stub_generate_flow_events(monkeypatch, captured: dict) -> None:
 
         await kwargs["event_manager"].queue.put((None, None, time.time()))
 
-    monkeypatch.setattr(workflow_module, "generate_flow_events", _fake_generate_flow_events)
+    monkeypatch.setattr(workflow_execution, "generate_flow_events", _fake_generate_flow_events)
 
 
 def _send_unauthenticated(client: AsyncClient, client_id: str) -> None:
