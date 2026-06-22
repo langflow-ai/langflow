@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { SpanNode } from "./SpanNode";
 import type { Span } from "./types";
+import { useSpanTree } from "./useSpanTree";
 
 interface SpanTreeProps {
   spans: Span[];
@@ -9,60 +10,52 @@ interface SpanTreeProps {
   onSelectSpan: (span: Span) => void;
 }
 
-/**
- * Recursive tree component for rendering hierarchical spans
- * Manages expand/collapse state for each node
- */
 export function SpanTree({
   spans,
   selectedSpanId,
   onSelectSpan,
 }: SpanTreeProps) {
-  // Track which spans are expanded (default: root level expanded)
   const { t } = useTranslation();
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    // Expand root level spans by default
-    spans.forEach((span) => initial.add(span.id));
-    return initial;
-  });
+  const {
+    expandedIds,
+    focusedId,
+    setFocusedId,
+    toggleExpand,
+    handleTreeKeyDown,
+  } = useSpanTree({ spans, selectedSpanId });
 
-  const toggleExpand = useCallback((spanId: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(spanId)) {
-        next.delete(spanId);
-      } else {
-        next.add(spanId);
-      }
-      return next;
-    });
-  }, []);
-
-  /**
-   * Recursively render span nodes
-   */
   const renderSpan = useCallback(
-    (span: Span, depth: number) => {
+    (span: Span, depth: number, posInSet: number, setSize: number) => {
       const isExpanded = expandedIds.has(span.id);
       const isSelected = span.id === selectedSpanId;
 
       return (
-        <div key={span.id} role="group">
+        <div key={span.id}>
           <SpanNode
             span={span}
             depth={depth}
             isExpanded={isExpanded}
             isSelected={isSelected}
+            tabIndex={focusedId === span.id ? 0 : -1}
+            posInSet={posInSet}
+            setSize={setSize}
             onToggle={() => toggleExpand(span.id)}
-            onSelect={() => onSelectSpan(span)}
+            onSelect={() => {
+              setFocusedId(span.id);
+              onSelectSpan(span);
+            }}
           />
-          {isExpanded &&
-            span.children.map((child) => renderSpan(child, depth + 1))}
+          {isExpanded && span.children.length > 0 && (
+            <div role="group">
+              {span.children.map((child, idx) =>
+                renderSpan(child, depth + 1, idx + 1, span.children.length),
+              )}
+            </div>
+          )}
         </div>
       );
     },
-    [expandedIds, selectedSpanId, toggleExpand, onSelectSpan],
+    [expandedIds, selectedSpanId, focusedId, toggleExpand, setFocusedId, onSelectSpan],
   );
 
   return (
@@ -71,8 +64,11 @@ export function SpanTree({
       role="tree"
       aria-label={t("trace.spanTree")}
       data-testid="span-tree"
+      onKeyDown={handleTreeKeyDown}
     >
-      {spans.map((span) => renderSpan(span, 0))}
+      {spans.map((span, idx) =>
+        renderSpan(span, 0, idx + 1, spans.length),
+      )}
     </div>
   );
 }

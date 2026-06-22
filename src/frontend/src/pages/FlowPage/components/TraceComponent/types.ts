@@ -58,6 +58,9 @@ export interface SpanNodeProps {
   depth: number;
   isExpanded: boolean;
   isSelected: boolean;
+  tabIndex?: number;
+  posInSet?: number;
+  setSize?: number;
   onToggle: () => void;
   onSelect: () => void;
 }
