@@ -8,7 +8,11 @@ from sqlalchemy import Select
 from sqlmodel import col, or_
 
 from langflow.services.authorization.actions import FlowAction
-from langflow.services.authorization.guards import _auth_context, _coerce_action
+from langflow.services.authorization.guards import (
+    _api_key_scopes_require_plugin_enforcement,
+    _auth_context,
+    _coerce_action,
+)
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
@@ -54,13 +58,19 @@ async def filter_visible_resources(
     authz = get_authorization_service()
     act_str = _coerce_action(act)
     user_id = getattr(user, "id", None)
+    owner_override_enabled = not await _api_key_scopes_require_plugin_enforcement()
 
     # Owned rows skip batch_enforce (matches direct-read owner override).
     owned_indices: set[int] = set()
     enforce_indices: list[int] = []
     enforce_items: list[T] = []
     for index, item in enumerate(candidates):
-        if owner_extractor is not None and user_id is not None and owner_extractor(item) == user_id:
+        if (
+            owner_override_enabled
+            and owner_extractor is not None
+            and user_id is not None
+            and owner_extractor(item) == user_id
+        ):
             owned_indices.add(index)
         else:
             enforce_indices.append(index)

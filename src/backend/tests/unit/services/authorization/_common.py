@@ -33,10 +33,12 @@ class _StubAuthorizationService:
         *,
         allow: bool = True,
         batch_results: list[bool] | None = None,
+        supports_api_key_scopes: bool = False,
         visible_ids: list | None = None,
     ) -> None:
         self.allow = allow
         self.batch_results = batch_results
+        self._supports_api_key_scopes = supports_api_key_scopes
         # ``None`` mirrors the OSS pass-through (declines to prefilter); a list
         # mirrors a registered plugin returning a concrete visible-id set.
         self.visible_ids = visible_ids
@@ -57,6 +59,9 @@ class _StubAuthorizationService:
     async def list_visible_resource_ids(self, **kwargs) -> list | None:
         self.visible_calls.append(kwargs)
         return self.visible_ids
+
+    async def supports_api_key_scopes(self) -> bool:
+        return self._supports_api_key_scopes
 
 
 def install_settings(monkeypatch, *, authz_enabled: bool, audit_enabled: bool = False) -> None:

@@ -182,6 +182,86 @@
       "added_in": "1.10.0"
     },
     {
+      "bare_class_name": "FirecrawlCrawlApi",
+      "target": "ext:firecrawl:FirecrawlCrawlApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.firecrawl_crawl_api.FirecrawlCrawlApi",
+      "target": "ext:firecrawl:FirecrawlCrawlApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.FirecrawlCrawlApi",
+      "target": "ext:firecrawl:FirecrawlCrawlApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:firecrawl:FirecrawlCrawlApi@official-pre-a",
+      "target": "ext:firecrawl:FirecrawlCrawlApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "FirecrawlMapApi",
+      "target": "ext:firecrawl:FirecrawlMapApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.firecrawl_map_api.FirecrawlMapApi",
+      "target": "ext:firecrawl:FirecrawlMapApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.FirecrawlMapApi",
+      "target": "ext:firecrawl:FirecrawlMapApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:firecrawl:FirecrawlMapApi@official-pre-a",
+      "target": "ext:firecrawl:FirecrawlMapApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "FirecrawlScrapeApi",
+      "target": "ext:firecrawl:FirecrawlScrapeApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.firecrawl_scrape_api.FirecrawlScrapeApi",
+      "target": "ext:firecrawl:FirecrawlScrapeApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.FirecrawlScrapeApi",
+      "target": "ext:firecrawl:FirecrawlScrapeApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:firecrawl:FirecrawlScrapeApi@official-pre-a",
+      "target": "ext:firecrawl:FirecrawlScrapeApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "FirecrawlSearchApi",
+      "target": "ext:firecrawl:FirecrawlSearchApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.firecrawl_search_api.FirecrawlSearchApi",
+      "target": "ext:firecrawl:FirecrawlSearchApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.FirecrawlSearchApi",
+      "target": "ext:firecrawl:FirecrawlSearchApi@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:firecrawl:FirecrawlSearchApi@official-pre-a",
+      "target": "ext:firecrawl:FirecrawlSearchApi@official",
+      "added_in": "1.11.0"
+    },
+    {
       "bare_class_name": "NextPlaidVectorStoreComponent",
       "target": "ext:nextplaid:NextPlaidVectorStoreComponent@official",
       "added_in": "1.11.0"

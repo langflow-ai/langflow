@@ -53,7 +53,7 @@ class FirecrawlMapApi(Component):
 
     def map(self) -> Data:
         try:
-            from firecrawl import FirecrawlApp
+            from firecrawl import Firecrawl
         except ImportError as e:
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
@@ -69,20 +69,25 @@ class FirecrawlMapApi(Component):
             msg = "No valid URLs provided"
             raise ValueError(msg)
 
-        params = {
-            "ignoreSitemap": self.ignore_sitemap,
-            "sitemapOnly": self.sitemap_only,
-            "includeSubdomains": self.include_subdomains,
-        }
+        # firecrawl-py v2 replaced the separate "ignoreSitemap"/"sitemapOnly" flags with a
+        # single "sitemap" mode: "only" (sitemap only), "skip" (ignore sitemap), or the
+        # default mixed behavior.
+        kwargs: dict = {"include_subdomains": self.include_subdomains}
+        if self.sitemap_only:
+            kwargs["sitemap"] = "only"
+        elif self.ignore_sitemap:
+            kwargs["sitemap"] = "skip"
 
-        app = FirecrawlApp(api_key=self.api_key)
+        app = Firecrawl(api_key=self.api_key)
 
-        # Map all provided URLs and combine results
+        # Map all provided URLs and combine results.
         combined_links = []
         for url in urls:
-            result = app.map_url(url, params=params)
-            if isinstance(result, dict) and "links" in result:
-                combined_links.extend(result["links"])
+            result = app.map(url, **kwargs)
+            # v2 returns a typed MapData object whose .links is a list of typed
+            # SearchResult objects; serialize each to a dict for downstream consumers.
+            links = getattr(result, "links", None) or []
+            combined_links.extend(link.model_dump() if hasattr(link, "model_dump") else link for link in links)
 
         map_result = {"success": True, "links": combined_links}
 
