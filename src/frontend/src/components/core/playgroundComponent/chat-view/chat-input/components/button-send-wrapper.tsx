@@ -57,13 +57,16 @@ const ButtonSendWrapper = ({
       disabled={isLoading}
       unstyled
       data-testid="button-send"
+      aria-label={
+        isBuilding ? t("playground.cancelButton") : t("playground.sendButton")
+      }
       title={
         isBuilding ? t("playground.cancelButton") : t("playground.sendButton")
       }
     >
       <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
         {isBuilding ? (
-          <Square className="h-3.5 w-3.5" fill="currentColor" />
+          <Square className="h-3.5 w-3.5" fill="currentColor" aria-hidden />
         ) : (
           <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
         )}

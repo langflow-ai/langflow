@@ -348,7 +348,9 @@ const SimpleSidebar = React.forwardRef<
     { side = "right", resizable = true, className, children, ...props },
     ref,
   ) => {
+    const { t } = useTranslation();
     const { open, isResizing, fullscreen } = useSimpleSidebar();
+    const sidebarRef = React.useRef<HTMLDivElement | null>(null);
 
     // Memoized animation values
     const spacerWidth = React.useMemo(() => {
@@ -369,6 +371,66 @@ const SimpleSidebar = React.forwardRef<
       if (fullscreen) return 0;
       return isResizing ? 0 : 0.3;
     }, [isResizing, fullscreen]);
+
+    const handleSidebarKeyDown = React.useCallback(
+      (event: KeyboardEvent) => {
+        if (!open || !fullscreen || event.key !== "Tab") return;
+
+        const focusableElements = Array.from(
+          sidebarRef.current?.querySelectorAll<HTMLElement>(
+            [
+              "a[href]",
+              "button:not([disabled])",
+              "textarea:not([disabled])",
+              "input:not([disabled])",
+              "select:not([disabled])",
+              '[tabindex]:not([tabindex="-1"])',
+            ].join(","),
+          ) ?? [],
+        ).filter(
+          (element) =>
+            element.getAttribute("aria-hidden") !== "true" &&
+            !element.closest("[inert]"),
+        );
+
+        if (focusableElements.length === 0) {
+          event.preventDefault();
+          sidebarRef.current?.focus();
+          return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        const activeElement = document.activeElement;
+
+        if (event.shiftKey) {
+          if (
+            activeElement === firstElement ||
+            activeElement === sidebarRef.current
+          ) {
+            event.preventDefault();
+            lastElement.focus();
+          }
+          return;
+        }
+
+        if (activeElement === lastElement) {
+          event.preventDefault();
+          firstElement.focus();
+        }
+      },
+      [fullscreen, open],
+    );
+
+    React.useEffect(() => {
+      const sidebarElement = sidebarRef.current;
+      if (!open || !fullscreen || !sidebarElement) return;
+
+      sidebarElement.addEventListener("keydown", handleSidebarKeyDown);
+      return () => {
+        sidebarElement.removeEventListener("keydown", handleSidebarKeyDown);
+      };
+    }, [fullscreen, handleSidebarKeyDown, open]);
 
     return (
       <div
@@ -408,7 +470,12 @@ const SimpleSidebar = React.forwardRef<
           }}
         >
           <div
+            ref={sidebarRef}
             data-simple-sidebar="sidebar"
+            tabIndex={fullscreen && open ? -1 : undefined}
+            role={fullscreen && open ? "dialog" : undefined}
+            aria-modal={fullscreen && open ? true : undefined}
+            aria-label={fullscreen && open ? t("misc.playground") : undefined}
             className="flex h-full w-full flex-col bg-background relative"
             style={{ visibility: open ? "visible" : "hidden" }}
           >
@@ -428,7 +495,7 @@ const SimpleSidebarTrigger = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button">
 >(({ className, onClick, children, ...props }, ref) => {
-  const { toggleSidebar, open } = useSimpleSidebar();
+  const { toggleSidebar } = useSimpleSidebar();
 
   const handleClick = React.useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {

@@ -191,6 +191,9 @@ export function ChatSidebar({
                           size="icon"
                           className="h-8 w-8 p-2 rounded text-status-red hover:text-status-red hover:bg-error-background"
                           onClick={handleBulkDelete}
+                          aria-label={t("chat.deleteSessionsCount", {
+                            count: selectedSessions.size,
+                          })}
                         >
                           <ForwardedIconComponent
                             name="Trash2"

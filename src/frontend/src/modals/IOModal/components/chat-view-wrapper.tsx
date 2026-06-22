@@ -44,10 +44,12 @@ export const ChatViewWrapper = ({
               size="icon"
               onClick={() => setSidebarOpen(true)}
               className="h-8 w-8"
+              aria-label="Show sidebar"
             >
               <IconComponent
                 name="PanelLeftOpen"
                 className="h-[18px] w-[18px] text-ring"
+                aria-hidden="true"
               />
             </Button>
           </div>
@@ -85,10 +87,12 @@ export const ChatViewWrapper = ({
                 setvisibleSession(undefined);
                 setSelectedViewField(undefined);
               }}
+              aria-label={t("modal.io.newChat")}
             >
               <IconComponent
                 name="Plus"
                 className="!h-[18px] !w-[18px] text-ring"
+                aria-hidden="true"
               />
             </Button>
           </ShadTooltip>
