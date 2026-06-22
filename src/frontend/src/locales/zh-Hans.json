@@ -1766,6 +1766,7 @@
   "sidebar.downloadError": "下载项目时发生错误。",
   "sidebar.emptyMessage": "开始创建项目或流程",
   "sidebar.getStarted": "开始",
+  "sidebar.closeGetStarted": "Close Get Started panel",
   "sidebar.joinCommunity": "加入社区",
   "sidebar.knowledge": "知识",
   "sidebar.legacyLabel": "原有",

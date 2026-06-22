@@ -1207,6 +1207,7 @@
   "sidebar.allSet": "All Set",
   "sidebar.mcpExposeFlows": "Expose flows as tools from clients like Cursor or Claude.",
   "sidebar.getStarted": "Get started",
+  "sidebar.closeGetStarted": "Close Get Started panel",
   "sidebar.starRepo": "Star repo for updates",
   "sidebar.joinCommunity": "Join the community",
   "sidebar.createFlow": "Create a flow",

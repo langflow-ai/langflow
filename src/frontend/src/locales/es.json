@@ -1766,6 +1766,7 @@
   "sidebar.downloadError": "Se ha producido un error al descargar tu proyecto.",
   "sidebar.emptyMessage": "Empieza a crear un proyecto o un flujo",
   "sidebar.getStarted": "Cómo empezar",
+  "sidebar.closeGetStarted": "Close Get Started panel",
   "sidebar.joinCommunity": "Únete a la comunidad",
   "sidebar.knowledge": "Conocimientos",
   "sidebar.legacyLabel": "Heredado",

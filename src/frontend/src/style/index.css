@@ -240,7 +240,7 @@
     --ring: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --primary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
     --secondary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
-    --placeholder-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
+    --placeholder-foreground: 240 4% 63%; /* hsl(240, 4%, 63%) — lightened for WCAG 1.4.3 ≥4.5:1 on dark bg */
     --canvas: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --canvas-dot: 240 5.3% 26.1%; /* hsl(240, 5.3%, 26.1%) */
 

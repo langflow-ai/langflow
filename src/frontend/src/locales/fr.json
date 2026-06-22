@@ -1766,6 +1766,7 @@
   "sidebar.downloadError": "Une erreur s'est produite lors du téléchargement de votre projet.",
   "sidebar.emptyMessage": "Commencez à créer un projet ou un flux",
   "sidebar.getStarted": "Premiers pas",
+  "sidebar.closeGetStarted": "Close Get Started panel",
   "sidebar.joinCommunity": "Rejoignez la communauté",
   "sidebar.knowledge": "Connaissances",
   "sidebar.legacyLabel": "Existant",

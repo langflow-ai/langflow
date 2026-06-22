@@ -1766,6 +1766,7 @@
   "sidebar.downloadError": "プロジェクトのダウンロード中にエラーが発生しました。",
   "sidebar.emptyMessage": "プロジェクトまたはフローの作成を開始する",
   "sidebar.getStarted": "使用を開始する",
+  "sidebar.closeGetStarted": "Close Get Started panel",
   "sidebar.joinCommunity": "コミュニティに参加しましょう",
   "sidebar.knowledge": "ナレッジ",
   "sidebar.legacyLabel": "レガシー",
