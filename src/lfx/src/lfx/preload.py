@@ -26,18 +26,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-# Core components as (module, class) pairs, assumed from standard usage. This list
-# can and should evolve if we want to warm more or less components.
-# Importing the class (not just the package) is what loads the heavy submodule + deps.
+# Core (module, class) pairs to warm. Importing the class (not just the package) is what
+# pulls in the heavy submodule + deps. Evolve this list as the warm set changes.
 DEFAULT_CORE_COMPONENTS: tuple[tuple[str, str], ...] = (
     ("lfx.components.input_output", "ChatInput"),
     ("lfx.components.input_output", "ChatOutput"),
     ("lfx.components.models_and_agents", "PromptComponent"),
     ("lfx.components.models_and_agents", "LanguageModelComponent"),
     ("lfx.components.models_and_agents", "AgentComponent"),
-    ("lfx.components.models_and_agents", "MemoryComponent"),
-    ("lfx.components.processing", "ParserComponent"),
-    ("lfx.components.utilities", "CalculatorComponent"),
 )
 
 
@@ -82,22 +78,17 @@ def freeze_heap() -> None:
 def teardown_warm_services() -> None:
     """Dispose every service instantiated during warming, before a fork/snapshot.
 
-    Warming triggers lazy service discovery + instantiation (settings, tracing, and
-    anything a registered ``lfx.services`` plugin replaces). The bundled lfx services are
-    fork-safe no-ops, but a real plugin (a DB pool, an external cache socket, a telemetry
-    thread) opened in ``__init__`` would be inherited live by every process forked from
-    this one (Gunicorn ``--preload``). This tears those down — mirroring Langflow's
-    ``engine.dispose()`` / cache ``teardown()`` before its master fork.
+    Bundled lfx services are fork-safe no-ops, but a real ``lfx.services`` plugin may open a
+    DB pool / cache socket / telemetry thread in ``__init__`` that every forked process would
+    then inherit live. Disposing here mirrors Langflow's ``engine.dispose()`` before its fork.
 
-    A teardown failure is fatal: it raises :class:`PrewarmError` rather than let a
-    half-disposed process be captured into a fork. Do NOT call this on the Firecracker
-    ``--unsafe-run`` path, where live connections across snapshot/restore are intentional.
+    A teardown failure raises :class:`PrewarmError` rather than capture a half-disposed
+    process into a fork. Don't call this on the ``--unsafe-run`` path, where live connections
+    across snapshot/restore are intentional.
 
-    Note: the warm-up runs flows in throwaway ``asyncio.run`` loops, so teardown happens
-    in a *new* loop here. A plugin service that binds an async resource to the loop it was
-    created on (e.g. an asyncpg pool) may fail to dispose cross-loop; that surfaces as a
-    fatal :class:`PrewarmError` (fail-safe — the process is refused for fork rather than
-    captured dirty), never silent corruption. Bundled lfx service teardowns are loop-free.
+    Teardown runs in a fresh ``asyncio.run`` loop, so a plugin resource bound to the warm-up
+    loop (e.g. an asyncpg pool) may fail cross-loop — that too surfaces as a fatal
+    :class:`PrewarmError`, never silent corruption.
     """
     import asyncio
 
@@ -262,11 +253,9 @@ def prewarm_flow(
     except Exception as exc:  # noqa: BLE001 - capture so multi-flow warming isn't aborted by one failure
         result.error = f"{type(exc).__name__}: {exc}"
     finally:
-        # Drop the flow's component instances and run their finalizers now, so any
-        # per-instance clients/connections opened during `run` are closed before a
-        # subsequent freeze/fork. Import/class/JIT warmth lives in modules, not instances,
-        # so it is unaffected. (Live execution before fork is still unsafe — see docs;
-        # this is hygiene, not a substitute for a fork-safe warm path.)
+        # Drop component instances and run finalizers now, closing any per-instance
+        # connections opened during `run` before a freeze/fork. Module-level import/JIT
+        # warmth is unaffected.
         graph = None  # explicit drop of the only ref before gc
         gc.collect()
         if run:
@@ -278,11 +267,9 @@ def prewarm_flow(
             result.ghost_threads = report.ghost_threads
             result.ghost_connections = report.ghost_connections
 
-    # Build-only (fork-safe) path: dispose services opened during the build before freezing.
-    # A `run` deliberately keeps live state (Firecracker), so never tear down there.
-    # Capture a teardown failure into ``error`` instead of raising: this function's contract
-    # is that one bad flow never aborts a multi-flow warming loop, so teardown — which raises
-    # PrewarmError — must be funneled into ``error`` like load/build/run failures above.
+    # Build-only is the fork-safe path: dispose services before freezing. A `run` keeps live
+    # state for Firecracker, so never tear down there. Funnel teardown failures into .error
+    # (not raise) so one bad flow doesn't abort a multi-flow loop.
     if teardown_services and not run and result.error is None:
         try:
             teardown_warm_services()

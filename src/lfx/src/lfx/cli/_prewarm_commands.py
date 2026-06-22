@@ -56,10 +56,8 @@ def register(app: typer.Typer) -> None:
 
         failed = False
 
-        # Service teardown is centralized below (one pass after ALL warming) so the
-        # per-flow layer doesn't re-instantiate services the base layer just disposed.
-        # The --unsafe-run path intentionally leaves live connections (Firecracker), so
-        # it skips teardown entirely.
+        # One teardown pass after all warming, so per-flow warming doesn't re-instantiate
+        # what the base layer disposed. --unsafe-run keeps live connections, so skip it.
         do_teardown = not unsafe_run
 
         # Base layer: common component imports + model-free execution machinery.
@@ -98,8 +96,7 @@ def register(app: typer.Typer) -> None:
                     )
 
         # Dispose any services warming instantiated so a Gunicorn/preload fork can't
-        # inherit a real plugin's live pool/socket/thread. Fatal on failure — a
-        # half-disposed process must never be captured into a fork.
+        # inherit a real plugin's live pool/socket/thread.
         if do_teardown:
             try:
                 teardown_warm_services()

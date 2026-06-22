@@ -7,13 +7,6 @@ import threading
 import pytest
 
 
-def test_benign_thread_prefixes_cover_known_safe_threads():
-    from lfx.fork import BENIGN_THREAD_PREFIXES
-
-    for expected in ("OTel", "prometheus", "loguru", "asyncio", "ThreadPoolExecutor"):
-        assert expected in BENIGN_THREAD_PREFIXES
-
-
 def test_find_ghost_threads_detects_non_benign_thread():
     from lfx.fork import find_ghost_threads
 

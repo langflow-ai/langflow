@@ -287,12 +287,8 @@ class ServiceManager:
         """Teardown all the services.
 
         Args:
-            raise_on_error: When True, every teardown is still attempted, but if any
-                service (or the adapter registries) raised, the first error is re-raised
-                after the table is cleared. Fork-safety-critical callers (e.g. disposing
-                a pluggable DB/cache service before a Gunicorn ``--preload`` fork) must
-                not silently inherit a half-disposed pool/socket. Default False keeps the
-                best-effort behavior — failures are logged only.
+            raise_on_error: When True, still attempt every teardown, but re-raise the
+                first error after the table is cleared. Default False logs failures only.
         """
         errors: list[tuple[str, Exception]] = []
         for service in list(self.services.values()):

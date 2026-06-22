@@ -184,10 +184,8 @@ def test_warmup_makes_subsequent_build_run_much_faster():
         )
     )
 
-    # Cold/warm margin varies a lot by machine (cold is dominated by one-time imports, which
-    # this isolated env can partly amortize — observed ~20x here, ~55x on a cold box). Assert a
-    # 10x floor: comfortably below the observed margin (not flaky) yet tight enough to catch a
-    # real regression that erodes most of the warm benefit (a loose 5x floor would let that slip).
+    # 10x floor: well below the observed margin (~20-55x) but tight enough to catch a
+    # regression that erodes most of the warm benefit.
     assert warmed * 10 < cold, f"warmed={warmed:.4f}s cold={cold:.4f}s"
 
 
@@ -422,14 +420,12 @@ def test_teardown_warm_services_raises_on_failure():
 
 
 class _LoopBoundSpyService(Service):
-    """Service holding an asyncio resource bound to a *different* event loop.
+    """Service holding an asyncio resource bound to a different event loop.
 
-    Stands in for a real pluggable service (e.g. an asyncpg pool / aiohttp session) that
-    binds a resource to the warm-up run's event loop. teardown_warm_services runs teardown
-    in a *new* asyncio.run loop, so awaiting that loop-bound resource there raises the
-    cross-loop RuntimeError the docstring warns about — which must surface as a fatal
-    PrewarmError, never silently. (A pending Future is used rather than a Lock because an
-    uncontended asyncio.Lock takes a fast path that never binds to a loop on 3.12+.)
+    Stands in for a plugin (asyncpg pool / aiohttp session) that bound a resource to the
+    warm-up loop; teardown runs in a new loop and awaiting it there raises the cross-loop
+    error. (A pending Future, not a Lock — an uncontended Lock takes a fast path that never
+    binds to a loop on 3.12+.)
     """
 
     def __init__(self, name: str = "loopbound_spy") -> None:

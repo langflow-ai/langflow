@@ -63,28 +63,6 @@ def test_unsafe_run_skips_service_teardown():
     assert "Disposed warm services" not in result.stdout
 
 
-def test_prewarm_flow_build_only(tmp_path):
-    """`--flow` builds the given flow (no --run = no execution)."""
-    import json
-
-    from lfx.components.input_output import ChatInput, ChatOutput
-    from lfx.components.models_and_agents import PromptComponent
-    from lfx.graph.graph.base import Graph
-
-    ci = ChatInput(_id="ci")
-    pr = PromptComponent(_id="pr")
-    pr.set(template="{m}", m=ci.message_response)
-    co = ChatOutput(_id="co")
-    co.set(input_value=pr.build_prompt)
-    flow_path = tmp_path / "hermetic.json"
-    flow_path.write_text(json.dumps(Graph(ci, co).dump(name="hermetic")))
-
-    result = runner.invoke(app, ["prewarm", "--skip-run", "--flow", str(flow_path)])
-
-    assert result.exit_code == 0, result.stdout
-    assert "built" in result.stdout
-
-
 def _write_hermetic_flow(tmp_path):
     """Write a model-free ChatInput -> Prompt -> ChatOutput flow and return its path."""
     import json
@@ -101,6 +79,16 @@ def _write_hermetic_flow(tmp_path):
     flow_path = tmp_path / "hermetic.json"
     flow_path.write_text(json.dumps(Graph(ci, co).dump(name="hermetic")))
     return flow_path
+
+
+def test_prewarm_flow_build_only(tmp_path):
+    """`--flow` builds the given flow (no --run = no execution)."""
+    flow_path = _write_hermetic_flow(tmp_path)
+
+    result = runner.invoke(app, ["prewarm", "--skip-run", "--flow", str(flow_path)])
+
+    assert result.exit_code == 0, result.stdout
+    assert "built" in result.stdout
 
 
 def test_prewarm_warns_when_a_run_leaves_fork_unsafe_state(tmp_path, monkeypatch):

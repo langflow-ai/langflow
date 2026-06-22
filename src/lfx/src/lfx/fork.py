@@ -3,8 +3,8 @@
 A process about to ``fork()`` (Gunicorn ``--preload``) or be snapshotted must not be
 holding fork-hostile state: non-main threads (they vanish in the child, possibly mid-lock)
 or live non-listening TCP connections (their file descriptors are shared into every child).
-These helpers detect that state so a warm-up path can verify — empirically, not by
-reasoning — that it is safe to fork/snapshot, and dispose any fork-unsafe resources first.
+These helpers detect that state so a warm-up path can confirm it's safe to fork/snapshot
+and dispose any fork-unsafe resources first.
 
 Shared by Langflow's Gunicorn server (`pre_fork` hook) and lfx serve's prewarm.
 """
@@ -48,9 +48,8 @@ def find_ghost_threads() -> list[threading.Thread]:
 def find_ghost_connections() -> list[str]:
     """Return non-listening TCP connections as formatted strings.
 
-    Returns ``[]`` when psutil is not installed. Any *other* failure (e.g. permission
-    denied) propagates, so callers that want observability can log it; callers that want
-    best-effort behaviour should use :func:`fork_safety_report`, which swallows it.
+    Returns ``[]`` when psutil is not installed. Any other failure (e.g. permission denied)
+    propagates; use :func:`fork_safety_report` for best-effort behaviour that swallows it.
     """
     try:
         import psutil
