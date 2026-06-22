@@ -161,6 +161,7 @@ EXPECTED_FIELDS = {
     "rate_limit_per_minute",
     "rate_limit_storage_uri",
     "rate_limit_trust_proxy",
+    "public_flow_rate_limit_per_minute",
     "custom_component_admin_only",
     "allow_components_paths_override",
     # RuntimeSettings
