@@ -64,7 +64,7 @@ export const HeaderButtons = ({
 
   return (
     <>
-      {true && (
+      {!hideGettingStartedProgress && !isDismissedDialog && userData && (
         <>
           <CustomGetStartedProgress
             userData={userData!}
