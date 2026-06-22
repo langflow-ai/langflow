@@ -10,9 +10,9 @@ describe("useSpanTree", () => {
 
   beforeEach(() => {
     focusEl = { focus: jest.fn() };
-    jest.spyOn(document, "querySelector").mockReturnValue(
-      focusEl as unknown as Element,
-    );
+    jest
+      .spyOn(document, "querySelector")
+      .mockReturnValue(focusEl as unknown as Element);
   });
 
   afterEach(() => jest.restoreAllMocks());
@@ -21,10 +21,7 @@ describe("useSpanTree", () => {
 
   describe("initial state", () => {
     it("expands all root spans by default", () => {
-      const spans = [
-        buildSpan({ id: "a" }),
-        buildSpan({ id: "b" }),
-      ];
+      const spans = [buildSpan({ id: "a" }), buildSpan({ id: "b" })];
       const { result } = renderHook(() =>
         useSpanTree({ spans, selectedSpanId: null }),
       );

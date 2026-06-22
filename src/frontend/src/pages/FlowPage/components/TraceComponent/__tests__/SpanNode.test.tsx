@@ -98,7 +98,14 @@ describe("SpanNode", () => {
   it("applies selected styles and aria-selected when isSelected is true", () => {
     render(
       <SpanNode
-        span={buildSpan({ tokenUsage: { promptTokens: 1, completionTokens: 1, totalTokens: 10, cost: 0 } })}
+        span={buildSpan({
+          tokenUsage: {
+            promptTokens: 1,
+            completionTokens: 1,
+            totalTokens: 10,
+            cost: 0,
+          },
+        })}
         depth={0}
         isExpanded={false}
         isSelected={true}

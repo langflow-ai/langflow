@@ -90,20 +90,24 @@ export function SpanNode({
 
       {/* Token count (if applicable) */}
       {tokenStr && (
-        <span className={cn(
-          "flex items-center gap-0.5 text-xs",
-          isSelected ? "text-foreground/65" : "text-muted-foreground",
-        )}>
+        <span
+          className={cn(
+            "flex items-center gap-0.5 text-xs",
+            isSelected ? "text-foreground/65" : "text-muted-foreground",
+          )}
+        >
           <IconComponent name="Coins" className="h-3 w-3" />
           {tokenStr}
         </span>
       )}
 
       {/* Latency */}
-      <span className={cn(
-        "min-w-[48px] text-right text-xs",
-        isSelected ? "text-foreground/65" : "text-muted-foreground",
-      )}>
+      <span
+        className={cn(
+          "min-w-[48px] text-right text-xs",
+          isSelected ? "text-foreground/65" : "text-muted-foreground",
+        )}
+      >
         {latency}
       </span>
 

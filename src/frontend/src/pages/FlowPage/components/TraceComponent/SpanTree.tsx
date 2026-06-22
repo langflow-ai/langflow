@@ -55,7 +55,14 @@ export function SpanTree({
         </div>
       );
     },
-    [expandedIds, selectedSpanId, focusedId, toggleExpand, setFocusedId, onSelectSpan],
+    [
+      expandedIds,
+      selectedSpanId,
+      focusedId,
+      toggleExpand,
+      setFocusedId,
+      onSelectSpan,
+    ],
   );
 
   return (
@@ -66,9 +73,7 @@ export function SpanTree({
       data-testid="span-tree"
       onKeyDown={handleTreeKeyDown}
     >
-      {spans.map((span, idx) =>
-        renderSpan(span, 0, idx + 1, spans.length),
-      )}
+      {spans.map((span, idx) => renderSpan(span, 0, idx + 1, spans.length))}
     </div>
   );
 }

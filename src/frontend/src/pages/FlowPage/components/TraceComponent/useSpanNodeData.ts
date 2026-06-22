@@ -36,7 +36,9 @@ export function useSpanNodeData({
   const nodes = useFlowStore((state) => state.nodes);
 
   const indentStyle = useMemo(
-    () => ({ paddingLeft: `${depth * INDENT_PER_DEPTH_REM + INDENT_BASE_REM}rem` }),
+    () => ({
+      paddingLeft: `${depth * INDENT_PER_DEPTH_REM + INDENT_BASE_REM}rem`,
+    }),
     [depth],
   );
 

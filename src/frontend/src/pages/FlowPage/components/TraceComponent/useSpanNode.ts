@@ -8,7 +8,10 @@ export function useSpanNode({
   isExpanded,
   onSelect,
   onToggle,
-}: Pick<SpanNodeProps, "span" | "depth" | "isExpanded" | "onSelect" | "onToggle">) {
+}: Pick<
+  SpanNodeProps,
+  "span" | "depth" | "isExpanded" | "onSelect" | "onToggle"
+>) {
   const data = useSpanNodeData({ span, depth, isExpanded });
   const actions = useSpanNodeActions({
     hasChildren: data.hasChildren,
