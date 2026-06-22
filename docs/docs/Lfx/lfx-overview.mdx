@@ -7,17 +7,14 @@ import Icon from "@site/src/components/icon";
 
 **LFX** (Langflow Executor) is a lightweight CLI and Python library for running Langflow flows without the full Langflow application.
 
-If Langflow is the visual builder, LFX is the engine — it executes flows statelessly from JSON files with minimal dependencies, no database, and no UI.
+Flows are built in the Langflow visual builder, and then run with LFX.
+LFX executes flows statelessly from JSON files with minimal dependencies, no database, and no UI.
 
-## When to use LFX
+LFX is similar to running Langflow with `--backend-only`, but even more lightweight because the full Langflow package and its dependencies do not need to be installed.
 
-| Scenario | Recommended tool |
-|---|---|
-| Building flows visually, saving to a database, collaborating with a team | Langflow (full install) |
-| Running flows in production, CI/CD pipelines, or serverless environments | LFX |
-| Versioning flows in Git and deploying them programmatically | LFX + [Flow DevOps Toolkit](/flow-devops-sdk) |
-| Building flows in Python code without the visual editor | LFX as a library |
-| Connecting any MCP-compatible client to a Langflow instance | `lfx-mcp` |
+If you're building flows in Langflow with a `uv pip install langflow` installation, you likely don't need to explore LFX, but if you're deploying and running flows from JSON files using other applications or environments, you'll find LFX is a powerful tool for executing flows.
+
+If you have installed Langflow OSS version 1.6 or later, lfx is already included in your environment.
 
 ## How LFX differs from Langflow
 
@@ -27,7 +24,6 @@ LFX uses a no-op database interface ([`NoopSession`](https://github.com/langflow
 - You can run flows over the API, but stateful operations — saving flows, storing messages, managing users — **will not persist data**.
 - Operations that depend on `langflow.db` will not work as they do in the full Langflow application.
 
-LFX is similar to running Langflow with `--backend-only`, but even more lightweight because the full Langflow package and its dependencies do not need to be installed.
 
 :::note
 If the `langflow` package is installed in the same Python environment as `lfx` and a real database service is registered, memory operations are routed to the full `langflow.memory` implementation instead. This applies when `lfx` is used as a Python library inside a running Langflow server, not when running `lfx run` or `lfx serve` from the command line.
@@ -61,9 +57,9 @@ LFX provides two sets of commands:
 
 For the Flow DevOps SDK commands, see [Flow DevOps Toolkit SDK](/flow-devops-sdk).
 
-## Related pages
+## See also
 
 - [Install LFX](./lfx-install)
 - [Run flows with LFX](./lfx-run)
-- [Flow DevOps Toolkit SDK](/flow-devops-sdk)
-- [Bundle extensions](/extensions-overview)
+- [Flow DevOps Toolkit SDK](./lfx-devops-sdk.mdx)
+- [Bundle extensions](./extensions-overview)
