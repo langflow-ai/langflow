@@ -33,7 +33,9 @@ members = [
     "lfx-arxiv",
     "lfx-docling",
     "lfx-duckduckgo",
+    "lfx-firecrawl",
     "lfx-ibm",
+    "lfx-nextplaid",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -4259,18 +4261,20 @@ wheels = [
 
 [[package]]
 name = "firecrawl-py"
-version = "1.17.0"
+version = "4.28.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "aiohttp" },
+    { name = "httpx" },
     { name = "nest-asyncio" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/08/61df5c8357742d8bee504db166b633ef7972b40c831e8c2f2a26feb9021c/firecrawl_py-1.17.0.tar.gz", hash = "sha256:5e2f50ec1f0e67514cdf6f0afc7df6be36eb8277fbec9e1f5a283fc01fae7875", size = 22191, upload-time = "2025-04-17T18:13:01.068Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2d/09/e7c667875c9a9dac09480e2f69fd46bdd9c1139555b835c3036a9858aff2/firecrawl_py-4.28.2.tar.gz", hash = "sha256:7e6181e2129b63c8d6aec5728d9b2fcf16ea82cb854372ad824b278efd258696", size = 191869, upload-time = "2026-05-28T00:03:48.822Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/53/a6/9431b62571b4ff4cd0d09f70c7df1253abf611e829f68d194e1ea69ea57e/firecrawl_py-1.17.0-py3-none-any.whl", hash = "sha256:0392822fbd906731f4c0876f91a9c3cce7624279c81948e4e3f8bc60b4e1c855", size = 21295, upload-time = "2025-04-17T18:12:59.463Z" },
+    { url = "https://files.pythonhosted.org/packages/80/08/384ca104c8004ca0541aacd3470e855bd28666d6bdb2101e08446dfcb407/firecrawl_py-4.28.2-py3-none-any.whl", hash = "sha256:0689080cb01672370e5a97963e0df479f6102137aa088857eac0fa287a4269b6", size = 239166, upload-time = "2026-05-28T00:03:47.479Z" },
 ]
 
 [[package]]
@@ -7281,6 +7285,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-plaid"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/a2/ab1be67245eade111c313e6db5fd58fe072832b7d2186095a1a1b8a72794/langchain_plaid-0.1.0.tar.gz", hash = "sha256:a315547b6d3f31047bd1c1ae5067b8c59eaaf131b031e223b71e44994071028e", size = 6050, upload-time = "2026-03-09T09:19:35.527Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/8b/350b3f1a42c4cff87a4191dd983f1c0a6b5d67097cfd684a00d25c539687/langchain_plaid-0.1.0-py3-none-any.whl", hash = "sha256:473cfa09de04f9c36e5434ecef3f1ec218a63e51fc0617145057664eb1fe3dfa", size = 7015, upload-time = "2026-03-09T09:19:38.408Z" },
+]
+
+[[package]]
 name = "langchain-protocol"
 version = "0.0.16"
 source = { registry = "https://pypi.org/simple" }
@@ -7400,14 +7417,16 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.10.0"
+version = "1.11.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
     { name = "lfx-arxiv" },
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
+    { name = "lfx-firecrawl" },
     { name = "lfx-ibm" },
+    { name = "lfx-nextplaid" },
 ]
 
 [package.optional-dependencies]
@@ -7500,7 +7519,9 @@ requires-dist = [
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["local"], marker = "extra == 'docling'", editable = "src/bundles/docling" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
+    { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
+    { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
@@ -7554,7 +7575,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.10.0"
+version = "0.11.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile", version = "3.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -7580,7 +7601,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "fastapi-pagination" },
     { name = "filelock" },
-    { name = "firecrawl-py" },
     { name = "grandalf" },
     { name = "greenlet" },
     { name = "gunicorn" },
@@ -8331,7 +8351,6 @@ requires-dist = [
     { name = "fastmcp", marker = "extra == 'fastmcp'", specifier = ">=3.2.0" },
     { name = "fastparquet", marker = "extra == 'fastparquet'", specifier = ">=2024.11.0,<2025.0.0" },
     { name = "filelock", specifier = ">=3.20.1,<4.0.0" },
-    { name = "firecrawl-py", specifier = ">=1.0.16,<2.0.0" },
     { name = "gassist", marker = "sys_platform == 'win32' and extra == 'gassist'", specifier = ">=0.0.1" },
     { name = "gitpython", marker = "extra == 'gitpython'", specifier = ">=3.1.50" },
     { name = "google-api-python-client", marker = "extra == 'google'", specifier = "~=2.161" },
@@ -8895,7 +8914,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "1.10.0"
+version = "1.11.0"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "ag-ui-protocol" },
@@ -8932,6 +8951,7 @@ dependencies = [
     { name = "platformdirs" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pyjwt" },
     { name = "pypdf" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -9002,6 +9022,7 @@ requires-dist = [
     { name = "platformdirs", specifier = ">=4.3.8,<5.0.0" },
     { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
     { name = "pydantic-settings", specifier = ">=2.10.1,<3.0.0" },
+    { name = "pyjwt", specifier = ">=2.10.0,<3.0.0" },
     { name = "pypdf", specifier = ">=6.10.0,<7.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0,<2.0.0" },
     { name = "pyyaml", specifier = ">=6.0.0,<7.0.0" },
@@ -9140,6 +9161,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-firecrawl"
+version = "0.1.0"
+source = { editable = "src/bundles/firecrawl" }
+dependencies = [
+    { name = "firecrawl-py" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "firecrawl-py", specifier = ">=4.0.0,<5.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
 name = "lfx-ibm"
 version = "0.1.1"
 source = { editable = "src/bundles/ibm" }
@@ -9159,6 +9195,23 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-ibm", specifier = "~=1.1.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-nextplaid"
+version = "0.1.0"
+source = { editable = "src/bundles/nextplaid" }
+dependencies = [
+    { name = "langchain-plaid" },
+    { name = "lfx" },
+    { name = "pillow" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-plaid", specifier = ">=0.1.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "pillow", specifier = ">=10.0.0" },
 ]
 
 [[package]]

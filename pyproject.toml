@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.10.0"
+version = "1.11.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,12 +17,14 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.10.0",
+    "langflow-base[complete]>=0.11.0",
     # langflow-extensions:bundle-deps-start
     "lfx-duckduckgo>=0.1.0",
     "lfx-arxiv>=0.1.0",
     "lfx-ibm>=0.1.0",
     "lfx-docling>=0.1.0",
+    "lfx-firecrawl>=0.1.0",
+    "lfx-nextplaid>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -84,6 +86,8 @@ lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
 lfx-docling = { workspace = true }
+lfx-firecrawl = { workspace = true }
+lfx-nextplaid = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -100,6 +104,8 @@ members = [
     "src/bundles/arxiv",
     "src/bundles/ibm",
     "src/bundles/docling",
+    "src/bundles/firecrawl",
+    "src/bundles/nextplaid",
     # langflow-extensions:bundle-members-end
 ]
 

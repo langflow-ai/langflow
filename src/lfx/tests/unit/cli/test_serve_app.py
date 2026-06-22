@@ -1432,7 +1432,7 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         # Mock execute_graph_with_capture to raise an error
-        async def mock_execute_error(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_error(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             msg = "Flow execution failed"
             raise RuntimeError(msg)
 
@@ -1457,7 +1457,7 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         # Mock execute_graph_with_capture to return empty results
-        async def mock_execute_empty(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_empty(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             return [], ""  # Empty results and logs
 
         with (
@@ -1478,7 +1478,7 @@ class TestServeAppEndpoints:
         """The /run endpoint must forward session_id from RunRequest to the executor."""
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["session_id"] = session_id
             return [], ""
 
@@ -1497,7 +1497,7 @@ class TestServeAppEndpoints:
         """The /stream endpoint must forward session_id from StreamRequest to the executor."""
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["session_id"] = session_id
             return [], ""
 
@@ -1592,7 +1592,7 @@ class TestServeAppEndpoints:
 
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["request_variables"] = dict(graph.context.get("request_variables") or {})
             return [], ""
 
@@ -1628,7 +1628,7 @@ class TestServeAppEndpoints:
         app = create_multi_serve_app(registry=registry)
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
-        async def mock_execute_noop(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_noop(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             return [], ""
 
         headers = {"x-api-key": "test-api-key"}
@@ -1670,7 +1670,7 @@ class TestServeAppEndpoints:
 
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["no_env_fallback"] = graph.context.get("no_env_fallback")
             return [], ""
 
@@ -1705,7 +1705,7 @@ class TestServeAppEndpoints:
 
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["no_env_fallback"] = graph.context.get("no_env_fallback")
             return [], ""
 
@@ -1744,7 +1744,7 @@ class TestServeAppEndpoints:
 
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["request_variables"] = dict(graph.context.get("request_variables") or {})
             return [], ""
 
@@ -1786,7 +1786,7 @@ class TestServeAppEndpoints:
 
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["request_variables"] = graph.context.get("request_variables")
             return [], ""
 
@@ -1823,7 +1823,7 @@ class TestServeAppEndpoints:
         app = create_multi_serve_app(registry=registry)
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
-        async def mock_execute_noop(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_noop(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             return [], ""
 
         headers = {"x-api-key": "test-api-key"}
