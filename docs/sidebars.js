@@ -337,7 +337,7 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "API-Reference/flow-devops-sdk",
+          id: "Lfx/lfx-devops-sdk",
           label: "Flow DevOps Toolkit SDK"
         },
       ],
