@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
   }, {});
 
   return {
-    base: env.VITE_BASENAME || "",
+    base: env.VITE_BASENAME ? env.VITE_BASENAME.replace(/\/$/, '') + '/' : '/',
     build: {
       outDir: "build",
     },
