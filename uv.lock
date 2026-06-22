@@ -8964,7 +8964,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
     { name = "tiktoken", marker = "extra == 'docling-chunking'", specifier = ">=0.7.0" },
-    { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.16,<1.0.0" },
+    { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.20,<1.0.0" },
     { name = "traceloop-sdk", marker = "extra == 'traceloop'", specifier = ">=0.43.1,<1.0.0" },
     { name = "transformers", specifier = ">=5.6.0,<6.0.0" },
     { name = "trustcall", specifier = ">=0.0.38,<1.0.0" },
@@ -18254,7 +18254,7 @@ wheels = [
 
 [[package]]
 name = "toolguard"
-version = "0.2.19"
+version = "0.2.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datamodel-code-generator" },
@@ -18270,9 +18270,9 @@ dependencies = [
     { name = "pytest-json-report" },
     { name = "smolagents" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/80/9cd3efd4d32dcf2cb08339ea23d827142e13ba9cee398bb332f840aed367/toolguard-0.2.19.tar.gz", hash = "sha256:a4f11dbfe7d53b3d6b5425005ae2d066a06a80ebe80b212ef3e560d15ffc6f4c", size = 68499, upload-time = "2026-05-28T07:49:19.733Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/05/4adc710f0b11beb340dfb3be680f539cf509b4566aad40f6cfa9ab6506a9/toolguard-0.2.20.tar.gz", hash = "sha256:d88044bdd72525f2b65355c6526b267c2a41c234836d3a8fa786ee9ef0571333", size = 69224, upload-time = "2026-06-21T06:20:23.362Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ab/82/246bde4c05a167ea25aead64f4626711fb59e8c4f5d6d78d90d7fa4e33bb/toolguard-0.2.19-py3-none-any.whl", hash = "sha256:2102d568e84082466ded4c1d99654cc22d060c9708cfe975e90169eef31dfe97", size = 99932, upload-time = "2026-05-28T07:49:18.206Z" },
+    { url = "https://files.pythonhosted.org/packages/71/17/adc658a7262f41d29b408cb2c6fafaff2c051cdca2a62d4b1c525c6cc2e9/toolguard-0.2.20-py3-none-any.whl", hash = "sha256:e8fda5fbe95766ec21be8e61dec268c1725800dd049f3cfa540bacd4adc61e27", size = 100717, upload-time = "2026-06-21T06:20:22.025Z" },
 ]
 
 [[package]]
