@@ -188,15 +188,6 @@ module.exports = {
           id: "Develop/configuration-cli",
           label: "Use the Langflow CLI"
         },
-        {
-          type: "category",
-          label: "Bundle extensions",
-          items: [
-            "Develop/extensions-overview",
-            "Develop/extensions-quickstart",
-            "Develop/extensions-manifest",
-          ],
-        },
       ],
     },
     {
@@ -339,6 +330,15 @@ module.exports = {
           type: "doc",
           id: "Lfx/lfx-devops-sdk",
           label: "Flow DevOps Toolkit SDK"
+        },
+        {
+          type: "category",
+          label: "Bundle extensions",
+          items: [
+            "Lfx/extensions-overview",
+            "Lfx/extensions-quickstart",
+            "Lfx/extensions-manifest",
+          ],
         },
       ],
     },
