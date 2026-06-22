@@ -257,7 +257,13 @@ async def get_messages(
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
+        _VALID_ORDER_BY_FIELDS = {"timestamp", "sender", "sender_name", "session_id", "flow_id"}
         if order_by:
+            if order_by not in _VALID_ORDER_BY_FIELDS:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid order_by field '{order_by}'. Must be one of: {sorted(_VALID_ORDER_BY_FIELDS)}",
+                )
             order_col = getattr(MessageTable, order_by)
             if order and order.lower() == "desc":
                 order_col = order_col.desc()
@@ -266,7 +272,9 @@ async def get_messages(
             stmt = stmt.order_by(order_col)
         if offset:
             stmt = stmt.offset(offset)
-        if limit:
+        if limit is not None:
+            if limit < 0:
+                raise HTTPException(status_code=422, detail="limit must be >= 0")
             stmt = stmt.limit(limit)
             
         messages = await session.exec(stmt)
