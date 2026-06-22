@@ -196,11 +196,11 @@ export default function InputComponent({
           className={className}
           placeholder={placeholder}
           blurOnEnter={blurOnEnter}
-          name={name}
-          id={id}
-          inputProps={inputProps}
-          allowAutofill={allowAutofill}
-        />
+            name={name}
+            id={id}
+            inputProps={inputProps}
+            allowAutofill={allowAutofill}
+          />
       ) : (
         <>
           {isObjectOption ? (
