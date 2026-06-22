@@ -493,3 +493,11 @@
     --indigo-foreground: 234.5 89.5% 73.9%;
   }
 }
+
+/* WCAG 2.4.7 — visible focus indicator fallback for any element not covered
+   by component-level Tailwind ring classes. Component ring classes (box-shadow)
+   take precedence over this outline via the cascade. */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
