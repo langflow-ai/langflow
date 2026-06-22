@@ -40,6 +40,7 @@ from lfx.utils.flow_validation import (
     validate_flow_for_current_settings,
     validate_public_flow_no_code_execution,
 )
+from limits import parse
 
 from langflow.api.utils.flow_utils import (
     scope_session_to_namespace,
@@ -60,6 +61,32 @@ from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_settings_service, session_scope
 
 router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"])
+
+
+def _enforce_public_rate_limit(http_request: Request) -> None:
+    """Throttle anonymous public-flow runs per client IP.
+
+    Each run executes as the flow owner (real CPU/DB/LLM-credit cost), so an
+    unauthenticated caller must not be able to spin up unbounded concurrent
+    executions. Mirrors the manual limiter check the login endpoint uses, but
+    keyed to its own configurable per-minute limit under a dedicated namespace so
+    it never shares a bucket with login. No-op when rate limiting is disabled.
+    """
+    settings = get_settings_service().settings
+    if not settings.rate_limit_enabled:
+        return
+    limiter = http_request.app.state.limiter
+    limit_item = parse(f"{settings.public_flow_rate_limit_per_minute}/minute")
+    # hit() returns False once the window is exhausted for this (namespace, ip) key.
+    if not limiter._limiter.hit(limit_item, "public-workflow", limiter._key_func(http_request)):  # noqa: SLF001
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": "Too many requests",
+                "code": "RATE_LIMITED",
+                "message": "Too many public workflow runs from this client. Please retry shortly.",
+            },
+        )
 
 
 @router.post(
@@ -87,6 +114,10 @@ async def execute_public_workflow(
     # ``v1.chat`` -> ``api.build`` cycle that fires when ``v2.__init__`` is
     # collected at import time.
     from langflow.api.v2.workflow import _stream_event_frames, _unknown_protocol_http_exception
+
+    # Throttle before any DB lookup or flow execution so an anonymous flood is
+    # rejected cheaply, not after spending the flow owner's resources.
+    _enforce_public_rate_limit(http_request)
 
     real_flow_id = UUID(request.flow_id)
 

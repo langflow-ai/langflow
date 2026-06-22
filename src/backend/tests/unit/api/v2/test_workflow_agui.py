@@ -1039,7 +1039,7 @@ class TestAGUIBackgroundJobStatus:
 
         assert (job_id, workflow_module.JobStatus.IN_PROGRESS, False) in updates
 
-    async def test_cancelled_agui_buffer_wakes_tail_reader_with_closed_text_and_run_error(
+    async def test_cancelled_agui_buffer_wakes_tail_reader_with_closed_text_and_run_finished(
         self, monkeypatch: pytest.MonkeyPatch
     ):
         """The owner task must append cancellation before marking replay done."""
@@ -1094,11 +1094,16 @@ class TestAGUIBackgroundJobStatus:
         tail_frames = await asyncio.wait_for(tail_task, timeout=2)
 
         tail_payloads = _sse_payloads(tail_frames)
-        assert [_sse_payload_type(payload) for payload in tail_payloads] == ["TEXT_MESSAGE_END", "RUN_ERROR"]
+        assert [_sse_payload_type(payload) for payload in tail_payloads] == [
+            "TEXT_MESSAGE_END",
+            "CUSTOM",
+            "RUN_FINISHED",
+        ]
         assert tail_payloads[0]["messageId"] == "m1"
-        assert tail_payloads[1]["message"] == "Workflow run cancelled."
+        assert tail_payloads[1]["name"] == "langflow.run.cancelled"
+        assert tail_payloads[1]["value"]["reason"] == "Workflow run cancelled."
 
-    async def test_cancelled_langflow_buffer_wakes_tail_reader_with_langflow_error(
+    async def test_cancelled_langflow_buffer_wakes_tail_reader_with_langflow_cancelled(
         self, monkeypatch: pytest.MonkeyPatch
     ):
         """Cancellation framing must stay protocol-native outside AG-UI too."""
@@ -1153,7 +1158,7 @@ class TestAGUIBackgroundJobStatus:
         tail_frames = await asyncio.wait_for(tail_task, timeout=2)
 
         [payload] = _sse_payloads(tail_frames)
-        assert payload == {"event": "error", "data": {"error": "Workflow run cancelled."}}
+        assert payload == {"event": "cancelled", "data": {"reason": "Workflow run cancelled."}}
 
     async def test_finish_cancelled_background_run_appends_terminal_before_waking_replay(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1212,9 +1217,14 @@ class TestAGUIBackgroundJobStatus:
             tail_frames = await asyncio.wait_for(tail_task, timeout=2)
 
             tail_payloads = _sse_payloads(tail_frames)
-            assert [_sse_payload_type(payload) for payload in tail_payloads] == ["TEXT_MESSAGE_END", "RUN_ERROR"]
+            assert [_sse_payload_type(payload) for payload in tail_payloads] == [
+                "TEXT_MESSAGE_END",
+                "CUSTOM",
+                "RUN_FINISHED",
+            ]
             assert tail_payloads[0]["messageId"] == "m1"
-            assert tail_payloads[1]["message"] == "Workflow run cancelled."
+            assert tail_payloads[1]["name"] == "langflow.run.cancelled"
+            assert tail_payloads[1]["value"]["reason"] == "Workflow run cancelled."
 
             frames_after_fallback = list(bg_run.frames)
             buffer_task.cancel()
@@ -1331,6 +1341,55 @@ class TestAGUIBackgroundJobStatus:
         body = status_resp.json()
         assert body["status"] == "completed"
         assert "outputs" in body
+
+    async def test_completed_background_job_status_recovers_session_id(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """A completed background job's GET status must echo the session it ran under.
+
+        Regression: ``reconstruct_workflow_response_from_job_id`` hardcoded
+        ``session_id=None``, so every completed background job reported a null
+        session even though the run executed under a real one, breaking the
+        documented handle for continuing the same chat/memory thread. The session
+        is recovered from the persisted terminal ``ChatOutputResponse.session_id``.
+        """
+        import asyncio as _asyncio
+        from uuid import UUID as _UUID
+
+        from langflow.services.database.models.jobs.model import Job as _Job
+
+        headers = {"x-api-key": created_api_key.api_key}
+        start = await client.post(
+            "api/v2/workflows",
+            json=_agui_body(chatbot_flow, message="hi", mode="background"),
+            headers=headers,
+        )
+        assert start.status_code == 200
+        job_id = start.json()["job_id"]
+
+        # Drain the SSE buffer so the build runs and persists vertex builds.
+        events = await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
+        assert events.status_code == 200
+        assert "RUN_FINISHED" in events.text
+
+        row = None
+        for _ in range(100):
+            async with session_scope() as session:
+                row = await session.get(_Job, _UUID(job_id))
+                if row is not None and row.status.value in ("completed", "failed"):
+                    break
+            await _asyncio.sleep(0.1)
+        assert row is not None, "background job row was never created"
+        assert row.status.value == "completed", f"background job did not complete: {row.status.value!r}"
+
+        status_resp = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+        assert status_resp.status_code == 200, status_resp.text
+        body = status_resp.json()
+        # _agui_body runs under session "thread-1"; before the fix this was null.
+        assert body["session_id"] == "thread-1"
 
     async def test_message_with_json_shaped_run_error_payload_does_not_fail_job(
         self,
@@ -1932,54 +1991,76 @@ class TestBackgroundRunsRegistryEviction:
     to evicting the oldest only when every slot is occupied by a running run.
     """
 
-    def test_eviction_prefers_completed_runs_over_running_ones(self, monkeypatch):
+    async def test_eviction_prefers_completed_runs_over_running_ones(self, monkeypatch):
         from langflow.api.v2 import workflow as workflow_module
 
         monkeypatch.setattr(workflow_module, "_MAX_BACKGROUND_RUNS", 3)
         monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
 
+        # Evicting a completed run has no live writer to stop, so the cancel path
+        # must not fire; record any call to prove it doesn't.
+        cancelled: list[str] = []
+
+        async def fake_cancel(job_id):
+            cancelled.append(job_id)
+            return True
+
+        monkeypatch.setattr(workflow_module, "_cancel_workflow_queue_job", fake_cancel)
+
         long_running = workflow_module._BackgroundRun(user_id="u")
         # done stays False; this is the run we must protect.
-        workflow_module._register_background_run("long", long_running)
+        await workflow_module._register_background_run("long", long_running)
 
         # Fill the rest with completed runs.
         for job_id in ("done1", "done2"):
             done_run = workflow_module._BackgroundRun(user_id="u")
             done_run.done = True
-            workflow_module._register_background_run(job_id, done_run)
+            await workflow_module._register_background_run(job_id, done_run)
 
         # Registry is now at the cap (3): [long, done1, done2]. Adding a new
         # entry must evict a completed run, not the still-running ``long``.
         new_run = workflow_module._BackgroundRun(user_id="u")
-        workflow_module._register_background_run("new", new_run)
+        await workflow_module._register_background_run("new", new_run)
 
         assert "long" in workflow_module._BACKGROUND_RUNS, (
             "Still-running background run was evicted in favor of a completed one"
         )
         assert "new" in workflow_module._BACKGROUND_RUNS
+        assert cancelled == [], "Evicting a completed run must not cancel a queue job"
 
-    def test_eviction_falls_back_to_oldest_when_every_run_is_active(self, monkeypatch):
+    async def test_eviction_falls_back_to_oldest_when_every_run_is_active(self, monkeypatch):
         """If every slot is occupied by a still-running run, evict the oldest anyway.
 
         Unbounded growth would leak memory. The fallback is intentional and
-        documented; a warning log makes the situation visible.
+        documented; a warning log makes the situation visible. The evicted run's
+        buffer writer is cancelled so it stops appending into a run no reader can
+        find (the bounded-memory guarantee the registry exists to provide).
         """
         from langflow.api.v2 import workflow as workflow_module
 
         monkeypatch.setattr(workflow_module, "_MAX_BACKGROUND_RUNS", 2)
         monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
 
+        cancelled: list[str] = []
+
+        async def fake_cancel(job_id):
+            cancelled.append(job_id)
+            return True
+
+        monkeypatch.setattr(workflow_module, "_cancel_workflow_queue_job", fake_cancel)
+
         for job_id in ("a", "b"):
             run = workflow_module._BackgroundRun(user_id="u")
-            workflow_module._register_background_run(job_id, run)
+            await workflow_module._register_background_run(job_id, run)
 
-        # All running; adding a third must evict the oldest (a).
+        # All running; adding a third must evict the oldest (a) and cancel it.
         third = workflow_module._BackgroundRun(user_id="u")
-        workflow_module._register_background_run("c", third)
+        await workflow_module._register_background_run("c", third)
 
         assert "a" not in workflow_module._BACKGROUND_RUNS
         assert "b" in workflow_module._BACKGROUND_RUNS
         assert "c" in workflow_module._BACKGROUND_RUNS
+        assert cancelled == ["a"], "Evicted still-running run's buffer writer was not cancelled"
 
 
 class TestClearBackgroundRun:
@@ -1997,7 +2078,7 @@ class TestClearBackgroundRun:
         monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
 
         bg_run = workflow_module._BackgroundRun(user_id="u")
-        workflow_module._register_background_run("job-1", bg_run)
+        await workflow_module._register_background_run("job-1", bg_run)
         assert bg_run.done is False
 
         await workflow_module._clear_background_run("job-1")
@@ -2331,9 +2412,11 @@ class TestStopWorkflowEndToEnd:
 
             events = await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
             assert events.status_code == 200
-            assert "RUN_ERROR" in events.text
-            assert "cancelled" in events.text.lower()
-            assert "RUN_FINISHED" not in events.text
+            # A deliberate stop replays as a CUSTOM cancel marker + RUN_FINISHED, not
+            # RUN_ERROR: a re-attaching client must not read a user-stop as a failure.
+            assert "RUN_ERROR" not in events.text
+            assert "langflow.run.cancelled" in events.text
+            assert "RUN_FINISHED" in events.text
 
             async with session_scope() as session:
                 row = await session.get(Job, _UUID(job_id))

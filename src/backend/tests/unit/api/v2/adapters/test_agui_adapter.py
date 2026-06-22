@@ -131,17 +131,20 @@ class TestErrorEventsFallback:
         assert [event.type for event in events] == ["TEXT_MESSAGE_END", "RUN_ERROR"]
         assert json.loads(events[0].data_json)["messageId"] == "m1"
 
-    def test_cancel_events_close_open_text_message_before_run_error(self):
-        """Cancellation uses adapter-owned framing and preserves AG-UI lifecycle."""
+    def test_cancel_events_close_open_text_then_custom_marker_and_run_finished(self):
+        """A user-stop emits a CUSTOM cancel marker + RUN_FINISHED (never RUN_ERROR), after closing open text."""
         adapter = get_stream_adapter("agui", _ctx())
         list(adapter.initial_events())
         list(adapter.translate("token", {"id": "m1", "chunk": "partial"}))
 
         events = list(adapter.cancel_events("cancelled"))
 
-        assert [event.type for event in events] == ["TEXT_MESSAGE_END", "RUN_ERROR"]
+        assert [event.type for event in events] == ["TEXT_MESSAGE_END", "CUSTOM", "RUN_FINISHED"]
+        assert all(event.type != "RUN_ERROR" for event in events)
         assert json.loads(events[0].data_json)["messageId"] == "m1"
-        assert json.loads(events[1].data_json)["message"] == "cancelled"
+        marker = json.loads(events[1].data_json)
+        assert marker["name"] == "langflow.run.cancelled"
+        assert marker["value"]["reason"] == "cancelled"
 
 
 class TestTerminalErrorType:

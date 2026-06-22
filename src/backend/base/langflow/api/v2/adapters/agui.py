@@ -59,9 +59,10 @@ class AGUIAdapter:
         return [_to_stream_event(e) for e in self._translator.translate("error", {"error": str(error)})]
 
     def cancel_events(self, reason: str) -> Iterable[StreamEvent]:
-        # AG-UI has no cancellation primitive in the local event model; route
-        # through the translator so any open text lifecycle is closed first.
-        return [_to_stream_event(e) for e in self._translator.translate("error", {"error": reason})]
+        # AG-UI has no cancel primitive: close any open text lifecycle, emit a
+        # CUSTOM cancel marker, then RUN_FINISHED. A user-stop must not replay as
+        # RUN_ERROR, which clients read as a genuine failure.
+        return [_to_stream_event(e) for e in self._translator.cancel(reason)]
 
     @property
     def terminal_error_type(self) -> str | None:

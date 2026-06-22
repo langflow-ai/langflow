@@ -1040,20 +1040,24 @@ async def _finish_cancelled_background_run(job_id: str) -> None:
     await bg_run.finish_cancelled(_WORKFLOW_CANCELLED_MESSAGE)
 
 
-def _register_background_run(job_id: str, bg_run: _BackgroundRun) -> None:
+async def _register_background_run(job_id: str, bg_run: _BackgroundRun) -> None:
     """Register a background run, evicting a completed entry when full.
 
     Prefer evicting the oldest *completed* run so a long-running job's
     re-attach handle survives. If every slot is still active, evict the
-    oldest one anyway to keep the registry bounded, and log a warning.
+    oldest one anyway to keep the registry bounded, cancel its still-running
+    buffer writer so it stops appending into a run no reader can find, and log
+    a warning.
     """
     if len(_BACKGROUND_RUNS) >= _MAX_BACKGROUND_RUNS:
         evict_key = next(
             (key for key, run in _BACKGROUND_RUNS.items() if run.done),
             None,
         )
+        evicted_running = False
         if evict_key is None:
             evict_key = next(iter(_BACKGROUND_RUNS))
+            evicted_running = True
             logger.warning(
                 "Background run registry full with no completed entries; "
                 "evicting still-running job %s to make room for %s",
@@ -1061,6 +1065,13 @@ def _register_background_run(job_id: str, bg_run: _BackgroundRun) -> None:
                 job_id,
             )
         _BACKGROUND_RUNS.pop(evict_key, None)
+        if evicted_running:
+            # Stop the orphaned buffer writer: without its registry entry no
+            # reader can find it, but the coroutine keeps appending frames.
+            # cancel_flow_build raises CancelledError into the build loop, which
+            # runs the buffer's finally/finish_cancelled path.
+            with contextlib.suppress(Exception):
+                await _cancel_workflow_queue_job(evict_key)
     _BACKGROUND_RUNS[job_id] = bg_run
 
 
@@ -1175,7 +1186,7 @@ async def execute_workflow_background(
         )
 
         bg_run = _BackgroundRun(user_id=str(current_user.id), stream_protocol=stream_protocol)
-        _register_background_run(job_id_str, bg_run)
+        await _register_background_run(job_id_str, bg_run)
 
         try:
             queue_service = get_queue_service()
@@ -1504,6 +1515,11 @@ async def reattach_workflow_events(
     leaking the existence of other users' runs.
     """
     bg_run = _BACKGROUND_RUNS.get(job_id)
+    # Live stream re-attach is intentionally owner-only and does not consult the
+    # authorization plugin: the replay buffer is process-local and keyed by the
+    # originating user, matching stop_workflow and the active-status path. Only
+    # the COMPLETED-status reconstruction branch is share-aware (it reloads the
+    # flow); a share-holder tails via the status endpoint, not this live stream.
     if bg_run is not None and bg_run.user_id != str(current_user.id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
