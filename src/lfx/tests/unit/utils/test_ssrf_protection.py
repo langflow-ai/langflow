@@ -20,7 +20,7 @@ from lfx.utils.ssrf_protection import (
 
 
 @contextmanager
-def mock_ssrf_settings(*, enabled=False, allowed_hosts=None, restrict_files=False):
+def mock_ssrf_settings(*, enabled=False, allowed_hosts=None, restrict_files=False, connector_validation=True):
     """Context manager to mock SSRF settings."""
     if allowed_hosts is None:
         allowed_hosts = []
@@ -29,6 +29,7 @@ def mock_ssrf_settings(*, enabled=False, allowed_hosts=None, restrict_files=Fals
         mock_settings = MagicMock()
         mock_settings.settings.ssrf_protection_enabled = enabled
         mock_settings.settings.ssrf_allowed_hosts = allowed_hosts
+        mock_settings.settings.connector_ssrf_validation_enabled = connector_validation
         # Explicit (not a truthy MagicMock) so DB local-file checks behave deterministically.
         mock_settings.settings.restrict_local_file_access = restrict_files
         mock_get_settings.return_value = mock_settings
@@ -602,18 +603,27 @@ class TestGitRepositoryURLValidation:
 
 
 class TestConnectorURLValidation:
-    """Tests for validate_connector_url_for_ssrf (opt-in connector host validation)."""
+    """Tests for validate_connector_url_for_ssrf."""
 
-    def test_noop_when_connector_validation_disabled(self):
-        """With the connector flag off, even a metadata URL is a no-op (default behavior)."""
+    def test_noop_when_connector_validation_explicitly_disabled(self):
+        """With the connector flag off, even a metadata URL is a no-op."""
         with (
             patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "false"}),
             mock_ssrf_settings(enabled=True),
         ):
             validate_connector_url_for_ssrf("http://169.254.169.254/latest/meta-data/")
 
-    def test_blocks_metadata_when_enabled(self):
-        """With both flags on, a metadata URL is blocked (defers to validate_url_for_ssrf)."""
+    def test_blocks_metadata_by_default(self):
+        """With global SSRF on, a metadata URL is blocked by default."""
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError),
+        ):
+            validate_connector_url_for_ssrf("http://169.254.169.254/")
+
+    def test_blocks_metadata_when_env_enabled(self):
+        """An explicit true env var also blocks metadata URLs."""
         with (
             patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true"}),
             mock_ssrf_settings(enabled=True),

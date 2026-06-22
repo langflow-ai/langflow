@@ -53,10 +53,28 @@ _RESERVED_ENV_NAMES: frozenset[str] = frozenset(
         "AWS_ACCESS_KEY_ID",
         "AWS_SESSION_TOKEN",
         "GOOGLE_APPLICATION_CREDENTIALS",
+        "GCP_SA_KEY",
         "AZURE_CLIENT_SECRET",
+        # Auth / token-signing secrets (forging these compromises every tenant's session)
+        "JWT_SECRET",
+        "JWT_SECRET_KEY",
+        "SESSION_SECRET",
+        "SIGNING_KEY",
+        "ENCRYPTION_KEY",
+        # OAuth / SSO client secrets (server-side app credentials, never a flow value)
+        "CLIENT_SECRET",
+        "OAUTH_CLIENT_SECRET",
+        "GOOGLE_CLIENT_SECRET",
+        "GITHUB_CLIENT_SECRET",
+        "MICROSOFT_CLIENT_SECRET",
+        # Mail relay credentials
+        "SMTP_PASSWORD",
+        "SMTP_PASS",
+        "EMAIL_HOST_PASSWORD",
         # Source control / CI
         "GITHUB_TOKEN",
         "GH_TOKEN",
+        "GITLAB_TOKEN",
     }
 )
 

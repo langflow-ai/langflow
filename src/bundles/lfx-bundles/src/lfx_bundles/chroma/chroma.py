@@ -8,6 +8,8 @@ from lfx.base.vectorstores.user_scoping import runtime_user_id, scoped_collectio
 from lfx.base.vectorstores.utils import chroma_collection_to_data
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.file_path_security import enforce_local_file_access
+from lfx.utils.ssrf_protection import validate_url_for_ssrf
 from typing_extensions import override
 
 if TYPE_CHECKING:
@@ -103,14 +105,22 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             except ImportError as e:
                 msg = "Could not import chromadb. Please install it with `pip install chromadb`."
                 raise ImportError(msg) from e
+            scheme = "https" if self.chroma_server_ssl_enabled else "http"
+            validate_url_for_ssrf(f"{scheme}://{self.chroma_server_host}:{self.chroma_server_http_port or 8000}")
             client = HttpClient(
                 host=self.chroma_server_host,
                 port=self.chroma_server_http_port or 8000,
                 ssl=bool(self.chroma_server_ssl_enabled),
             )
 
-        # Check persist_directory and expand it if it is a relative path
-        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None
+        # Check persist_directory and expand it if it is a relative path. Confine the resolved
+        # path to the storage dir when LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is on so a tenant
+        # cannot point Chroma's on-disk sqlite store at an arbitrary host path (no-op by default).
+        persist_directory = (
+            str(enforce_local_file_access(self.resolve_path(self.persist_directory)))
+            if self.persist_directory is not None
+            else None
+        )
 
         # Scope the collection name by runtime user for local stores so two users
         # sharing the same persist_directory + collection_name cannot read each

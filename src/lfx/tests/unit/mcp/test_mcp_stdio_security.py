@@ -42,14 +42,91 @@ from lfx.base.mcp.security import (
         # Langflow may inject it at spawn from the authenticated identity.
         ("python", ["-m", "langflow.agentic.mcp"], {"LANGFLOW_AGENTIC_USER_ID": "victim"}),
         ("uvx", ["x"], {"langflow_agentic_user_id": "victim"}),
-        # Docker isolation break.
+        # Docker -- blocked even under the DEFAULT (lenient) policy.
         ("docker", ["run", "--privileged", "img"], {}),
+        ("docker", ["run", "--cap-add", "SYS_ADMIN", "img"], {}),
         ("docker", ["run", "--network=host", "img"], {}),
     ],
 )
 def test_validate_mcp_stdio_config_blocks_malicious(command, args, env):
     with pytest.raises(MCPStdioSecurityError):
         validate_mcp_stdio_config(command, args, env)
+
+
+# Docker host-access vectors that are ONLY rejected under the opt-in hardened policy
+# (LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true). Under the default they are allowed (previous
+# single-tenant behavior), which test_docker_default_policy_is_lenient asserts.
+@pytest.mark.parametrize(
+    "args",
+    [
+        # Host filesystem / device mounts -> host compromise.
+        ["run", "-v", "/:/host", "alpine"],
+        ["run", "--volume=/:/host", "alpine"],
+        ["run", "-v", "/var/run/docker.sock:/s", "alpine"],
+        ["run", "--mount", "type=bind,src=/,dst=/host", "alpine"],
+        ["run", "--volumes-from", "other", "img"],
+        ["run", "--device", "/dev/mem", "img"],
+        ["run", "--device-cgroup-rule", "b 8:0 rwm", "img"],
+        # Host / another-container namespaces.
+        ["run", "--network", "host", "img"],
+        ["run", "--net=host", "img"],
+        ["run", "--pid", "host", "img"],
+        ["run", "--ipc", "host", "img"],
+        ["run", "--uts", "host", "img"],
+        ["run", "--pid", "container:victim", "img"],
+        # Non-default network (named infra network -> lateral movement).
+        ["run", "--network", "internal-db-net", "img"],
+        # Sandbox-profile downgrades.
+        ["run", "--security-opt", "seccomp=unconfined", "img"],
+        ["run", "--security-opt=apparmor=unconfined", "img"],
+        ["run", "--security-opt", "label:disable", "img"],
+    ],
+)
+def test_docker_hardened_policy_blocks_host_access(args):
+    with pytest.raises(MCPStdioSecurityError):
+        validate_mcp_stdio_config("docker", args, {}, docker_hardening=True)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["run", "-i", "--rm", "img"],
+        ["run", "-i", "--rm", "img", "--server-arg", "x"],
+        ["run", "--user", "1000", "img"],  # run as non-root (hardening)
+        ["run", "--network", "none", "img"],
+        ["run", "--network", "bridge", "img"],
+        ["run", "--network=default", "img"],
+        ["run", "--security-opt", "no-new-privileges", "img"],  # hardening flag, must stay allowed
+        ["run", "--ipc", "private", "img"],
+    ],
+)
+def test_docker_hardened_policy_allows_benign(args):
+    # Should not raise even under the strict policy.
+    validate_mcp_stdio_config("docker", args, {}, docker_hardening=True)
+
+
+@pytest.mark.parametrize(
+    ("args", "should_block"),
+    [
+        # Default policy preserves previous behavior: these were always blocked...
+        (["run", "--privileged", "img"], True),
+        (["run", "--cap-add", "SYS_ADMIN", "img"], True),
+        (["run", "--network=host", "img"], True),
+        # ...but host mounts / named networks / space-form namespaces are allowed by default
+        # (only the opt-in hardened policy rejects them).
+        (["run", "-v", "/:/host", "alpine"], False),
+        (["run", "--mount", "type=bind,src=/,dst=/host", "alpine"], False),
+        (["run", "--device", "/dev/mem", "img"], False),
+        (["run", "--network", "host", "img"], False),
+        (["run", "--security-opt", "seccomp=unconfined", "img"], False),
+    ],
+)
+def test_docker_default_policy_is_lenient(args, should_block):
+    if should_block:
+        with pytest.raises(MCPStdioSecurityError):
+            validate_mcp_stdio_config("docker", args, {}, docker_hardening=False)
+    else:
+        validate_mcp_stdio_config("docker", args, {}, docker_hardening=False)
 
 
 @pytest.mark.parametrize(

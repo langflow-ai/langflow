@@ -397,10 +397,9 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
 def is_connector_ssrf_validation_enabled() -> bool:
     """Whether SSRF validation is enabled for tenant-controlled CONNECTOR host/URL components.
 
-    Separate, opt-in (default False) gate from the global ``ssrf_protection_enabled``. Connector
-    components (vector stores, the Glean/AstraDB-CQL tools, model-provider model discovery) commonly
-    point at localhost / a private network, so they are NOT validated by default. Multi-tenant
-    operators opt in via ``LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED=true``.
+    Separate gate from the global ``ssrf_protection_enabled``. Defaults to True so connector
+    components (vector stores, SQL DBs, Glean/AstraDB-CQL tools, model-provider discovery) follow
+    the same internal-host policy unless an operator explicitly disables it.
     """
     import os
 
@@ -409,21 +408,21 @@ def is_connector_ssrf_validation_enabled() -> bool:
         return env_value.lower() in ("true", "1", "yes", "on")
     try:
         return bool(get_settings_service().settings.connector_ssrf_validation_enabled)
-    except Exception:  # noqa: BLE001 - settings may be unavailable; default to disabled
+    except Exception:  # noqa: BLE001 - settings may be unavailable; default to enabled
         logger.warning(
             "Could not read connector_ssrf_validation_enabled setting; treating connector SSRF "
-            "validation as DISABLED (fail-open to default). Connector URLs are not being validated."
+            "validation as ENABLED (fail-closed to default). Connector URLs will be validated."
         )
-        return False
+        return True
 
 
 def validate_connector_url_for_ssrf(url: str) -> None:
-    """SSRF-validate a tenant-controlled connector URL, but only when connector validation is on.
+    """SSRF-validate a tenant-controlled connector URL unless connector validation is disabled.
 
-    A no-op unless ``connector_ssrf_validation_enabled`` is set, so default behavior is unchanged
-    (connectors keep reaching localhost/private hosts). When enabled, defers to
-    :func:`validate_url_for_ssrf` (which still respects ``ssrf_protection_enabled`` and the
-    allowlist) for the actual host policy.
+    Defers to :func:`validate_url_for_ssrf`, which still respects ``ssrf_protection_enabled`` and
+    the allowlist, for the actual host policy. Operators can set
+    ``connector_ssrf_validation_enabled=false`` to preserve legacy localhost/private-network
+    connector behavior.
 
     DNS-rebinding residual: unlike the API Request component (which uses
     :func:`validate_and_resolve_url` to pin the validated IP), connectors hand the URL to a
@@ -541,9 +540,9 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
 def validate_connector_database_url_for_ssrf(url: str) -> None:
     """DB-URL validation for connector components (e.g. the SQL Database components).
 
-    The network-host SSRF check is opt-in via ``connector_ssrf_validation_enabled`` so a tenant's
-    local/private database keeps working by default. The local-file dialect restriction still
-    honors ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` regardless, since that is a separate control.
+    The network-host SSRF check follows ``connector_ssrf_validation_enabled`` (default on). The
+    local-file dialect restriction still honors ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` regardless,
+    since that is a separate control.
 
     Raises:
         SSRFProtectionError: If connector validation is on and the host is blocked, or a local-file

@@ -12,6 +12,7 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
+from lfx.utils.file_path_security import enforce_local_file_access
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 from typing_extensions import override
 
@@ -216,7 +217,10 @@ class LocalDBComponent(LCVectorStoreComponent):
         # Use user-provided directory or default cache directory
         if self.persist_directory:
             base_dir = self.resolve_path(self.persist_directory)
-            persist_directory = str(self.get_vector_store_directory(base_dir))
+            # Confine the on-disk store to the storage dir when LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS
+            # is on so a tenant cannot write Chroma's sqlite store to an arbitrary host path
+            # (no-op by default).
+            persist_directory = str(enforce_local_file_access(self.get_vector_store_directory(base_dir)))
             logger.debug(f"Using custom persist directory: {persist_directory}")
         else:
             persist_directory = self.get_default_persist_dir()

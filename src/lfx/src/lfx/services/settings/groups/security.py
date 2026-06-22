@@ -32,20 +32,19 @@ class SecuritySettings(BaseModel):
 
     Note: This setting only takes effect when ssrf_protection_enabled is True.
     When protection is disabled, all hosts are allowed regardless of this setting."""
-    connector_ssrf_validation_enabled: bool = False
-    """Opt-in SSRF validation for CONNECTOR components that take a tenant-controlled host/URL:
+    connector_ssrf_validation_enabled: bool = True
+    """SSRF validation for CONNECTOR components that take a tenant-controlled host/URL:
     vector stores (Chroma/Qdrant/Elasticsearch/OpenSearch/Milvus/Weaviate/Supabase/Upstash/
     ClickHouse), the SQL Database components, the Glean and AstraDB-CQL tools, model-provider
     model discovery (LiteLLM/HuggingFace/xAI/DeepSeek/Groq/watsonx), and the Ollama / LM Studio /
     Home Assistant base-URL fields.
 
-    Default False to preserve existing behavior: these connectors commonly point at localhost or
-    a private network, so validating them by default (under ssrf_protection_enabled) would break
-    legitimate single-tenant/self-hosted setups. Multi-tenant operators who want to stop tenants
-    reaching internal/cloud-metadata hosts through these components should set this to True (it
-    then defers to ssrf_protection_enabled / ssrf_allowed_hosts for the actual host policy). For
-    the SQL Database components, the separate LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS toggle still
-    governs local-file dialects (e.g. sqlite) independently of this flag."""
+    Default True: connector host validation follows ssrf_protection_enabled / ssrf_allowed_hosts
+    so tenant-controlled connector URLs cannot reach internal/cloud-metadata hosts by default.
+    Single-tenant/self-hosted operators who intentionally point connectors at localhost or private
+    networks can either allowlist those hosts or set this to False. For the SQL Database
+    components, the separate LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS toggle still governs local-file
+    dialects (e.g. sqlite) independently of this flag."""
 
     # API key handling
     disable_track_apikey_usage: bool = False
@@ -124,6 +123,24 @@ class SecuritySettings(BaseModel):
 
     Defaults to False to preserve existing single-tenant behavior, where reading local server
     files by absolute path is a legitimate feature."""
+
+    mcp_server_docker_hardening: bool = False
+    """If set to True, applies a strict docker-argument policy to MCP stdio servers (both
+    flow-embedded configs and the ``/api/v2/mcp/servers`` REST endpoint).
+
+    ``docker`` is an allowed MCP transport, but flags like ``-v /:/host`` (mount the host
+    filesystem), ``-v /var/run/docker.sock:/s`` (Docker-API root), ``--device``, ``--network
+    host``, and ``--privileged`` turn a container run into host access. With the default (False)
+    only ``--privileged`` / ``--cap-add`` and the host-namespace ``=`` forms are blocked, which
+    preserves existing single-tenant behavior where docker MCP servers legitimately use volume
+    mounts and custom networks.
+
+    Multi-tenant / untrusted-tenant deployments should set this to True (alongside
+    ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``): host filesystem/device mounts and privilege flags
+    are then rejected outright, host/another-container namespaces and non-default networks are
+    rejected, and ``--security-opt`` is rejected only when it disables the sandbox. Benign forms
+    (no flags, ``--user``, ``--network none``/``bridge``, ``--security-opt no-new-privileges``)
+    stay allowed."""
 
     # Rate Limiting
     rate_limit_enabled: bool = True

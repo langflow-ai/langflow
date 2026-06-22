@@ -20,11 +20,11 @@ METADATA_URL = "http://169.254.169.254"
 
 @contextmanager
 def ssrf_enabled():
-    """Enable both global SSRF protection AND the opt-in connector-SSRF validation flag."""
+    """Enable global and connector SSRF protection."""
     with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get:
         s = MagicMock()
         s.settings.ssrf_protection_enabled = True
-        s.settings.connector_ssrf_validation_enabled = True  # opt-in gate for connector components
+        s.settings.connector_ssrf_validation_enabled = True
         s.settings.ssrf_allowed_hosts = []
         s.settings.restrict_local_file_access = False
         mock_get.return_value = s

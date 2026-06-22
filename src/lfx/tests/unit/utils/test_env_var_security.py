@@ -20,8 +20,22 @@ from lfx.utils.env_var_security import is_protected_env_var, safe_getenv
         "PGPASSWORD",
         "REDIS_URL",
         "GITHUB_TOKEN",
+        "GITLAB_TOKEN",
         "GOOGLE_APPLICATION_CREDENTIALS",
+        "GCP_SA_KEY",
         "AZURE_CLIENT_SECRET",
+        # Auth / token-signing secrets
+        "JWT_SECRET",
+        "SIGNING_KEY",
+        "session_secret",  # case-insensitive
+        "ENCRYPTION_KEY",
+        # OAuth / SSO client secrets
+        "CLIENT_SECRET",
+        "GOOGLE_CLIENT_SECRET",
+        "MICROSOFT_CLIENT_SECRET",
+        # Mail relay credentials
+        "SMTP_PASSWORD",
+        "EMAIL_HOST_PASSWORD",
         "mongodb_uri",  # case-insensitive
         "",  # empty fails closed
     ],

@@ -18,7 +18,7 @@ def ssrf_enabled():
     with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get:
         s = MagicMock()
         s.settings.ssrf_protection_enabled = True
-        # Also enable the opt-in connector flag so the watsonx connector guard runs here too.
+        # Explicitly enable the connector flag so the watsonx connector guard runs here too.
         # (Home Assistant / Ollama / LM Studio use the always-on validate_url_for_ssrf.)
         s.settings.connector_ssrf_validation_enabled = True
         s.settings.ssrf_allowed_hosts = []
