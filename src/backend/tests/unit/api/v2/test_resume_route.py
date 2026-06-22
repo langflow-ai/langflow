@@ -159,3 +159,96 @@ async def test_mark_card_answered_is_noop_without_card_message(client):  # noqa:
 
     # Unknown job → no job_metadata.card_message_id → returns without raising.
     await mark_card_answered(uuid4(), "req-1", {"action_id": "approve"})
+
+
+async def test_list_pending_returns_suspended_hitl(client, created_api_key):
+    """GET /workflows/pending surfaces a SUSPENDED HITL job + its pending request."""
+    from sqlmodel import select
+
+    user_id = created_api_key.user_id
+    flow_id, job_id = uuid4(), uuid4()
+    request = {"flow_id": str(flow_id), "session_id": "sess-pending", "input_value": "hi"}
+    async with session_scope() as session:
+        session.add(Flow(id=flow_id, name=f"f-{flow_id}", data={"nodes": [], "edges": []}, user_id=user_id))
+        session.add(
+            Job(
+                job_id=job_id,
+                flow_id=flow_id,
+                user_id=user_id,
+                type=JobType.WORKFLOW,
+                status=JobStatus.SUSPENDED,
+                job_metadata={"pending_request_id": "req-1", "request": request},
+            )
+        )
+        session.add(
+            JobEvent(
+                job_id=job_id,
+                seq=1,
+                event_type="human_input_required",
+                payload={
+                    "request_id": "req-1",
+                    "prompt": "Approve?",
+                    "kind": "tool_approval",
+                    "options": [{"action_id": "approve", "label": "Approve"}],
+                    "allowed_decisions": ["approve", "reject"],
+                },
+            )
+        )
+        await session.flush()
+    try:
+        resp = await client.get(f"api/v2/workflows/pending?flow_id={flow_id}", headers=_headers(created_api_key))
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert len(data) == 1
+        item = data[0]
+        assert item["job_id"] == str(job_id)
+        assert item["session_id"] == "sess-pending"
+        assert item["request_id"] == "req-1"
+        assert item["prompt"] == "Approve?"
+        assert item["allowed_decisions"] == ["approve", "reject"]
+    finally:
+        async with session_scope() as session:
+            events = (await session.exec(select(JobEvent).where(JobEvent.job_id == job_id))).all()
+            for event in events:
+                await session.delete(event)
+            for model, key in ((Job, job_id), (Flow, flow_id)):
+                row = await session.get(model, key)
+                if row:
+                    await session.delete(row)
+
+
+class TestRerouteDecisionOnTimeout:
+    """Lazy timeout reroute (no watchdog): a late decision goes to fallback only if defined."""
+
+    @staticmethod
+    def _pending(*, seconds_ago: float, timeout_s: int, fallback: str | None):
+        from datetime import datetime, timedelta, timezone
+
+        paused_at = (datetime.now(timezone.utc) - timedelta(seconds=seconds_ago)).isoformat()
+        return {"timeout_seconds": timeout_s, "fallback_action": fallback, "paused_at": paused_at}
+
+    def test_late_decision_reroutes_to_fallback(self):
+        from langflow.api.v2.hitl import reroute_decision_on_timeout
+
+        pending = self._pending(seconds_ago=120, timeout_s=60, fallback="fallback")
+        result = reroute_decision_on_timeout(pending, {"action_id": "approve", "values": {}})
+        assert result["action_id"] == "fallback"
+        assert result["values"] == {}
+
+    def test_within_deadline_keeps_decision(self):
+        from langflow.api.v2.hitl import reroute_decision_on_timeout
+
+        pending = self._pending(seconds_ago=5, timeout_s=60, fallback="fallback")
+        assert reroute_decision_on_timeout(pending, {"action_id": "approve"})["action_id"] == "approve"
+
+    def test_late_but_no_fallback_keeps_decision(self):
+        from langflow.api.v2.hitl import reroute_decision_on_timeout
+
+        pending = self._pending(seconds_ago=120, timeout_s=60, fallback=None)
+        assert reroute_decision_on_timeout(pending, {"action_id": "approve"})["action_id"] == "approve"
+
+    def test_no_timeout_keeps_decision(self):
+        from langflow.api.v2.hitl import reroute_decision_on_timeout
+
+        pending = self._pending(seconds_ago=120, timeout_s=0, fallback="fallback")
+        assert reroute_decision_on_timeout(pending, {"action_id": "approve"})["action_id"] == "approve"

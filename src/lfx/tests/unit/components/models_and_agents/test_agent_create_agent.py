@@ -1481,37 +1481,50 @@ async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_tru
     assert captured.get("stream") is True
 
 
+def _gated_tool(name: str):
+    """A connected tool whose action was marked 'Require approval' on the tool."""
+    return SimpleNamespace(name=name, metadata={"approval_actions": ["approve", "reject"]})
+
+
 def test_should_attach_hitl_middleware_when_a_tool_is_gated() -> None:
-    """LE-1447 Slice 1: a tool listed for approval adds HumanInTheLoopMiddleware."""
+    """LE-1447 Slice 1: a tool whose action requires approval adds HumanInTheLoopMiddleware."""
     from langchain.agents.middleware import HumanInTheLoopMiddleware
 
     component = _build_component()
-    search = SimpleNamespace(name="search")
-    component.set_attributes({"tools": [search], "tools_requiring_approval": ["search"]})
+    component.set_attributes({"tools": [_gated_tool("search")]})
 
     middleware = component._build_middleware(MagicMock(name="fake_llm"))
 
     hitl = [m for m in middleware if isinstance(m, HumanInTheLoopMiddleware)]
     assert len(hitl) == 1
-    assert component._gated_interrupt_on() == {"search": True}
+    assert component._gated_interrupt_on() == {"search": {"allowed_decisions": ["approve", "reject"]}}
 
 
 def test_should_omit_hitl_middleware_when_no_tools_gated() -> None:
-    """No tool listed for approval keeps the existing graph shape (no HITL middleware)."""
+    """A tool with no approval flag keeps the existing graph shape (no HITL middleware)."""
     from langchain.agents.middleware import HumanInTheLoopMiddleware
 
     component = _build_component()
-    component.set_attributes({"tools": [SimpleNamespace(name="search")], "tools_requiring_approval": []})
+    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata={})]})
 
     middleware = component._build_middleware(MagicMock(name="fake_llm"))
 
     assert not any(isinstance(m, HumanInTheLoopMiddleware) for m in middleware)
 
 
-def test_gated_interrupt_on_ignores_unknown_tool_names() -> None:
-    """A stale approval name never gates a tool that is not wired."""
+def test_gates_only_tools_marked_for_approval() -> None:
+    """Only tools whose metadata lists approval_actions are gated; others run freely."""
     component = _build_component()
-    component.set_attributes({"tools": [SimpleNamespace(name="search")], "tools_requiring_approval": ["nonexistent"]})
+    component.set_attributes(
+        {"tools": [_gated_tool("transfer"), SimpleNamespace(name="search", metadata={"approval_actions": []})]}
+    )
+
+    assert component._gated_interrupt_on() == {"transfer": {"allowed_decisions": ["approve", "reject"]}}
+
+
+def test_gated_interrupt_on_empty_when_no_tool_marked() -> None:
+    component = _build_component()
+    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata=None)]})
 
     assert component._gated_interrupt_on() == {}
 
@@ -1532,7 +1545,7 @@ async def test_should_pass_durable_checkpointer_when_gated_with_run_context() ->
     captured: dict = {}
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer")], "tools_requiring_approval": ["transfer"]})
+    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
@@ -1548,7 +1561,7 @@ async def test_should_omit_checkpointer_when_no_tools_gated() -> None:
     captured: dict = {}
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer")], "tools_requiring_approval": []})
+    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={})]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
@@ -1566,7 +1579,7 @@ async def test_should_omit_checkpointer_and_hitl_when_allow_interrupts_false() -
     captured: dict = {}
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer")], "tools_requiring_approval": ["transfer"]})
+    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
@@ -1611,7 +1624,7 @@ async def test_should_request_pause_when_agent_stops_on_tool_approval_interrupt(
     """
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer")], "tools_requiring_approval": ["transfer"]})
+    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]})
     langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
     component._vertex = SimpleNamespace(graph=langflow_graph)
     component.send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
@@ -1665,7 +1678,7 @@ async def test_should_stream_resume_command_when_a_human_decision_is_injected() 
 
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer")], "tools_requiring_approval": ["transfer"]})
+    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]})
     langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
     langflow_graph.human_input_decisions = {f"{component._id}:job-1": {"action_id": "approve"}}
     component._vertex = SimpleNamespace(graph=langflow_graph)
@@ -1699,7 +1712,7 @@ async def test_should_not_probe_interrupts_when_agent_has_no_checkpointer() -> N
     """
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer")], "tools_requiring_approval": ["transfer"]})
+    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]})
     langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
     component._vertex = SimpleNamespace(graph=langflow_graph)
     component.send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)

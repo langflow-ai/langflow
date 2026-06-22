@@ -48,6 +48,19 @@ export const BotMessage = memo(
     const chatMessage = chat.message ? chat.message.toString() : "";
     // ContentBlockDisplay renders only tool_use content, so the HITL card is rendered directly below.
     const humanInputContent = findHumanInputContent(chat.content_blocks);
+    const hasContentBlocks = (chat.content_blocks?.length ?? 0) > 0;
+    const hasRenderableContent = (chat.content_blocks ?? []).some(
+      (block) => (block?.contents?.length ?? 0) > 0,
+    );
+    // A paused agent leaves an empty "partial" placeholder bubble; hide it unless it's
+    // the actively-building last message (where thinking dots render).
+    const isBlankPlaceholder =
+      chat.properties?.state === "partial" &&
+      isEmpty &&
+      !hasRenderableContent &&
+      !humanInputContent &&
+      !isStreaming &&
+      (!isBuilding || !lastMessage);
     const showThinkingDots =
       (chatMessage === "" || (isEmpty && !isStreaming)) &&
       isBuilding &&
@@ -135,6 +148,8 @@ export const BotMessage = memo(
       typeof persistedDuration === "number" && persistedDuration > 0
         ? persistedDuration
         : liveDisplayTime;
+
+    if (isBlankPlaceholder) return null;
 
     return (
       <>
@@ -247,7 +262,11 @@ export const BotMessage = memo(
                                   <CustomMarkdownField
                                     isAudioMessage={isAudioMessage}
                                     chat={chat}
-                                    isEmpty={isEmpty && !isStreaming}
+                                    isEmpty={
+                                      isEmpty &&
+                                      !isStreaming &&
+                                      !hasContentBlocks
+                                    }
                                     chatMessage={decodedMessage}
                                     editedFlag={editedFlag}
                                   />

@@ -8,7 +8,13 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
@@ -20,6 +26,75 @@ import {
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
+
+// The decisions an agent can offer when a tool action pauses for approval
+// (mirrors langgraph's HumanInTheLoopMiddleware). Empty selection = no approval.
+const APPROVAL_ACTIONS: { id: string; label: string }[] = [
+  { id: "approve", label: "Approve" },
+  { id: "edit", label: "Edit" },
+  { id: "reject", label: "Reject" },
+  { id: "respond", label: "Respond" },
+];
+
+function ApprovalActionsCell({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  // Keep edits local while the popover is open so toggling a box doesn't re-render
+  // the grid row (which would remount this cell and close the popover). Persist on close.
+  const [local, setLocal] = useState<string[]>(selected);
+  useEffect(() => {
+    if (!open) setLocal(selected);
+  }, [selected, open]);
+
+  const toggle = (id: string) =>
+    setLocal((current) =>
+      current.includes(id) ? current.filter((a) => a !== id) : [...current, id],
+    );
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) onChange(local);
+  };
+
+  const summary =
+    local.length === 0
+      ? "Off"
+      : APPROVAL_ACTIONS.filter((a) => local.includes(a.id))
+          .map((a) => a.label)
+          .join(", ");
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          data-testid="approval-actions-trigger"
+          className="flex h-7 w-full items-center truncate rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted"
+        >
+          <span className="truncate">{summary}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-44 p-1">
+        {APPROVAL_ACTIONS.map((action) => (
+          <button
+            key={action.id}
+            type="button"
+            onClick={() => toggle(action.id)}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+          >
+            <Checkbox checked={local.includes(action.id)} />
+            <span>{action.label}</span>
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function ToolsTable({
   rows,
@@ -61,8 +136,9 @@ export default function ToolsTable({
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
-    // biome-ignore lint/suspicious/noExplicitAny: legacy
-    return (params: any) =>
+    return (params: {
+      data: { _uniqueId?: string; name?: string; display_name?: string };
+    }) =>
       params.data._uniqueId ||
       `${params.data.name}_${params.data.display_name}`;
   }, []);
@@ -239,6 +315,27 @@ export default function ToolsTable({
       cellClass: "text-muted-foreground",
     },
     {
+      field: "approval_actions",
+      headerName: t("toolsModal.columnApproval", "HITL"),
+      width: 150,
+      flex: 0,
+      resizable: false,
+      sortable: false,
+      cellRenderer: (params: {
+        data: { _uniqueId?: string; approval_actions?: string[] } & Record<
+          string,
+          unknown
+        >;
+      }) => (
+        <div data-hitl-cell className="flex h-full items-center">
+          <ApprovalActionsCell
+            selected={params.data?.approval_actions ?? []}
+            onChange={(next) => handleApprovalChange(params.data, next)}
+          />
+        </div>
+      ),
+    },
+    {
       field: "tags",
       headerName: "Tags",
       flex: 1,
@@ -293,6 +390,17 @@ export default function ToolsTable({
     }
   };
 
+  const handleApprovalChange = (
+    row: { _uniqueId?: string } & Record<string, unknown>,
+    actions: string[],
+  ) => {
+    if (!row?._uniqueId) return;
+    skipSelectionReapply.current++;
+    const updatedRow = { ...row, approval_actions: actions };
+    agGrid.current?.api.applyTransaction({ update: [updatedRow] });
+    setData(data.map((r) => (r._uniqueId === row._uniqueId ? updatedRow : r)));
+  };
+
   const actionArgs = useMemo(() => {
     return Object.entries(focusedRow?.args ?? {}).map(
       // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -324,6 +432,10 @@ export default function ToolsTable({
   };
 
   const handleRowClicked = (event) => {
+    // Clicking the HITL cell opens its own popover; don't also open the row sidebar
+    // (that re-render would close the popover).
+    const target = event.event?.target as HTMLElement | undefined;
+    if (target?.closest("[data-hitl-cell]")) return;
     setFocusedRow(event.data);
     setSidebarOpen(true);
   };

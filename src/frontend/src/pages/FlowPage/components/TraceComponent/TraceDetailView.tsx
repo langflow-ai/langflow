@@ -4,13 +4,19 @@ import Loading from "@/components/ui/loading";
 import { useGetTraceQuery } from "@/controllers/API/queries/traces";
 import { SpanDetail } from "./SpanDetail";
 import { SpanTree } from "./SpanTree";
+import { TraceHitlBar } from "./TraceHitlBar";
 import { Span, TraceDetailViewProps } from "./types";
 
 /**
  * Single-trace detail view used in the right-side panel.
  * Matches the "Trace Detail" layout (header + span list + span details).
  */
-export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
+export function TraceDetailView({
+  traceId,
+  flowName,
+  pendingRequest,
+  onResolved,
+}: TraceDetailViewProps) {
   const { t } = useTranslation();
   const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
 
@@ -133,6 +139,10 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
           <SpanDetail span={selectedSpan} />
         </div>
       </div>
+
+      {pendingRequest && (
+        <TraceHitlBar pending={pendingRequest} onResolved={onResolved} />
+      )}
     </div>
   );
 }

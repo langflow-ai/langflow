@@ -182,6 +182,7 @@ describe("traceViewHelpers", () => {
       expect(getSpanStatusLabel("ok")).toBe("success");
       expect(getSpanStatusLabel("error")).toBe("error");
       expect(getSpanStatusLabel("unset")).toBe("running");
+      expect(getSpanStatusLabel("awaiting_human")).toBe("awaiting human action");
     });
   });
 
@@ -332,6 +333,12 @@ describe("traceViewHelpers", () => {
         colorClass: "text-muted-foreground",
         iconName: "Loader2",
         shouldSpin: true,
+      });
+
+      expect(getStatusIconProps("awaiting_human")).toEqual({
+        colorClass: "text-accent-indigo-foreground",
+        iconName: "CirclePause",
+        shouldSpin: false,
       });
     });
   });

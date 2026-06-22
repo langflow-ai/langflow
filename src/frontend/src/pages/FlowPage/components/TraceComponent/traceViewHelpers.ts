@@ -38,6 +38,8 @@ export const getSpanStatusLabel = (status: Span["status"]): string => {
       return "error";
     case "unset":
       return "running";
+    case "awaiting_human":
+      return "awaiting human action";
     default:
       return status;
   }
@@ -145,6 +147,15 @@ export const getStatusIconProps = (
   const isOk = normalized === "ok";
   const isError = normalized === "error";
   const isUnset = normalized === "unset";
+  const isAwaitingHuman = normalized === "awaiting_human";
+
+  if (isAwaitingHuman) {
+    return {
+      colorClass: "text-accent-indigo-foreground",
+      iconName: "CirclePause",
+      shouldSpin: false,
+    };
+  }
 
   return {
     colorClass: isError

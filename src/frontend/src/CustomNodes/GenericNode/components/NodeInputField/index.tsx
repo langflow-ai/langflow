@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
+import { ActionPickerAddButton } from "@/components/core/parameterRenderComponent/components/actionPickerComponent/AddButton";
 import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import {
@@ -184,6 +185,29 @@ export default function NodeInputField({
             templateValue={data.node?.template[name]}
             nodeClass={data.node!}
           />
+          {data.node?.template[name]?.type === "actionPicker" && (
+            <ActionPickerAddButton
+              selected={
+                Array.isArray(data.node?.template[name]?.value)
+                  ? data.node?.template[name]?.value
+                  : []
+              }
+              options={
+                Array.isArray(data.node?.template[name]?.options)
+                  ? data.node?.template[name]?.options
+                  : []
+              }
+              combobox={data.node?.template[name]?.combobox}
+              testId={name}
+              onAdd={(action) => {
+                const current = Array.isArray(data.node?.template[name]?.value)
+                  ? data.node?.template[name]?.value
+                  : [];
+                if (current.includes(action)) return;
+                handleOnNewValue({ value: [...current, action] });
+              }}
+            />
+          )}
         </div>
 
         {data.node?.template[name] !== undefined && (

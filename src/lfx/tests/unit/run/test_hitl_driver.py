@@ -145,3 +145,81 @@ async def test_driver_raises_when_provider_never_resolves() -> None:
     # the driver's _MAX_PAUSES guard must surface the pause rather than loop.
     with pytest.raises(GraphPausedException):
         await run_graph_with_human_input(graph, decision_provider=lambda _r: None, store=store)
+
+
+def _hitl_graph(store, *, enable_fallback: bool, late: bool, job_id: str = "job-1"):
+    """A real HumanInput node wired to two branch outputs (approve + fallback).
+
+    ``late=True`` backdates the pause so the driver sees the response as past-deadline.
+    HumanInput's branch outputs are dynamic, so they're materialized + wired by name here.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from lfx.components.flow_controls.human_input import HumanInput
+    from lfx.io import Output
+
+    human = HumanInput(_id="human")
+    human.set(
+        prompt="Approve?",
+        decisions=["Approve"],
+        enable_fallback=enable_fallback,
+        timeout={"value": 1, "unit": "Minutes"},
+    )
+    if late:
+        original = human._pause_request
+
+        def _backdated():
+            req = original()
+            req["paused_at"] = (datetime.now(timezone.utc) - timedelta(seconds=120)).isoformat()
+            return req
+
+        human._pause_request = _backdated
+    human.outputs = [
+        Output(
+            display_name="Approve", name="branch_approve", method="route_branch", group_outputs=True, types=["Message"]
+        ),
+        Output(
+            display_name="Fallback",
+            name="branch_fallback",
+            method="route_branch",
+            group_outputs=True,
+            types=["Message"],
+        ),
+    ]
+    human.map_outputs()
+    out_approve = ChatOutput(_id="out_approve")
+    out_approve.set(should_store_message=False)
+    out_fallback = ChatOutput(_id="out_fallback")
+    out_fallback.set(should_store_message=False)
+    graph = Graph()
+    graph.add_component(human, "human")
+    graph.add_component(out_approve, "out_approve")
+    graph.add_component(out_fallback, "out_fallback")
+    graph.add_component_edge("human", ("branch_approve", "input_value"), "out_approve")
+    graph.add_component_edge("human", ("branch_fallback", "input_value"), "out_fallback")
+    graph.set_run_id(job_id)
+    graph.checkpointing_enabled = True
+    graph.checkpoint_store = store
+    return graph
+
+
+async def test_late_decision_routes_to_fallback_branch() -> None:
+    store = InMemoryCheckpointStore()
+    graph = _hitl_graph(store, enable_fallback=True, late=True)
+    results = await run_graph_with_human_input(
+        graph, decision_provider=lambda _r: {"action_id": "approve", "values": {}}, store=store
+    )
+    built = {r.vertex.id for r in results}
+    assert "out_fallback" in built
+    assert "out_approve" not in built
+
+
+async def test_ontime_decision_routes_to_chosen_branch() -> None:
+    store = InMemoryCheckpointStore()
+    graph = _hitl_graph(store, enable_fallback=True, late=False)
+    results = await run_graph_with_human_input(
+        graph, decision_provider=lambda _r: {"action_id": "approve", "values": {}}, store=store
+    )
+    built = {r.vertex.id for r in results}
+    assert "out_approve" in built
+    assert "out_fallback" not in built

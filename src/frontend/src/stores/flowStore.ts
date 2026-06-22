@@ -933,7 +933,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const buildController = new AbortController();
     get().setBuildController(buildController);
 
-    // A Human Input node can suspend mid-run — only the durable background path supports it.
+    // Only the durable background path supports a mid-run pause/resume.
     const runArgs = {
       flowId: currentFlow!.id,
       message: input_value,
@@ -944,10 +944,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       files,
       signal: buildController.signal,
     };
-    const hasHumanInput = get().nodes.some(
-      (node) => node.data?.type === "HumanInput",
-    );
-    await (hasHumanInput ? runFlowHITL(runArgs) : runFlowAGUI(runArgs));
+    const canSuspend = get().nodes.some((node) => {
+      if (node.data?.type === "HumanInput") return true;
+      const rows = node.data?.node?.template?.tools_metadata?.value;
+      return (
+        Array.isArray(rows) &&
+        rows.some((row) => (row?.approval_actions?.length ?? 0) > 0)
+      );
+    });
+    await (canSuspend ? runFlowHITL(runArgs) : runFlowAGUI(runArgs));
 
     // Invalidate KB-related caches so any KnowledgeIngestion node that ran
     // inside this build surfaces its updated stats / runs the next time the

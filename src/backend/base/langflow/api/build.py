@@ -82,6 +82,31 @@ def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
     }
 
 
+def _rerun_non_input_predecessors(graph: Graph, vertex_id: str) -> None:
+    """Un-build the paused vertex's non-input predecessors so they re-run on resume.
+
+    A checkpoint cannot serialize non-JSON outputs (Tools, models), so a producer like
+    an Agent would receive ``None`` tools after restore. Re-running the upstream
+    definitions regenerates valid inputs; input vertices (e.g. Chat Input) keep their
+    restored value and are not re-run.
+    """
+    visited: set[str] = set()
+    stack = list(graph.predecessor_map.get(vertex_id, []))
+    while stack:
+        pred_id = stack.pop()
+        if pred_id in visited:
+            continue
+        visited.add(pred_id)
+        try:
+            pred = graph.get_vertex(pred_id)
+        except ValueError:
+            continue
+        if pred.is_input:
+            continue
+        pred.built = False
+        stack.extend(graph.predecessor_map.get(pred_id, []))
+
+
 def _log_component_input_telemetry(
     vertex,
     vertex_id: str,
@@ -388,16 +413,21 @@ async def generate_flow_events(
         from lfx.graph.graph.base import Graph as LfxGraph
         from lfx.services.deps import get_checkpoint_service
 
+        from langflow.api.v2.hitl import reroute_decision_on_timeout
+
         run_id = str(job_id)
         store = get_checkpoint_service()
         checkpoint = await store.load_by_run_id(run_id)
         if checkpoint is None:
             return await build_graph_and_get_order()
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
-        graph.human_input_decisions = {resume["request_id"]: resume["decision"]}
+        pending = await get_job_service().get_pending_human_request(job_id)
+        decision = reroute_decision_on_timeout(pending, resume["decision"])
+        graph.human_input_decisions = {resume["request_id"]: decision}
         for vertex in graph.vertices:
             if f"{vertex.id}:{run_id}" == resume["request_id"]:
                 vertex.built = False
+                _rerun_non_input_predecessors(graph, vertex.id)
         first_layer = graph.resume_first_layer()
         for vertex_id in first_layer:
             graph.run_manager.add_to_vertices_being_run(vertex_id)

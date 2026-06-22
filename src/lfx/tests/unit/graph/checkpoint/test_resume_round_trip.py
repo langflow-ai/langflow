@@ -87,3 +87,28 @@ async def test_resume_without_decision_suspends_again():
 
     with pytest.raises(GraphPausedException):
         await resumed.process(fallback_to_env_vars=False)
+
+
+async def test_resume_reapplies_user_id_to_restored_component():
+    """A checkpoint-restored component loses _user_id; the build re-applies it on resume.
+
+    Without this, load_from_db fields (e.g. an Agent's API key global variable) raise
+    'User id is not set' when the paused vertex re-runs.
+    """
+    store = InMemoryCheckpointStore()
+    first = _graph(store)
+    with pytest.raises(GraphPausedException):
+        await first.process(fallback_to_env_vars=False)
+
+    checkpoint = await store.load_by_run_id("job-1")
+    resumed = Graph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+    resumed.human_input_decisions = {"pauser:job-1": {"action_id": "approve", "values": {}}}
+    paused = resumed.get_vertex("pauser")
+    paused.built = False
+    paused.custom_component._user_id = None  # restored component starts without a user
+    resumed.user_id = "user-123"
+
+    await resumed.process(fallback_to_env_vars=False)
+
+    assert paused.custom_component._user_id == "user-123"
+    assert resumed.get_vertex("chat_output").built is True

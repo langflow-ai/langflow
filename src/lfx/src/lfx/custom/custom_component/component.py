@@ -1630,6 +1630,7 @@ class Component(CustomComponent):
             "description": tool.description,
             "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
             "status": True,  # Initialize all tools with status True
+            "approval_actions": tool.metadata.get("approval_actions") or [],  # HITL decisions per action (LE-1447)
             "display_name": tool.metadata.get("display_name", tool.name),
             "display_description": tool.metadata.get("display_description", tool.description),
             "readonly": tool.metadata.get("readonly", False),
@@ -1686,6 +1687,7 @@ class Component(CustomComponent):
                     old = old_by_tag.get(tags[0]) if tags else None
                     if old:
                         item["status"] = old.get("status", True)
+                        item["approval_actions"] = old.get("approval_actions") or []
                         item["name"] = old.get("name", item["name"])
                         # Preserve description only if user customized it
                         old_desc = old.get("description", "")

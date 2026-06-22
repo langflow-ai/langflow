@@ -25,6 +25,7 @@ from lfx.components.models_and_agents.agent_helpers.placeholder_corrective_middl
 from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware import (
     SingleToolCallMiddleware,
 )
+from lfx.components.models_and_agents.agent_helpers.tool_approval import ToolApprovalMixin
 from lfx.components.models_and_agents.memory import MemoryComponent, aget_agent_chat_history
 
 if TYPE_CHECKING:
@@ -146,12 +147,7 @@ def _suppress_send_message(component: Any):
         component.send_message = original
 
 
-_HUMAN_INPUT_REQUIRED = "human_input_required"
-_KIND_TOOL_APPROVAL = "tool_approval"
-_DECISION_LABELS = {"approve": "Approve", "edit": "Edit", "reject": "Reject", "respond": "Respond"}
-
-
-class AgentComponent(ToolCallingAgentComponent):
+class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
     documentation: str = "https://docs.langflow.org/agents"
@@ -229,16 +225,6 @@ class AgentComponent(ToolCallingAgentComponent):
             info="Maximum number of tokens to generate. Field name varies by provider.",
             advanced=True,
             range_spec=RangeSpec(min=1, max=128000, step=1, step_type="int"),
-        ),
-        StrInput(
-            name="tools_requiring_approval",
-            display_name="Tools Requiring Approval",
-            info=(
-                "Names of connected tools that pause for human approval before running "
-                "(human-in-the-loop). Leave empty to auto-approve every tool."
-            ),
-            is_list=True,
-            advanced=True,
         ),
         MultilineInput(
             name="format_instructions",
@@ -617,138 +603,6 @@ class AgentComponent(ToolCallingAgentComponent):
         if interrupt_on:
             middleware.append(HumanInTheLoopMiddleware(interrupt_on=interrupt_on))
         return middleware
-
-    def _agent_thread_id(self) -> str | None:
-        """Per-run thread id for the agent HITL checkpoint (run_id, not session_id)."""
-        run_id = getattr(getattr(self, "graph", None), "run_id", None)
-        return str(run_id) if run_id else None
-
-    def _build_agent_checkpointer(self):
-        """Durable saver for a gated agent run, else None (no checkpointer overhead).
-
-        The blob store is the INJECTED checkpoint service (DB-backed in the Langflow
-        runtime, in-memory standalone) so lfx never imports langflow.
-        """
-        thread_id = self._agent_thread_id()
-        if not thread_id or not self._gated_interrupt_on():
-            return None
-        from lfx.components.models_and_agents.agent_helpers.job_checkpoint_saver import JobCheckpointSaver
-        from lfx.graph.checkpoint.store import default_checkpoint_store
-        from lfx.services.deps import get_checkpoint_service
-
-        try:
-            store = get_checkpoint_service()
-        except Exception:  # noqa: BLE001
-            store = None
-        store = store or default_checkpoint_store()
-        return JobCheckpointSaver(thread_id, store.save_blob, store.load_blob)
-
-    def _gated_interrupt_on(self) -> dict[str, bool]:
-        """Map each connected tool flagged for approval to a HITL interrupt entry.
-
-        Intersects the user-listed names with the real tool names so a stale name
-        never gates a tool that isn't wired.
-        """
-        requested = getattr(self, "tools_requiring_approval", None) or []
-        if not requested:
-            return {}
-        tool_names = {getattr(tool, "name", None) for tool in (self.tools or [])}
-        return {name: True for name in requested if name in tool_names}
-
-    def _map_interrupt_to_request(self, value: dict[str, Any]) -> dict[str, Any]:
-        """Translate a HumanInTheLoopMiddleware interrupt into the HITL pause request.
-
-        Reuses the same ``request_id``/``options``/``allowed_decisions`` contract as the
-        HumanInput node so the persisted card, resume route, and frontend treat an agent
-        tool-approval pause exactly like a node pause.
-        """
-        action_requests = value.get("action_requests") or []
-        review_configs = value.get("review_configs") or []
-        allowed: list[str] = []
-        for config in review_configs:
-            for decision in config.get("allowed_decisions") or []:
-                if decision not in allowed:
-                    allowed.append(decision)
-        calls = ", ".join(str(req.get("name")) for req in action_requests if req.get("name"))
-        prompt = action_requests[0].get("description") if action_requests else ""
-        return {
-            "request_id": f"{self._id}:{self._agent_thread_id()}",
-            "kind": _KIND_TOOL_APPROVAL,
-            "prompt": prompt or (f"Approve tool call: {calls}" if calls else "Approve the agent's next action?"),
-            "options": [{"action_id": d, "label": _DECISION_LABELS.get(d, d.title())} for d in allowed],
-            "allowed_decisions": allowed,
-            "action_requests": action_requests,
-        }
-
-    async def _read_pending_interrupt_value(self, agent, config: dict[str, Any]) -> dict[str, Any] | None:
-        """Return the raw interrupt value (action_requests/review_configs) from the snapshot."""
-        snapshot = await agent.aget_state(config)
-        interrupts = getattr(snapshot, "interrupts", None) or []
-        if not interrupts:
-            for task in getattr(snapshot, "tasks", None) or []:
-                interrupts = getattr(task, "interrupts", None) or []
-                if interrupts:
-                    break
-        if not interrupts:
-            return None
-        value = getattr(interrupts[0], "value", None)
-        return value if isinstance(value, dict) else None
-
-    def _pending_interrupt_getter(self, agent, config: dict[str, Any]):
-        """Closure that reports the agent's pending tool-approval request, or None.
-
-        Called after the event stream drains; the interrupt has by then been written to
-        the checkpointer, so the state snapshot carries it.
-        """
-
-        async def _get() -> dict[str, Any] | None:
-            value = await self._read_pending_interrupt_value(agent, config)
-            return self._map_interrupt_to_request(value) if value else None
-
-        return _get
-
-    def _injected_agent_decision(self, thread_id: str) -> dict[str, Any] | None:
-        """Human decision for this agent's pending approval, injected on resume."""
-        decisions = getattr(self.graph, "human_input_decisions", None)
-        if not isinstance(decisions, dict):
-            return None
-        return decisions.get(f"{self._id}:{thread_id}")
-
-    @staticmethod
-    def _to_langgraph_decision(decision: dict[str, Any], action_request: dict[str, Any]) -> dict[str, Any]:
-        """Translate one HITL action_id into the middleware's resume Decision shape."""
-        action_id = decision.get("action_id")
-        values = decision.get("values") or {}
-        if action_id == "edit":
-            return {
-                "type": "edit",
-                "edited_action": {"name": action_request.get("name"), "args": values.get("args", values)},
-            }
-        if action_id == "reject":
-            return {"type": "reject", "message": values.get("message", "")}
-        if action_id == "respond":
-            return {"type": "respond", "message": values.get("message") or values.get("response") or ""}
-        return {"type": "approve"}
-
-    def _build_resume_decisions(
-        self, decision: dict[str, Any], action_requests: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        """One Decision per interrupted tool call (count must match), all from the human pick."""
-        count = max(len(action_requests), 1)
-        return [
-            self._to_langgraph_decision(decision, action_requests[i] if i < len(action_requests) else {})
-            for i in range(count)
-        ]
-
-    def _suspend_for_tool_approval(self, request: dict[str, Any], agent_message: Message) -> Message:
-        """Request a graph pause carrying the tool-approval request, mirroring HumanInput.
-
-        The actual suspend happens at the next ``check_and_handle_pause`` (start of the
-        following ``build_vertices``); returning the partial message lets this vertex finish.
-        """
-        self.graph.request_pause(reason=_HUMAN_INPUT_REQUIRED, data=request)
-        self.status = "Awaiting human approval"
-        return agent_message
 
     async def run_agent(self, agent) -> Message:
         """Run the LangGraph `CompiledStateGraph` and return the final agent Message.

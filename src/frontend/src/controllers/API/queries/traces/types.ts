@@ -1,3 +1,4 @@
+import type { PendingHumanRequest } from "@/controllers/API/queries/workflows/use-get-pending-workflows";
 import { Span } from "@/pages/FlowPage/components/TraceComponent/types";
 
 export interface TracesQueryParams {
@@ -19,6 +20,7 @@ export interface TraceListItem {
   sessionId?: string;
   input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
+  pendingRequest?: PendingHumanRequest;
 }
 
 export interface TracesResponse {

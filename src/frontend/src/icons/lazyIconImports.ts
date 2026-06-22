@@ -270,6 +270,10 @@ export const lazyIconsMapping = {
       default: mod.HackerNewsIcon,
     })),
   HCD: () => import("@/icons/HCD").then((mod) => ({ default: mod.HCDIcon })),
+  HumanInput: () =>
+    import("@/icons/HumanInput").then((mod) => ({
+      default: mod.HumanInputIcon,
+    })),
   HomeAssistant: () =>
     import("@/icons/HomeAssistant").then((mod) => ({
       default: mod.HomeAssistantIcon,

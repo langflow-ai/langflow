@@ -11,9 +11,62 @@ import uuid
 from uuid import UUID
 
 from lfx.log import logger
+from lfx.run.hitl import reroute_decision_on_timeout
 from sqlalchemy.orm.attributes import flag_modified
 
 from langflow.services.deps import get_job_service
+
+__all__ = [
+    "is_decision_allowed",
+    "list_pending_human_requests",
+    "mark_card_answered",
+    "persist_human_input_card",
+    "reroute_decision_on_timeout",
+]
+
+
+async def list_pending_human_requests(flow_id: UUID, user_id: UUID) -> list[dict]:
+    """Suspended HITL jobs for a flow + their pending request, for the Traces overlay.
+
+    Traces and jobs are separate stores; the paused state lives on the SUSPENDED job, so
+    the frontend correlates these to trace rows by ``session_id``.
+    """
+    from sqlmodel import select
+
+    from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
+    from langflow.services.deps import session_scope
+
+    async with session_scope() as session:
+        result = await session.exec(
+            select(Job).where(
+                Job.flow_id == flow_id,
+                Job.user_id == user_id,
+                Job.status == JobStatus.SUSPENDED,
+                Job.type == JobType.WORKFLOW,
+            )
+        )
+        jobs = list(result.all())
+
+    pending: list[dict] = []
+    for job in jobs:
+        request = await get_job_service().get_pending_human_request(job.job_id)
+        if not request:
+            continue
+        session_id = ((job.job_metadata or {}).get("request") or {}).get("session_id")
+        pending.append(
+            {
+                "job_id": str(job.job_id),
+                "flow_id": str(job.flow_id),
+                "session_id": session_id,
+                "created_at": job.created_timestamp.isoformat() if job.created_timestamp else None,
+                "request_id": request.get("request_id"),
+                "kind": request.get("kind"),
+                "prompt": request.get("prompt"),
+                "options": request.get("options") or [],
+                "allowed_decisions": request.get("allowed_decisions") or [],
+            }
+        )
+    return pending
 
 
 async def is_decision_allowed(job_id: UUID, decision: dict) -> bool:

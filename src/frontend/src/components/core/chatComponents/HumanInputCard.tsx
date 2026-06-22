@@ -105,7 +105,7 @@ export default function HumanInputCard({
       className="flex flex-col gap-3 rounded-md border border-border bg-muted/40 p-4"
     >
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <ForwardedIconComponent name="CircleHelp" className="h-4 w-4" />
+        <ForwardedIconComponent name="HumanInput" className="h-4 w-4" />
         <span>Human input required</span>
       </div>
 

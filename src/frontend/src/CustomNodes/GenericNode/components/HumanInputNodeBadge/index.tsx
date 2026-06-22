@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import HumanInputCard from "@/components/core/chatComponents/HumanInputCard";
 import {
   Popover,
@@ -11,8 +10,8 @@ import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
 
 /**
- * Canvas affordance for a paused Human Input node (LE-1603): a pulsing "awaiting input"
- * badge that doubles as the anchor for a decision popover. The popover reuses the chat
+ * Canvas affordance for a paused Human Input node (LE-1603): a circular indigo "awaiting
+ * input" badge that doubles as the anchor for a decision popover. The popover reuses the chat
  * `HumanInputCard` (which self-resumes), so the human can resolve the pause from the
  * canvas. Only the node whose id matches the pending request renders anything.
  */
@@ -39,16 +38,17 @@ export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
           type="button"
           data-testid="human-input-node-badge"
           onClick={() => setOpen(true)}
+          title="Awaiting input"
+          aria-label="Awaiting input"
           className={cn(
-            "flex items-center gap-1 rounded-full border border-accent-amber-foreground/40",
-            "bg-accent-amber/20 px-2 py-0.5 text-xs font-medium text-accent-amber-foreground",
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+            "border-2 border-accent-indigo-foreground text-accent-indigo-foreground",
           )}
         >
-          <ForwardedIconComponent
-            name="CircleHelp"
-            className="h-3 w-3 animate-pulse"
-          />
-          Awaiting input
+          <span className="flex items-center gap-[2px]">
+            <span className="h-2 w-0.5 rounded-[1px] bg-accent-indigo-foreground" />
+            <span className="h-2 w-0.5 rounded-[1px] bg-accent-indigo-foreground" />
+          </span>
         </button>
       </PopoverAnchor>
       <PopoverContent

@@ -203,6 +203,24 @@ describe("ChatMessage Component", () => {
     // Empty user message with no files should render as BotMessage
     expect(screen.getByTestId("div-chat-message")).toBeInTheDocument();
   });
+
+  it("hides an empty partial placeholder that is not the building last message", () => {
+    const placeholderProps = {
+      ...defaultProps,
+      lastMessage: false,
+      chat: {
+        ...mockChat,
+        isSend: false,
+        message: "",
+        files: [],
+        content_blocks: [],
+        properties: { ...mockChat.properties, state: "partial" },
+      },
+    };
+
+    render(<ChatMessage {...placeholderProps} />);
+    expect(screen.queryByTestId("div-chat-message")).not.toBeInTheDocument();
+  });
 });
 
 describe("ThinkingMessage Component", () => {

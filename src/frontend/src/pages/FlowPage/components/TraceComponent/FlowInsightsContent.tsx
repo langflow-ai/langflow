@@ -33,6 +33,10 @@ import {
   useGetTracesQuery,
 } from "@/controllers/API/queries/traces";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
+import {
+  type PendingHumanRequest,
+  useGetPendingWorkflows,
+} from "@/controllers/API/queries/workflows/use-get-pending-workflows";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
@@ -137,7 +141,44 @@ export function FlowInsightsContent({
     },
   );
 
-  const rows = tracesData?.traces ?? [];
+  const { data: pendingRequests } = useGetPendingWorkflows(
+    { flowId: resolvedFlowId ?? undefined },
+    { enabled: !!resolvedFlowId },
+  );
+
+  const pendingBySession = useMemo(() => {
+    const map = new Map<string, PendingHumanRequest>();
+    (pendingRequests ?? []).forEach((req) => {
+      if (req.session_id) map.set(req.session_id, req);
+    });
+    return map;
+  }, [pendingRequests]);
+
+  // A paused run's trace stays "unset" (incomplete); overlay the awaiting-human state
+  // onto it so the list mirrors the chat/canvas HITL affordance.
+  const rows = useMemo(() => {
+    const baseRows = tracesData?.traces ?? [];
+    if (pendingBySession.size === 0) return baseRows;
+    return baseRows.map((row) => {
+      const pending = row.sessionId
+        ? pendingBySession.get(row.sessionId)
+        : undefined;
+      if (pending && row.status === "unset") {
+        return {
+          ...row,
+          status: "awaiting_human" as const,
+          pendingRequest: pending,
+        };
+      }
+      return row;
+    });
+  }, [tracesData, pendingBySession]);
+
+  const selectedPending = useMemo(
+    () =>
+      rows.find((row) => row.id === tracePanelTraceId)?.pendingRequest ?? null,
+    [rows, tracePanelTraceId],
+  );
 
   useEffect(() => {
     if (!initialTraceId) return;
@@ -158,7 +199,7 @@ export function FlowInsightsContent({
       }
     });
     return Array.from(groups.entries());
-  }, [groupBySession, tracesData]);
+  }, [groupBySession, rows]);
 
   const expandedSessionIds = useMemo(
     () => groupedRows.map(([sessionId]) => sessionId),
@@ -447,6 +488,12 @@ export function FlowInsightsContent({
               <TraceDetailView
                 traceId={tracePanelTraceId}
                 flowName={resolvedFlowName}
+                pendingRequest={selectedPending}
+                onResolved={() => {
+                  setTracePanelOpen(false);
+                  setTracePanelTraceId(null);
+                  refetch();
+                }}
               />
             </div>
           </div>

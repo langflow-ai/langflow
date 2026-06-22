@@ -1,5 +1,6 @@
 import { CellClickedEvent } from "ag-grid-community";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
+import type { PendingHumanRequest } from "@/controllers/API/queries/workflows/use-get-pending-workflows";
 import { createFlowTracesColumns } from "./config/flowTraceColumns";
 
 export type SpanType =
@@ -12,7 +13,7 @@ export type SpanType =
   | "agent"
   | "none";
 
-export type SpanStatus = "unset" | "ok" | "error";
+export type SpanStatus = "unset" | "ok" | "error" | "awaiting_human";
 
 export interface TokenUsage {
   promptTokens: number;
@@ -75,6 +76,8 @@ export interface TraceViewProps {
 export interface TraceDetailViewProps {
   traceId: string | null;
   flowName?: string | null;
+  pendingRequest?: PendingHumanRequest | null;
+  onResolved?: () => void;
 }
 
 export interface TraceAccordionItemProps {

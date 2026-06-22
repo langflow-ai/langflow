@@ -1158,6 +1158,20 @@ async def stop_workflow(
         ) from exc
 
 
+@router.get(
+    "/pending",
+    summary="List pending human-input requests",
+    description="Suspended HITL jobs for a flow plus their pending request, for the Traces overlay.",
+)
+async def list_pending_workflows(
+    current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
+    flow_id: Annotated[UUID, Query(description="Flow ID to list pending HITL requests for")],
+) -> list[dict]:
+    from langflow.api.v2.hitl import list_pending_human_requests
+
+    return await list_pending_human_requests(flow_id, current_user.id)
+
+
 @router.post(
     "/{job_id}/resume",
     summary="Resume Workflow",

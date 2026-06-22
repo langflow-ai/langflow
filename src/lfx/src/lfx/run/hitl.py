@@ -17,6 +17,7 @@ from __future__ import annotations
 import inspect
 import sys
 from collections.abc import Awaitable, Callable
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.graph.checkpoint.store import CheckpointStore, InMemoryCheckpointStore
@@ -30,6 +31,28 @@ DecisionProvider = Callable[[dict[str, Any]], "dict[str, Any] | Awaitable[dict[s
 
 # A provider that never resolves a pause would loop forever; bound it.
 _MAX_PAUSES = 100
+
+
+def reroute_decision_on_timeout(pending: dict | None, decision: dict) -> dict:
+    """Reroute a late HITL decision to the fallback branch once the pause timed out.
+
+    Lazy timeout (no background watchdog): when the human responds we compare now against
+    ``paused_at + timeout_seconds``. If it elapsed and the node defined a fallback action,
+    the decision is rerouted there; otherwise the late answer is kept unchanged.
+    """
+    pending = pending or {}
+    timeout_s = pending.get("timeout_seconds") or 0
+    fallback = pending.get("fallback_action")
+    paused_at = pending.get("paused_at")
+    if not (timeout_s and fallback and paused_at):
+        return decision
+    try:
+        paused_dt = datetime.fromisoformat(paused_at)
+    except (TypeError, ValueError):
+        return decision
+    if (datetime.now(timezone.utc) - paused_dt).total_seconds() > timeout_s:
+        return {**(decision or {}), "action_id": fallback}
+    return decision
 
 
 async def run_graph_with_human_input(
@@ -82,6 +105,7 @@ async def run_graph_with_human_input(
             graph.checkpointing_enabled = True
             graph.checkpoint_store = store
             request_id = request.get("request_id")
+            decision = reroute_decision_on_timeout(request, decision)
             graph.human_input_decisions = {request_id: decision}
             for vertex in graph.vertices:
                 if f"{vertex.id}:{graph.run_id}" == request_id:
