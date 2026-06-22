@@ -51,15 +51,20 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
-### New features and enhancements
 
-- NextPlaid multi-vector bundle
+- LFX is now engine-only
 
-    The **NextPlaid** bundle adds two new components for ColBERT-style multi-vector retrieval.
+    `uv pip install lfx` now installs the LFX executor only, with no bundle components included.
+    `uv pip install langflow` is unchanged.
+    This only affects users who install `lfx` directly.
 
-    The **NextPlaid** vector store, backed by a running [NextPlaid](https://github.com/meetdoshi90/next-plaid) server, stores each document as a matrix of token embeddings, and the **vLLM Multivector Embeddings** component generates the token-level multi-vector embeddings required by NextPlaid.
+    If you install `lfx` directly and your flows use bundle components, you need to install the required bundles in the same environment using `uv pip install lfx-bundles`.
 
-    For more information, see [NextPlaid bundle](./bundles-nextplaid).
+    45 long-tail providers ship as a single `lfx-bundles` metapackage, and are installed all at once with `uv pip install lfx-bundles`.
+    Six partner providers (OpenAI, Anthropic, Amazon, Cohere, DataStax, and Firecrawl) ship as individual packages, and are installed separately with `uv pip install lfx-<provider>`.
+
+    All bundles remain included in `uv pip install langflow` as explicit dependencies.
+    For more information, see [Bundle extensions overview](/extensions-overview).
 
 ## 1.10.x
 
