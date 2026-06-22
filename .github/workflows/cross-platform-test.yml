@@ -472,10 +472,13 @@ jobs:
       matrix:
         include:
           # Python 3.14 - Experimental (non-blocking) to monitor ecosystem readiness.
-          # Mirrors the platform set that 3.13 used while it was experimental. On
-          # macOS Intel (x86_64) the torch-dependent extras are excluded via
-          # pyproject markers (sys_platform/platform_machine), so the install still
-          # resolves there; this job is non-blocking via continue-on-error regardless.
+          # macOS Intel (x86_64) is intentionally omitted: langflow requires
+          # onnxruntime>=1.26 on Python >=3.14 (pyproject.toml), but onnxruntime
+          # dropped macOS x86_64 wheels at 1.24 — so macOS Intel + py3.14 is
+          # permanently unsatisfiable (older onnxruntime that still ships macOS
+          # x86_64 wheels has no cp314 ABI). macOS Intel resolves fine through 3.13;
+          # arm64 has cp314 wheels. Running it would only burn the costly
+          # macos-latest-large runner on a guaranteed, no-signal failure.
           - os: linux
             arch: amd64
             runner: ubuntu-latest
@@ -483,10 +486,6 @@ jobs:
           - os: windows
             arch: amd64
             runner: windows-latest
-            python-version: "3.14"
-          - os: macos
-            arch: amd64
-            runner: macos-latest-large
             python-version: "3.14"
           - os: macos
             arch: arm64
