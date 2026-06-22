@@ -61,9 +61,11 @@ jobs:
   - **All platforms**: 3.10, 3.12, 3.13, and 3.14
   - **Stability**: 3.10, 3.12, and 3.13 are required to pass (blocking)
   - **Preview**: 3.14 testing is optional (non-blocking) to monitor ecosystem readiness
-  - **Note**: on the blocking matrix, macOS Intel (x86_64) runs only Python 3.12 to
-    limit use of the costly `macos-latest-large` runner; newer Python versions get
-    macOS Intel coverage through the non-blocking experimental (3.14) set instead
+  - **Note**: macOS Intel (x86_64) is tested only on Python 3.12. macOS x86_64 is
+    being dropped across the ecosystem — PyTorch ships no x86_64 wheels for py>=3.13
+    and onnxruntime shipped none after 1.23 — and langflow requires `onnxruntime>=1.26`
+    on py>=3.14, so macOS Intel + py>=3.14 cannot resolve. The 3.13 (blocking) and
+    3.14 (preview) sets therefore run on Linux, Windows, and macOS arm64 only
 
 ## What Gets Tested
 
