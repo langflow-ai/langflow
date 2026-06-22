@@ -133,6 +133,7 @@ EXPECTED_FIELDS = {
     "dev",
     "event_delivery",
     "worker_timeout",
+    "workflow_execution_timeout",
     "public_flow_cleanup_interval",
     "public_flow_expiration",
     "webhook_polling_interval",

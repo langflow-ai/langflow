@@ -259,8 +259,6 @@ def _simplify_output_content(content: Any, output_type: str) -> Any:
             result_data = _extract_nested_value(content, *path)
             if result_data is not None:
                 return result_data
-    # TODO: Future scope - Add dataframe-specific extraction logic
-    # The following code is commented out pending further requirements analysis:
     if output_type == "dataframe":
         # For dataframe types, try multiple path combinations in order
         dataframe_paths = [
@@ -364,7 +362,6 @@ def build_component_output(
             # Non-output nodes:
             # - For data types: extract and show content
             # - For message types: extract metadata only (source, file_path)
-            # TODO: Future scope - Add support for "dataframe" output type
             if output_type in ["data", "dataframe"]:
                 content = _simplify_output_content(raw_content, output_type)
             else:

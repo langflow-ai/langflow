@@ -113,7 +113,8 @@ async def execute_public_workflow(
     # Lazy-import to avoid the circular ``v2.workflow`` -> ``api.build`` ->
     # ``v1.chat`` -> ``api.build`` cycle that fires when ``v2.__init__`` is
     # collected at import time.
-    from langflow.api.v2.workflow import _stream_event_frames, _unknown_protocol_http_exception
+    from langflow.api.v2.workflow import _unknown_protocol_http_exception
+    from langflow.api.v2.workflow_execution import _stream_event_frames
 
     # Throttle before any DB lookup or flow execution so an anonymous flood is
     # rejected cheaply, not after spending the flow owner's resources.
