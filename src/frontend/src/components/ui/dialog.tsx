@@ -34,6 +34,26 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+const MAX_DIALOG_CHILD_SCAN_DEPTH = 4;
+
+const hasChildOfType = (
+  children: React.ReactNode,
+  targetType: React.ElementType,
+  depth = 0,
+): boolean =>
+  React.Children.toArray(children).some((child) => {
+    if (!React.isValidElement<{ children?: React.ReactNode }>(child)) {
+      return false;
+    }
+    if (child.type === targetType) {
+      return true;
+    }
+    if (depth >= MAX_DIALOG_CHILD_SCAN_DEPTH) {
+      return false;
+    }
+    return hasChildOfType(child.props.children, targetType, depth + 1);
+  });
+
 // Create a VisuallyHidden component for accessibility
 const VisuallyHidden = React.forwardRef<
   HTMLSpanElement,
@@ -73,13 +93,8 @@ const DialogContent = React.forwardRef<
     ref,
   ) => {
     // Check if DialogTitle is included in children
-    const hasDialogTitle = React.Children.toArray(children).some(
-      (child) => React.isValidElement(child) && child.type === DialogTitle,
-    );
-    const hasDialogDescription = React.Children.toArray(children).some(
-      (child) =>
-        React.isValidElement(child) && child.type === DialogDescription,
-    );
+    const hasDialogTitle = hasChildOfType(children, DialogTitle);
+    const hasDialogDescription = hasChildOfType(children, DialogDescription);
 
     return (
       <DialogPortal>
