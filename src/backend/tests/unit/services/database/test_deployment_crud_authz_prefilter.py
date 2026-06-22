@@ -102,6 +102,36 @@ async def test_list_deployments_page_allowed_ids_unions_owner_and_visible(async_
 
 
 @pytest.mark.asyncio
+async def test_get_provider_account_by_id_unscoped_loads_foreign_account(async_session: AsyncSession):
+    """The unscoped fetch resolves a provider account by id regardless of owner.
+
+    This is the gate relaxation behind the deployment-list authz prefilter: a
+    caller granted READ on a shared deployment under another user's provider
+    account must resolve that account's ``provider_key`` even though the
+    owner-scoped fetch hides it from them.
+    """
+    from langflow.services.database.models.deployment_provider_account.crud import (
+        get_provider_account_by_id,
+        get_provider_account_by_id_unscoped,
+    )
+
+    owner, provider, *_ = await _seed(async_session)
+    non_owner = uuid4()
+
+    # Owner-scoped fetch hides the account from a non-owner ...
+    assert await get_provider_account_by_id(async_session, provider_id=provider.id, user_id=non_owner) is None
+    # ... but the unscoped fetch resolves it by id alone.
+    loaded = await get_provider_account_by_id_unscoped(async_session, provider_id=provider.id)
+    assert loaded is not None
+    assert loaded.id == provider.id
+    # The owner can still load their own account via the scoped fetch.
+    assert await get_provider_account_by_id(async_session, provider_id=provider.id, user_id=owner.id) is not None
+    # A non-existent id returns None (the helper raises no error; the route maps
+    # None → 404).
+    assert await get_provider_account_by_id_unscoped(async_session, provider_id=uuid4()) is None
+
+
+@pytest.mark.asyncio
 async def test_count_deployments_by_provider_reflects_allowed_ids(async_session: AsyncSession):
     """The total count uses the same predicate as the page, so pagination stays consistent."""
     owner, provider, _owned, foreign_visible, _foreign_hidden = await _seed(async_session)

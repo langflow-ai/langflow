@@ -26,6 +26,7 @@ from langflow.api.v1.mappers.deployments.helpers import (
     get_deployment_row_or_404,
     get_deployment_synced,
     get_owned_provider_account_or_404,
+    get_shared_listing_provider_account_or_404,
     handle_adapter_errors,
     list_deployment_flow_versions_synced,
     list_deployments_synced,
@@ -676,9 +677,44 @@ async def list_deployments(
             return DeploymentListResponse(deployments=[], page=params.page, size=params.size, total=0)
         effective_flow_version_ids = resolved
 
-    provider_account = await get_owned_provider_account_or_404(
-        provider_id=provider_id, user_id=current_user.id, db=session
+    # DB-layer authz prefilter: a registered authorization plugin can return the
+    # concrete set of deployment ids the caller may read, which we thread into
+    # ``list_deployments_synced`` so the page query and its total are constrained
+    # to (owner ⊕ visible) in SQL — skipping the per-row in-memory filter below
+    # and the N+1 it implies. OSS pass-through returns None → owner-scoped query
+    # plus ``filter_visible_resources`` unchanged.
+    #
+    # Computed up front (not after the provider-account gate) so a concrete list
+    # can also relax that gate: a shared deployment lives under its *owner's*
+    # provider account, so the strict owner gate would 404 a cross-user reader
+    # before the prefilter could widen anything. ``load_from_provider`` lists via
+    # the owner's live provider connection, so it always requires an owned account
+    # and never consults the prefilter.
+    visible_deployment_ids = (
+        None
+        if load_from_provider
+        else await visible_id_prefilter(
+            current_user,
+            resource_type="deployment",
+            domain=_resolve_authz_domain(None, project_id),
+            act=DeploymentAction.READ,
+        )
     )
+
+    # OSS / no-plugin path keeps the strict owner gate (byte-for-byte the prior
+    # behavior). Relax it only when the prefilter actually lists ids to surface:
+    # an empty list means "no extra visibility", so there's nothing a cross-user
+    # reader could see under a provider they don't own — keep the strict 404 there
+    # rather than degrade it to an empty 200. A non-empty list resolves the
+    # provider account by id alone so a shared deployment under another user's
+    # provider account can be listed; the (owner ⊕ visible) union below still
+    # governs which rows actually surface.
+    if visible_deployment_ids:
+        provider_account = await get_shared_listing_provider_account_or_404(provider_id=provider_id, db=session)
+    else:
+        provider_account = await get_owned_provider_account_or_404(
+            provider_id=provider_id, user_id=current_user.id, db=session
+        )
     await ensure_deployment_permission(
         current_user,
         DeploymentAction.READ,
@@ -699,19 +735,6 @@ async def list_deployments(
                 params=adapter_params,
             )
         return deployment_mapper.shape_deployment_list_result(provider_view)
-
-    # DB-layer authz prefilter: a registered authorization plugin can return the
-    # concrete set of deployment ids the caller may read, which we thread into
-    # ``list_deployments_synced`` so the page query and its total are constrained
-    # to (owner ⊕ visible) in SQL — skipping the per-row in-memory filter below
-    # and the N+1 it implies. OSS pass-through returns None → owner-scoped query
-    # plus ``filter_visible_resources`` unchanged.
-    visible_deployment_ids = await visible_id_prefilter(
-        current_user,
-        resource_type="deployment",
-        domain=_resolve_authz_domain(None, project_id),
-        act=DeploymentAction.READ,
-    )
 
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
         rows_with_counts, total, provider_data_by_resource_key = await list_deployments_synced(

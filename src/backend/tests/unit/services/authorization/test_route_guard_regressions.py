@@ -177,6 +177,29 @@ def test_list_deployments_threads_prefilter_into_synced_query(deployments_routes
     )
 
 
+def test_list_deployments_relaxes_provider_gate_on_prefilter(deployments_routes):
+    """list_deployments must not unconditionally apply the owner-scoped provider gate.
+
+    A shared deployment lives under its *owner's* provider account, so the strict
+    ``get_owned_provider_account_or_404`` 404s a cross-user reader before the
+    ``(owner ⊕ visible)`` prefilter union can surface the row. When
+    ``visible_id_prefilter`` returns a concrete list, the handler must resolve the
+    provider account by id alone (``get_shared_listing_provider_account_or_404``)
+    so ``allowed_ids`` can actually widen cross-user shared listing — while the
+    OSS / no-plugin path keeps the strict owner gate.
+    """
+    func = deployments_routes["list_deployments"]
+    src = ast.unparse(func)
+    assert _calls(func, "get_shared_listing_provider_account_or_404"), (
+        "list_deployments must resolve the provider account by id alone on the "
+        "prefilter path so shared deployments under another user's provider "
+        "account are listable"
+    )
+    assert "get_owned_provider_account_or_404" in src, (
+        "list_deployments must keep the strict owner gate for the OSS / no-plugin path"
+    )
+
+
 def test_load_flow_calls_ensure_flow_permission(helpers_funcs):
     """load_flow (component-reachable graph loader) must authorize EXECUTE.
 
