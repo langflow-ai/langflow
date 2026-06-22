@@ -6,6 +6,7 @@
 > **Scope:** Frontend code analysis against IBM `Level 1` filtered requirements
 > **Reference:** [a11y-level-1-requirements.md](/Users/viktoravelino/projects/langflow/a11y-level-1-requirements.md)
 > **Method:** Direct source code analysis + targeted re-validation of current frontend sources
+> **Latest targeted update:** 2026-06-17, LE-1518 error handling and announcements
 
 ---
 
@@ -45,10 +46,10 @@ IBM's `Level 1` filter currently returns these `21` requirements:
 | `2.4.7` | Focus Visible | FAIL | Global and local CSS suppress visible focus indicators |
 | `3.1.1` | Language of Page | PASS | `<html lang="en">` is set |
 | `3.2.4` | Consistent Identification | FAIL | Icon-only actions remain inconsistently and often invisibly identified |
-| `3.3.1` | Error Identification | FAIL | Validation and toast error feedback are not robustly announced |
+| `3.3.1` | Error Identification | PARTIAL | Auth validation and toast announcements fixed; non-auth error surfaces still need broader audit |
 | `3.3.2` | Labels or Instructions | FAIL | Placeholder-only inputs still exist in key flows |
-| `3.3.3` | Error Suggestion | AT RISK | Weak in signup/auth flows; needs runtime confirmation for final severity |
-| `3.3.4` | Error Prevention (Legal, Financial, Data) | NEEDS TARGETED AUDIT | Destructive flows exist, but criterion not fully re-verified in this pass |
+| `3.3.3` | Error Suggestion | PASS (TARGETED AUTH) | Login/signup required, mismatch, and server-error flows now expose actionable suggestions |
+| `3.3.4` | Error Prevention (Legal, Financial, Data) | FAIL | Flow/folder/deployment confirmations exist, but delete-account is a visible stub and cannot be verified end-to-end |
 | `4.1.2` | Name, Role, Value | FAIL | Widespread issues across controls, dialogs, toggles, list cards, and canvas |
 
 ---
@@ -150,10 +151,15 @@ IBM's `Level 1` filter currently returns these `21` requirements:
 - Notification, toolbar, dropdown, canvas, and list-card actions rely heavily on unlabeled or inconsistently labeled icon-only patterns.
 - Same action types are not consistently exposed with the same accessible naming strategy.
 
-### `3.3.1` Error Identification — FAIL
+### `3.3.1` Error Identification — PARTIAL
 
-- Login form validation messages are not robustly announced in [LoginPage/index.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/pages/LoginPage/index.tsx:106).
-- Alert/toast area still has no live region semantics in [alerts/displayArea/index.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/alerts/displayArea/index.tsx:16).
+- Login and signup required-field errors are now rendered as `role="alert"` messages and associated with their controls via `aria-describedby` in [LoginPage/index.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/pages/LoginPage/index.tsx:78) and [SignUpPage/index.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/pages/SignUpPage/index.tsx:86).
+- Toasts now map severity to live-region semantics in [alerts/displayArea/index.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/alerts/displayArea/index.tsx:18): errors use `role="alert"` / `aria-live="assertive"`; success and notice use `role="status"` / `aria-live="polite"`.
+- Automated evidence:
+  - [LoginPage.a11y.test.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/pages/LoginPage/__tests__/LoginPage.a11y.test.tsx:63)
+  - [SignUpPage.a11y.test.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/pages/SignUpPage/__tests__/SignUpPage.a11y.test.tsx:65)
+  - [displayArea.a11y.test.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/alerts/displayArea/__tests__/displayArea.a11y.test.tsx:34)
+- Remaining risk: non-auth validation/error surfaces were not exhaustively re-audited in this LE-1518 pass.
 
 ### `3.3.2` Labels or Instructions — FAIL
 
@@ -161,14 +167,23 @@ IBM's `Level 1` filter currently returns these `21` requirements:
 - Required markers and instructions are still not clearly exposed in all auth forms.
 - Several admin/settings/search surfaces still depend on placeholder-only or weakly associated labels.
 
-### `3.3.3` Error Suggestion — AT RISK
+### `3.3.3` Error Suggestion — PASS (TARGETED AUTH)
 
-- Signup password mismatch handling is weak in [SignUpPage/index.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/pages/SignUpPage/index.tsx:156).
-- This criterion needs runtime confirmation before finalizing severity, but current implementation is not strong enough to call compliant.
+- Signup password mismatch now announces actionable correction text: "Passwords do not match. Re-enter both passwords so they match."
+- Server-side login errors append "Check your username and password, then try again."
+- Server-side signup errors append "Use a different username or contact an administrator if you already have an account."
+- Automated evidence:
+  - [LoginPage.a11y.test.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/pages/LoginPage/__tests__/LoginPage.a11y.test.tsx:87)
+  - [SignUpPage.a11y.test.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/pages/SignUpPage/__tests__/SignUpPage.a11y.test.tsx:86)
 
-### `3.3.4` Error Prevention (Legal, Financial, Data) — NEEDS TARGETED AUDIT
+### `3.3.4` Error Prevention (Legal, Financial, Data) — FAIL
 
-- Destructive confirmations exist, but this pass did not fully validate the requirement end-to-end against all relevant user data flows.
+- Folder/flow deletion uses [DeleteConfirmationModal](/Users/viktoravelino/projects/langflow/src/frontend/src/modals/deleteConfirmationModal/index.tsx:33), which presents a named destructive confirmation dialog, explicit permanent-delete copy, a cancel action, and a destructive delete action.
+- Shared dialog title detection now recognizes nested `DialogHeader > DialogTitle` structures in [dialog.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/components/ui/dialog.tsx:32), so delete dialogs announce their specific title instead of the fallback "Dialog".
+- Automated evidence: [DeleteConfirmationModal.a11y.test.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/modals/deleteConfirmationModal/__tests__/DeleteConfirmationModal.a11y.test.tsx:5) verifies the named dialog, permanent-delete warning, cancel path, and no accidental confirmation on cancel.
+- Deployment deletion has stronger type-to-confirm protection in [type-to-confirm-delete-dialog.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/pages/MainPage/pages/deploymentsPage/components/type-to-confirm-delete-dialog.tsx:25).
+- Account deletion remains unimplemented: [DeleteAccountPage/index.tsx](/Users/viktoravelino/projects/langflow/src/frontend/src/pages/DeleteAccountPage/index.tsx:12) contains only placeholder comments and no real deletion/recovery path. This prevents a pass for the criterion across the targeted destructive/data-affecting flows.
+- Keyboard walkthrough, shared delete dialog: open the delete trigger, focus enters the named "Delete" dialog container, `Tab` reaches `Cancel`, `Delete`, and `Close`, `Cancel` exits without calling confirm, and activating `Delete` runs the destructive callback. Screen-reader structural announcement is supported by `role="dialog"` plus the visible `DialogTitle`; live assistive-technology execution was not performed in this source/test pass.
 
 ### `4.1.2` Name, Role, Value — FAIL
 
@@ -191,4 +206,3 @@ IBM's `Level 1` filter currently returns these `21` requirements:
 6. Fix high-impact semantic primitives: `Input`, `CheckBoxDiv`, `AccordionTrigger`, full-screen modal container.
 7. Repair route titles so non-playground pages set meaningful `document.title`.
 8. Adjust failing text and non-text contrast tokens before page-level QA.
-

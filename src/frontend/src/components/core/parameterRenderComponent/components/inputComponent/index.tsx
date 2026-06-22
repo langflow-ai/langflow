@@ -30,6 +30,7 @@ interface FormInputBranchProps {
   blurOnEnter: boolean;
   name?: string;
   id: string;
+  inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
 }
 
 function FormInputBranch({
@@ -49,6 +50,7 @@ function FormInputBranch({
   blurOnEnter,
   name,
   id,
+  inputProps,
 }: FormInputBranchProps) {
   const [cursor, setCursor] = useState<number | null>(null);
 
@@ -88,6 +90,7 @@ function FormInputBranch({
   return (
     <Form.Control asChild>
       <Input
+        {...inputProps}
         name={name}
         id={"form-" + id}
         ref={refInput}
@@ -145,6 +148,7 @@ export default function InputComponent({
   objectOptions,
   isObjectOption = false,
   name,
+  inputProps,
   onChangeFolderName,
   nodeStyle,
   isToolMode,
@@ -190,6 +194,7 @@ export default function InputComponent({
           blurOnEnter={blurOnEnter}
           name={name}
           id={id}
+          inputProps={inputProps}
         />
       ) : (
         <>

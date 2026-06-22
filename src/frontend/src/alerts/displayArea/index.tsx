@@ -13,25 +13,39 @@ export default function AlertDisplayArea() {
   const removeAlert = (id: string) => {
     removeFromTempNotificationList(id);
   };
+  const errorAlerts = tempNotificationList.filter(
+    (alert) => alert.type === "error",
+  );
+  const politeAlerts = tempNotificationList.filter(
+    (alert) => alert.type !== "error",
+  );
 
   return (
-    <div
-      aria-live="polite"
-      role="status"
-      className="flex flex-col-reverse"
-      style={{ zIndex: 999 }}
-    >
-      {tempNotificationList.map((alert) => (
-        <div key={alert.id}>
-          {alert.type === "error" ? (
+    <div style={{ zIndex: 999 }}>
+      <div
+        aria-atomic="true"
+        aria-live="assertive"
+        className="flex flex-col-reverse"
+      >
+        {errorAlerts.map((alert) => (
+          <div key={alert.id} role="alert">
             <ErrorAlert
-              key={alert.id}
               title={alert.title}
               list={alert.list}
               id={alert.id}
               removeAlert={removeAlert}
             />
-          ) : alert.type === "notice" ? (
+          </div>
+        ))}
+      </div>
+      <div
+        aria-atomic="true"
+        aria-live="polite"
+        className="flex flex-col-reverse"
+        role="status"
+      >
+        {politeAlerts.map((alert) =>
+          alert.type === "notice" ? (
             <NoticeAlert
               key={alert.id}
               title={alert.title}
@@ -48,9 +62,9 @@ export default function AlertDisplayArea() {
                 removeAlert={removeAlert}
               />
             )
-          )}
-        </div>
-      ))}
+          ),
+        )}
+      </div>
     </div>
   );
 }
