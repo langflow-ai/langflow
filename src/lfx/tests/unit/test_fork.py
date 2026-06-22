@@ -57,6 +57,35 @@ def test_fork_safety_report_flags_a_ghost_thread():
         ghost.join()
 
 
+def test_find_ghost_connections_detects_a_real_open_connection():
+    """The connection detector must actually flag a live non-LISTEN socket.
+
+    The other connection tests only cover the empty/clean path (no psutil, inspection
+    failure). This proves the safety net catches a genuinely fork-hostile connection —
+    the exact state the prewarm run path checks for before allowing a fork/snapshot.
+    """
+    import socket
+
+    pytest.importorskip("psutil")
+    from lfx.fork import find_ghost_connections
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect(server.getsockname())
+    accepted, _ = server.accept()
+    try:
+        ghosts = find_ghost_connections()
+        # The established (non-LISTEN) connection must be reported; the LISTEN socket must not.
+        assert ghosts, "expected the open established connection to be detected"
+        assert all("LISTEN" not in g for g in ghosts)
+    finally:
+        accepted.close()
+        client.close()
+        server.close()
+
+
 def test_find_ghost_connections_returns_list_without_psutil(monkeypatch):
     import builtins
 

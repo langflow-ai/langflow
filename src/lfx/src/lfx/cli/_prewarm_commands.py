@@ -70,7 +70,10 @@ def register(app: typer.Typer) -> None:
             raise typer.Exit(1) from exc
 
         suffix = " (warm-up run)" if core.warmup_ran else ""
-        typer.echo(f"Pre-warmed: {len(core.imported)} component(s) imported{suffix} in {core.elapsed_s:.3f}s")
+        failed_note = f", {len(core.failed)} failed" if core.failed else ""
+        typer.echo(
+            f"Pre-warmed: {len(core.imported)} component(s) imported{failed_note}{suffix} in {core.elapsed_s:.3f}s"
+        )
         if verbose:
             for component in core.imported:
                 typer.echo(f"  ok   {component}")

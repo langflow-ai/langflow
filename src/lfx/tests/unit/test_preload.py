@@ -7,9 +7,27 @@ Pre-warming has two halves, neither of which performs observable execution:
 
 from __future__ import annotations
 
+import asyncio
 import sys
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _reset_service_manager():
+    """Isolate the process-wide ServiceManager singleton between tests in this module.
+
+    Several tests inject spy services into the global manager and trigger teardown (which
+    wipes its registries). Resetting the singleton around each test keeps that shared state
+    from leaking and making later tests order-dependent.
+    """
+    import lfx.services.manager as manager_mod
+
+    manager_mod._service_manager = None
+    try:
+        yield
+    finally:
+        manager_mod._service_manager = None
 
 
 def test_default_core_set_includes_agent():
@@ -107,13 +125,19 @@ def test_required_component_failure_raises():
 
 
 def test_idempotent_second_call():
-    """Calling twice succeeds with no failures."""
+    """Calling twice succeeds with no failures and does NOT re-import (AC#5)."""
     from lfx.preload import prewarm_core_imports
 
     prewarm_core_imports(warmup_run=False)
+    module_name = "lfx.components.models_and_agents.agent"
+    first_module = sys.modules[module_name]
+
     second = prewarm_core_imports(warmup_run=False)
 
     assert second.failed == {}
+    # importlib.import_module returns the cached module, so the object identity must be
+    # unchanged — a second prewarm reuses the warmed module rather than reloading it.
+    assert sys.modules[module_name] is first_module
 
 
 # Build + run a hermetic flow, timing only that region. Cold pays the lazy import/run cost.
@@ -123,13 +147,14 @@ import time, asyncio
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents import PromptComponent
 from lfx.graph.graph.base import Graph
+from lfx.schema.schema import InputValueRequest
 {start}
 ci = ChatInput(_id="a"); pr = PromptComponent(_id="b")
 pr.set(template="{{m}}", m=ci.message_response)
 co = ChatOutput(_id="c"); co.set(input_value=pr.build_prompt)
 g = Graph(ci, co); g.prepare()
 async def r():
-    async for _ in g.async_start(inputs={{"input_value": "hi"}}):
+    async for _ in g.async_start(inputs=InputValueRequest(input_value="hi")):
         pass
 asyncio.run(r())
 print(time.perf_counter() - t0)
@@ -159,8 +184,11 @@ def test_warmup_makes_subsequent_build_run_much_faster():
         )
     )
 
-    # Observed locally ~55x; assert a conservative floor to stay non-flaky.
-    assert warmed * 5 < cold, f"warmed={warmed:.4f}s cold={cold:.4f}s"
+    # Cold/warm margin varies a lot by machine (cold is dominated by one-time imports, which
+    # this isolated env can partly amortize — observed ~20x here, ~55x on a cold box). Assert a
+    # 10x floor: comfortably below the observed margin (not flaky) yet tight enough to catch a
+    # real regression that erodes most of the warm benefit (a loose 5x floor would let that slip).
+    assert warmed * 10 < cold, f"warmed={warmed:.4f}s cold={cold:.4f}s"
 
 
 def _hermetic_flow_payload():
@@ -175,6 +203,33 @@ def _hermetic_flow_payload():
     chat_output = ChatOutput(_id="co")
     chat_output.set(input_value=prompt.build_prompt)
     return Graph(chat_input, chat_output).dump(name="hermetic")
+
+
+def test_run_flow_once_feeds_input_value_through_graph():
+    """Regression: input_value must actually reach the flow, not be silently dropped.
+
+    astep reads inputs only via .model_dump(), so a raw dict is ignored and the flow runs
+    with empty input. _run_flow_once must wrap input_value in an InputValueRequest so the
+    value flows to the output (matters on the --unsafe-run path that runs the real flow).
+    """
+    from lfx.components.input_output import ChatInput, ChatOutput
+    from lfx.components.models_and_agents import PromptComponent
+    from lfx.graph.graph.base import Graph
+    from lfx.preload import _run_flow_once
+
+    sentinel = "prewarm_sentinel_value_xyz"
+    chat_input = ChatInput(_id="prewarm_chat_input")
+    prompt = PromptComponent(_id="prewarm_prompt")
+    prompt.set(template="{warmup}", warmup=chat_input.message_response)
+    chat_output = ChatOutput(_id="prewarm_chat_output")
+    chat_output.set(input_value=prompt.build_prompt)
+    graph = Graph(chat_input, chat_output)
+    graph.prepare()
+
+    _run_flow_once(graph, sentinel)
+
+    # With the raw-dict bug the input was dropped and the sentinel never appeared.
+    assert sentinel in str(graph.get_vertex("prewarm_chat_output").result)
 
 
 def test_prewarm_flow_build_only():
@@ -217,6 +272,29 @@ def test_prewarm_flow_run_reports_fork_safety():
     assert isinstance(result.ghost_threads, list)
     # A model-free flow opens no network connections.
     assert result.ghost_connections == []
+
+
+def test_prewarm_flow_run_surfaces_a_dirty_fork_safety_report(monkeypatch):
+    """A run that leaves fork-hostile state must be reported, not hidden.
+
+    Complements the clean-case test: if the process is left with ghost threads/connections,
+    prewarm_flow must surface them so a caller can refuse to fork/snapshot a dirty process.
+    """
+    from lfx.preload import prewarm_flow
+
+    from lfx import fork as fork_mod
+
+    dirty = fork_mod.ForkSafetyReport(
+        ghost_threads=["leaked-worker"],
+        ghost_connections=["1.2.3.4:5->6.7.8.9:10 (ESTABLISHED)"],
+    )
+    monkeypatch.setattr(fork_mod, "fork_safety_report", lambda: dirty)
+
+    result = prewarm_flow(_hermetic_flow_payload(), run=True)
+
+    assert result.ran is True
+    assert result.ghost_threads == ["leaked-worker"]
+    assert result.ghost_connections == ["1.2.3.4:5->6.7.8.9:10 (ESTABLISHED)"]
 
 
 def test_prewarm_flow_build_only_skips_fork_safety_check():
@@ -341,6 +419,71 @@ def test_teardown_warm_services_raises_on_failure():
             teardown_warm_services()
     finally:
         _drop_spy()
+
+
+class _LoopBoundSpyService(Service):
+    """Service holding an asyncio resource bound to a *different* event loop.
+
+    Stands in for a real pluggable service (e.g. an asyncpg pool / aiohttp session) that
+    binds a resource to the warm-up run's event loop. teardown_warm_services runs teardown
+    in a *new* asyncio.run loop, so awaiting that loop-bound resource there raises the
+    cross-loop RuntimeError the docstring warns about — which must surface as a fatal
+    PrewarmError, never silently. (A pending Future is used rather than a Lock because an
+    uncontended asyncio.Lock takes a fast path that never binds to a loop on 3.12+.)
+    """
+
+    def __init__(self, name: str = "loopbound_spy") -> None:
+        super().__init__()
+        self._name = name
+        self.torn_down = False
+        # A pending future owned by a separate loop (loop A).
+        self._loop = asyncio.new_event_loop()
+        self._fut = self._loop.create_future()
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    async def teardown(self) -> None:
+        self.torn_down = True
+        # Awaiting loop A's future from teardown's loop (loop B) -> cross-loop RuntimeError.
+        await self._fut
+
+    def close(self) -> None:
+        if not self._fut.done():
+            self._fut.cancel()
+        self._loop.close()
+
+
+def test_teardown_cross_loop_resource_failure_is_fatal_not_silent():
+    """A service resource bound to a prior loop fails teardown loudly (PrewarmError).
+
+    Exercises the documented hazard: warming runs flows in throwaway asyncio.run loops, so
+    teardown happens in a new loop; a loop-bound plugin resource must fail-safe (refuse the
+    fork) rather than be captured dirty.
+    """
+    from lfx.preload import PrewarmError, teardown_warm_services
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    spy = _LoopBoundSpyService()
+    get_service_manager().services[ServiceType.TRACING_SERVICE] = spy
+    try:
+        with pytest.raises(PrewarmError, match="teardown before fork/snapshot failed"):
+            teardown_warm_services()
+        assert spy.torn_down is True  # teardown was attempted before it failed
+    finally:
+        _drop_spy()
+        spy.close()
+
+    # Confirm the underlying cause really is the cross-loop binding (not some other error),
+    # using a fresh resource so we're not re-awaiting an already-consumed future.
+    cause_spy = _LoopBoundSpyService()
+    try:
+        with pytest.raises(RuntimeError, match="attached to a different loop"):
+            asyncio.run(cause_spy.teardown())
+    finally:
+        cause_spy.close()
 
 
 def test_flow_build_only_tears_down_services():

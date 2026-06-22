@@ -114,14 +114,29 @@ def _component_key(module: str, attr: str) -> str:
     return f"{module}:{attr}"
 
 
+def _run_flow_once(graph, input_value: str) -> None:
+    """Execute a built graph once. Must be called without a running event loop."""
+    import asyncio
+
+    from lfx.schema.schema import InputValueRequest
+
+    # async_start -> astep only reads inputs via .model_dump(), so a raw dict is silently
+    # dropped; the input must be an InputValueRequest (same as lfx.cli.common.execute_graph).
+    inputs = InputValueRequest(input_value=input_value) if input_value else None
+
+    async def _run() -> None:
+        async for _ in graph.async_start(inputs=inputs):
+            pass
+
+    asyncio.run(_run())
+
+
 def _run_hermetic_warmup() -> None:
     """Build and run one model-free flow to warm the execution machinery.
 
     Uses only in-memory components (ChatInput -> Prompt -> ChatOutput). No model, no
     network, no external side effects. Must be called without a running event loop.
     """
-    import asyncio
-
     from lfx.components.input_output import ChatInput, ChatOutput
     from lfx.components.models_and_agents import PromptComponent
     from lfx.graph.graph.base import Graph
@@ -135,11 +150,7 @@ def _run_hermetic_warmup() -> None:
     graph = Graph(chat_input, chat_output)
     graph.prepare()
 
-    async def _run() -> None:
-        async for _ in graph.async_start(inputs={"input_value": "prewarm"}):
-            pass
-
-    asyncio.run(_run())
+    _run_flow_once(graph, "prewarm")
 
 
 def prewarm_core_imports(
@@ -204,17 +215,6 @@ def prewarm_core_imports(
 
     result.elapsed_s = time.perf_counter() - start
     return result
-
-
-def _run_flow_once(graph, input_value: str) -> None:
-    """Execute a built graph once. Must be called without a running event loop."""
-    import asyncio
-
-    async def _run() -> None:
-        async for _ in graph.async_start(inputs={"input_value": input_value}):
-            pass
-
-    asyncio.run(_run())
 
 
 def prewarm_flow(

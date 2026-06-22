@@ -111,6 +111,13 @@ class LangflowApplication(BaseApplication):
             names = [t.name for t in ghost_threads]
             server.log.warning("Ghost threads found before fork (these will be dead in workers): %s", names)
 
+        # find_ghost_connections() returns [] when psutil is absent; surface that here as a
+        # debug breadcrumb so an empty result isn't mistaken for "checked and clean".
+        import importlib.util
+
+        if importlib.util.find_spec("psutil") is None:
+            server.log.debug("psutil not installed; skipping ghost TCP connection check")
+
         try:
             ghost_conns = find_ghost_connections()
         except Exception as e:  # noqa: BLE001

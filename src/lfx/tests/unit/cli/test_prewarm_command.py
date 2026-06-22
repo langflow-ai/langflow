@@ -83,3 +83,74 @@ def test_prewarm_flow_build_only(tmp_path):
 
     assert result.exit_code == 0, result.stdout
     assert "built" in result.stdout
+
+
+def _write_hermetic_flow(tmp_path):
+    """Write a model-free ChatInput -> Prompt -> ChatOutput flow and return its path."""
+    import json
+
+    from lfx.components.input_output import ChatInput, ChatOutput
+    from lfx.components.models_and_agents import PromptComponent
+    from lfx.graph.graph.base import Graph
+
+    ci = ChatInput(_id="ci")
+    pr = PromptComponent(_id="pr")
+    pr.set(template="{m}", m=ci.message_response)
+    co = ChatOutput(_id="co")
+    co.set(input_value=pr.build_prompt)
+    flow_path = tmp_path / "hermetic.json"
+    flow_path.write_text(json.dumps(Graph(ci, co).dump(name="hermetic")))
+    return flow_path
+
+
+def test_prewarm_warns_when_a_run_leaves_fork_unsafe_state(tmp_path, monkeypatch):
+    """If a --flow run leaves ghost threads/connections, the CLI must emit the warning.
+
+    This is the user-facing safety signal ("do NOT capture this before a fork"); a clean
+    model-free flow never triggers it, so inject a dirty result to exercise the path.
+    """
+    import lfx.preload as preload_mod
+
+    flow_path = _write_hermetic_flow(tmp_path)
+
+    def _dirty_flow(*_args, **_kwargs):
+        return preload_mod.FlowPrewarmResult(
+            built=True, ran=True, ghost_threads=["leaked-worker"], ghost_connections=["a->b (ESTABLISHED)"]
+        )
+
+    monkeypatch.setattr(preload_mod, "prewarm_flow", _dirty_flow)
+
+    result = runner.invoke(
+        app, ["prewarm", "--skip-run", "--flow", str(flow_path), "--unsafe-run-may-leak-connections"]
+    )
+
+    # A dirty --unsafe-run is expected (Firecracker), so it still exits 0 — but must warn loudly.
+    assert result.exit_code == 0, result.stdout
+    # The warning is emitted to stderr (err=True).
+    assert "fork-unsafe" in result.stderr
+    assert "leaked-worker" in result.stderr
+
+
+def test_prewarm_verbose_lists_imported_components():
+    """`--verbose` lists each imported component, not just the summary count."""
+    result = runner.invoke(app, ["prewarm", "--skip-run", "--verbose"])
+
+    assert result.exit_code == 0, result.stdout
+    assert "ok" in result.stdout
+    assert "ChatInput" in result.stdout
+
+
+def test_prewarm_unsafe_run_executes_flow_end_to_end(tmp_path):
+    """`--unsafe-run` fully executes the flow; a model-free flow runs clean (no warning)."""
+    flow_path = _write_hermetic_flow(tmp_path)
+
+    result = runner.invoke(
+        app, ["prewarm", "--skip-run", "--flow", str(flow_path), "--unsafe-run-may-leak-connections"]
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert "built+ran" in result.stdout
+    # A model-free flow opens nothing, so the fork-unsafe warning must NOT appear.
+    assert "fork-unsafe" not in result.stdout
+    # --unsafe-run intentionally keeps live state, so no service teardown happens.
+    assert "Disposed warm services" not in result.stdout
