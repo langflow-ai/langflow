@@ -337,6 +337,7 @@ def build_component_output(
     output_type: str,
     display_name: str | None,
     result_data: Any,
+    valid: bool = True,
 ) -> ComponentOutput:
     """Build a ``ComponentOutput`` from one component's result data.
 
@@ -381,9 +382,15 @@ def build_component_output(
             if isinstance(result_metadata, dict):
                 metadata.update(result_metadata)
 
+    # Derive per-component status instead of hardcoding COMPLETED so a client
+    # trusting it is not given a false positive: a build that produced an error
+    # artifact (``output_type == "error"``) or that the graph marked invalid is
+    # FAILED. This mirrors the agui translator, which already keys node status on
+    # the same ``valid`` flag, so sync and both stream protocols agree.
+    status = JobStatus.FAILED if (output_type == "error" or not valid) else JobStatus.COMPLETED
     return ComponentOutput(
         type=output_type,
-        status=JobStatus.COMPLETED,
+        status=status,
         display_name=resolved_display_name,
         content=content,
         metadata=metadata,

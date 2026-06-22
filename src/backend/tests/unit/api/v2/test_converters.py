@@ -1630,6 +1630,54 @@ class TestBuildComponentOutput:
         assert output.content is None
         assert output.metadata == {"component_type": "ChatOutput"}
 
+    def test_error_output_type_yields_failed_status(self):
+        # An error artifact carries type "error"; per-component status must reflect
+        # the failure instead of the hardcoded COMPLETED a client would trust.
+        output = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="error",
+            display_name="Chat Output",
+            result_data=None,
+        )
+        assert output.status == JobStatus.FAILED
+
+    def test_invalid_build_yields_failed_status(self):
+        # The stream path passes the vertex ``valid`` flag (the agui translator keys
+        # node status on the same signal); an invalid build is FAILED, not COMPLETED.
+        output = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="message",
+            display_name="Chat Output",
+            result_data=None,
+            valid=False,
+        )
+        assert output.status == JobStatus.FAILED
+
+
+class TestGlobalsSyncOnlyDocumented:
+    """The ``globals`` field is honored on sync only; the schema must say so.
+
+    Stream/background converge on ``generate_flow_events`` which never receives
+    request globals, so the field description documents the sync-only limitation
+    the same way ``output_ids`` already documents "Ignored for stream/background".
+    """
+
+    def test_workflow_run_request_globals_documents_sync_only(self):
+        from lfx.schema.workflow import WorkflowRunRequest
+
+        description = WorkflowRunRequest.model_fields["globals"].description
+        assert "ignored for stream/background" in description.lower()
+
+    def test_workflow_execution_request_globals_documents_sync_only(self):
+        from lfx.schema.workflow import WorkflowExecutionRequest
+
+        description = WorkflowExecutionRequest.model_fields["globals"].description
+        assert "ignored for stream/background" in description.lower()
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

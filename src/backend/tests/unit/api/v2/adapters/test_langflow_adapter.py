@@ -62,12 +62,13 @@ class TestErrorHandling:
         assert payload == {"event": "error", "data": {"error": "boom"}}
         assert evt.type == "error"
 
-    def test_cancel_events_emit_protocol_error_payload(self):
+    def test_cancel_events_emit_cancelled_payload_not_error(self):
+        """A user-stop is its own ``cancelled`` terminal, not ``error``, so a client can tell it from a failure."""
         adapter = get_stream_adapter("langflow", _ctx())
         [evt] = list(adapter.cancel_events("cancelled"))
         payload = json.loads(evt.data_json)
-        assert payload == {"event": "error", "data": {"error": "cancelled"}}
-        assert evt.type == "error"
+        assert payload == {"event": "cancelled", "data": {"reason": "cancelled"}}
+        assert evt.type == "cancelled"
 
     def test_terminal_error_type_is_error(self):
         """Used by the buffer task to decide JobStatus.FAILED."""
