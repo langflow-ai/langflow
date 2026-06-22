@@ -226,7 +226,7 @@ jobs:
             local response_file
             response_file="$(mktemp)"
             local status
-            status=$(curl -sS -o "$response_file" -w "%{http_code}" "https://pypi.org/pypi/${package_name}/json")
+            status=$(curl --retry 3 --retry-delay 2 --retry-connrefused -sS -o "$response_file" -w "%{http_code}" "https://pypi.org/pypi/${package_name}/json")
             if [ "$status" = "404" ]; then
               : > "$output_file"
               return
@@ -245,7 +245,7 @@ jobs:
             local response_file
             response_file="$(mktemp)"
             local status
-            status=$(curl -sS -o "$response_file" -w "%{http_code}" "https://registry.hub.docker.com/v2/repositories/${repository}/tags?page_size=100")
+            status=$(curl --retry 3 --retry-delay 2 --retry-connrefused -sS -o "$response_file" -w "%{http_code}" "https://registry.hub.docker.com/v2/repositories/${repository}/tags?page_size=100")
             if [ "$status" != "200" ]; then
               echo "Failed to fetch Docker tags for ${repository}: HTTP ${status}" >&2
               cat "$response_file" >&2 || true
@@ -1061,7 +1061,7 @@ jobs:
           PY
           )
             VERSION=$(uv run ./scripts/ci/langflow_pre_release_tag.py "$CURRENT_VERSION" --rc-number "$RC_NUMBER")
-            sed -i.bak "s/^version = .*/version = \"$VERSION\"/" "$pyproject"
+            sed -i.bak "0,/^version = /s|^version = .*|version = \"$VERSION\"|" "$pyproject"
             rm -f "${pyproject}.bak"
             grep "^version" "$pyproject" | sed "s|^|  ${pyproject}: |"
           done

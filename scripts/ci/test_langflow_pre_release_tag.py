@@ -33,6 +33,10 @@ def test_shared_rc_number_floor_applies_to_other_package_base():
     assert pr.create_tag("0.10.1", [], rc_number=1) == "0.10.1rc1"
 
 
+def test_shared_rc_number_floor_does_not_regress_existing_higher_rc():
+    assert pr.create_tag("1.10.1", ["1.10.1rc5"], rc_number=1) == "1.10.1rc6"
+
+
 def test_cli_reads_released_versions_from_stdin():
     output = io.StringIO()
     with (
