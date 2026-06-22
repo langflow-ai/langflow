@@ -2408,6 +2408,200 @@ async def test_polling_watchdog_runs_when_cancel_channel_disabled():
         await fake_client.aclose()
 
 
+# ── Public job registry — Redis-specific tests ───────────────────────────────
+# Complement the base-class unit tests in test_chat_endpoint.py.
+# These tests verify the Redis-specific paths: cross-worker fallback (#6)
+# and cleanup deleting the Redis key (#7).
+
+
+async def test_redis_public_job_cross_worker_fallback():
+    """is_public_job_async returns True for Worker B even when its in-memory set is empty.
+
+    Why: Worker A registers the job (writes local memory + Redis key via background task).
+    Worker B has no local memory entry — it must fall back to Redis.
+    This is the multi-worker correctness guarantee of RedisJobQueueService.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    # Worker A — registers the public job
+    svc_a, _ = await _make_service(shared_client=fake_client, cancel_channel_enabled=False)
+    # Worker B — shares same Redis, but has empty local memory
+    svc_b, _ = await _make_service(shared_client=fake_client, cancel_channel_enabled=False)
+
+    try:
+        job_id = str(uuid.uuid4())
+        # register_public_job awaits the Redis write directly (no background task
+        # to drain) — see Why comment on RedisJobQueueService.register_public_job.
+        await svc_a.register_public_job(job_id)
+
+        # Worker B must have no in-memory entry (no shared memory between workers)
+        assert not svc_b.is_public_job(job_id), "Worker B must have no in-memory entry"
+
+        # Why: is_public_job_async on Worker B must hit Redis fallback and return True
+        assert await svc_b.is_public_job_async(job_id) is True
+    finally:
+        await _stop_service(svc_a)
+        await _stop_service(svc_b)
+        await fake_client.aclose()
+
+
+async def test_redis_cleanup_removes_public_job_key():
+    """cleanup_job deletes the public_job Redis key so the job_id cannot be reused cross-worker.
+
+    Why: after cleanup the in-memory discard is proven by the base-class test in
+    test_chat_endpoint.py. This test proves the Redis key (cross-worker marker) is
+    also removed. A missing delete would let a cross-worker is_public_job_async
+    return True for a finished/evicted job.
+    """
+    svc, fake_client = await _make_service(cancel_channel_enabled=False)
+
+    try:
+        job_id = str(uuid.uuid4())
+        # register_public_job awaits the Redis write directly (no background task
+        # to drain) — see Why comment on RedisJobQueueService.register_public_job.
+        await svc.register_public_job(job_id)
+
+        # Confirm the key exists in Redis before cleanup
+        pub_key = svc._public_job_key(job_id)
+        assert await fake_client.exists(pub_key), "public_job Redis key must exist after registration"
+
+        # Seed a minimal queue entry so cleanup_job doesn't early-return
+        svc._queues[job_id] = (asyncio.Queue(), None, None, None)  # type: ignore[arg-type]
+        await svc.cleanup_job(job_id)
+
+        # Drain any background tasks spawned by cleanup
+        for task in list(svc._background_tasks):
+            with contextlib.suppress(Exception):
+                await task
+
+        # Why: if cleanup_job's Redis DEL call ever drops public_job_key, this catches it
+        assert not await fake_client.exists(pub_key), "public_job Redis key must be deleted after cleanup"
+        # In-memory also cleared
+        assert svc.is_public_job(job_id) is False
+    finally:
+        await _stop_service(svc)
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_register_public_job_raises_backend_unavailable_when_marker_write_fails() -> None:
+    """register_public_job must surface (not swallow) a failed Redis marker write.
+
+    Swallowing the failure would let build_public_tmp return a job_id that only
+    this worker recognizes — on a multi-worker deployment the public events/cancel
+    endpoints would 404 it on every other worker. With a Redis client configured,
+    the failure must raise JobQueueBackendUnavailableError.
+    """
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.register_public_job(str(uuid.uuid4()))
+
+
+@pytest.mark.asyncio
+async def test_register_public_job_is_noop_success_for_in_memory_backend() -> None:
+    """The in-memory base class stays a pure no-op success (no shared marker to persist).
+
+    Single-worker deployments have no Redis client; there is no shared marker, so
+    register_public_job must not raise and must record the job locally.
+    """
+    service = JobQueueService()
+    job_id = str(uuid.uuid4())
+    await service.register_public_job(job_id)  # must not raise
+    assert service.is_public_job(job_id) is True
+
+
+@pytest.mark.asyncio
+async def test_build_public_tmp_returns_503_when_public_marker_persist_fails(monkeypatch) -> None:
+    """build_public_tmp returns 503 (not an un-shareable job_id) when the marker write fails.
+
+    The build task is started before the public marker is persisted. If the shared
+    backend write fails, the handler must cancel the just-started build and surface
+    a clean 503 instead of returning a job_id that other workers cannot resolve.
+    """
+    from fastapi import HTTPException
+    from langflow.api.v1 import chat as chat_module
+
+    service, fake_client = await _make_service(cancel_channel_enabled=False)
+    service._POST_CANCEL_CLEANUP_TIMEOUT_S = 0.5
+    try:
+        flow_id = uuid.uuid4()
+        new_flow_id = uuid.uuid4()
+        job_id = str(uuid.uuid4())
+        service.create_queue(job_id)
+
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        async def _build() -> None:
+            started.set()
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        class _Owner:
+            id = uuid.uuid4()
+
+        async def _fake_verify_public_flow_and_get_user(**_kwargs):
+            return _Owner(), new_flow_id
+
+        async def _fake_start_flow_build(**_kwargs):
+            service.start_job(job_id, _build())
+            await asyncio.wait_for(started.wait(), timeout=5)
+            return job_id
+
+        class _FakeFlow:
+            data = None
+
+        class _FakeSession:
+            async def get(self, *_args, **_kwargs):
+                return _FakeFlow()
+
+        @contextlib.asynccontextmanager
+        async def _fake_session_scope():
+            yield _FakeSession()
+
+        class _FakeSettingsService:
+            class auth_settings:  # noqa: N801
+                AUTO_LOGIN = True
+
+        monkeypatch.setattr(chat_module, "verify_public_flow_and_get_user", _fake_verify_public_flow_and_get_user)
+        monkeypatch.setattr(chat_module, "start_flow_build", _fake_start_flow_build)
+        monkeypatch.setattr(chat_module, "session_scope", _fake_session_scope)
+        monkeypatch.setattr(chat_module, "get_settings_service", lambda: _FakeSettingsService())
+
+        # Redis marker write fails: register_public_job raises JobQueueBackendUnavailableError.
+        service._client = _PingFailRedis()
+
+        class _FakeRequest:
+            cookies: dict[str, str] = {"client_id": "test-client"}
+
+        with pytest.raises(HTTPException) as exc_info:
+            await chat_module.build_public_tmp(
+                background_tasks=None,
+                flow_id=flow_id,
+                inputs=None,
+                files=None,
+                stop_component_id=None,
+                start_component_id=None,
+                log_builds=False,
+                flow_name=None,
+                request=_FakeRequest(),
+                queue_service=service,
+                authenticated_user=None,
+                event_delivery=EventDeliveryType.POLLING,
+            )
+        assert exc_info.value.status_code == 503
+        # The just-started build must have been cancelled, not left running unreachable.
+        await asyncio.wait_for(cancelled.wait(), timeout=5)
+    finally:
+        await _stop_service(service)
+        await fake_client.aclose()
+
+
 # ---------------------------------------------------------------------------
 # Startup connectivity probe + runtime backstop (LE-1396)
 # ---------------------------------------------------------------------------
