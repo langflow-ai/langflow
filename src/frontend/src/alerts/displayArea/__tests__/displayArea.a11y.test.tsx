@@ -31,14 +31,41 @@ describe("AlertDisplayArea accessibility", () => {
     expect(screen.getByText("Flow saved")).toBeInTheDocument();
   });
 
-  // Known gap (a11y-action-plan 4.2): the alert display area has no
-  // aria-live region, so success/error/notice messages are never announced
-  // to screen readers. Fails until the fix lands.
-  it("should_announce_alerts_via_live_region", () => {
+  it("keeps_live_regions_mounted_before_alerts_are_inserted", () => {
     const { container } = render(<AlertDisplayArea />);
 
-    const wrapper = container.firstElementChild;
-    expect(wrapper).not.toBeNull();
-    expect(wrapper).toHaveAttribute("aria-live");
+    expect(
+      container.querySelector('[aria-live="assertive"]'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("announces_success_and_notice_alerts_politely", () => {
+    render(<AlertDisplayArea />);
+
+    act(() => {
+      useAlertStore.getState().setSuccessData({ title: "Flow saved" });
+    });
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveAttribute("aria-atomic", "true");
+    expect(status).toHaveTextContent("Flow saved");
+  });
+
+  it("announces_error_alerts_assertively", () => {
+    const { container } = render(<AlertDisplayArea />);
+
+    act(() => {
+      useAlertStore.getState().setErrorData({ title: "Build failed" });
+    });
+
+    const assertiveRegion = container.querySelector('[aria-live="assertive"]');
+    expect(assertiveRegion).toHaveAttribute("aria-atomic", "true");
+    expect(assertiveRegion).toHaveTextContent("Build failed");
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Build failed");
   });
 });

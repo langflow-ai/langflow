@@ -1,5 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
-import type { ReactElement, ReactNode } from "react";
+import type { InputHTMLAttributes, ReactElement, ReactNode } from "react";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { InputOutput } from "../../constants/enums";
 import type {
@@ -32,6 +32,7 @@ export type InputComponentType = {
   placeholder?: string;
   className?: string;
   id?: string;
+  inputProps?: InputHTMLAttributes<HTMLInputElement>;
   blurOnEnter?: boolean;
   optionsIcon?: string;
   optionsPlaceholder?: string;
