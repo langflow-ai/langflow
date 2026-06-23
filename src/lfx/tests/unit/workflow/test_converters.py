@@ -27,7 +27,15 @@ from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
-from langflow.api.v2.converters import (
+from lfx.schema.workflow import (
+    ComponentOutput,
+    ErrorDetail,
+    JobStatus,
+    OutputReason,
+    WorkflowExecutionResponse,
+    WorkflowJobResponse,
+)
+from lfx.workflow.converters import (
     _build_metadata_for_non_output,
     _extract_file_path,
     _extract_model_source,
@@ -41,14 +49,6 @@ from langflow.api.v2.converters import (
     create_error_response,
     create_job_response,
     run_response_to_workflow_response,
-)
-from lfx.schema.workflow import (
-    ComponentOutput,
-    ErrorDetail,
-    JobStatus,
-    OutputReason,
-    WorkflowExecutionResponse,
-    WorkflowJobResponse,
 )
 
 
@@ -1127,8 +1127,8 @@ class TestParseWorkflowRunRequest:
     """``parse_workflow_run_request`` projects ``WorkflowRunRequest`` onto ``ParsedWorkflowRun``."""
 
     def test_minimal_body_round_trips_with_defaults(self):
-        from langflow.api.v2.converters import parse_workflow_run_request
         from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
 
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=_VALID_UUID))
 
@@ -1144,8 +1144,8 @@ class TestParseWorkflowRunRequest:
         assert parsed.files is None
 
     def test_full_body_round_trip(self):
-        from langflow.api.v2.converters import parse_workflow_run_request
         from lfx.schema.workflow import WorkflowMode, WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
 
         request = WorkflowRunRequest(
             flow_id=_VALID_UUID,
@@ -1174,8 +1174,8 @@ class TestParseWorkflowRunRequest:
 
     def test_run_id_is_always_none_on_the_parsed_record(self):
         """The endpoint generates run_id; callers cannot supply it via the body."""
-        from langflow.api.v2.converters import parse_workflow_run_request
         from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
 
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=_VALID_UUID))
         assert parsed.run_id is None
@@ -1629,6 +1629,54 @@ class TestBuildComponentOutput:
         )
         assert output.content is None
         assert output.metadata == {"component_type": "ChatOutput"}
+
+    def test_error_output_type_yields_failed_status(self):
+        # An error artifact carries type "error"; per-component status must reflect
+        # the failure instead of the hardcoded COMPLETED a client would trust.
+        output = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="error",
+            display_name="Chat Output",
+            result_data=None,
+        )
+        assert output.status == JobStatus.FAILED
+
+    def test_invalid_build_yields_failed_status(self):
+        # The stream path passes the vertex ``valid`` flag (the agui translator keys
+        # node status on the same signal); an invalid build is FAILED, not COMPLETED.
+        output = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="message",
+            display_name="Chat Output",
+            result_data=None,
+            valid=False,
+        )
+        assert output.status == JobStatus.FAILED
+
+
+class TestGlobalsSyncOnlyDocumented:
+    """The ``globals`` field is honored on sync only; the schema must say so.
+
+    Stream/background converge on ``generate_flow_events`` which never receives
+    request globals, so the field description documents the sync-only limitation
+    the same way ``output_ids`` already documents "Ignored for stream/background".
+    """
+
+    def test_workflow_run_request_globals_documents_sync_only(self):
+        from lfx.schema.workflow import WorkflowRunRequest
+
+        description = WorkflowRunRequest.model_fields["globals"].description
+        assert "ignored for stream/background" in description.lower()
+
+    def test_workflow_execution_request_globals_documents_sync_only(self):
+        from lfx.schema.workflow import WorkflowExecutionRequest
+
+        description = WorkflowExecutionRequest.model_fields["globals"].description
+        assert "ignored for stream/background" in description.lower()
 
 
 if __name__ == "__main__":

@@ -31,7 +31,8 @@ from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, PauseR
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langflow.api.v2.adapters import StreamAdapter
+    from lfx.workflow.adapters import StreamAdapter
+
     from langflow.services.background_execution.live_bus import InMemoryLiveBus
     from langflow.services.jobs.service import JobService
 

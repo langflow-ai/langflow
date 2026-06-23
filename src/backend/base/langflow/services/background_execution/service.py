@@ -504,7 +504,7 @@ class BackgroundExecutionService(Service):
         return meta.get("stream_protocol") or "langflow"
 
     def _build_adapter(self, request: dict[str, Any], job_id: UUID, flow_id: UUID):
-        from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
+        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 
         protocol = request.get("stream_protocol", "langflow")
         return get_stream_adapter(

@@ -15,10 +15,10 @@ import json
 from uuid import uuid4
 
 import pytest
-from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
 from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.background_execution.runner import HUMAN_INPUT_REQUIRED_EVENT, JobRunner
 from langflow.services.database.models.jobs.model import JobStatus
+from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 
 
 def _frame(event_type: str, data: dict) -> tuple[bytes, str]:

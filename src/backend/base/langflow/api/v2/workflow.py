@@ -51,13 +51,7 @@ from lfx.schema.workflow import (
     WorkflowStopResponse,
 )
 from lfx.services.deps import injectable_session_scope_readonly
-from pydantic_core import ValidationError as PydanticValidationError
-from sqlalchemy.exc import OperationalError
-
-from langflow.api.build import generate_flow_events
-from langflow.api.utils import extract_global_variables_from_headers
-from langflow.api.v1.schemas import FlowDataRequest, RunResponse
-from langflow.api.v2.adapters import (
+from lfx.workflow.adapters import (
     STREAM_ADAPTERS,
     StreamAdapter,
     StreamAdapterContext,
@@ -66,14 +60,26 @@ from langflow.api.v2.adapters import (
     available_protocols,
     get_stream_adapter,
 )
-from langflow.api.v2.converters import (
+from lfx.workflow.converters import (
     ParsedWorkflowRun,
     create_error_response,
     parse_workflow_run_request,
     run_response_to_workflow_response,
     workflow_response_from_output_events,
 )
+from pydantic_core import ValidationError as PydanticValidationError
+from sqlalchemy.exc import OperationalError
+
+from langflow.api.build import generate_flow_events
+from langflow.api.utils import extract_global_variables_from_headers
+from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_response_from_job_id
+from langflow.api.v2.workflow_validation import (
+    _enforce_flow_data_override_owner,
+    _flow_not_found_privacy_exception,
+    _reject_unsupported_sync_fields,
+    _validate_flow_data_for_execution,
+)
 from langflow.exceptions.api import (
     WorkflowQueueFullError,
     WorkflowResourceError,
@@ -234,14 +240,21 @@ async def execute_workflow(
             current_user.id,
             widen_for_shares=True,
         )
-        await ensure_flow_permission(
-            current_user,
-            FlowAction.EXECUTE,
-            flow_id=flow.id,
-            flow_user_id=flow.user_id,
-            workspace_id=getattr(flow, "workspace_id", None),
-            folder_id=getattr(flow, "folder_id", None),
-        )
+        try:
+            await ensure_flow_permission(
+                current_user,
+                FlowAction.EXECUTE,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                workspace_id=getattr(flow, "workspace_id", None),
+                folder_id=getattr(flow, "folder_id", None),
+            )
+        except HTTPException as exc:
+            raise _flow_not_found_privacy_exception(exc, parsed.flow_id) from exc
+
+        _reject_unsupported_sync_fields(parsed)
+        _enforce_flow_data_override_owner(parsed, flow, current_user)
+        _validate_flow_data_for_execution(parsed, flow)
 
         if parsed.mode == "sync":
             return await execute_sync_workflow_with_timeout(
