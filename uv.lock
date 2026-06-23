@@ -30,12 +30,19 @@ members = [
     "langflow-sdk",
     "langflow-stepflow",
     "lfx",
+    "lfx-amazon",
+    "lfx-anthropic",
     "lfx-arxiv",
+    "lfx-bundles",
+    "lfx-cohere",
+    "lfx-datastax",
     "lfx-docling",
     "lfx-duckduckgo",
     "lfx-firecrawl",
     "lfx-ibm",
     "lfx-nextplaid",
+    "lfx-openai",
+    "lfx-oracle",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -530,7 +537,7 @@ wheels = [
 
 [[package]]
 name = "anthropic"
-version = "0.105.2"
+version = "0.109.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -542,9 +549,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/46/46/47581b8c689c743ceabf6a0f9ff48472160900ce802d26c0fb50423997b3/anthropic-0.105.2.tar.gz", hash = "sha256:0e26b90841c2dced7cc6e98d21d5517d0be33f1876b8e779f478202e28bcaa07", size = 853789, upload-time = "2026-05-29T00:21:14.104Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/3b/96c84c2d70fb7e185d240fbd101c185f7f9b0f6fea39d0f86d22c628add5/anthropic-0.109.0.tar.gz", hash = "sha256:86719114c62f21b50bf7148a373371605f065d22e6eeee3d4d361ac0ea079d0e", size = 927503, upload-time = "2026-06-09T20:04:24.701Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/83/75/be0c357e33a5a56c8f9db5b4212f886138d2bf59c0952d858f6b75d710ef/anthropic-0.105.2-py3-none-any.whl", hash = "sha256:e53ed5f6bf36fb1ecb9b25d8634cfd30e02fab9fb3374a0c2d5c585874757230", size = 837507, upload-time = "2026-05-29T00:21:15.528Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/e9/267ea711185049714c4f3d1256b23e26f6968594651c155910584cc533bb/anthropic-0.109.0-py3-none-any.whl", hash = "sha256:b5d930af26fdeeb7c7e7a6ff6c4bcdaf46ee50403b26ada25d08fd853c751fff", size = 923835, upload-time = "2026-06-09T20:04:26.098Z" },
 ]
 
 [[package]]
@@ -7253,6 +7260,23 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-oracledb"
+version = "1.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "langchain-text-splitters" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "oracledb" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d5/3d/b212d36c2d5afe57acb5bf57c3e2f31ffbc55abbb15a755442768f9eaac2/langchain_oracledb-1.5.0.tar.gz", hash = "sha256:88444ba567375f7b7c0f13cdda5fffb6a56636111110b36507f8570c41138004", size = 47867, upload-time = "2026-06-03T13:05:05.037Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/94/2a/3b123c7784f8df0f6b06be071a6e4137a462ceeffcf842bca848423f2a70/langchain_oracledb-1.5.0-py3-none-any.whl", hash = "sha256:3a05690e9c6256edb10c9cfd4245655c288d877fe401c25d7f138a86b3be6b20", size = 54753, upload-time = "2026-06-03T13:05:04.106Z" },
+]
+
+[[package]]
 name = "langchain-perplexity"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -7421,12 +7445,19 @@ version = "1.11.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
+    { name = "lfx-amazon" },
+    { name = "lfx-anthropic" },
     { name = "lfx-arxiv" },
+    { name = "lfx-bundles", extra = ["all"] },
+    { name = "lfx-cohere" },
+    { name = "lfx-datastax" },
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
     { name = "lfx-firecrawl" },
     { name = "lfx-ibm" },
     { name = "lfx-nextplaid" },
+    { name = "lfx-openai" },
+    { name = "lfx-oracle" },
 ]
 
 [package.optional-dependencies]
@@ -7513,7 +7544,12 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
+    { name = "lfx-amazon", editable = "src/bundles/amazon" },
+    { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
+    { name = "lfx-bundles", extras = ["all"], editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-cohere", editable = "src/bundles/cohere" },
+    { name = "lfx-datastax", editable = "src/bundles/datastax" },
     { name = "lfx-docling", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["chunking"], marker = "extra == 'docling-chunking'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
@@ -7522,6 +7558,8 @@ requires-dist = [
     { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
+    { name = "lfx-openai", editable = "src/bundles/openai" },
+    { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
@@ -7722,7 +7760,6 @@ all = [
     { name = "gitpython" },
     { name = "google-api-python-client" },
     { name = "google-search-results" },
-    { name = "graph-retriever" },
     { name = "huggingface-hub" },
     { name = "ibm-cloud-sdk-core" },
     { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
@@ -7730,17 +7767,12 @@ all = [
     { name = "jigsawstack" },
     { name = "json-repair" },
     { name = "kubernetes" },
-    { name = "langchain-anthropic" },
-    { name = "langchain-astradb" },
-    { name = "langchain-aws" },
     { name = "langchain-chroma" },
-    { name = "langchain-cohere" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
     { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
-    { name = "langchain-graph-retriever" },
     { name = "langchain-groq" },
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "langchain-mcp-adapters" },
@@ -7749,7 +7781,6 @@ all = [
     { name = "langchain-mongodb" },
     { name = "langchain-nvidia-ai-endpoints" },
     { name = "langchain-ollama" },
-    { name = "langchain-openai" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
     { name = "langchain-qdrant" },
     { name = "langchain-sambanova" },
@@ -7770,7 +7801,6 @@ all = [
     { name = "needle-python" },
     { name = "nltk" },
     { name = "numexpr" },
-    { name = "openai" },
     { name = "openinference-instrumentation-langchain" },
     { name = "openlayer" },
     { name = "opensearch-py" },
@@ -7807,9 +7837,6 @@ all = [
 altk = [
     { name = "agent-lifecycle-toolkit", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
-anthropic = [
-    { name = "langchain-anthropic" },
-]
 apify = [
     { name = "apify-client", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "apify-client", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -7819,9 +7846,6 @@ arize = [
 ]
 assemblyai = [
     { name = "assemblyai" },
-]
-astradb = [
-    { name = "langchain-astradb" },
 ]
 astrapy = [
     { name = "astrapy" },
@@ -7834,7 +7858,6 @@ audio = [
 ]
 aws = [
     { name = "boto3" },
-    { name = "langchain-aws" },
 ]
 beautifulsoup = [
     { name = "beautifulsoup4" },
@@ -7851,9 +7874,6 @@ cleanlab = [
 ]
 clickhouse = [
     { name = "clickhouse-connect" },
-]
-cohere = [
-    { name = "langchain-cohere" },
 ]
 complete = [
     { name = "ag2" },
@@ -7893,7 +7913,6 @@ complete = [
     { name = "gitpython" },
     { name = "google-api-python-client" },
     { name = "google-search-results" },
-    { name = "graph-retriever" },
     { name = "huggingface-hub" },
     { name = "ibm-cloud-sdk-core" },
     { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
@@ -7901,17 +7920,12 @@ complete = [
     { name = "jigsawstack" },
     { name = "json-repair" },
     { name = "kubernetes" },
-    { name = "langchain-anthropic" },
-    { name = "langchain-astradb" },
-    { name = "langchain-aws" },
     { name = "langchain-chroma" },
-    { name = "langchain-cohere" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
     { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
-    { name = "langchain-graph-retriever" },
     { name = "langchain-groq" },
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "langchain-mcp-adapters" },
@@ -7920,7 +7934,6 @@ complete = [
     { name = "langchain-mongodb" },
     { name = "langchain-nvidia-ai-endpoints" },
     { name = "langchain-ollama" },
-    { name = "langchain-openai" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
     { name = "langchain-qdrant" },
     { name = "langchain-sambanova" },
@@ -7941,7 +7954,6 @@ complete = [
     { name = "needle-python" },
     { name = "nltk" },
     { name = "numexpr" },
-    { name = "openai" },
     { name = "openinference-instrumentation-langchain" },
     { name = "openlayer" },
     { name = "opensearch-py" },
@@ -8051,10 +8063,6 @@ google = [
 google-api = [
     { name = "google-api-python-client" },
 ]
-graph-retriever = [
-    { name = "graph-retriever" },
-    { name = "langchain-graph-retriever" },
-]
 groq = [
     { name = "langchain-groq" },
 ]
@@ -8154,10 +8162,6 @@ nvidia = [
 ]
 ollama = [
     { name = "langchain-ollama" },
-]
-openai = [
-    { name = "langchain-openai" },
-    { name = "openai" },
 ]
 openinference = [
     { name = "openinference-instrumentation-langchain" },
@@ -8359,7 +8363,6 @@ requires-dist = [
     { name = "google-api-python-client", marker = "extra == 'google-api'", specifier = "~=2.161" },
     { name = "google-search-results", marker = "extra == 'serpapi'", specifier = ">=2.4.1,<3.0.0" },
     { name = "grandalf", specifier = ">=0.8.0,<1.0.0" },
-    { name = "graph-retriever", marker = "extra == 'graph-retriever'", specifier = "==0.8.0" },
     { name = "greenlet", specifier = ">=3.1.1,<4.0.0" },
     { name = "gunicorn", specifier = ">=25.3.0,<27.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
@@ -8376,12 +8379,8 @@ requires-dist = [
     { name = "jsonquerylang", specifier = ">=1.1.1,<2.0.0" },
     { name = "kubernetes", marker = "extra == 'kubernetes'", specifier = "==31.0.0" },
     { name = "langchain", specifier = "~=1.2.0" },
-    { name = "langchain-anthropic", marker = "extra == 'anthropic'", specifier = "~=1.3.0" },
-    { name = "langchain-astradb", marker = "extra == 'astradb'", specifier = "~=1.0.0" },
-    { name = "langchain-aws", marker = "extra == 'aws'", specifier = "~=1.1.0" },
     { name = "langchain-chroma", specifier = "~=0.2.6" },
     { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
-    { name = "langchain-cohere", marker = "extra == 'cohere'", specifier = "~=0.5.0" },
     { name = "langchain-community", specifier = "~=0.4.1" },
     { name = "langchain-core", specifier = ">=1.3.3,<2.0.0" },
     { name = "langchain-docling", marker = "extra == 'docling-image-description'", specifier = ">=1.1.0" },
@@ -8391,7 +8390,6 @@ requires-dist = [
     { name = "langchain-google-community", marker = "extra == 'google'", specifier = "~=3.0.2" },
     { name = "langchain-google-genai", marker = "extra == 'google'", specifier = "~=4.1.2" },
     { name = "langchain-google-vertexai", marker = "extra == 'google'", specifier = ">=3.2.0" },
-    { name = "langchain-graph-retriever", marker = "extra == 'graph-retriever'", specifier = "==0.8.0" },
     { name = "langchain-groq", marker = "extra == 'groq'", specifier = "~=1.1.1" },
     { name = "langchain-huggingface", marker = "(platform_machine != 'x86_64' and extra == 'langchain-huggingface') or (sys_platform != 'darwin' and extra == 'langchain-huggingface')", specifier = "~=1.2.0" },
     { name = "langchain-ibm", specifier = "~=1.1.0" },
@@ -8402,7 +8400,6 @@ requires-dist = [
     { name = "langchain-mongodb", marker = "extra == 'mongodb-vectors'", specifier = ">=0.11.0" },
     { name = "langchain-nvidia-ai-endpoints", marker = "extra == 'nvidia'", specifier = "~=1.0.0" },
     { name = "langchain-ollama", marker = "extra == 'ollama'", specifier = "~=0.3.10" },
-    { name = "langchain-openai", marker = "extra == 'openai'", specifier = ">=1.1.6" },
     { name = "langchain-perplexity", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14' and extra == 'pinecone'", specifier = "~=0.2.13" },
     { name = "langchain-qdrant", specifier = ">=1.0.0,<2.0.0" },
@@ -8414,11 +8411,9 @@ requires-dist = [
     { name = "langflow-base", extras = ["ag2"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["aioboto3"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["altk"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["anthropic"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["apify"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["arize"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["assemblyai"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["astradb"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["astrapy"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["atlassian"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["aws"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8427,7 +8422,6 @@ requires-dist = [
     { name = "langflow-base", extras = ["chroma"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["cleanlab"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["clickhouse"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["cohere"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["complete"], marker = "extra == 'all'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["composio"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["couchbase"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8448,7 +8442,6 @@ requires-dist = [
     { name = "langflow-base", extras = ["gitpython"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["google"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["google-api"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["graph-retriever"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["groq"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["huggingface"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["ibm-watsonx-clients"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8479,7 +8472,6 @@ requires-dist = [
     { name = "langflow-base", extras = ["numexpr"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["nvidia"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["ollama"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openai"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["openinference"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["openlayer"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["opensearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8538,7 +8530,6 @@ requires-dist = [
     { name = "numexpr", marker = "extra == 'numexpr'", specifier = ">=2.10.2" },
     { name = "onnxruntime", marker = "python_full_version < '3.14'", specifier = ">=1.20,<1.24" },
     { name = "onnxruntime", marker = "python_full_version >= '3.14'", specifier = ">=1.26" },
-    { name = "openai", marker = "extra == 'openai'", specifier = ">=1.68.2,<3.0.0" },
     { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin')", specifier = "==1.0.26" },
     { name = "openinference-instrumentation-langchain", marker = "extra == 'openinference'", specifier = ">=0.1.29" },
     { name = "openlayer", marker = "extra == 'openlayer'", specifier = ">=0.9.0,<1.0.0" },
@@ -8616,7 +8607,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -8969,6 +8960,11 @@ dependencies = [
     { name = "wheel" },
 ]
 
+[package.optional-dependencies]
+bundles = [
+    { name = "lfx-bundles", extra = ["all"] },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
@@ -9011,6 +9007,7 @@ requires-dist = [
     { name = "langchain-classic", specifier = "~=1.0.7" },
     { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
     { name = "langflow-sdk", editable = "src/sdk" },
+    { name = "lfx-bundles", extras = ["all"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
     { name = "loguru", specifier = ">=0.7.3,<1.0.0" },
     { name = "markitdown", specifier = ">=0.1.4,<2.0.0" },
     { name = "mcp", specifier = ">=1.17.0,<2.0.0" },
@@ -9038,6 +9035,7 @@ requires-dist = [
     { name = "validators", specifier = ">=0.34.0,<1.0.0" },
     { name = "wheel", specifier = ">=0.46.2,<1.0.0" },
 ]
+provides-extras = ["bundles"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -9062,6 +9060,40 @@ integration = [
 ]
 
 [[package]]
+name = "lfx-amazon"
+version = "0.1.0"
+source = { editable = "src/bundles/amazon" }
+dependencies = [
+    { name = "boto3" },
+    { name = "langchain-aws" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "boto3", specifier = ">=1.34.162,<2.0.0" },
+    { name = "langchain-aws", specifier = "~=1.1.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-anthropic"
+version = "0.1.0"
+source = { editable = "src/bundles/anthropic" }
+dependencies = [
+    { name = "langchain-anthropic" },
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-anthropic", specifier = "~=1.3.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "requests", specifier = ">=2.32.0" },
+]
+
+[[package]]
 name = "lfx-arxiv"
 version = "0.1.1"
 source = { editable = "src/bundles/arxiv" }
@@ -9074,6 +9106,561 @@ dependencies = [
 requires-dist = [
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-bundles"
+version = "1.0.0"
+source = { editable = "src/bundles/lfx-bundles" }
+dependencies = [
+    { name = "lfx" },
+]
+
+[package.optional-dependencies]
+aiml = [
+    { name = "langchain-openai" },
+    { name = "openai" },
+]
+all = [
+    { name = "agent-lifecycle-toolkit", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "apify-client", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "apify-client", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "assemblyai" },
+    { name = "atlassian-python-api" },
+    { name = "chromadb" },
+    { name = "cleanlab-tlm" },
+    { name = "clickhouse-connect" },
+    { name = "composio" },
+    { name = "composio-langchain" },
+    { name = "couchbase" },
+    { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
+    { name = "elasticsearch" },
+    { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "faiss-cpu", version = "1.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
+    { name = "gassist", marker = "sys_platform == 'win32'" },
+    { name = "gitpython" },
+    { name = "google-api-python-client" },
+    { name = "google-search-results" },
+    { name = "huggingface-hub" },
+    { name = "jigsawstack" },
+    { name = "langchain-chroma" },
+    { name = "langchain-community" },
+    { name = "langchain-elasticsearch" },
+    { name = "langchain-google-community" },
+    { name = "langchain-google-genai" },
+    { name = "langchain-google-vertexai" },
+    { name = "langchain-groq" },
+    { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "langchain-milvus" },
+    { name = "langchain-mistralai" },
+    { name = "langchain-mongodb" },
+    { name = "langchain-nvidia-ai-endpoints" },
+    { name = "langchain-ollama" },
+    { name = "langchain-openai" },
+    { name = "langchain-perplexity" },
+    { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
+    { name = "langchain-qdrant" },
+    { name = "langchain-sambanova" },
+    { name = "langchain-unstructured" },
+    { name = "langchain-weaviate" },
+    { name = "markdown" },
+    { name = "mem0ai" },
+    { name = "metaphor-python" },
+    { name = "needle-python" },
+    { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
+    { name = "openai" },
+    { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin')" },
+    { name = "opensearch-py" },
+    { name = "pgvector" },
+    { name = "pymongo" },
+    { name = "pytube" },
+    { name = "qdrant-client" },
+    { name = "qianfan" },
+    { name = "redis" },
+    { name = "requests" },
+    { name = "scrapegraph-py", version = "1.47.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scrapegraph-py", version = "2.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "smolagents" },
+    { name = "spider-client" },
+    { name = "supabase" },
+    { name = "twelvelabs" },
+    { name = "upstash-vector" },
+    { name = "vlmrun", extra = ["all"] },
+    { name = "weaviate-client" },
+    { name = "wikipedia" },
+    { name = "wolframalpha" },
+    { name = "yfinance" },
+    { name = "youtube-transcript-api" },
+    { name = "zep-python" },
+]
+altk = [
+    { name = "agent-lifecycle-toolkit", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+]
+apify = [
+    { name = "apify-client", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "apify-client", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "langchain-community" },
+]
+assemblyai = [
+    { name = "assemblyai" },
+]
+azure = [
+    { name = "langchain-openai" },
+]
+baidu = [
+    { name = "langchain-community" },
+    { name = "qianfan" },
+]
+bing = [
+    { name = "langchain-community" },
+]
+chroma = [
+    { name = "chromadb" },
+    { name = "langchain-chroma" },
+    { name = "langchain-community" },
+]
+cleanlab = [
+    { name = "cleanlab-tlm" },
+]
+clickhouse = [
+    { name = "clickhouse-connect" },
+    { name = "langchain-community" },
+]
+cloudflare = [
+    { name = "langchain-community" },
+]
+codeagents = [
+    { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin')" },
+    { name = "smolagents" },
+]
+cometapi = [
+    { name = "langchain-openai" },
+    { name = "requests" },
+]
+composio = [
+    { name = "composio" },
+    { name = "composio-langchain" },
+]
+confluence = [
+    { name = "atlassian-python-api" },
+    { name = "langchain-community" },
+]
+couchbase = [
+    { name = "couchbase" },
+    { name = "langchain-community" },
+]
+cuga = [
+    { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
+]
+deepseek = [
+    { name = "langchain-openai" },
+    { name = "openai" },
+    { name = "requests" },
+]
+elastic = [
+    { name = "elasticsearch" },
+    { name = "langchain-elasticsearch" },
+    { name = "opensearch-py" },
+]
+exa = [
+    { name = "metaphor-python" },
+]
+faiss = [
+    { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "faiss-cpu", version = "1.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
+    { name = "langchain-community" },
+]
+git = [
+    { name = "gitpython" },
+    { name = "langchain-community" },
+]
+google = [
+    { name = "google-api-python-client" },
+    { name = "langchain-google-community" },
+    { name = "langchain-google-genai" },
+]
+groq = [
+    { name = "langchain-groq" },
+]
+homeassistant = [
+    { name = "requests" },
+]
+huggingface = [
+    { name = "huggingface-hub" },
+    { name = "langchain-community" },
+    { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+]
+icosacomputing = [
+    { name = "requests" },
+]
+jigsawstack = [
+    { name = "jigsawstack" },
+]
+litellm = [
+    { name = "langchain-openai" },
+    { name = "openai" },
+]
+lmstudio = [
+    { name = "langchain-nvidia-ai-endpoints" },
+    { name = "langchain-openai" },
+    { name = "openai" },
+]
+maritalk = [
+    { name = "langchain-community" },
+]
+mem0 = [
+    { name = "mem0ai" },
+]
+milvus = [
+    { name = "langchain-milvus" },
+]
+mistral = [
+    { name = "langchain-mistralai" },
+]
+mongodb = [
+    { name = "langchain-mongodb" },
+    { name = "pymongo" },
+]
+needle = [
+    { name = "langchain-community" },
+    { name = "needle-python" },
+]
+notion = [
+    { name = "markdown" },
+    { name = "requests" },
+]
+novita = [
+    { name = "langchain-openai" },
+    { name = "requests" },
+]
+nvidia = [
+    { name = "gassist", marker = "sys_platform == 'win32'" },
+    { name = "langchain-nvidia-ai-endpoints" },
+    { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
+]
+ollama = [
+    { name = "langchain-ollama" },
+]
+openrouter = [
+    { name = "langchain-openai" },
+]
+perplexity = [
+    { name = "langchain-perplexity" },
+]
+pgvector = [
+    { name = "langchain-community" },
+    { name = "pgvector" },
+]
+pinecone = [
+    { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
+]
+qdrant = [
+    { name = "langchain-qdrant" },
+    { name = "qdrant-client" },
+]
+redis = [
+    { name = "langchain-community" },
+    { name = "redis" },
+]
+sambanova = [
+    { name = "langchain-sambanova" },
+]
+scrapegraph = [
+    { name = "scrapegraph-py", version = "1.47.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scrapegraph-py", version = "2.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+searchapi = [
+    { name = "langchain-community" },
+]
+serpapi = [
+    { name = "google-search-results" },
+    { name = "langchain-community" },
+]
+spider = [
+    { name = "spider-client" },
+]
+supabase = [
+    { name = "langchain-community" },
+    { name = "supabase" },
+]
+twelvelabs = [
+    { name = "twelvelabs" },
+]
+unstructured = [
+    { name = "langchain-unstructured" },
+]
+upstash = [
+    { name = "langchain-community" },
+    { name = "upstash-vector" },
+]
+vectara = [
+    { name = "langchain-community" },
+]
+vertexai = [
+    { name = "langchain-google-vertexai" },
+]
+vllm = [
+    { name = "langchain-openai" },
+    { name = "openai" },
+]
+vlmrun = [
+    { name = "vlmrun", extra = ["all"] },
+]
+weaviate = [
+    { name = "langchain-weaviate" },
+    { name = "weaviate-client" },
+]
+wikipedia = [
+    { name = "langchain-community" },
+    { name = "wikipedia" },
+]
+wolframalpha = [
+    { name = "langchain-community" },
+    { name = "wolframalpha" },
+]
+xai = [
+    { name = "langchain-openai" },
+    { name = "openai" },
+    { name = "requests" },
+]
+yahoosearch = [
+    { name = "yfinance" },
+]
+youtube = [
+    { name = "google-api-python-client" },
+    { name = "pytube" },
+    { name = "youtube-transcript-api" },
+]
+zep = [
+    { name = "zep-python" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-lifecycle-toolkit", marker = "(platform_machine != 'x86_64' and extra == 'altk') or (sys_platform != 'darwin' and extra == 'altk')", specifier = ">=0.10.1,<1.0" },
+    { name = "apify-client", marker = "extra == 'apify'", specifier = ">=1.8.1" },
+    { name = "assemblyai", marker = "extra == 'assemblyai'", specifier = ">=0.33.0,<1.0.0" },
+    { name = "atlassian-python-api", marker = "extra == 'confluence'", specifier = "==3.41.16" },
+    { name = "chromadb", marker = "extra == 'chroma'", specifier = ">=1.0.0,<2.0.0" },
+    { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
+    { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
+    { name = "composio", marker = "extra == 'composio'", specifier = "==0.9.2" },
+    { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.9.2" },
+    { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
+    { name = "cuga", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
+    { name = "cuga", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
+    { name = "elasticsearch", marker = "extra == 'elastic'", specifier = "~=8.19" },
+    { name = "faiss-cpu", marker = "python_full_version >= '3.14' and extra == 'faiss'", specifier = ">=1.13.2" },
+    { name = "faiss-cpu", marker = "python_full_version < '3.14' and extra == 'faiss'", specifier = "==1.9.0.post1" },
+    { name = "gassist", marker = "sys_platform == 'win32' and extra == 'nvidia'", specifier = ">=0.0.1" },
+    { name = "gitpython", marker = "extra == 'git'", specifier = ">=3.1.50" },
+    { name = "google-api-python-client", marker = "extra == 'google'", specifier = "~=2.161" },
+    { name = "google-api-python-client", marker = "extra == 'youtube'", specifier = "~=2.161" },
+    { name = "google-search-results", marker = "extra == 'serpapi'", specifier = ">=2.4.1,<3.0.0" },
+    { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=1.0.0,<2.0.0" },
+    { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
+    { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
+    { name = "langchain-community", marker = "extra == 'apify'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'baidu'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'bing'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'chroma'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'clickhouse'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'cloudflare'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'confluence'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'couchbase'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'faiss'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'git'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'huggingface'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'maritalk'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'needle'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'pgvector'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'redis'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'searchapi'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'serpapi'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'supabase'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'upstash'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'vectara'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'wikipedia'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-community", marker = "extra == 'wolframalpha'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-elasticsearch", marker = "extra == 'elastic'", specifier = "~=1.0.0" },
+    { name = "langchain-google-community", marker = "extra == 'google'", specifier = "~=3.0.2" },
+    { name = "langchain-google-genai", marker = "extra == 'google'", specifier = "~=4.1.2" },
+    { name = "langchain-google-vertexai", marker = "extra == 'vertexai'", specifier = ">=3.2.0" },
+    { name = "langchain-groq", marker = "extra == 'groq'", specifier = "~=1.1.1" },
+    { name = "langchain-huggingface", marker = "(platform_machine != 'x86_64' and extra == 'huggingface') or (sys_platform != 'darwin' and extra == 'huggingface')", specifier = "~=1.2.0" },
+    { name = "langchain-milvus", marker = "extra == 'milvus'", specifier = "~=0.3.2" },
+    { name = "langchain-mistralai", marker = "extra == 'mistral'", specifier = "~=1.1.1" },
+    { name = "langchain-mongodb", marker = "extra == 'mongodb'", specifier = ">=0.11.0" },
+    { name = "langchain-nvidia-ai-endpoints", marker = "extra == 'lmstudio'", specifier = "~=1.0.0" },
+    { name = "langchain-nvidia-ai-endpoints", marker = "extra == 'nvidia'", specifier = "~=1.0.0" },
+    { name = "langchain-ollama", marker = "extra == 'ollama'", specifier = "~=0.3.10" },
+    { name = "langchain-openai", marker = "extra == 'aiml'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'azure'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'cometapi'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'deepseek'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'litellm'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'lmstudio'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'novita'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'openrouter'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'vllm'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'xai'", specifier = ">=1.1.6" },
+    { name = "langchain-perplexity", marker = "extra == 'perplexity'", specifier = ">=1.0.0,<2.0.0" },
+    { name = "langchain-pinecone", marker = "python_full_version < '3.14' and extra == 'pinecone'", specifier = "~=0.2.13" },
+    { name = "langchain-qdrant", marker = "extra == 'qdrant'", specifier = ">=1.0.0,<2.0.0" },
+    { name = "langchain-sambanova", marker = "extra == 'sambanova'", specifier = "~=1.0.0" },
+    { name = "langchain-unstructured", marker = "extra == 'unstructured'", specifier = "~=1.0.0" },
+    { name = "langchain-weaviate", marker = "extra == 'weaviate'", specifier = ">=0.0.6" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "lfx-bundles", extras = ["agentql"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["aiml"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["altk"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["apify"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["assemblyai"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["azure"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["baidu"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["bing"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["chroma"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["cleanlab"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["clickhouse"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["cloudflare"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["codeagents"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["cometapi"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["composio"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["confluence"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["couchbase"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["cuga"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["deepseek"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["elastic"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["exa"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["faiss"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["git"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["glean"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["google"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["groq"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["homeassistant"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["huggingface"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["icosacomputing"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["jigsawstack"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["langwatch"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["litellm"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["lmstudio"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["maritalk"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["mem0"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["milvus"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["mistral"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["mongodb"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["needle"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["notdiamond"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["notion"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["novita"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["nvidia"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["olivya"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["ollama"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["openrouter"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["perplexity"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["pgvector"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["pinecone"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["qdrant"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["redis"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["sambanova"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["scrapegraph"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["searchapi"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["serpapi"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["spider"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["supabase"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["tavily"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["twelvelabs"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["unstructured"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["upstash"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["vectara"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["vertexai"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["vllm"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["vlmrun"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["weaviate"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["wikipedia"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["wolframalpha"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["xai"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["yahoosearch"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["youtube"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["zep"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
+    { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
+    { name = "metaphor-python", marker = "extra == 'exa'", specifier = "==0.1.23" },
+    { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
+    { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nvidia'", specifier = ">=26.1.0,<27.0.0" },
+    { name = "openai", marker = "extra == 'aiml'", specifier = ">=1.68.2,<3.0.0" },
+    { name = "openai", marker = "extra == 'deepseek'", specifier = ">=1.68.2,<3.0.0" },
+    { name = "openai", marker = "extra == 'litellm'", specifier = ">=1.68.2,<3.0.0" },
+    { name = "openai", marker = "extra == 'lmstudio'", specifier = ">=1.68.2,<3.0.0" },
+    { name = "openai", marker = "extra == 'vllm'", specifier = ">=1.68.2,<3.0.0" },
+    { name = "openai", marker = "extra == 'xai'", specifier = ">=1.68.2,<3.0.0" },
+    { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64' and extra == 'codeagents') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'codeagents')", specifier = "==1.0.26" },
+    { name = "opensearch-py", marker = "extra == 'elastic'", specifier = "==2.8.0" },
+    { name = "pgvector", marker = "extra == 'pgvector'", specifier = ">=0.4.2" },
+    { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.10.1" },
+    { name = "pytube", marker = "extra == 'youtube'", specifier = "==15.0.0" },
+    { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = ">=1.12.0,<2.0.0" },
+    { name = "qianfan", marker = "extra == 'baidu'", specifier = "==0.3.5" },
+    { name = "redis", marker = "extra == 'redis'", specifier = ">=7.4.0,<8.0.0" },
+    { name = "requests", marker = "extra == 'cometapi'", specifier = ">=2.32.0" },
+    { name = "requests", marker = "extra == 'deepseek'", specifier = ">=2.32.0" },
+    { name = "requests", marker = "extra == 'homeassistant'", specifier = ">=2.32.0" },
+    { name = "requests", marker = "extra == 'icosacomputing'", specifier = ">=2.32.0" },
+    { name = "requests", marker = "extra == 'notion'", specifier = ">=2.32.0" },
+    { name = "requests", marker = "extra == 'novita'", specifier = ">=2.32.0" },
+    { name = "requests", marker = "extra == 'xai'", specifier = ">=2.32.0" },
+    { name = "scrapegraph-py", marker = "extra == 'scrapegraph'", specifier = ">=1.12.0" },
+    { name = "smolagents", marker = "extra == 'codeagents'", specifier = ">=1.8.0" },
+    { name = "spider-client", marker = "extra == 'spider'", specifier = ">=0.0.27,<1.0.0" },
+    { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
+    { name = "twelvelabs", marker = "extra == 'twelvelabs'", specifier = ">=0.4.7,<1.0.0" },
+    { name = "upstash-vector", marker = "extra == 'upstash'", specifier = "==0.6.0" },
+    { name = "vlmrun", extras = ["all"], marker = "extra == 'vlmrun'", specifier = ">=0.2.0" },
+    { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.10.2,<5.0.0" },
+    { name = "wikipedia", marker = "extra == 'wikipedia'", specifier = "==1.4.0" },
+    { name = "wolframalpha", marker = "extra == 'wolframalpha'", specifier = "==5.1.3" },
+    { name = "yfinance", marker = "extra == 'yahoosearch'", specifier = "==0.2.50" },
+    { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
+    { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
+]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "exa", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vllm", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
+
+[[package]]
+name = "lfx-cohere"
+version = "0.1.0"
+source = { editable = "src/bundles/cohere" }
+dependencies = [
+    { name = "langchain-cohere" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-cohere", specifier = "~=0.5.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-datastax"
+version = "0.1.0"
+source = { editable = "src/bundles/datastax" }
+dependencies = [
+    { name = "astrapy" },
+    { name = "graph-retriever" },
+    { name = "langchain-astradb" },
+    { name = "langchain-graph-retriever" },
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "astrapy", specifier = ">=2.1.0,<3.0.0" },
+    { name = "graph-retriever", specifier = "==0.8.0" },
+    { name = "langchain-astradb", specifier = "~=1.0.0" },
+    { name = "langchain-graph-retriever", specifier = "==0.8.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "requests", specifier = ">=2.32.0" },
 ]
 
 [[package]]
@@ -9214,6 +9801,42 @@ requires-dist = [
     { name = "langchain-plaid", specifier = ">=0.1.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "pillow", specifier = ">=10.0.0" },
+]
+
+[[package]]
+name = "lfx-openai"
+version = "0.1.0"
+source = { editable = "src/bundles/openai" }
+dependencies = [
+    { name = "langchain-openai" },
+    { name = "lfx" },
+    { name = "openai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-openai", specifier = ">=1.1.6" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "openai", specifier = ">=1.68.2,<3.0.0" },
+]
+
+[[package]]
+name = "lfx-oracle"
+version = "0.1.0"
+source = { editable = "src/bundles/oracle" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "langchain-oracledb" },
+    { name = "lfx" },
+    { name = "oracledb" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-oracledb", specifier = ">=1.0.1,<2.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "oracledb", specifier = ">=2.2.0,<4.0.0" },
 ]
 
 [[package]]
@@ -12302,6 +12925,43 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ba/25/0ce51a09bd4cb4d5c99e1fe02597ab089cb7ace8afe940a8c87a23ba73e0/opik-2.0.56.tar.gz", hash = "sha256:aa5e10d19dc28e34c7accbc810725501e8528a3314d392da8ac85463714715aa", size = 1066591, upload-time = "2026-06-03T11:11:53.235Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/af/6d/19a54f00189f7b2879fb0804b5d3167f8b625ea1441a5a958c8d41ae1818/opik-2.0.56-py3-none-any.whl", hash = "sha256:f564d6faedace25435f79e4cbb468028c0617314027f1c131d96d43d72c93e23", size = 1699683, upload-time = "2026-06-03T11:11:51.263Z" },
+]
+
+[[package]]
+name = "oracledb"
+version = "3.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f7/02/70a872d1a4a739b4f7371ab8d3d5ed8c6e57e142e2503531aafcb220893c/oracledb-3.4.2.tar.gz", hash = "sha256:46e0f2278ff1fe83fbc33a3b93c72d429323ec7eed47bc9484e217776cd437e5", size = 855467, upload-time = "2026-01-28T17:25:39.91Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4c/5d/b8a0ca1c520fa43ae33260f6f8ca9bd468ade43da7986029bc214965df12/oracledb-3.4.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:ff3c89cecea62af8ca02aa33cab0f2edc0214c747eac7d3364ed6b2640cb55e4", size = 4243966, upload-time = "2026-01-28T17:25:45.05Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/43/26e2bbb2a6ee31392a339089e53cb2e386ca795ff4fbe2f673c167821bd6/oracledb-3.4.2-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:e068ef844a327877bfefbef1bc6fb7284c727bb87af80095f08d95bcaf7b8bb2", size = 2426056, upload-time = "2026-01-28T17:25:47.176Z" },
+    { url = "https://files.pythonhosted.org/packages/09/ba/11ee1d044295465a04ff45c6e3023d35400bb3f67bc5fed9408f0f2dc04c/oracledb-3.4.2-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9f434a739405557bd57cb39b62238142bb27855a524a70dc6d397a2a8c576c9d", size = 2603062, upload-time = "2026-01-28T17:25:49.817Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/bc/292f2f5f7b65a667787871e300889ab8f4a3b9cfd88c5d78f828a40f6d31/oracledb-3.4.2-cp310-cp310-win32.whl", hash = "sha256:00c79448017f367bb7ab6900efe0706658a53768abea2b4519a4c9b2d5743890", size = 1496639, upload-time = "2026-01-28T17:25:51.298Z" },
+    { url = "https://files.pythonhosted.org/packages/21/23/81931c16663e771937c0161bb90460668d2a5f7982b5030ab7bef3b3a4f9/oracledb-3.4.2-cp310-cp310-win_amd64.whl", hash = "sha256:574c8280d49cbbe21dbe03fc28356d9b9a5b9e300ebcde6c6d106e51453a7e65", size = 1837314, upload-time = "2026-01-28T17:25:52.718Z" },
+    { url = "https://files.pythonhosted.org/packages/64/80/be263b668ba32b258d07c85f7bfb6967a9677e016c299207b28734f04c4b/oracledb-3.4.2-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:b8e4b8a852251cef09038b75f30fce1227010835f4e19cfbd436027acba2697c", size = 4228552, upload-time = "2026-01-28T17:25:54.844Z" },
+    { url = "https://files.pythonhosted.org/packages/91/bc/e832a649529da7c60409a81be41f3213b4c7ffda4fe424222b2145e8d43c/oracledb-3.4.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:1617a1db020346883455af005efbefd51be2c4d797e43b1b38455a19f8526b48", size = 2421924, upload-time = "2026-01-28T17:25:56.984Z" },
+    { url = "https://files.pythonhosted.org/packages/86/21/d867c37e493a63b5521bd248110ad5b97b18253d64a30703e3e8f3d9631e/oracledb-3.4.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5ed78d7e7079a778062744ccf42141ce4806818c3f4dd6463e4a7edd561c9f86", size = 2599301, upload-time = "2026-01-28T17:25:58.529Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/de/9b1843ea27f7791449652d7f340f042c3053336d2c11caf29e59bab86189/oracledb-3.4.2-cp311-cp311-win32.whl", hash = "sha256:0e16fe3d057e0c41a23ad2ae95bfa002401690773376d476be608f79ac74bf05", size = 1492890, upload-time = "2026-01-28T17:26:00.662Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/10/cbc8afa2db0cec80530858d3e4574f9734fae8c0b7f1df261398aa026c5f/oracledb-3.4.2-cp311-cp311-win_amd64.whl", hash = "sha256:f93cae08e8ed20f2d5b777a8602a71f9418389c661d2c937e84d94863e7e7011", size = 1843355, upload-time = "2026-01-28T17:26:02.637Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/81/2e6154f34b71cd93b4946c73ea13b69d54b8d45a5f6bbffe271793240d21/oracledb-3.4.2-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:a7396664e592881225ba66385ee83ce339d864f39003d6e4ca31a894a7e7c552", size = 4220806, upload-time = "2026-01-28T17:26:04.322Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/a9/a1d59aaac77d8f727156ec6a3b03399917c90b7da4f02d057f92e5601f56/oracledb-3.4.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0f04a2d62073407672f114d02529921de0677c6883ed7c64d8d1a3c04caa3238", size = 2233795, upload-time = "2026-01-28T17:26:05.877Z" },
+    { url = "https://files.pythonhosted.org/packages/94/ec/8c4a38020cd251572bd406ddcbde98ca052ec94b5684f9aa9ef1ddfcc68c/oracledb-3.4.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d8d75e4f879b908be66cce05ba6c05791a5dbb4a15e39abc01aa25c8a2492bd9", size = 2424756, upload-time = "2026-01-28T17:26:07.35Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/7d/c251c2a8567151ccfcfbe3467ea9a60fb5480dc4719342e2e6b7a9679e5d/oracledb-3.4.2-cp312-cp312-win32.whl", hash = "sha256:31b7ee83c23d0439778303de8a675717f805f7e8edb5556d48c4d8343bcf14f5", size = 1453486, upload-time = "2026-01-28T17:26:08.869Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/78/c939f3c16fb39400c4734d5a3340db5659ba4e9dce23032d7b33ccfd3fe5/oracledb-3.4.2-cp312-cp312-win_amd64.whl", hash = "sha256:ac25a0448fc830fb7029ad50cd136cdbfcd06975d53967e269772cc5cb8c203a", size = 1794445, upload-time = "2026-01-28T17:26:10.66Z" },
+    { url = "https://files.pythonhosted.org/packages/22/68/f7126f5d911c295b57720c6b1a0609a5a2667b4546946433552a4de46333/oracledb-3.4.2-cp313-cp313-macosx_10_13_universal2.whl", hash = "sha256:643c25d301a289a371e37fcedb59e5fa5e54fb321708e5c12821c4b55bdd8a4d", size = 4205176, upload-time = "2026-01-28T17:26:12.463Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/93/2fced60f92dc82e66980a8a3ba5c1ea48110bf1dd81d030edb69d88f992e/oracledb-3.4.2-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:55397e7eb43bb7017c03a981c736c25724182f5210951181dfe3fab0e5d457fb", size = 2231298, upload-time = "2026-01-28T17:26:14.497Z" },
+    { url = "https://files.pythonhosted.org/packages/75/a7/4dd286f3a6348d786fef9e6ab2e6c9b74ca9195d9a756f2a67e45743cdf0/oracledb-3.4.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b26a10f9c790bd141ffc8af68520803ed4a44a9258bf7d1eea9bfdd36bd6df7f", size = 2439430, upload-time = "2026-01-28T17:26:16.044Z" },
+    { url = "https://files.pythonhosted.org/packages/19/28/94bc753e5e969c60ee5d9c914e2b4ef79999eaca8e91bcab2fbf0586b80b/oracledb-3.4.2-cp313-cp313-win32.whl", hash = "sha256:b974caec2c330c22bbe765705a5ac7d98ec3022811dec2042d561a3c65cb991b", size = 1458209, upload-time = "2026-01-28T17:26:17.652Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/2b/593a9b2d4c12c9de3289e67d84fe023336d99f36ba51442a5a0f5ce6acf7/oracledb-3.4.2-cp313-cp313-win_amd64.whl", hash = "sha256:3df8eee1410d25360599968b1625b000f10c5ae0e47274031a7842a9dc418890", size = 1793558, upload-time = "2026-01-28T17:26:19.914Z" },
+    { url = "https://files.pythonhosted.org/packages/42/20/1e98f84c1555911c46b4fa870fbef2a80617bf7e0a5f178078ecf466c917/oracledb-3.4.2-cp314-cp314-macosx_10_15_universal2.whl", hash = "sha256:59ad6438f56a25e8e1a4a3dd1b42235a5d09ab9ba417ff2ad14eae6596f3d06f", size = 4247459, upload-time = "2026-01-28T17:26:22.356Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/74/95963e2d94f84b9937a562a9a2529f72d050afbc2ffd88f6661e3a876f7d/oracledb-3.4.2-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:404ec1451d0448653ee074213b87d6c5bd65eaa74b50083ddf2c9c3e11c71c71", size = 2271749, upload-time = "2026-01-28T17:26:24.078Z" },
+    { url = "https://files.pythonhosted.org/packages/82/89/38ce85148a246087795379ee52c5b20726a00a69c87ba6ec266bcdad30fc/oracledb-3.4.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:19fa80ef84f85ad74077aa626067bbe697e527bd39604b4209f9d86cb2876b89", size = 2452031, upload-time = "2026-01-28T17:26:26.08Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/8d/51fe907fdec0267ad7c6e9a62998cbe878efcd168ea6e39f162fab62fdaa/oracledb-3.4.2-cp314-cp314-win32.whl", hash = "sha256:d7ce75c498bff758548ec6e4424ab4271aa257e5887cc436a54bc947fd46199a", size = 1480973, upload-time = "2026-01-28T17:26:27.584Z" },
+    { url = "https://files.pythonhosted.org/packages/48/22/a37354f19786774e5e4041338043b516db060aacfdfcd5aca8bb92c2539a/oracledb-3.4.2-cp314-cp314-win_amd64.whl", hash = "sha256:5d7befb014174c5ae11c3a08f5ed6668a25ab2335d8e7104dca70d54d54a5b3a", size = 1837756, upload-time = "2026-01-28T17:26:29.032Z" },
 ]
 
 [[package]]

@@ -11,10 +11,10 @@ from lfx.components.flow_controls import LoopComponent
 from lfx.components.input_output import ChatOutput
 from lfx.components.llm_operations import StructuredOutputComponent
 from lfx.components.models_and_agents import PromptComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.processing import ParserComponent, SplitTextComponent
 from lfx.graph import Graph
 from lfx.schema.data import Data
+from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 from tests.api_keys import get_openai_api_key, has_api_key
 from tests.base import ComponentTestBaseWithClient
