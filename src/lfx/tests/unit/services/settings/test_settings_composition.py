@@ -203,6 +203,9 @@ EXPECTED_FIELDS = {
     "background_lease_ttl_s",
     "background_heartbeat_interval_s",
     "background_watchdog_interval_s",
+    "background_metrics_interval",
+    "background_worker_registry_interval_s",
+    "background_worker_registry_retention_s",
     "test_redis_url",
 }
 
