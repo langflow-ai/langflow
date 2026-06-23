@@ -19,6 +19,7 @@ the mitigations the v2 public endpoint is supposed to inherit from v1:
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient, codes
@@ -422,3 +423,30 @@ async def test_public_endpoint_surfaces_value_error_as_400(client: AsyncClient, 
 
     assert response.status_code == codes.BAD_REQUEST
     assert response.json().get("detail") == "custom gate failure"
+
+
+def test_public_endpoint_throttles_per_ip(monkeypatch):
+    """The unauthenticated public endpoint throttles per client IP.
+
+    Each run executes as the flow owner (real cost), so an anonymous caller must
+    not be able to spin up unbounded runs. With the limit set to 2/min, the third
+    request from the same IP is rejected at the throttle (429) before any flow work.
+    """
+    from fastapi.testclient import TestClient
+    from langflow.main import create_app
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "rate_limit_enabled", True)
+    monkeypatch.setattr(settings, "public_flow_rate_limit_per_minute", 2)
+
+    app = create_app()
+    sync_client = TestClient(app)
+    body = {"flow_id": str(uuid4()), "input_value": "hi"}
+
+    statuses = [sync_client.post("api/v2/workflows/public", json=body).status_code for _ in range(3)]
+
+    # First two pass the throttle (and fail downstream on the nonexistent flow);
+    # the third exhausts the 2/min window and is rejected at the throttle.
+    assert statuses[2] == codes.TOO_MANY_REQUESTS, statuses
+    assert codes.TOO_MANY_REQUESTS not in statuses[:2], statuses

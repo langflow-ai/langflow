@@ -8,17 +8,18 @@ clients (curl users, the v1 frontend) can read it without learning anything new.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from lfx.schema.workflow import OutputEvent
-
-from langflow.api.v2.adapters import (
+from lfx.workflow.adapters import (
     StreamAdapterContext,
     StreamEvent,
     register_stream_adapter,
 )
-from langflow.api.v2.converters import build_component_output, resolve_output_type
+from lfx.workflow.converters import build_component_output, resolve_output_type
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 # Durable milestones for the langflow wire protocol. ``token`` is the only
 # high-volume ephemeral type; everything else the build loop emits is a
@@ -92,6 +93,7 @@ class LangflowAdapter:
             output_type=resolve_output_type(output_meta.get("output_types"), output_meta.get("vertex_type")),
             display_name=output_meta.get("display_name"),
             result_data=build_data.get("data"),
+            valid=bool(build_data.get("valid", True)),
         )
         output = OutputEvent(component_id=component_id, **component_output.model_dump())
         payload = {"event": "output", "data": output.model_dump(mode="json")}
@@ -105,8 +107,11 @@ class LangflowAdapter:
         return (StreamEvent(type="error", data_json=json.dumps(payload)),)
 
     def cancel_events(self, reason: str) -> Iterable[StreamEvent]:
-        payload = {"event": "error", "data": {"error": reason}}
-        return (StreamEvent(type="error", data_json=json.dumps(payload)),)
+        # A deliberate user stop is its own terminal, not an ``error``: a
+        # re-attaching client must be able to tell a cancel apart from a genuine
+        # failure instead of seeing the stream end in ``error``.
+        payload = {"event": "cancelled", "data": {"reason": reason}}
+        return (StreamEvent(type="cancelled", data_json=json.dumps(payload)),)
 
     @property
     def terminal_error_type(self) -> str | None:
