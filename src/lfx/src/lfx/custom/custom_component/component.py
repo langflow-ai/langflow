@@ -452,15 +452,17 @@ class Component(CustomComponent):
             )
             new_outputs_map = {}
             for k, output in self._outputs_map.items():
+                # Fresh memo per output: the failed outer deepcopy poisoned the shared memo with a
+                # partial copy of output.__dict__, so reusing it would return an Output missing ``value``.
                 try:
-                    new_outputs_map[k] = deepcopy(output, memo)
+                    copied = deepcopy(output)
                 except Exception:  # noqa: BLE001
-                    output_copy = output.model_copy()
+                    copied = output.model_copy()
                     try:
-                        output_copy.value = deepcopy(output.value, memo)
+                        copied.value = deepcopy(output.value)
                     except Exception:  # noqa: BLE001
-                        output_copy.value = output.value
-                    new_outputs_map[k] = output_copy
+                        copied.value = output.value
+                new_outputs_map[k] = copied
             new_component._outputs_map = new_outputs_map
 
         # Safe deepcopy of inputs

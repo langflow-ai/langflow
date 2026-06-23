@@ -152,7 +152,7 @@
                 "dependencies": [
                   {
                     "name": "apify_client",
-                    "version": "3.0.2"
+                    "version": null
                   },
                   {
                     "name": "langchain_community",
@@ -384,7 +384,7 @@
                 "dependencies": [
                   {
                     "name": "apify_client",
-                    "version": "3.0.2"
+                    "version": null
                   },
                   {
                     "name": "langchain_community",

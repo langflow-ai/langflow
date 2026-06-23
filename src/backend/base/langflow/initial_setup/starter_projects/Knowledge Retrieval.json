@@ -707,7 +707,7 @@
                   },
                   {
                     "name": "langchain_chroma",
-                    "version": "0.2.6"
+                    "version": null
                   },
                   {
                     "name": "langflow",
@@ -723,7 +723,7 @@
                   },
                   {
                     "name": "chromadb",
-                    "version": "1.5.9"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 7

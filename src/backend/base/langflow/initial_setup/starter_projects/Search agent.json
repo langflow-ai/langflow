@@ -115,7 +115,7 @@
                   },
                   {
                     "name": "scrapegraph_py",
-                    "version": "2.1.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 2

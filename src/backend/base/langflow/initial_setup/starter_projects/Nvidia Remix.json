@@ -1757,17 +1757,8 @@
             "metadata": {
               "code_hash": "3e55e36d0692",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_community",
-                    "version": "0.4.2"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.FAISS.faiss.FaissVectorStoreComponent"
             },
