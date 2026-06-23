@@ -1,11 +1,14 @@
-"""Regression tests for lfx.memory runtime dispatch.
+"""Tests for lfx.memory dispatch through the pluggable MEMORY_SERVICE.
 
-Original bug: when langflow was installed alongside lfx but `lfx run` had
-only a NoopDatabaseService registered, `lfx.memory` bound at import time to
-`langflow.memory` (because the `langflow` package was importable). The
-langflow-backed `aupdate_messages` then called `session.get(...)` on a
-NoopSession, which always returns `None`, raising spurious
-"Message with id X not found" errors mid-stream.
+Original bug: when langflow was installed alongside lfx but `lfx run` had only a
+NoopDatabaseService registered, `lfx.memory` routed to `langflow.memory` simply
+because the `langflow` package was importable, and its DB-backed code then hit a
+NoopSession (silent no-op inserts / "Message with id X not found" on update).
+
+The fix moved dispatch behind MEMORY_SERVICE: `lfx.memory` resolves the registered
+memory service via `get_memory_service()` at call time and no longer asks "is
+langflow importable and is its DB non-noop". The DB-vs-in-memory decision lives in
+the memory service factory/service layer. These tests pin that contract.
 """
 
 from __future__ import annotations
@@ -22,6 +25,8 @@ class _FakeRealDbService:
 
 
 class TestHasLangflowDbBackend:
+    """The util still exists (used by the factory layer); it is no longer the memory gate."""
+
     def test_returns_false_when_langflow_not_importable(self, monkeypatch):
         monkeypatch.setattr("lfx.utils.langflow_utils.has_langflow_memory", lambda: False)
         assert has_langflow_db_backend() is False
@@ -48,61 +53,72 @@ class TestHasLangflowDbBackend:
 
 
 class TestMemoryDispatch:
-    def test_dispatches_to_stubs_when_no_real_db(self, monkeypatch):
-        import lfx.memory as memory_mod
-        from lfx.memory import stubs
-
-        monkeypatch.setattr("lfx.memory.has_langflow_db_backend", lambda: False)
-        assert memory_mod._impl() is stubs
-
-    def test_dispatches_to_langflow_when_real_db(self, monkeypatch):
-        pytest.importorskip("langflow.memory")
-        import langflow.memory as langflow_memory
+    def test_memory_module_does_not_import_db_backend_gate(self):
+        """The layering fix: memory/__init__ no longer references has_langflow_db_backend."""
         import lfx.memory as memory_mod
 
-        monkeypatch.setattr("lfx.memory.has_langflow_db_backend", lambda: True)
-        assert memory_mod._impl() is langflow_memory
+        assert not hasattr(memory_mod, "has_langflow_db_backend")
 
-    def test_dispatch_is_evaluated_per_call(self, monkeypatch):
-        """Dispatch must read the backend state each call, not cache at import.
-
-        The database service is often registered *after* lfx.memory is imported
-        (components load first, services register during graph setup), so
-        memoizing the dispatcher would bind to whatever state existed at
-        component-module load time.
-        """
+    def test_impl_resolves_registered_memory_service(self, monkeypatch):
+        """_impl() routes to whatever get_memory_service() returns — at call time."""
         import lfx.memory as memory_mod
-        from lfx.memory import stubs
 
-        state = {"real": False}
-        monkeypatch.setattr("lfx.memory.has_langflow_db_backend", lambda: state["real"])
+        sentinel = object()
+        monkeypatch.setattr("lfx.memory.get_memory_service", lambda: sentinel)
+        assert memory_mod._impl() is sentinel
 
-        assert memory_mod._impl() is stubs
-        state["real"] = True
-        pytest.importorskip("langflow.memory")
-        import langflow.memory as langflow_memory
+    def test_impl_is_evaluated_per_call(self, monkeypatch):
+        """Dispatch reads the registry each call, not a value cached at import."""
+        import lfx.memory as memory_mod
 
-        assert memory_mod._impl() is langflow_memory
+        state = {"svc": object()}
+        monkeypatch.setattr("lfx.memory.get_memory_service", lambda: state["svc"])
+
+        first = memory_mod._impl()
+        assert first is state["svc"]
+
+        state["svc"] = object()
+        assert memory_mod._impl() is state["svc"]
+        assert memory_mod._impl() is not first
+
+    def test_public_functions_route_through_service(self, monkeypatch):
+        """Public proxies forward to the resolved service's matching method."""
+        import lfx.memory as memory_mod
+
+        calls = {}
+
+        class _Recorder:
+            async def astore_message(self, *args, **kwargs):
+                calls["astore_message"] = (args, kwargs)
+                return ["ok"]
+
+            async def adelete_message(self, *args, **kwargs):
+                calls["adelete_message"] = (args, kwargs)
+
+        monkeypatch.setattr("lfx.memory.get_memory_service", lambda: _Recorder())
+
+        import asyncio
+
+        assert asyncio.run(memory_mod.astore_message("m", flow_id="f")) == ["ok"]
+        assert calls["astore_message"] == (("m",), {"flow_id": "f"})
+
+        # delete_message proxies to the service's adelete_message primitive.
+        asyncio.run(memory_mod.delete_message("the-id"))
+        assert calls["adelete_message"] == (("the-id",), {})
 
 
 class TestAupdateMessagesRegression:
-    """Direct regression for the original 'Message with id X not found' crash."""
+    """The original 'Message with id X not found' crash must not return."""
 
     @pytest.mark.asyncio
-    async def test_aupdate_messages_does_not_raise_against_noop_session(self, monkeypatch):
-        """Regression: route to stubs (no-op) instead of raising via langflow.memory.
-
-        With langflow importable but only a NoopDatabaseService registered,
-        aupdate_messages must route to stubs and succeed silently rather than
-        trigger langflow.memory's strict existence check against NoopSession.
-        """
+    async def test_aupdate_messages_does_not_raise_against_noop_db(self, monkeypatch):
+        """With only a NoopDatabaseService, update upserts in-memory and succeeds."""
         try:
             from langflow.schema.message import Message
         except ImportError:
             from lfx.schema.message import Message
 
-        # Force the noop-DB branch even if a real DB happens to be registered in
-        # this test environment.
+        # Force the noop-DB branch even if a real DB is registered in this env.
         monkeypatch.setattr("lfx.services.deps.get_db_service", lambda: NoopDatabaseService())
 
         from lfx.memory import aupdate_messages

@@ -31,6 +31,7 @@ if TYPE_CHECKING:
         TransactionServiceProtocol,
         VariableServiceProtocol,
     )
+    from lfx.services.memory.base import MemoryService
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -104,6 +105,13 @@ def get_variable_service() -> VariableServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.VARIABLE_SERVICE)
+
+
+def get_memory_service() -> MemoryService | None:
+    """Retrieves the chat-message memory service instance."""
+    from lfx.services.schema import ServiceType
+
+    return get_service(ServiceType.MEMORY_SERVICE)
 
 
 def get_shared_component_cache_service() -> CacheServiceProtocol | None:

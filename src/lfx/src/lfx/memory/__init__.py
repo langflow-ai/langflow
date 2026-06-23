@@ -1,63 +1,74 @@
-"""Memory management for lfx with dynamic dispatch.
+"""Memory management for lfx, routed through the pluggable MEMORY_SERVICE.
 
-Routes memory operations to either the full langflow implementation (when
-langflow is installed AND a real database service is registered) or the lfx
-stub implementation (standalone / noop DB).
+Every public function resolves the registered memory service via
+``get_memory_service()`` *at call time*. The question this layer asks is simply
+"is a memory backend registered" — not "is langflow importable and is its DB
+non-noop". Which concrete backend the registered service uses (in-memory vs a
+real DB) is decided by the MEMORY_SERVICE factory/service layer, not here.
 
-Dispatch is evaluated at call time, not import time, because the database
-service is typically registered *after* this module is first imported (e.g.,
-from Component class definitions loaded before graph setup). An import-time
-decision can't distinguish "langflow is importable" from "a real DB is wired",
-and picking the langflow backend with a NoopDatabaseService yields silent
-no-op inserts followed by spurious "Message with id X not found" errors on
-update.
+Resolution happens per call (rather than binding at import) because the service
+manager — and the database service that a DB-backed backend depends on — is
+typically registered *after* this module is first imported (e.g. from Component
+class definitions loaded before graph setup). The call-time lookup is a cheap
+manager hit that returns the already-cached service.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from lfx.utils.langflow_utils import has_langflow_db_backend
+from lfx.services.deps import get_memory_service
 
-
-def _impl():
-    if has_langflow_db_backend():
-        from langflow import memory as impl
-    else:
-        from lfx.memory import stubs as impl
-    return impl
+if TYPE_CHECKING:
+    from lfx.services.memory.base import MemoryService
 
 
-def aadd_messages(*args: Any, **kwargs: Any):
-    return _impl().aadd_messages(*args, **kwargs)
+def _impl() -> MemoryService:
+    """Resolve the registered memory service.
+
+    The MEMORY_SERVICE factory is always registered (auto-discovered from the
+    ``ServiceType`` enum and registered explicitly in ``lfx.services.initialize``),
+    so this normally returns a real service. We guard against ``None`` only to
+    fail loudly on a genuinely broken service manager rather than silently route
+    memory into a throwaway store.
+    """
+    service = get_memory_service()
+    if service is None:  # pragma: no cover - the factory is always registered
+        msg = "No memory service is registered; cannot perform memory operations."
+        raise RuntimeError(msg)
+    return service
 
 
-def aadd_messagetables(*args: Any, **kwargs: Any):
-    return _impl().aadd_messagetables(*args, **kwargs)
+async def aadd_messages(*args: Any, **kwargs: Any):
+    return await _impl().aadd_messages(*args, **kwargs)
+
+
+async def aadd_messagetables(*args: Any, **kwargs: Any):
+    return await _impl().aadd_messagetables(*args, **kwargs)
 
 
 def add_messages(*args: Any, **kwargs: Any):
     return _impl().add_messages(*args, **kwargs)
 
 
-def adelete_messages(*args: Any, **kwargs: Any):
-    return _impl().adelete_messages(*args, **kwargs)
+async def adelete_messages(*args: Any, **kwargs: Any):
+    return await _impl().adelete_messages(*args, **kwargs)
 
 
-def aget_messages(*args: Any, **kwargs: Any):
-    return _impl().aget_messages(*args, **kwargs)
+async def aget_messages(*args: Any, **kwargs: Any):
+    return await _impl().aget_messages(*args, **kwargs)
 
 
-def astore_message(*args: Any, **kwargs: Any):
-    return _impl().astore_message(*args, **kwargs)
+async def astore_message(*args: Any, **kwargs: Any):
+    return await _impl().astore_message(*args, **kwargs)
 
 
-def aupdate_messages(*args: Any, **kwargs: Any):
-    return _impl().aupdate_messages(*args, **kwargs)
+async def aupdate_messages(*args: Any, **kwargs: Any):
+    return await _impl().aupdate_messages(*args, **kwargs)
 
 
-def delete_message(*args: Any, **kwargs: Any):
-    return _impl().delete_message(*args, **kwargs)
+async def delete_message(*args: Any, **kwargs: Any):
+    return await _impl().adelete_message(*args, **kwargs)
 
 
 def delete_messages(*args: Any, **kwargs: Any):
