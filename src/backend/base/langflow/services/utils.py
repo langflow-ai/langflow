@@ -487,6 +487,7 @@ def register_all_service_factories() -> None:
     from lfx.services.schema import ServiceType
 
     service_manager = get_service_manager()
+    from lfx.services.capability import factory as capability_factory
     from lfx.services.executor import factory as executor_factory
     from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.settings import factory as settings_factory
@@ -543,6 +544,9 @@ def register_all_service_factories() -> None:
     )
     service_manager.register_factory(authorization_factory.AuthorizationServiceFactory())
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
+    # ExecutorService depends on CAPABILITY_SERVICE, so its factory must be
+    # registered too or the manager can't resolve the dependency.
+    service_manager.register_factory(capability_factory.CapabilityServiceFactory())
     service_manager.register_factory(executor_factory.ExecutorServiceFactory())
     service_manager.set_factory_registered()
 
