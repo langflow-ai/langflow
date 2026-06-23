@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
   }, {});
 
   return {
-    base: BASENAME || "",
+    base: process.env.LANGFLOW_ROOT_PATH || envLangflow.LANGFLOW_ROOT_PATH || BASENAME || "",
     build: {
       outDir: "build",
     },
@@ -72,6 +72,9 @@ export default defineConfig(({ mode }) => {
       ),
       "import.meta.env.LANGFLOW_WXO_UTM_SOURCE": JSON.stringify(
         envLangflow.LANGFLOW_WXO_UTM_SOURCE ?? "langflow",
+      ),
+      "process.env.LANGFLOW_ROOT_PATH": JSON.stringify(
+        process.env.LANGFLOW_ROOT_PATH || envLangflow.LANGFLOW_ROOT_PATH || "",
       ),
     },
     plugins: [
