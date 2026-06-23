@@ -630,7 +630,9 @@ def generate_requirements_from_file(
 
 
 # ===================================================================
-# Dependency preflight (fail-fast for `lfx run` / `lfx serve`)
+# Dependency preflight (fail-fast for `lfx run`)
+# `lfx serve` does not call this; it surfaces missing deps at request
+# time via its own module-not-found hint.
 # ===================================================================
 
 
