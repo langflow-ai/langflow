@@ -62,9 +62,12 @@ export function TraceHitlBar({
       },
     };
     flowStore.setIsBuilding(true);
-    void consumeBackgroundEvents(reattach.jobId, reattach.opts, undefined, {
-      skipCardInjection: true,
-    });
+    void consumeBackgroundEvents(
+      reattach.jobId,
+      { ...reattach.opts, silent: true },
+      undefined,
+      { skipCardInjection: true },
+    );
     queryClient.invalidateQueries({ queryKey: ["useGetTracesQuery"] });
     queryClient.invalidateQueries({ queryKey: ["useGetPendingWorkflows"] });
     queryClient.invalidateQueries({ queryKey: ["useGetTraceQuery"] });

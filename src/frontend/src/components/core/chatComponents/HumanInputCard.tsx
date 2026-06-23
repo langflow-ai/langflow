@@ -92,7 +92,7 @@ export default function HumanInputCard({
             flowStore.setIsBuilding(true);
             void consumeBackgroundEvents(
               reattach.jobId,
-              reattach.opts,
+              { ...reattach.opts, silent: true },
               undefined,
               {
                 skipCardInjection: true,

@@ -16,17 +16,17 @@ import {
 } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import { BuildStatus } from "@/constants/enums";
 import { persistMessageProperties } from "@/controllers/API/helpers/persist-message-properties";
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useHitlStore } from "@/stores/hitlStore";
 import { useMessagesStore } from "@/stores/messagesStore";
-import type { ChatInputType, ChatOutputType } from "@/types/chat";
 import type {
   LogsLogType,
   VertexBuildTypeAPI,
   VertexDataTypeAPI,
 } from "@/types/api";
-import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
+import type { ChatInputType, ChatOutputType } from "@/types/chat";
 import { api } from "../api";
 import { injectHumanInputCard } from "./human-input-card";
 import {
@@ -552,7 +552,11 @@ export async function consumeBackgroundEvents(
       suspended = true;
       injectHumanInputCard(payload as Record<string, unknown>, jobId, opts);
     },
-    onFinished: () => flowStore.setBuildInfo({ success: true }),
+    onFinished: () => {
+      // A HITL resume continuation is not a user-initiated build, so the caller can pass
+      // silent to suppress the "Flow built successfully" toast on the canvas.
+      if (!opts.silent) flowStore.setBuildInfo({ success: true });
+    },
     onError: (message) => {
       flowStore.setBuildInfo({ error: [message], success: false });
       setErrorData({ title: "Workflow run failed", list: [message] });

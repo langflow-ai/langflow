@@ -144,9 +144,11 @@ describe("HumanInputCard", () => {
     onSuccess();
     expect(mockSetAwaitingInput).toHaveBeenCalledWith(false);
     expect(mockSetIsBuilding).toHaveBeenCalledWith(true);
+    // Resume reattach is silent: a continuation is not a user-initiated build, so it must not
+    // raise the "Flow built successfully" toast on the canvas.
     expect(mockConsume).toHaveBeenCalledWith(
       "job-1",
-      { flowId: "f1" },
+      { flowId: "f1", silent: true },
       undefined,
       {
         skipCardInjection: true,
