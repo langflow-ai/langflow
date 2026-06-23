@@ -19,6 +19,26 @@ except (ImportError, ModuleNotFoundError):
     from lfx.schema.message import Message
 
 
+@pytest.fixture(autouse=True)
+def _reset_memory_store():
+    """Isolate tests: the default memory service is a process-global singleton.
+
+    Memory now round-trips in-process (it is no longer a no-op stub), so without a
+    reset, messages stored by one test would leak into the next.
+    """
+    from lfx.services.deps import get_memory_service
+
+    def _clear():
+        svc = get_memory_service()
+        store = getattr(svc, "_messages", None)
+        if store is not None:
+            store.clear()
+
+    _clear()
+    yield
+    _clear()
+
+
 class TestMemoryFunctions:
     """Test cases for memory functions."""
 
@@ -146,7 +166,7 @@ class TestMemoryFunctions:
 
     def test_get_messages_basic(self):
         """Test getting messages basic functionality."""
-        # Since this is a stub implementation, it should return empty list
+        # The store is reset per test, so nothing has been stored yet.
         result = get_messages()
         assert isinstance(result, list)
         assert len(result) == 0

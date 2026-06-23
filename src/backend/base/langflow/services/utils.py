@@ -498,6 +498,7 @@ def register_all_service_factories() -> None:
     from langflow.services.chat import factory as chat_factory
     from langflow.services.database import factory as database_factory
     from langflow.services.job_queue import factory as job_queue_factory
+    from langflow.services.memory import factory as memory_factory
     from langflow.services.session import factory as session_factory
     from langflow.services.shared_component_cache import factory as shared_component_cache_factory
     from langflow.services.state import factory as state_factory
@@ -518,6 +519,7 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(session_factory.SessionServiceFactory())
     service_manager.register_factory(storage_factory.StorageServiceFactory())
     service_manager.register_factory(variable_factory.VariableServiceFactory())
+    service_manager.register_factory(memory_factory.MemoryServiceFactory())
     service_manager.register_factory(telemetry_factory.TelemetryServiceFactory())
     service_manager.register_factory(tracing_factory.TracingServiceFactory())
     service_manager.register_factory(transaction_factory.TransactionServiceFactory())
