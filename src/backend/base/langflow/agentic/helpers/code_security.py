@@ -146,6 +146,51 @@ def _is_dangerous_submodule(dotted: str) -> bool:
     return any(dotted == prefix or dotted.startswith(prefix + ".") for prefix in DANGEROUS_SUBMODULES)
 
 
+def _build_dangerous_members() -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+    """Per-module dangerous member names, derived from the call/read tables.
+
+    Used to catch wildcard imports (``from os import *``) where a restricted
+    member is then referenced as a bare name (``dup2(...)`` / ``environ[...]``).
+    Kept in sync automatically so a new entry in the tables above is covered.
+    """
+    call_members: dict[str, set[str]] = {}
+    for mod, method, _ in DANGEROUS_ATTR_CALLS:
+        call_members.setdefault(mod, set()).add(method)
+    for mod, names in RESTRICTED_IMPORT_NAMES.items():
+        call_members.setdefault(mod, set()).update(names)
+
+    read_members: dict[str, set[str]] = {}
+    for mod, attr, _ in DANGEROUS_ATTRIBUTE_READS:
+        read_members.setdefault(mod, set()).add(attr)
+
+    return call_members, read_members
+
+
+_DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
+
+
+def _collect_imports(tree: ast.AST) -> tuple[dict[str, str], set[str]]:
+    """Map local binding names to canonical modules; collect ``import *`` modules.
+
+    Resolves alias bypasses (``import os as o`` → ``o`` maps to ``os``) and
+    wildcard bypasses (``from os import *``) so the checks below see them as
+    plain ``os.<member>`` access. Order-independent (whole-tree walk).
+    """
+    aliases: dict[str, str] = {}
+    wildcard_modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.asname:
+                    aliases[alias.asname] = alias.name.split(".")[0]
+                else:
+                    top = alias.name.split(".")[0]
+                    aliases[top] = top
+        elif isinstance(node, ast.ImportFrom) and node.module and any(a.name == "*" for a in node.names):
+            wildcard_modules.add(node.module.split(".")[0])
+    return aliases, wildcard_modules
+
+
 @dataclass(frozen=True)
 class SecurityScanResult:
     """Result of code security scan."""
@@ -157,8 +202,13 @@ class SecurityScanResult:
 class _SecurityChecker(ast.NodeVisitor):
     """AST visitor that detects dangerous patterns in generated code."""
 
-    def __init__(self):
+    def __init__(self, module_aliases: dict[str, str] | None = None, wildcard_modules: set[str] | None = None):
         self.violations: list[str] = []
+        # local-name -> canonical module (e.g. {"o": "os"}); falls back to the
+        # name itself so unaliased ``os.system()`` still matches.
+        self.module_aliases: dict[str, str] = module_aliases or {}
+        # modules pulled in via ``from <mod> import *``.
+        self.wildcard_modules: set[str] = wildcard_modules or set()
 
     def visit_Import(self, node: ast.Import):
         for alias in node.names:
@@ -194,9 +244,19 @@ class _SecurityChecker(ast.NodeVisitor):
         if node.attr in DANGEROUS_DUNDER_ATTRS:
             self.violations.append(f"Access to '{node.attr}' is forbidden in components (sandbox escape)")
         elif isinstance(node.value, ast.Name):
+            module_name = self.module_aliases.get(node.value.id, node.value.id)
             for mod, attr, message in DANGEROUS_ATTRIBUTE_READS:
-                if node.value.id == mod and node.attr == attr:
+                if module_name == mod and node.attr == attr:
                     self.violations.append(message)
+                    break
+        self.generic_visit(node)
+
+    def visit_Name(self, node: ast.Name):
+        """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
+        if isinstance(node.ctx, ast.Load):
+            for mod in self.wildcard_modules:
+                if node.id in _DANGEROUS_READ_MEMBERS.get(mod, ()):
+                    self.violations.append(f"Use of '{node.id}' (via 'from {mod} import *') is forbidden in components")
                     break
         self.generic_visit(node)
 
@@ -206,18 +266,32 @@ class _SecurityChecker(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _check_name_call(self, node: ast.Call):
-        """Check direct function calls like exec(), eval()."""
-        if isinstance(node.func, ast.Name) and node.func.id in DANGEROUS_CALLS:
-            self.violations.append(DANGEROUS_CALLS[node.func.id])
+        """Check bare-name calls: builtins (exec) and wildcard-imported members.
+
+        e.g. ``exec(...)`` and, after ``from os import *``, a bare ``dup2(...)``.
+        """
+        if not isinstance(node.func, ast.Name):
+            return
+        name = node.func.id
+        if name in DANGEROUS_CALLS:
+            self.violations.append(DANGEROUS_CALLS[name])
+            return
+        for mod in self.wildcard_modules:
+            if name in _DANGEROUS_CALL_MEMBERS.get(mod, ()):
+                self.violations.append(f"Use of '{name}()' (via 'from {mod} import *') is forbidden in components")
+                return
 
     def _check_attribute_call(self, node: ast.Call):
-        """Check attribute calls like os.system(), subprocess.run()."""
+        """Check attribute calls like os.system(), subprocess.run().
+
+        Resolves import aliases so ``import os as o; o.system()`` is caught.
+        """
         if not isinstance(node.func, ast.Attribute):
             return
         if not isinstance(node.func.value, ast.Name):
             return
 
-        module_name = node.func.value.id
+        module_name = self.module_aliases.get(node.func.value.id, node.func.value.id)
         method_name = node.func.attr
 
         for mod, method, message in DANGEROUS_ATTR_CALLS:
@@ -243,7 +317,8 @@ def scan_code_security(code: str) -> SecurityScanResult:
     except SyntaxError:
         return SecurityScanResult(is_safe=True)
 
-    checker = _SecurityChecker()
+    module_aliases, wildcard_modules = _collect_imports(tree)
+    checker = _SecurityChecker(module_aliases=module_aliases, wildcard_modules=wildcard_modules)
     checker.visit(tree)
 
     return SecurityScanResult(

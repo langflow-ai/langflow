@@ -436,3 +436,71 @@ class TestScanCodeSecurityNetworkImports:
     def test_should_allow_bare_http_import(self):
         result = scan_code_security("import http")
         assert result.is_safe is True
+
+
+class TestScanCodeSecurityAliasAndWildcardBypass:
+    """Evasion via import aliases / wildcard imports must not slip past.
+
+    ``os``/``sys`` are importable as whole modules (only specific members are
+    restricted), so aliasing or wildcard-importing them used to bypass the
+    attribute-call / restricted-name checks. The scanner now resolves aliases
+    and treats wildcard-imported members as direct attribute access.
+    """
+
+    # --- import alias bypass: `import os as o; o.<restricted>()` ---
+
+    def test_should_detect_aliased_os_dup2(self):
+        result = scan_code_security("import os as o\no.dup2(3, 0)")
+        assert result.is_safe is False
+        assert any("dup2" in v for v in result.violations)
+
+    def test_should_detect_aliased_os_system(self):
+        result = scan_code_security("import os as o\no.system('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_aliased_sys_exit(self):
+        result = scan_code_security("import sys as y\ny.exit(1)")
+        assert result.is_safe is False
+
+    def test_should_detect_aliased_os_environ_read(self):
+        result = scan_code_security("import os as o\nk = o.environ['SECRET']")
+        assert result.is_safe is False
+
+    def test_should_detect_aliased_os_getenv(self):
+        result = scan_code_security("import os as o\nk = o.getenv('SECRET')")
+        assert result.is_safe is False
+
+    def test_should_detect_dotted_alias_os_path(self):
+        """`import os.path as p` still binds top-level `os`; p.system() is os.system()."""
+        result = scan_code_security("import os.path as p\np.system('id')")
+        assert result.is_safe is False
+
+    # --- wildcard import bypass: `from os import *; <restricted>()` ---
+
+    def test_should_detect_wildcard_os_dup2(self):
+        result = scan_code_security("from os import *\ndup2(3, 0)")
+        assert result.is_safe is False
+        assert any("dup2" in v for v in result.violations)
+
+    def test_should_detect_wildcard_os_system(self):
+        result = scan_code_security("from os import *\nsystem('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_wildcard_os_environ_read(self):
+        result = scan_code_security("from os import *\nk = environ['SECRET']")
+        assert result.is_safe is False
+
+    # --- no-regression: aliases/wildcards of safe members must still pass ---
+
+    def test_should_allow_aliased_os_path(self):
+        result = scan_code_security("import os as o\np = o.path.join('a', 'b')")
+        assert result.is_safe is True
+
+    def test_should_allow_aliased_requests(self):
+        result = scan_code_security("import requests as r\nr.get('https://api.example.com')")
+        assert result.is_safe is True
+
+    def test_should_allow_wildcard_os_safe_member(self):
+        """`from os import *` then a non-restricted member (getcwd) is fine."""
+        result = scan_code_security("from os import *\nd = getcwd()")
+        assert result.is_safe is True
