@@ -15,6 +15,7 @@ class ServiceType(str, Enum):
     FLOW_EVENTS_SERVICE = "flow_events_service"
     JOB_QUEUE_SERVICE = "job_queue_service"
     MCP_COMPOSER_SERVICE = "mcp_composer_service"
+    MEMORY_SERVICE = "memory_service"
     SESSION_SERVICE = "session_service"
     SETTINGS_SERVICE = "settings_service"
     SHARED_COMPONENT_CACHE_SERVICE = "shared_component_cache_service"
