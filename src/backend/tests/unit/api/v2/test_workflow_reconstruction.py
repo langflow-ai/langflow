@@ -12,10 +12,39 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_response_from_job_id
+from langflow.api.v2.workflow_reconstruction import _recover_session_id, reconstruct_workflow_response_from_job_id
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from lfx.interface.components import component_cache
 from lfx.utils.flow_validation import CustomComponentValidationError
+
+
+class TestRecoverSessionId:
+    """``_recover_session_id`` digs the persisted session_id out of terminal data.
+
+    The session_id sits inside the serialized terminal Message at a depth that
+    varies by component, so the search walks the dict/list structure and ignores
+    serialized text blobs that merely contain the word ``session_id``.
+    """
+
+    def test_recovers_session_id_nested_like_persisted_message(self):
+        # Mirrors the real shape: results["message"]["data"]["session_id"].
+        data = {"results": {"message": {"text_key": "text", "data": {"session_id": "thread-1", "text": "hi"}}}}
+        assert _recover_session_id(data) == "thread-1"
+
+    def test_recovers_session_id_from_list_of_rows(self):
+        data = {"outputs": {"dataframe": {"message": [{"text": "hi", "session_id": "thread-9"}]}}}
+        assert _recover_session_id(data) == "thread-9"
+
+    def test_ignores_session_id_appearing_only_inside_serialized_text(self):
+        # A rendered table header is a string, not a dict key, so it is not matched.
+        data = {"outputs": {"prompt": {"message": "| sender | session_id | text |"}}}
+        assert _recover_session_id(data) is None
+
+    def test_returns_none_for_data_only_flow(self):
+        assert _recover_session_id({"results": {}, "outputs": {"data": {"value": 1}}}) is None
+
+    def test_blank_session_id_is_not_recovered(self):
+        assert _recover_session_id({"data": {"session_id": ""}}) is None
 
 
 class TestWorkflowReconstruction:

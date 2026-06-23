@@ -12,12 +12,17 @@ Execution mode (``mode`` field):
 """
 
 import json
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import Flow
+from lfx.schema.workflow import WorkflowRunRequest
 from lfx.services.deps import session_scope
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 
 def _agui_body(flow_id, *, message: str = "hello", mode: str = "sync", tweaks: dict | None = None) -> dict:
@@ -1388,3 +1393,137 @@ class TestStopWorkflowEndToEnd:
                 break
             await _asyncio.sleep(0.1)
         assert final in terminal, f"run did not terminalize after stop: got {final}"
+
+
+class TestV2WorkflowAdmission:
+    """Route-level admission guards: sync-field rejection, owner-override, RBAC masking, policy gate."""
+
+    async def test_sync_mode_rejects_live_canvas_only_fields(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        empty_flow,
+    ):
+        """Sync runs must reject fields that only stream/background executes."""
+        body = _agui_body(empty_flow, mode="sync")
+        body.update(
+            {
+                "data": {"nodes": [], "edges": []},
+                "files": ["tmp/upload.txt"],
+                "start_component_id": "input-1",
+                "stop_component_id": "output-1",
+            }
+        )
+
+        response = await client.post(
+            "api/v2/workflows",
+            json=body,
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["code"] == "SYNC_MODE_UNSUPPORTED_FIELDS"
+        assert detail["fields"] == ["data", "files", "start_component_id", "stop_component_id"]
+
+    async def test_non_owner_data_override_is_hidden_as_404(self, monkeypatch: pytest.MonkeyPatch):
+        """Execute-only sharees must not inject alternate graph data into shared flows."""
+        from langflow.api.v2 import workflow as workflow_module
+
+        flow_id = uuid4()
+        owner_id = uuid4()
+        caller_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=owner_id,
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="shared",
+        )
+        current_user = SimpleNamespace(id=caller_id)
+
+        monkeypatch.setattr(workflow_module, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
+        monkeypatch.setattr(workflow_module, "ensure_flow_permission", AsyncMock(return_value=None))
+
+        with pytest.raises(HTTPException) as exc_info:
+            await workflow_module.execute_workflow(
+                WorkflowRunRequest(
+                    flow_id=str(flow_id),
+                    input_value="hi",
+                    mode="stream",
+                    data={"nodes": [], "edges": []},
+                ),
+                background_tasks=SimpleNamespace(),
+                http_request=SimpleNamespace(),
+                current_user=current_user,
+            )
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
+
+    async def test_execute_permission_denial_is_hidden_as_404(self, monkeypatch: pytest.MonkeyPatch):
+        """A denied share-aware fetch must not leak flow existence as a raw 403."""
+        from langflow.api.v2 import workflow as workflow_module
+
+        flow_id = uuid4()
+        caller_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=uuid4(),
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="private",
+        )
+
+        async def _deny(*_args, **_kwargs):
+            raise HTTPException(status_code=403, detail="denied")
+
+        monkeypatch.setattr(workflow_module, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
+        monkeypatch.setattr(workflow_module, "ensure_flow_permission", _deny)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await workflow_module.execute_workflow(
+                WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"),
+                background_tasks=SimpleNamespace(),
+                http_request=SimpleNamespace(),
+                current_user=SimpleNamespace(id=caller_id),
+            )
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
+
+    async def test_private_route_applies_component_policy_gate(self, monkeypatch: pytest.MonkeyPatch):
+        """The authenticated v2 route must run server-side component policy validation."""
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_validation as wf_val
+
+        flow_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=uuid4(),
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="private",
+        )
+
+        def _reject(_flow_data):
+            message = "custom components are disabled"
+            raise CustomComponentValidationError(message)
+
+        monkeypatch.setattr(workflow_module, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
+        monkeypatch.setattr(workflow_module, "ensure_flow_permission", AsyncMock(return_value=None))
+        monkeypatch.setattr(wf_val, "validate_flow_for_current_settings", _reject)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await workflow_module.execute_workflow(
+                WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"),
+                background_tasks=SimpleNamespace(),
+                http_request=SimpleNamespace(),
+                current_user=SimpleNamespace(id=flow.user_id),
+            )
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail == "custom components are disabled"

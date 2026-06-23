@@ -16,8 +16,8 @@ import json
 
 import pytest
 from fastapi.sse import format_sse_event
-from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
 from langflow.services.background_execution.service import BackgroundExecutionService
+from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 
 pytestmark = pytest.mark.real_services
 

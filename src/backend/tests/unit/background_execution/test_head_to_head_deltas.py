@@ -27,11 +27,11 @@ import threading
 from uuid import uuid4
 
 import pytest
-from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
 from langflow.services.background_execution.executor import InProcessExecutor
 from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.background_execution.runner import JobRunner
 from langflow.services.database.models.jobs.model import JobStatus
+from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 
 pytestmark = pytest.mark.real_services
 
