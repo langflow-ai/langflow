@@ -1791,11 +1791,11 @@
                   },
                   {
                     "name": "boto3",
-                    "version": null
+                    "version": "1.40.61"
                   },
                   {
                     "name": "googleapiclient",
-                    "version": null
+                    "version": "2.197.0"
                   }
                 ],
                 "total_dependencies": 7

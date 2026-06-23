@@ -1328,7 +1328,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": null
+                    "version": "2.197.0"
                   }
                 ],
                 "total_dependencies": 4

@@ -3003,7 +3003,7 @@
                 "dependencies": [
                   {
                     "name": "yfinance",
-                    "version": null
+                    "version": "0.2.50"
                   },
                   {
                     "name": "langchain_core",

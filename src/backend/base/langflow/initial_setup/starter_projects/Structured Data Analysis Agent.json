@@ -1101,7 +1101,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": null
+                    "version": "2.197.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -2556,7 +2556,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_chroma",
-                    "version": null
+                    "version": "0.2.6"
                   },
                   {
                     "name": "typing_extensions",
@@ -2568,7 +2568,7 @@
                   },
                   {
                     "name": "chromadb",
-                    "version": null
+                    "version": "1.5.9"
                   },
                   {
                     "name": "langchain_community",
@@ -3017,7 +3017,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_chroma",
-                    "version": null
+                    "version": "0.2.6"
                   },
                   {
                     "name": "typing_extensions",
@@ -3029,7 +3029,7 @@
                   },
                   {
                     "name": "chromadb",
-                    "version": null
+                    "version": "1.5.9"
                   },
                   {
                     "name": "langchain_community",
@@ -5243,11 +5243,11 @@
                   },
                   {
                     "name": "boto3",
-                    "version": null
+                    "version": "1.40.61"
                   },
                   {
                     "name": "googleapiclient",
-                    "version": null
+                    "version": "2.197.0"
                   }
                 ],
                 "total_dependencies": 7
