@@ -111,8 +111,13 @@ dependencies = [
 ]
 
 [tool.uv]
+# Workspace-resolution override for litellm, gated to <3.14 to match the
+# litellm/opik/toolguard extras. litellm has no 3.14-compatible release, so an
+# unconditional override would force the resolver to select an uninstallable
+# litellm on 3.14 (pulled transitively by opik/toolguard before they too were
+# gated). Drop the marker once upstream litellm supports 3.14.
 override-dependencies = [
-    "litellm>=1.85.1,<2.0.0"
+    "litellm>=1.85.1,<2.0.0; python_version < '3.14'"
 ]
 
 [dependency-groups]
@@ -344,13 +349,19 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 # Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
 # Upper bound prevents breaking changes in future major versions
 # Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2
-# Python 3.14: agent-lifecycle-toolkit 0.10.x dropped its own <3.14 cap (now
-# requires-python >=3.10) and does not depend on OpenDsStar, so the python_version
-# gate is removed; the dependency tree resolves on 3.14 within the langflow lock.
-altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+# Python 3.14: re-gated off 3.14. altk 0.10.x itself supports 3.14 (requires-python
+# >=3.10) and no longer depends on OpenDsStar, but it depends on litellm<2.0.0, and
+# litellm has no 3.14-compatible release (every version from 1.83.8 on caps at <3.14,
+# see the litellm extra below). Without this gate the resolver pins an uninstallable
+# litellm on 3.14. Re-enable once upstream litellm supports 3.14.
+altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'"]
 
 # Toolguard Integration
-toolguard = ["toolguard>=0.2.20,<1.0.0"]
+# Gated off 3.14: toolguard depends on litellm unconditionally, and litellm has
+# no 3.14-compatible release (see the litellm extra below), so allowing it on
+# 3.14 would drag in an uninstallable / sub-floor litellm. Re-enable once
+# upstream litellm supports 3.14.
+toolguard = ["toolguard>=0.2.20,<1.0.0; python_version < '3.14'"]
 
 # Additional LangChain integrations
 # Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels
@@ -360,7 +371,11 @@ graph-retriever = ["langchain-graph-retriever==0.8.0", "graph-retriever==0.8.0"]
 langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
 
 # Additional monitoring
-opik = ["opik>=2.0.0,<3.0.0"]
+# Gated off 3.14: opik depends on litellm unconditionally, and litellm has no
+# 3.14-compatible release (see the litellm extra below), so allowing it on 3.14
+# would drag in an uninstallable / sub-floor litellm. Re-enable once upstream
+# litellm supports 3.14.
+opik = ["opik>=2.0.0,<3.0.0; python_version < '3.14'"]
 traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
 openlayer = ["openlayer>=0.9.0,<1.0.0"]
 
