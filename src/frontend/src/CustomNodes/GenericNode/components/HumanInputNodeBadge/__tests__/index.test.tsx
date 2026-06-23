@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import type { InteractiveContent } from "@/types/chat";
 import { useHitlStore } from "@/stores/hitlStore";
+import type { InteractiveContent } from "@/types/chat";
 import HumanInputNodeBadge from "../index";
 
 jest.mock("@/components/core/chatComponents/HumanInputCard", () => ({

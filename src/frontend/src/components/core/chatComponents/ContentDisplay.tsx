@@ -4,7 +4,6 @@ import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
 import type { ContentType, InteractiveContent, JSONValue } from "@/types/chat";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
-import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
 import HumanInputCard, { type HumanInputDecision } from "./HumanInputCard";

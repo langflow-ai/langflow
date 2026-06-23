@@ -9,6 +9,7 @@ import {
   SimpleSidebar,
   SimpleSidebarProvider,
 } from "@/components/ui/simple-sidebar";
+import { useRestoreCanvasHitl } from "@/controllers/API/agui/use-restore-canvas-hitl";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
@@ -20,9 +21,9 @@ import { useWebhookEvents } from "@/hooks/use-webhook-events";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
@@ -33,7 +34,6 @@ import {
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
 import MemoriesMainContent from "./components/MemoriesMainContent";
-import { useRestoreCanvasHitl } from "@/controllers/API/agui/use-restore-canvas-hitl";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
 

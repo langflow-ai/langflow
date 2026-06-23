@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noExplicitAny: pre-existing legacy flow-store types predate this rule; the HITL change only added typed fields
 import type {
   Connection,
   Node,

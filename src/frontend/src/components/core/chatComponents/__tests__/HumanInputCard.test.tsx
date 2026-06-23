@@ -50,11 +50,13 @@ jest.mock("react-markdown", () => ({
 jest.mock("remark-gfm", () => ({ __esModule: true, default: () => {} }));
 
 jest.mock("@/components/ui/button", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: jest mock forwards arbitrary props
   Button: ({ children, ...props }: any) => (
     <button {...props}>{children}</button>
   ),
 }));
 jest.mock("@/components/ui/input", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: jest mock forwards arbitrary props
   Input: (props: any) => <input {...props} />,
 }));
 
