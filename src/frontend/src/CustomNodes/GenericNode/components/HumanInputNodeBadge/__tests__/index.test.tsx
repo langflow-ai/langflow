@@ -12,9 +12,15 @@ jest.mock("@/components/common/genericIconComponent", () => ({
   default: () => <span />,
 }));
 jest.mock("@/components/ui/popover", () => ({
-  Popover: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PopoverAnchor: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  PopoverContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Popover: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  PopoverAnchor: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  PopoverContent: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
 }));
 
 const _content: InteractiveContent = {
@@ -32,19 +38,27 @@ describe("HumanInputNodeBadge", () => {
 
   it("renders nothing when no node is awaiting input", () => {
     render(<HumanInputNodeBadge nodeId="HumanInput-abc" />);
-    expect(screen.queryByTestId("human-input-node-badge")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("human-input-node-badge"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders the badge + card on the node whose id matches the pending request", () => {
-    useHitlStore.getState().setPending({ nodeId: "HumanInput-abc", content: _content });
+    useHitlStore
+      .getState()
+      .setPending({ nodeId: "HumanInput-abc", content: _content });
     render(<HumanInputNodeBadge nodeId="HumanInput-abc" />);
     expect(screen.getByTestId("human-input-node-badge")).toBeInTheDocument();
     expect(screen.getByTestId("hitl-card")).toBeInTheDocument();
   });
 
   it("renders nothing on a node that is not the one awaiting input", () => {
-    useHitlStore.getState().setPending({ nodeId: "HumanInput-abc", content: _content });
+    useHitlStore
+      .getState()
+      .setPending({ nodeId: "HumanInput-abc", content: _content });
     render(<HumanInputNodeBadge nodeId="ChatOutput-xyz" />);
-    expect(screen.queryByTestId("human-input-node-badge")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("human-input-node-badge"),
+    ).not.toBeInTheDocument();
   });
 });

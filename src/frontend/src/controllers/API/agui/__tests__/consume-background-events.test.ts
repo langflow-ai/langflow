@@ -6,7 +6,10 @@
  */
 
 import { ReadableStream as NodeReadableStream } from "stream/web";
-import { TextDecoder as NodeTextDecoder, TextEncoder as NodeTextEncoder } from "util";
+import {
+  TextDecoder as NodeTextDecoder,
+  TextEncoder as NodeTextEncoder,
+} from "util";
 
 Object.assign(globalThis, {
   TextEncoder: globalThis.TextEncoder ?? NodeTextEncoder,
@@ -72,7 +75,9 @@ function sseStream(frames: string[]): ReadableStream<Uint8Array> {
 }
 
 /** Emits real `data:\nid:` frames and closes WITHOUT a trailing blank line. */
-function sseStreamNoTrailingBlank(frames: string[]): ReadableStream<Uint8Array> {
+function sseStreamNoTrailingBlank(
+  frames: string[],
+): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const body =
     frames.map((f, i) => `data: ${f}\nid: ${i + 1}`).join("\n\n") + "\n";
@@ -155,7 +160,13 @@ describe("consumeBackgroundEvents", () => {
     const humanInput = JSON.stringify({
       type: "CUSTOM",
       name: "langflow.human_input_required",
-      value: { request_id: "HI:job-3", kind: "node_input", prompt: "Approve?", options: [], allowed_decisions: [] },
+      value: {
+        request_id: "HI:job-3",
+        kind: "node_input",
+        prompt: "Approve?",
+        options: [],
+        allowed_decisions: [],
+      },
     });
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
