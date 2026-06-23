@@ -25,7 +25,7 @@ from ag_ui.core import (
     ToolCallResultEvent,
     ToolCallStartEvent,
 )
-from langflow.api.v2.agui_translator import AGUITranslator
+from lfx.workflow.agui_translator import AGUITranslator
 
 
 def test_run_lifecycle_emits_started_and_finished():
