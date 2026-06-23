@@ -9,6 +9,7 @@ from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
+from lfx.graph.vertex.base import Vertex
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from sqlmodel import select
@@ -391,6 +392,9 @@ async def generate_flow_events(
     source_flow_id: uuid.UUID | None = None,
     job_id: uuid.UUID | str | None = None,
     resume: dict | None = None,
+    run_id: str | None = None,
+    track_job_status: bool = True,
+    tweaks: dict | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -398,6 +402,10 @@ async def generate_flow_events(
     - Building and validating the graph
     - Processing vertices
     - Handling errors and cleanup
+
+    When ``run_id`` is provided the graph adopts it instead of minting a fresh
+    one, so callers (e.g. background jobs) can later look up the run's vertex
+    builds by that id. Defaults to a fresh uuid for the live build path.
     """
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -442,16 +450,29 @@ async def generate_flow_events(
         start_time = time.perf_counter()
         components_count = 0
         graph = None
-        # On the durable background path the run_id MUST equal job_id so the HITL
-        # checkpoint (keyed by job_id) is found on resume; foreground runs keep a uuid4.
-        run_id = str(job_id) if job_id is not None else str(uuid.uuid4())
+        # The durable HITL path keys the checkpoint by job_id, so run_id MUST equal job_id when set;
+        # otherwise honor an explicit run_id (background path) or mint a fresh uuid (foreground).
+        build_run_id = str(job_id) if job_id is not None else (run_id or str(uuid.uuid4()))
         try:
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
-            graph.set_run_id(run_id)
+            # Apply request tweaks to the built graph. The sync path applies tweaks before Graph
+            # construction; the streaming/background path builds from the DB (or request data), so
+            # tweaks must be applied here or they are silently dropped. ``update_raw_params`` is used
+            # rather than the lfx ``process_tweaks_on_graph`` helper because that helper only sets
+            # ``vertex.params`` and does not persist the override to runtime.
+            if tweaks:
+                for vertex in graph.vertices:
+                    if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):
+                        continue
+                    if node_tweaks := tweaks.get(vertex.id):
+                        node_tweaks = {k: v for k, v in node_tweaks.items() if k != "code"}
+                        vertex.update_raw_params(node_tweaks, overwrite=True)
+
+            graph.set_run_id(build_run_id)
             if job_id is not None:
                 from lfx.services.deps import get_checkpoint_service
 
@@ -470,13 +491,13 @@ async def generate_flow_events(
             vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
 
             await chat_service.set_cache(flow_id_str, graph)
-            await log_telemetry(start_time, components_count, run_id=run_id, success=True)
+            await log_telemetry(start_time, components_count, run_id=build_run_id, success=True)
 
         except Exception as exc:
             await log_telemetry(
                 start_time,
                 components_count,
-                run_id=run_id,
+                run_id=build_run_id,
                 success=False,
                 error_message=str(exc),
             )
@@ -597,8 +618,12 @@ async def generate_flow_events(
 
             result_data_response.message = artifacts
 
-            # Log the vertex build
-            if not vertex.will_stream and log_builds:
+            # Log the vertex build. Job-tracked runs (background workflows pass a
+            # ``run_id``) persist every vertex, including streaming terminal outputs,
+            # so GET-status reconstruction by job_id is complete. The live build
+            # path (``run_id is None``) keeps the original "skip streaming vertices"
+            # behavior unchanged.
+            if log_builds and (run_id is not None or not vertex.will_stream):
                 background_tasks.add_task(
                     log_vertex_build,
                     flow_id=flow_id_str,
@@ -607,6 +632,9 @@ async def generate_flow_events(
                     params=params,
                     data=result_data_response,
                     artifacts=artifacts,
+                    # Key the persisted build by the run id so job-tracked runs can
+                    # reconstruct status by job_id.
+                    job_id=graph.run_id,
                 )
             else:
                 await chat_service.set_cache(flow_id_str, graph)
@@ -754,7 +782,7 @@ async def generate_flow_events(
     _build_run_id: uuid.UUID | None = None
     try:
         _build_run_id = uuid.UUID(graph.run_id) if graph.run_id else None
-        if _build_run_id is not None:
+        if track_job_status and _build_run_id is not None:
             _build_job_svc = get_job_service()
             # Background path already created the job; re-creating it = UNIQUE violation.
             if await _build_job_svc.get_job_by_job_id(_build_run_id) is None:
@@ -843,16 +871,21 @@ async def generate_flow_events(
     # generate_flow_events runs as an asyncio task; by the time the flow
     # finishes, FastAPI has already drained the background_tasks queue and any
     # tasks added after that point are silently dropped.
-    try:
-        _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
-        await get_task_service().fire_and_forget_task(
-            get_memory_base_service().on_flow_output,
-            flow_id=flow_id,
-            session_id=graph.session_id or str(flow_id),
-            job_id=_run_id_uuid,
-        )
-    except (RuntimeError, ValueError, OSError):
-        await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
+    # Gated on ``track_job_status`` for the same reason as the job row above:
+    # when a caller owns the run's lifecycle (the v2 durable background path
+    # passes ``track_job_status=False`` and fires this hook itself with the
+    # durable job_id), firing here too would double-capture the flow output.
+    if track_job_status:
+        try:
+            _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow_id,
+                session_id=graph.session_id or str(flow_id),
+                job_id=_run_id_uuid,
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
 
     await event_manager.queue.put((None, None, time.time()))
 

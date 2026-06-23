@@ -96,6 +96,9 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
     # revive a branch a ConditionalRouter had stopped before the pause.
     graph.inactivated_vertices = {str(v) for v in checkpoint.inactivated_vertices}
     graph.activated_vertices = list(checkpoint.activated_vertices)
+    # Vertices already built at checkpoint time must not have their async generators re-consumed on
+    # resume (the original run exhausted them); the output-collection loop reads this set to skip them.
+    graph.checkpoint_restored_built_ids = {vid for vid, vd in checkpoint.vertex_results.items() if vd.built}
     _restore_run_manager(graph, checkpoint)
     _restore_vertices(graph, checkpoint)
     graph._run_queue.clear()  # noqa: SLF001

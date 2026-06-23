@@ -102,7 +102,7 @@ export interface TraceAccordionItemProps {
 
 export type StatusIconProps = {
   colorClass: string;
-  iconName: "Loader2" | "CircleCheck" | "CircleX";
+  iconName: "Loader2" | "CircleCheck" | "CircleX" | "CirclePause";
   shouldSpin: boolean;
 };
 

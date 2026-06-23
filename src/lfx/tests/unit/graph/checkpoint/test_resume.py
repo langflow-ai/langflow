@@ -83,6 +83,24 @@ async def test_resume_keeps_inactivated_branch_stopped():
     assert "chat_output" not in resumed.resume_first_layer()
 
 
+async def test_resume_does_not_reconsume_restored_built_output_vertex():
+    chat_input = ChatInput(_id="chat_input", input_value="hello")
+    chat_input.set(should_store_message=False)
+    chat_output = ChatOutput(_id="chat_output")
+    chat_output.set(input_value=chat_input.message_response, should_store_message=False)
+    graph = Graph(chat_input, chat_output)
+    graph.set_run_id()
+    # Build BOTH vertices so chat_output (which has consume_async_generator) is checkpointed as built.
+    await graph.process(fallback_to_env_vars=False)
+    checkpoint = graph.build_checkpoint()
+
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+    assert "chat_output" in resumed.checkpoint_restored_built_ids
+    # Without the guard the output-collection loop re-consumes chat_output's exhausted generator and
+    # raises TypeError from stream(); arun must complete cleanly instead of re-consuming it.
+    await resumed.arun([{}], fallback_to_env_vars=False)
+
+
 async def test_resume_restores_cycle_vertices_from_graph():
     _, checkpoint = await _paused_checkpoint()
     resumed = Graph.resume_from_checkpoint(checkpoint)

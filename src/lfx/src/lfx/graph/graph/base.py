@@ -150,6 +150,9 @@ class Graph:
         self.checkpoint_store: CheckpointStore | None = None
         self.job_id: str | None = None
         self.resumed_from_checkpoint = False
+        # Vertices already built at checkpoint time: on resume their async generators are exhausted,
+        # so the output-collection loop must NOT re-consume them. Empty for fresh (non-resume) runs.
+        self.checkpoint_restored_built_ids: set[str] = set()
         self.pause_probe: Callable[[str], Any] | None = None
 
         if context and not isinstance(context, dict):
@@ -926,7 +929,14 @@ class Graph:
                 msg = f"Vertex {vertex_id} not found"
                 raise ValueError(msg)
 
-            if not vertex.result and not stream and hasattr(vertex, "consume_async_generator"):
+            if (
+                not vertex.result
+                and not stream
+                and vertex.id not in self.checkpoint_restored_built_ids
+                and hasattr(vertex, "consume_async_generator")
+            ):
+                # A vertex restored from a checkpoint already consumed its generator in the original
+                # run; re-consuming here would re-iterate an exhausted/absent iterator and raise.
                 await vertex.consume_async_generator()
             if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
                 vertex_outputs.append(vertex.result)

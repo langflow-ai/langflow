@@ -7,6 +7,7 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
+import { v5 as uuidv5 } from "uuid";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
@@ -49,6 +50,7 @@ import {
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
+import useAuthStore from "./authStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
@@ -933,6 +935,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const buildController = new AbortController();
     get().setBuildController(buildController);
 
+    // Playground runs are namespaced by visitor id so unsaved tweaks run as the user sees them.
+    let buildingFlowId = currentFlow!.id;
+    if (get().playgroundPage) {
+      const authState = useAuthStore.getState();
+      const visitorId =
+        authState.isAuthenticated &&
+        authState.autoLogin === false &&
+        authState.userData?.id
+          ? authState.userData.id
+          : useUtilityStore.getState().clientId;
+      buildingFlowId = uuidv5(`${visitorId}_${currentFlow!.id}`, uuidv5.DNS);
+    }
+    get().setBuildingSession(buildingFlowId, session ?? null);
+
     // Only the durable background path supports a mid-run pause/resume.
     const runArgs = {
       flowId: currentFlow!.id,
@@ -943,6 +959,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowData: { nodes: get().nodes, edges: get().edges },
       files,
       signal: buildController.signal,
+      silent,
     };
     const canSuspend = get().nodes.some((node) => {
       if (node.data?.type === "HumanInput") return true;
@@ -964,8 +981,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     // Mirror the v1 build callbacks' analytics: every actual build attempt
     // logs a flow-build event with success/error and (on failure) the error
-    // list. `runFlowAGUI` always resolves and writes the outcome into
-    // `buildInfo`, so reading it back is the cleanest success/error signal.
+    // list. `runFlowAGUI` always resolves and writes failures into
+    // `buildInfo`; silent successful runs leave it null and are tracked as
+    // success.
     const finalBuildInfo = get().buildInfo;
     const hasError = finalBuildInfo?.success === false;
     trackFlowBuild(currentFlow?.name ?? "Unknown", hasError, {
@@ -1295,7 +1313,7 @@ export function syncNodeTranslations(): void {
           knownFields[fieldName]?.display_name ?? [];
         const isKnownTranslation =
           knownFieldDisplayNames.length === 0 ||
-          knownFieldDisplayNames.includes(currentDisplayName);
+          knownFieldDisplayNames.includes(currentDisplayName!);
         if (isKnownTranslation) {
           updatedTemplate[fieldName] = {
             ...updatedTemplate[fieldName],

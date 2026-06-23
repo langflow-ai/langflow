@@ -2072,8 +2072,9 @@ class Component(CustomComponent):
         if self._event_manager:
             if first_chunk:
                 # Send the initial message only on the first chunk
-                msg_copy = message.model_copy()
+                msg_copy = message.model_copy(update={"properties": message.properties.model_copy(deep=True)})
                 msg_copy.text = complete_message
+                msg_copy.properties.state = "partial"
                 await self._send_message_event(msg_copy, id_=message_id)
             await asyncio.to_thread(
                 self._event_manager.on_token,

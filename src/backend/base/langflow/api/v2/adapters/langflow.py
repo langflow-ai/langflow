@@ -105,6 +105,10 @@ class LangflowAdapter:
         payload = {"event": "error", "data": {"error": str(error)}}
         return (StreamEvent(type="error", data_json=json.dumps(payload)),)
 
+    def cancel_events(self, reason: str) -> Iterable[StreamEvent]:
+        payload = {"event": "error", "data": {"error": reason}}
+        return (StreamEvent(type="error", data_json=json.dumps(payload)),)
+
     @property
     def terminal_error_type(self) -> str | None:
         return "error"

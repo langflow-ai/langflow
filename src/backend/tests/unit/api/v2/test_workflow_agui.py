@@ -305,6 +305,63 @@ class TestAGUIStreaming:
                 if flow:
                     await session.delete(flow)
 
+    async def test_stream_applies_request_tweaks(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        json_memory_chatbot_no_llm,
+    ):
+        """Request ``tweaks`` must reach the graph on the streaming path.
+
+        Regression: the stream/background path builds the graph via the v1
+        build-vertex loop (``generate_flow_events``) and previously dropped
+        ``tweaks`` entirely, so only ``mode=sync`` applied them. Here we
+        override the ChatInput's ``input_value`` via tweaks (with no top-level
+        input to override it) and assert the tweaked text drives the run.
+        Stream and background share ``generate_flow_events``, so this covers
+        both non-sync paths.
+        """
+        raw = json.loads(json_memory_chatbot_no_llm)
+        flow_data = raw.get("data", raw)
+        chat_input_id = next(n["id"] for n in flow_data["nodes"] if n.get("data", {}).get("type") == "ChatInput")
+        flow_id = uuid4()
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="AG-UI Tweaks Flow",
+                data=flow_data,
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+
+        tweaked = "TWEAKED_VIA_TWEAKS_123"
+        try:
+            response = await client.post(
+                "api/v2/workflows",
+                json={
+                    "flow_id": str(flow_id),
+                    "mode": "stream",
+                    "stream_protocol": "agui",
+                    # No top-level input_value and no session_id, so the build
+                    # loop receives no chat-input override and the tweak is the
+                    # only source of the ChatInput value. Without the fix the
+                    # flow default is used and the tweaked text never appears.
+                    "tweaks": {chat_input_id: {"input_value": tweaked}},
+                },
+                headers={"x-api-key": created_api_key.api_key},
+            )
+
+            assert response.status_code == 200
+            body = response.text
+            assert "RUN_ERROR" not in body
+            assert tweaked in body
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
 
 class TestAGUISyncExecution:
     """mode=sync runs the flow inline and folds outputs into the response."""
@@ -1008,6 +1065,60 @@ class TestMemoryBaseHookBackgroundMode:
         assert call["flow_id"] == chatbot_flow
         assert call["session_id"] == "thread-1"  # matches _agui_body session_id
         assert call["job_id"] == _UUID(job_id)
+
+
+class TestBackgroundNoDuplicateWorkflowRow:
+    """A v2 background run must create exactly ONE WORKFLOW job row.
+
+    The durable runner owns the run's job row (keyed by ``submit()``'s job_id).
+    Without ``track_job_status=False`` on the background frame source, the build
+    pipeline (``generate_flow_events``) would mint its own run_id-keyed WORKFLOW
+    row, leaving a phantom/orphan row per background run that skews job-table
+    metrics and double-fires the memory-base hook.
+    """
+
+    async def test_background_run_creates_single_workflow_row(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        import asyncio as _asyncio
+        from uuid import UUID as _UUID
+
+        from langflow.services.database.models.jobs.model import Job as _Job
+        from langflow.services.database.models.jobs.model import JobType as _JobType
+        from sqlmodel import select
+
+        headers = {"x-api-key": created_api_key.api_key}
+        start = await client.post(
+            "api/v2/workflows",
+            json=_agui_body(chatbot_flow, message="hi", mode="background"),
+            headers=headers,
+        )
+        assert start.status_code == 200
+        job_id = start.json()["job_id"]
+
+        events = await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
+        assert events.status_code == 200
+        assert "RUN_FINISHED" in events.text
+
+        # Wait for the durable row to finalize.
+        for _ in range(100):
+            async with session_scope() as session:
+                row = await session.get(_Job, _UUID(job_id))
+                if row is not None and row.status.value in ("completed", "failed"):
+                    break
+            await _asyncio.sleep(0.1)
+
+        # Exactly one WORKFLOW row for this flow: the durable one. No phantom
+        # build-pipeline row keyed by a separately-minted run_id.
+        async with session_scope() as session:
+            rows = (
+                await session.exec(select(_Job).where(_Job.flow_id == chatbot_flow, _Job.type == _JobType.WORKFLOW))
+            ).all()
+        assert len(rows) == 1, f"expected one WORKFLOW row, found {len(rows)}: {[str(r.job_id) for r in rows]}"
+        assert rows[0].job_id == _UUID(job_id)
 
 
 class TestBackgroundFinalizationGuards:
