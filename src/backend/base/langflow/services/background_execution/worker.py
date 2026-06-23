@@ -100,7 +100,7 @@ class WorkerJobRunner:
 
     @staticmethod
     def _build_adapter(request: dict[str, Any], job_id: Any, flow_id: Any) -> Any:
-        from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
+        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 
         protocol = request.get("stream_protocol", "langflow")
         return get_stream_adapter(

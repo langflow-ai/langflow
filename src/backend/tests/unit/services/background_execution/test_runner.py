@@ -14,11 +14,11 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
-from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
 from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.background_execution.runner import JobRunner
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_job_service
+from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
