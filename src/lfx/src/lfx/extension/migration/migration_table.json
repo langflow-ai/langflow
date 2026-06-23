@@ -4760,6 +4760,46 @@
       "legacy_slot": "ext:chroma:LocalDBComponent@official-pre-a",
       "target": "ext:chroma:LocalDBComponent@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "NotDiamondComponent",
+      "target": "ext:notdiamond:NotDiamondComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.notdiamond.notdiamond.NotDiamondComponent",
+      "target": "ext:notdiamond:NotDiamondComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.notdiamond.NotDiamondComponent",
+      "target": "ext:notdiamond:NotDiamondComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:notdiamond:NotDiamondComponent@official-pre-a",
+      "target": "ext:notdiamond:NotDiamondComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "VLMRunTranscription",
+      "target": "ext:vlmrun:VLMRunTranscription@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vlmrun.vlmrun_transcription.VLMRunTranscription",
+      "target": "ext:vlmrun:VLMRunTranscription@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vlmrun.VLMRunTranscription",
+      "target": "ext:vlmrun:VLMRunTranscription@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:vlmrun:VLMRunTranscription@official-pre-a",
+      "target": "ext:vlmrun:VLMRunTranscription@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

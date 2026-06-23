@@ -65,6 +65,7 @@ milvus = ["langchain-milvus~=0.3.2"]
 mistral = ["langchain-mistralai~=1.1.1"]
 mongodb = ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"]
 needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
+notdiamond = []
 notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
@@ -89,6 +90,7 @@ upstash = ["upstash-vector==0.6.0", "langchain-community>=0.4.1,<1.0.0"]
 vectara = ["langchain-community>=0.4.1,<1.0.0"]
 vertexai = ["langchain-google-vertexai>=3.2.0"]
 vllm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
+vlmrun = ["vlmrun[all]>=0.2.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0", "langchain-weaviate>=0.0.6"]
 wikipedia = ["wikipedia==1.4.0", "langchain-community>=0.4.1,<1.0.0"]
 wolframalpha = ["wolframalpha==5.1.3", "langchain-community>=0.4.1,<1.0.0"]
@@ -136,6 +138,7 @@ all = [
     "lfx-bundles[mistral]",
     "lfx-bundles[mongodb]",
     "lfx-bundles[needle]",
+    "lfx-bundles[notdiamond]",
     "lfx-bundles[notion]",
     "lfx-bundles[novita]",
     "lfx-bundles[nvidia]",
@@ -160,6 +163,7 @@ all = [
     "lfx-bundles[vectara]",
     "lfx-bundles[vertexai]",
     "lfx-bundles[vllm]",
+    "lfx-bundles[vlmrun]",
     "lfx-bundles[weaviate]",
     "lfx-bundles[wikipedia]",
     "lfx-bundles[wolframalpha]",
