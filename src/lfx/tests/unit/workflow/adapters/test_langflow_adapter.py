@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from langflow.api.v2.adapters import (
+from lfx.workflow.adapters import (
     StreamAdapterContext,
     get_stream_adapter,
 )

@@ -19,14 +19,14 @@ from fastapi import BackgroundTasks, Request
 from fastapi.sse import format_sse_event
 from lfx.log.logger import logger
 from lfx.schema.workflow import JobId, JobStatus, WorkflowJobResponse
-
-from langflow.api.v2.adapters import (
+from lfx.workflow.adapters import (
     StreamAdapterContext,
     StreamEvent,
     UnknownStreamProtocolError,
     get_stream_adapter,
 )
-from langflow.api.v2.converters import ParsedWorkflowRun
+from lfx.workflow.converters import ParsedWorkflowRun
+
 from langflow.api.v2.workflow_execution import _stream_event_frames
 from langflow.exceptions.api import (
     WorkflowQueueFullError,

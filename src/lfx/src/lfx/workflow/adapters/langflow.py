@@ -8,17 +8,18 @@ clients (curl users, the v1 frontend) can read it without learning anything new.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from lfx.schema.workflow import OutputEvent
-
-from langflow.api.v2.adapters import (
+from lfx.workflow.adapters import (
     StreamAdapterContext,
     StreamEvent,
     register_stream_adapter,
 )
-from langflow.api.v2.converters import build_component_output, resolve_output_type
+from lfx.workflow.converters import build_component_output, resolve_output_type
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class LangflowAdapter:

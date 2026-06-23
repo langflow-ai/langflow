@@ -7,17 +7,19 @@ Per-run state lives on the wrapped translator instance.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from ag_ui.core import BaseEvent
-
-from langflow.api.v2.adapters import (
+from lfx.workflow.adapters import (
     StreamAdapterContext,
     StreamEvent,
     register_stream_adapter,
 )
-from langflow.api.v2.agui_translator import AGUITranslator
+from lfx.workflow.agui_translator import AGUITranslator
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from ag_ui.core import BaseEvent
 
 
 def _to_stream_event(event: BaseEvent) -> StreamEvent:
