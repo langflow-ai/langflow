@@ -95,6 +95,11 @@ class RuntimeSettings(BaseModel):
     worker_timeout: int = 300
     """Timeout for the API calls in seconds."""
 
+    workflow_execution_timeout: int = 300
+    """Wall-clock ceiling in seconds for a single v2 workflow run, applied to every
+    execution mode. Sync runs raise a 408; stream, background, and public runs emit
+    the protocol's terminal-error event and (for background) mark the job failed."""
+
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
     """The interval in seconds at which public temporary flows will be cleaned up.
     Default is 1 hour (3600 seconds). Minimum is 600 seconds (10 minutes)."""
