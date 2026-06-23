@@ -307,7 +307,7 @@ def prepare_graph(graph, verbose_print):
         raise typer.Exit(1) from e
 
 
-async def execute_graph_with_capture(graph, input_value: str | None, session_id: str | None = None):
+async def execute_graph_with_capture(graph, input_value: str | None, session_id: str | None = None, event_manager=None):
     """Execute a graph and capture output.
 
     Args:
@@ -317,6 +317,10 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
             message-store paths (which validate session_id) succeed; an empty or
             whitespace-only string is rejected with ``ValueError`` to surface
             shell/env-var typos (see ``lfx.run._defaults.validate_provided_id``).
+        event_manager: Optional ``EventManager``. When provided it is threaded
+            into ``graph.async_start`` so components emit token/message/error
+            events to its queue as the run progresses (used by the streaming
+            workflow endpoint). ``None`` keeps the non-streaming behavior.
 
     Returns:
         Tuple of (results, captured_logs)
@@ -349,7 +353,12 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
     try:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
-        results = [result async for result in graph.async_start(inputs, fallback_to_env_vars=fallback_to_env_vars)]
+        results = [
+            result
+            async for result in graph.async_start(
+                inputs, fallback_to_env_vars=fallback_to_env_vars, event_manager=event_manager
+            )
+        ]
     except Exception as exc:
         # Capture any error output that was written to stderr
         error_output = captured_stderr.getvalue()
