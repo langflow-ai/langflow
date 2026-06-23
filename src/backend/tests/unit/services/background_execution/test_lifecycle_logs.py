@@ -27,12 +27,12 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
-from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.background_execution.runner import JobRunner
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_job_service
 from lfx.log.logger import configure, logger
+from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 from structlog.testing import capture_logs
 
 if TYPE_CHECKING:
