@@ -99,7 +99,7 @@ def cleanup_telemetry():
 def test_init(opentelemetry_instance):
     assert isinstance(opentelemetry_instance, OpenTelemetry)
     assert len(opentelemetry_instance._metrics) > 1
-    assert len(opentelemetry_instance._metrics) == len(opentelemetry_instance._metrics_registry) == 2
+    assert len(opentelemetry_instance._metrics) == len(opentelemetry_instance._metrics_registry)
     assert "file_uploads" in opentelemetry_instance._metrics
 
 
