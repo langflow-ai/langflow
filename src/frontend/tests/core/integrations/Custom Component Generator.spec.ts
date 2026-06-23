@@ -4,9 +4,8 @@ import { TEXTS } from "../../utils/constants/texts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { selectAnthropicModel } from "../../utils/select-anthropic-model";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-withEventDeliveryModes(
+test(
   "Custom Component Generator",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {

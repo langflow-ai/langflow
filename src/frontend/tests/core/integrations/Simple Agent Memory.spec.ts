@@ -1,12 +1,11 @@
-import { expect } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-withEventDeliveryModes(
+test(
   "Simple Agent Memory",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {

@@ -3,7 +3,6 @@ import { TEXTS } from "../../utils/constants/texts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 function getRandomSocialMediaQuery(): string {
   const companies = [
@@ -53,7 +52,7 @@ function getRandomSocialMediaQuery(): string {
   return `Find the ${randomPlatform} profile of the company ${randomCompany} using Google search, then show me the ${randomContent1} and their ${randomContent2}.`;
 }
 
-withEventDeliveryModes(
+test(
   "Social Media Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {

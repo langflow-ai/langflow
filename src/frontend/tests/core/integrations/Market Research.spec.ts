@@ -8,9 +8,8 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { disableInspectPanel } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-withEventDeliveryModes(
+test(
   "Market Research",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {

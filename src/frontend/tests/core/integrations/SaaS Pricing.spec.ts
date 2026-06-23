@@ -1,4 +1,4 @@
-import { expect } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { TEXTS } from "../../utils/constants/texts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
@@ -7,9 +7,8 @@ import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-modal";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-withEventDeliveryModes(
+test(
   "SaaS Pricing",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {

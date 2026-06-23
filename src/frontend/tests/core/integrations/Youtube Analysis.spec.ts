@@ -4,9 +4,8 @@ import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-withEventDeliveryModes(
+test(
   "YouTube Analysis",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {

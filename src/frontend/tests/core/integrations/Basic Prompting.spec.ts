@@ -1,13 +1,12 @@
-import { expect } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { TEXTS } from "../../utils/constants/texts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-withEventDeliveryModes(
+test(
   "Basic Prompting (Hello, World)",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
