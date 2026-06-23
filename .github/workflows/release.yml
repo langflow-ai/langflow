@@ -1013,19 +1013,44 @@ jobs:
             exit 0
           fi
           failed=0
+          pypi_publish_delay_seconds=60
+          pypi_publish_max_attempts=5
+          wheel_count=${#wheels[@]}
+          wheel_number=0
           for wheel in "${wheels[@]}"; do
+            wheel_number=$((wheel_number + 1))
             echo "Publishing $wheel"
-            # Tolerate "already exists" so reruns -- or a bundle whose version is
-            # unchanged and already on PyPI -- do not fail the job. Matches the
-            # duplicate-tolerant publish in release_bundles.yml.
-            if ! err=$(uv publish "$wheel" 2>&1); then
+            attempt=1
+            published=0
+            while true; do
+              # Tolerate "already exists" so reruns -- or a bundle whose version is
+              # unchanged and already on PyPI -- do not fail the job. Matches the
+              # duplicate-tolerant publish in release_bundles.yml.
+              if err=$(uv publish "$wheel" 2>&1); then
+                echo "$err"
+                published=1
+                break
+              fi
               echo "$err"
               if echo "$err" | grep -qiE 'already exists|file already exists|HTTP 400|duplicate'; then
                 echo "Skipping $wheel: already published."
-              else
-                echo "Publish failed for $wheel"
-                failed=1
+                break
               fi
+              if echo "$err" | grep -qiE 'HTTP 429|429 Too Many Requests|Too many new projects created'; then
+                if [ "$attempt" -lt "$pypi_publish_max_attempts" ]; then
+                  echo "PyPI rate limited $wheel; sleeping ${pypi_publish_delay_seconds}s before retry $((attempt + 1))/${pypi_publish_max_attempts}."
+                  sleep "$pypi_publish_delay_seconds"
+                  attempt=$((attempt + 1))
+                  continue
+                fi
+              fi
+              echo "Publish failed for $wheel"
+              failed=1
+              break
+            done
+            if [ "$published" = "1" ] && [ "$wheel_number" -lt "$wheel_count" ]; then
+              echo "Sleeping ${pypi_publish_delay_seconds}s before the next PyPI upload."
+              sleep "$pypi_publish_delay_seconds"
             fi
           done
           if [ "$failed" = "1" ]; then
