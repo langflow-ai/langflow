@@ -55,18 +55,9 @@ If all else fails, you can always create your own [custom components](/component
 
 `uv pip install langflow` includes all bundle components automatically. No additional steps are required.
 
-If you installed `lfx` directly with `uv pip install lfx`, the executor ships without any bundle components. Install the bundles you need separately:
+If you install `lfx` directly with `uv pip install lfx`, only the `lfx` executor is installed without any bundle components.
 
-| Bundle | To install |
-|---|---|
-| DuckDuckGo, arXiv, IBM, Docling | Included in `uv pip install langflow` only. Install individually: `uv pip install lfx-duckduckgo`, etc. |
-| Long-tail bundles (~45 providers) | `uv pip install lfx-bundles` |
-| OpenAI, Anthropic, Amazon Bedrock, Cohere | `uv pip install lfx-openai`, `lfx-anthropic`, `lfx-amazon`, `lfx-cohere` |
-| DataStax, Firecrawl | `uv pip install lfx-datastax`, `lfx-firecrawl` |
-
-### Long-tail bundles {#long-tail-bundles}
-
-About 45 provider bundles are distributed together in the `lfx-bundles` metapackage. To install them all at once:
+About 45 provider bundles are distributed together in the `lfx-bundles` metapackage. To install them all at once, run:
 
 ```bash
 uv pip install lfx-bundles
@@ -86,23 +77,13 @@ uv pip install "lfx[bundles]"
 
 ### Graduated partner bundles {#graduated-partner-bundles}
 
-These providers have standalone packages with enhanced, provider-specific components. For OpenAI, Anthropic, Amazon Bedrock, and Cohere, basic LLM support is already included in all Langflow installations through the core [Language Model](/components-models) component. The bundle adds an enhanced component with additional provider-specific parameters.
+Some providers have standalone packages with enhanced, provider-specific components. For OpenAI, Anthropic, Amazon Bedrock, and Cohere, basic LLM support is already included in all Langflow installations through the core [Language Model](/components-models) component. The bundle adds an enhanced component with additional provider-specific parameters.
 
 To install a graduated bundle:
 
 1. Run `uv pip install lfx-<name>` (for example, `uv pip install lfx-openai`).
 2. Restart Langflow.
 3. To confirm the bundle loaded, run `lfx extension list`.
-
-### Install without bundles {#engine-only}
-
-To install only the `lfx` execution engine — useful for headless deployments, CI pipelines, or running flows programmatically without the full Langflow application:
-
-```bash
-uv pip install lfx
-```
-
-To add bundle components to a standalone `lfx` install, see [Long-tail bundles](#long-tail-bundles) or [Graduated partner bundles](#graduated-partner-bundles) above.
 
 ## Legacy bundles
 
