@@ -323,16 +323,6 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Lfx/lfx-compatibility",
-          label: "LFX and Langflow version compatibility"
-        },
-        {
-          type: "doc",
-          id: "Lfx/lfx-prewarm",
-          label: "Pre-warm LFX"
-        },
-        {
-          type: "doc",
           id: "Lfx/lfx-mcp",
           label: "LFX MCP server"
         },
@@ -342,13 +332,9 @@ module.exports = {
           label: "Flow DevOps Toolkit SDK"
         },
         {
-          type: "category",
-          label: "Bundle extensions",
-          items: [
-            "Lfx/extensions-overview",
-            "Lfx/extensions-quickstart",
-            "Lfx/extensions-manifest",
-          ],
+          type: "doc",
+          id: "Lfx/lfx-compatibility",
+          label: "LFX and Langflow version compatibility"
         },
       ],
     },
@@ -530,6 +516,15 @@ module.exports = {
             "Components/bundles-weaviate",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",
+          ],
+        },
+        {
+          type: "category",
+          label: "Bundle extensions",
+          items: [
+            "Lfx/extensions-overview",
+            "Lfx/extensions-quickstart",
+            "Lfx/extensions-manifest",
           ],
         },
         "Components/components-custom-components",
