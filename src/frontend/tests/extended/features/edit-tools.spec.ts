@@ -52,7 +52,9 @@ test(
 
     // Scope to the enable ("name") column: the HITL approval_actions column also renders an
     // eInput checkbox, so a global nth() index would land on it instead of the action toggle.
-    const enableCheckboxes = page.locator('[col-id="name"] input[data-ref="eInput"]');
+    const enableCheckboxes = page.locator(
+      '[col-id="name"] input[data-ref="eInput"]',
+    );
 
     expect(await enableCheckboxes.nth(0).isChecked()).toBe(true);
 
