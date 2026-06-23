@@ -36,6 +36,9 @@ const ButtonSendWrapper = ({
   };
 
   const buttonClasses = cn("form-modal-send-button", getButtonState());
+  const buttonLabel = isBuilding
+    ? t("flowBuild.stop")
+    : t("playground.sendButton");
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -56,13 +59,9 @@ const ButtonSendWrapper = ({
       onClick={handleClick}
       disabled={isLoading}
       unstyled
-      data-testid="button-send"
-      aria-label={
-        isBuilding ? t("playground.cancelButton") : t("playground.sendButton")
-      }
-      title={
-        isBuilding ? t("playground.cancelButton") : t("playground.sendButton")
-      }
+      data-testid={isBuilding ? "button-stop" : "button-send"}
+      aria-label={buttonLabel}
+      title={buttonLabel}
     >
       <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
         {isBuilding ? (
