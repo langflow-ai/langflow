@@ -26,6 +26,7 @@ from urllib.parse import urlparse
 
 from lfx.logging import logger
 from lfx.services.deps import get_settings_service
+from lfx.utils.file_path_security import is_local_file_access_restricted
 
 
 class SSRFProtectionError(ValueError):
@@ -462,18 +463,6 @@ def validate_connector_url_for_ssrf(url: str) -> None:
 _LOCAL_FILE_DB_DIALECTS = frozenset({"sqlite", "duckdb", "access", "shell"})
 
 
-def _local_file_access_restricted() -> bool:
-    """Return True if LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is enabled."""
-    try:
-        return bool(get_settings_service().settings.restrict_local_file_access)
-    except Exception:  # noqa: BLE001 - settings may be unavailable; default to not restricted
-        logger.warning(
-            "Could not read restrict_local_file_access setting; treating local file restriction "
-            "as DISABLED (fail-open to default). Local-file DB dialects are not being blocked."
-        )
-        return False
-
-
 def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = True) -> None:
     """Validate a SQLAlchemy database URL against SSRF and local-file access.
 
@@ -499,7 +488,7 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
         ValueError: If the URL is malformed.
     """
     ssrf_on = is_ssrf_protection_enabled() and validate_network_host
-    file_restricted = _local_file_access_restricted()
+    file_restricted = is_local_file_access_restricted()
     if not ssrf_on and not file_restricted:
         return
 
@@ -609,7 +598,7 @@ def validate_git_repository_url(url: str) -> None:
     pre_colon = url.split(":", 1)[0]
     is_local_path = scheme == "file" or (scheme == "" and ("/" in pre_colon or url.startswith(("/", ".", "~"))))
     if is_local_path:
-        if is_ssrf_protection_enabled() or _local_file_access_restricted():
+        if is_ssrf_protection_enabled() or is_local_file_access_restricted():
             msg = "Cloning local-filesystem Git repositories is not permitted."
             raise SSRFProtectionError(msg)
         return

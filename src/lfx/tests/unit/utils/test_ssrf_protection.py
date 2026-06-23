@@ -25,14 +25,18 @@ def mock_ssrf_settings(*, enabled=False, allowed_hosts=None, restrict_files=Fals
     if allowed_hosts is None:
         allowed_hosts = []
 
-    with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
-        mock_settings = MagicMock()
-        mock_settings.settings.ssrf_protection_enabled = enabled
-        mock_settings.settings.ssrf_allowed_hosts = allowed_hosts
-        mock_settings.settings.connector_ssrf_validation_enabled = connector_validation
-        # Explicit (not a truthy MagicMock) so DB local-file checks behave deterministically.
-        mock_settings.settings.restrict_local_file_access = restrict_files
-        mock_get_settings.return_value = mock_settings
+    mock_settings = MagicMock()
+    mock_settings.settings.ssrf_protection_enabled = enabled
+    mock_settings.settings.ssrf_allowed_hosts = allowed_hosts
+    mock_settings.settings.connector_ssrf_validation_enabled = connector_validation
+    # Explicit (not a truthy MagicMock) so DB local-file checks behave deterministically.
+    mock_settings.settings.restrict_local_file_access = restrict_files
+    # The local-file-restriction read lives in file_path_security (is_local_file_access_restricted,
+    # reused by the DB/git validators here), so patch its settings source too.
+    with (
+        patch("lfx.utils.ssrf_protection.get_settings_service", return_value=mock_settings),
+        patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
+    ):
         yield
 
 
