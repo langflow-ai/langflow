@@ -79,9 +79,7 @@ async def test_durable_saver_round_trip_pauses_persists_and_resumes() -> None:
 
     # Run 1: pauses at the gated tool; the paused thread is persisted to the blob store.
     saver = JobCheckpointSaver("job-1", save_blob, load_blob)
-    async for _ in _agent(saver).astream_events(
-        {"messages": [("user", "send 200")]}, version="v2", config=config
-    ):
+    async for _ in _agent(saver).astream_events({"messages": [("user", "send 200")]}, version="v2", config=config):
         pass
 
     assert ("job-1", "agent") in blobs, "paused thread was not persisted"

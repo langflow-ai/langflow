@@ -772,9 +772,7 @@ def test_extract_output_text_chatbedrockconverse_compatibility():
 def test_extract_output_text_responses_api_reasoning_block_is_empty():
     """Reasoning/function_call blocks (list ``content``) must yield '' (used to leak '[]')."""
     assert _extract_output_text([{"id": "rs", "summary": [], "type": "reasoning", "content": [], "index": 0}]) == ""
-    assert (
-        _extract_output_text([{"type": "function_call", "name": "fetch_content", "arguments": "", "index": 1}]) == ""
-    )
+    assert _extract_output_text([{"type": "function_call", "name": "fetch_content", "arguments": "", "index": 1}]) == ""
     # A string content payload is still extracted; a list content recurses, not str()-ed.
     assert _extract_output_text([{"content": "real text"}]) == "real text"
     assert _extract_output_text([{"content": [{"type": "text", "text": "nested"}]}]) == "nested"

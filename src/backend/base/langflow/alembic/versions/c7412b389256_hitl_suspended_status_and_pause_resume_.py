@@ -12,12 +12,16 @@ Phase: EXPAND
 
 from collections.abc import Sequence
 
+import sqlalchemy as sa
 from alembic import op
 
 revision: str = "c7412b389256"  # pragma: allowlist secret
 down_revision: str | None = "8ce44e4858c6"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+_OLD_SIGNAL_ENUM = sa.Enum("stop", name="execution_signal_type_enum")
+_NEW_SIGNAL_ENUM = sa.Enum("stop", "pause", "resume", name="execution_signal_type_enum")
 
 
 def upgrade() -> None:
@@ -29,11 +33,16 @@ def upgrade() -> None:
             op.execute("ALTER TYPE execution_signal_type_enum ADD VALUE IF NOT EXISTS 'pause'")
             op.execute("ALTER TYPE execution_signal_type_enum ADD VALUE IF NOT EXISTS 'resume'")
     else:
-        # SQLite stores enums as VARCHAR and the base migration created signal_type via plain
-        # sa.Enum (create_constraint defaults to False in SQLAlchemy 2.x), so there is no CHECK
-        # constraint to widen — 'pause'/'resume' are accepted without DDL. A table rebuild here is
-        # dead DDL (and job_status_enum, which also gains SUSPENDED, isn't rebuilt either).
-        pass
+        # SQLite rebuilds the column so its reflected VARCHAR length matches the model's widened
+        # Enum(stop, pause, resume); without it the model/migration consistency check (autogenerate)
+        # reports a phantom VARCHAR(4) -> Enum diff. job_status_enum needs no rebuild here.
+        with op.batch_alter_table("execution_signals", recreate="always") as batch_op:
+            batch_op.alter_column(
+                "signal_type",
+                existing_type=_OLD_SIGNAL_ENUM,
+                type_=_NEW_SIGNAL_ENUM,
+                existing_nullable=False,
+            )
 
 
 def downgrade() -> None:

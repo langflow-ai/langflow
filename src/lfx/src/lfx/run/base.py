@@ -451,9 +451,7 @@ async def run_flow(
         from lfx.run.hitl import flow_has_pausing_node
 
         # None auto-enables only for a known pausing node on an interactive terminal.
-        hitl_active = (
-            human_input if human_input is not None else (flow_has_pausing_node(graph) and sys.stdin.isatty())
-        )
+        hitl_active = human_input if human_input is not None else (flow_has_pausing_node(graph) and sys.stdin.isatty())
         if hitl_active:
             from lfx.run.hitl import run_graph_with_human_input, terminal_decision_provider
 

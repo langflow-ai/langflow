@@ -1545,7 +1545,9 @@ async def test_should_pass_durable_checkpointer_when_gated_with_run_context() ->
     captured: dict = {}
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]})
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
@@ -1579,7 +1581,9 @@ async def test_should_omit_checkpointer_and_hitl_when_allow_interrupts_false() -
     captured: dict = {}
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]})
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
@@ -1624,7 +1628,9 @@ async def test_should_request_pause_when_agent_stops_on_tool_approval_interrupt(
     """
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]})
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
     langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
     component._vertex = SimpleNamespace(graph=langflow_graph)
     component.send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
@@ -1678,7 +1684,9 @@ async def test_should_stream_resume_command_when_a_human_decision_is_injected() 
 
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]})
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
     langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
     langflow_graph.human_input_decisions = {f"{component._id}:job-1": {"action_id": "approve"}}
     component._vertex = SimpleNamespace(graph=langflow_graph)
@@ -1712,7 +1720,9 @@ async def test_should_not_probe_interrupts_when_agent_has_no_checkpointer() -> N
     """
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]})
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
     langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
     component._vertex = SimpleNamespace(graph=langflow_graph)
     component.send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
