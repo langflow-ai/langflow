@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
+from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 
 _PAYLOAD = {
     "request_id": "node:job-1",

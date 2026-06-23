@@ -7,17 +7,19 @@ Per-run state lives on the wrapped translator instance.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from ag_ui.core import BaseEvent
-
-from langflow.api.v2.adapters import (
+from lfx.workflow.adapters import (
     StreamAdapterContext,
     StreamEvent,
     register_stream_adapter,
 )
-from langflow.api.v2.agui_translator import AGUITranslator
+from lfx.workflow.agui_translator import AGUITranslator
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from ag_ui.core import BaseEvent
 
 # Durable AG-UI milestones. ``TEXT_MESSAGE_CONTENT`` is the per-token delta and
 # is ephemeral; the START/END lifecycle frames around it are durable so a
@@ -80,9 +82,10 @@ class AGUIAdapter:
         return [_to_stream_event(e) for e in self._translator.translate("error", {"error": str(error)})]
 
     def cancel_events(self, reason: str) -> Iterable[StreamEvent]:
-        # AG-UI has no cancellation primitive in the local event model; route
-        # through the translator so any open text lifecycle is closed first.
-        return [_to_stream_event(e) for e in self._translator.translate("error", {"error": reason})]
+        # AG-UI has no cancel primitive: close any open text lifecycle, emit a
+        # CUSTOM cancel marker, then RUN_FINISHED. A user-stop must not replay as
+        # RUN_ERROR, which clients read as a genuine failure.
+        return [_to_stream_event(e) for e in self._translator.cancel(reason)]
 
     @property
     def terminal_error_type(self) -> str | None:

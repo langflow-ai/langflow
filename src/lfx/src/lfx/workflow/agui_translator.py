@@ -156,6 +156,19 @@ class AGUITranslator:
             return events
         return []
 
+    def cancel(self, reason: str) -> list[BaseEvent]:
+        """Close any open text lifecycle, mark the run cancelled, then finish.
+
+        AG-UI has no cancel primitive, so a deliberate stop is surfaced as a
+        namespaced CUSTOM marker (generic clients ignore it) followed by a clean
+        ``RUN_FINISHED`` rather than ``RUN_ERROR``, which clients read as a
+        genuine failure.
+        """
+        events = self._drain_messages()
+        events.append(CustomEvent(name="langflow.run.cancelled", value={"reason": reason}))
+        events.append(RunFinishedEvent(run_id=self.run_id, thread_id=self.thread_id))
+        return events
+
     def _translate_token(self, data: dict) -> list[BaseEvent]:
         """Map a ``token`` event to text-message events.
 

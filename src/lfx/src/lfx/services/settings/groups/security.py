@@ -78,6 +78,10 @@ class SecuritySettings(BaseModel):
     """Storage backend for rate limiting. Use 'memory://' for single-server or 'redis://host:port' for multi-server."""
     rate_limit_trust_proxy: bool = False
     """Trust X-Forwarded-For header when behind a reverse proxy. Only enable when behind a trusted proxy."""
+    public_flow_rate_limit_per_minute: int = 20
+    """Public-flow runs allowed per minute per IP on the unauthenticated /api/v2/workflows/public endpoint.
+    Each run executes as the flow owner (real CPU/DB/LLM-credit cost), so anonymous callers are throttled
+    separately from (and more generously than) the login limit. Gated by rate_limit_enabled."""
 
     @field_validator("cors_origins", mode="before")
     @classmethod
