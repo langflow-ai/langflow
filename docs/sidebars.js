@@ -291,11 +291,6 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Deployment/deployment-lfx-compatibility",
-          label: "LFX and Langflow version compatibility",
-        },
-        {
-          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },
@@ -325,6 +320,21 @@ module.exports = {
           type: "doc",
           id: "Lfx/lfx-run",
           label: "Run flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-compatibility",
+          label: "LFX and Langflow version compatibility"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-prewarm",
+          label: "Pre-warm LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-mcp",
+          label: "LFX MCP server"
         },
         {
           type: "doc",
