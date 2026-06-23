@@ -12,6 +12,18 @@ import { Button } from "./button";
 const SIMPLE_SIDEBAR_WIDTH = "400px";
 const MIN_SIDEBAR_WIDTH = 200;
 const MAX_SIDEBAR_WIDTH = 800;
+const FOCUSABLE_ELEMENT_SELECTOR = [
+  "a[href]",
+  "area[href]",
+  "button:not([disabled])",
+  'input:not([disabled]):not([type="hidden"])',
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[contenteditable]:not([contenteditable="false"])',
+  "[tabindex]",
+  "audio[controls]",
+  "video[controls]",
+].join(",");
 
 type SimpleSidebarContext = {
   open: boolean;
@@ -27,6 +39,58 @@ type SimpleSidebarContext = {
 const SimpleSidebarContext = React.createContext<SimpleSidebarContext | null>(
   null,
 );
+
+function getTabIndex(element: HTMLElement) {
+  const tabIndex = element.getAttribute("tabindex");
+  if (tabIndex === null) return 0;
+
+  const parsedTabIndex = Number.parseInt(tabIndex, 10);
+  return Number.isNaN(parsedTabIndex) ? 0 : parsedTabIndex;
+}
+
+function isFocusableElement(element: HTMLElement) {
+  if (element.closest("[inert]") || element.closest('[aria-hidden="true"]')) {
+    return false;
+  }
+
+  if (element.hasAttribute("disabled") || element.hasAttribute("hidden")) {
+    return false;
+  }
+
+  if (getTabIndex(element) < 0) {
+    return false;
+  }
+
+  const style = window.getComputedStyle(element);
+  return style.display !== "none" && style.visibility !== "hidden";
+}
+
+function getFocusableElements(container: HTMLElement) {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(FOCUSABLE_ELEMENT_SELECTOR),
+  )
+    .filter(isFocusableElement)
+    .map((element, index) => ({
+      element,
+      index,
+      tabIndex: getTabIndex(element),
+    }))
+    .sort((a, b) => {
+      const aPositiveTabIndex = a.tabIndex > 0;
+      const bPositiveTabIndex = b.tabIndex > 0;
+
+      if (aPositiveTabIndex && bPositiveTabIndex) {
+        return a.tabIndex === b.tabIndex
+          ? a.index - b.index
+          : a.tabIndex - b.tabIndex;
+      }
+
+      if (aPositiveTabIndex) return -1;
+      if (bPositiveTabIndex) return 1;
+      return a.index - b.index;
+    })
+    .map(({ element }) => element);
+}
 
 function useSimpleSidebar() {
   const context = React.useContext(SimpleSidebarContext);
@@ -373,29 +437,14 @@ const SimpleSidebar = React.forwardRef<
     }, [isResizing, fullscreen]);
 
     const handleSidebarKeyDown = React.useCallback(
-      (event: KeyboardEvent) => {
+      (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (!open || !fullscreen || event.key !== "Tab") return;
 
-        const focusableElements = Array.from(
-          sidebarRef.current?.querySelectorAll<HTMLElement>(
-            [
-              "a[href]",
-              "button:not([disabled])",
-              "textarea:not([disabled])",
-              "input:not([disabled])",
-              "select:not([disabled])",
-              '[tabindex]:not([tabindex="-1"])',
-            ].join(","),
-          ) ?? [],
-        ).filter(
-          (element) =>
-            element.getAttribute("aria-hidden") !== "true" &&
-            !element.closest("[inert]"),
-        );
+        const focusableElements = getFocusableElements(event.currentTarget);
 
         if (focusableElements.length === 0) {
           event.preventDefault();
-          sidebarRef.current?.focus();
+          event.currentTarget.focus();
           return;
         }
 
@@ -421,16 +470,6 @@ const SimpleSidebar = React.forwardRef<
       },
       [fullscreen, open],
     );
-
-    React.useEffect(() => {
-      const sidebarElement = sidebarRef.current;
-      if (!open || !fullscreen || !sidebarElement) return;
-
-      sidebarElement.addEventListener("keydown", handleSidebarKeyDown);
-      return () => {
-        sidebarElement.removeEventListener("keydown", handleSidebarKeyDown);
-      };
-    }, [fullscreen, handleSidebarKeyDown, open]);
 
     return (
       <div
@@ -469,6 +508,7 @@ const SimpleSidebar = React.forwardRef<
             pointerEvents: open ? "auto" : "none",
           }}
         >
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: fullscreen mode gives this focus container role="dialog"; keydown keeps focus inside it. */}
           <div
             ref={sidebarRef}
             data-simple-sidebar="sidebar"
@@ -476,6 +516,7 @@ const SimpleSidebar = React.forwardRef<
             role={fullscreen && open ? "dialog" : undefined}
             aria-modal={fullscreen && open ? true : undefined}
             aria-label={fullscreen && open ? t("misc.playground") : undefined}
+            onKeyDown={handleSidebarKeyDown}
             className="flex h-full w-full flex-col bg-background relative"
             style={{ visibility: open ? "visible" : "hidden" }}
           >

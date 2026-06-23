@@ -486,7 +486,7 @@ export function VoiceAssistant({
             unstyled
             onClick={handleCloseAudioInput}
             data-testid="voice-assistant-close-button"
-            aria-label="Close voice assistant"
+            aria-label={t("voiceAssistant.close")}
           >
             <IconComponent
               name="X"

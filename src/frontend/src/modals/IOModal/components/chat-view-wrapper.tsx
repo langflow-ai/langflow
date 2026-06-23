@@ -44,7 +44,7 @@ export const ChatViewWrapper = ({
               size="icon"
               onClick={() => setSidebarOpen(true)}
               className="h-8 w-8"
-              aria-label="Show sidebar"
+              aria-label={t("modal.io.showSidebar")}
             >
               <IconComponent
                 name="PanelLeftOpen"
