@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { usePermissions } from "@/contexts/permissionsContext";
+import CustomFlowShareAction from "@/customization/components/custom-flow-share-action";
 import useAlertStore from "@/stores/alertStore";
 import type { FlowType } from "@/types/flow";
 import useDuplicateFlow from "../../hooks/use-handle-duplicate";
@@ -99,6 +100,11 @@ const DropdownComponent = ({
         />
         {t("flow.menu.duplicate")}
       </DropdownMenuItem>
+      <CustomFlowShareAction
+        resourceId={flowData.id}
+        resourceType="flow"
+        resourceName={flowData.name}
+      />
       <DropdownMenuItem
         disabled={!canDelete}
         onClick={(e) => {
