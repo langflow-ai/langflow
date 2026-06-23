@@ -82,7 +82,7 @@ async def test_request_pause_sets_flag_and_info():
     assert graph.pause_info == {"reason": "human_input_required", "data": {"options": ["a"]}}
 
 
-async def test_checkpoint_builder_fails_fast_on_opaque_built_object():
+async def test_checkpoint_builder_degrades_opaque_built_object_to_none():
     store = InMemoryCheckpointStore()
     graph = _graph(store=store)
     await graph.process(fallback_to_env_vars=False)
@@ -93,8 +93,28 @@ async def test_checkpoint_builder_fails_fast_on_opaque_built_object():
     vertex = graph.get_vertex("chat_input")
     vertex.built = True
     vertex.built_object = OpaqueHandle()
-    with pytest.raises(TypeError, match="chat_input"):
-        graph.build_checkpoint()
+    # An opaque built_object must NOT hard-raise — that escapes as TypeError, bypasses the pause path
+    # and finalizes the run FAILED. It degrades to None so the checkpoint still saves (resume
+    # re-derives it from the rebuilt node).
+    checkpoint = graph.build_checkpoint()
+    assert checkpoint.vertex_results["chat_input"].built_object is None
+
+
+async def test_checkpoint_builder_degrades_dict_with_opaque_member_to_none():
+    store = InMemoryCheckpointStore()
+    graph = _graph(store=store)
+    await graph.process(fallback_to_env_vars=False)
+
+    class OpaqueHandle:
+        pass
+
+    # built_object is usually a dict of outputs; an opaque member must not corrupt it to {'x': None} —
+    # the whole built_object degrades to None instead.
+    vertex = graph.get_vertex("chat_input")
+    vertex.built = True
+    vertex.built_object = {"dataframe": OpaqueHandle(), "count": 3}
+    checkpoint = graph.build_checkpoint()
+    assert checkpoint.vertex_results["chat_input"].built_object is None
 
 
 async def test_checkpoint_captures_execution_state_after_partial_run():

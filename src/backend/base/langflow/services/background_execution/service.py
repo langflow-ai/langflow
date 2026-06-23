@@ -186,7 +186,12 @@ class BackgroundExecutionService(Service):
             stmt = (
                 select(JobModel)
                 .where(JobModel.dedupe_key == dedupe_key)
-                .where(col(JobModel.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.COMPLETED]))
+                # Why: SUSPENDED included so a retry while paused at a HITL node can't bypass dedupe.
+                .where(
+                    col(JobModel.status).in_(
+                        [JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED, JobStatus.COMPLETED]
+                    )
+                )
             )
             if user_id is not None:
                 stmt = stmt.where(JobModel.user_id == user_id)
@@ -316,12 +321,20 @@ class BackgroundExecutionService(Service):
         if not await job_service.claim_suspended_for_resume(job_id, owner=self._owner):
             return False
         await job_service.write_signal(job_id, SignalType.RESUME, {"decision": decision, "request_id": request_id})
-        await self._enqueue(
-            job_id=job_id,
-            flow_id=job.flow_id,
-            request=self._reconstruct_request(job),
-            user=self._user_stub(job.user_id),
-        )
+        try:
+            await self._enqueue(
+                job_id=job_id,
+                flow_id=job.flow_id,
+                request=self._reconstruct_request(job),
+                user=self._user_stub(job.user_id),
+            )
+        except Exception:
+            # Why: claim already flipped SUSPENDED→IN_PROGRESS; a failed enqueue would strand the job
+            # and lose the decision — roll back to SUSPENDED (clearing RESUME) so it can be retried.
+            with contextlib.suppress(Exception):
+                await job_service.consume_signals(job_id, SignalType.RESUME)
+            await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
+            raise
         return True
 
     async def _cancel_suspended(self, job_id: UUID, job_service) -> None:

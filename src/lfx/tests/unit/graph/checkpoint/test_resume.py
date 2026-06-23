@@ -65,3 +65,28 @@ async def test_resume_restores_vertex_results():
     resumed = Graph.resume_from_checkpoint(checkpoint)
     restored_results = resumed.get_vertex("chat_input").results
     assert set(restored_results) == set(original_results)
+
+
+async def test_resume_keeps_inactivated_branch_stopped():
+    from lfx.graph.vertex.base import VertexStates
+
+    graph, _ = await _paused_checkpoint()
+    # Simulate a ConditionalRouter having stopped the chat_output branch before the pause.
+    graph.inactivated_vertices = {"chat_output"}
+    graph.get_vertex("chat_output").state = VertexStates.INACTIVE
+    checkpoint = graph.build_checkpoint()
+
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+    # The inactivated state survives resume and the dead branch is NOT queued to run again.
+    assert resumed.inactivated_vertices == {"chat_output"}
+    assert resumed.get_vertex("chat_output").state == VertexStates.INACTIVE
+    assert "chat_output" not in resumed.resume_first_layer()
+
+
+async def test_resume_restores_cycle_vertices_from_graph():
+    _, checkpoint = await _paused_checkpoint()
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+    # cycle_vertices is dropped by to_dict/from_dict; resume must repopulate it from the rebuilt
+    # graph so a looped flow still schedules its loop vertex (here both are empty, but the
+    # restored manager must mirror the graph rather than an independently-empty set).
+    assert resumed.run_manager.cycle_vertices == set(resumed.cycle_vertices)

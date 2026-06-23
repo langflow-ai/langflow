@@ -64,6 +64,34 @@ async def test_runner_persists_durable_frames_only(active_user):
     assert [e.seq for e in events] == sorted(e.seq for e in events)
 
 
+async def test_runner_failed_suspend_finalizes_failed_not_hung(active_user, monkeypatch):
+    """A suspend that fails mid-persist must not strand the job IN_PROGRESS with an open bus."""
+    from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT
+
+    job_service = get_job_service()
+    job_id = await _make_job(uuid4(), active_user.id)
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame(HUMAN_INPUT_REQUIRED_EVENT, {"request_id": "r1"})
+
+    bus = InMemoryLiveBus()
+    adapter = get_stream_adapter("langflow", StreamAdapterContext(run_id=str(job_id), thread_id="t"))
+    runner = JobRunner(job_service=job_service, live_bus=bus, adapter=adapter, frame_source=source)
+
+    async def boom(*_args, **_kwargs):
+        msg = "suspend persistence down"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(runner, "_suspend", boom)
+
+    # run() must RETURN (not hang) and the job must be terminal, not stuck SUSPENDED/IN_PROGRESS.
+    await asyncio.wait_for(runner.run(job_id=job_id, source_kwargs={}), timeout=10)
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.FAILED
+    assert job.error is not None
+
+
 async def test_runner_finalizes_completed(active_user):
     job_service = get_job_service()
     job_id = await _make_job(uuid4(), active_user.id)

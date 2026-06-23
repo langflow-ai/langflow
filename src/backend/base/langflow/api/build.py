@@ -419,7 +419,9 @@ async def generate_flow_events(
         store = get_checkpoint_service()
         checkpoint = await store.load_by_run_id(run_id)
         if checkpoint is None:
-            return await build_graph_and_get_order()
+            # Why: re-dispatching here (resume/job_id still set) recurses to RecursionError; a missing
+            # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
+            raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
         pending = await get_job_service().get_pending_human_request(job_id)
         decision = reroute_decision_on_timeout(pending, resume["decision"])

@@ -103,13 +103,23 @@ class JobRunner:
         try:
             await self._jobs.execute_with_status(job_id, _wrapped)
         except PauseRequested as exc:
-            paused = True
             # Stop the heartbeat BEFORE stamping suspend metadata: both are whole-blob
             # read-modify-writes, so a beat racing the stamp would clobber the request id.
             await self._stop_heartbeat(heartbeat_task)
             heartbeat_task = None
-            await self._suspend(job_id, exc)
-            await logger.adebug(f"Background job {job_id} suspended for human input")
+            try:
+                await self._suspend(job_id, exc)
+            except Exception as suspend_exc:  # noqa: BLE001
+                # Why: a failed suspend must not leave the job paused-but-broken with an open bus and a
+                # hanging client; mark FAILED and leave paused=False so the finally closes the bus.
+                await logger.aerror(f"Background job {job_id} failed to suspend: {suspend_exc}", exc_info=True)
+                with contextlib.suppress(Exception):
+                    await self._jobs.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
+                with contextlib.suppress(Exception):
+                    await self._jobs.set_error(job_id, {"type": "suspend_failed", "detail": str(suspend_exc)})
+            else:
+                paused = True
+                await logger.adebug(f"Background job {job_id} suspended for human input")
         except asyncio.CancelledError as exc:
             user_tagged = bool(exc.args) and exc.args[0] == "LANGFLOW_USER_CANCELLED"
             if not user_tagged and not await self._stop_requested(job_id):

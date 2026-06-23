@@ -15,16 +15,20 @@ if TYPE_CHECKING:
 
 
 def compute_resume_layer(graph: Graph) -> list[str]:
-    """Next runnable vertex ids: unbuilt vertices whose predecessors are all built.
+    """Next runnable vertex ids: unbuilt, non-inactivated vertices whose predecessors are all built.
 
-    Recomputed from restored per-vertex state instead of a full re-sort, so
-    already-built vertices are never queued (and never re-executed) on resume.
+    Recomputed from restored per-vertex state instead of a full re-sort, so already-built vertices
+    are never queued (and never re-executed) on resume. Inactivated vertices (a branch a
+    ConditionalRouter stopped before the pause) are excluded so resume doesn't revive a dead branch.
     """
+    inactivated = graph.inactivated_vertices
     built_ids = {vertex.id for vertex in graph.vertices if vertex.built}
     layer = [
         vertex.id
         for vertex in graph.vertices
-        if not vertex.built and all(pred in built_ids for pred in graph.predecessor_map.get(vertex.id, []))
+        if not vertex.built
+        and vertex.id not in inactivated
+        and all(pred in built_ids for pred in graph.predecessor_map.get(vertex.id, []))
     ]
     return sorted(layer)
 
@@ -46,16 +50,24 @@ def _restore_run_manager(graph: Graph, checkpoint: GraphCheckpoint) -> None:
         }
     )
     manager.vertices_to_run.update(checkpoint.vertices_being_run)
+    # Why: to_dict/from_dict omit cycle_vertices, so without this a resumed flow with a Loop never
+    # schedules its loop vertex and hangs; prepare() already computed graph.cycle_vertices.
+    manager.cycle_vertices = set(graph.cycle_vertices)
     graph.run_manager = manager
 
 
 def _restore_vertices(graph: Graph, checkpoint: GraphCheckpoint) -> None:
+    from lfx.graph.vertex.base import VertexStates
+
     for vertex_id, vertex_data in checkpoint.vertex_results.items():
         try:
             vertex = graph.get_vertex(vertex_id)
         except ValueError:
             continue
         vertex.built = vertex_data.built
+        # Restore ACTIVE/INACTIVE so a branch a ConditionalRouter stopped stays stopped on resume.
+        if vertex_data.state in VertexStates.__members__:
+            vertex.state = VertexStates[vertex_data.state]
         vertex.results = {k: deserialize_value(v) for k, v in vertex_data.results.items()}
         vertex.artifacts = {k: deserialize_value(v) for k, v in vertex_data.artifacts.items()}
         if vertex_data.built_object is not None:
@@ -80,6 +92,10 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
     graph.vertices_layers = [list(layer) for layer in checkpoint.vertices_layers]
     graph._first_layer = list(checkpoint.first_layer)  # noqa: SLF001
     graph._call_order = list(checkpoint.call_order)  # noqa: SLF001
+    # Why: without restoring these, every vertex resumes ACTIVE and compute_resume_layer would
+    # revive a branch a ConditionalRouter had stopped before the pause.
+    graph.inactivated_vertices = {str(v) for v in checkpoint.inactivated_vertices}
+    graph.activated_vertices = list(checkpoint.activated_vertices)
     _restore_run_manager(graph, checkpoint)
     _restore_vertices(graph, checkpoint)
     graph._run_queue.clear()  # noqa: SLF001

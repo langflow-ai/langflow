@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -153,7 +154,13 @@ class JobService(Service):
                     select(func.count())
                     .select_from(Job)
                     .where(Job.dedupe_key == dedupe_key)
-                    .where(col(Job.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.COMPLETED]))
+                    # SUSPENDED included so retrying the same key while a run is paused at a HITL node
+                    # cannot bypass dedupe and launch a second concurrent execution that races the resume.
+                    .where(
+                        col(Job.status).in_(
+                            [JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED, JobStatus.COMPLETED]
+                        )
+                    )
                 )
                 stmt = (
                     stmt.where(Job.user_id == user_id)
@@ -721,6 +728,10 @@ class JobService(Service):
             await session.flush()
         for job_id in reconciled:
             await self.append_event(job_id, "input_timed_out", dict(error_payload))
+            # Why: a deadline timeout terminalizes the run, so its durable checkpoint is dead weight
+            # that _all() keeps full-scanning (expires_at is never set); drop it like the cancel path.
+            with contextlib.suppress(Exception):
+                await self.delete_checkpoint(job_id, "graph")
         return reconciled
 
     @staticmethod

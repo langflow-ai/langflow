@@ -907,6 +907,10 @@ class Graph:
                 event_manager=event_manager,
             )
             self.increment_run_count()
+        except (GraphPausedException, asyncio.CancelledError):
+            # Why: a HITL pause/cancel must propagate UNWRAPPED so the job/runner layer suspends the
+            # run instead of finalizing it; wrapping it as ValueError terminalizes the job (LE-1440).
+            raise
         except Exception as exc:
             self._end_all_traces_async(error=exc)
             msg = f"Error running graph: {exc}"

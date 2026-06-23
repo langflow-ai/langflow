@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from lfx.graph.checkpoint.schema import GraphCheckpoint, VertexCheckpointData, serialize_value
+from lfx.graph.checkpoint.schema import (
+    GraphCheckpoint,
+    VertexCheckpointData,
+    serialize_value,
+    wire_has_opaque_drop,
+)
 from lfx.graph.utils import UnbuiltObject, UnbuiltResult
 
 if TYPE_CHECKING:
@@ -18,17 +23,18 @@ def _vertex_data(vertex: Vertex) -> VertexCheckpointData:
     built_object_wire: dict[str, Any] | None = None
     raw = vertex.built_object
     if vertex.built and raw is not None and not isinstance(raw, (UnbuiltObject, UnbuiltResult)):
-        built_object_wire = serialize_value(raw)
-        if built_object_wire is None:
-            # Why: silently dropping a built object would produce a checkpoint that resumes with corrupted state.
-            msg = f"Vertex {vertex.id}: built_object of type {type(raw).__name__} cannot be checkpointed"
-            raise TypeError(msg)
+        candidate = serialize_value(raw)
+        # Why: an opaque member of a dict built_object degrades to a bare None inside the envelope;
+        # store the whole built_object as None (downstream re-derives it) instead of corrupting it to
+        # {'x': None} or hard-raising (which would bypass the pause path and finalize the run FAILED).
+        built_object_wire = None if wire_has_opaque_drop(candidate) else candidate
     built_result_wire = None
     if vertex.built and vertex.built_result is not None and not isinstance(vertex.built_result, UnbuiltResult):
         built_result_wire = serialize_value(vertex.built_result)
     return VertexCheckpointData(
         vertex_id=vertex.id,
         built=vertex.built,
+        state=getattr(vertex.state, "name", "ACTIVE"),
         results={k: serialize_value(v) for k, v in vertex.results.items()},
         artifacts={k: serialize_value(v) for k, v in vertex.artifacts.items()},
         built_object=built_object_wire,

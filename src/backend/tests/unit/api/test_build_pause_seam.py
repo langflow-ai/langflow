@@ -17,7 +17,6 @@ from fastapi import BackgroundTasks
 from langflow.api.build import generate_flow_events
 from lfx.events.event_manager import create_default_event_manager
 from lfx.graph.checkpoint.store import InMemoryCheckpointStore
-from lfx.graph.exceptions import GraphPausedException
 from lfx.schema.schema import InputValueRequest
 
 from tests.unit.build_utils import create_flow
@@ -76,7 +75,7 @@ def _drain_events(queue: asyncio.Queue) -> list[dict]:
     return events
 
 
-async def test_build_path_pause_persists_checkpoint_and_propagates_unwrapped(
+async def test_build_path_pause_persists_checkpoint_and_emits_human_input_required(
     client, json_memory_chatbot_no_llm, logged_in_headers, active_user, monkeypatch
 ):
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
@@ -88,13 +87,19 @@ async def test_build_path_pause_persists_checkpoint_and_propagates_unwrapped(
     _wrap_graph_config(monkeypatch, store=store, probe=probe)
     queue, error = await _drive_build(flow_id, active_user)
 
-    assert isinstance(error, GraphPausedException), f"expected unwrapped GraphPausedException, got {error!r}"
-    checkpoint = await store.load(error.checkpoint_id)
-    assert checkpoint is not None
-    assert checkpoint.job_id == "job-1"
+    # The build/SSE seam catches the pause and surfaces it as a human_input_required event (the HITL
+    # card) — it must NOT escape as an exception or be terminalized as an error event. The unwrapped
+    # propagation guard lives one layer down (Graph._run / execute_with_status), not here.
+    assert error is None, f"pause must be caught at the build seam, got {error!r}"
     events = _drain_events(queue)
-    error_events = [e for e in events if e.get("event") == "error"]
-    assert not error_events, f"pause must not be terminalized as an error event: {error_events}"
+    assert any(e.get("event") == "human_input_required" for e in events), (
+        f"expected a human_input_required event, got {[e.get('event') for e in events]}"
+    )
+    assert not [e for e in events if e.get("event") == "error"], "pause must not emit an error event"
+
+    # The durable checkpoint was persisted (keyed by job_id) so a later resume can restore it.
+    persisted = [cp for cp in store._checkpoints.values() if cp.job_id == "job-1"]
+    assert persisted, "expected a persisted checkpoint for job-1"
 
 
 async def test_build_path_noop_probe_completes(

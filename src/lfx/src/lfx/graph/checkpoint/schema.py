@@ -21,6 +21,7 @@ _WIRE_KIND = "__lfx_ser__"
 class VertexCheckpointData(BaseModel):
     vertex_id: str
     built: bool = False
+    state: str = "ACTIVE"
     results: dict[str, Any] = Field(default_factory=dict)
     artifacts: dict[str, Any] = Field(default_factory=dict)
     built_object: Any = None
@@ -65,6 +66,13 @@ def serialize_value(value: Any) -> dict[str, Any] | None:
     if value is None or isinstance(value, (str, int, float, bool)):
         return {_WIRE_KIND: "raw", "value": value}
     if isinstance(value, BaseModel):
+        module = type(value).__module__
+        # Why: _restore_model only imports lfx.* modules (importing arbitrary modules from stored
+        # data is injection). A non-lfx model would checkpoint fine but raise TypeError on every
+        # resume — leaving the run permanently stuck — so degrade it to None here for symmetry.
+        if not module.startswith("lfx."):
+            logger.debug("checkpoint: dropping non-lfx model %s", type(value).__qualname__)
+            return None
         try:
             dumped = value.model_dump(mode="json")
         except Exception:  # noqa: BLE001
@@ -73,7 +81,7 @@ def serialize_value(value: Any) -> dict[str, Any] | None:
             return None
         return {
             _WIRE_KIND: "model",
-            "module": type(value).__module__,
+            "module": module,
             "name": type(value).__qualname__,
             "value": dumped,
         }
@@ -84,6 +92,26 @@ def serialize_value(value: Any) -> dict[str, Any] | None:
     if isinstance(value, (list, tuple)):
         return {_WIRE_KIND: "list", "value": [serialize_value(v) for v in value]}
     return None
+
+
+def wire_has_opaque_drop(wire: Any) -> bool:
+    """True if serialization dropped an opaque member somewhere in the envelope tree.
+
+    serialize_value encodes a genuine None as a "raw" envelope but returns a bare None when it
+    drops an opaque value (e.g. a DataFrame member of a dict). A bare None anywhere therefore means
+    the value could not be checkpointed faithfully — the caller must not persist it as built state.
+    """
+    if wire is None:
+        return True
+    if not isinstance(wire, dict):
+        return False
+    kind = wire.get(_WIRE_KIND)
+    payload = wire.get("value")
+    if kind == "dict":
+        return any(wire_has_opaque_drop(v) for v in (payload or {}).values())
+    if kind == "list":
+        return any(wire_has_opaque_drop(v) for v in (payload or []))
+    return False
 
 
 def deserialize_value(wire: dict[str, Any] | None) -> Any:
