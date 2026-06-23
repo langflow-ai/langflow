@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import Loading from "@/components/ui/loading";
 import { useGetTraceQuery } from "@/controllers/API/queries/traces";
 import useFlowStore from "@/stores/flowStore";
+import { type HitlExecutedOutput, useHitlStore } from "@/stores/hitlStore";
 import { SpanDetail } from "./SpanDetail";
 import { SpanTree } from "./SpanTree";
 import { TraceHitlBar } from "./TraceHitlBar";
@@ -33,7 +34,27 @@ export function TraceDetailView({
   const flowPool = useFlowStore((state) => state.flowPool);
   const buildStartTime = useFlowStore((state) => state.buildStartTime);
   const nodes = useFlowStore((state) => state.nodes);
+  const outputs = useFlowStore((state) => state.outputs);
   const isResuming = pollUpdates && isBuilding && !pendingRequest;
+
+  // The HITL gate is not persisted as a backend span, so remember the decision per trace to keep
+  // the resolved step visible after the panel is closed and reopened.
+  const storedResolved = useHitlStore((state) =>
+    traceId ? state.resolved[traceId] : undefined,
+  );
+  const setStoredResolved = useHitlStore((state) => state.setResolved);
+  const storedOutputs = useHitlStore((state) =>
+    traceId ? state.executedOutputs[traceId] : undefined,
+  );
+  const setStoredOutputs = useHitlStore((state) => state.setExecutedOutputs);
+  const effectiveResolved = resolvedAction ?? storedResolved ?? null;
+  const recordDecision = useCallback(
+    (action: string) => {
+      setResolvedAction(action);
+      if (traceId) setStoredResolved(traceId, action);
+    },
+    [traceId, setStoredResolved],
+  );
 
   // Tick a live elapsed clock while resuming, mirroring the canvas's build timer. The AG-UI resume
   // path doesn't set buildStartTime, so fall back to a local start captured when resuming begins.
@@ -94,13 +115,75 @@ export function TraceDetailView({
     };
   }, [trace, isResuming, liveElapsed, flowName]);
 
+  // Executed output components (Chat Output) read live from flowPool while it holds this run.
+  const liveOutputs = useMemo<HitlExecutedOutput[]>(() => {
+    const result: HitlExecutedOutput[] = [];
+    for (const output of outputs ?? []) {
+      const entries = flowPool[output.id];
+      const entry = entries?.[entries.length - 1];
+      if (!entry?.data) continue;
+      const timedelta = entry.data.timedelta;
+      result.push({
+        id: output.id,
+        name: output.displayName,
+        latencyMs: typeof timedelta === "number" ? timedelta * 1000 : null,
+        outputs: (entry.data.results ?? {}) as Record<string, unknown>,
+      });
+    }
+    return result;
+  }, [outputs, flowPool]);
+
+  // flowPool clears on canvas navigation, so cache the executed outputs per trace and fall back to
+  // them — otherwise Chat Output vanishes from a resumed HITL trace when leaving and returning.
+  useEffect(() => {
+    if (traceId && liveOutputs.length) setStoredOutputs(traceId, liveOutputs);
+  }, [traceId, liveOutputs, setStoredOutputs]);
+
+  // HITL resume can drop the terminal output span (Chat Output) from the backend trace; re-inject
+  // it, gated to the active HITL run so old traces never get this session's outputs.
+  const executedOutputSpans = useMemo<Span[]>(() => {
+    if (!trace) return [];
+    const hasHitlContext = !!(
+      pendingRequest ||
+      effectiveResolved ||
+      isResuming
+    );
+    if (!hasHitlContext) return [];
+    const existing = new Set(
+      (trace.spans ?? []).map((s) => s.name.toLowerCase()),
+    );
+    const source = liveOutputs.length ? liveOutputs : (storedOutputs ?? []);
+    return source
+      .filter((o) => !existing.has(o.name.toLowerCase()))
+      .map((o) => ({
+        id: `executed-${o.id}`,
+        name: o.name,
+        type: "none" as const,
+        status: "ok" as const,
+        startTime: trace.endTime ?? trace.startTime,
+        latencyMs: o.latencyMs,
+        inputs: {},
+        outputs: o.outputs,
+        children: [],
+      }));
+  }, [
+    trace,
+    pendingRequest,
+    effectiveResolved,
+    isResuming,
+    liveOutputs,
+    storedOutputs,
+  ]);
+
   const treeSpans = useMemo(() => {
     if (!trace || !summarySpan) return [] as Span[];
+    const children = [...summarySpan.children, ...executedOutputSpans];
     // Surface the gate as its own node: "awaiting" while pending, then a resolved step showing the
     // decision after Approve/Reject — so it stays in the completed trace rather than disappearing.
-    if (!pendingRequest && !resolvedAction) return [summarySpan];
-    const decisionLabel = resolvedAction
-      ? resolvedAction.toLowerCase().includes("reject")
+    if (!pendingRequest && !effectiveResolved)
+      return [{ ...summarySpan, children }];
+    const decisionLabel = effectiveResolved
+      ? effectiveResolved.toLowerCase().includes("reject")
         ? "Rejected"
         : "Approved"
       : null;
@@ -110,15 +193,21 @@ export function TraceDetailView({
         ? `Human In The Loop — ${decisionLabel}`
         : "Human In The Loop",
       type: "none",
-      status: resolvedAction ? "ok" : "awaiting_human",
+      status: effectiveResolved ? "ok" : "awaiting_human",
       startTime: trace.endTime ?? trace.startTime,
       latencyMs: null,
       inputs: {},
-      outputs: resolvedAction ? { decision: resolvedAction } : {},
+      outputs: effectiveResolved ? { decision: effectiveResolved } : {},
       children: [],
     };
-    return [{ ...summarySpan, children: [...summarySpan.children, hitlSpan] }];
-  }, [trace, summarySpan, pendingRequest, resolvedAction]);
+    return [{ ...summarySpan, children: [...children, hitlSpan] }];
+  }, [
+    trace,
+    summarySpan,
+    pendingRequest,
+    effectiveResolved,
+    executedOutputSpans,
+  ]);
 
   // Why: overlay each span's live build state so the tree behaves like the canvas — BUILDING shows
   // a spinner with no duration (not a stale "0 ms"); BUILT shows the duration streamed in flowPool.
@@ -219,7 +308,7 @@ export function TraceDetailView({
           <TraceHitlBar
             pending={pendingRequest}
             onResolved={onResolved}
-            onDecision={setResolvedAction}
+            onDecision={recordDecision}
           />
         )}
       </div>
@@ -285,7 +374,7 @@ export function TraceDetailView({
         <TraceHitlBar
           pending={pendingRequest}
           onResolved={onResolved}
-          onDecision={setResolvedAction}
+          onDecision={recordDecision}
         />
       )}
     </div>

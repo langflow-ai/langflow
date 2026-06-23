@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from collections import defaultdict
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
@@ -319,12 +319,21 @@ class TracingService(Service):
     async def _stop(self, trace_context: TraceContext) -> None:
         try:
             trace_context.running = False
-            # check the qeue is empty
-            if not trace_context.traces_queue.empty():
-                await trace_context.traces_queue.join()
+            # Cancel the worker, then drain inline so a late end event (typically the terminal
+            # component's, enqueued as end_tracers runs) is flushed, not lost with the worker.
             if trace_context.worker_task:
                 trace_context.worker_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await trace_context.worker_task
                 trace_context.worker_task = None
+            while not trace_context.traces_queue.empty():
+                trace_func, args = trace_context.traces_queue.get_nowait()
+                try:
+                    trace_func(*args)
+                except Exception:  # noqa: BLE001
+                    await logger.aexception("Error draining trace_func")
+                finally:
+                    trace_context.traces_queue.task_done()
 
         except Exception:  # noqa: BLE001
             await logger.aexception("Error stopping tracing service")

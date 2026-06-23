@@ -6,6 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import useFlowStore from "@/stores/flowStore";
+import { useHitlStore } from "@/stores/hitlStore";
 import { TraceDetailView } from "../TraceDetailView";
 import type { Trace } from "../types";
 
@@ -67,6 +68,7 @@ describe("TraceDetailView", () => {
   beforeEach(() => {
     mockTrace = null;
     mockIsLoading = false;
+    useHitlStore.setState({ pending: null, resolved: {}, executedOutputs: {} });
   });
 
   it("renders a run summary node above the span hierarchy and shows trace input/output when selected", async () => {
@@ -287,6 +289,162 @@ describe("TraceDetailView", () => {
     expect(
       screen.getByText(/Human In The Loop — Approved/),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the resolved gate after the trace panel is closed and reopened", () => {
+    const baseTrace: Trace = {
+      id: "trace-reentry",
+      name: "Gated Trace",
+      status: "ok",
+      startTime: "2024-01-01T00:00:00Z",
+      endTime: "2024-01-01T00:00:01Z",
+      totalLatencyMs: 1234,
+      totalTokens: 0,
+      totalCost: 0,
+      flowId: "flow-1",
+      sessionId: "session-1",
+      input: {},
+      output: {},
+      spans: [],
+    };
+    mockTrace = baseTrace;
+    const pending = {
+      job_id: "job-1",
+      flow_id: "flow-1",
+      session_id: "session-1",
+      created_at: null,
+      request_id: "Agent-oYRYa:job-1",
+      kind: "tool_approval" as const,
+      prompt: null,
+      options: [],
+      allowed_decisions: ["approve", "reject"],
+    };
+
+    const { unmount } = render(
+      <TraceDetailView
+        traceId="trace-reentry"
+        flowName="Flow"
+        hasTrace
+        pendingRequest={pending}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("hitl-bar"));
+    expect(
+      screen.getByText(/Human In The Loop — Approved/),
+    ).toBeInTheDocument();
+
+    // Leave the trace (unmount clears local state), then reopen with no pending request — the
+    // decision is gone from props/local state but the store keeps the resolved gate visible.
+    unmount();
+    render(<TraceDetailView traceId="trace-reentry" flowName="Flow" hasTrace />);
+    expect(
+      screen.getByText(/Human In The Loop — Approved/),
+    ).toBeInTheDocument();
+  });
+
+  it("injects an executed Chat Output span missing from a resumed HITL trace", () => {
+    useFlowStore.setState({
+      outputs: [
+        { type: "ChatOutput", id: "ChatOutput-z90", displayName: "Chat Output" },
+      ],
+      flowPool: {
+        "ChatOutput-z90": [
+          { valid: true, data: { results: { message: "hi" }, timedelta: 0.02 } },
+        ],
+      },
+    } as never);
+    try {
+      mockTrace = {
+        id: "trace-resumed",
+        name: "Resumed Trace",
+        status: "ok",
+        startTime: "2024-01-01T00:00:00Z",
+        endTime: "2024-01-01T00:00:01Z",
+        totalLatencyMs: 1234,
+        totalTokens: 0,
+        totalCost: 0,
+        flowId: "flow-1",
+        sessionId: "session-1",
+        input: {},
+        output: {},
+        spans: [
+          {
+            id: "agent-span",
+            name: "Agent",
+            type: "agent",
+            status: "ok",
+            startTime: "2024-01-01T00:00:00Z",
+            endTime: "2024-01-01T00:00:01Z",
+            latencyMs: 10,
+            inputs: {},
+            outputs: {},
+            children: [],
+          },
+        ],
+      };
+      // Seed a resolved decision so the view is in HITL context (the run paused/resumed).
+      useHitlStore.setState({ resolved: { "trace-resumed": "approve" } });
+
+      render(
+        <TraceDetailView traceId="trace-resumed" flowName="Flow" hasTrace />,
+      );
+
+      // The Chat Output executed (in flowPool) but is absent from trace.spans — re-injected here.
+      expect(
+        screen.getByTestId("span-node-executed-ChatOutput-z90"),
+      ).toBeInTheDocument();
+    } finally {
+      useFlowStore.setState({ outputs: [], flowPool: {} } as never);
+    }
+  });
+
+  it("keeps the injected Chat Output after flowPool clears (canvas navigation)", () => {
+    // flowPool is empty (left for the canvas and came back) but the executed output was cached,
+    // and the gate decision is stored — the Chat Output must still be re-injected from the cache.
+    useFlowStore.setState({
+      outputs: [
+        { type: "ChatOutput", id: "ChatOutput-z90", displayName: "Chat Output" },
+      ],
+      flowPool: {},
+    } as never);
+    useHitlStore.setState({
+      resolved: { "trace-cached": "approve" },
+      executedOutputs: {
+        "trace-cached": [
+          {
+            id: "ChatOutput-z90",
+            name: "Chat Output",
+            latencyMs: 20,
+            outputs: { message: "hi" },
+          },
+        ],
+      },
+    });
+    try {
+      mockTrace = {
+        id: "trace-cached",
+        name: "Cached Trace",
+        status: "ok",
+        startTime: "2024-01-01T00:00:00Z",
+        endTime: "2024-01-01T00:00:01Z",
+        totalLatencyMs: 1234,
+        totalTokens: 0,
+        totalCost: 0,
+        flowId: "flow-1",
+        sessionId: "session-1",
+        input: {},
+        output: {},
+        spans: [],
+      };
+
+      render(<TraceDetailView traceId="trace-cached" flowName="Flow" hasTrace />);
+
+      expect(
+        screen.getByTestId("span-node-executed-ChatOutput-z90"),
+      ).toBeInTheDocument();
+    } finally {
+      useFlowStore.setState({ outputs: [], flowPool: {} } as never);
+    }
   });
 
   it("recovers selection to the result when the HITL node is resolved away", () => {

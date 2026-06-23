@@ -268,8 +268,38 @@ class NativeTracer(BaseTracer):
             except Exception as e:  # noqa: BLE001
                 logger.debug("Error waiting for flush: %s", e)
 
+    def _finalize_pending_spans(self) -> None:
+        """Force-complete spans that started but never received an end_trace.
+
+        The terminal component's end event can be enqueued as ``end_tracers`` tears the trace
+        worker down, so its end_trace may never run. Without this, that component (e.g. Chat
+        Output) is silently missing from the persisted trace. Flush whatever started.
+        """
+        if not self.spans:
+            return
+        end_time = datetime.now(tz=timezone.utc)
+        for trace_id, span_info in list(self.spans.items()):
+            self.spans.pop(trace_id, None)
+            start_time = span_info["start_time"]
+            self.completed_spans.append(
+                self._build_completed_span(
+                    span_id=trace_id,
+                    name=span_info["name"],
+                    span_type=self._map_trace_type(span_info["trace_type"]),
+                    inputs=span_info["inputs"],
+                    outputs=None,
+                    start_time=start_time,
+                    end_time=end_time,
+                    latency_ms=int((end_time - start_time).total_seconds() * 1000),
+                    error=None,
+                    attributes={},
+                    span_source="component",
+                )
+            )
+
     async def _flush_to_database(self, error: Exception | None = None) -> None:
         """Persist the completed trace and all its spans in a single DB session to minimise round-trips."""
+        self._finalize_pending_spans()
         try:
             from lfx.services.deps import session_scope
 
