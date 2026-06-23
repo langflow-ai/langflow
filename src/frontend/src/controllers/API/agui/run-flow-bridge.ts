@@ -26,6 +26,7 @@ import type {
   VertexBuildTypeAPI,
   VertexDataTypeAPI,
 } from "@/types/api";
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 import { api } from "../api";
 import { injectHumanInputCard } from "./human-input-card";
 import {
@@ -576,7 +577,7 @@ export async function consumeBackgroundEvents(
     const response = await fetch(url, {
       method: "GET",
       headers,
-      credentials: "same-origin",
+      credentials: getFetchCredentials(),
       signal: opts.signal,
     });
     if (!response.ok || !response.body) {

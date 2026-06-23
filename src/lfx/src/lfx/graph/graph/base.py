@@ -153,6 +153,10 @@ class Graph:
         # Vertices already built at checkpoint time: on resume their async generators are exhausted,
         # so the output-collection loop must NOT re-consume them. Empty for fresh (non-resume) runs.
         self.checkpoint_restored_built_ids: set[str] = set()
+        # Built vertices whose live output (Tool/model client) was opaque-dropped to None in the
+        # checkpoint: only these re-run on resume to regenerate the object, so producers whose output
+        # round-tripped (e.g. an Agent's Message) are not needlessly re-executed. Empty otherwise.
+        self.checkpoint_opaque_dropped_ids: set[str] = set()
         self.pause_probe: Callable[[str], Any] | None = None
 
         if context and not isinstance(context, dict):

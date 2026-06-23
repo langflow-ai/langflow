@@ -27,6 +27,9 @@ def _frame(event_type: str, data: dict) -> tuple[bytes, str]:
 
 
 async def _scripted_source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+    # Why: these tests isolate the service/runner plumbing (submit, status, dedupe, cross-user
+    # ownership, terminal handling) from graph execution. The REAL frame source
+    # (generate_flow_events over a live graph) is exercised end-to-end in test_build_pause_seam.
     yield _frame("build_start", {})
     yield _frame("end_vertex", {"id": "n1"})
     yield _frame("end", {})

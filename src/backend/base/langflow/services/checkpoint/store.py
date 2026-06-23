@@ -103,6 +103,16 @@ class JobScopedCheckpointStore(CheckpointStore, Service):
         return [cp for _job_id, cp in await self._all() if cp.session_id == session_id and not _expired(cp)]
 
     async def _all(self) -> list[tuple[UUID, GraphCheckpoint]]:
+        """Decode every stored ``graph`` checkpoint across ALL jobs/users.
+
+        This scan is NOT tenant-scoped (the row has no user_id; the store has no
+        request user). The callers that use it — ``load(checkpoint_id)``,
+        ``delete(checkpoint_id)``, ``list_by_session`` — must therefore never be
+        exposed to a cross-user request: the durable multi-tenant resume path uses
+        only ``load_by_run_id`` (job-scoped) behind ``resume_job``'s ownership
+        check. Adding a user filter here would require threading the user through
+        the CheckpointStore ABC.
+        """
         decoded = []
         for job_id, blob in await self._jobs.all_checkpoints(_KIND):
             checkpoint = _decode(blob)

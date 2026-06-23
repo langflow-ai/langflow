@@ -174,7 +174,7 @@ class JobCheckpoint(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "job_checkpoints"
     __table_args__ = (UniqueConstraint("job_id", "kind", name="uq_job_checkpoints_job_id_kind"),)
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
     job_id: UUID = Field(index=True, nullable=False)
     kind: str = Field(sa_column=Column(String, nullable=False))
     blob: str = Field(sa_column=Column(Text, nullable=False))

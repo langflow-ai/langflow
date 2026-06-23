@@ -39,7 +39,8 @@ def upgrade() -> None:
             sa.UniqueConstraint("job_id", "kind", name="uq_job_checkpoints_job_id_kind"),
         )
         with op.batch_alter_table("job_checkpoints", schema=None) as batch_op:
-            batch_op.create_index(batch_op.f("ix_job_checkpoints_id"), ["id"], unique=False)
+            # No index on ``id``: the PRIMARY KEY already provides a unique index, so a separate
+            # ix_job_checkpoints_id would be dead duplicate DDL.
             batch_op.create_index(batch_op.f("ix_job_checkpoints_job_id"), ["job_id"], unique=False)
 
 

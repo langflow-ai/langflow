@@ -99,6 +99,11 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
     # Vertices already built at checkpoint time must not have their async generators re-consumed on
     # resume (the original run exhausted them); the output-collection loop reads this set to skip them.
     graph.checkpoint_restored_built_ids = {vid for vid, vd in checkpoint.vertex_results.items() if vd.built}
+    # Built vertices whose live output was opaque-dropped to None re-run on resume; others reuse the
+    # restored result instead of re-executing (avoids re-billing an Agent whose Message round-tripped).
+    graph.checkpoint_opaque_dropped_ids = {
+        vid for vid, vd in checkpoint.vertex_results.items() if vd.built and vd.built_object is None
+    }
     _restore_run_manager(graph, checkpoint)
     _restore_vertices(graph, checkpoint)
     graph._run_queue.clear()  # noqa: SLF001

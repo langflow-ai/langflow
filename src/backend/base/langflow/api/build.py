@@ -84,13 +84,16 @@ def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
 
 
 def _rerun_non_input_predecessors(graph: Graph, vertex_id: str) -> None:
-    """Un-build the paused vertex's non-input predecessors so they re-run on resume.
+    """Un-build only the upstream producers whose live output was dropped from the checkpoint.
 
-    A checkpoint cannot serialize non-JSON outputs (Tools, models), so a producer like
-    an Agent would receive ``None`` tools after restore. Re-running the upstream
-    definitions regenerates valid inputs; input vertices (e.g. Chat Input) keep their
-    restored value and are not re-run.
+    A checkpoint cannot serialize non-JSON outputs (Tools, model clients), so a producer of one of
+    those must re-run on resume to regenerate it. Producers whose output round-tripped (e.g. an
+    Agent's ``Message``) keep their restored result — re-running them would re-bill the LLM call and
+    re-fire side-effecting tools. The dropped set is computed at restore; if it's empty (no live
+    objects were dropped) nothing re-runs. Input vertices (e.g. Chat Input) are never re-run.
+    The whole predecessor chain is still walked so a dropped producer behind a restored one is found.
     """
+    dropped: set[str] = getattr(graph, "checkpoint_opaque_dropped_ids", set())
     visited: set[str] = set()
     stack = list(graph.predecessor_map.get(vertex_id, []))
     while stack:
@@ -102,9 +105,8 @@ def _rerun_non_input_predecessors(graph: Graph, vertex_id: str) -> None:
             pred = graph.get_vertex(pred_id)
         except ValueError:
             continue
-        if pred.is_input:
-            continue
-        pred.built = False
+        if not pred.is_input and pred_id in dropped:
+            pred.built = False
         stack.extend(graph.predecessor_map.get(pred_id, []))
 
 

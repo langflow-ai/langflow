@@ -101,6 +101,19 @@ async def test_resume_does_not_reconsume_restored_built_output_vertex():
     await resumed.arun([{}], fallback_to_env_vars=False)
 
 
+async def test_resume_flags_only_opaque_dropped_producers():
+    _, checkpoint = await _paused_checkpoint()
+    # A built producer whose live output (Tool/model) was opaque-dropped is stored with built_object
+    # None; one whose output round-tripped keeps a value. Only the former must be flagged for re-run.
+    checkpoint.vertex_results["chat_input"].built = True
+    checkpoint.vertex_results["chat_input"].built_object = None
+
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+
+    assert "chat_input" in resumed.checkpoint_opaque_dropped_ids
+    assert "chat_output" not in resumed.checkpoint_opaque_dropped_ids
+
+
 async def test_resume_restores_cycle_vertices_from_graph():
     _, checkpoint = await _paused_checkpoint()
     resumed = Graph.resume_from_checkpoint(checkpoint)
