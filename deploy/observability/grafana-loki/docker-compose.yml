@@ -24,6 +24,19 @@ services:
       loki:
         condition: service_healthy
 
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: lf-prometheus
+    ports:
+      - "9091:9090"
+    command:
+      - --config.file=/etc/prometheus/config.yml
+    volumes:
+      - ./prometheus/config.yml:/etc/prometheus/config.yml
+    # Reach a Langflow running on the host (metrics on :9090) from inside the container.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   grafana:
     image: grafana/grafana:11.3.0
     container_name: lf-grafana
@@ -33,9 +46,22 @@ services:
       - GF_SECURITY_ADMIN_USER=${GF_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
       - GF_USERS_DEFAULT_THEME=dark
+      # Postgres datasource for the worker roster. In production point these at a
+      # READ-ONLY DB role, never the app's read-write credentials.
+      - LANGFLOW_DB_HOST=${LANGFLOW_DB_HOST:-host.docker.internal}
+      - LANGFLOW_DB_PORT=${LANGFLOW_DB_PORT:-5432}
+      - LANGFLOW_DB_NAME=${LANGFLOW_DB_NAME:-langflow}
+      - LANGFLOW_DB_USER=${LANGFLOW_DB_USER:-langflow}
+      - LANGFLOW_DB_PASSWORD=${LANGFLOW_DB_PASSWORD:-langflow}
+      - LANGFLOW_DB_SSLMODE=${LANGFLOW_DB_SSLMODE:-disable}
+    # Reach a Langflow Postgres published on the host from inside the container.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       loki:
         condition: service_healthy
+      prometheus:
+        condition: service_started

@@ -1,0 +1,593 @@
+{
+  "uid": "langflow-bg-workers",
+  "title": "Langflow Background Workers",
+  "description": "Flower-style view of the background worker fleet: the live roster from worker_registry joined with per-owner job counts, aggregate online/busy/idle gauges, and a per-worker drill-down filtered by $worker.",
+  "tags": [
+    "langflow",
+    "background-execution",
+    "workers"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "worker",
+        "label": "Worker",
+        "type": "query",
+        "datasource": "Postgres",
+        "query": "SELECT owner FROM worker_registry ORDER BY last_heartbeat DESC",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Online",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(langflow_bg_workers_online)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Busy",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(langflow_bg_workers_busy)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Idle",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(langflow_bg_workers_idle)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Total registered",
+      "description": "Every row in worker_registry, including stale rows not yet pruned (offline). Aggregate online/busy/idle above come from Prometheus.",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": "Postgres",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) AS \"registered\" FROM worker_registry",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Worker roster",
+      "description": "Live fleet from worker_registry LEFT JOINed with per-owner job counts derived from job.job_metadata->>'owner'. online = last_heartbeat within 30s (3x background_worker_registry_interval_s default of 10s). Sorted online-first, then most recent heartbeat.",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": "Postgres",
+      "targets": [
+        {
+          "rawSql": "SELECT\n  wr.owner AS \"owner\",\n  wr.pid AS \"pid\",\n  wr.host AS \"host\",\n  wr.state AS \"state\",\n  -- online window = 30s == 3x background_worker_registry_interval_s (default 10s)\n  (wr.last_heartbeat >= now() - interval '30 seconds') AS \"online\",\n  EXTRACT(EPOCH FROM (now() - wr.started_at)) AS \"uptime\",\n  EXTRACT(EPOCH FROM (now() - wr.last_heartbeat)) AS \"last_seen\",\n  wr.current_job_id AS \"current_job_id\",\n  COALESCE(j.processed, 0) AS \"processed\",\n  COALESCE(j.succeeded, 0) AS \"succeeded\",\n  COALESCE(j.failed, 0) AS \"failed\"\nFROM worker_registry wr\nLEFT JOIN (\n  SELECT\n    job_metadata->>'owner' AS owner,\n    count(*) AS processed,\n    count(*) FILTER (WHERE status = 'completed') AS succeeded,\n    count(*) FILTER (WHERE status = 'failed') AS failed\n  FROM job\n  WHERE job_metadata ? 'owner'\n  GROUP BY 1\n) j ON j.owner = wr.owner\nORDER BY (wr.last_heartbeat >= now() - interval '30 seconds') DESC, wr.last_heartbeat DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "uptime"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "last_seen"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 20
+                    },
+                    {
+                      "color": "red",
+                      "value": 30
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "state"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "busy": {
+                        "color": "blue",
+                        "index": 0
+                      },
+                      "idle": {
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "online"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "true": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "online"
+                      },
+                      "false": {
+                        "color": "red",
+                        "index": 1,
+                        "text": "offline"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Per-worker drill-down ($worker)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Selected worker(s): state / current job / uptime",
+      "description": "worker_registry rows for the selected $worker. With includeAll/multi, $worker expands to a regex; this panel matches owner against it via PostgreSQL ~ so the All case lists every worker.",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "datasource": "Postgres",
+      "targets": [
+        {
+          "rawSql": "SELECT\n  owner AS \"owner\",\n  state AS \"state\",\n  current_job_id AS \"current_job_id\",\n  EXTRACT(EPOCH FROM (now() - started_at)) AS \"uptime\",\n  EXTRACT(EPOCH FROM (now() - last_heartbeat)) AS \"last_seen\",\n  (last_heartbeat >= now() - interval '30 seconds') AS \"online\"\nFROM worker_registry\nWHERE owner ~ '$worker'\nORDER BY last_heartbeat DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "uptime"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "last_seen"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "state"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "busy": {
+                        "color": "blue",
+                        "index": 0
+                      },
+                      "idle": {
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "online"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "true": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "online"
+                      },
+                      "false": {
+                        "color": "red",
+                        "index": 1,
+                        "text": "offline"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Throughput by status ($worker)",
+      "description": "bg_job lifecycle events for the selected worker(s), bucketed by status. worker=~\"$worker\" regex-matches so the All/multi case aggregates every worker.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum by (status) (count_over_time({job=\"langflow\"} | json | event_type=\"bg_job\" | worker=~\"$worker\" [$__auto]))",
+          "refId": "A",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "logs",
+      "title": "Recent jobs / logs ($worker)",
+      "description": "bg_job lifecycle lines filtered to the selected worker(s). High-cardinality identifiers (job_id, flow_id, user_id) live on logs, never on metrics.",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "{job=\"langflow\"} | json | event_type=\"bg_job\" | worker=~\"$worker\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showLabels": true,
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "dedupStrategy": "none"
+      }
+    }
+  ]
+}

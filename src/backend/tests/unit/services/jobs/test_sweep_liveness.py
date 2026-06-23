@@ -62,3 +62,41 @@ async def test_sweep_still_fails_heartbeatless_in_progress():
     events = await service.read_events(orphan)
     assert len(events) == 1
     assert events[0].event_type == "run_failed"
+
+
+@pytest.mark.usefixtures("client")
+async def test_sweep_emits_worker_lost_metrics_without_raising():
+    """Reconciling a stale-heartbeat orphan fires the worker_lost emit pair.
+
+    The emit helpers are best-effort (they swallow their own errors), so the
+    contract here is: the sweep still reconciles the orphan AND the emit calls
+    do not raise into the sweep. We do not assert OTel counter values (the
+    metrics are write-only); a clean run that preserves the existing FAILED /
+    worker_lost behavior is the proof.
+    """
+    service = JobService()
+    stale = uuid4()
+    fresh = uuid4()
+
+    # Stale heartbeat -> real orphan that must be reconciled (and emitted for).
+    await service.create_job(job_id=stale, flow_id=uuid4(), user_id=uuid4())
+    await service.update_job_status(stale, JobStatus.IN_PROGRESS)
+    old = (datetime.now(timezone.utc) - timedelta(seconds=300)).isoformat()
+    await service.update_job_metadata(stale, {"owner": "worker-dead", "heartbeat_at": old})
+
+    # Fresh heartbeat -> liveness gate keeps it out of reconciliation (no emit).
+    await service.create_job(job_id=fresh, flow_id=uuid4(), user_id=uuid4())
+    await service.update_job_status(fresh, JobStatus.IN_PROGRESS)
+    await service.heartbeat(fresh, owner="worker-live")
+
+    swept = await service.sweep_orphans(lease_ttl_s=30.0)
+
+    assert stale in swept
+    assert fresh not in swept
+
+    stale_job = await service.get_job_by_job_id(stale)
+    assert stale_job.status == JobStatus.FAILED
+    assert (stale_job.error or {}).get("type") == "worker_lost"
+
+    fresh_job = await service.get_job_by_job_id(fresh)
+    assert fresh_job.status == JobStatus.IN_PROGRESS

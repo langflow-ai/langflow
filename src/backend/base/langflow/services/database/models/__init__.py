@@ -27,6 +27,7 @@ from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .user import User
 from .variable import Variable
+from .worker_registry import WorkerRegistry, WorkerState
 
 __all__ = [
     "ApiKey",
@@ -65,4 +66,6 @@ __all__ = [
     "TransactionTable",
     "User",
     "Variable",
+    "WorkerRegistry",
+    "WorkerState",
 ]

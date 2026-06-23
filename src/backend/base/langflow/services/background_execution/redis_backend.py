@@ -200,6 +200,26 @@ class RedisBackgroundQueue:
             # (with a finished timestamp) explicitly.
             await self._job_service.update_job_status(job.job_id, JobStatus.FAILED, finished_timestamp=True)
             await self._job_service.set_error(job.job_id, {"type": "worker_lost"})
+            # One structured line per reconciled orphan. event_type="bg_job" is the
+            # marker key (structlog reserves "event" for the message); a logging
+            # failure must never break the watchdog, so the emit is guarded.
+            with contextlib.suppress(Exception):
+                from lfx.log import logger
+
+                extra = {
+                    "flow_id": str(job.flow_id) if job.flow_id is not None else None,
+                    "user_id": str(job.user_id) if job.user_id is not None else None,
+                    "attempt": int(meta["attempt"]) if "attempt" in meta else None,
+                }
+                await logger.ainfo(
+                    "background job worker_lost",
+                    event_type="bg_job",
+                    job_id=str(job.job_id),
+                    status="failed",
+                    reason="worker_lost",
+                    backend="scaled",
+                    **{k: v for k, v in extra.items() if v is not None},
+                )
             await self.claim_queue.complete(job_id)
         return requeued
 

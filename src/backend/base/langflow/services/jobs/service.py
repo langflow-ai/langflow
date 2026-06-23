@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -554,6 +555,10 @@ class JobService(Service):
         """
         error_payload = {"type": "worker_lost"}
         reconciled: list[UUID] = []
+        # Per-reconciled forensic identifiers, captured inside the session loop
+        # while the rows are loaded so the worker_lost log can carry flow_id/
+        # user_id without a second query.
+        reconciled_meta: dict[UUID, tuple[str | None, str | None]] = {}
         async with session_scope() as session:
             stmt = select(Job).where(Job.status == JobStatus.IN_PROGRESS)
             result = await session.exec(stmt)
@@ -568,12 +573,41 @@ class JobService(Service):
                 job.finished_timestamp = now
                 session.add(job)
                 reconciled.append(job.job_id)
+                reconciled_meta[job.job_id] = (
+                    str(job.flow_id) if job.flow_id is not None else None,
+                    str(job.user_id) if job.user_id is not None else None,
+                )
             await session.flush()
+        # Function-local import: background_execution imports from jobs, so a
+        # module-level import here would risk a cycle. The metrics module itself
+        # only pulls in deps, so the local import is cheap and safe. Only the
+        # backend label for the log is needed — outcome counts are DB-derived in
+        # the API-side collector, not emitted in-process here.
+        from lfx.log import logger
+
+        from langflow.services.background_execution import metrics as bg_metrics
+
+        backend = bg_metrics.current_backend()
         # Append the terminal milestone via append_event (its own session) so the
         # IntegrityError/seq-collision retry applies: a seq collision with a
         # concurrent appender can no longer roll back the whole sweep.
         for job_id in reconciled:
             await self.append_event(job_id, "run_failed", dict(error_payload))
+            # One structured line per reconciled orphan. event_type="bg_job" is the
+            # marker key (structlog reserves "event" for the message); a logging
+            # failure must never break the sweep, so the emit is guarded.
+            flow_id, user_id = reconciled_meta.get(job_id, (None, None))
+            with contextlib.suppress(Exception):
+                extra = {"flow_id": flow_id, "user_id": user_id}
+                await logger.ainfo(
+                    "background job worker_lost",
+                    event_type="bg_job",
+                    job_id=str(job_id),
+                    status="failed",
+                    reason="worker_lost",
+                    backend=backend,
+                    **{k: v for k, v in extra.items() if v is not None},
+                )
         return reconciled
 
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:

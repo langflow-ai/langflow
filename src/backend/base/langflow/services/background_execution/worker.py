@@ -12,16 +12,23 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
+import socket
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 
 from langflow.services.background_execution.runner import JobRunner
+from langflow.services.database.models.worker_registry.model import WorkerState
+from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from uuid import UUID
 
     from lfx.services.settings.base import Settings
+
+    from langflow.services.background_execution.worker_registry import WorkerRegistryService
 
 
 class WorkerJobRunner:
@@ -148,6 +155,63 @@ async def _recover_stranded_queued(backend: Any) -> None:
     await recover()
 
 
+class _WorkerPresence:
+    """Mutable presence state shared between the claim loop and its heartbeat task.
+
+    The claim loop flips ``state`` + ``current_job_id`` event-driven (BUSY on claim,
+    IDLE on complete) and writes an immediate registry beat each transition for a
+    snappy roster; the periodic ``_registry_heartbeat_loop`` reads this same state
+    and refreshes ``last_heartbeat`` on the interval, so the row stays fresh during a
+    long job (it runs while ``runner.run`` awaits) and while idle.
+    """
+
+    def __init__(self) -> None:
+        self.state: WorkerState = WorkerState.IDLE
+        self.current_job_id: UUID | None = None
+
+
+async def _write_registry_heartbeat(
+    worker_registry: WorkerRegistryService,
+    owner: str,
+    presence: _WorkerPresence,
+) -> None:
+    """Write one registry heartbeat for the current presence. Best-effort.
+
+    Opens a short-lived ``session_scope()`` per call — the same mechanism the loop
+    uses for the job heartbeat — because ``WorkerRegistryService`` takes the session
+    positionally and never opens its own. A DB hiccup must never kill the loop, so
+    the write is guarded.
+    """
+    try:
+        async with session_scope() as session:
+            await worker_registry.heartbeat(
+                session,
+                owner=owner,
+                state=presence.state,
+                current_job_id=presence.current_job_id,
+            )
+    except Exception as exc:  # noqa: BLE001
+        await logger.adebug(f"Worker registry heartbeat failed for {owner}: {exc}")
+
+
+async def _registry_heartbeat_loop(
+    worker_registry: WorkerRegistryService,
+    owner: str,
+    presence: _WorkerPresence,
+    *,
+    interval_s: float,
+) -> None:
+    """Refresh ``last_heartbeat`` every ``interval_s`` until cancelled.
+
+    Mirrors the runner's ``_start_heartbeat``: it keeps the row fresh during a long
+    job (this task runs while the loop is blocked in ``await runner.run``) and during
+    idle. Cancelled by the loop's ``finally``.
+    """
+    while True:
+        await asyncio.sleep(interval_s)
+        await _write_registry_heartbeat(worker_registry, owner, presence)
+
+
 async def run_worker_loop(
     backend: Any,
     runner: Any,
@@ -158,6 +222,10 @@ async def run_worker_loop(
     owner: str | None = None,
     lease_ttl_s: float = 45.0,
     watchdog_interval_s: float | None = None,
+    worker_registry: WorkerRegistryService | None = None,
+    pid: int | None = None,
+    host: str | None = None,
+    registry_interval_s: float = 10.0,
 ) -> None:
     """Claim-and-run loop with a periodic lease watchdog. Returns on *stop_event*.
 
@@ -175,12 +243,38 @@ async def run_worker_loop(
         lease_ttl_s: lease window the watchdog uses to decide "dead".
         watchdog_interval_s: how often the periodic watchdog runs; None disables
             it (startup-only reconcile, the prior behaviour).
+        worker_registry: durable presence roster; when set (with ``owner``) the
+            worker registers an IDLE row before the loop, flips it BUSY/IDLE on
+            claim/complete, beats ``last_heartbeat`` on ``registry_interval_s``, and
+            deregisters in the finally so a cleanly-stopped worker disappears.
+        pid: process id stored on the registry row (computed at the entrypoint so
+            tests can inject it).
+        host: hostname stored on the registry row (computed at the entrypoint).
+        registry_interval_s: how often the periodic registry heartbeat refreshes
+            ``last_heartbeat`` (idle or busy). Defaults to the settings value.
     """
     # Startup reconcile: requeue work lost by a previously-crashed worker.
     await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
     if job_service is not None:
         with contextlib.suppress(Exception):
             await _recover_stranded_queued(backend)
+
+    # Durable presence: register an IDLE row BEFORE any heartbeat so the
+    # recreate-on-missing branch in the service stays dead, then keep it fresh on
+    # the interval and flip it event-driven on claim/complete.
+    registry_active = worker_registry is not None and owner is not None
+    presence = _WorkerPresence()
+    if registry_active:
+        try:
+            async with session_scope() as session:
+                await worker_registry.register(
+                    session,
+                    owner=owner,
+                    pid=pid if pid is not None else os.getpid(),
+                    host=host if host is not None else socket.gethostname(),
+                )
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"Worker registry register failed for {owner}; not in roster: {exc}")
 
     watchdog_task: asyncio.Task | None = None
     if watchdog_interval_s is not None:
@@ -191,6 +285,17 @@ async def run_worker_loop(
                 stop_event=stop_event,
                 lease_ttl_s=lease_ttl_s,
                 interval_s=watchdog_interval_s,
+            )
+        )
+
+    registry_heartbeat_task: asyncio.Task | None = None
+    if registry_active:
+        registry_heartbeat_task = asyncio.create_task(
+            _registry_heartbeat_loop(
+                worker_registry,
+                owner,
+                presence,
+                interval_s=registry_interval_s,
             )
         )
 
@@ -209,6 +314,12 @@ async def run_worker_loop(
             if job_service is not None and owner is not None:
                 with contextlib.suppress(Exception):
                     await job_service.heartbeat(_coerce_uuid(job_id), owner)
+            # Flip the roster to BUSY with the claimed id and write an immediate beat
+            # so the roster reflects the transition without waiting for the interval.
+            if registry_active:
+                presence.state = WorkerState.BUSY
+                presence.current_job_id = _coerce_uuid(job_id)
+                await _write_registry_heartbeat(worker_registry, owner, presence)
             try:
                 await runner.run(job_id)
             except asyncio.CancelledError:
@@ -220,11 +331,29 @@ async def run_worker_loop(
                 # whether the work should be retried; a stuck processing-list entry
                 # would block reconcile forever.
                 await backend.complete(job_id)
+                # Back to IDLE on the roster with an immediate beat for a snappy view.
+                if registry_active:
+                    presence.state = WorkerState.IDLE
+                    presence.current_job_id = None
+                    await _write_registry_heartbeat(worker_registry, owner, presence)
     finally:
         if watchdog_task is not None:
             watchdog_task.cancel()
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await watchdog_task
+        if registry_heartbeat_task is not None:
+            registry_heartbeat_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await registry_heartbeat_task
+        # Graceful stop deletes the row so the worker disappears from the roster
+        # immediately. Runs on the normal stop path AND on a signal-driven stop
+        # (the loop reaches this finally either way). Best-effort.
+        if registry_active:
+            try:
+                async with session_scope() as session:
+                    await worker_registry.deregister(session, owner=owner)
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(f"Worker registry deregister failed for {owner}; stale row will linger: {exc}")
 
 
 def _coerce_uuid(job_id: Any) -> Any:
