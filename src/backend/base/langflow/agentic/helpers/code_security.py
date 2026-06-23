@@ -64,6 +64,9 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("subprocess", "Popen", "subprocess.Popen() is forbidden"),
     ("subprocess", "check_output", "subprocess.check_output() is forbidden"),
     ("subprocess", "check_call", "subprocess.check_call() is forbidden"),
+    # File-descriptor redirection wires a socket to a shell (reverse shell).
+    ("os", "dup2", "os.dup2() is forbidden in components"),
+    ("os", "dup", "os.dup() is forbidden in components"),
     ("os", "getenv", "os.getenv() is forbidden — use Langflow's variable/secret service"),
     ("os", "putenv", "os.putenv() is forbidden in components"),
     ("shutil", "rmtree", "shutil.rmtree() is forbidden"),
@@ -83,7 +86,35 @@ DANGEROUS_IMPORTS: set[str] = {
     "codeop",
     "compileall",
     "importlib",
+    # Network / IPC primitives — same attack class as subprocess (reverse
+    # shells, raw exfil, SSRF, non-HTTP protocol egress). High-level HTTP via
+    # ``requests``/``httpx`` stays allowed by design (legit API components need
+    # it); these provide raw sockets and non-HTTP channels a component never
+    # legitimately needs.
+    "socket",
+    "socketserver",
+    "ftplib",
+    "telnetlib",
+    "smtplib",
+    "poplib",
+    "imaplib",
+    "nntplib",
+    "xmlrpc",
+    # Pseudo-terminal — spawns an interactive shell (pty.spawn).
+    "pty",
 }
+
+# Dangerous *submodules* of packages that also expose safe siblings. Block the
+# dotted prefix while leaving the safe parts of the package importable (e.g.
+# ``urllib.parse`` for urlencode/quote, ``from http import HTTPStatus``).
+# ``urllib.request`` additionally supports ``file://`` / ``ftp://`` schemes, so
+# it is a local-file-read and SSRF bypass beyond what plain HTTP allows.
+DANGEROUS_SUBMODULES: tuple[str, ...] = (
+    "urllib.request",
+    "urllib.error",
+    "http.client",
+    "http.server",
+)
 
 # Imports where only specific names are dangerous (module -> set of dangerous names)
 RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
@@ -100,8 +131,19 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
         "remove",
         "rmdir",
         "unlink",
+        "dup2",
+        "dup",
     },
 }
+
+
+def _is_dangerous_submodule(dotted: str) -> bool:
+    """True if a dotted module path is (or is under) a blocked submodule.
+
+    e.g. ``urllib.request`` and ``urllib.request.foo`` match; ``urllib`` and
+    ``urllib.parse`` do not.
+    """
+    return any(dotted == prefix or dotted.startswith(prefix + ".") for prefix in DANGEROUS_SUBMODULES)
 
 
 @dataclass(frozen=True)
@@ -121,7 +163,7 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Import(self, node: ast.Import):
         for alias in node.names:
             module = alias.name.split(".")[0]
-            if module in DANGEROUS_IMPORTS:
+            if module in DANGEROUS_IMPORTS or _is_dangerous_submodule(alias.name):
                 self.violations.append(f"Import of '{alias.name}' is forbidden in components")
         self.generic_visit(node)
 
@@ -131,13 +173,19 @@ class _SecurityChecker(ast.NodeVisitor):
 
         root_module = node.module.split(".")[0]
 
-        if root_module in DANGEROUS_IMPORTS:
+        if root_module in DANGEROUS_IMPORTS or _is_dangerous_submodule(node.module):
             self.violations.append(f"Import from '{node.module}' is forbidden in components")
         elif root_module in RESTRICTED_IMPORT_NAMES and node.names:
             restricted = RESTRICTED_IMPORT_NAMES[root_module]
             for alias in node.names:
                 if alias.name in restricted:
                     self.violations.append(f"Import of '{root_module}.{alias.name}' is forbidden in components")
+        elif node.names:
+            # `from urllib import request` / `from http import client`: the
+            # imported name *is* a blocked submodule.
+            for alias in node.names:
+                if _is_dangerous_submodule(f"{node.module}.{alias.name}"):
+                    self.violations.append(f"Import of '{node.module}.{alias.name}' is forbidden in components")
 
         return self.generic_visit(node)
 

