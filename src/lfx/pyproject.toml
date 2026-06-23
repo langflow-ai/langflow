@@ -54,6 +54,18 @@ dependencies = [
     "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
 
+[project.optional-dependencies]
+# Engine-only by default: ``pip install lfx`` ships NO bundles.  This optional
+# extra pulls the long-tail metapackage for users who want the provider
+# components without the full ``langflow`` server install:
+#
+#   pip install lfx              -> engine only
+#   pip install "lfx[bundles]"   -> engine + the lfx-bundles long tail
+#
+# Documented as a headless/serverless deployment footnote, not a
+# getting-started headline.  There is intentionally NO ``lfx[all]``.
+bundles = ["lfx-bundles[all]>=1.0,<2.0"]
+
 [project.scripts]
 lfx = "lfx.__main__:main"
 lfx-mcp = "lfx.mcp.__main__:main"

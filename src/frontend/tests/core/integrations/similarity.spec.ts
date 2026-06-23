@@ -164,7 +164,9 @@ test(
 
     //connection 1
     const openAiEmbeddingOutput_0 = await page
-      .getByTestId("handle-openaiembeddings-shownode-embedding model-right")
+      .getByTestId(
+        "handle-openaiembeddingscomponent-shownode-embedding model-right",
+      )
       .nth(0);
     await openAiEmbeddingOutput_0.hover();
     await page.mouse.down();
@@ -177,7 +179,9 @@ test(
 
     //connection 2
     const openAiEmbeddingOutput_1 = await page
-      .getByTestId("handle-openaiembeddings-shownode-embedding model-right")
+      .getByTestId(
+        "handle-openaiembeddingscomponent-shownode-embedding model-right",
+      )
       .nth(0);
     await openAiEmbeddingOutput_1.hover();
     await page.mouse.down();
