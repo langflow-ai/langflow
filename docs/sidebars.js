@@ -323,6 +323,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Lfx/lfx-prewarm",
+          label: "Pre-warm LFX"
+        },
+        {
+          type: "doc",
           id: "Lfx/lfx-mcp",
           label: "LFX MCP server"
         },
