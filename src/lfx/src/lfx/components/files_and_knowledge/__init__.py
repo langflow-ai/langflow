@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
     from lfx.components.files_and_knowledge.knowledge import KnowledgeComponent
     from lfx.components.files_and_knowledge.memory_retrieval import MemoryBaseComponent
+    from lfx.components.files_and_knowledge.paddleocr import PaddleOCRComponent
     from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
     from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
 
@@ -23,6 +24,7 @@ _dynamic_imports = {
     "KnowledgeIngestionComponent": "ingestion",
     "KnowledgeBaseComponent": "retrieval",
     "MemoryBaseComponent": "memory_retrieval",
+    "PaddleOCRComponent": "paddleocr",
     "SaveToFileComponent": "save_file",
 }
 
@@ -34,6 +36,7 @@ __all__ = [
     "KnowledgeComponent",
     "KnowledgeIngestionComponent",
     "MemoryBaseComponent",
+    "PaddleOCRComponent",
     "SaveToFileComponent",
 ]
 
