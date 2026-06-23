@@ -305,7 +305,12 @@ numexpr = ["numexpr>=2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector>=0.4.2"]
 litellm = [
-    "litellm>=1.85.1,<2.0.0",
+    # litellm has no Python 3.14-compatible release: every version from 1.83.8
+    # onward declares Requires-Python <3.14, so nothing satisfying our >=1.85.1
+    # floor installs on 3.14 (the newest 3.14-installable litellm is 1.83.7).
+    # Gate it off on 3.14 so `pip install langflow` resolves there instead of
+    # dead-ending; drop the marker once upstream ships a 3.14-compatible litellm.
+    "litellm>=1.85.1,<2.0.0; python_version < '3.14'",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
     # [proxy] extra pins boto3==1.43.1, which conflicts with our aioboto3
