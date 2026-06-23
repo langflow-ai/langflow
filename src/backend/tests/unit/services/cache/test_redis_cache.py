@@ -1,9 +1,12 @@
 """Tests for RedisCache teardown functionality."""
 
+import ssl
 from unittest.mock import AsyncMock, patch
 
+import fakeredis
 import pytest
 from langflow.services.cache.service import RedisCache
+from lfx.services.cache.utils import CACHE_MISS
 
 
 @pytest.mark.asyncio
@@ -206,3 +209,54 @@ class TestRedisCacheDeserializationIntegrity:
 
             # The tag was bound to "a"'s key, so it fails verification under "b".
             assert await cache.get("b") is CACHE_MISS
+
+
+@pytest.mark.asyncio
+class TestRedisCacheSerialization:
+    """Test that RedisCache degrades gracefully on unpicklable values.
+
+    Live objects built during a flow run (e.g. an LLM client holding an
+    ``ssl.SSLContext``, httpx clients, thread locks) cannot be serialized. The
+    cache write must not crash the flow build; the value should simply be
+    skipped. See https://github.com/langflow-ai/langflow/issues/13764.
+    """
+
+    def _cache(self) -> RedisCache:
+        with patch("redis.asyncio.StrictRedis"):
+            cache = RedisCache(expiration_time=3600)
+        cache._client = fakeredis.FakeAsyncRedis()
+        return cache
+
+    async def test_set_unpicklable_value_does_not_raise(self):
+        """An unpicklable value (SSLContext) is skipped instead of raising.
+
+        ``dill.dumps`` raises a bare ``TypeError`` for an ``SSLContext`` (not a
+        ``pickle.PicklingError``), so the original narrow ``except`` let it
+        escape and crash the build.
+        """
+        cache = self._cache()
+        value = {"result": {"built_object": ssl.create_default_context()}, "type": dict}
+
+        # Should not raise (previously raised TypeError: cannot pickle 'SSLContext').
+        await cache.set("vertex-id", value)
+
+        # The value was skipped, so a later read is a cache miss rather than stale data.
+        assert await cache.get("vertex-id") is CACHE_MISS
+
+    async def test_upsert_unpicklable_value_does_not_raise(self):
+        """upsert() (used by the build cache path) also degrades gracefully."""
+        cache = self._cache()
+        value = {"built_object": ssl.create_default_context()}
+
+        await cache.upsert("vertex-id", value)
+
+        assert await cache.get("vertex-id") is CACHE_MISS
+
+    async def test_picklable_value_still_round_trips(self):
+        """Regression: ordinary picklable values continue to cache and load."""
+        cache = self._cache()
+        value = {"a": 1, "b": [1, 2, 3], "c": {"nested": True}}
+
+        await cache.set("ok-key", value)
+
+        assert await cache.get("ok-key") == value

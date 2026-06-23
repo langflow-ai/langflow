@@ -334,20 +334,31 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
 
     @override
     async def set(self, key, value, lock=None) -> None:
+        # Serialize first, in isolation from the network write. Live objects built during
+        # a flow run -- LLM clients holding an ``ssl.SSLContext``, httpx clients, thread
+        # locks, dynamically-created pydantic models -- are inherently unpicklable, and
+        # dill signals this with a variety of exception types (a bare ``TypeError`` for an
+        # SSLContext, ``AttributeError`` for dynamic classes, ``RecursionError`` for deep
+        # graphs, etc.) -- not only ``pickle.PicklingError``. Failing to serialize must not
+        # crash the caller (e.g. the vertex build); skip the cache write instead, which
+        # just means the value is recomputed on the next access. See issue #13764.
         try:
-            if pickled := dill.dumps(value, recurse=True):
-                # Prefix an HMAC tag so get() can reject tampered/forged payloads
-                # before deserialization (see get()). The tag is bound to the
-                # namespaced key so it cannot be replayed under a different key.
-                namespaced_key = self._key(key)
-                tag = self._integrity_tag(namespaced_key, pickled)
-                result = await self._client.setex(namespaced_key, self.expiration_time, tag + pickled)
-                if not result:
-                    msg = "RedisCache could not set the value."
-                    raise ValueError(msg)
-        except pickle.PicklingError as exc:
-            msg = "RedisCache only accepts values that can be pickled. "
-            raise TypeError(msg) from exc
+            pickled = dill.dumps(value, recurse=True)
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(
+                f"RedisCache skipping cache for key '{key}': value is not serializable ({type(exc).__name__}: {exc})."
+            )
+            return
+        if pickled:
+            # Prefix an HMAC tag so get() can reject tampered/forged payloads
+            # before deserialization (see get()). The tag is bound to the
+            # namespaced key so it cannot be replayed under a different key.
+            namespaced_key = self._key(key)
+            tag = self._integrity_tag(namespaced_key, pickled)
+            result = await self._client.setex(namespaced_key, self.expiration_time, tag + pickled)
+            if not result:
+                msg = "RedisCache could not set the value."
+                raise ValueError(msg)
 
     @override
     async def upsert(self, key, value, lock=None) -> None:
