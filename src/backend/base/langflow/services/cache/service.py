@@ -348,6 +348,11 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             await logger.awarning(
                 f"RedisCache skipping cache for key '{key}': value is not serializable ({type(exc).__name__}: {exc})."
             )
+            # Drop any previously-cached value for this key. ``upsert`` does
+            # get -> merge -> set, so leaving an older entry in place would let a
+            # later get() serve stale data instead of recomputing. (DEL of a
+            # missing key is a harmless no-op.)
+            await self._client.delete(self._key(key))
             return
         if pickled:
             # Prefix an HMAC tag so get() can reject tampered/forged payloads

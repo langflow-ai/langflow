@@ -260,3 +260,20 @@ class TestRedisCacheSerialization:
         await cache.set("ok-key", value)
 
         assert await cache.get("ok-key") == value
+
+    async def test_unpicklable_set_evicts_stale_value(self):
+        """A skipped write must drop any previously cached value for that key.
+
+        ``upsert`` is get -> merge -> set; if a later value is unserializable we
+        skip the write, but a stale entry left in Redis would be served on the
+        next get() instead of triggering recomputation.
+        """
+        cache = self._cache()
+        await cache.set("vertex-id", {"built_object": "old-serializable"})
+        assert await cache.get("vertex-id") == {"built_object": "old-serializable"}
+
+        # New value for the same key is unserializable -> write skipped...
+        await cache.upsert("vertex-id", {"built_object": ssl.create_default_context()})
+
+        # ...and the stale entry is gone, so the next access recomputes.
+        assert await cache.get("vertex-id") is CACHE_MISS
