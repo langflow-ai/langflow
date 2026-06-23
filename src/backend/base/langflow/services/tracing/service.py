@@ -89,11 +89,8 @@ class TraceContext:
         self.run_id: UUID | None = run_id
         self.run_name: str | None = run_name
         self.project_name: str | None = project_name
-        # ``user_id`` is the authenticated Langflow user (e.g. API-key owner)
-        # and drives ``trace.userId`` for tracing providers. ``tracing_user_id``
-        # is an optional caller-supplied label that providers surface separately
-        # (e.g. LangFuseTracer stamps it into trace metadata as
-        # ``langflow.tracing_user_id``).
+        # ``user_id`` is the authenticated Langflow user and drives ``trace.userId``;
+        # ``tracing_user_id`` is an optional caller label providers surface separately.
         self.user_id: str | None = user_id
         self.tracing_user_id: str | None = tracing_user_id
         self.session_id: str | None = session_id
@@ -195,10 +192,8 @@ class TracingService(Service):
         if self.deactivated:
             return
         langfuse_tracer = _get_langfuse_tracer()
-        # ``user_id`` carries the authenticated Langflow user and drives
-        # ``trace.userId`` (unchanged from pre-#9505 behavior for backwards
-        # compatibility). ``tracing_user_id`` is the optional caller-supplied
-        # label that LangFuseTracer stamps into trace metadata.
+        # ``user_id`` carries the authenticated Langflow user and drives ``trace.userId``;
+        # ``tracing_user_id`` is the optional caller label LangFuseTracer stamps into metadata.
         trace_context.tracers["langfuse"] = langfuse_tracer(
             trace_name=trace_context.run_name,
             trace_type="chain",

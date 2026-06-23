@@ -46,6 +46,29 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         return []
 
+    def test_default_outputs_expose_branch_handles(self, component_class):
+        """A freshly created node must already carry branch outputs so handles render on drag."""
+        component = component_class()
+        assert [o.name for o in component.outputs] == ["branch_approve", "branch_reject"]
+
+    async def test_update_frontend_node_resyncs_branches_from_saved_decisions(self, component_class):
+        """Loading a saved flow rebuilds the branch outputs from the persisted User Actions."""
+        component = component_class()
+        new_frontend_node = {
+            "template": {
+                "decisions": {"value": ["Approve", "Reject", "Escalate"]},
+                "enable_fallback": {"value": True},
+            },
+            "outputs": [],
+        }
+        node = await component.update_frontend_node(new_frontend_node, dict(new_frontend_node))
+        assert [o.name for o in node["outputs"]] == [
+            "branch_approve",
+            "branch_reject",
+            "branch_escalate",
+            "branch_fallback",
+        ]
+
     def test_two_decisions_yield_two_branches(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         node = component.update_outputs({"outputs": []}, "decisions", default_kwargs["decisions"])
@@ -147,6 +170,18 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
         component.stop.assert_any_call("branch_approve")
         component.stop.assert_any_call("branch_reject")
         assert ("branch_fallback",) not in [c.args for c in component.stop.call_args_list]
+
+    def test_expired_decision_stops_every_branch(self, component_class):
+        """A timed-out answer with no fallback routes to the expired sentinel, so no branch survives."""
+        from lfx.run.hitl import EXPIRED_ACTION
+
+        component = _wired(
+            component_class(prompt="x", decisions=["Approve", "Reject"]),
+            decision={"action_id": EXPIRED_ACTION, "values": {}},
+        )
+        component.route_branch()
+        stopped = {c.args[0] for c in component.stop.call_args_list}
+        assert stopped == {"branch_approve", "branch_reject"}
 
     def test_route_branch_without_decision_requests_pause(self, component_class):
         component = _wired(component_class(prompt="ok?", decisions=["Approve"]))

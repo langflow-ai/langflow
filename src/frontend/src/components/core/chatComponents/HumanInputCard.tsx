@@ -1,24 +1,40 @@
 import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { queryClient } from "@/contexts";
-import { useHitlStore } from "@/stores/hitlStore";
 import {
   getResumeContext,
   markHumanInputSubmitted,
 } from "@/controllers/API/agui/human-input-card";
 import { consumeBackgroundEvents } from "@/controllers/API/agui/run-flow-bridge";
 import { useResumeWorkflow } from "@/controllers/API/queries/workflows/use-resume-workflow";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import { useHitlStore } from "@/stores/hitlStore";
 import type { InteractiveContent } from "@/types/chat";
+import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 
 export interface HumanInputDecision {
   action_id: string;
   values: Record<string, string>;
+}
+
+const WAITING_FALLBACK_TEXT =
+  "The flow has paused and is waiting for your decision before continuing.";
+
+// Map an action to its Figma style: Approve is the filled primary, Reject is the
+// red outline; everything else stays a neutral outline.
+function decisionButtonClass(actionId: string): string {
+  if (actionId === "approve") {
+    return "border border-accent-indigo-foreground bg-accent-indigo-foreground text-white hover:bg-accent-indigo-foreground/90";
+  }
+  if (actionId === "reject") {
+    return "border border-accent-red-foreground/40 bg-transparent text-accent-red-foreground hover:bg-accent-red-foreground/10";
+  }
+  return "border border-border bg-transparent text-foreground hover:bg-muted";
 }
 
 /**
@@ -66,9 +82,14 @@ export default function HumanInputCard({
           const reattach = getResumeContext(content.request_id);
           if (reattach) {
             flowStore.setIsBuilding(true);
-            void consumeBackgroundEvents(reattach.jobId, reattach.opts, undefined, {
-              skipCardInjection: true,
-            });
+            void consumeBackgroundEvents(
+              reattach.jobId,
+              reattach.opts,
+              undefined,
+              {
+                skipCardInjection: true,
+              },
+            );
           } else {
             // After a reload there is no live stream to reattach to; refetch the
             // history so the resumed run's persisted output shows up.
@@ -102,64 +123,71 @@ export default function HumanInputCard({
   return (
     <div
       data-testid="human-input-card"
-      className="flex flex-col gap-3 rounded-md border border-border bg-muted/40 p-4"
+      className="flex flex-col overflow-hidden rounded-xl border border-accent-indigo-foreground/40"
     >
-      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <ForwardedIconComponent name="HumanInput" className="h-4 w-4" />
-        <span>Human input required</span>
+      <div className="flex items-center gap-2 border-b border-accent-indigo-foreground/20 bg-accent-indigo-foreground/5 px-4 py-3 text-base font-semibold text-accent-indigo-foreground">
+        <ForwardedIconComponent name="CirclePause" className="h-5 w-5" />
+        <span>Waiting for input</span>
       </div>
 
-      {content.prompt && (
-        <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-          <Markdown remarkPlugins={[remarkGfm]}>{content.prompt}</Markdown>
+      <div className="flex flex-col gap-3 px-4 py-3">
+        <div className="prose prose-sm dark:prose-invert max-w-none text-sm text-muted-foreground">
+          {content.prompt ? (
+            <Markdown remarkPlugins={[remarkGfm]}>{content.prompt}</Markdown>
+          ) : (
+            <p>{WAITING_FALLBACK_TEXT}</p>
+          )}
         </div>
-      )}
 
-      {fields.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {fields.map((field) => (
-            <label key={field.name} className="flex flex-col gap-1 text-xs">
-              <span className="text-muted-foreground">
-                {field.name}
-                {field.required ? " *" : ""}
-              </span>
-              <Input
-                data-testid={`human-input-field-${field.name}`}
-                disabled={isSubmitted}
-                value={values[field.name] ?? ""}
-                onChange={(e) =>
-                  setValues((prev) => ({
-                    ...prev,
-                    [field.name]: e.target.value,
-                  }))
-                }
-              />
-            </label>
-          ))}
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        {content.options
-          .filter((option) => chosen === null || option.action_id === chosen)
-          .map((option) => (
-            <Button
-              key={option.action_id}
-              data-testid={`human-input-decision-${option.action_id}`}
-              size="sm"
-              variant={chosen === option.action_id ? "default" : "outline"}
-              disabled={isSubmitted || isPending}
-              onClick={() => handleDecision(option.action_id)}
-            >
-              {chosen === option.action_id && (
-                <ForwardedIconComponent
-                  name="Check"
-                  className="mr-1 h-3.5 w-3.5"
+        {fields.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {fields.map((field) => (
+              <label key={field.name} className="flex flex-col gap-1 text-xs">
+                <span className="text-muted-foreground">
+                  {field.name}
+                  {field.required ? " *" : ""}
+                </span>
+                <Input
+                  data-testid={`human-input-field-${field.name}`}
+                  disabled={isSubmitted}
+                  value={values[field.name] ?? ""}
+                  onChange={(e) =>
+                    setValues((prev) => ({
+                      ...prev,
+                      [field.name]: e.target.value,
+                    }))
+                  }
                 />
-              )}
-              {option.label || option.action_id}
-            </Button>
-          ))}
+              </label>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {content.options
+            .filter((option) => chosen === null || option.action_id === chosen)
+            .map((option) => (
+              <Button
+                key={option.action_id}
+                data-testid={`human-input-decision-${option.action_id}`}
+                unstyled
+                disabled={isSubmitted || isPending}
+                onClick={() => handleDecision(option.action_id)}
+                className={cn(
+                  "inline-flex items-center justify-center rounded-[10px] px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-70",
+                  decisionButtonClass(option.action_id),
+                )}
+              >
+                {chosen === option.action_id && (
+                  <ForwardedIconComponent
+                    name="Check"
+                    className="mr-1 h-3.5 w-3.5"
+                  />
+                )}
+                {option.label || option.action_id}
+              </Button>
+            ))}
+        </div>
       </div>
     </div>
   );

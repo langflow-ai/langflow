@@ -674,7 +674,13 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 get_pending_interrupt=get_pending_interrupt,
             )
         except AgentPausedError as e:
-            return self._suspend_for_tool_approval(e.request, agent_message)
+            # Why: retract the empty partial bubble (leaks as "[]"); the HITL card supersedes it, resume re-emits it.
+            paused_message = e.agent_message or agent_message
+            msg_id = paused_message.get_id()
+            if msg_id:
+                await delete_message(id_=msg_id)
+            await self._send_message_event(paused_message, category="remove_message")
+            return self._suspend_for_tool_approval(e.request, paused_message)
         except ExceptionWithMessageError as e:
             # Drop the half-stored partial message from the DB (only if it was
             # actually persisted) and tell the frontend to remove the stale bubble.

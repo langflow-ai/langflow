@@ -32,6 +32,7 @@ from ag_ui.core import (
     ToolCallResultEvent,
     ToolCallStartEvent,
 )
+from lfx.utils.constants import MESSAGE_SENDER_USER
 
 # Langflow content-block types with no standard AG-UI primitive. They ride as
 # CUSTOM events namespaced ``langflow.*``; generic AG-UI clients ignore them.
@@ -224,6 +225,10 @@ class AGUITranslator:
         ``add_message`` can fire repeatedly for one message as its content grows;
         emissions are deduplicated by message id and tool-call id.
         """
+        # Why: the user's echoed input must not become an assistant TEXT_MESSAGE (renders a stray empty bubble).
+        if data.get("sender") == MESSAGE_SENDER_USER:
+            return []
+
         message_id = str(data.get("id") or "")
         events: list[BaseEvent] = []
 

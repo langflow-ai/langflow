@@ -37,8 +37,10 @@ class AgentPausedError(Exception):
     run through the graph pause seam instead of finalizing an empty 'complete' message.
     """
 
-    def __init__(self, request: dict[str, Any]):
+    def __init__(self, request: dict[str, Any], agent_message: "Message | None" = None):
         self.request = request
+        # Why: carries the persisted id so the caller can retract the bubble (its own ref predates streaming reassigns).
+        self.agent_message = agent_message
         super().__init__("Agent paused for human approval")
 
 
@@ -121,26 +123,20 @@ def _extract_output_text(output: str | list) -> str:
             if isinstance(item, str):
                 return item
             if isinstance(item, dict):
-                if "text" in item:
-                    return item["text"] or ""
-                if "content" in item:
-                    return str(item["content"])
-                if "message" in item:
-                    return str(item["message"])
-
-                # Special case handling for non-text-like dicts
-                if (
-                    item.get("type") == "tool_use"  # Handle tool use items
-                    or ("index" in item and len(item) == 1)  # Handle index-only items
-                    or "partial_json" in item  # Handle partial json items
-                    # Handle index-only items
-                    or ("index" in item and not any(k in item for k in ("text", "content", "message")))
-                    # Handle other metadata-only chunks that don't contain meaningful text
-                    or not any(key in item for key in ["text", "content", "message"])
-                ):
+                # Why: reasoning/tool blocks have no display text; str()-ing their content leaked "[]" as a token.
+                if item.get("type") in {"reasoning", "thinking", "tool_use", "function_call", "tool_call"}:
                     return ""
-
-                # For any other dict format, return empty string
+                if isinstance(item.get("text"), str):
+                    return item["text"]
+                content = item.get("content")
+                if isinstance(content, str):
+                    return content
+                if isinstance(content, list):
+                    return _extract_output_text(content)
+                message = item.get("message")
+                if isinstance(message, str):
+                    return message
+                # Any other dict (index-only/partial_json/metadata chunk) has no text.
                 return ""
             # For any other single item type (not str or dict), return empty string
             return ""
@@ -441,7 +437,7 @@ async def process_agent_events(
         if get_pending_interrupt is not None:
             pending = await get_pending_interrupt()
             if pending is not None:
-                raise AgentPausedError(pending)
+                raise AgentPausedError(pending, agent_message)
 
         agent_message.properties.state = "complete"
         # Final DB update with the complete message (skip_db_update=False by default)

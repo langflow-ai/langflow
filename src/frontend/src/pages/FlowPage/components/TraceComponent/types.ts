@@ -29,7 +29,7 @@ export interface Span {
   status: SpanStatus;
   startTime: string;
   endTime?: string;
-  latencyMs: number;
+  latencyMs: number | null;
   inputs: Record<string, unknown>;
   outputs: Record<string, unknown>;
   error?: string;
@@ -78,6 +78,11 @@ export interface TraceDetailViewProps {
   flowName?: string | null;
   pendingRequest?: PendingHumanRequest | null;
   onResolved?: () => void;
+  // False when the row is a synthetic paused run with no persisted trace yet —
+  // skip the trace fetch and show only the pause/resume affordance.
+  hasTrace?: boolean;
+  // While true (just after a resume), poll the trace so its spans/status update in place.
+  pollUpdates?: boolean;
 }
 
 export interface TraceAccordionItemProps {

@@ -49,16 +49,24 @@ export const BotMessage = memo(
     // ContentBlockDisplay renders only tool_use content, so the HITL card is rendered directly below.
     const humanInputContent = findHumanInputContent(chat.content_blocks);
     const hasContentBlocks = (chat.content_blocks?.length ?? 0) > 0;
-    const hasRenderableContent = (chat.content_blocks ?? []).some(
-      (block) => (block?.contents?.length ?? 0) > 0,
+    // ContentBlockDisplay only renders tool_use content; a block holding just the agent's
+    // "Input" text content displays nothing, so it must not count as renderable here.
+    const hasRenderableContent = (chat.content_blocks ?? []).some((block) =>
+      (block?.contents ?? []).some(
+        (content) => (content as { type?: string })?.type === "tool_use",
+      ),
     );
-    // A paused agent leaves an empty "partial" placeholder bubble; hide it unless it's
-    // the actively-building last message (where thinking dots render).
+    // A paused agent leaves a "partial" bubble with empty/"[]" text and no tool_use content yet;
+    // hide it unless it has tool content, the HITL card, files/audio, or is the building message.
+    const isContentlessText =
+      chatMessage.trim() === "" || chatMessage.trim() === "[]";
     const isBlankPlaceholder =
       chat.properties?.state === "partial" &&
-      isEmpty &&
+      isContentlessText &&
       !hasRenderableContent &&
       !humanInputContent &&
+      !isAudioMessage &&
+      (chat.files?.length ?? 0) === 0 &&
       !isStreaming &&
       (!isBuilding || !lastMessage);
     const showThinkingDots =

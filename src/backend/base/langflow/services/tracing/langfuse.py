@@ -187,11 +187,8 @@ class LangFuseTracer(BaseTracer):
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.trace_id = trace_id
-        # ``user_id`` remains the authenticated Langflow user and drives
-        # ``trace.userId`` unchanged from pre-#9505 behavior. ``tracing_user_id``
-        # is an optional caller-supplied label; when set, it is stamped into
-        # trace metadata as ``langflow.tracing_user_id`` so consumers can still
-        # access the override without redefining ``trace.userId``.
+        # ``user_id`` drives ``trace.userId`` (unchanged from pre-#9505); ``tracing_user_id``
+        # is an optional label stamped into metadata as ``langflow.tracing_user_id``.
         self.user_id = user_id
         self.tracing_user_id = tracing_user_id
         self.session_id = session_id
@@ -249,11 +246,8 @@ class LangFuseTracer(BaseTracer):
                 metadata={"flow_id": self.flow_id, "project_name": self.project_name},
             )
 
-            # ``trace.userId`` stays the authenticated Langflow user so existing
-            # Langfuse consumers keep getting the same identity. When a caller
-            # provides an override via ``tracing_user_id``, stamp it under
-            # ``langflow.tracing_user_id`` so it is still recoverable from trace
-            # metadata without changing the meaning of ``trace.userId``.
+            # ``trace.userId`` stays the authenticated Langflow user; a ``tracing_user_id``
+            # override is stamped under ``langflow.tracing_user_id`` in metadata instead.
             trace_kwargs: dict[str, Any] = {
                 "name": self.flow_id,
                 "user_id": self.user_id,
@@ -268,9 +262,8 @@ class LangFuseTracer(BaseTracer):
             return False
 
         except Exception:  # noqa: BLE001
-            # logger.exception emits at ERROR level with full traceback so users
-            # see the real cause (e.g. pydantic.v1 incompatibility on Python
-            # 3.14 with pydantic<2.13) instead of silently getting no traces.
+            # Why: log full traceback at ERROR so the real cause (e.g. pydantic.v1
+            # incompatibility on Py3.14 with pydantic<2.13) isn't silently swallowed.
             logger.exception("Error setting up LangFuse tracer")
             return False
 
@@ -360,9 +353,8 @@ class LangFuseTracer(BaseTracer):
         # End the root span
         self._root_span.end()
 
-        # Flush buffered events so they are delivered before the flow finishes.
-        # Best-effort: if the upstream is unreachable we still want flow end to
-        # complete without raising.
+        # Flush buffered events before flow end; best-effort so an unreachable upstream
+        # never makes flow completion raise.
         try:
             self._client.flush()
         except Exception as e:  # noqa: BLE001
@@ -375,19 +367,20 @@ class LangFuseTracer(BaseTracer):
         try:
             from langfuse.langchain import CallbackHandler
 
-            # Get the current span's context for proper nesting
+            # Why: bind to OUR client by public_key — get_client() with no key can't find a
+            # client created with an isolated tracer_provider (#13319) and raises mid-tool-call.
+            public_key = self._get_config().get("public_key")
+
             if self.spans:
-                # Use the most recent span as parent
                 current_span = next(reversed(self.spans.values()))
-                # Create callback with parent context
                 trace_ctx: TraceContext = {
                     "trace_id": self._trace_context["trace_id"],
                     "parent_span_id": current_span.id,
                 }
-                handler = CallbackHandler(trace_context=trace_ctx)
+                handler = CallbackHandler(public_key=public_key, trace_context=trace_ctx)
             else:
                 # Fall back to root trace context
-                handler = CallbackHandler(trace_context=self._trace_context)
+                handler = CallbackHandler(public_key=public_key, trace_context=self._trace_context)
 
         except (ImportError, ValueError, TypeError) as e:
             logger.debug(f"Error creating LangChain callback handler: {e}")

@@ -823,6 +823,11 @@ async def generate_flow_events(
         from langflow.api.v2.hitl import persist_human_input_card
 
         await persist_human_input_card(exc.data or {}, flow_id, graph.session_id or str(flow_id), job_id)
+        # Why: persist spans that ran before the pause so the trace detail isn't empty (merge is idempotent on resume).
+        try:
+            await graph.end_all_traces()
+        except Exception:  # noqa: BLE001
+            await logger.awarning("Failed to flush partial trace on pause for flow %s", flow_id, exc_info=True)
         event_manager.send_event(event_type="human_input_required", data=exc.data or {})
         await event_manager.queue.put((None, None, time.time()))
         return

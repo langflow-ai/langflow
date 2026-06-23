@@ -241,14 +241,53 @@ class TestRerouteDecisionOnTimeout:
         pending = self._pending(seconds_ago=5, timeout_s=60, fallback="fallback")
         assert reroute_decision_on_timeout(pending, {"action_id": "approve"})["action_id"] == "approve"
 
-    def test_late_but_no_fallback_keeps_decision(self):
+    def test_late_but_no_fallback_expires_decision(self):
+        """A late answer with no fallback expires to a sentinel so no branch is taken."""
         from langflow.api.v2.hitl import reroute_decision_on_timeout
+        from lfx.run.hitl import EXPIRED_ACTION
 
         pending = self._pending(seconds_ago=120, timeout_s=60, fallback=None)
-        assert reroute_decision_on_timeout(pending, {"action_id": "approve"})["action_id"] == "approve"
+        assert reroute_decision_on_timeout(pending, {"action_id": "approve"})["action_id"] == EXPIRED_ACTION
 
     def test_no_timeout_keeps_decision(self):
         from langflow.api.v2.hitl import reroute_decision_on_timeout
 
         pending = self._pending(seconds_ago=120, timeout_s=0, fallback="fallback")
         assert reroute_decision_on_timeout(pending, {"action_id": "approve"})["action_id"] == "approve"
+
+
+class TestUnwrapPausePayload:
+    """The stored pause payload is the wire frame; consumers need the raw request unwrapped."""
+
+    def test_flat_payload_passthrough(self):
+        from langflow.services.jobs.service import _unwrap_pause_payload
+
+        flat = {"request_id": "r", "timeout_seconds": 60, "allowed_decisions": ["approve"]}
+        assert _unwrap_pause_payload(flat) is flat
+
+    def test_langflow_envelope_unwrapped(self):
+        from langflow.services.jobs.service import _unwrap_pause_payload
+
+        raw = {"request_id": "r", "timeout_seconds": 60, "fallback_action": "fallback"}
+        wrapped = {"event": "human_input_required", "data": raw}
+        assert _unwrap_pause_payload(wrapped) == raw
+
+    def test_agui_custom_event_unwrapped(self):
+        from langflow.services.jobs.service import _unwrap_pause_payload
+
+        raw = {"request_id": "r", "timeout_seconds": 60, "fallback_action": "fallback"}
+        wrapped = {"type": "CUSTOM", "name": "langflow.human_input_required", "value": raw}
+        assert _unwrap_pause_payload(wrapped) == raw
+
+    def test_reroute_reads_timeout_through_agui_envelope(self):
+        """End-to-end: a wrapped AG-UI payload (what production stores) still triggers reroute."""
+        from datetime import datetime, timedelta, timezone
+
+        from langflow.api.v2.hitl import reroute_decision_on_timeout
+        from langflow.services.jobs.service import _unwrap_pause_payload
+
+        paused_at = (datetime.now(timezone.utc) - timedelta(seconds=120)).isoformat()
+        raw = {"request_id": "r", "timeout_seconds": 60, "fallback_action": "fallback", "paused_at": paused_at}
+        stored = {"type": "CUSTOM", "name": "langflow.human_input_required", "value": raw}
+        pending = _unwrap_pause_payload(stored)
+        assert reroute_decision_on_timeout(pending, {"action_id": "approve"})["action_id"] == "fallback"

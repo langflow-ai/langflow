@@ -21,6 +21,9 @@ export interface TraceListItem {
   input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
   pendingRequest?: PendingHumanRequest;
+  // Synthetic row for a paused run that has no TraceTable row yet (the pause path
+  // returns before traces flush), so the detail view must skip the trace fetch.
+  isPending?: boolean;
 }
 
 export interface TracesResponse {

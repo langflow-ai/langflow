@@ -27,13 +27,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
 
-// The decisions an agent can offer when a tool action pauses for approval
-// (mirrors langgraph's HumanInTheLoopMiddleware). Empty selection = no approval.
+// Decisions an agent can offer when a tool action pauses (empty selection = no approval).
+// Scoped to Approve/Reject for now (no Edit/Respond).
 const APPROVAL_ACTIONS: { id: string; label: string }[] = [
   { id: "approve", label: "Approve" },
-  { id: "edit", label: "Edit" },
   { id: "reject", label: "Reject" },
-  { id: "respond", label: "Respond" },
 ];
 
 function ApprovalActionsCell({

@@ -295,9 +295,8 @@ class NativeTracer(BaseTracer):
             has_span_errors = any(span.get("status") == SpanStatus.ERROR for span in self.completed_spans)
             trace_status = SpanStatus.ERROR if (error or has_span_errors) else SpanStatus.OK
 
-            # Only sum LangChain spans because component spans already aggregate their children's
-            # tokens — summing both levels would double-count every LLM call.
-            # OTel spec requires deriving total from input+output (no standard total_tokens key)
+            # Only sum LangChain spans (component spans already aggregate their children's
+            # tokens); OTel derives total from input+output as there is no standard total_tokens key.
             from langflow.services.tracing.formatting import safe_int_tokens
 
             total_tokens = sum(
@@ -321,9 +320,8 @@ class NativeTracer(BaseTracer):
                 )
                 await session.merge(trace)
 
-                # Pre-compute UUIDs and topologically sort so parents are inserted
-                # before children — required by PostgreSQL's immediate FK enforcement
-                # on span.parent_span_id → span.id.
+                # Pre-compute UUIDs and topologically sort so parents are inserted before children
+                # (required by PostgreSQL's immediate FK enforcement on span.parent_span_id → span.id).
                 resolved = resolve_span_uuids(self.completed_spans, self.trace_id)
                 resolved = topological_sort_spans(resolved)
 
@@ -364,9 +362,8 @@ class NativeTracer(BaseTracer):
         from langflow.services.tracing.native_callback import NativeCallbackHandler
         from langflow.services.tracing.service import component_context_var
 
-        # Component context is set before add_trace() is called,
-        # so it's available when components call get_langchain_callbacks() during flow execution.
-        # We need to check component_context in case _current_component_id was still None when callbacks were created.
+        # Component context is set before add_trace(), so it's available when components call
+        # get_langchain_callbacks() — checked here in case _current_component_id was None at creation.
         parent_span_id = None
         component_context = component_context_var.get(None)
         if component_context:

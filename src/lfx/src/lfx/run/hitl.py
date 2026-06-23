@@ -32,26 +32,31 @@ DecisionProvider = Callable[[dict[str, Any]], "dict[str, Any] | Awaitable[dict[s
 # A provider that never resolves a pause would loop forever; bound it.
 _MAX_PAUSES = 100
 
+# Sentinel action for a late answer when no fallback is configured: it matches no
+# branch, so ``HumanInput.route_branch`` stops every branch and the flow takes no path.
+EXPIRED_ACTION = "__expired__"
+
 
 def reroute_decision_on_timeout(pending: dict | None, decision: dict) -> dict:
-    """Reroute a late HITL decision to the fallback branch once the pause timed out.
+    """Reroute a late HITL decision once the pause timed out.
 
     Lazy timeout (no background watchdog): when the human responds we compare now against
-    ``paused_at + timeout_seconds``. If it elapsed and the node defined a fallback action,
-    the decision is rerouted there; otherwise the late answer is kept unchanged.
+    ``paused_at + timeout_seconds``. If it elapsed, the late answer must not take the path
+    the human picked: it is rerouted to the fallback branch when the node defined one, or
+    to an expired sentinel (no branch taken) otherwise. A timely answer is kept unchanged.
     """
     pending = pending or {}
     timeout_s = pending.get("timeout_seconds") or 0
     fallback = pending.get("fallback_action")
     paused_at = pending.get("paused_at")
-    if not (timeout_s and fallback and paused_at):
+    if not (timeout_s and paused_at):
         return decision
     try:
         paused_dt = datetime.fromisoformat(paused_at)
     except (TypeError, ValueError):
         return decision
     if (datetime.now(timezone.utc) - paused_dt).total_seconds() > timeout_s:
-        return {**(decision or {}), "action_id": fallback}
+        return {**(decision or {}), "action_id": fallback or EXPIRED_ACTION}
     return decision
 
 

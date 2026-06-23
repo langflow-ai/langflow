@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/contexts";
-import { markHumanInputSubmitted } from "@/controllers/API/agui/human-input-card";
+import {
+  getResumeContext,
+  markHumanInputSubmitted,
+} from "@/controllers/API/agui/human-input-card";
+import { consumeBackgroundEvents } from "@/controllers/API/agui/run-flow-bridge";
 import type { PendingHumanRequest } from "@/controllers/API/queries/workflows/use-get-pending-workflows";
 import { useResumeWorkflow } from "@/controllers/API/queries/workflows/use-resume-workflow";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
+import { useHitlStore } from "@/stores/hitlStore";
 import { cn } from "@/utils/utils";
 
 function PauseGlyph() {
@@ -25,9 +31,11 @@ function PauseGlyph() {
 export function TraceHitlBar({
   pending,
   onResolved,
+  onDecision,
 }: {
   pending: PendingHumanRequest;
   onResolved?: () => void;
+  onDecision?: (actionId: string) => void;
 }): JSX.Element {
   const { mutate: resume, isPending } = useResumeWorkflow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -40,9 +48,33 @@ export function TraceHitlBar({
         label: undefined,
       }));
 
+  // Drive every surface (canvas badge, playground, node statuses) live off the resumed
+  // run's event stream, mirroring the chat card — so nothing requires a hard refresh.
+  const reattachAndResolve = () => {
+    useHitlStore.getState().clear();
+    const flowStore = useFlowStore.getState();
+    flowStore.setAwaitingInput(false);
+    const reattach = getResumeContext(pending.request_id) ?? {
+      jobId: pending.job_id,
+      opts: {
+        flowId: pending.flow_id,
+        threadId: pending.session_id ?? undefined,
+      },
+    };
+    flowStore.setIsBuilding(true);
+    void consumeBackgroundEvents(reattach.jobId, reattach.opts, undefined, {
+      skipCardInjection: true,
+    });
+    queryClient.invalidateQueries({ queryKey: ["useGetTracesQuery"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetPendingWorkflows"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetTraceQuery"] });
+    onResolved?.();
+  };
+
   const decide = (actionId: string) => {
     if (isPending || resuming) return;
     setResuming(true);
+    onDecision?.(actionId);
     markHumanInputSubmitted(pending.request_id, actionId);
     resume(
       {
@@ -51,19 +83,13 @@ export function TraceHitlBar({
         decision: { action_id: actionId, values: {} },
       },
       {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["useGetTracesQuery"] });
-          queryClient.invalidateQueries({
-            queryKey: ["useGetPendingWorkflows"],
-          });
-          queryClient.invalidateQueries({ queryKey: ["useGetTraceQuery"] });
-          onResolved?.();
-        },
+        onSuccess: reattachAndResolve,
         onError: (err: Error) => {
           const status = (err as { response?: { status?: number } })?.response
             ?.status;
+          // 409 = already resumed (single-use); still reconcile the UI to the final state.
           if (status === 409) {
-            onResolved?.();
+            reattachAndResolve();
             return;
           }
           setResuming(false);

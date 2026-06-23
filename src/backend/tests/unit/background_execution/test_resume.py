@@ -66,6 +66,30 @@ async def _facade():
 
 @pytest.mark.real_services
 @pytest.mark.no_blockbuster
+async def test_pending_request_unwraps_agui_custom_event_envelope(real_services_job_service) -> None:
+    """get_pending unwraps the AG-UI CustomEvent wire frame to the raw request (top-level fields)."""
+    job_service = real_services_job_service
+    user_id, flow_id, job_id = uuid4(), uuid4(), uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
+    raw = {
+        "request_id": "node:run",
+        "kind": "node_input",
+        "timeout_seconds": 60,
+        "fallback_action": "fallback",
+        "paused_at": "2026-06-22T00:00:00+00:00",
+        "allowed_decisions": ["approve", "reject", "fallback"],
+    }
+    envelope = {"type": "CUSTOM", "name": "langflow.human_input_required", "value": raw}
+    await _runner(job_service, job_id, _pause_source(envelope)).run(job_id=job_id, source_kwargs={})
+
+    pending = await job_service.get_pending_human_request(job_id)
+    assert pending["request_id"] == "node:run"
+    assert pending["timeout_seconds"] == 60
+    assert pending["fallback_action"] == "fallback"
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
 async def test_resume_job_writes_resume_signal_with_decision(real_services_job_service) -> None:
     job_service = real_services_job_service
     user_id, job_id = await _suspend_a_job(job_service, request_id="req-a")

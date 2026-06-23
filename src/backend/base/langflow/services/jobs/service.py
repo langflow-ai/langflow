@@ -31,10 +31,27 @@ from langflow.services.database.models.jobs.model import (
 from langflow.services.deps import session_scope
 from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, DuplicateJobError, PauseRequested
 
-# Bounded retries for append_event's optimistic seq assignment. Real contention is
-# at most a couple of concurrent appenders per job (a worker plus the orphan sweep,
-# or multiple processes in the scaled backend), so this is comfortably generous.
+# Bounded retries for append_event's optimistic seq assignment — contention is at most a
+# couple of concurrent appenders per job (worker + orphan sweep, or scaled-out processes).
 _APPEND_EVENT_MAX_RETRIES = 50
+
+
+def _unwrap_pause_payload(payload: dict | None) -> dict | None:
+    """Return the raw pause request, unwrapping the wire adapter's envelope.
+
+    The pause event is persisted as the wire frame the runner saw: the langflow
+    adapter nests the raw request under ``data``, AG-UI under a ``CustomEvent``'s
+    ``value``. Consumers (resume single-use, timeout reroute, allowed-decision
+    gate) read ``request_id``/``timeout_seconds``/``allowed_decisions`` at the top
+    level, so peel one envelope layer when the payload is wrapped.
+    """
+    if not isinstance(payload, dict) or "request_id" in payload:
+        return payload
+    for key in ("value", "data"):
+        inner = payload.get(key)
+        if isinstance(inner, dict) and "request_id" in inner:
+            return inner
+    return payload
 
 
 class JobService(Service):
@@ -129,12 +146,9 @@ class JobService(Service):
 
         async with session_scope() as session:
             if dedupe_key is not None:
-                # Scope uniqueness to the owner: a client-controlled
-                # idempotency_key flows into dedupe_key, so a GLOBAL count would
-                # let user A collide with / DoS user B's key (and the error would
-                # leak that a job with that key exists for someone else). When
-                # user_id is None (single-tenant AUTO_LOGIN), the ownerless rows
-                # form their own dedupe space.
+                # Why: scope uniqueness to the owner — a client-controlled idempotency_key flows into
+                # dedupe_key, so a global count would let user A collide with / DoS user B's key (and leak
+                # its existence). Ownerless rows (single-tenant AUTO_LOGIN, user_id None) share one space.
                 stmt = (
                     select(func.count())
                     .select_from(Job)
@@ -267,17 +281,33 @@ class JobService(Service):
         msgpack, LE-1447) share one API. UNIQUE(job_id, kind) keeps a single live
         checkpoint per kind: a second save replaces the first.
         """
-        now = datetime.now(timezone.utc)
-        async with session_scope() as session:
-            stmt = select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).where(JobCheckpoint.kind == kind)
-            existing = (await session.exec(stmt)).first()
-            if existing is None:
-                session.add(JobCheckpoint(job_id=job_id, kind=kind, blob=blob, created_at=now, updated_at=now))
-            else:
-                existing.blob = blob
-                existing.updated_at = now
-                session.add(existing)
-            await session.flush()
+        # Why: read-then-insert is not atomic — two concurrent savers (e.g. two vertices hitting the
+        # pause boundary in one run) both see "no row" and both INSERT, hitting UNIQUE(job_id, kind).
+        # On that collision the row now exists, so a retry falls through to the update branch.
+        last_exc: Exception | None = None
+        for attempt in range(_APPEND_EVENT_MAX_RETRIES):
+            now = datetime.now(timezone.utc)
+            try:
+                async with session_scope() as session:
+                    stmt = select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).where(JobCheckpoint.kind == kind)
+                    existing = (await session.exec(stmt)).first()
+                    if existing is None:
+                        session.add(JobCheckpoint(job_id=job_id, kind=kind, blob=blob, created_at=now, updated_at=now))
+                    else:
+                        existing.blob = blob
+                        existing.updated_at = now
+                        session.add(existing)
+                    await session.flush()
+                    return
+            except IntegrityError as exc:
+                last_exc = exc
+            except OperationalError as exc:
+                if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
+                    raise
+                last_exc = exc
+            await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
+        msg = f"save_checkpoint exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (kind={kind})"
+        raise RuntimeError(msg) from last_exc
 
     async def load_checkpoint(self, job_id: UUID, kind: str) -> str | None:
         """Return the stored checkpoint blob for ``(job_id, kind)``, or None if absent."""
@@ -304,7 +334,7 @@ class JobService(Service):
                 .order_by(col(JobEvent.seq).desc())
             )
             row = (await session.exec(stmt)).first()
-            return row.payload if row is not None else None
+            return _unwrap_pause_payload(row.payload) if row is not None else None
 
     async def all_checkpoints(self, kind: str) -> list[tuple[UUID, str]]:
         """Return ``(job_id, blob)`` for every stored checkpoint of ``kind``.
@@ -657,9 +687,8 @@ class JobService(Service):
                 session.add(job)
                 reconciled.append(job.job_id)
             await session.flush()
-        # Append the terminal milestone via append_event (its own session) so the
-        # IntegrityError/seq-collision retry applies: a seq collision with a
-        # concurrent appender can no longer roll back the whole sweep.
+        # Why: append the terminal milestone via append_event (own session) so its seq-collision retry
+        # applies — a collision with a concurrent appender can no longer roll back the whole sweep.
         for job_id in reconciled:
             await self.append_event(job_id, "run_failed", dict(error_payload))
         return reconciled

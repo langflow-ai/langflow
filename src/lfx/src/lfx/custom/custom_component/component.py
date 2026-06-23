@@ -27,10 +27,8 @@ from lfx.custom.tree_visitor import RequiredInputsVisitor
 from lfx.exceptions.component import StreamingError
 from lfx.field_typing import Tool  # noqa: TC001
 
-# Lazy import to avoid circular dependency
-# from lfx.graph.state.model import create_state_model
-# Lazy import to avoid circular dependency
-# from lfx.graph.utils import has_chat_output
+# Lazy imports avoid circular deps: create_state_model (lfx.graph.state.model),
+# has_chat_output (lfx.graph.utils).
 from lfx.helpers.custom import format_type
 from lfx.memory import astore_message, aupdate_messages, delete_message
 from lfx.schema.artifact import get_artifact_type, post_process_raw
@@ -428,25 +426,42 @@ class Component(CustomComponent):
     def __deepcopy__(self, memo: dict) -> Component:
         if id(self) in memo:
             return memo[id(self)]
-        # Shallow-copy config/inputs: they may contain non-picklable services
-        # (e.g. _tracing_service holds ServiceManager with threading.RLock).
-        # use the mangled names to access the private attributes
+        # Shallow-copy config/inputs (mangled names) — they may hold non-picklable services
+        # (e.g. _tracing_service's ServiceManager with a threading.RLock).
         config = getattr(self, "_Component__config", {})
         inputs_raw = getattr(self, "_Component__inputs", {})
 
         kwargs = dict(config)
         kwargs.update(inputs_raw)
         new_component = type(self)(**kwargs)
-        # Register in memo before the recursive deepcopy calls below so reference
-        # cycles (e.g. components linked through _components) resolve to this same
-        # copy instead of producing a duplicate.
+        # Register in memo before the recursive deepcopy calls so reference cycles
+        # (e.g. components linked through _components) resolve to this same copy.
         memo[id(self)] = new_component
         new_component._code = self._code
-        # Must deep-copy so each graph_copy has independent Output objects.
-        # Output.cache=True by default, and output.value is set during execution.
-        # A shallow copy causes all concurrent requests to share the same Output objects,
-        # so the first request's cached output.value is returned to all subsequent requests.
-        new_component._outputs_map = deepcopy(self._outputs_map, memo)
+        # Deep-copy so each graph_copy has independent Output objects; a shallow copy
+        # shares cached output.value across concurrent requests (first result leaks to all).
+        try:
+            new_component._outputs_map = deepcopy(self._outputs_map, memo)
+        except Exception:  # noqa: BLE001
+            # Why: an output.value can hold a non-deepcopyable object (e.g. a Langfuse
+            # handler whose __new__ needs kw-only args); without this every tool call fails.
+            logger.warning(
+                "deepcopy failed for _outputs_map on %s — falling back to per-output safe copy",
+                type(self).__name__,
+                exc_info=True,
+            )
+            new_outputs_map = {}
+            for k, output in self._outputs_map.items():
+                try:
+                    new_outputs_map[k] = deepcopy(output, memo)
+                except Exception:  # noqa: BLE001
+                    output_copy = output.model_copy()
+                    try:
+                        output_copy.value = deepcopy(output.value, memo)
+                    except Exception:  # noqa: BLE001
+                        output_copy.value = output.value
+                    new_outputs_map[k] = output_copy
+            new_component._outputs_map = new_outputs_map
 
         # Safe deepcopy of inputs
         new_inputs = {}
@@ -479,10 +494,8 @@ class Component(CustomComponent):
                 new_inputs[k] = input_copy
 
         new_component._inputs = new_inputs
-        # Must deep-copy so each graph_copy has independent component instances.
-        # Shallow copies here caused all concurrent requests to share the same
-        # intermediate component objects (e.g. the LLM node), producing identical
-        # responses for different inputs under concurrent load.
+        # Deep-copy so each graph_copy has independent component instances; shallow copies
+        # shared intermediate components (e.g. the LLM node) and crossed concurrent responses.
         new_component._edges = deepcopy(self._edges, memo)
         new_component._components = deepcopy(self._components, memo)
         new_component._parameters = dict(self._parameters)
@@ -498,12 +511,8 @@ class Component(CustomComponent):
         try:
             module = inspect.getmodule(self.__class__)
             if module is None:
-                # Fallback: ``inspect.getmodule`` returns None when
-                # ``cls.__module__`` points to a ``sys.modules`` key that has
-                # been swapped or dropped (e.g. mid-reload, when the staging
-                # namespace was just collapsed back into the production
-                # namespace).  Read the file directly so cache rebuilds and
-                # template construction survive a transient inconsistency.
+                # Fallback when ``inspect.getmodule`` returns None (swapped/dropped
+                # ``sys.modules`` key, e.g. mid-reload): read the class file directly.
                 try:
                     class_code = Path(inspect.getfile(self.__class__)).read_text(encoding="utf-8")
                 except (OSError, TypeError) as inner:

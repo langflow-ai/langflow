@@ -73,6 +73,21 @@ async def test_save_checkpoint_upserts_single_row_per_kind(real_services_job_ser
 
 @pytest.mark.real_services
 @pytest.mark.no_blockbuster
+async def test_concurrent_first_save_does_not_raise_integrity_error(real_services_job_service) -> None:
+    """Racing savers of the first checkpoint must not hit UNIQUE — the loser retries into update."""
+    import asyncio
+
+    service = real_services_job_service
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    await asyncio.gather(*[service.save_checkpoint(job_id, "graph", f"blob-{i}") for i in range(8)])
+
+    assert (await service.load_checkpoint(job_id, "graph")).startswith("blob-")
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
 async def test_kinds_are_isolated_per_job(real_services_job_service) -> None:
     service = real_services_job_service
     job_id = uuid4()

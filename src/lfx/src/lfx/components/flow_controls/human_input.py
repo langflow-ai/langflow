@@ -22,12 +22,10 @@ _KIND_NODE_INPUT = "node_input"
 _FALLBACK_ACTION = "fallback"
 _UNIT_SECONDS = {"Minutes": 60, "Hours": 3600, "Days": 86400}
 
-# Picker presets mirror langgraph's HumanInTheLoopMiddleware decisions; combobox allows custom too.
+# Scoped to Approve/Reject for now (no Edit/Respond); combobox still allows a custom action.
 _PREDEFINED_ACTIONS = [
     "Approve",
-    "Edit",
     "Reject",
-    "Respond",
 ]
 
 
@@ -75,7 +73,19 @@ class HumanInput(Component):
         ),
     ]
 
-    outputs: list[Output] = []
+    # Default branch outputs mirror the default ``decisions`` so a freshly dragged
+    # node shows handles immediately (update_outputs only fires on a field change).
+    outputs: list[Output] = [
+        Output(display_name="Approve", name="branch_approve", method="route_branch", group_outputs=True),
+        Output(display_name="Reject", name="branch_reject", method="route_branch", group_outputs=True),
+    ]
+
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
+        """Rebuild branch outputs from the saved User Actions so loaded/refreshed flows keep their handles."""
+        new_frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        decisions = (new_frontend_node.get("template", {}).get("decisions") or {}).get("value")
+        self.update_outputs(new_frontend_node, "decisions", decisions if decisions is not None else [])
+        return new_frontend_node
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """One branch output per selected action (+ optional fallback) + a stable action output."""

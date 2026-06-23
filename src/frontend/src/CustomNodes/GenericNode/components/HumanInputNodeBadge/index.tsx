@@ -54,7 +54,7 @@ export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
       <PopoverContent
         side="bottom"
         align="start"
-        className="w-96 p-0"
+        className="w-96 overflow-hidden rounded-xl border-0 p-0 shadow-md"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <HumanInputCard content={pending.content} />
