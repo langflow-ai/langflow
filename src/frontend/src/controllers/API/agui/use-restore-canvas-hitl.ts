@@ -1,28 +1,20 @@
 import { useEffect } from "react";
-import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import { useGetPendingWorkflows } from "@/controllers/API/queries/workflows/use-get-pending-workflows";
 import { useHitlStore } from "@/stores/hitlStore";
-import type { Message } from "@/types/messages";
-import {
-  findHumanInputContent,
-  registerResumeContext,
-} from "./human-input-card";
+import type { InteractiveContent } from "@/types/chat";
+import { registerResumeContext } from "./human-input-card";
 
 /**
- * Restore the canvas awaiting-input badge after a reload (LE-1603 reconnect): the
- * pending state lives in memory and is lost on F5, but the pause is persisted as a
- * chat message. Find the latest unanswered human_input card for the flow and re-arm
- * the badge — but only when the backend still lists that run as pending. A card whose
- * job was resumed elsewhere / expired keeps `submitted_action` empty (the resume does
- * not always stamp it), so trusting the message alone re-armed a stale badge on every
- * open; cross-checking the pending list is the source of truth and also clears the
- * badge when navigating to a flow with nothing pending.
+ * Keep the canvas awaiting-input badge in sync with the backend pending list (LE-1603).
+ *
+ * The pending list is the single source of truth: it is polled (every 5s) and carries the full
+ * card (request_id, prompt, options, job_id), so the badge derives from it directly. Earlier this
+ * cross-checked the messages query, but that query is NOT polled — during a live run it lags and
+ * has no card yet, so the 5s pending poll re-ran this reconciler, found no matching message, and
+ * cleared the badge "after a while". Deriving from the pending list survives the live run and the
+ * reload alike, and clears the badge exactly when nothing is pending.
  */
 export function useRestoreCanvasHitl(flowId: string | undefined): void {
-  const { data } = useGetMessagesQuery(
-    { id: flowId ?? "", mode: "union" },
-    { enabled: Boolean(flowId) },
-  );
   const { data: pendingRequests } = useGetPendingWorkflows(
     { flowId },
     { enabled: Boolean(flowId) },
@@ -30,35 +22,31 @@ export function useRestoreCanvasHitl(flowId: string | undefined): void {
 
   useEffect(() => {
     if (pendingRequests === undefined) return;
-    const pendingByRequestId = new Set(
-      pendingRequests.map((req) => req.request_id),
-    );
-    const rows =
-      (data as { rows?: { data?: Message[] } } | undefined)?.rows?.data ?? [];
-    for (let i = rows.length - 1; i >= 0; i--) {
-      const message = rows[i];
-      const content = findHumanInputContent(message.content_blocks);
-      if (
-        content &&
-        !content.submitted_action &&
-        content.request_id &&
-        pendingByRequestId.has(content.request_id)
-      ) {
-        if (content.job_id) {
-          registerResumeContext(content.request_id, content.job_id, {
-            flowId: message.flow_id ?? flowId ?? "",
-            threadId: message.session_id ?? undefined,
-          });
-        }
-        useHitlStore.getState().setPending({
-          nodeId: content.request_id.split(":")[0],
-          content,
-        });
-        return;
-      }
+    if (pendingRequests.length === 0) {
+      useHitlStore.getState().clear();
+      return;
     }
-    // Nothing actually pending for this flow — drop any stale badge (e.g. resolved
-    // elsewhere, expired, or carried over from a previously opened flow).
-    useHitlStore.getState().clear();
-  }, [data, pendingRequests, flowId]);
+    const latest = [...pendingRequests].sort((a, b) =>
+      (a.created_at ?? "").localeCompare(b.created_at ?? ""),
+    )[pendingRequests.length - 1];
+    const content: InteractiveContent = {
+      type: "human_input",
+      kind: (latest.kind as InteractiveContent["kind"]) ?? "node_input",
+      request_id: latest.request_id,
+      prompt: latest.prompt ?? undefined,
+      options: latest.options ?? [],
+      allowed_decisions: latest.allowed_decisions ?? [],
+      job_id: latest.job_id,
+    };
+    if (latest.job_id) {
+      registerResumeContext(latest.request_id, latest.job_id, {
+        flowId: latest.flow_id ?? flowId ?? "",
+        threadId: latest.session_id ?? undefined,
+      });
+    }
+    useHitlStore.getState().setPending({
+      nodeId: latest.request_id.split(":")[0],
+      content,
+    });
+  }, [pendingRequests, flowId]);
 }

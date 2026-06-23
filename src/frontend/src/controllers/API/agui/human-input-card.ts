@@ -69,7 +69,8 @@ export function registerResumeContext(
   jobId: string,
   opts: WorkflowRunOptions,
 ): void {
-  if (!resumeRegistry.has(requestId)) resumeRegistry.set(requestId, { jobId, opts });
+  if (!resumeRegistry.has(requestId))
+    resumeRegistry.set(requestId, { jobId, opts });
 }
 
 function forEachMessageCache(
@@ -103,26 +104,33 @@ export function markHumanInputSubmitted(
   actionId: string,
 ): void {
   const messageId = `human-input-${requestId}`;
+  const stampBlocks = (blocks: ContentBlock[] | undefined): ContentBlock[] =>
+    (blocks ?? []).map((block) => ({
+      ...block,
+      contents: (block.contents ?? []).map((c) =>
+        c?.type === "human_input" ? { ...c, submitted_action: actionId } : c,
+      ),
+    }));
   forEachMessageCache((key, messages) => {
     if (!messages.some((m) => m.id === messageId)) return;
     queryClient.setQueryData(key, (old: Message[] = []) =>
       old.map((m) =>
         m.id === messageId
-          ? {
-              ...m,
-              content_blocks: (m.content_blocks ?? []).map((block) => ({
-                ...block,
-                contents: (block.contents ?? []).map((c) =>
-                  c?.type === "human_input"
-                    ? { ...c, submitted_action: actionId }
-                    : c,
-                ),
-              })),
-            }
+          ? { ...m, content_blocks: stampBlocks(m.content_blocks) }
           : m,
       ),
     );
   });
+  // injectHumanInputCard writes both caches, so the resolve must stamp both — else a surface reading
+  // useMessagesStore (legacy IOModal) keeps an interactive card after the other surface answered.
+  const store = useMessagesStore.getState();
+  const target = store.messages.find((m) => m.id === messageId);
+  if (target) {
+    store.updateMessage({
+      ...target,
+      content_blocks: stampBlocks(target.content_blocks),
+    });
+  }
 }
 
 /** Render the pause as an interactive card in the chat and flag awaiting-input. */
@@ -165,6 +173,8 @@ export function injectHumanInputCard(
   updateMessage(message);
   useMessagesStore.getState().addMessage(message);
   // Canvas: surface the pause on the node that requested it (request_id = node_id:run_id).
-  useHitlStore.getState().setPending({ nodeId: content.request_id.split(":")[0], content });
+  useHitlStore
+    .getState()
+    .setPending({ nodeId: content.request_id.split(":")[0], content });
   useFlowStore.getState().setAwaitingInput(true);
 }

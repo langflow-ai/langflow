@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Sequence
 from datetime import datetime, timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -288,33 +288,20 @@ class JobService(Service):
         msgpack, LE-1447) share one API. UNIQUE(job_id, kind) keeps a single live
         checkpoint per kind: a second save replaces the first.
         """
-        # Why: read-then-insert is not atomic — two concurrent savers (e.g. two vertices hitting the
-        # pause boundary in one run) both see "no row" and both INSERT, hitting UNIQUE(job_id, kind).
-        # On that collision the row now exists, so a retry falls through to the update branch.
-        last_exc: Exception | None = None
-        for attempt in range(_APPEND_EVENT_MAX_RETRIES):
-            now = datetime.now(timezone.utc)
-            try:
-                async with session_scope() as session:
-                    stmt = select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).where(JobCheckpoint.kind == kind)
-                    existing = (await session.exec(stmt)).first()
-                    if existing is None:
-                        session.add(JobCheckpoint(job_id=job_id, kind=kind, blob=blob, created_at=now, updated_at=now))
-                    else:
-                        existing.blob = blob
-                        existing.updated_at = now
-                        session.add(existing)
-                    await session.flush()
-                    return
-            except IntegrityError as exc:
-                last_exc = exc
-            except OperationalError as exc:
-                if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
-                    raise
-                last_exc = exc
-            await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
-        msg = f"save_checkpoint exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (kind={kind})"
-        raise RuntimeError(msg) from last_exc
+        # Why: a single-statement dialect upsert is atomic, so two concurrent savers (two vertices at
+        # one pause boundary) never collide on UNIQUE(job_id, kind) — no read-then-insert race to log.
+        now = datetime.now(timezone.utc)
+        async with session_scope() as session:
+            if session.get_bind().dialect.name == "postgresql":
+                from sqlalchemy.dialects.postgresql import insert as _dialect_insert
+            else:
+                from sqlalchemy.dialects.sqlite import insert as _dialect_insert
+            stmt = (
+                _dialect_insert(JobCheckpoint)
+                .values(id=uuid4(), job_id=job_id, kind=kind, blob=blob, created_at=now, updated_at=now)
+                .on_conflict_do_update(index_elements=["job_id", "kind"], set_={"blob": blob, "updated_at": now})
+            )
+            await session.exec(stmt)
 
     async def load_checkpoint(self, job_id: UUID, kind: str) -> str | None:
         """Return the stored checkpoint blob for ``(job_id, kind)``, or None if absent."""

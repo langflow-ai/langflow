@@ -79,6 +79,14 @@ export default function HumanInputCard({
           flowStore.setAwaitingInput(false);
           // Resolve the canvas badge now — covers the reconnect path with no reattach.
           useHitlStore.getState().clear();
+          // Resume synchronously drops this pause from the pending list and stamps submitted_action
+          // on the card; refetch both so every surface re-derives as resolved (reattach won't).
+          void queryClient.invalidateQueries({
+            queryKey: ["useGetPendingWorkflows"],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ["useGetMessagesQuery"],
+          });
           const reattach = getResumeContext(content.request_id);
           if (reattach) {
             flowStore.setIsBuilding(true);
@@ -90,12 +98,6 @@ export default function HumanInputCard({
                 skipCardInjection: true,
               },
             );
-          } else {
-            // After a reload there is no live stream to reattach to; refetch the
-            // history so the resumed run's persisted output shows up.
-            void queryClient.invalidateQueries({
-              queryKey: ["useGetMessagesQuery"],
-            });
           }
         },
         onError: (err: Error) => {

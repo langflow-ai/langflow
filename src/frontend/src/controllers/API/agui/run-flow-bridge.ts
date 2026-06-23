@@ -533,6 +533,7 @@ export async function consumeBackgroundEvents(
   const touchedNodeIds = new Set<string>();
   let runId = jobId;
   let suspended = false;
+  let terminalSeen = false;
 
   const ctx: BridgeContext = {
     setRunId: (r) => {
@@ -560,12 +561,18 @@ export async function consumeBackgroundEvents(
 
   const finish = () => {
     flowStore.updateEdgesRunningByNodes([...touchedNodeIds], false);
-    // A suspended run stops building and parks awaiting input; the spinner reads
-    // isBuilding, so it must clear on suspend too — only awaitingInput differs.
+    // The spinner reads isBuilding, so it clears whether the run parked or ended.
     flowStore.setIsBuilding(false);
-    flowStore.setAwaitingInput(suspended);
-    // The run ended (not parked at a pause): drop the canvas awaiting-input badge.
-    if (!suspended) useHitlStore.getState().clear();
+    // Only a definitive terminal (RUN_FINISHED/RUN_ERROR) or an observed pause may change the
+    // awaiting/badge state. A stream that ends having seen NEITHER — e.g. a reattach whose replay
+    // started past the pause, or the live tail that never gets the pause frame — must leave the
+    // parked state intact; clearing on mere absence drops the badge of a still-SUSPENDED run.
+    if (suspended) {
+      flowStore.setAwaitingInput(true);
+    } else if (terminalSeen) {
+      flowStore.setAwaitingInput(false);
+      useHitlStore.getState().clear();
+    }
     flowStore.revertBuiltStatusFromBuilding();
   };
 
@@ -604,6 +611,7 @@ export async function consumeBackgroundEvents(
       if (handleAGUIEvent(event, ctx)) {
         // A terminal event supersedes a replayed pause (resume reattach re-emits it).
         suspended = false;
+        terminalSeen = true;
         return true;
       }
       return false;
