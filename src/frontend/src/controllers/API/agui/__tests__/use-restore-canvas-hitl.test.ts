@@ -8,9 +8,12 @@ const mockPending = jest.fn();
 jest.mock("@/controllers/API/queries/messages", () => ({
   useGetMessagesQuery: (...args: unknown[]) => mockMessages(...args),
 }));
-jest.mock("@/controllers/API/queries/workflows/use-get-pending-workflows", () => ({
-  useGetPendingWorkflows: (...args: unknown[]) => mockPending(...args),
-}));
+jest.mock(
+  "@/controllers/API/queries/workflows/use-get-pending-workflows",
+  () => ({
+    useGetPendingWorkflows: (...args: unknown[]) => mockPending(...args),
+  }),
+);
 
 const card = (requestId: string, submitted?: string) => ({
   flow_id: "flow-1",

@@ -69,7 +69,8 @@ export function registerResumeContext(
   jobId: string,
   opts: WorkflowRunOptions,
 ): void {
-  if (!resumeRegistry.has(requestId)) resumeRegistry.set(requestId, { jobId, opts });
+  if (!resumeRegistry.has(requestId))
+    resumeRegistry.set(requestId, { jobId, opts });
 }
 
 function forEachMessageCache(
@@ -165,6 +166,8 @@ export function injectHumanInputCard(
   updateMessage(message);
   useMessagesStore.getState().addMessage(message);
   // Canvas: surface the pause on the node that requested it (request_id = node_id:run_id).
-  useHitlStore.getState().setPending({ nodeId: content.request_id.split(":")[0], content });
+  useHitlStore
+    .getState()
+    .setPending({ nodeId: content.request_id.split(":")[0], content });
   useFlowStore.getState().setAwaitingInput(true);
 }

@@ -38,7 +38,9 @@ jest.mock("@/stores/alertStore", () => ({
 
 jest.mock("../../../common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name }: { name: string }) => <span data-testid={`icon-${name}`} />,
+  default: ({ name }: { name: string }) => (
+    <span data-testid={`icon-${name}`} />
+  ),
 }));
 
 jest.mock("react-markdown", () => ({
@@ -48,7 +50,9 @@ jest.mock("react-markdown", () => ({
 jest.mock("remark-gfm", () => ({ __esModule: true, default: () => {} }));
 
 jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+  Button: ({ children, ...props }: any) => (
+    <button {...props}>{children}</button>
+  ),
 }));
 jest.mock("@/components/ui/input", () => ({
   Input: (props: any) => <input {...props} />,
@@ -72,8 +76,12 @@ describe("HumanInputCard", () => {
   it("renders the prompt and one button per option", () => {
     render(<HumanInputCard content={_approval} onSubmit={jest.fn()} />);
     expect(screen.getByText("Approve refund?")).toBeInTheDocument();
-    expect(screen.getByTestId("human-input-decision-approve")).toBeInTheDocument();
-    expect(screen.getByTestId("human-input-decision-reject")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("human-input-decision-approve"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("human-input-decision-reject"),
+    ).toBeInTheDocument();
   });
 
   it("submits the chosen action with empty values when there are no form fields", () => {
@@ -85,7 +93,9 @@ describe("HumanInputCard", () => {
 
   it("disables the controls once submitted", () => {
     const onSubmit = jest.fn();
-    render(<HumanInputCard content={_approval} onSubmit={onSubmit} submitted />);
+    render(
+      <HumanInputCard content={_approval} onSubmit={onSubmit} submitted />,
+    );
     fireEvent.click(screen.getByTestId("human-input-decision-approve"));
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.getByTestId("human-input-decision-approve")).toBeDisabled();
@@ -134,9 +144,14 @@ describe("HumanInputCard", () => {
     onSuccess();
     expect(mockSetAwaitingInput).toHaveBeenCalledWith(false);
     expect(mockSetIsBuilding).toHaveBeenCalledWith(true);
-    expect(mockConsume).toHaveBeenCalledWith("job-1", { flowId: "f1" }, undefined, {
-      skipCardInjection: true,
-    });
+    expect(mockConsume).toHaveBeenCalledWith(
+      "job-1",
+      { flowId: "f1" },
+      undefined,
+      {
+        skipCardInjection: true,
+      },
+    );
   });
 
   it("disables controls after a self-resume click (single-use)", () => {
@@ -166,9 +181,13 @@ describe("HumanInputCard", () => {
   it("keeps only the chosen option and removes the others after selecting", () => {
     const content: InteractiveContent = { ..._approval, job_id: "job-1" };
     render(<HumanInputCard content={content} />);
-    expect(screen.getByTestId("human-input-decision-reject")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("human-input-decision-reject"),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("human-input-decision-approve"));
-    expect(screen.getByTestId("human-input-decision-approve")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("human-input-decision-approve"),
+    ).toBeInTheDocument();
     expect(
       screen.queryByTestId("human-input-decision-reject"),
     ).not.toBeInTheDocument();
