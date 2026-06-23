@@ -30,6 +30,7 @@ from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     code_hash_matches_any_template,
     get_component_hash_lookups_for_validation,
+    get_trusted_code_for_validation,
 )
 from sqlmodel import select
 
@@ -1307,7 +1308,21 @@ async def custom_component(
             detail="Custom component creation is disabled",
         )
 
-    component = Component(_code=raw_code.code)
+    # In restricted mode the request only reached here by matching a known
+    # template hash. That hash is a truncated digest, so a second-preimage
+    # collision could clear the gate with attacker-controlled bytes. Execute
+    # the server's trusted copy keyed by the same hash instead of the client
+    # bytes, and fail closed if no trusted source can be recovered.
+    effective_code = raw_code.code
+    if _requires_component_hash_lookups(settings, user):
+        effective_code = get_trusted_code_for_validation(raw_code.code)
+        if effective_code is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled",
+            )
+
+    component = Component(_code=effective_code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
     if raw_code.frontend_node is not None:
@@ -1379,8 +1394,21 @@ async def custom_component_update(
             detail="Custom component creation is disabled",
         )
 
+    # In restricted mode the request only reached here by matching a known
+    # template hash. Because that hash is a truncated digest, execute the
+    # server's trusted copy keyed by the same hash rather than the client
+    # bytes (defeats a hash collision), failing closed if it can't be found.
+    effective_code = code_request.code
+    if _requires_component_hash_lookups(settings_service.settings, user):
+        effective_code = get_trusted_code_for_validation(code_request.code)
+        if effective_code is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled",
+            )
+
     try:
-        component = Component(_code=code_request.code)
+        component = Component(_code=effective_code)
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
@@ -1428,7 +1456,16 @@ async def custom_component_update(
             field_name=code_request.field,
         )
         if "code" not in updated_build_config or not updated_build_config.get("code", {}).get("value"):
-            updated_build_config = add_code_field_to_build_config(updated_build_config, code_request.code)
+            updated_build_config = add_code_field_to_build_config(updated_build_config, effective_code)
+        else:
+            # Never echo client bytes back in restricted mode. A colliding
+            # payload may have cleared the truncated-hash gate, but the server
+            # executed its trusted copy (``effective_code``); the returned node
+            # must carry that trusted code too, otherwise the attacker bytes
+            # could be persisted into a saved flow and later exec'd on the
+            # build path. In the default (unrestricted) mode ``effective_code``
+            # is ``code_request.code``, so this is a no-op.
+            updated_build_config["code"]["value"] = effective_code
         component_node["template"] = updated_build_config
 
         if isinstance(cc_instance, Component):

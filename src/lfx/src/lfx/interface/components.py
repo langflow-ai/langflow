@@ -26,7 +26,7 @@ from lfx.extension import (
 from lfx.extension.bundle_registry import BundleRecord, get_default_registry
 from lfx.extension.reload import register_post_swap_hook
 from lfx.log.logger import logger
-from lfx.utils.flow_validation import collect_component_hash_lookups
+from lfx.utils.flow_validation import collect_code_by_hash, collect_component_hash_lookups
 from lfx.utils.validate_cloud import (
     filter_disabled_components_from_dict,
     is_component_disabled_in_astra_cloud,
@@ -59,6 +59,10 @@ class ComponentCache:
         # None means "not yet loaded" (fail-closed); {} means "loaded, no components found".
         self.type_to_current_hash: dict[str, set[str]] | None = None
         self.all_known_hashes: set[str] | None = None
+        # Maps each known code-hash to its trusted server-side source. Used to
+        # substitute the trusted copy for client bytes once the hash gate
+        # passes, so a truncated-hash collision can't run attacker code.
+        self.code_by_hash: dict[str, str] | None = None
 
 
 # Singleton instance
@@ -688,6 +692,7 @@ def _build_code_hash_lookups(cache: ComponentCache) -> None:
 
     cache.type_to_current_hash = type_to_hash
     cache.all_known_hashes = all_hashes
+    cache.code_by_hash = collect_code_by_hash(cache.all_types_dict)
     logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
 
 
@@ -1093,9 +1098,12 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
     # Invalidate the precomputed code-hash lookups so flow validation
     # picks up the freshly-loaded class bodies instead of comparing
     # against the pre-reload hashes.  ``get_component_hash_lookups_for_validation``
-    # rebuilds them lazily on the next call when both fields are None.
+    # rebuilds them lazily on the next call when the fields are None.  The
+    # trusted-source map is invalidated too so the endpoint never substitutes
+    # stale source after a bundle reload.
     component_cache.type_to_current_hash = None
     component_cache.all_known_hashes = None
+    component_cache.code_by_hash = None
 
 
 async def get_and_cache_all_types_dict(

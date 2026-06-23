@@ -414,7 +414,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.3"
+                    "version": "0.137.2"
                   },
                   {
                     "name": "lfx",
@@ -703,7 +703,7 @@
                   },
                   {
                     "name": "cryptography",
-                    "version": "48.0.0"
+                    "version": "48.0.1"
                   },
                   {
                     "name": "langchain_chroma",
