@@ -415,6 +415,33 @@ class TracingService(Service):
             except Exception:  # noqa: BLE001
                 logger.exception(f"Error starting trace {component_trace_context.trace_name}")
 
+    def record_event_span(
+        self,
+        *,
+        span_id: str,
+        name: str,
+        outputs: dict[str, Any],
+        span_type: str = "chain",
+    ) -> None:
+        """Record a standalone, instantaneous span into the active trace.
+
+        Used for non-component steps such as the resolved HITL gate, which has no vertex of its own
+        but should be persisted in the trace so it survives a page refresh (not only in client state).
+        """
+        if self.deactivated:
+            return
+        trace_context = trace_context_var.get()
+        if trace_context is None:
+            return
+        for tracer in trace_context.tracers.values():
+            if not tracer.ready:
+                continue
+            try:
+                tracer.add_trace(span_id, name, span_type, {}, {}, None)
+                tracer.end_trace(trace_id=span_id, trace_name=name, outputs=outputs)
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error recording event span {name}")
+
     def _end_component_traces(
         self,
         component_trace_context: ComponentTraceContext,

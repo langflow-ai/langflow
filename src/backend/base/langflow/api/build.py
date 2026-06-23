@@ -433,9 +433,21 @@ async def generate_flow_events(
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        # Resume skips the initial run's trace setup (trace_context_var stays unset → post-pause
+        # vertices like Chat Output never trace); re-init so the resumed vertices trace.
+        graph.flow_name = graph.flow_name or flow_name
+        await graph.initialize_run()
         pending = await get_job_service().get_pending_human_request(job_id)
         decision = reroute_decision_on_timeout(pending, resume["decision"])
         graph.human_input_decisions = {resume["request_id"]: decision}
+        action_id = str((decision or {}).get("action_id", ""))
+        gate_label = "Rejected" if "reject" in action_id.lower() else "Approved"
+        if graph.tracing_service:
+            graph.tracing_service.record_event_span(
+                span_id=f"hitl-{resume['request_id']}",
+                name=f"Human In The Loop — {gate_label}",
+                outputs={"decision": action_id},
+            )
         for vertex in graph.vertices:
             if f"{vertex.id}:{run_id}" == resume["request_id"]:
                 vertex.built = False
@@ -545,6 +557,7 @@ async def generate_flow_events(
                 chat_service=chat_service,
                 user_id=str(current_user.id),
                 session_id=effective_session_id,
+                run_id=str(job_id) if job_id is not None else run_id,
             )
             if source_flow_id is not None:
                 graph.flow_id = str(flow_id)
@@ -560,6 +573,7 @@ async def generate_flow_events(
             user_id=str(current_user.id),
             flow_name=flow_name,
             session_id=effective_session_id,
+            run_id=str(job_id) if job_id is not None else run_id,
         )
 
     def sort_vertices(graph: Graph) -> list[str]:

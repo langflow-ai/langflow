@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import Loading from "@/components/ui/loading";
 import { useGetTraceQuery } from "@/controllers/API/queries/traces";
 import useFlowStore from "@/stores/flowStore";
-import { type HitlExecutedOutput, useHitlStore } from "@/stores/hitlStore";
+import type { HitlExecutedOutput } from "@/stores/hitlStore";
 import { SpanDetail } from "./SpanDetail";
 import { SpanTree } from "./SpanTree";
 import { TraceHitlBar } from "./TraceHitlBar";
@@ -37,24 +37,12 @@ export function TraceDetailView({
   const outputs = useFlowStore((state) => state.outputs);
   const isResuming = pollUpdates && isBuilding && !pendingRequest;
 
-  // The HITL gate is not persisted as a backend span, so remember the decision per trace to keep
-  // the resolved step visible after the panel is closed and reopened.
-  const storedResolved = useHitlStore((state) =>
-    traceId ? state.resolved[traceId] : undefined,
-  );
-  const setStoredResolved = useHitlStore((state) => state.setResolved);
-  const storedOutputs = useHitlStore((state) =>
-    traceId ? state.executedOutputs[traceId] : undefined,
-  );
-  const setStoredOutputs = useHitlStore((state) => state.setExecutedOutputs);
-  const effectiveResolved = resolvedAction ?? storedResolved ?? null;
-  const recordDecision = useCallback(
-    (action: string) => {
-      setResolvedAction(action);
-      if (traceId) setStoredResolved(traceId, action);
-    },
-    [traceId, setStoredResolved],
-  );
+  // The backend persists the resolved gate as a trace span; this local pick only bridges the brief
+  // window between the click and the resumed trace flushing, so the step never flickers out.
+  const effectiveResolved = resolvedAction;
+  const recordDecision = useCallback((action: string) => {
+    setResolvedAction(action);
+  }, []);
 
   // Tick a live elapsed clock while resuming, mirroring the canvas's build timer. The AG-UI resume
   // path doesn't set buildStartTime, so fall back to a local start captured when resuming begins.
@@ -133,14 +121,8 @@ export function TraceDetailView({
     return result;
   }, [outputs, flowPool]);
 
-  // flowPool clears on canvas navigation, so cache the executed outputs per trace and fall back to
-  // them — otherwise Chat Output vanishes from a resumed HITL trace when leaving and returning.
-  useEffect(() => {
-    if (traceId && liveOutputs.length) setStoredOutputs(traceId, liveOutputs);
-  }, [traceId, liveOutputs, setStoredOutputs]);
-
-  // HITL resume can drop the terminal output span (Chat Output) from the backend trace; re-inject
-  // it, gated to the active HITL run so old traces never get this session's outputs.
+  // The resumed run flushes Chat Output to the backend trace, but only after it finishes; bridge the
+  // live window by injecting it from flowPool, deduped by name so the flushed span never doubles up.
   const executedOutputSpans = useMemo<Span[]>(() => {
     if (!trace) return [];
     const hasHitlContext = !!(
@@ -152,8 +134,7 @@ export function TraceDetailView({
     const existing = new Set(
       (trace.spans ?? []).map((s) => s.name.toLowerCase()),
     );
-    const source = liveOutputs.length ? liveOutputs : (storedOutputs ?? []);
-    return source
+    return liveOutputs
       .filter((o) => !existing.has(o.name.toLowerCase()))
       .map((o) => ({
         id: `executed-${o.id}`,
@@ -166,21 +147,17 @@ export function TraceDetailView({
         outputs: o.outputs,
         children: [],
       }));
-  }, [
-    trace,
-    pendingRequest,
-    effectiveResolved,
-    isResuming,
-    liveOutputs,
-    storedOutputs,
-  ]);
+  }, [trace, pendingRequest, effectiveResolved, isResuming, liveOutputs]);
 
   const treeSpans = useMemo(() => {
     if (!trace || !summarySpan) return [] as Span[];
     const children = [...summarySpan.children, ...executedOutputSpans];
-    // Surface the gate as its own node: "awaiting" while pending, then a resolved step showing the
-    // decision after Approve/Reject — so it stays in the completed trace rather than disappearing.
-    if (!pendingRequest && !effectiveResolved)
+    // The resumed trace carries its own "Human In The Loop" span once flushed; defer to it and only
+    // synthesize the gate for the live window (awaiting a decision, or just-resolved pre-flush).
+    const backendHasGate = (trace.spans ?? []).some((s) =>
+      s.name.toLowerCase().startsWith("human in the loop"),
+    );
+    if (backendHasGate || (!pendingRequest && !effectiveResolved))
       return [{ ...summarySpan, children }];
     const decisionLabel = effectiveResolved
       ? effectiveResolved.toLowerCase().includes("reject")

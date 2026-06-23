@@ -68,7 +68,8 @@ describe("TraceDetailView", () => {
   beforeEach(() => {
     mockTrace = null;
     mockIsLoading = false;
-    useHitlStore.setState({ pending: null, resolved: {}, executedOutputs: {} });
+    useHitlStore.setState({ pending: null });
+    useFlowStore.setState({ isBuilding: false } as never);
   });
 
   it("renders a run summary node above the span hierarchy and shows trace input/output when selected", async () => {
@@ -291,8 +292,10 @@ describe("TraceDetailView", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps the resolved gate after the trace panel is closed and reopened", () => {
-    const baseTrace: Trace = {
+  it("renders the resolved gate from the backend trace span after reopen", () => {
+    // The resumed run flushes a "Human In The Loop — Approved" span to the backend trace, so the
+    // gate survives reopen/refresh from the durable trace alone — no client-side persistence.
+    mockTrace = {
       id: "trace-reentry",
       name: "Gated Trace",
       status: "ok",
@@ -305,51 +308,48 @@ describe("TraceDetailView", () => {
       sessionId: "session-1",
       input: {},
       output: {},
-      spans: [],
-    };
-    mockTrace = baseTrace;
-    const pending = {
-      job_id: "job-1",
-      flow_id: "flow-1",
-      session_id: "session-1",
-      created_at: null,
-      request_id: "Agent-oYRYa:job-1",
-      kind: "tool_approval" as const,
-      prompt: null,
-      options: [],
-      allowed_decisions: ["approve", "reject"],
+      spans: [
+        {
+          id: "hitl-Agent-oYRYa:job-1",
+          name: "Human In The Loop — Approved",
+          type: "none",
+          status: "ok",
+          startTime: "2024-01-01T00:00:00Z",
+          endTime: "2024-01-01T00:00:01Z",
+          latencyMs: null,
+          inputs: {},
+          outputs: { decision: "approve" },
+          children: [],
+        },
+      ],
     };
 
-    const { unmount } = render(
-      <TraceDetailView
-        traceId="trace-reentry"
-        flowName="Flow"
-        hasTrace
-        pendingRequest={pending}
-      />,
+    render(
+      <TraceDetailView traceId="trace-reentry" flowName="Flow" hasTrace />,
     );
-    fireEvent.click(screen.getByTestId("hitl-bar"));
-    expect(
-      screen.getByText(/Human In The Loop — Approved/),
-    ).toBeInTheDocument();
-
-    // Leave the trace (unmount clears local state), then reopen with no pending request — the
-    // decision is gone from props/local state but the store keeps the resolved gate visible.
-    unmount();
-    render(<TraceDetailView traceId="trace-reentry" flowName="Flow" hasTrace />);
     expect(
       screen.getByText(/Human In The Loop — Approved/),
     ).toBeInTheDocument();
   });
 
   it("injects an executed Chat Output span missing from a resumed HITL trace", () => {
+    // isResuming context (live build + polling): the resumed run hasn't flushed Chat Output to the
+    // backend trace yet, so it is bridged from flowPool until the flush lands.
     useFlowStore.setState({
+      isBuilding: true,
       outputs: [
-        { type: "ChatOutput", id: "ChatOutput-z90", displayName: "Chat Output" },
+        {
+          type: "ChatOutput",
+          id: "ChatOutput-z90",
+          displayName: "Chat Output",
+        },
       ],
       flowPool: {
         "ChatOutput-z90": [
-          { valid: true, data: { results: { message: "hi" }, timedelta: 0.02 } },
+          {
+            valid: true,
+            data: { results: { message: "hi" }, timedelta: 0.02 },
+          },
         ],
       },
     } as never);
@@ -382,11 +382,13 @@ describe("TraceDetailView", () => {
           },
         ],
       };
-      // Seed a resolved decision so the view is in HITL context (the run paused/resumed).
-      useHitlStore.setState({ resolved: { "trace-resumed": "approve" } });
-
       render(
-        <TraceDetailView traceId="trace-resumed" flowName="Flow" hasTrace />,
+        <TraceDetailView
+          traceId="trace-resumed"
+          flowName="Flow"
+          hasTrace
+          pollUpdates
+        />,
       );
 
       // The Chat Output executed (in flowPool) but is absent from trace.spans — re-injected here.
@@ -394,36 +396,39 @@ describe("TraceDetailView", () => {
         screen.getByTestId("span-node-executed-ChatOutput-z90"),
       ).toBeInTheDocument();
     } finally {
-      useFlowStore.setState({ outputs: [], flowPool: {} } as never);
+      useFlowStore.setState({
+        isBuilding: false,
+        outputs: [],
+        flowPool: {},
+      } as never);
     }
   });
 
-  it("keeps the injected Chat Output after flowPool clears (canvas navigation)", () => {
-    // flowPool is empty (left for the canvas and came back) but the executed output was cached,
-    // and the gate decision is stored — the Chat Output must still be re-injected from the cache.
+  it("does not duplicate the gate or Chat Output already flushed to the backend trace", () => {
+    // Once the resumed run flushes, the backend trace owns both spans; the live bridge must defer to
+    // them (dedup by name) so the gate and Chat Output never render twice.
     useFlowStore.setState({
+      isBuilding: true,
       outputs: [
-        { type: "ChatOutput", id: "ChatOutput-z90", displayName: "Chat Output" },
+        {
+          type: "ChatOutput",
+          id: "ChatOutput-z90",
+          displayName: "Chat Output",
+        },
       ],
-      flowPool: {},
-    } as never);
-    useHitlStore.setState({
-      resolved: { "trace-cached": "approve" },
-      executedOutputs: {
-        "trace-cached": [
+      flowPool: {
+        "ChatOutput-z90": [
           {
-            id: "ChatOutput-z90",
-            name: "Chat Output",
-            latencyMs: 20,
-            outputs: { message: "hi" },
+            valid: true,
+            data: { results: { message: "hi" }, timedelta: 0.02 },
           },
         ],
       },
-    });
+    } as never);
     try {
       mockTrace = {
-        id: "trace-cached",
-        name: "Cached Trace",
+        id: "trace-flushed",
+        name: "Flushed Trace",
         status: "ok",
         startTime: "2024-01-01T00:00:00Z",
         endTime: "2024-01-01T00:00:01Z",
@@ -434,16 +439,59 @@ describe("TraceDetailView", () => {
         sessionId: "session-1",
         input: {},
         output: {},
-        spans: [],
+        spans: [
+          {
+            id: "hitl-span",
+            name: "Human In The Loop — Approved",
+            type: "none",
+            status: "ok",
+            startTime: "2024-01-01T00:00:00Z",
+            endTime: "2024-01-01T00:00:01Z",
+            latencyMs: null,
+            inputs: {},
+            outputs: { decision: "approve" },
+            children: [],
+          },
+          {
+            id: "chat-output-span",
+            name: "Chat Output",
+            type: "none",
+            status: "ok",
+            startTime: "2024-01-01T00:00:00Z",
+            endTime: "2024-01-01T00:00:01Z",
+            latencyMs: 20,
+            inputs: {},
+            outputs: { message: "hi" },
+            children: [],
+          },
+        ],
       };
 
-      render(<TraceDetailView traceId="trace-cached" flowName="Flow" hasTrace />);
+      render(
+        <TraceDetailView
+          traceId="trace-flushed"
+          flowName="Flow"
+          hasTrace
+          pollUpdates
+        />,
+      );
 
+      // Backend gate present; no synthesized duplicate, and no injected executed Chat Output.
       expect(
-        screen.getByTestId("span-node-executed-ChatOutput-z90"),
+        screen.getByText(/Human In The Loop — Approved/),
       ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("span-node-hitl-trace-flushed"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("span-node-executed-ChatOutput-z90"),
+      ).not.toBeInTheDocument();
     } finally {
-      useFlowStore.setState({ outputs: [], flowPool: {} } as never);
+      useFlowStore.setState({
+        isBuilding: false,
+        outputs: [],
+        flowPool: {},
+      } as never);
     }
   });
 
