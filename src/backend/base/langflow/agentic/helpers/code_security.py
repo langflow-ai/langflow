@@ -146,6 +146,21 @@ def _is_dangerous_submodule(dotted: str) -> bool:
     return any(dotted == prefix or dotted.startswith(prefix + ".") for prefix in DANGEROUS_SUBMODULES)
 
 
+def _dotted_parts(node: ast.AST) -> list[str] | None:
+    """Reconstruct a pure ``a.b.c`` Name/Attribute chain into ``["a", "b", "c"]``.
+
+    Returns None if the chain is not rooted in a plain Name (e.g. ``foo().bar``).
+    """
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        parts.append(node.id)
+        return list(reversed(parts))
+    return None
+
+
 def _build_dangerous_members() -> tuple[dict[str, set[str]], dict[str, set[str]]]:
     """Per-module dangerous member names, derived from the call/read tables.
 
@@ -240,7 +255,7 @@ class _SecurityChecker(ast.NodeVisitor):
         return self.generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute):
-        """Check attribute READS like func.__globals__ or os.environ."""
+        """Check attribute access: dunder escapes, os.environ, urllib.request, ..."""
         if node.attr in DANGEROUS_DUNDER_ATTRS:
             self.violations.append(f"Access to '{node.attr}' is forbidden in components (sandbox escape)")
         elif isinstance(node.value, ast.Name):
@@ -249,7 +264,25 @@ class _SecurityChecker(ast.NodeVisitor):
                 if module_name == mod and node.attr == attr:
                     self.violations.append(message)
                     break
+        # Dotted access to a blocked submodule (``urllib.request`` / ``http.client``),
+        # which a bare ``import urllib`` / ``import http`` makes reachable at runtime
+        # without an explicit submodule import. Alias-resolved on the root name.
+        if self._is_dangerous_submodule_access(node):
+            dotted = self._resolved_dotted(node)
+            self.violations.append(f"Access to '{dotted}' is forbidden in components")
         self.generic_visit(node)
+
+    def _resolved_dotted(self, node: ast.Attribute) -> str | None:
+        """Dotted name of an attribute chain, with the root name alias-resolved."""
+        parts = _dotted_parts(node)
+        if not parts:
+            return None
+        return ".".join([self.module_aliases.get(parts[0], parts[0]), *parts[1:]])
+
+    def _is_dangerous_submodule_access(self, node: ast.Attribute) -> bool:
+        # Exact match (not prefix): the ``urllib.request`` node itself is visited
+        # within ``urllib.request.urlopen``, so matching exactly avoids double-flagging.
+        return self._resolved_dotted(node) in DANGEROUS_SUBMODULES
 
     def visit_Name(self, node: ast.Name):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""

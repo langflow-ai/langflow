@@ -504,3 +504,60 @@ class TestScanCodeSecurityAliasAndWildcardBypass:
         """`from os import *` then a non-restricted member (getcwd) is fine."""
         result = scan_code_security("from os import *\nd = getcwd()")
         assert result.is_safe is True
+
+
+class TestScanCodeSecurityDottedSubmoduleAccess:
+    """Bare-package imports must not reach a blocked submodule via dotted access.
+
+    A bare ``import urllib`` / ``import http`` is allowed (the package root is
+    safe), but at runtime ``urllib.request`` / ``http.client`` are already
+    preloaded, so ``urllib.request.urlopen(...)`` works without an explicit
+    submodule import. The scanner flags the dotted access itself. Safe siblings
+    (``urllib.parse``, ``http.HTTPStatus``, ``os.path``) stay allowed.
+    """
+
+    def test_should_detect_bare_urllib_then_request_call(self):
+        code = "import urllib\nurllib.request.urlopen('http://169.254.169.254/latest/meta-data/')"
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("urllib.request" in v for v in result.violations)
+
+    def test_should_detect_bare_http_then_client(self):
+        code = "import http\nc = http.client.HTTPConnection('attacker', 80)"
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("http.client" in v for v in result.violations)
+
+    def test_should_detect_urllib_request_access_without_import(self):
+        """Relying on the runtime preload — no import statement at all."""
+        result = scan_code_security("urllib.request.urlopen('http://x')")
+        assert result.is_safe is False
+
+    def test_should_detect_aliased_bare_urllib_submodule(self):
+        result = scan_code_security("import urllib as u\nu.request.urlopen('http://x')")
+        assert result.is_safe is False
+
+    def test_should_detect_submodule_assignment(self):
+        """Binding the submodule object is just as dangerous as calling through it."""
+        result = scan_code_security("import urllib\nreq = urllib.request")
+        assert result.is_safe is False
+
+    def test_should_report_single_violation_for_chain(self):
+        """One dotted chain → exactly one submodule violation (no double-flag)."""
+        result = scan_code_security("import urllib\nurllib.request.urlopen('http://x')")
+        submod_hits = [v for v in result.violations if "urllib.request" in v]
+        assert len(submod_hits) == 1
+
+    # --- no-regression: safe dotted access on mixed packages ---
+
+    def test_should_allow_urllib_parse_dotted_access(self):
+        result = scan_code_security("import urllib.parse\nq = urllib.parse.urlencode({'a': 1})")
+        assert result.is_safe is True
+
+    def test_should_allow_http_httpstatus_dotted_access(self):
+        result = scan_code_security("import http\nx = http.HTTPStatus.OK")
+        assert result.is_safe is True
+
+    def test_should_allow_os_path_dotted_access(self):
+        result = scan_code_security("import os\np = os.path.join('a', 'b')")
+        assert result.is_safe is True
