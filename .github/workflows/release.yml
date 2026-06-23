@@ -182,14 +182,23 @@ jobs:
     needs: [validate-tag, validate-dependencies]
     runs-on: ubuntu-latest
     outputs:
-      rc_number: ${{ steps.rc.outputs.rc_number }}
+      rc_number: ${{ steps.rc.outputs.rc_number || steps.stable.outputs.rc_number }}
     steps:
+      - name: Use stable RC number
+        id: stable
+        if: ${{ !inputs.pre_release }}
+        run: |
+          echo "rc_number=0" >> "$GITHUB_OUTPUT"
+          echo "Not a pre-release; shared rc number is 0."
+
       - name: Checkout code
+        if: ${{ inputs.pre_release }}
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_tag }}
 
       - name: Setup Environment
+        if: ${{ inputs.pre_release }}
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -199,15 +208,10 @@ jobs:
 
       - name: Determine shared pre-release RC number
         id: rc
+        if: ${{ inputs.pre_release }}
         shell: bash
         run: |
           set -euo pipefail
-
-          if [ "${{ inputs.pre_release }}" != "true" ]; then
-            echo "rc_number=0" >> "$GITHUB_OUTPUT"
-            echo "Not a pre-release; shared rc number is 0."
-            exit 0
-          fi
 
           read_pyproject_version() {
             python3 - "$1" <<'PY'
