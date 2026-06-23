@@ -11,11 +11,15 @@ Adding a new protocol is one new module under ``adapters/`` plus one
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, ClassVar, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+    from typing import Any, ClassVar
 
 
 @dataclass(frozen=True)
@@ -127,5 +131,5 @@ def available_protocols() -> list[str]:
 
 # Built-in adapter registrations happen here, after the registry is defined.
 # Import for side-effect: each module calls ``register_stream_adapter``.
-from langflow.api.v2.adapters import agui as _agui  # noqa: E402, F401
-from langflow.api.v2.adapters import langflow as _langflow  # noqa: E402, F401
+from lfx.workflow.adapters import agui as _agui  # noqa: E402, F401
+from lfx.workflow.adapters import langflow as _langflow  # noqa: E402, F401

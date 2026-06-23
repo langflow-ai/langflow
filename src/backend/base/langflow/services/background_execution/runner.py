@@ -29,7 +29,8 @@ from langflow.services.database.models.jobs.model import JobStatus, SignalType
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langflow.api.v2.adapters import StreamAdapter
+    from lfx.workflow.adapters import StreamAdapter
+
     from langflow.services.background_execution.live_bus import InMemoryLiveBus
     from langflow.services.jobs.service import JobService
 

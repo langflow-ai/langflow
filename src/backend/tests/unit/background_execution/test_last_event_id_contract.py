@@ -23,9 +23,9 @@ from uuid import uuid4
 
 import pytest
 from fastapi.sse import format_sse_event
-from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
 from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.background_execution.runner import JobRunner
+from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
