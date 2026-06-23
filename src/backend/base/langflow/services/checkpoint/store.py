@@ -5,9 +5,12 @@ checkpoint helper (one JSON row per ``(job_id, "graph")``), so a checkpoint
 survives a process restart. The in-memory store (LE-1440) stays the standalone
 default; this is wired as ``CHECKPOINT_SERVICE`` inside the running app.
 
-Cross-row ABC lookups (by checkpoint id, run id, session id) deserialize the
-graph-kind rows and filter in Python — the helper is job-keyed and never parses
-the blob. The scanned set is bounded: one row per actively-suspended job.
+Resume resolves a checkpoint by ``load_by_run_id`` only: the run id carries the
+job id, so it reads the one job-scoped row directly. The other ``CheckpointStore``
+lookups (``load``/``delete`` by checkpoint id, ``list_by_session``) would have to
+scan every job's row — there is no per-row user id and no request user to filter
+on — so they raise ``NotImplementedError`` rather than risk a silent cross-user
+scan if ever wired onto a request. The in-memory store keeps them for standalone.
 """
 
 from __future__ import annotations
@@ -25,6 +28,11 @@ if TYPE_CHECKING:
     from langflow.services.jobs.service import JobService
 
 _KIND = "graph"
+
+_SCAN_UNSUPPORTED = (
+    "JobScopedCheckpointStore.{method} is unsupported: it would scan checkpoints across all "
+    "jobs/users (not tenant-scoped). The durable resume path uses load_by_run_id (job-scoped)."
+)
 
 
 def _expired(checkpoint: GraphCheckpoint) -> bool:
@@ -74,16 +82,10 @@ class JobScopedCheckpointStore(CheckpointStore, Service):
         await self._jobs.save_checkpoint(UUID(checkpoint.job_id), _KIND, checkpoint.model_dump_json())
 
     async def load(self, checkpoint_id: str) -> GraphCheckpoint | None:
-        for _job_id, checkpoint in await self._all():
-            if checkpoint.checkpoint_id == checkpoint_id:
-                return None if _expired(checkpoint) else checkpoint
-        return None
+        raise NotImplementedError(_SCAN_UNSUPPORTED.format(method="load(checkpoint_id)"))
 
     async def delete(self, checkpoint_id: str) -> None:
-        for job_id, checkpoint in await self._all():
-            if checkpoint.checkpoint_id == checkpoint_id:
-                await self._jobs.delete_checkpoint(job_id, _KIND)
-                return
+        raise NotImplementedError(_SCAN_UNSUPPORTED.format(method="delete(checkpoint_id)"))
 
     async def load_by_run_id(self, run_id: str) -> GraphCheckpoint | None:
         # run_id carries the job_id (LE-1446 threads it), so resume resolves the
@@ -100,24 +102,4 @@ class JobScopedCheckpointStore(CheckpointStore, Service):
         return checkpoint
 
     async def list_by_session(self, session_id: str) -> list[GraphCheckpoint]:
-        return [cp for _job_id, cp in await self._all() if cp.session_id == session_id and not _expired(cp)]
-
-    async def _all(self) -> list[tuple[UUID, GraphCheckpoint]]:
-        """Decode every stored ``graph`` checkpoint across ALL jobs/users.
-
-        This scan is NOT tenant-scoped (the row has no user_id; the store has no
-        request user). The callers that use it — ``load(checkpoint_id)``,
-        ``delete(checkpoint_id)``, ``list_by_session`` — must therefore never be
-        exposed to a cross-user request: the durable multi-tenant resume path uses
-        only ``load_by_run_id`` (job-scoped) behind ``resume_job``'s ownership
-        check. Adding a user filter here would require threading the user through
-        the CheckpointStore ABC.
-        """
-        decoded = []
-        for job_id, blob in await self._jobs.all_checkpoints(_KIND):
-            checkpoint = _decode(blob)
-            # A row that no longer decodes (foreign/corrupt blob) is treated as
-            # absent rather than failing every cross-row lookup.
-            if checkpoint is not None:
-                decoded.append((job_id, checkpoint))
-        return decoded
+        raise NotImplementedError(_SCAN_UNSUPPORTED.format(method="list_by_session"))

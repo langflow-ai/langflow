@@ -144,13 +144,13 @@ def test_durable_store_is_a_checkpoint_store() -> None:
 
 @pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_save_then_load_returns_same_checkpoint(real_services_job_service) -> None:
+async def test_save_then_load_by_run_id_returns_same_checkpoint(real_services_job_service) -> None:
     store = _store(real_services_job_service)
     job_id = await _new_job(real_services_job_service)
     cp = _checkpoint(job_id)
 
     await store.save(cp)
-    loaded = await store.load(cp.checkpoint_id)
+    loaded = await store.load_by_run_id(str(job_id))
 
     assert loaded is not None
     assert loaded.checkpoint_id == cp.checkpoint_id
@@ -161,41 +161,16 @@ async def test_save_then_load_returns_same_checkpoint(real_services_job_service)
 
 @pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_load_missing_returns_none(real_services_job_service) -> None:
+async def test_scan_based_lookups_raise_not_implemented(real_services_job_service) -> None:
+    # The durable store is job-scoped; load/delete by checkpoint id and list_by_session would scan
+    # across all jobs/users. They fail loud so a future caller can't trigger a silent cross-user scan.
     store = _store(real_services_job_service)
-    assert await store.load("nope") is None
-
-
-@pytest.mark.real_services
-@pytest.mark.no_blockbuster
-async def test_delete_removes_checkpoint(real_services_job_service) -> None:
-    store = _store(real_services_job_service)
-    job_id = await _new_job(real_services_job_service)
-    cp = _checkpoint(job_id)
-
-    await store.save(cp)
-    await store.delete(cp.checkpoint_id)
-
-    assert await store.load(cp.checkpoint_id) is None
-
-
-@pytest.mark.real_services
-@pytest.mark.no_blockbuster
-async def test_delete_missing_is_noop(real_services_job_service) -> None:
-    store = _store(real_services_job_service)
-    await store.delete("ghost")  # must not raise
-
-
-@pytest.mark.real_services
-@pytest.mark.no_blockbuster
-async def test_load_honors_expiry(real_services_job_service) -> None:
-    store = _store(real_services_job_service)
-    job_id = await _new_job(real_services_job_service)
-    cp = _checkpoint(job_id, expires_at=datetime.now(timezone.utc) - timedelta(seconds=1))
-
-    await store.save(cp)
-
-    assert await store.load(cp.checkpoint_id) is None
+    with pytest.raises(NotImplementedError):
+        await store.load("any-checkpoint-id")
+    with pytest.raises(NotImplementedError):
+        await store.delete("any-checkpoint-id")
+    with pytest.raises(NotImplementedError):
+        await store.list_by_session("any-session")
 
 
 @pytest.mark.real_services
@@ -231,24 +206,6 @@ async def test_load_by_run_id_honors_expiry(real_services_job_service) -> None:
     await store.save(cp)
 
     assert await store.load_by_run_id(str(job_id)) is None
-
-
-@pytest.mark.real_services
-@pytest.mark.no_blockbuster
-async def test_list_by_session_returns_only_that_session(real_services_job_service) -> None:
-    store = _store(real_services_job_service)
-    session_a = f"sess-a-{uuid4()}"  # unique so the assertion is immune to prior runs
-    session_b = f"sess-b-{uuid4()}"
-    job_a = await _new_job(real_services_job_service)
-    job_b = await _new_job(real_services_job_service)
-    a = _checkpoint(job_a, session_id=session_a)
-    b = _checkpoint(job_b, session_id=session_b)
-
-    await store.save(a)
-    await store.save(b)
-
-    found = await store.list_by_session(session_a)
-    assert {cp.checkpoint_id for cp in found} == {a.checkpoint_id}
 
 
 @pytest.mark.real_services
