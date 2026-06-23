@@ -50,23 +50,21 @@ test(
 
     expect(rowsCount).toBeGreaterThan(2);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(0).isChecked(),
-    ).toBe(true);
+    // Scope to the enable ("name") column: the HITL approval_actions column also renders an
+    // eInput checkbox, so a global nth() index would land on it instead of the action toggle.
+    const enableCheckboxes = page.locator('[col-id="name"] input[data-ref="eInput"]');
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(true);
+    expect(await enableCheckboxes.nth(0).isChecked()).toBe(true);
 
-    await page.locator('input[data-ref="eInput"]').nth(0).click();
+    expect(await enableCheckboxes.nth(1).isChecked()).toBe(true);
+
+    await enableCheckboxes.nth(0).click();
 
     await page.waitForTimeout(500);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(false);
+    expect(await enableCheckboxes.nth(1).isChecked()).toBe(false);
 
-    await page.locator('input[data-ref="eInput"]').nth(0).click();
+    await enableCheckboxes.nth(0).click();
 
     await page.waitForTimeout(500);
 
@@ -131,9 +129,7 @@ test(
 
     await page.waitForTimeout(500);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(true);
+    expect(await enableCheckboxes.nth(1).isChecked()).toBe(true);
 
     await page.waitForTimeout(500);
 
