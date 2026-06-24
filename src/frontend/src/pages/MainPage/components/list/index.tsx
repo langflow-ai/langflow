@@ -11,6 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePermissions } from "@/contexts/permissionsContext";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
@@ -77,6 +78,10 @@ const ListComponent = ({
       });
   };
 
+  const { can } = usePermissions();
+  // Moving a flow into another folder mutates its folder_id → gate on write.
+  const canMove = can(flowData.id, "write");
+
   const { onDragStart } = useDragStart(flowData);
 
   const descriptionModal = useDescriptionModal(
@@ -111,7 +116,7 @@ const ListComponent = ({
     <>
       <Card
         key={flowData.id}
-        draggable
+        draggable={canMove}
         // role/tabIndex instead of a native button: the card nests other
         // interactive elements (checkbox, dropdown), which a <button>
         // wrapper would make invalid markup. Component cards aren't

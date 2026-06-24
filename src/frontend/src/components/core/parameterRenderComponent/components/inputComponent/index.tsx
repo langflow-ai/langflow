@@ -31,6 +31,7 @@ interface FormInputBranchProps {
   name?: string;
   id: string;
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
+  allowAutofill?: boolean;
 }
 
 function FormInputBranch({
@@ -51,6 +52,7 @@ function FormInputBranch({
   name,
   id,
   inputProps,
+  allowAutofill,
 }: FormInputBranchProps) {
   const [cursor, setCursor] = useState<number | null>(null);
 
@@ -94,6 +96,7 @@ function FormInputBranch({
         name={name}
         id={"form-" + id}
         ref={refInput}
+        allowAutofill={allowAutofill}
         autoFocus={autoFocus}
         type={password && !pwdVisible ? "password" : "text"}
         {...imeInputProps}
@@ -129,6 +132,7 @@ export default function InputComponent({
   disabled,
   required = false,
   isForm = false,
+  allowAutofill = false,
   password,
   editNode = false,
   placeholder = "Type something...",
@@ -195,6 +199,7 @@ export default function InputComponent({
           name={name}
           id={id}
           inputProps={inputProps}
+          allowAutofill={allowAutofill}
         />
       ) : (
         <>

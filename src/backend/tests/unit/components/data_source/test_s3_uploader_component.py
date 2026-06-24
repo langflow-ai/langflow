@@ -5,8 +5,8 @@ from pathlib import Path
 
 import boto3
 import pytest
-from lfx.components.amazon.s3_bucket_uploader import S3BucketUploaderComponent
 from lfx.schema.data import Data
+from lfx_amazon.components.amazon.s3_bucket_uploader import S3BucketUploaderComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 

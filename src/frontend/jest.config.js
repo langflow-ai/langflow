@@ -9,6 +9,7 @@ module.exports = {
     "^@jsonquerylang/jsonquery$":
       "<rootDir>/src/__mocks__/@jsonquerylang/jsonquery.js",
     "^vanilla-jsoneditor$": "<rootDir>/src/__mocks__/vanilla-jsoneditor.js",
+    "^uuid$": "<rootDir>/src/__mocks__/uuid.js",
   },
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
   setupFiles: ["<rootDir>/jest.setup.js"],
