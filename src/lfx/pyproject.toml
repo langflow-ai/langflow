@@ -51,6 +51,7 @@ dependencies = [
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
+    "prometheus-client>=0.20.0,<1.0.0",
 ]
 
 [project.optional-dependencies]

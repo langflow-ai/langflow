@@ -292,6 +292,9 @@ def serve_command(
     identity_header: str = "X-Consumer-Username",
     identity_jwt_allow_insecure_http: bool = False,
     upgrade_flow: str | None = None,
+    build_concurrency_limit: int = 0,
+    build_admission_timeout_seconds: float = 5.0,
+    build_profile_label: str = "unknown",
 ) -> None:
     """Serve LFX flows as a web API.
 
@@ -488,6 +491,9 @@ def serve_command(
                     elif temp_file_to_cleanup:
                         startup_paths_for_workers = [temp_file_to_cleanup]
                 os.environ[_SERVE_STARTUP_PATHS_ENV] = json.dumps(startup_paths_for_workers)
+                os.environ["LANGFLOW_BUILD_CONCURRENCY_LIMIT"] = str(build_concurrency_limit)
+                os.environ["LANGFLOW_BUILD_ADMISSION_TIMEOUT_SECONDS"] = str(build_admission_timeout_seconds)
+                os.environ["LANGFLOW_BUILD_PROFILE_LABEL"] = build_profile_label
                 try:
                     uvicorn.run(
                         "lfx.cli.serve_app:create_serve_app",
@@ -505,10 +511,22 @@ def serve_command(
                         _SERVE_NO_ENV_FALLBACK_ENV,
                         _SERVE_STARTUP_PATHS_ENV,
                         *identity_env,
+                        "LANGFLOW_BUILD_CONCURRENCY_LIMIT",
+                        "LANGFLOW_BUILD_ADMISSION_TIMEOUT_SECONDS",
+                        "LANGFLOW_BUILD_PROFILE_LABEL",
                     ):
                         os.environ.pop(k, None)
             else:
-                serve_app = create_multi_serve_app(registry=registry, identity_config=identity_config)
+                from lfx.cli.admission import BuildAdmissionConfig
+
+                admission_config = BuildAdmissionConfig(
+                    limit=build_concurrency_limit,
+                    timeout=build_admission_timeout_seconds,
+                    profile=build_profile_label,
+                )
+                serve_app = create_multi_serve_app(
+                    registry=registry, identity_config=identity_config, admission_config=admission_config
+                )
                 uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
         except KeyboardInterrupt:
             verbose_print("\nServer stopped")

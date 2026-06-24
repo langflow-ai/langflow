@@ -31,6 +31,12 @@ from fastapi.security import APIKeyHeader, APIKeyQuery
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from rich.console import Console
 
+from lfx.cli.admission import (
+    AdmissionTimeout,
+    BuildAdmissionConfig,
+    BuildAdmissionController,
+    render_metrics,
+)
 from lfx.cli.common import (
     execute_graph_with_capture,
     extract_result_data,
@@ -556,6 +562,7 @@ def create_multi_serve_app(
     *,
     registry: FlowRegistry,
     identity_config: IdentityConfig | None = None,
+    admission_config: BuildAdmissionConfig | None = None,
 ) -> FastAPI:
     """Create a FastAPI app exposing LFX flows via a mutable registry.
 
@@ -576,6 +583,9 @@ def create_multi_serve_app(
         version="1.0.0",
     )
     app.state.registry = registry
+
+    admission = BuildAdmissionController(admission_config or BuildAdmissionConfig.from_env())
+    app.state.admission = admission
 
     identity_config = identity_config or IdentityConfig()
     app.state.identity_config = identity_config
@@ -637,6 +647,11 @@ def create_multi_serve_app(
     @app.get("/health", tags=["info"], summary="Global health check")
     async def global_health():
         return {"status": "healthy", "flow_count": len(registry)}
+
+    @app.get("/metrics", include_in_schema=False)
+    async def metrics() -> Response:
+        body, content_type = render_metrics()
+        return Response(content=body, media_type=content_type)
 
     # ------------------------------------------------------------------
     # Upload endpoint — registered BEFORE /{flow_id} to avoid shadowing
@@ -760,9 +775,10 @@ def create_multi_serve_app(
             # deepcopy() drops graph.context; re-apply the registry's env policy.
             registry.stamp(graph_copy)
             apply_global_vars_to_graph(graph_copy, request.global_vars)
-            results, logs = await execute_graph_with_capture(
-                graph_copy, request.input_value, session_id=request.session_id, user_id=user_id
-            )
+            async with app.state.admission.slot():
+                results, logs = await execute_graph_with_capture(
+                    graph_copy, request.input_value, session_id=request.session_id, user_id=user_id
+                )
             result_data = extract_result_data(results, logs)
 
             if not result_data.get("success", True):
@@ -785,6 +801,12 @@ def create_multi_serve_app(
                 type=result_data.get("type", "message"),
                 component=result_data.get("component", ""),
             )
+        except AdmissionTimeout as exc:
+            raise HTTPException(
+                status_code=429,
+                detail="Server at capacity, retry later",
+                headers={"Retry-After": str(exc.retry_after)},
+            ) from exc
         except Exception as exc:  # noqa: BLE001
             error_traceback = traceback.format_exc()
             error_message = f"Flow execution failed: {exc!s}"
@@ -813,9 +835,32 @@ def create_multi_serve_app(
         request: StreamRequest,
         user_id: str | None = Depends(resolve_identity),  # noqa: FAST002 - see run_flow note on Depends-in-default
     ) -> StreamingResponse:
+        # --- Phase 1: validation (before acquiring a slot) ---
         graph, _ = _get_flow_or_404(flow_id)
         try:
             validate_flow_for_current_settings(graph)
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Error setting up streaming for flow {flow_id}: {exc}")
+            error_payload = json.dumps({"error": str(exc), "success": False})
+            # No admission slot acquired yet — do NOT release here.
+
+            async def error_stream():
+                yield f"data: {error_payload}\n\n"
+
+            return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+        # --- Phase 2: acquire admission slot ---
+        try:
+            await app.state.admission.acquire()
+        except AdmissionTimeout as exc:
+            raise HTTPException(
+                status_code=429,
+                detail="Server at capacity, retry later",
+                headers={"Retry-After": str(exc.retry_after)},
+            ) from exc
+
+        # --- Phase 3: set up streaming (release slot on any setup error) ---
+        try:
             from lfx.events.event_manager import create_stream_tokens_event_manager
 
             asyncio_queue: asyncio.Queue = asyncio.Queue()
@@ -836,24 +881,32 @@ def create_multi_serve_app(
                     user_id=user_id,
                 )
             )
-
-            async def on_disconnect() -> None:
-                logger.debug(f"Client disconnected from flow {flow_id}, closing tasks")
-                main_task.cancel()
-
-            return StreamingResponse(
-                consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
-                background=on_disconnect,
-                media_type="text/event-stream",
-            )
         except Exception as exc:  # noqa: BLE001
+            app.state.admission.release()
             logger.error(f"Error setting up streaming for flow {flow_id}: {exc}")
             error_payload = json.dumps({"error": str(exc), "success": False})
 
-            async def error_stream():
+            async def setup_error_stream():
                 yield f"data: {error_payload}\n\n"
 
-            return StreamingResponse(error_stream(), media_type="text/event-stream")
+            return StreamingResponse(setup_error_stream(), media_type="text/event-stream")
+
+        async def on_disconnect() -> None:
+            logger.debug(f"Client disconnected from flow {flow_id}, closing tasks")
+            main_task.cancel()
+
+        async def gated_stream():
+            try:
+                async for chunk in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
+                    yield chunk
+            finally:
+                app.state.admission.release()
+
+        return StreamingResponse(
+            gated_stream(),
+            background=on_disconnect,
+            media_type="text/event-stream",
+        )
 
     return app
 

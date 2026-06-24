@@ -183,6 +183,27 @@ def register(app: typer.Typer) -> None:
                 "instead of reading from the process environment."
             ),
         ),
+        build_concurrency_limit: int = typer.Option(
+            0,
+            "--build-concurrency-limit",
+            envvar="LANGFLOW_BUILD_CONCURRENCY_LIMIT",
+            help=(
+                "Max concurrent flow runs per worker process. 0 disables the gate (unbounded). "
+                "The limit is per worker process; per-pod ceiling = limit x --workers."
+            ),
+        ),
+        build_admission_timeout_seconds: float = typer.Option(
+            5.0,
+            "--build-admission-timeout-seconds",
+            envvar="LANGFLOW_BUILD_ADMISSION_TIMEOUT_SECONDS",
+            help="Seconds to wait for a free execution slot before returning HTTP 429.",
+        ),
+        build_profile_label: str = typer.Option(
+            "unknown",
+            "--build-profile-label",
+            envvar="LANGFLOW_BUILD_PROFILE_LABEL",
+            help="Value for the 'profile' label on build_slots_in_use / build_slots_limit metrics.",
+        ),
         identity_mode: str = typer.Option(
             "off",
             "--identity-mode",
@@ -251,6 +272,9 @@ def register(app: typer.Typer) -> None:
             check_variables=check_variables,
             upgrade_flow=upgrade_flow,
             no_env_fallback=no_env_fallback,
+            build_concurrency_limit=build_concurrency_limit,
+            build_admission_timeout_seconds=build_admission_timeout_seconds,
+            build_profile_label=build_profile_label,
             identity_mode=identity_mode,
             identity_jwt_issuer=identity_jwt_issuer,
             identity_jwt_audience=identity_jwt_audience,
