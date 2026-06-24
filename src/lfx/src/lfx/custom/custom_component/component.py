@@ -1388,6 +1388,24 @@ class Component(CustomComponent):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
         result = self._sanitize_secret_values(result)
+
+        if getattr(output, "schema_", None) is not None:
+            schema = output.schema_
+            if isinstance(schema, type) and issubclass(schema, BaseModel):
+                try:
+                    if isinstance(result, dict):
+                        result = schema(**result).model_dump()
+                    elif isinstance(result, list) and all(isinstance(x, dict) for x in result):
+                        result = [schema(**x).model_dump() for x in result]
+                    elif isinstance(result, Data):
+                        result.data = schema(**result.data).model_dump()
+                    elif isinstance(result, list) and all(isinstance(x, Data) for x in result):
+                        for x in result:
+                            x.data = schema(**x.data).model_dump()
+                except ValidationError as e:
+                    logger.error(f"Schema validation failed for output {output.name}: {e}")
+                    raise ValueError(f"Schema validation failed for output {output.name}: {e}") from e
+
         output.value = result
 
         return result
