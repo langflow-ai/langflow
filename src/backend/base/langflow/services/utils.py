@@ -57,6 +57,17 @@ def get_auto_login_superuser_password(auth_settings) -> str:
     return token_urlsafe(32)
 
 
+async def _get_superuser_by_username(session: AsyncSession, username: str):
+    from langflow.services.database.models.user.model import User
+
+    stmt = select(User).where(
+        User.username == username,
+        User.is_superuser == True,  # noqa: E712
+    )
+    result = await session.exec(stmt)
+    return result.first()
+
+
 async def _rotate_legacy_default_superuser_password(session: AsyncSession, user, replacement_password: str) -> bool:
     legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
     if not legacy_password or not user.password:
@@ -70,7 +81,7 @@ async def _rotate_legacy_default_superuser_password(session: AsyncSession, user,
     session.add(user)
     await session.commit()
     await session.refresh(user)
-    await logger.awarning("Rotated legacy default superuser password for AUTO_LOGIN mode.")
+    await logger.awarning("Rotated legacy default superuser password.")
     return True
 
 
@@ -136,6 +147,12 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         from filelock import FileLock
 
         username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+        configured_password = _secret_value(settings_service.auth_settings.SUPERUSER_PASSWORD)
+        if configured_password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
+            await logger.awarning(
+                "Ignoring legacy default LANGFLOW_SUPERUSER_PASSWORD in AUTO_LOGIN mode; "
+                "generated a random bootstrap password instead."
+            )
         password = get_auto_login_superuser_password(settings_service.auth_settings)
 
         # Use file lock similar to starter projects
@@ -168,6 +185,11 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                     _ = await get_or_create_default_folder(session, super_user.id)
                     await logger.adebug("Auto-login superuser initialized successfully")
                     return SetupSuperuserResult.AUTO_LOGIN_INITIALIZED
+                existing_superuser = await _get_superuser_by_username(session, username)
+                if existing_superuser is None:
+                    msg = "AUTO_LOGIN is enabled but the configured bootstrap user is not a superuser."
+                    await logger.aerror(msg)
+                    raise RuntimeError(msg)
                 return SetupSuperuserResult.AUTO_LOGIN_ALREADY_SATISFIED
         except TimeoutError as exc:
             # Another worker may be handling it - but a stale/abandoned lock or dead holder
@@ -177,13 +199,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                 "(another worker may hold it, or the lock file may be stale). "
                 "Verifying whether the default superuser exists.",
             )
-            from langflow.services.database.models.user.model import User
-
-            stmt = select(User).where(
-                User.username == username,
-                User.is_superuser == True,  # noqa: E712
-            )
-            exists = (await session.exec(stmt)).first() is not None
+            exists = (await _get_superuser_by_username(session, username)) is not None
             if not exists:
                 msg = (
                     "AUTO_LOGIN is enabled but the default superuser was not initialized: "
@@ -213,7 +229,11 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
     try:
         await logger.adebug(f"Creating/getting superuser: username={username}, is_default={is_default}")
         user = await get_or_create_super_user(
-            session=session, username=username, password=password, is_default=is_default
+            session=session,
+            username=username,
+            password=password,
+            is_default=is_default,
+            rotate_legacy_default_password=True,
         )
         if user is not None:
             await logger.adebug("Superuser created successfully.")

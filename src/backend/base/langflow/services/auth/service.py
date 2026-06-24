@@ -696,14 +696,11 @@ class AuthService(BaseAuthService):
 
         auth_settings = self.settings.auth_settings
         auto_login_superuser = auth_settings.SUPERUSER or DEFAULT_SUPERUSER
-        if (
-            auth_settings.AUTO_LOGIN
-            and username == auto_login_superuser
-            and password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
-        ):
+        legacy_superuser_usernames = {DEFAULT_SUPERUSER, auto_login_superuser}
+        if username in legacy_superuser_usernames and password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
             if request and request.client:
                 logger.warning(
-                    "Login failed: legacy default auto-login password is disabled",
+                    "Login failed: legacy default superuser password is disabled",
                     auth_event="login_failed",
                     reason="legacy_default_password_disabled",
                     auth_id=str(user.id),

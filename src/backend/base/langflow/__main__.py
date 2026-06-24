@@ -1065,7 +1065,10 @@ def api_key(
             from langflow.services.database.models.user.model import User
 
             superuser_username = auth_settings.SUPERUSER or DEFAULT_SUPERUSER
-            stmt = select(User).where(User.username == superuser_username)
+            stmt = select(User).where(
+                User.username == superuser_username,
+                User.is_superuser == True,  # noqa: E712
+            )
             superuser = (await session.exec(stmt)).first()
             if not superuser:
                 typer.echo(

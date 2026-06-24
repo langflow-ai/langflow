@@ -299,6 +299,50 @@ async def test_authenticate_user_rejects_legacy_default_password_in_auto_login(
 
 
 @pytest.mark.anyio
+async def test_authenticate_user_rejects_legacy_default_password_when_auto_login_false(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    auth_settings.AUTO_LOGIN = False
+    auth_settings.SUPERUSER = DEFAULT_SUPERUSER
+    legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    default_superuser = User(
+        id=uuid4(),
+        username=DEFAULT_SUPERUSER,
+        password=auth_service.get_password_hash(legacy_password),
+        is_active=True,
+        is_superuser=True,
+    )
+
+    with patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=default_superuser)):
+        result = await auth_service.authenticate_user(DEFAULT_SUPERUSER, legacy_password, AsyncMock())
+
+    assert result is None
+
+
+@pytest.mark.anyio
+async def test_authenticate_user_rejects_legacy_default_username_after_superuser_override(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.SUPERUSER = "custom_admin"
+    legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    default_superuser = User(
+        id=uuid4(),
+        username=DEFAULT_SUPERUSER,
+        password=auth_service.get_password_hash(legacy_password),
+        is_active=True,
+        is_superuser=True,
+    )
+
+    with patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=default_superuser)):
+        result = await auth_service.authenticate_user(DEFAULT_SUPERUSER, legacy_password, AsyncMock())
+
+    assert result is None
+
+
+@pytest.mark.anyio
 async def test_create_refresh_token_requires_refresh_type(auth_service: AuthService):
     invalid_refresh = auth_service.create_token({"sub": str(uuid4()), "type": "access"}, timedelta(minutes=1))
 

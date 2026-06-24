@@ -1337,7 +1337,7 @@ async def initialize_auto_login_default_superuser() -> None:
         )
         if super_user is None:
             super_user = await get_user_by_username(async_session, username)
-        if super_user is None:
+        if super_user is None or not super_user.is_superuser:
             msg = "Auto-login superuser was not initialized."
             raise RuntimeError(msg)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)

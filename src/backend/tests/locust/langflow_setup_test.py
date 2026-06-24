@@ -29,6 +29,9 @@ async def authenticate_setup_client(client) -> tuple[str, str, str]:
     username = os.environ.get("LANGFLOW_SUPERUSER", "")
     password = os.environ.get("LANGFLOW_SUPERUSER_PASSWORD", "")
 
+    if bool(username) != bool(password):
+        raise RuntimeError("Set both LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD, or neither.")
+
     if username and password:
         login_response = await client.post(
             "/api/v1/login",
@@ -37,7 +40,7 @@ async def authenticate_setup_client(client) -> tuple[str, str, str]:
         )
         if login_response.status_code != 200:
             raise RuntimeError(f"Login failed: {login_response.status_code} - {login_response.text}")
-        return login_response.json()["access_token"], username, password
+        return login_response.json()["access_token"], username, "<redacted>"
 
     auto_login_response = await client.get("/api/v1/auto_login")
     if auto_login_response.status_code != 200:

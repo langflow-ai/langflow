@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import filelock
 import pytest
 from langflow.services.auth.utils import verify_password
@@ -9,6 +11,7 @@ from lfx.services.settings.constants import (
     DEFAULT_SUPERUSER_PASSWORD,
     LEGACY_DEFAULT_SUPERUSER_PASSWORD,
 )
+from pydantic import SecretStr
 from sqlmodel import select
 
 _MOCK_AUTO_LOGIN_LOCK_TIMEOUT_MSG = "mock lock timeout"
@@ -60,6 +63,7 @@ async def test_initialize_services_creates_default_superuser_when_auto_login_tru
         user = (await session.exec(stmt)).first()
         assert user is not None
         assert user.is_superuser is True
+        assert verify_password("test-superuser-password", user.password) is True
         assert verify_password(LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value(), user.password) is False
 
 
@@ -98,6 +102,71 @@ async def test_setup_superuser_auto_login_rotates_legacy_default_password(initia
         user = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
         assert user is not None
         assert verify_password(legacy_password, user.password) is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(30)
+async def test_setup_superuser_rotates_legacy_default_password_when_auto_login_false(
+    initialized_services,  # noqa: ARG001
+):
+    """Authenticated startup rotates old langflow/langflow hashes to the configured password."""
+    settings = get_settings_service()
+    settings.auth_settings.AUTO_LOGIN = False
+    settings.auth_settings.SUPERUSER = DEFAULT_SUPERUSER
+    settings.auth_settings.SUPERUSER_PASSWORD = SecretStr("rotated-production-password")
+    legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+
+    async with session_scope() as session:
+        stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+        user = (await session.exec(stmt)).first()
+        if user is None:
+            user = User(
+                username=DEFAULT_SUPERUSER,
+                password=get_auth_service().get_password_hash(legacy_password),
+                is_superuser=True,
+                is_active=True,
+            )
+            session.add(user)
+            await session.flush()
+        user.password = get_auth_service().get_password_hash(legacy_password)
+        user.is_superuser = True
+        user.is_active = True
+        user.last_login_at = datetime.now(timezone.utc)
+        await session.commit()
+
+    async with session_scope() as session:
+        result = await setup_superuser(settings, session)
+        assert result == SetupSuperuserResult.SUPERUSER_UNCHANGED
+
+    async with session_scope() as session:
+        user = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
+        assert user is not None
+        assert verify_password("rotated-production-password", user.password) is True
+        assert verify_password(legacy_password, user.password) is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(30)
+async def test_setup_superuser_auto_login_fails_when_username_is_not_superuser(initialized_services):  # noqa: ARG001
+    """AUTO_LOGIN setup must not accept an existing non-superuser bootstrap username."""
+    settings = get_settings_service()
+    settings.auth_settings.AUTO_LOGIN = True
+    settings.auth_settings.SUPERUSER = "regular-user"
+    settings.auth_settings.SUPERUSER_PASSWORD = DEFAULT_SUPERUSER_PASSWORD
+
+    async with session_scope() as session:
+        user = User(
+            username="regular-user",
+            password=get_auth_service().get_password_hash("regular-password"),
+            is_superuser=False,
+            is_active=True,
+        )
+        session.add(user)
+        await session.commit()
+
+    async with session_scope() as session:
+        with pytest.raises(RuntimeError, match="not a superuser"):
+            await setup_superuser(settings, session)
 
 
 @pytest.mark.asyncio
@@ -193,8 +262,6 @@ async def test_setup_superuser_with_no_configured_credentials_fails_closed(initi
 @pytest.mark.timeout(30)
 async def test_setup_superuser_with_custom_credentials(initialized_services):  # noqa: ARG001
     """Test setup_superuser behavior with custom superuser credentials."""
-    from pydantic import SecretStr
-
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
     settings.auth_settings.SUPERUSER = "custom_admin"
