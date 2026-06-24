@@ -55,6 +55,11 @@ class TestAllModulesImportable:
         # 3.14-gating moved with them.
         gated_on_py314 = {
             "altk.ALTKAgentComponent",
+            # CrewAI agent/crew components import litellm transitively, and
+            # litellm is gated off on Python 3.14 until upstream supports it.
+            "crewai.CrewAIAgentComponent",
+            "crewai.HierarchicalCrewComponent",
+            "crewai.SequentialCrewComponent",
         }
         on_py314 = sys.version_info >= (3, 14)
 
