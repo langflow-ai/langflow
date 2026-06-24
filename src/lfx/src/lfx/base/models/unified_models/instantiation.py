@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 from typing import TYPE_CHECKING, Any
 
-from lfx.base.models.model_utils import _to_str
+from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
+from lfx.base.models.model_utils import _to_str, replace_with_live_models
+from lfx.log.logger import logger
 from lfx.services.variable.request_scope import is_env_fallback_disabled
+from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
+from .credentials import _fetch_enabled_providers_for_user
+from .model_catalog import get_unified_models_detailed
 from .provider_queries import model_provider_metadata
 
 if TYPE_CHECKING:
@@ -275,6 +281,80 @@ def get_llm(
         raise
 
 
+def _get_provider_embedding_model_names(
+    provider: str,
+    user_id: UUID | str | None,
+) -> list[str]:
+    """Return all embedding model names for a provider from the configured catalog.
+
+    Unlike ``get_embedding_model_options``, this does not filter by user
+    default/disabled/explicitly-enabled preferences — callers use it to build
+    the full ``available_models`` map on ``EmbeddingsWithModels``.
+    """
+    provider_models = get_unified_models_detailed(
+        providers=[provider],
+        model_type="embeddings",
+        include_deprecated=False,
+        include_unsupported=False,
+    )
+
+    if user_id:
+        with contextlib.suppress(Exception):
+            enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
+            if provider in enabled_providers:
+                replace_with_live_models(
+                    provider_models,
+                    user_id,
+                    {provider},
+                    "embeddings",
+                    model_provider_metadata,
+                )
+
+    model_names: list[str] = []
+    for provider_data in provider_models:
+        if provider_data.get("provider") != provider:
+            continue
+        for model_data in provider_data.get("models", []):
+            name = model_data.get("model_name")
+            if name:
+                model_names.append(name)
+    return model_names
+
+
+def _build_available_embedding_models(
+    embedding_class: type,
+    kwargs: dict[str, Any],
+    param_mapping: dict[str, str],
+    provider: str,
+    user_id: UUID | str | None,
+    primary_model_name: str,
+    primary_instance: Any,
+) -> dict[str, Any]:
+    """Build dedicated embedding instances for every model on the configured provider."""
+    available_models: dict[str, Any] = {primary_model_name: primary_instance}
+
+    model_param_key = param_mapping.get("model") or param_mapping.get("model_id")
+    if not model_param_key:
+        return available_models
+
+    for model_name in _get_provider_embedding_model_names(provider, user_id):
+        if model_name in available_models:
+            continue
+        model_kwargs = dict(kwargs)
+        model_kwargs[model_param_key] = model_name
+        try:
+            available_models[model_name] = embedding_class(**model_kwargs)
+        except Exception:  # noqa: BLE001
+            logger.debug(
+                "Failed to instantiate embedding model %s for provider %s; skipping",
+                model_name,
+                provider,
+                exc_info=True,
+            )
+
+    return available_models
+
+
 def get_embeddings(
     model,
     user_id: UUID | str | None = None,
@@ -293,7 +373,12 @@ def get_embeddings(
     watsonx_input_text=None,
     ollama_base_url=None,
 ) -> Any:
-    """Instantiate an embeddings model from a model selection dict."""
+    """Instantiate an embeddings model from a model selection dict.
+
+    Returns an :class:`~lfx.base.embeddings.embeddings_class.EmbeddingsWithModels`
+    wrapper containing the primary instance for the selected model and an
+    ``available_models`` map of all embedding models for the configured provider.
+    """
     # Resolve helpers via package namespace so tests patching
     # lfx.base.models.unified_models.<name> keep working.
     from lfx.base.models import unified_models as unified_models_module
@@ -462,7 +547,7 @@ def get_embeddings(
                 kwargs[param_mapping[param_name]] = param_value
 
     try:
-        return embedding_class(**kwargs)
+        primary_instance = embedding_class(**kwargs)
     except Exception as e:
         if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
             msg = (
@@ -471,3 +556,18 @@ def get_embeddings(
             )
             raise ValueError(msg) from e
         raise
+
+    available_models = _build_available_embedding_models(
+        embedding_class=embedding_class,
+        kwargs=kwargs,
+        param_mapping=param_mapping,
+        provider=provider,
+        user_id=user_id,
+        primary_model_name=model_name,
+        primary_instance=primary_instance,
+    )
+
+    return EmbeddingsWithModels(
+        embeddings=primary_instance,
+        available_models=available_models,
+    )
