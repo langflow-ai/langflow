@@ -16,6 +16,7 @@ from lfx.schema.schema import InputValueRequest, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
+    prepare_public_flow_build,
     validate_flow_for_current_settings,
     validate_public_flow_no_code_execution,
 )
@@ -832,18 +833,25 @@ async def build_public_tmp(
             if scoped_session != inputs.session:
                 inputs = inputs.model_copy(update={"session": scoped_session})
 
-        # Validate the stored flow data after the public-access boundary.
-        # Public flows never accept client-supplied data.
+        # Validate the stored flow data after the public-access boundary. Public flows never
+        # accept client-supplied data; the two checks below harden the unauthenticated build
+        # path (report H1-3754930) and only ever run server-trusted code for anonymous visitors.
+        sanitized_public_data: dict | None = None
         async with session_scope() as session:
             flow = await session.get(Flow, flow_id)
             if flow and flow.data:
-                validate_flow_for_current_settings(flow.data)
                 # Block unauthenticated builds of flows that run arbitrary code
                 # (Python interpreter/REPL, legacy Python Code Structured tool,
-                # Smart Transform lambda). Without this, any public flow
-                # containing such a component is an unauthenticated server-side
-                # code-execution primitive (report H1-3754930).
+                # Smart Transform lambda) or invoke another saved flow (Run Flow,
+                # Sub Flow, Flow as Tool — the transitive case). Without this, any
+                # public flow containing such a component is an unauthenticated
+                # server-side code-execution primitive (report H1-3754930).
                 validate_public_flow_no_code_execution(flow.data)
+                # Substitute the server's trusted code into every known component and
+                # reject unrecognized custom components, so anonymous visitors only ever
+                # run server code (opt out with allow_public_custom_components, which
+                # restores the prior DB-loaded build that honors allow_custom_components).
+                sanitized_public_data = await prepare_public_flow_build(flow.data)
 
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.
@@ -852,7 +860,19 @@ async def build_public_tmp(
             source_flow_id=flow_id,
             background_tasks=background_tasks,
             inputs=inputs,
-            data=None,  # Always None - public flows load from database only
+            # Default path: build from server-sanitized data (trusted code substituted in,
+            # unknown custom components already rejected above). When None (opt-in mode or no
+            # flow data) the build falls back to loading the flow from the DB by source_flow_id.
+            # Either way the caller never supplies the data — it is derived from the stored flow.
+            data=(
+                FlowDataRequest(
+                    nodes=sanitized_public_data.get("nodes", []),
+                    edges=sanitized_public_data.get("edges", []),
+                    viewport=sanitized_public_data.get("viewport"),
+                )
+                if sanitized_public_data is not None
+                else None
+            ),
             files=files,
             stop_component_id=stop_component_id,
             start_component_id=start_component_id,
@@ -861,6 +881,10 @@ async def build_public_tmp(
             queue_service=queue_service,
             flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
         )
+        # Gate the public events/cancel endpoints to jobs that were actually
+        # started through this public build path, preventing unauthenticated
+        # callers from reading or cancelling private-flow builds by job_id.
+        await queue_service.register_public_job(job_id)
     except CustomComponentValidationError as exc:
         await logger.awarning(f"Public flow validation failed: {exc}")
         raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc
@@ -880,6 +904,20 @@ async def build_public_tmp(
     )
 
 
+async def _assert_public_job(job_id: str, queue_service: JobQueueService) -> None:
+    """Raise HTTP 404 if job_id was not registered through the public build endpoint.
+
+    Prevents unauthenticated callers from reading or cancelling private-flow
+    builds by guessing or leaking a job_id.
+
+    Why 404 not 403: returning 403 would confirm the job exists under a different
+    access tier, leaking information about private builds. 404 is neutral.
+    """
+    if not await queue_service.is_public_job_async(job_id):
+        # Static detail — do not reflect job_id back; avoid confirming which IDs exist.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+
 @router.get("/build_public_tmp/{job_id}/events")
 async def get_build_events_public(
     job_id: str,
@@ -892,6 +930,7 @@ async def get_build_events_public(
     This endpoint does not require authentication, matching the public build endpoint.
     It is used by the shareable playground to consume build events.
     """
+    await _assert_public_job(job_id, queue_service)
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
@@ -912,6 +951,7 @@ async def cancel_build_public(
     This endpoint does not require authentication, matching the public build endpoint.
     It is used by the shareable playground to cancel builds.
     """
+    await _assert_public_job(job_id, queue_service)
     try:
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
 

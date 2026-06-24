@@ -909,9 +909,28 @@ async def test_redis_service_cancel_marker_closes_signal_before_subscribe_race()
     producer, _ = await _make_service(shared_client=shared_client)
     try:
         job_id = str(uuid.uuid4())
-        # Publish a cancel BEFORE the producer has registered the job.  The
-        # pubsub publish reaches no relevant owner; only the marker key matters.
+        # Publish a cancel BEFORE the producer has registered the job.
         await publisher.signal_cancel(job_id)
+
+        # In production there is real elapsed time between the publish and this
+        # worker registering the job, so the producer's cancel dispatcher receives
+        # the publish while it owns no matching queue and discards it (counted as a
+        # "foreign" dispatch). Wait for that to happen before create_queue/start_job
+        # so this single-process test reproduces the real ordering: the pubsub
+        # signal is spent before the job exists, leaving only the persistent marker
+        # to surface the cancel during start_job's marker check. Without this, the
+        # buffered publish can land in the window after start_job registers the task
+        # but before that task runs its first step, cancelling it before the build
+        # coroutine ever starts — a scheduling-order artifact of the shared loop, not
+        # the marker mechanism under test.
+        async def _dispatcher_discarded_publish() -> None:
+            # Poll the dispatcher's stat counter: it is mutated by an opaque
+            # background task, so there is no Event to await (asyncio.wait_for
+            # below bounds the wait).
+            while producer._cancel_stats["dispatched_foreign"] < 1:  # noqa: ASYNC110
+                await asyncio.sleep(0.01)
+
+        await asyncio.wait_for(_dispatcher_discarded_publish(), timeout=2)
 
         producer.create_queue(job_id)
         cancelled = asyncio.Event()
@@ -2405,4 +2424,78 @@ async def test_polling_watchdog_runs_when_cancel_channel_disabled():
                 bridge.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await bridge
+        await fake_client.aclose()
+
+
+# ── Public job registry — Redis-specific tests ───────────────────────────────
+# Complement the base-class unit tests in test_chat_endpoint.py.
+# These tests verify the Redis-specific paths: cross-worker fallback (#6)
+# and cleanup deleting the Redis key (#7).
+
+
+async def test_redis_public_job_cross_worker_fallback():
+    """is_public_job_async returns True for Worker B even when its in-memory set is empty.
+
+    Why: Worker A registers the job (writes local memory + Redis key via background task).
+    Worker B has no local memory entry — it must fall back to Redis.
+    This is the multi-worker correctness guarantee of RedisJobQueueService.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    # Worker A — registers the public job
+    svc_a, _ = await _make_service(shared_client=fake_client, cancel_channel_enabled=False)
+    # Worker B — shares same Redis, but has empty local memory
+    svc_b, _ = await _make_service(shared_client=fake_client, cancel_channel_enabled=False)
+
+    try:
+        job_id = str(uuid.uuid4())
+        # register_public_job awaits the Redis write directly (no background task
+        # to drain) — see Why comment on RedisJobQueueService.register_public_job.
+        await svc_a.register_public_job(job_id)
+
+        # Worker B must have no in-memory entry (no shared memory between workers)
+        assert not svc_b.is_public_job(job_id), "Worker B must have no in-memory entry"
+
+        # Why: is_public_job_async on Worker B must hit Redis fallback and return True
+        assert await svc_b.is_public_job_async(job_id) is True
+    finally:
+        await _stop_service(svc_a)
+        await _stop_service(svc_b)
+        await fake_client.aclose()
+
+
+async def test_redis_cleanup_removes_public_job_key():
+    """cleanup_job deletes the public_job Redis key so the job_id cannot be reused cross-worker.
+
+    Why: after cleanup the in-memory discard is proven by the base-class test in
+    test_chat_endpoint.py. This test proves the Redis key (cross-worker marker) is
+    also removed. A missing delete would let a cross-worker is_public_job_async
+    return True for a finished/evicted job.
+    """
+    svc, fake_client = await _make_service(cancel_channel_enabled=False)
+
+    try:
+        job_id = str(uuid.uuid4())
+        # register_public_job awaits the Redis write directly (no background task
+        # to drain) — see Why comment on RedisJobQueueService.register_public_job.
+        await svc.register_public_job(job_id)
+
+        # Confirm the key exists in Redis before cleanup
+        pub_key = svc._public_job_key(job_id)
+        assert await fake_client.exists(pub_key), "public_job Redis key must exist after registration"
+
+        # Seed a minimal queue entry so cleanup_job doesn't early-return
+        svc._queues[job_id] = (asyncio.Queue(), None, None, None)  # type: ignore[arg-type]
+        await svc.cleanup_job(job_id)
+
+        # Drain any background tasks spawned by cleanup
+        for task in list(svc._background_tasks):
+            with contextlib.suppress(Exception):
+                await task
+
+        # Why: if cleanup_job's Redis DEL call ever drops public_job_key, this catches it
+        assert not await fake_client.exists(pub_key), "public_job Redis key must be deleted after cleanup"
+        # In-memory also cleared
+        assert svc.is_public_job(job_id) is False
+    finally:
+        await _stop_service(svc)
         await fake_client.aclose()

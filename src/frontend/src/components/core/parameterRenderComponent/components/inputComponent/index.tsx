@@ -30,6 +30,7 @@ interface FormInputBranchProps {
   blurOnEnter: boolean;
   name?: string;
   id: string;
+  allowAutofill?: boolean;
 }
 
 function FormInputBranch({
@@ -49,6 +50,7 @@ function FormInputBranch({
   blurOnEnter,
   name,
   id,
+  allowAutofill,
 }: FormInputBranchProps) {
   const [cursor, setCursor] = useState<number | null>(null);
 
@@ -91,6 +93,7 @@ function FormInputBranch({
         name={name}
         id={"form-" + id}
         ref={refInput}
+        allowAutofill={allowAutofill}
         autoFocus={autoFocus}
         type={password && !pwdVisible ? "password" : "text"}
         {...imeInputProps}
@@ -126,6 +129,7 @@ export default function InputComponent({
   disabled,
   required = false,
   isForm = false,
+  allowAutofill = false,
   password,
   editNode = false,
   placeholder = "Type something...",
@@ -190,6 +194,7 @@ export default function InputComponent({
           blurOnEnter={blurOnEnter}
           name={name}
           id={id}
+          allowAutofill={allowAutofill}
         />
       ) : (
         <>
