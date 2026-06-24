@@ -154,11 +154,11 @@ test("should share component with share button", async ({ page }) => {
   await expect(page.getByText("Name:")).toBeVisible();
   await expect(page.getByText("Description:")).toBeVisible();
   await expect(page.getByText("Set workflow status to public")).toBeVisible();
-  await page
-    .getByText(
+  await expect(
+    page.getByText(
       "Attention: API keys in specified fields are automatically removed upon sharing.",
-    )
-    .isVisible();
+    ),
+  ).toBeVisible();
   await expect(page.getByText("Export").first()).toBeVisible();
   await expect(page.getByText("Share Flow").first()).toBeVisible();
   await page.waitForTimeout(3000);
@@ -168,7 +168,7 @@ test("should share component with share button", async ({ page }) => {
   await expect(page.getByText("Chain").first()).toBeVisible();
   await expect(page.getByText("Vector Store").first()).toBeVisible();
   await expect(page.getByText("Prompt").last()).toBeVisible();
-  await page.getByTestId("public-checkbox").isChecked();
+  await expect(page.getByTestId("public-checkbox")).toBeVisible();
 
   const flowName = await page.getByTestId("input-flow-name").inputValue();
   const flowDescription = await page
