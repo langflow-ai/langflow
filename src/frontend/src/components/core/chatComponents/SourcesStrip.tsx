@@ -1,19 +1,6 @@
 import type { CitationContent } from "@/types/chat";
-
-/** Returns the URL if its scheme is http(s), otherwise null. Guards against
- * `javascript:` / `data:` / `vbscript:` and other unsafe schemes that
- * React would otherwise pass through to a clickable anchor in production. */
-function safeUrl(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === "http:" || parsed.protocol === "https:"
-      ? raw
-      : null;
-  } catch {
-    return null;
-  }
-}
+import ForwardedIconComponent from "../../common/genericIconComponent";
+import { safeUrl } from "./url";
 
 /** Best-effort host extraction. Returns null for unparseable inputs so the
  * caller can decide whether to fall back to the raw URL or hide the chip. */
@@ -27,18 +14,14 @@ function extractDomain(raw: string | null | undefined): string | null {
   }
 }
 
-function FaviconImg({ domain }: { domain: string }) {
-  // Google's favicon service handles missing icons gracefully (returns a
-  // globe), so we don't need to plumb our own onError state.
-  const src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+function FaviconImg() {
+  // A local globe icon instead of fetching from a third party: in on-prem /
+  // privacy-sensitive deployments the favicon request would leak every cited
+  // source domain to an external endpoint, hostname by hostname.
   return (
-    <img
-      src={src}
-      alt=""
-      width={16}
-      height={16}
-      className="rounded-sm flex-shrink-0"
-      loading="lazy"
+    <ForwardedIconComponent
+      name="Globe"
+      className="h-4 w-4 flex-shrink-0 text-muted-foreground"
     />
   );
 }
@@ -50,7 +33,7 @@ function SourceCard({ citation }: { citation: CitationContent }) {
   const inner = (
     <div className="flex flex-col gap-1 p-3 w-56 flex-shrink-0 rounded-lg border border-border bg-background hover:bg-muted/50 transition-colors h-full">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <FaviconImg domain={domain} />
+        <FaviconImg />
         <span className="truncate">{domain}</span>
       </div>
       <p className="text-sm font-medium line-clamp-2">{heading}</p>

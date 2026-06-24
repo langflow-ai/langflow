@@ -111,6 +111,7 @@ export default function SignUp(): JSX.Element {
               <Form.Control asChild>
                 <Input
                   type="username"
+                  allowAutofill
                   onChange={({ target: { value } }) => {
                     handleInput({ target: { name: "username", value } });
                   }}
@@ -143,6 +144,7 @@ export default function SignUp(): JSX.Element {
                 }}
                 value={password}
                 isForm
+                allowAutofill
                 password={true}
                 required
                 placeholder={t("auth.passwordPlaceholder")}
@@ -183,6 +185,7 @@ export default function SignUp(): JSX.Element {
                 }}
                 value={cnfPassword}
                 isForm
+                allowAutofill
                 password={true}
                 required
                 placeholder={t("auth.confirmPasswordPlaceholder")}

@@ -122,12 +122,9 @@ export function ContentBlockDisplay({
 
   return (
     <div className="relative py-3">
-      {/* Render flat content items. Three routes:
-          - tool_use items get wrapped in their own collapsible card
-            (ToolCallCard) so they always carry the bordered-header
-            chrome — the agent emits them flat, not inside a group
-          - consecutive citations get coalesced into one Sources strip
-          - everything else passes through ContentDisplay directly */}
+      {/* The agent emits tool_use items flat (not inside a group), so they
+          get their own ToolCallCard wrapper to carry the bordered-header
+          chrome a group would otherwise provide. */}
       {flatItems.length > 0 && (
         <div className="flex flex-col gap-2">
           {groupConsecutiveCitations(flatItems).map((run) => {

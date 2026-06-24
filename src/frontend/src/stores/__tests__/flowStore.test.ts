@@ -1,4 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
+import { v5 as uuidv5 } from "uuid";
 
 // Mock all the complex dependencies
 jest.mock("@xyflow/react", () => ({
@@ -124,6 +125,7 @@ jest.mock("../../utils/reactflowUtils", () => {
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import type { LogsLogType, VertexBuildTypeAPI } from "@/types/api";
 import type { AllNodeType, EdgeType } from "@/types/flow";
+import useAuthStore from "../authStore";
 import useFlowStore, {
   completeNodeUpdate,
   recomputeComponentsToUpdateIfNeeded,
@@ -1170,6 +1172,12 @@ describe("useFlowStore", () => {
     beforeEach(() => {
       mockedRunFlow.mockReset();
       trackFlowBuildMock.mockReset();
+      useAuthStore.setState({
+        isAuthenticated: false,
+        autoLogin: null,
+        userData: null,
+      });
+      useUtilityStore.setState({ clientId: "" });
       act(() => {
         useFlowStore.setState({
           nodes: [],
@@ -1211,6 +1219,60 @@ describe("useFlowStore", () => {
         flowId: "flow-abc",
         error: errorList,
       });
+    });
+
+    it("passes silent and sets the active building session before the AG-UI run", async () => {
+      mockedRunFlow.mockImplementation(async () => {
+        const state = useFlowStore.getState();
+        expect(state.buildingFlowId).toBe("flow-abc");
+        expect(state.buildingSessionId).toBe("session-123");
+        useFlowStore.setState({ buildInfo: null });
+      });
+
+      await useFlowStore.getState().buildFlow({
+        silent: true,
+        session: "session-123",
+      });
+
+      expect(mockedRunFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: "flow-abc",
+          threadId: "session-123",
+          silent: true,
+        }),
+      );
+      expect(trackFlowBuildMock).toHaveBeenCalledWith("Test Flow", false, {
+        flowId: "flow-abc",
+      });
+    });
+
+    it("uses the public playground virtual flow id for the active building session", async () => {
+      const expectedFlowId = uuidv5("client-123_flow-abc", uuidv5.DNS);
+
+      useUtilityStore.setState({ clientId: "client-123" });
+      useAuthStore.setState({
+        isAuthenticated: false,
+        autoLogin: true,
+        userData: null,
+      });
+      useFlowStore.setState({ playgroundPage: true });
+      mockedRunFlow.mockImplementation(async () => {
+        const state = useFlowStore.getState();
+        expect(state.buildingFlowId).toBe(expectedFlowId);
+        expect(state.buildingSessionId).toBe("session-123");
+        useFlowStore.setState({ buildInfo: null });
+      });
+
+      await useFlowStore.getState().buildFlow({
+        session: "session-123",
+      });
+
+      expect(mockedRunFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: "flow-abc",
+          threadId: "session-123",
+        }),
+      );
     });
   });
 });

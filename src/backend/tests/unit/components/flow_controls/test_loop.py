@@ -11,7 +11,6 @@ from lfx.components.flow_controls import LoopComponent
 from lfx.components.input_output import ChatOutput
 from lfx.components.llm_operations import StructuredOutputComponent
 from lfx.components.models_and_agents import PromptComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.processing import ParserComponent, SplitTextComponent
 from lfx.graph import Graph
 from lfx.schema.data import Data
@@ -129,6 +128,9 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
 @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not set")
 def loop_flow():
     """Complete loop flow that processes multiple URLs through a loop."""
+    pytest.importorskip("lfx_openai")
+    from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
+
     # Create URL component to fetch content from multiple sources
     url_component = URLComponent()
     url_component.set(urls=["https://docs.langflow.org/"])

@@ -22,7 +22,6 @@ from pydantic import (
     field_serializer,
     field_validator,
     model_serializer,
-    model_validator,
 )
 
 if TYPE_CHECKING:
@@ -36,6 +35,7 @@ from lfx.schema.content_block import ContentBlock, ContentType
 from lfx.schema.content_types import ErrorContent, TextContent
 from lfx.schema.data import Data
 from lfx.schema.image import Image, get_file_paths, is_image_file
+from lfx.schema.legacy_render import legacy_text, render_v1_content_blocks
 from lfx.schema.properties import Properties, Source
 from lfx.schema.validators import str_to_timestamp_validator, timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
@@ -113,28 +113,22 @@ class Message(Data):
     duration: int | None = None
     session_metadata: dict | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def _fold_text_into_content_blocks(cls, data):
-        if not isinstance(data, dict):
-            return data
-        text = data.get("text")
-        if text and not isinstance(text, str):
-            # AsyncIterator/Iterator for streaming -- leave in data for model_post_init
-            return data
-        # Don't auto-wrap text into content_blocks. Text-only messages keep
-        # content_blocks empty for backwards compatibility with the frontend.
-        # content_blocks is populated explicitly by components that produce
-        # rich content (agents, multimodal, etc.).
-        return data
+    # Text is intentionally NOT auto-folded into content_blocks. Text-only
+    # messages keep content_blocks empty for frontend backwards compatibility;
+    # content_blocks is populated explicitly by components that produce rich
+    # content (agents, multimodal, etc.). Streaming text (AsyncIterator/Iterator)
+    # is left in data for model_post_init to handle.
 
     @computed_field
     @property
-    def text(self) -> str:
+    def text(self) -> str | AsyncIterator | Iterator:
         """Extract text from content_blocks, or fall back to data dict.
 
         Always returns a string. For streaming access, use `text_stream` property.
         """
+        stream = self.__dict__.get("_text_stream")
+        if stream is not None:
+            return stream
         # If content_blocks has TextContent, derive from there
         text_from_blocks = "".join(b.text for b in self.content_blocks if isinstance(b, TextContent))
         if text_from_blocks:
@@ -195,13 +189,6 @@ class Message(Data):
     def validate_run_id(cls, value):
         if isinstance(value, UUID):
             value = str(value)
-        return value
-
-    @field_validator("text", mode="before")
-    @classmethod
-    def validate_text(cls, value):
-        if is_secret_value(value):
-            return str(value)
         return value
 
     @field_validator("content_blocks", mode="before")
@@ -268,8 +255,14 @@ class Message(Data):
         return value
 
     def model_post_init(self, /, _context: Any) -> None:
-        # If text in data dict is an iterator/stream, move it to __dict__ for direct access
+        # If text in data dict is an iterator/stream, move it to __dict__ for direct access.
+        # Coerce SecretStr first so a secret value isn't mistaken for a stream
+        # (``text`` is now a computed_field, so the old before-validator that
+        # did this coercion no longer runs).
         text_val = self.data.get("text")
+        if is_secret_value(text_val):
+            text_val = str(text_val)
+            self.data[self.text_key] = text_val
         if text_val is not None and not isinstance(text_val, str):
             self.data.pop("text", None)
             self.__dict__["_text_stream"] = text_val
@@ -309,6 +302,15 @@ class Message(Data):
             existing = self.data[self.text_key]
             if existing is not None and not isinstance(existing, str):
                 self.data[self.text_key] = ""
+        else:
+            # Bare-default message (``text`` never provided): restore the
+            # release-1.11.0 default of ``text == ""`` so a sender-only message
+            # still persists via ``from_message`` and v1 consumers keep finding
+            # ``data["text"]``. This matches baseline for both v1 and v2 (``text``
+            # was a stored field defaulting to ""); only the ``text`` value is
+            # seeded, ``content_blocks`` is untouched. An explicit ``text=None``
+            # keeps the key present with ``None`` (handled by the elif above).
+            self.data[self.text_key] = ""
 
     def set_flow_id(self, flow_id: str) -> None:
         self.flow_id = flow_id
@@ -390,6 +392,14 @@ class Message(Data):
                             blocks.append(ImageContent(base64=b64, mime_type=mime))
                         elif url:
                             blocks.append(ImageContent(urls=[url]))
+                        else:
+                            # Log shape only, never the payload, so a provider
+                            # emitting an undecodable image part leaves a trace
+                            # instead of silently dropping content.
+                            logger.debug(
+                                "from_lc_message: dropping image item with no usable url/base64 "
+                                f"(keys={sorted(item.keys())})"
+                            )
                     else:
                         logger.debug(f"from_lc_message: skipping unsupported content type '{item_type}'")
 
@@ -743,31 +753,21 @@ class MessageResponse(DefaultModel):
 
     properties: Properties | None = None
     category: str | None = None
-    # ContentBlock joined the ContentType discriminated union as tag "group",
-    # so list[ContentType] alone covers both flat ContentType (text, image,
-    # tool_use, ...) and the wrapping ContentBlock shape. The previous
-    # `list[ContentType | ContentBlock]` union confused Pydantic's
-    # discriminator: any dict with a `contents` field (which every backend
-    # BaseContent now serializes by default, even as []) was routed to
-    # ContentBlock and rejected with `type: literal_error` for non-group
-    # types like text.
-    content_blocks: list[ContentType] | None = None
+    # v1 wire shape: content_blocks is held as plain legacy dicts, not the new
+    # ContentType union, so the v1 API keeps emitting the release-1.11.0 shape.
+    # The new (v2) shape never flows through MessageResponse.
+    content_blocks: list[dict] | None = None
     session_metadata: dict | None = None
 
     @field_validator("content_blocks", mode="before")
     @classmethod
     def validate_content_blocks(cls, v):
-        if isinstance(v, str):
-            v = json.loads(v)
-        if isinstance(v, list):
-            return [cls.validate_content_blocks(block) for block in v]
-        if isinstance(v, dict):
-            # The discriminator on `type` handles flat ContentType vs grouped
-            # ContentBlock uniformly. The old "type and not contents"
-            # heuristic broke once BaseContent started serializing
-            # `contents: []` on every leaf.
-            return _CONTENT_TYPE_ADAPTER.validate_python(v)
-        return v
+        # Project the new content_blocks model onto the legacy (release-1.11.0)
+        # v1 shape. Accepts ContentType models (from ``from_message``), serialized
+        # dicts (from a DB-row ``model_validate``), or a JSON string. The agent
+        # answer is folded back into the "Agent Steps" group; the new (v2) shape
+        # never flows through MessageResponse.
+        return render_v1_content_blocks(v)
 
     @field_validator("properties", mode="before")
     @classmethod
@@ -808,9 +808,7 @@ class MessageResponse(DefaultModel):
         if no_content or not message.sender or not message.sender_name:
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
-        text = message.text
-        if not isinstance(text, str):
-            text = ""
+        text = legacy_text(message)
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,

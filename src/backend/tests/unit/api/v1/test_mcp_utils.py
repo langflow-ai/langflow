@@ -391,7 +391,10 @@ def _build_fake_server() -> SimpleNamespace:
 
 async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
     """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock."""
-    flow = SimpleNamespace(id="flow-id-1", name="my_flow", folder_id=None)
+    # ``user_id`` matches the current user (see ``current_user_ctx`` below) so the
+    # owner-override path in ``ensure_flow_permission`` is exercised; ``workspace_id``
+    # is read by the same guard.
+    flow = SimpleNamespace(id="flow-id-1", name="my_flow", folder_id=None, user_id="user-1", workspace_id=None)
 
     async def fake_get_flow_snake_case(*_args, **_kwargs):
         return flow

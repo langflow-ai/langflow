@@ -20,6 +20,8 @@ function makeRecordingContext() {
     setRunId: (runId) => calls.push(`setRunId:${runId}`),
     applyDelta: (ops) => calls.push(`applyDelta:${ops.length}`),
     handleCustomEvent: (eventType) => calls.push(`custom:${eventType}`),
+    handleEndEvent: () => calls.push("end"),
+    handleLogEvent: () => calls.push("log"),
     onFinished: () => calls.push("finished"),
     onError: (message) => calls.push(`error:${message}`),
   };
@@ -121,6 +123,38 @@ describe("handleAGUIEvent non-terminal contract", () => {
 
     expect(terminal).toBe(false);
     expect(calls).toEqual(["custom:add_message"]);
+  });
+
+  it("routes CUSTOM(langflow.event:end) to the end-event handler", () => {
+    const { ctx, calls } = makeRecordingContext();
+
+    const terminal = handleAGUIEvent(
+      {
+        type: EventType.CUSTOM,
+        name: "langflow.event",
+        value: { event_type: "end", data: { build_duration: 1.25 } },
+      } as unknown as BaseEvent,
+      ctx,
+    );
+
+    expect(terminal).toBe(false);
+    expect(calls).toEqual(["end"]);
+  });
+
+  it("routes CUSTOM(langflow.log) to the log handler", () => {
+    const { ctx, calls } = makeRecordingContext();
+
+    const terminal = handleAGUIEvent(
+      {
+        type: EventType.CUSTOM,
+        name: "langflow.log",
+        value: { component_id: "node-a", output: "out" },
+      } as unknown as BaseEvent,
+      ctx,
+    );
+
+    expect(terminal).toBe(false);
+    expect(calls).toEqual(["log"]);
   });
 
   it("returns false for CUSTOM with a foreign name and skips the handler", () => {
