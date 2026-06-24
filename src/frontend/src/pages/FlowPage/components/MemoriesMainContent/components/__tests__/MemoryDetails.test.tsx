@@ -48,8 +48,16 @@ jest.mock("@/components/ui/popover", () => ({
       {children}
     </div>
   ),
-  PopoverContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="popover-content">{children}</div>
+  PopoverContent: ({
+    children,
+    "aria-label": ariaLabel,
+  }: {
+    children: React.ReactNode;
+    "aria-label"?: string;
+  }) => (
+    <div data-testid="popover-content" aria-label={ariaLabel}>
+      {children}
+    </div>
   ),
 }));
 
@@ -263,6 +271,12 @@ describe("MemoryDetails — Config popover", () => {
     render(<MemoryDetails {...baseProps} />);
     const chevron = screen.getByTestId("icon-ChevronDown");
     expect(chevron.className).not.toContain("rotate-180");
+  });
+
+  it("popover content has aria-label 'Config' so screen readers can name the panel", () => {
+    render(<MemoryDetails {...baseProps} />);
+    const content = screen.getByTestId("popover-content");
+    expect(content).toHaveAttribute("aria-label", "Config");
   });
 });
 

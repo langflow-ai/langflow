@@ -159,6 +159,7 @@ const ListComponent = ({
                   !selected && "opacity-0 group-hover/checkbox:opacity-100",
                 )}
                 data-testid={`checkbox-${flowData.id}`}
+                aria-label={t("flows.selectFlow", { name: flowData.name })}
               />
             </div>
             <div
@@ -210,6 +211,7 @@ const ListComponent = ({
                 size="iconMd"
                 data-testid="home-dropdown-menu"
                 className="group"
+                aria-label={t("flows.moreOptions", { name: flowData.name })}
               >
                 <ForwardedIconComponent
                   name="Ellipsis"
