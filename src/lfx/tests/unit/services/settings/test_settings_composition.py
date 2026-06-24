@@ -197,6 +197,9 @@ EXPECTED_FIELDS = {
     "telemetry_writer_size_strategy",
     "telemetry_writer_batch_size_bytes",
     "telemetry_writer_max_queue_bytes",
+    # ---- Added in 1.10.1 ----
+    # SecuritySettings
+    "allow_public_custom_components",
 }
 
 

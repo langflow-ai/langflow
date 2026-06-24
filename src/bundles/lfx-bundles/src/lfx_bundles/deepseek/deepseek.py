@@ -1,8 +1,10 @@
-import requests
+import httpx
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from lfx.utils.ssrf_httpx import ssrf_protected_openai_clients_for_url, ssrf_safe_httpx_get
+from lfx.utils.ssrf_protection import SSRFProtectionError
 from pydantic.v1 import SecretStr
 from typing_extensions import override
 
@@ -82,11 +84,14 @@ class DeepSeekModelComponent(LCModelComponent):
         headers = {"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"}
 
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = ssrf_safe_httpx_get(url, headers=headers, timeout=10)
             response.raise_for_status()
             model_list = response.json()
             return [model["id"] for model in model_list.get("data", [])]
-        except requests.RequestException as e:
+        except SSRFProtectionError as e:
+            self.status = f"SSRF Protection: {e}"
+            return DEEPSEEK_MODELS
+        except httpx.HTTPError as e:
             self.status = f"Error fetching models: {e}"
             return DEEPSEEK_MODELS
 
@@ -105,6 +110,8 @@ class DeepSeekModelComponent(LCModelComponent):
             raise ImportError(msg) from e
 
         api_key = SecretStr(self.api_key).get_secret_value() if self.api_key else None
+        ssrf_client_kwargs = ssrf_protected_openai_clients_for_url(self.api_base)
+
         output = ChatOpenAI(
             model=self.model_name,
             temperature=self.temperature if self.temperature is not None else 0.1,
@@ -114,6 +121,7 @@ class DeepSeekModelComponent(LCModelComponent):
             api_key=api_key,
             streaming=self.stream if hasattr(self, "stream") else False,
             seed=self.seed,
+            **ssrf_client_kwargs,
         )
 
         if self.json_mode:

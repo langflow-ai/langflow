@@ -20,6 +20,14 @@ def set_advanced_true(component_input):
 
 MODEL_PROVIDERS_LIST = ["Anthropic", "OpenAI"]
 INPUT_NAMES_TO_BE_OVERRIDDEN = ["agent_llm"]
+VERBOSE_INPUT_INFO = (
+    "Legacy toggle. The '> Entering new ... chain' / '> Finished chain.' "
+    "markers it used to print to stdout are now gated on the "
+    "LANGCHAIN_VERBOSE environment variable (off by default); set "
+    "LANGCHAIN_VERBOSE=true to emit them. Toggling this input on its own no "
+    "longer attaches LangChain's stdout handler. Agent steps remain visible "
+    "in the UI regardless of this setting."
+)
 
 
 def get_parent_agent_inputs():
@@ -52,14 +60,22 @@ def get_parent_agent_inputs():
         for input_field in ALTKBaseAgentComponent.inputs
         if input_field.name not in INPUT_NAMES_TO_BE_OVERRIDDEN
     ]
-    # `verbose` was removed from `AgentComponent.inputs`. ALTK's `run_agent` still
-    # passes it through to `AgentExecutor.from_agent_and_tools(verbose=...)`, so
-    # re-add it after `handle_parsing_errors` to preserve the previous UI order.
+    # `verbose` was removed from `AgentComponent.inputs`. ALTK still runs through
+    # AgentExecutor, but stdout markers now follow LANGCHAIN_VERBOSE via
+    # resolve_agent_verbose(); keep the legacy input with explanatory UI text.
     rebuilt: list = []
     for input_field in parent_inputs:
         rebuilt.append(input_field)
         if input_field.name == "handle_parsing_errors":
-            rebuilt.append(BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True))
+            rebuilt.append(
+                BoolInput(
+                    name="verbose",
+                    display_name="Verbose",
+                    value=True,
+                    advanced=True,
+                    info=VERBOSE_INPUT_INFO,
+                )
+            )
     return rebuilt
 
 

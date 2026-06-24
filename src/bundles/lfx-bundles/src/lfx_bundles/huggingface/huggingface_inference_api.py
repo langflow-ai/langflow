@@ -1,10 +1,11 @@
 from urllib.parse import urlparse
 
-import requests
+import httpx
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.field_typing import Embeddings
 from lfx.io import MessageTextInput, Output, SecretStrInput
+from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get, validate_url_for_ssrf_or_raise
 
 # Next update: use langchain_huggingface
 from pydantic import SecretStr
@@ -56,15 +57,15 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             raise ValueError(msg)
 
         try:
-            response = requests.get(f"{inference_endpoint}/health", timeout=5)
-        except requests.RequestException as e:
+            response = ssrf_safe_httpx_get(f"{inference_endpoint}/health", timeout=5)
+        except httpx.HTTPError as e:
             msg = (
                 f"Inference endpoint '{inference_endpoint}' is not responding. "
                 "Please ensure the URL is correct and the service is running."
             )
             raise ValueError(msg) from e
 
-        if response.status_code != requests.codes.ok:
+        if response.status_code != httpx.codes.OK:
             msg = f"Hugging Face health check failed: {response.status_code}"
             raise ValueError(msg)
         # returning True to solve linting error
@@ -83,6 +84,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
 
     def build_embeddings(self) -> Embeddings:
         api_url = self.get_api_url()
+        validate_url_for_ssrf_or_raise(api_url)
 
         is_local_url = (
             api_url.startswith(("http://localhost", "http://127.0.0.1", "http://0.0.0.0", "http://docker"))

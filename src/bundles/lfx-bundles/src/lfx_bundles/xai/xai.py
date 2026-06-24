@@ -1,4 +1,4 @@
-import requests
+import httpx
 from langchain_openai import ChatOpenAI
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
@@ -12,6 +12,8 @@ from lfx.inputs.inputs import (
     SecretStrInput,
     SliderInput,
 )
+from lfx.utils.ssrf_httpx import ssrf_protected_openai_clients_for_url, ssrf_safe_httpx_get
+from lfx.utils.ssrf_protection import SSRFProtectionError
 from pydantic.v1 import SecretStr
 from typing_extensions import override
 
@@ -96,7 +98,7 @@ class XAIModelComponent(LCModelComponent):
         headers = {"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"}
 
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = ssrf_safe_httpx_get(url, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
 
@@ -107,7 +109,10 @@ class XAIModelComponent(LCModelComponent):
                 models.update(model.get("aliases", []))
 
             return sorted(models) if models else XAI_DEFAULT_MODELS
-        except requests.RequestException as e:
+        except SSRFProtectionError as e:
+            self.status = f"SSRF Protection: {e}"
+            return XAI_DEFAULT_MODELS
+        except httpx.HTTPError as e:
             self.status = f"Error fetching models: {e}"
             return XAI_DEFAULT_MODELS
 
@@ -129,6 +134,7 @@ class XAIModelComponent(LCModelComponent):
         json_mode = self.json_mode
         seed = self.seed
 
+        ssrf_client_kwargs = ssrf_protected_openai_clients_for_url(base_url)
         api_key = SecretStr(api_key).get_secret_value() if api_key else None
 
         output = ChatOpenAI(
@@ -139,6 +145,7 @@ class XAIModelComponent(LCModelComponent):
             api_key=api_key,
             temperature=temperature if temperature is not None else 0.1,
             seed=seed,
+            **ssrf_client_kwargs,
         )
 
         if json_mode:
