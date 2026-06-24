@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 from lfx.custom.validate import (
-    _create_langflow_execution_context,
     add_type_ignores,
     build_class_constructor,
     compile_class_code,
@@ -119,6 +118,26 @@ def error_function():
         assert result["imports"]["errors"] == []
         assert result["function"]["errors"] == []
 
+    def test_validate_code_does_not_execute_default_args(self, tmp_path):
+        """validate_code must not run function-definition-time code.
+
+        Regression for GHSA-2wcq-pvw2-xh7v: the
+        validator previously exec()'d each function definition, so a default
+        argument (or decorator) expression executed during validation. Here a
+        default arg would create a file as a side effect; it must NOT run.
+        """
+        marker = tmp_path / "pwned.txt"
+        code = f'def exploit(x=open({str(marker)!r}, "w").write("pwned")):\n    return x\n'
+
+        result = validate_code(code)
+
+        # No code executed -> the side-effect file was never created.
+        assert not marker.exists()
+        # Validation still returns the normal structure (valid syntax, no imports).
+        assert result["imports"]["errors"] == []
+        # Code is syntactically valid, so no compile errors expected.
+        assert result["function"]["errors"] == []
+
     def test_code_with_multiple_imports(self):
         """Test validation handles multiple imports."""
         code = """
@@ -147,52 +166,6 @@ def test_func():
 
         # With structlog, we expect logger.debug to be called with exc_info=True
         mock_logger.debug.assert_called_with("Error parsing code", exc_info=True)
-
-
-class TestCreateLangflowExecutionContext:
-    """Test cases for _create_langflow_execution_context function."""
-
-    def test_creates_context_with_langflow_imports(self):
-        """Test that context includes langflow imports."""
-        # The function imports modules inside try/except blocks
-        # We don't need to patch anything, just test it works
-        context = _create_langflow_execution_context()
-
-        # Check that the context contains the expected keys
-        # The actual imports may succeed or fail, but the function should handle both cases
-        assert isinstance(context, dict)
-        # These keys should be present regardless of import success/failure
-        expected_keys = ["DataFrame", "Message", "Data", "Component", "HandleInput", "Output", "TabInput"]
-        for key in expected_keys:
-            assert key in context, f"Expected key '{key}' not found in context"
-
-    def test_creates_mock_classes_on_import_failure(self):
-        """Test that mock classes are created when imports fail."""
-        # Test that the function handles import failures gracefully
-        # by checking the actual implementation behavior
-        with patch("builtins.__import__", side_effect=ImportError("Module not found")):
-            context = _create_langflow_execution_context()
-
-            # Even with import failures, the context should still be created
-            assert isinstance(context, dict)
-            # The function should create mock classes when imports fail
-            if "DataFrame" in context:
-                assert isinstance(context["DataFrame"], type)
-
-    def test_includes_typing_imports(self):
-        """Test that typing imports are included."""
-        context = _create_langflow_execution_context()
-
-        assert "Any" in context
-        assert "Dict" in context
-        assert "List" in context
-        assert "Optional" in context
-        assert "Union" in context
-
-    def test_does_not_include_pandas(self):
-        """Test that pandas is not included in the langflow execution context."""
-        context = _create_langflow_execution_context()
-        assert "pd" not in context
 
 
 class TestEvalFunction:

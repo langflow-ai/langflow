@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
+import { classNameFromType } from "@/CustomNodes/utils/class-name-from-type";
 import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import {
@@ -110,9 +111,9 @@ export default function NodeInputField({
       colors={colors}
       setFilterEdge={setFilterEdge}
       showNode={showNode}
-      testIdComplement={`${data?.type?.toLowerCase()}-${
-        showNode ? "shownode" : "noshownode"
-      }`}
+      testIdComplement={`${classNameFromType(
+        data?.type ?? "",
+      ).toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
       nodeId={data.id}
       colorName={colorName}
     />

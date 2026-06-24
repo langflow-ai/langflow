@@ -19,7 +19,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import session_scope
 from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, select, text
@@ -193,6 +193,65 @@ def check_postgresql_version_sync(database_url: str) -> None:
         engine.dispose()
 
 
+def get_sqlite_database_file_path(database_url: str) -> Path | None:
+    """Return the on-disk file path for a SQLite URL, or ``None`` when there is none.
+
+    Returns ``None`` for non-SQLite URLs and for in-memory SQLite databases
+    (``sqlite://`` and ``sqlite:///:memory:``), which have no file on disk. The
+    returned path is kept exactly as written in the URL (relative paths are *not*
+    resolved) so callers can report it back to the user verbatim.
+    """
+    if not database_url.startswith("sqlite"):
+        return None
+    try:
+        database = make_url(database_url).database
+    except Exception:  # noqa: BLE001 - defensive: malformed URLs are handled elsewhere
+        return None
+    if not database or database == ":memory:":
+        return None
+    return Path(database)
+
+
+def check_sqlite_database_path(database_url: str) -> None:
+    """Fail fast with an actionable message when a SQLite database cannot be opened.
+
+    SQLite does not create intermediate directories, and relative paths in
+    ``LANGFLOW_DATABASE_URL`` are resolved by SQLAlchemy against the current
+    working directory at connect time. When the resolved parent directory is
+    missing the raw ``sqlite3.OperationalError`` ("unable to open database file")
+    is opaque, so surface where Langflow actually tried to open the database and
+    how a relative path was resolved. No-op for non-SQLite and in-memory URLs.
+
+    Note: this only improves diagnostics; it does not change which URLs are
+    accepted nor create any directories. See issue #13634.
+    """
+    db_path = get_sqlite_database_file_path(database_url)
+    if db_path is None:
+        return
+
+    resolved = db_path.resolve()
+    logger.debug(f"Using SQLite database at {resolved}")
+
+    parent = resolved.parent
+    if parent.exists():
+        return
+
+    msg = (
+        f"Cannot open the SQLite database at '{resolved}': the parent directory "
+        f"'{parent}' does not exist, and SQLite does not create intermediate "
+        f"directories. "
+    )
+    if db_path.is_absolute():
+        msg += "Create the directory before starting Langflow, or point LANGFLOW_DATABASE_URL at an existing path."
+    else:
+        msg += (
+            f"The relative path '{db_path}' from LANGFLOW_DATABASE_URL was resolved against the current working "
+            f"directory ('{Path.cwd()}'). Set LANGFLOW_DATABASE_URL to an absolute path "
+            f"(e.g. 'sqlite:///{resolved}'), or create the directory before starting Langflow."
+        )
+    raise ValueError(msg)
+
+
 class DatabaseService(Service):
     name = "database_service"
 
@@ -240,14 +299,32 @@ class DatabaseService(Service):
         elif Path(alembic_log_file).is_absolute():
             self.alembic_log_path = Path(alembic_log_file)
         else:
-            self.alembic_log_path = Path(langflow_dir) / alembic_log_file
+            # Resolve relative log paths against the writable runtime config
+            # directory, not the installed package directory. The package dir is
+            # read-only in hardened deployments (non-root containers, read-only
+            # root filesystems, Kubernetes), where writing into it raises OSError
+            # and crashes startup. config_dir is always writable (it defaults to
+            # platformdirs' user cache dir and is created on startup).
+            config_dir = getattr(self.settings_service.settings, "config_dir", None)
+            base_dir = Path(config_dir) if config_dir else langflow_dir
+            self.alembic_log_path = base_dir / alembic_log_file
 
     async def initialize_alembic_log_file(self):
-        if self.alembic_log_to_stdout:
+        log_path = self.alembic_log_path
+        if self.alembic_log_to_stdout or log_path is None:
             return
-        # Ensure the directory and file for the alembic log file exists
-        await anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
-        await anyio.Path(self.alembic_log_path).touch(exist_ok=True)
+        # Ensure the directory and file for the alembic log file exists. The
+        # migration log is diagnostic-only, so a read-only filesystem (hardened
+        # containers / Kubernetes) must never abort startup: warn and move on.
+        try:
+            await anyio.Path(log_path.parent).mkdir(parents=True, exist_ok=True)
+            await anyio.Path(log_path).touch(exist_ok=True)
+        except OSError as exc:
+            await logger.awarning(
+                f"Could not initialize the Alembic migration log at '{log_path}' ({exc}). "
+                "Migration output falls back to stdout. Set LANGFLOW_ALEMBIC_LOG_FILE to a writable path "
+                "or LANGFLOW_ALEMBIC_LOG_TO_STDOUT=true to silence this warning."
+            )
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
@@ -518,6 +595,33 @@ class DatabaseService(Service):
         # alembic_cfg.attributes["connection"].commit()
         command.upgrade(alembic_cfg, "head")
 
+    def _open_alembic_log_buffer(self):
+        """Open the Alembic migration log for writing, falling back to stdout.
+
+        The migration log is diagnostic-only output. If the target path cannot
+        be written -- e.g. the installed package directory or the root
+        filesystem is read-only, as in hardened container/Kubernetes deployments
+        (non-root user or read-only root filesystem) -- startup must not abort.
+        Fall back to stdout rather than letting OSError propagate through the
+        FastAPI lifespan. Returns a context manager yielding the buffer Alembic
+        writes its output to.
+        """
+        log_path = self.alembic_log_path
+        if self.alembic_log_to_stdout or log_path is None:
+            return nullcontext(sys.stdout)
+        try:
+            # _run_migrations can run before initialize_alembic_log_file(), so
+            # make sure the parent directory exists before opening for writing.
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            return log_path.open("w", encoding="utf-8")
+        except OSError as exc:
+            logger.warning(
+                f"Could not open the Alembic migration log at '{log_path}' ({exc}). "
+                "Falling back to stdout. Set LANGFLOW_ALEMBIC_LOG_FILE to a writable path "
+                "or LANGFLOW_ALEMBIC_LOG_TO_STDOUT=true to silence this warning."
+            )
+            return nullcontext(sys.stdout)
+
     def _run_migrations(self, should_initialize_alembic, fix) -> None:
         # First we need to check if alembic has been initialized
         # If not, we need to initialize it
@@ -528,9 +632,7 @@ class DatabaseService(Service):
         # which is a buffer
         # I don't want to output anything
         # subprocess.DEVNULL is an int
-        buffer_context = (
-            nullcontext(sys.stdout) if self.alembic_log_to_stdout else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
-        )
+        buffer_context = self._open_alembic_log_buffer()
         # The advisory lock serialises concurrent migration runs across workers
         # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
         with _postgres_migration_lock(self.database_url), buffer_context as buffer:

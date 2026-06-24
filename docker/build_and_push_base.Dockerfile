@@ -75,7 +75,7 @@ RUN npm install \
 
 WORKDIR /app/src/backend/base
 # langflow-base ships the core framework only.  The extension bundles
-# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling, lfx-firecrawl) are intentionally NOT
+# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling, lfx-oracle, lfx-firecrawl) are intentionally NOT
 # installed in this image: they are dependencies of the full ``langflow``
 # distribution, not of the lean ``langflow-base`` core, and we keep that
 # boundary at the image layer too.  Consumers who want those components

@@ -10,7 +10,7 @@ import { useApplyTemplateToCurrentFlow } from "../use-apply-template-to-current-
 
 const setNodes = jest.fn();
 const setEdges = jest.fn();
-const setCurrentFlow = jest.fn();
+const setCurrentFlowInManager = jest.fn();
 const saveFlow = jest.fn().mockResolvedValue(undefined);
 
 let currentFlow: unknown;
@@ -18,7 +18,7 @@ let currentFlow: unknown;
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: jest.fn((selector?: (state: unknown) => unknown) => {
-    const state = { setNodes, setEdges, setCurrentFlow, currentFlow };
+    const state = { setNodes, setEdges, currentFlow };
     return selector ? selector(state) : state;
   }),
 }));
@@ -68,17 +68,23 @@ function setStores(
 ) {
   mockedFlowsManagerStore.mockImplementation(
     (selector?: (state: unknown) => unknown) => {
-      const state = { examples, flows };
+      const state = {
+        examples,
+        flows,
+        setCurrentFlow: setCurrentFlowInManager,
+      };
       return selector ? selector(state) : state;
     },
   );
+  (mockedFlowsManagerStore as unknown as { getState: () => unknown }).getState =
+    () => ({ currentFlow });
 }
 
 describe("useApplyTemplateToCurrentFlow", () => {
   beforeEach(() => {
     setNodes.mockClear();
     setEdges.mockClear();
-    setCurrentFlow.mockClear();
+    setCurrentFlowInManager.mockClear();
     saveFlow.mockClear();
     currentFlow = {
       id: "flow-1",
@@ -89,7 +95,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
     setStores(fullExamples);
   });
 
-  it("should_call_setNodes_and_setEdges_with_template_data_when_template_is_applied", () => {
+  it("should_apply_template_data_to_current_flow_when_template_is_applied", () => {
     const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
 
     let didApply = false;
@@ -98,8 +104,16 @@ describe("useApplyTemplateToCurrentFlow", () => {
     });
 
     expect(didApply).toBe(true);
-    expect(setNodes).toHaveBeenCalledWith([{ id: "n1" }]);
-    expect(setEdges).toHaveBeenCalledWith([{ id: "e1" }]);
+    // setCurrentFlowInManager (which internally calls resetFlow → setNodes/setEdges)
+    // is the path taken when currentFlow exists.
+    expect(setCurrentFlowInManager).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          nodes: [{ id: "n1" }],
+          edges: [{ id: "e1" }],
+        }),
+      }),
+    );
   });
 
   it("should_pick_the_correct_template_when_a_different_name_key_is_passed", () => {
@@ -109,8 +123,14 @@ describe("useApplyTemplateToCurrentFlow", () => {
       result.current("vector_store_rag");
     });
 
-    expect(setNodes).toHaveBeenCalledWith([{ id: "n2" }, { id: "n3" }]);
-    expect(setEdges).toHaveBeenCalledWith([{ id: "e2" }]);
+    expect(setCurrentFlowInManager).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          nodes: [{ id: "n2" }, { id: "n3" }],
+          edges: [{ id: "e2" }],
+        }),
+      }),
+    );
   });
 
   it("should_return_false_and_not_mutate_when_no_example_matches_name_key", () => {
@@ -137,7 +157,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
     });
 
     // The generic "New Flow" placeholder adopts the template name...
-    expect(setCurrentFlow).toHaveBeenCalledWith(
+    expect(setCurrentFlowInManager).toHaveBeenCalledWith(
       expect.objectContaining({ id: "flow-1", name: "Simple Agent" }),
     );
     // ...and the rename is persisted via saveFlow.
@@ -159,7 +179,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
       result.current("simple_agent");
     });
 
-    expect(setCurrentFlow).toHaveBeenCalledWith(
+    expect(setCurrentFlowInManager).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Simple Agent (1)" }),
     );
   });
@@ -176,7 +196,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
       result.current("simple_agent");
     });
 
-    expect(setCurrentFlow).toHaveBeenCalledWith(
+    expect(setCurrentFlowInManager).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Simple Agent" }),
     );
   });
@@ -194,11 +214,11 @@ describe("useApplyTemplateToCurrentFlow", () => {
       await Promise.resolve();
     });
 
-    expect(setCurrentFlow).toHaveBeenNthCalledWith(
+    expect(setCurrentFlowInManager).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ name: "Simple Agent" }),
     );
-    expect(setCurrentFlow).toHaveBeenLastCalledWith(original);
+    expect(setCurrentFlowInManager).toHaveBeenLastCalledWith(original);
   });
 
   it("should_not_rename_or_persist_when_there_is_no_current_flow", () => {
@@ -209,7 +229,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
       result.current("simple_agent");
     });
 
-    expect(setCurrentFlow).not.toHaveBeenCalled();
+    expect(setCurrentFlowInManager).not.toHaveBeenCalled();
     expect(saveFlow).not.toHaveBeenCalled();
   });
 });
