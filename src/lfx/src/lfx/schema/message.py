@@ -35,6 +35,7 @@ from lfx.schema.content_block import ContentBlock, ContentType
 from lfx.schema.content_types import ErrorContent, TextContent
 from lfx.schema.data import Data
 from lfx.schema.image import Image, get_file_paths, is_image_file
+from lfx.schema.legacy_render import legacy_text, render_v1_content_blocks
 from lfx.schema.properties import Properties, Source
 from lfx.schema.validators import str_to_timestamp_validator, timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
@@ -120,11 +121,14 @@ class Message(Data):
 
     @computed_field
     @property
-    def text(self) -> str:
+    def text(self) -> str | AsyncIterator | Iterator:
         """Extract text from content_blocks, or fall back to data dict.
 
         Always returns a string. For streaming access, use `text_stream` property.
         """
+        stream = self.__dict__.get("_text_stream")
+        if stream is not None:
+            return stream
         # If content_blocks has TextContent, derive from there
         text_from_blocks = "".join(b.text for b in self.content_blocks if isinstance(b, TextContent))
         if text_from_blocks:
@@ -298,6 +302,15 @@ class Message(Data):
             existing = self.data[self.text_key]
             if existing is not None and not isinstance(existing, str):
                 self.data[self.text_key] = ""
+        else:
+            # Bare-default message (``text`` never provided): restore the
+            # release-1.11.0 default of ``text == ""`` so a sender-only message
+            # still persists via ``from_message`` and v1 consumers keep finding
+            # ``data["text"]``. This matches baseline for both v1 and v2 (``text``
+            # was a stored field defaulting to ""); only the ``text`` value is
+            # seeded, ``content_blocks`` is untouched. An explicit ``text=None``
+            # keeps the key present with ``None`` (handled by the elif above).
+            self.data[self.text_key] = ""
 
     def set_flow_id(self, flow_id: str) -> None:
         self.flow_id = flow_id
@@ -740,29 +753,21 @@ class MessageResponse(DefaultModel):
 
     properties: Properties | None = None
     category: str | None = None
-    content_blocks: list[ContentType] | None = None
+    # v1 wire shape: content_blocks is held as plain legacy dicts, not the new
+    # ContentType union, so the v1 API keeps emitting the release-1.11.0 shape.
+    # The new (v2) shape never flows through MessageResponse.
+    content_blocks: list[dict] | None = None
     session_metadata: dict | None = None
 
     @field_validator("content_blocks", mode="before")
     @classmethod
     def validate_content_blocks(cls, v):
-        if isinstance(v, str):
-            v = json.loads(v)
-        if isinstance(v, list):
-            return [cls.validate_content_blocks(block) for block in v]
-        if isinstance(v, dict):
-            # Route every tagged dict through the discriminated-union adapter.
-            # Stored blocks always serialize ``contents: []`` (default_factory),
-            # so an "absence of contents" guard would misfire and force flat
-            # ContentTypes into ContentBlock.model_validate (which requires a
-            # title) on the DB read path. The grouped ContentBlock carries
-            # type="group" and is itself a member of the union.
-            if "type" in v:
-                return _CONTENT_TYPE_ADAPTER.validate_python(v)
-            if "title" in v and "contents" in v:
-                return ContentBlock.model_validate(v)
-            return _CONTENT_TYPE_ADAPTER.validate_python(v)
-        return v
+        # Project the new content_blocks model onto the legacy (release-1.11.0)
+        # v1 shape. Accepts ContentType models (from ``from_message``), serialized
+        # dicts (from a DB-row ``model_validate``), or a JSON string. The agent
+        # answer is folded back into the "Agent Steps" group; the new (v2) shape
+        # never flows through MessageResponse.
+        return render_v1_content_blocks(v)
 
     @field_validator("properties", mode="before")
     @classmethod
@@ -803,9 +808,7 @@ class MessageResponse(DefaultModel):
         if no_content or not message.sender or not message.sender_name:
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
-        text = message.text
-        if not isinstance(text, str):
-            text = ""
+        text = legacy_text(message)
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
