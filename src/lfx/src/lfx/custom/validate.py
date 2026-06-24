@@ -57,80 +57,26 @@ def validate_code(code):
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
 
-    # Evaluate the function definition with langflow context
+    # Validate each function definition WITHOUT executing it.
+    #
+    # Security (GHSA-2wcq-pvw2-xh7v): this endpoint only
+    # *validates* code, but it previously compiled and exec()'d every function
+    # definition. Executing a function definition evaluates its decorators and
+    # default-argument expressions at definition time, so a payload such as
+    #     def f(x=__import__("os").system("...")): ...
+    # achieves arbitrary code execution during "validation" — the function never
+    # has to be called. Compile only, to surface syntax/compile errors; never
+    # exec untrusted code on the validation path.
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
-            code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
-                # Create execution context with common langflow imports
-                exec_globals = _create_langflow_execution_context()
-                exec(code_obj, exec_globals)
+                compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             except Exception as e:  # noqa: BLE001
-                logger.debug("Error executing function code", exc_info=True)
+                logger.debug("Error compiling function code", exc_info=True)
                 errors["function"]["errors"].append(str(e))
 
     # Return the errors dictionary
     return errors
-
-
-def _create_langflow_execution_context():
-    """Create execution context with common langflow imports."""
-    context = {}
-
-    # Import common langflow types that are used in templates
-    try:
-        from lfx.schema.dataframe import DataFrame
-
-        context["DataFrame"] = DataFrame
-    except ImportError:
-        # Create a mock DataFrame if import fails
-        context["DataFrame"] = type("DataFrame", (), {})
-
-    try:
-        from lfx.schema.message import Message
-
-        context["Message"] = Message
-    except ImportError:
-        context["Message"] = type("Message", (), {})
-
-    try:
-        from lfx.schema.data import Data
-
-        context["Data"] = Data
-    except ImportError:
-        context["Data"] = type("Data", (), {})
-
-    try:
-        from lfx.custom import Component
-
-        context["Component"] = Component
-    except ImportError:
-        context["Component"] = type("Component", (), {})
-
-    try:
-        from lfx.io import HandleInput, Output, TabInput
-
-        context["HandleInput"] = HandleInput
-        context["Output"] = Output
-        context["TabInput"] = TabInput
-    except ImportError:
-        context["HandleInput"] = type("HandleInput", (), {})
-        context["Output"] = type("Output", (), {})
-        context["TabInput"] = type("TabInput", (), {})
-
-    # Add common Python typing imports
-    try:
-        from typing import Any, Optional, Union
-
-        context["Any"] = Any
-        context["Dict"] = dict
-        context["List"] = list
-        context["Optional"] = Optional
-        context["Union"] = Union
-    except ImportError:
-        pass
-
-    return context
 
 
 def eval_function(function_string: str):
