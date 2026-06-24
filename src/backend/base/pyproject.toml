@@ -110,16 +110,6 @@ dependencies = [
     "transformers>=5.6.0,<6.0.0",
 ]
 
-[tool.uv]
-# Workspace-resolution override for litellm, gated to <3.14 to match the
-# litellm/opik/toolguard extras. litellm has no 3.14-compatible release, so an
-# unconditional override would force the resolver to select an uninstallable
-# litellm on 3.14 (pulled transitively by opik/toolguard before they too were
-# gated). Drop the marker once upstream litellm supports 3.14.
-override-dependencies = [
-    "litellm>=1.85.1,<2.0.0; python_version < '3.14'"
-]
-
 [dependency-groups]
 dev = [
     "asgi-lifespan>=2.1.0",
