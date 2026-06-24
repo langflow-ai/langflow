@@ -37,7 +37,7 @@ class ScriptedModel(BaseChatModel):
     def bind_tools(self, tools, **kwargs):  # noqa: ARG002
         return self
 
-    def _generate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
+    def _result(self, messages) -> ChatResult:
         answered = any(isinstance(m, ToolMessage) for m in messages)
         msg = (
             AIMessage(content="Done — transferred.")
@@ -48,6 +48,16 @@ class ScriptedModel(BaseChatModel):
             )
         )
         return ChatResult(generations=[ChatGeneration(message=msg)])
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
+        return self._result(messages)
+
+    # Native async path: the agent is driven with ainvoke (async), so without _agenerate
+    # langchain would fall back to running _generate in an executor thread, where langgraph's
+    # runnable-config ContextVar isn't reliably propagated under parallel load — surfacing as
+    # "Called get_config outside of a runnable context". Staying on the event loop avoids it.
+    async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
+        return self._result(messages)
 
 
 def _store():
@@ -79,8 +89,7 @@ async def test_durable_saver_round_trip_pauses_persists_and_resumes() -> None:
 
     # Run 1: pauses at the gated tool; the paused thread is persisted to the blob store.
     saver = JobCheckpointSaver("job-1", save_blob, load_blob)
-    async for _ in _agent(saver).astream_events({"messages": [("user", "send 200")]}, version="v2", config=config):
-        pass
+    await _agent(saver).ainvoke({"messages": [("user", "send 200")]}, config=config)
 
     assert ("job-1", "agent") in blobs, "paused thread was not persisted"
 
@@ -92,10 +101,7 @@ async def test_durable_saver_round_trip_pauses_persists_and_resumes() -> None:
 
     # Resume approve on the rebuilt thread → the gated tool runs and the run completes.
     agent2 = _agent(saver2)
-    async for _ in agent2.astream_events(
-        Command(resume={"decisions": [{"type": "approve"}]}), version="v2", config=config
-    ):
-        pass
+    await agent2.ainvoke(Command(resume={"decisions": [{"type": "approve"}]}), config=config)
 
     final = await agent2.aget_state(config)
     messages = final.values.get("messages", [])
