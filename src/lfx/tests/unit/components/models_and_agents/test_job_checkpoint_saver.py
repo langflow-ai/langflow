@@ -8,6 +8,8 @@ No mocks of the serializer — the `__interrupt__` write is non-JSON and must su
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 from langchain.agents import create_agent
 from langchain.agents.middleware import HumanInTheLoopMiddleware
@@ -37,7 +39,7 @@ class ScriptedModel(BaseChatModel):
     def bind_tools(self, tools, **kwargs):  # noqa: ARG002
         return self
 
-    def _result(self, messages) -> ChatResult:
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
         answered = any(isinstance(m, ToolMessage) for m in messages)
         msg = (
             AIMessage(content="Done — transferred.")
@@ -48,16 +50,6 @@ class ScriptedModel(BaseChatModel):
             )
         )
         return ChatResult(generations=[ChatGeneration(message=msg)])
-
-    def _generate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
-        return self._result(messages)
-
-    # Native async path: the agent is driven with ainvoke (async), so without _agenerate
-    # langchain would fall back to running _generate in an executor thread, where langgraph's
-    # runnable-config ContextVar isn't reliably propagated under parallel load — surfacing as
-    # "Called get_config outside of a runnable context". Staying on the event loop avoids it.
-    async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
-        return self._result(messages)
 
 
 def _store():
@@ -82,6 +74,16 @@ def _agent(saver):
     )
 
 
+# langgraph's interrupt() reads get_config(), which is only populated inside the node when langgraph
+# runs it via asyncio.create_task(context=...) — gated on ASYNCIO_ACCEPTS_CONTEXT (Python >= 3.11).
+# On 3.10 the config ContextVar is never set, so any HITL interrupt raises "Called get_config outside
+# of a runnable context" (confirmed on langgraph 1.1.10 and 1.2.6). The durable-saver round trip needs
+# a real interrupt, so it can only run on 3.11+; the blob serde itself is exercised version-agnostically
+# by test_durable_saver_async_only.
+@pytest.mark.skipif(
+    sys.version_info < (3, 11),
+    reason="langgraph HITL interrupt() needs asyncio create_task context= (Python 3.11+)",
+)
 @pytest.mark.asyncio
 async def test_durable_saver_round_trip_pauses_persists_and_resumes() -> None:
     blobs, save_blob, load_blob = _store()
@@ -89,7 +91,8 @@ async def test_durable_saver_round_trip_pauses_persists_and_resumes() -> None:
 
     # Run 1: pauses at the gated tool; the paused thread is persisted to the blob store.
     saver = JobCheckpointSaver("job-1", save_blob, load_blob)
-    await _agent(saver).ainvoke({"messages": [("user", "send 200")]}, config=config)
+    async for _ in _agent(saver).astream_events({"messages": [("user", "send 200")]}, version="v2", config=config):
+        pass
 
     assert ("job-1", "agent") in blobs, "paused thread was not persisted"
 
@@ -101,7 +104,10 @@ async def test_durable_saver_round_trip_pauses_persists_and_resumes() -> None:
 
     # Resume approve on the rebuilt thread → the gated tool runs and the run completes.
     agent2 = _agent(saver2)
-    await agent2.ainvoke(Command(resume={"decisions": [{"type": "approve"}]}), config=config)
+    async for _ in agent2.astream_events(
+        Command(resume={"decisions": [{"type": "approve"}]}), version="v2", config=config
+    ):
+        pass
 
     final = await agent2.aget_state(config)
     messages = final.values.get("messages", [])
