@@ -157,9 +157,9 @@ For JWT authentication configuration, including algorithm selection and key mana
 This variable controls whether authentication is required to access your Langflow server, including the visual editor, API, and Langflow CLI:
 
 * If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key for Langflow API requests.
-If `false`, the Langflow team recommends that you also explicitly set [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) to avoid using the insecure default values.
+If `false`, you must explicitly set [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) before startup.
 
-* If `LANGFLOW_AUTO_LOGIN=True` (default), all API requests require authentication with a Langflow API key, but the visual editor automatically signs in all users as superusers, and Langflow uses _only_ the default [superuser credentials](/api-keys-and-authentication#langflow-superuser).
+* If `LANGFLOW_AUTO_LOGIN=True` (default), all API requests require authentication with a Langflow API key, but the visual editor automatically signs in all users as superusers, and Langflow uses the configured superuser username with a configured or generated bootstrap password.
 All users access the same visual editor environment without password protection, they can run all Langflow CLI commands as superusers, and Langflow automatically authenticates internal requests between the backend and frontend based on the users' superuser privileges.
 If you also want to bypass authentication for Langflow API requests in addition to other bypassed authentication, see [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](/api-keys-and-authentication#langflow-skip-auth-auto-login).
 
@@ -202,9 +202,9 @@ LANGFLOW_SUPERUSER_PASSWORD=securepassword
 ```
 
 They are required if `LANGFLOW_AUTO_LOGIN=False`.
-Otherwise, they aren't relevant.
+When `LANGFLOW_AUTO_LOGIN=True`, `LANGFLOW_SUPERUSER` selects the auto-login account username and `LANGFLOW_SUPERUSER_PASSWORD` is optional. If the password isn't set, Langflow generates an unknown bootstrap password for the auto-login account.
 
-When you [start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled), if these variables are required but _not_ set, then Langflow uses the default values of `langflow` and `langflow`.
+When you [start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled), if these variables are required but _not_ set, then startup fails instead of creating a default password.
 These defaults don't apply when using the Langflow CLI command [`langflow superuser`](/configuration-cli#langflow-superuser).
 
 ### LANGFLOW_SECRET_KEY {#langflow-secret-key}

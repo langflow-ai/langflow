@@ -4,10 +4,14 @@ import asyncio
 from enum import Enum
 from importlib import import_module
 from pathlib import Path
+from secrets import token_urlsafe
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.constants import (
+    DEFAULT_SUPERUSER,
+    LEGACY_DEFAULT_SUPERUSER_PASSWORD,
+)
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
@@ -37,7 +41,47 @@ class SetupSuperuserResult(str, Enum):
     SUPERUSER_UNCHANGED = "superuser_unchanged"
 
 
-async def get_or_create_super_user(session: AsyncSession, username, password, is_default):
+def _secret_value(secret) -> str:
+    if not secret:
+        return ""
+    if hasattr(secret, "get_secret_value"):
+        return secret.get_secret_value()
+    return str(secret)
+
+
+def get_auto_login_superuser_password(auth_settings) -> str:
+    configured_password = _secret_value(auth_settings.SUPERUSER_PASSWORD)
+    legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    if configured_password and configured_password != legacy_password:
+        return configured_password
+    return token_urlsafe(32)
+
+
+async def _rotate_legacy_default_superuser_password(session: AsyncSession, user, replacement_password: str) -> bool:
+    legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    if not legacy_password or not user.password:
+        return False
+
+    auth = get_auth_service()
+    if not auth.verify_password(legacy_password, user.password):
+        return False
+
+    user.password = auth.get_password_hash(replacement_password)
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    await logger.awarning("Rotated legacy default superuser password for AUTO_LOGIN mode.")
+    return True
+
+
+async def get_or_create_super_user(
+    session: AsyncSession,
+    username,
+    password,
+    is_default,
+    *,
+    rotate_legacy_default_password: bool = False,
+):
     from langflow.services.database.models.user.model import User
 
     stmt = select(User).where(User.username == username)
@@ -46,6 +90,8 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
 
     auth = get_auth_service()
     if user and user.is_superuser:
+        if rotate_legacy_default_password:
+            await _rotate_legacy_default_superuser_password(session, user, password)
         return None  # Superuser already exists
 
     if user and is_default:
@@ -89,8 +135,8 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
 
         from filelock import FileLock
 
-        username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+        username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+        password = get_auto_login_superuser_password(settings_service.auth_settings)
 
         # Use file lock similar to starter projects
         lock_file = Path(gettempdir()) / "langflow_auto_login_superuser.lock"
@@ -99,7 +145,13 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         try:
             with lock:
                 # Create user and initialize all related resources
-                super_user = await get_or_create_super_user(session, username, password, is_default=True)
+                super_user = await get_or_create_super_user(
+                    session,
+                    username,
+                    password,
+                    is_default=True,
+                    rotate_legacy_default_password=True,
+                )
                 if super_user:  # Only initialize if user was created
                     from langflow.initial_setup.setup import get_or_create_default_folder
                     from langflow.services.deps import get_variable_service
@@ -141,12 +193,13 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                 await logger.aerror(msg)
                 raise RuntimeError(msg) from exc
             return SetupSuperuserResult.AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT
+        finally:
+            settings_service.auth_settings.reset_credentials()
     # Remove the default superuser if it exists
     await teardown_superuser(settings_service, session)
-    # If AUTO_LOGIN is disabled, attempt to use configured credentials
-    # or fall back to default credentials if none are provided.
+    # If AUTO_LOGIN is disabled, require configured credentials.
     username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
-    password = (settings_service.auth_settings.SUPERUSER_PASSWORD or DEFAULT_SUPERUSER_PASSWORD).get_secret_value()
+    password = _secret_value(settings_service.auth_settings.SUPERUSER_PASSWORD)
 
     await logger.adebug(f"Setup superuser: username={username}, has_password={bool(password)}")
 
@@ -155,7 +208,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         await logger.aerror(f"Missing credentials: username={username}, password={'set' if password else 'not set'}")
         raise ValueError(msg)
 
-    is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+    is_default = (username == DEFAULT_SUPERUSER) and (password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
 
     try:
         await logger.adebug(f"Creating/getting superuser: username={username}, is_default={is_default}")
