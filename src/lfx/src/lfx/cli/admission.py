@@ -5,6 +5,11 @@ gauges expose saturation so KEDA can autoscale the fleet and operators can obser
 backpressure. The semaphore is per-process, therefore **per worker**: the effective
 per-pod ceiling is ``limit x uvicorn workers``. ``limit <= 0`` disables the gate
 (unbounded — today's behavior).
+
+``prometheus-client`` is an optional dependency (the ``lfx[metrics]`` extra). When
+it is absent the admission **gate still works fully** — only the metrics degrade:
+the gauges become no-ops and ``GET /metrics`` reports 503. This keeps the engine
+lean (``pip install lfx`` stays metrics-free) without breaking ``lfx serve``.
 """
 
 from __future__ import annotations
@@ -15,7 +20,28 @@ import os
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
-from prometheus_client import CONTENT_TYPE_LATEST, Gauge, generate_latest
+try:
+    from prometheus_client import CONTENT_TYPE_LATEST, Gauge, generate_latest
+
+    PROMETHEUS_AVAILABLE = True
+except ImportError:  # pragma: no cover - exercised only without the lfx[metrics] extra
+    PROMETHEUS_AVAILABLE = False
+    # Standard Prometheus text exposition content type, for the 503 body's header.
+    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+    generate_latest = None  # type: ignore[assignment]
+
+    class _NoopGauge:
+        """Stand-in when prometheus-client is not installed; all ops are no-ops."""
+
+        def labels(self, **_kwargs: str) -> _NoopGauge:
+            return self
+
+        def inc(self, _amount: float = 1) -> None: ...
+
+        def dec(self, _amount: float = 1) -> None: ...
+
+        def set(self, _value: float) -> None: ...
+
 
 # Defaults mirror the chart contract (see the design spec).
 _DEFAULT_LIMIT = 0
@@ -23,17 +49,22 @@ _DEFAULT_TIMEOUT = 5.0
 _DEFAULT_PROFILE = "unknown"
 
 # Gauges live on the default registry and are defined once at import. The ``profile``
-# label lets one Prometheus job distinguish editor/serve deployments.
-BUILD_SLOTS_LIMIT = Gauge(
-    "build_slots_limit",
-    "Configured max concurrent flow runs per worker process (0 = no cap).",
-    ["profile"],
-)
-BUILD_SLOTS_IN_USE = Gauge(
-    "build_slots_in_use",
-    "Flow runs currently holding an execution slot in this worker process.",
-    ["profile"],
-)
+# label lets one Prometheus job distinguish editor/serve deployments. Without the
+# metrics extra they fall back to no-op stubs so the gate logic is unchanged.
+if PROMETHEUS_AVAILABLE:
+    BUILD_SLOTS_LIMIT = Gauge(
+        "build_slots_limit",
+        "Configured max concurrent flow runs per worker process (0 = no cap).",
+        ["profile"],
+    )
+    BUILD_SLOTS_IN_USE = Gauge(
+        "build_slots_in_use",
+        "Flow runs currently holding an execution slot in this worker process.",
+        ["profile"],
+    )
+else:
+    BUILD_SLOTS_LIMIT = _NoopGauge()
+    BUILD_SLOTS_IN_USE = _NoopGauge()
 
 
 class AdmissionTimeout(Exception):  # noqa: N818

@@ -51,10 +51,14 @@ dependencies = [
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
-    "prometheus-client>=0.20.0,<1.0.0",
 ]
 
 [project.optional-dependencies]
+# Prometheus metrics for `lfx serve` build admission control (build_slots_in_use /
+# build_slots_limit on GET /metrics). Optional to keep the engine lean: without it
+# the admission gate still enforces limits; only the metrics degrade (GET /metrics
+# returns 503). Enable with: pip install "lfx[metrics]".
+metrics = ["prometheus-client>=0.20.0,<1.0.0"]
 opendsstar = [
     "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
@@ -109,6 +113,8 @@ dev = [
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.9.10",
+    # Exercises the real metrics path in tests; shipped to users via the lfx[metrics] extra.
+    "prometheus-client>=0.20.0,<1.0.0",
 ]
 integration = [
     # Dependencies for running Simple Agent and other integration tests

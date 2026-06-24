@@ -44,6 +44,22 @@ async def test_metrics_endpoint_is_unauthenticated_and_exposes_gauges():
     assert 'profile="metrics-test"' in body
 
 
+async def test_metrics_endpoint_returns_503_when_prometheus_unavailable(monkeypatch):
+    """Without the lfx[metrics] extra, /metrics reports 503 instead of crashing."""
+    # The route reads the module-level flag at request time, so flip it there.
+    monkeypatch.setattr("lfx.cli.serve_app.PROMETHEUS_AVAILABLE", False)
+    registry = _registry_with_one_flow()
+    app = create_multi_serve_app(
+        registry=registry,
+        admission_config=BuildAdmissionConfig(limit=1, timeout=1.0, profile="metrics-missing"),
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/metrics")
+    assert resp.status_code == 503
+    assert "lfx[metrics]" in resp.text
+
+
 async def test_run_returns_429_when_saturated(monkeypatch):
     registry = _registry_with_one_flow(monkeypatch)
     gate = asyncio.Event()  # holds the first request inside execution

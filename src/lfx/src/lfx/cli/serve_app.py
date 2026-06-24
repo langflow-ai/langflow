@@ -32,6 +32,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from rich.console import Console
 
 from lfx.cli.admission import (
+    PROMETHEUS_AVAILABLE,
     AdmissionTimeout,
     BuildAdmissionConfig,
     BuildAdmissionController,
@@ -586,6 +587,12 @@ def create_multi_serve_app(
 
     admission = BuildAdmissionController(admission_config or BuildAdmissionConfig.from_env())
     app.state.admission = admission
+    if not PROMETHEUS_AVAILABLE:
+        logger.warning(
+            "prometheus-client is not installed: build_slots metrics are disabled and GET /metrics "
+            "returns 503. The admission gate still enforces concurrency limits. Install the "
+            "'lfx[metrics]' extra to enable metrics."
+        )
 
     identity_config = identity_config or IdentityConfig()
     app.state.identity_config = identity_config
@@ -650,6 +657,12 @@ def create_multi_serve_app(
 
     @app.get("/metrics", include_in_schema=False)
     async def metrics() -> Response:
+        if not PROMETHEUS_AVAILABLE:
+            return Response(
+                content="prometheus-client not installed; install the 'lfx[metrics]' extra to enable metrics\n",
+                media_type="text/plain",
+                status_code=503,
+            )
         body, content_type = render_metrics()
         return Response(content=body, media_type=content_type)
 
