@@ -22,6 +22,14 @@ GLOBAL_VALUE_MAX_LEN = 64 * 1024
 GlobalVarKey = Annotated[str, StringConstraints(min_length=1, max_length=GLOBAL_KEY_MAX_LEN)]
 GlobalVarValue = Annotated[str, StringConstraints(max_length=GLOBAL_VALUE_MAX_LEN)]
 
+# Bounds on the unauthenticated public-flow request, so an anonymous caller
+# can't post arbitrarily large strings that are held in memory and persisted to
+# MessageTable. input_value is a chat message (same 64 KB ceiling as a global
+# variable value); session_id is namespaced under the visitor's virtual flow id,
+# so a key-sized bound is ample.
+PublicInputValue = Annotated[str, StringConstraints(max_length=GLOBAL_VALUE_MAX_LEN)]
+PublicSessionId = Annotated[str, StringConstraints(max_length=GLOBAL_KEY_MAX_LEN)]
+
 
 class JobStatus(str, Enum):
     """Job execution status."""
@@ -126,7 +134,8 @@ class WorkflowExecutionRequest(BaseModel):
             "Keys may use any printable string up to "
             f"{GLOBAL_KEY_MAX_LEN} chars; values are capped at "
             f"{GLOBAL_VALUE_MAX_LEN} chars. Body globals always win over the "
-            "legacy ``X-LANGFLOW-GLOBAL-VAR-*`` headers."
+            "legacy ``X-LANGFLOW-GLOBAL-VAR-*`` headers. Honored in sync mode; "
+            "ignored for stream/background modes."
         ),
     )
 
@@ -249,7 +258,8 @@ class WorkflowRunRequest(BaseModel):
             "Keys may use any printable string up to "
             f"{GLOBAL_KEY_MAX_LEN} chars; values are capped at "
             f"{GLOBAL_VALUE_MAX_LEN} chars. Body globals always win over the "
-            "legacy ``X-LANGFLOW-GLOBAL-VAR-*`` headers."
+            "legacy ``X-LANGFLOW-GLOBAL-VAR-*`` headers. Honored in sync mode; "
+            "ignored for stream/background modes."
         ),
     )
 
@@ -312,8 +322,8 @@ class PublicWorkflowRunRequest(BaseModel):
     """
 
     flow_id: str = Field(..., description="UUID of the public flow to run.")
-    input_value: str = Field("", description="Chat-style input value.")
-    session_id: str | None = Field(
+    input_value: PublicInputValue = Field("", description="Chat-style input value.")
+    session_id: PublicSessionId | None = Field(
         None,
         description=("Optional caller session. Always namespaced under the visitor's virtual flow id by the endpoint."),
     )
@@ -423,6 +433,7 @@ class WorkflowJobResponse(BaseModel):
         if not self.links:
             self.links = {
                 "status": f"/api/v2/workflows?job_id={self.job_id!s}",
+                "events": f"/api/v2/workflows/{self.job_id!s}/events",
                 "stop": "/api/v2/workflows/stop",
             }
         return self

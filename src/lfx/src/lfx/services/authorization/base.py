@@ -27,6 +27,10 @@ class AuthzContext(TypedDict, total=False):
     share_user_id: _UUID | None
     workspace_id: _UUID | None
     folder_id: _UUID | None
+    auth_method: str | None
+    api_key_id: _UUID | None
+    api_key_source: str | None
+    external_provider: str | None
 
 
 class BaseAuthorizationService(Service, abc.ABC):
@@ -36,10 +40,19 @@ class BaseAuthorizationService(Service, abc.ABC):
 
     # True when the service can authorize non-owner access (share-aware fetch).
     SUPPORTS_CROSS_USER_FETCH: ClassVar[bool] = False
+    # True when the service honors API-key credential context as a possible
+    # restriction on top of the resolved user. When enabled, Langflow lets the
+    # plugin evaluate owner-owned resources for API-key requests instead of
+    # applying the built-in owner override first.
+    SUPPORTS_API_KEY_SCOPES: ClassVar[bool] = False
 
     async def supports_cross_user_fetch(self) -> bool:
         """Return True when this service can authorize non-owner resource access."""
         return self.SUPPORTS_CROSS_USER_FETCH
+
+    async def supports_api_key_scopes(self) -> bool:
+        """Return True when API-key requests should be enforced even for owners."""
+        return self.SUPPORTS_API_KEY_SCOPES
 
     @abc.abstractmethod
     async def is_enabled(self) -> bool:

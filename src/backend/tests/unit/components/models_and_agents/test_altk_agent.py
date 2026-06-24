@@ -13,8 +13,8 @@ except ImportError:
 
 from langflow.custom import Component
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
-from lfx.components.altk.altk_agent import ALTKAgentComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
+from lfx_bundles.altk.altk_agent import ALTKAgentComponent
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel

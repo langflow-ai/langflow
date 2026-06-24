@@ -284,6 +284,26 @@ def test_error_drains_buffered_messages_before_run_error():
     assert deltas["m3"] == "second waiting"
 
 
+def test_partial_add_message_before_token_does_not_burn_streamed_text_id():
+    """A partial snapshot before token streaming must not complete the id."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    partial = t.translate("add_message", {"id": "m1", "text": "Hel", "properties": {"state": "partial"}})
+    first = t.translate("token", {"id": "m1", "chunk": "Hel"})
+    second = t.translate("token", {"id": "m1", "chunk": "lo"})
+    finalizer = t.translate("add_message", {"id": "m1", "text": "Hello", "properties": {"state": "complete"}})
+
+    text_lifecycle_types = (TextMessageStartEvent, TextMessageContentEvent, TextMessageEndEvent)
+    assert all(not isinstance(e, text_lifecycle_types) for e in partial)
+    assert [type(e) for e in first] == [TextMessageStartEvent, TextMessageContentEvent]
+    assert first[1].delta == "Hel"
+    assert len(second) == 1
+    assert isinstance(second[0], TextMessageContentEvent)
+    assert second[0].delta == "lo"
+    assert [type(e) for e in finalizer] == [TextMessageEndEvent]
+
+
 def test_partial_add_message_does_not_finalize_open_message():
     """A partial ``add_message`` re-fire must not close the streaming message.
 
@@ -467,6 +487,85 @@ def test_end_vertex_failure_sets_error_status():
     assert op["value"]["status"] == "error"
 
 
+def test_end_vertex_marks_inactivated_vertices_inactive():
+    """A branch component's not-taken vertices must be marked ``inactive``.
+
+    Without this the canvas leaves them on the ``pending`` status seeded by
+    ``vertices_sorted`` (they are skipped, so no build_start/end_vertex follows),
+    and the frontend never renders the inactive/skipped state for conditional
+    routing (If-Else, Conditional Router).
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "end_vertex",
+        {
+            "build_data": {
+                "id": "branch",
+                "valid": True,
+                "data": None,
+                "inactivated_vertices": ["node-a", "node-b"],
+            }
+        },
+    )
+
+    ops = out[1].delta
+    assert ops[0]["path"] == "/nodes/branch"
+    assert ops[0]["value"]["status"] == "success"
+    inactive = {op["path"]: op["value"]["status"] for op in ops[1:]}
+    assert inactive == {
+        "/nodes/node-a": "inactive",
+        "/nodes/node-b": "inactive",
+    }
+
+
+def test_inactivated_vertex_is_emitted_once_across_end_vertices():
+    """``build.py`` keeps reporting the persisted excluded set on later end_vertex.
+
+    The translator must emit each node's ``inactive`` delta only once so the first
+    run of the feature doesn't put the same redundant op on the wire repeatedly.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    first = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    # The next vertex still carries node-b in the persisted excluded set.
+    second = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "node-a", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+
+    def inactive_paths(out):
+        return [op["path"] for op in out[1].delta if op["value"]["status"] == "inactive"]
+
+    assert inactive_paths(first) == ["/nodes/node-b"]
+    assert inactive_paths(second) == []  # already emitted, not repeated
+
+
+def test_reactivated_vertex_can_emit_inactive_again():
+    """A vertex that runs after being excluded (loop re-activation) may go inactive again."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    excluded = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    assert [op["path"] for op in excluded[1].delta if op["value"]["status"] == "inactive"] == ["/nodes/node-b"]
+
+    # node-b actually runs on a later pass, then gets excluded again.
+    t.translate("build_start", {"id": "node-b"})
+    again = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    assert [op["path"] for op in again[1].delta if op["value"]["status"] == "inactive"] == ["/nodes/node-b"]
+
+
 def test_node_state_deltas_use_add_so_they_apply_without_vertices_sorted():
     """build_start/end_vertex must not depend on vertices_sorted seeding the node.
 
@@ -607,6 +706,79 @@ def test_add_message_tool_use_emits_tool_call_lifecycle():
     assert {starts[0].tool_call_id, args[0].tool_call_id, ends[0].tool_call_id, results[0].tool_call_id} == {
         starts[0].tool_call_id
     }
+
+
+def test_add_message_flat_tool_use_emits_tool_call_lifecycle():
+    """The agent's flat content_blocks log carries tool_use at the TOP level.
+
+    The content-blocks-as-source-of-truth agent emits an interleaved flat log
+    (top-level TextContent + ToolContent, no wrapping "Agent Steps" group). The
+    translator must surface those top-level tool_use leaves as tool-call events,
+    not only ones nested inside a group's ``contents``.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "text": "",
+            "content_blocks": [
+                {"type": "text", "contents": [], "text": "let me search"},
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "name": "search",
+                    "tool_input": {"query": "weather"},
+                    "output": "sunny",
+                    "error": None,
+                },
+            ],
+        },
+    )
+
+    starts = [e for e in out if isinstance(e, ToolCallStartEvent)]
+    args = [e for e in out if isinstance(e, ToolCallArgsEvent)]
+    ends = [e for e in out if isinstance(e, ToolCallEndEvent)]
+    results = [e for e in out if isinstance(e, ToolCallResultEvent)]
+    assert len(starts) == 1
+    assert starts[0].tool_call_name == "search"
+    assert starts[0].parent_message_id == "m1"
+    assert len(args) == 1
+    assert "weather" in args[0].delta
+    assert len(ends) == 1
+    assert len(results) == 1
+    assert "sunny" in results[0].content
+
+
+def test_repeated_add_message_does_not_re_emit_flat_tool_call():
+    """A re-fired add_message for the same flat message must not double-emit.
+
+    ``add_message`` re-fires as the append-only content_blocks grow; the
+    top-level tool_use leaf keeps its index, so its tool-call id is stable and
+    must be emitted exactly once.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+    data = {
+        "id": "m1",
+        "text": "",
+        "content_blocks": [
+            {
+                "type": "tool_use",
+                "contents": [],
+                "name": "search",
+                "tool_input": {"q": "x"},
+                "output": "done",
+                "error": None,
+            }
+        ],
+    }
+    first = t.translate("add_message", data)
+    second = t.translate("add_message", data)
+    assert len([e for e in first if isinstance(e, ToolCallStartEvent)]) == 1
+    assert len([e for e in second if isinstance(e, ToolCallStartEvent)]) == 0
 
 
 def test_tool_use_error_is_reported_via_tool_call_result():

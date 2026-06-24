@@ -7,7 +7,11 @@ from uuid import UUID
 import httpx
 import requests
 
-from lfx.base.models.model_metadata import LIVE_MODEL_PROVIDERS, create_model_metadata
+from lfx.base.models.model_metadata import (
+    CONDITIONAL_LIVE_MODEL_PROVIDERS,
+    LIVE_MODEL_PROVIDERS,
+    create_model_metadata,
+)
 from lfx.base.models.watsonx_constants import (
     IBM_WATSONX_URLS,
 )
@@ -38,6 +42,27 @@ MIN_DEFAULT_MODELS = 5
 _OLLAMA_MODEL_LIST_TTL_SECONDS = 30.0
 _ollama_model_list_cache: dict[tuple[str, str], tuple[float, list[str]]] = {}
 
+# Per-model capability cache, keyed by (base_url, model_name). A given
+# Ollama ``model:tag``'s capabilities (completion / embedding / tools / …)
+# are intrinsic to the model, so this lives longer than the model-*list*
+# cache above. It exists to kill the ``/api/show`` fan-out that made Ollama
+# Cloud's large public catalog crawl on every model toggle (issue #12399):
+# without it each catalog read cost ``N + 1`` upstream calls (one
+# ``/api/tags`` + one ``/api/show`` per model) and ``/enabled_models`` paid
+# that twice (llm + embeddings) on every refetch. With it:
+#   (1) the llm and embedding reads (``model_type=None``) share a single
+#       probe set instead of each fanning out over the whole catalog, and
+#   (2) a read after the short list-TTL expires re-probes only models we
+#       have never seen, not the full catalog.
+# TTL is bounded (not indefinite) because the key omits the model digest:
+# re-pulling the same tag to a different capability class (e.g. a
+# completion model swapped for an embedding one under ``:latest``) would
+# otherwise mis-route the model in the picker until expiry. 10 minutes
+# fully covers a toggle session — the #12399 symptom — while keeping any
+# post-re-pull staleness short and self-healing.
+_OLLAMA_CAPABILITY_TTL_SECONDS = 600.0
+_ollama_capability_cache: dict[tuple[str, str], tuple[float, list[str]]] = {}
+
 
 def _ollama_cache_get(key: tuple[str, str], *, now: float | None = None) -> list[str] | None:
     """Return the cached model list for *key* if still fresh; else None."""
@@ -57,9 +82,46 @@ def _ollama_cache_set(key: tuple[str, str], value: list[str], *, now: float | No
     _ollama_model_list_cache[key] = (current, list(value))
 
 
+def _ollama_capability_get(key: tuple[str, str], *, now: float | None = None) -> list[str] | None:
+    """Return the cached capability list for *key* if still fresh; else None.
+
+    ``None`` means a genuine miss or expiry. Callers never store an empty
+    list (see ``_capabilities_for``), so a fresh hit is always a populated
+    capability list.
+    """
+    entry = _ollama_capability_cache.get(key)
+    if entry is None:
+        return None
+    timestamp, value = entry
+    current = now if now is not None else time.monotonic()
+    if (current - timestamp) >= _OLLAMA_CAPABILITY_TTL_SECONDS:
+        return None
+    return list(value)
+
+
+def _ollama_capability_set(key: tuple[str, str], value: list[str], *, now: float | None = None) -> None:
+    current = now if now is not None else time.monotonic()
+    _ollama_capability_cache[key] = (current, list(value))
+
+
+def _ollama_capability_prune(base_url: str, keep: set[str]) -> None:
+    """Drop capability entries for *base_url* whose model left the catalog.
+
+    The capability cache expires on read but is otherwise never evicted, so
+    without this it would retain one entry per distinct model ever seen for
+    the process lifetime — relevant for Ollama Cloud's large, evolving public
+    catalog. Pruning on each fresh catalog read bounds it to the live catalog
+    instead. Entries for other base URLs are left untouched.
+    """
+    stale = [key for key in _ollama_capability_cache if key[0] == base_url and key[1] not in keep]
+    for key in stale:
+        del _ollama_capability_cache[key]
+
+
 def _ollama_cache_clear() -> None:
     """Drop every cached entry. Exposed for tests; not called in production."""
     _ollama_model_list_cache.clear()
+    _ollama_capability_cache.clear()
 
 
 # Extract model names from metadata for fallback defaults
@@ -160,12 +222,30 @@ async def get_ollama_models(
                 model.get(json_name_key) for model in models.get(json_models_key, []) if model.get(json_name_key)
             ]
 
-            async def _has_capability(model_name: str) -> str | None:
-                """Probe one model's capabilities. Returns its name on match, else None.
+            # Keep the capability cache aligned with the live catalog so it
+            # can't accumulate entries for models that have dropped out.
+            _ollama_capability_prune(base_url_value, set(candidates))
 
-                Per-model failures are absorbed (logged at debug) so a single
-                bad model does not poison the whole catalog response.
+            async def _capabilities_for(model_name: str) -> list[str] | None:
+                """Return one model's capability list, reusing the per-model cache.
+
+                A cache hit skips the ``/api/show`` round-trip entirely — this
+                is what stops the catalog read from fanning out over the whole
+                catalog on every refetch. Two responses are deliberately left
+                *uncached* and retried on the next read:
+
+                  * a probe failure (``RequestError``/``HTTPStatusError``), so
+                    one bad model never poisons or sticks in the catalog; and
+                  * a 200 carrying no capabilities, so a transient empty
+                    response (e.g. a model still warming up on Ollama Cloud)
+                    can't hide a model from the picker for the full TTL. Real
+                    Ollama always returns a populated array, so this never
+                    re-probes a legitimately-capable model.
                 """
+                cap_key = (base_url_value, model_name)
+                cached_caps = _ollama_capability_get(cap_key)
+                if cached_caps is not None:
+                    return cached_caps
                 try:
                     show_response = await client.post(url=show_url, json={"model": model_name})
                     show_response.raise_for_status()
@@ -176,15 +256,23 @@ async def get_ollama_models(
                     await logger.adebug(f"Ollama /api/show failed for {model_name}: {e}")
                     return None
                 capabilities = json_data.get(json_capabilities_key) or []
-                if desired_capability in capabilities:
-                    return model_name
-                return None
+                # Only cache a populated list; an empty one carries no signal
+                # (it can never match a desired_capability) and may be
+                # transient, so leave it uncached like the failure path above.
+                if capabilities:
+                    _ollama_capability_set(cap_key, capabilities)
+                return capabilities
 
-            # Parallel fan-out: one POST /api/show per candidate, awaited
-            # together so latency is bounded by the slowest single request
-            # instead of N * avg-request-latency.
-            results = await asyncio.gather(*(_has_capability(n) for n in candidates))
-            model_ids = sorted(name for name in results if name)
+            # Parallel fan-out: one POST /api/show per *uncached* candidate,
+            # awaited together so latency is bounded by the slowest single
+            # request instead of N * avg-request-latency. Cached candidates
+            # resolve without any upstream call.
+            results = await asyncio.gather(*(_capabilities_for(n) for n in candidates))
+            model_ids = sorted(
+                name
+                for name, capabilities in zip(candidates, results, strict=True)
+                if capabilities is not None and desired_capability in capabilities
+            )
 
     except (httpx.RequestError, ValueError) as e:
         msg = "Could not get model names from Ollama."
@@ -393,6 +481,60 @@ OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
 OPENROUTER_FETCH_TIMEOUT = 10.0
 
 
+OPENAI_COMPATIBLE_FETCH_TIMEOUT = 10.0
+
+
+def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
+    """Fetch models from a custom OpenAI-compatible endpoint (OPENAI_BASE_URL).
+
+    Returns [] when no custom base URL is configured, so api.openai.com
+    users keep the curated static catalog. ``tool_calling`` is assumed
+    True: ``/models`` carries no capability data and the OpenAI wire
+    format implies tools support.
+    """
+    if model_type != "llm":
+        return []
+
+    base_url = get_provider_variable_value(user_id, "OPENAI_BASE_URL")
+    if not base_url:
+        return []
+    base_url = transform_localhost_url(base_url)
+
+    api_key = get_provider_variable_value(user_id, "OPENAI_API_KEY")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+    try:
+        response = requests.get(
+            f"{base_url.rstrip('/')}/models",
+            headers=headers,
+            timeout=OPENAI_COMPATIBLE_FETCH_TIMEOUT,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        logger.debug(f"Could not fetch live OpenAI-compatible models from {base_url}: {exc}")
+        return []
+
+    # An arbitrary OpenAI-compatible server may return a non-conforming body
+    # (a bare list, a list of strings, …); treat anything off-spec as "no models".
+    entries = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(entries, list):
+        return []
+
+    return [
+        create_model_metadata(
+            provider="OpenAI",
+            name=entry["id"],
+            icon="OpenAI",
+            model_type="llm",
+            tool_calling=True,
+            default=index < MIN_DEFAULT_MODELS,
+        )
+        for index, entry in enumerate(entries)
+        if isinstance(entry, dict) and entry.get("id")
+    ]
+
+
 def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
     """Fetch live OpenRouter models using the user's configured API key.
 
@@ -566,6 +708,8 @@ def get_live_models_for_provider(
         return fetch_live_watsonx_models(user_id, model_type)
     if provider == "OpenRouter":
         return fetch_live_openrouter_models(user_id, model_type)
+    if provider == "OpenAI":
+        return fetch_live_openai_compatible_models(user_id, model_type)
     return []
 
 
@@ -606,7 +750,7 @@ def replace_with_live_models(
     if not user_id or not enabled_providers:
         return provider_models
 
-    for provider in LIVE_MODEL_PROVIDERS:
+    for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS):
         if provider not in enabled_providers:
             continue
 
@@ -616,6 +760,9 @@ def replace_with_live_models(
             live_models = live_llm + live_emb
         else:
             live_models = get_live_models_for_provider(user_id, provider, model_type)
+
+        if provider in CONDITIONAL_LIVE_MODEL_PROVIDERS and not live_models:
+            continue
 
         catalog_models = _live_models_to_catalog_shape(live_models) if live_models else []
 

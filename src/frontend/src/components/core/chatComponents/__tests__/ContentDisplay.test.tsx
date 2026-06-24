@@ -1,6 +1,28 @@
 import { render, screen } from "@testing-library/react";
-import type { ContentBlockItem } from "@/types/chat";
+import type {
+  CitationContent,
+  ContentBlockItem,
+  FileContent,
+  UsageContent,
+} from "@/types/chat";
 import ContentDisplay from "../ContentDisplay";
+
+// Typed factories so fixtures fail to compile when a content type's shape
+// drifts, instead of leaning on `as unknown as ContentBlockItem` everywhere.
+const makeFile = (props: Partial<FileContent> = {}): FileContent => ({
+  type: "file",
+  ...props,
+});
+const makeCitation = (
+  props: Partial<CitationContent> = {},
+): CitationContent => ({
+  type: "citation",
+  ...props,
+});
+const makeUsage = (props: Partial<UsageContent> = {}): UsageContent => ({
+  type: "usage",
+  ...props,
+});
 
 // react-markdown ships ESM that jest doesn't transpile by default; the
 // MarkdownComponent only matters for text/error/json/code cases, none of
@@ -341,11 +363,10 @@ describe("ContentDisplay", () => {
 
   describe("citation", () => {
     it("renders the domain extracted from the URL alongside the title", () => {
-      const citation = {
-        type: "citation",
+      const citation = makeCitation({
         url: "https://docs.python.org/3/library/typing.html",
         title: "typing — Support for type hints",
-      } as unknown as ContentBlockItem;
+      });
       render(<ContentDisplay content={citation} chatId="t-c1" />);
       expect(screen.getByText(/docs\.python\.org/)).toBeInTheDocument();
       expect(
@@ -356,11 +377,10 @@ describe("ContentDisplay", () => {
     it("does not render an anchor for non-http URLs (sanitization)", () => {
       // javascript: and other non-http(s) schemes must never become a
       // clickable link; we degrade to a text-only card instead.
-      const citation = {
-        type: "citation",
+      const citation = makeCitation({
         url: "javascript:alert(1)",
         title: "bad",
-      } as unknown as ContentBlockItem;
+      });
       render(<ContentDisplay content={citation} chatId="t-c2" />);
       expect(screen.queryByRole("link")).not.toBeInTheDocument();
       expect(screen.getByText("bad")).toBeInTheDocument();
@@ -370,14 +390,37 @@ describe("ContentDisplay", () => {
       // The cited_text comes from upstream model output and may contain
       // angle brackets. React text nodes escape them, so the literal
       // characters render rather than parsing as markup.
-      const citation = {
-        type: "citation",
+      const citation = makeCitation({
         url: "https://example.com",
         title: "src",
         cited_text: "<script>alert(1)</script>",
-      } as unknown as ContentBlockItem;
+      });
       render(<ContentDisplay content={citation} chatId="t-c3" />);
       expect(screen.getByText("<script>alert(1)</script>")).toBeInTheDocument();
+    });
+  });
+
+  describe("file", () => {
+    it("renders a download anchor for http(s) URLs", () => {
+      const file = makeFile({
+        urls: ["https://example.com/report.pdf"],
+        filename: "report.pdf",
+      });
+      render(<ContentDisplay content={file} chatId="t-f1" />);
+      const link = screen.getByRole("link", { name: "report.pdf" });
+      expect(link).toHaveAttribute("href", "https://example.com/report.pdf");
+    });
+
+    it("does not render an anchor for non-http URLs (sanitization)", () => {
+      // urls come from untrusted tool/model output; a javascript: scheme must
+      // degrade to a plain label instead of a clickable anchor.
+      const file = makeFile({
+        urls: ["javascript:alert(document.cookie)"],
+        filename: "evil.pdf",
+      });
+      render(<ContentDisplay content={file} chatId="t-f2" />);
+      expect(screen.queryByRole("link")).not.toBeInTheDocument();
+      expect(screen.getByText("evil.pdf")).toBeInTheDocument();
     });
   });
 
@@ -391,12 +434,8 @@ describe("ContentDisplay", () => {
         type: "group",
         title: "Inner step",
         contents: [
-          { type: "usage", input_tokens: 1, output_tokens: 2 },
-          {
-            type: "citation",
-            url: "https://example.com",
-            title: "Cited source",
-          },
+          makeUsage({ input_tokens: 1, output_tokens: 2 }),
+          makeCitation({ url: "https://example.com", title: "Cited source" }),
         ],
       } as unknown as ContentBlockItem;
       render(<ContentDisplay content={nested} chatId="t6" />);

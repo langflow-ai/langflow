@@ -75,6 +75,7 @@ class LangflowAdapter:
             output_type=resolve_output_type(output_meta.get("output_types"), output_meta.get("vertex_type")),
             display_name=output_meta.get("display_name"),
             result_data=build_data.get("data"),
+            valid=bool(build_data.get("valid", True)),
         )
         output = OutputEvent(component_id=component_id, **component_output.model_dump())
         payload = {"event": "output", "data": output.model_dump(mode="json")}
@@ -86,6 +87,13 @@ class LangflowAdapter:
     def error_events(self, error: BaseException) -> Iterable[StreamEvent]:
         payload = {"event": "error", "data": {"error": str(error)}}
         return (StreamEvent(type="error", data_json=json.dumps(payload)),)
+
+    def cancel_events(self, reason: str) -> Iterable[StreamEvent]:
+        # A deliberate user stop is its own terminal, not an ``error``: a
+        # re-attaching client must be able to tell a cancel apart from a genuine
+        # failure instead of seeing the stream end in ``error``.
+        payload = {"event": "cancelled", "data": {"reason": reason}}
+        return (StreamEvent(type="cancelled", data_json=json.dumps(payload)),)
 
     @property
     def terminal_error_type(self) -> str | None:

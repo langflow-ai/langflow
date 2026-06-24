@@ -5,6 +5,7 @@ import { useDarkStore } from "@/stores/darkStore";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import type { ColDef } from "ag-grid-community";
 import type { TableOptionsTypeAPI } from "@/types/api";
+import { suppressAutofillOnElement } from "@/utils/inputAutofill";
 import { cn } from "@/utils/utils";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
@@ -331,6 +332,22 @@ const TableComponent = forwardRef<
         params.api.sizeColumnsToFit();
       }
     };
+    const onCellEditingStarted = (event) => {
+      // ag-grid mounts its cell editor <input>/<textarea> outside React, so the
+      // hardened Input primitive doesn't cover them. Stamp the autofill-
+      // suppression attributes on the active editor so the browser can't inject
+      // saved credentials into editable cells (which autosave persists). Defer a
+      // frame so the editor DOM exists; cover inline and popup (large-text)
+      // editors.
+      requestAnimationFrame(() => {
+        document
+          .querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+            ".ag-cell-inline-editing input, .ag-cell-inline-editing textarea, .ag-popup-editor input, .ag-popup-editor textarea",
+          )
+          .forEach(suppressAutofillOnElement);
+      });
+      props.onCellEditingStarted?.(event);
+    };
     if (props.rowData.length === 0 && displayEmptyAlert) {
       return (
         <div className="flex h-full w-full items-center justify-center rounded-md border">
@@ -406,6 +423,7 @@ const TableComponent = forwardRef<
           }}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
+          onCellEditingStarted={onCellEditingStarted}
           onCellValueChanged={
             props.onCellValueChanged
               ? (e) => {

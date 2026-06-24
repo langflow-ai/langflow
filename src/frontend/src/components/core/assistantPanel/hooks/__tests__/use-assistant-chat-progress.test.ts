@@ -400,3 +400,40 @@ describe("useAssistantChat — progress field propagation", () => {
     });
   });
 });
+
+describe("useAssistantChat — retrying clears stale partial output", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockPostAssistStream.mockResolvedValue(undefined);
+  });
+
+  it("should clear streamed content when the backend retries the attempt", async () => {
+    // Observed live (2026-06-12): a leaked tool-call fragment from a failed
+    // attempt stayed on screen while the next attempt ran.
+    mockPostAssistStream.mockImplementation(
+      async (_request: unknown, callbacks: Record<string, Function>) => {
+        callbacks.onToken({
+          event: "token",
+          chunk: '{"component_type":"Memory"}',
+        });
+        callbacks.onProgress({
+          event: "progress",
+          step: "retrying",
+          attempt: 2,
+          max_attempts: 4,
+          message: "No canvas changes detected — retrying...",
+        });
+      },
+    );
+
+    const { result } = renderHook(() => useAssistantChat());
+    await act(async () => {
+      await result.current.handleSend("crie um flow", TEST_MODEL);
+    });
+
+    const assistant = result.current.messages.find(
+      (m) => m.role === "assistant",
+    );
+    expect(assistant?.content).toBe("");
+  });
+});

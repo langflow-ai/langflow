@@ -345,6 +345,9 @@ export function useAssistantChat(): UseAssistantChatReturn {
 
               setCurrentStep(event.step);
               updateMessage(assistantMessageId, (msg) => ({
+                // A retry restarts generation; the failed attempt's partial
+                // output (often a leaked tool-call fragment) must not linger.
+                ...(event.step === "retrying" ? { content: "" } : {}),
                 progress: {
                   step: event.step,
                   attempt: event.attempt,

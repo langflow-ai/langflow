@@ -59,6 +59,9 @@ from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.crud import (
     get_provider_account_by_id as get_provider_account_row_by_id,
 )
+from langflow.services.database.models.deployment_provider_account.crud import (
+    get_provider_account_by_id_unscoped as get_provider_account_row_by_id_unscoped,
+)
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
@@ -380,6 +383,32 @@ async def get_owned_provider_account_or_404(
     db: DbSession,
 ) -> DeploymentProviderAccount:
     provider_account = await get_provider_account_row_by_id(db, provider_id=provider_id, user_id=user_id)
+    if provider_account is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
+    return provider_account
+
+
+async def get_shared_listing_provider_account_or_404(
+    *,
+    provider_id: UUID,
+    db: DbSession,
+) -> DeploymentProviderAccount:
+    """Resolve a provider account by id alone for the deployment-list prefilter path.
+
+    Used by ``list_deployments`` *only* when ``visible_id_prefilter`` returns a
+    concrete list (a registered authorization plugin is engaged). A shared
+    deployment lives under its *owner's* provider account, so the strict owner
+    gate (``get_owned_provider_account_or_404``) would 404 a cross-user reader
+    before the ``(owner ⊕ visible)`` SQL union in ``list_deployments_synced``
+    could surface the row. Loading the account by id here only widens which
+    ``provider_key`` may be resolved (adapter/mapper); row-level access stays
+    governed by that union plus ``ensure_deployment_permission``, and the list
+    response carries no provider secrets (only ``provider_key`` is read).
+
+    The OSS pass-through always declines the prefilter, so this path is never
+    taken on default installs — the owner-scoped gate is preserved there exactly.
+    """
+    provider_account = await get_provider_account_row_by_id_unscoped(db, provider_id=provider_id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
     return provider_account
@@ -854,6 +883,7 @@ async def list_deployments_synced(
     deployment_type: DeploymentType | None,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
+    allowed_ids: list[UUID] | None = None,
 ) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int, dict[str, dict[str, Any]]]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
@@ -861,6 +891,11 @@ async def list_deployments_synced(
     provider for validation, deletes stale rows inline, and syncs
     provider-owned display metadata for rows that still exist. The cursor
     does not advance for deleted rows (deletion shifts subsequent offsets down).
+
+    ``allowed_ids`` is the DB-layer authorization prefilter, threaded into both
+    the page query and the total count so a registered authorization plugin can
+    constrain the listing to (owner ⊕ visible) rows without a per-row enforce.
+    ``None`` (OSS default) keeps the listing owner-scoped exactly as before.
     """
     accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
     accepted_deployment_ids: list[UUID] = []
@@ -880,6 +915,7 @@ async def list_deployments_synced(
             limit=size - len(accepted),
             flow_version_ids=flow_version_ids,
             project_id=project_id,
+            allowed_ids=allowed_ids,
         )
         if not batch:
             break
@@ -961,6 +997,7 @@ async def list_deployments_synced(
         deployment_provider_account_id=provider_id,
         flow_version_ids=flow_version_ids,
         project_id=project_id,
+        allowed_ids=allowed_ids,
     )
     return accepted, total, provider_data_by_resource_key
 

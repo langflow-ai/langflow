@@ -9,6 +9,12 @@ import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
+import {
+  AudioContentDisplay,
+  FileContentDisplay,
+  ImageContentDisplay,
+  VideoContentDisplay,
+} from "./MediaContentDisplay";
 import { SourcesStrip } from "./SourcesStrip";
 import { ToolOutputDisplay } from "./ToolOutputDisplay";
 import { ToolSection } from "./ToolSection";
@@ -154,7 +160,7 @@ export default function ContentDisplay({
       const hasInput = Object.keys(toolInput).length > 0;
       // Treat an empty (or whitespace-only) string as "no output" so it
       // doesn't render an empty bordered box. Legitimate falsy outputs like
-      // 0 or false still render through formatToolOutput.
+      // 0 or false still render through ToolOutputDisplay.
       const hasOutput =
         content.output !== undefined &&
         content.output !== null &&
@@ -208,99 +214,19 @@ export default function ContentDisplay({
       break;
 
     case "image":
-      contentData = (
-        <div className="flex flex-col gap-2">
-          {content.urls?.map((url, index) => (
-            <img
-              key={index}
-              src={url}
-              alt={content.caption || `Image ${index + 1}`}
-              className="max-w-full rounded"
-            />
-          ))}
-          {/* base64 is a fallback for when no usable URL is provided.
-              `some(Boolean)` so urls=[""] or urls=[null] don't suppress the
-              fallback while rendering a broken <img src=""> above. */}
-          {!content.urls?.some(Boolean) && content.base64 && (
-            <img
-              src={`data:${content.mime_type || "image/png"};base64,${content.base64}`}
-              alt={content.caption || "Image"}
-              className="max-w-full rounded"
-            />
-          )}
-          {content.caption && (
-            <p className="text-xs text-muted-foreground">{content.caption}</p>
-          )}
-        </div>
-      );
+      contentData = <ImageContentDisplay content={content} />;
       break;
 
     case "audio":
-      contentData = (
-        <div className="flex flex-col gap-2">
-          {content.urls?.map((url, index) => (
-            <audio key={index} controls className="w-full">
-              <source src={url} type={content.mime_type} />
-            </audio>
-          ))}
-          {!content.urls?.some(Boolean) && content.base64 && (
-            <audio controls className="w-full">
-              <source
-                src={`data:${content.mime_type || "audio/mpeg"};base64,${content.base64}`}
-                type={content.mime_type || "audio/mpeg"}
-              />
-            </audio>
-          )}
-          {content.transcript && (
-            <p className="text-xs text-muted-foreground italic">
-              {content.transcript}
-            </p>
-          )}
-        </div>
-      );
+      contentData = <AudioContentDisplay content={content} />;
       break;
 
     case "video":
-      contentData = (
-        <div className="flex flex-col gap-2">
-          {content.urls?.map((url, index) => (
-            <video key={index} controls className="max-w-full rounded">
-              <source src={url} type={content.mime_type} />
-            </video>
-          ))}
-          {!content.urls?.some(Boolean) && content.base64 && (
-            <video controls className="max-w-full rounded">
-              <source
-                src={`data:${content.mime_type || "video/mp4"};base64,${content.base64}`}
-                type={content.mime_type || "video/mp4"}
-              />
-            </video>
-          )}
-        </div>
-      );
+      contentData = <VideoContentDisplay content={content} />;
       break;
 
     case "file":
-      contentData = (
-        <div className="flex items-center gap-2">
-          <ForwardedIconComponent
-            name="File"
-            className="h-4 w-4 text-muted-foreground"
-          />
-          {content.urls?.map((url, index) => (
-            <a
-              key={index}
-              href={url}
-              download={content.filename}
-              className="text-sm underline text-primary hover:text-primary/80"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {content.filename || `Download file ${index + 1}`}
-            </a>
-          ))}
-        </div>
-      );
+      contentData = <FileContentDisplay content={content} />;
       break;
 
     case "reasoning":
