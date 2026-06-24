@@ -654,7 +654,7 @@ def register_builtin_deployment_mappers() -> None:
         logger.info("Skipping Watsonx Orchestrate deployment mapper registration: %s", exc)
 
 
-async def initialize_services(*, fix_migration: bool = False) -> None:
+async def initialize_services(*, fix_migration: bool = False, skip_superuser_setup: bool = False) -> None:
     """Initialize all the services needed."""
     from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
 
@@ -675,13 +675,14 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     await initialize_database(fix_migration=fix_migration)
     db_service = get_db_service()
     await db_service.initialize_alembic_log_file()
-    async with session_scope() as session:
-        settings_service = get_service(ServiceType.SETTINGS_SERVICE)
-        await setup_superuser(settings_service, session)
-    try:
-        await get_db_service().assign_orphaned_flows_to_superuser()
-    except sqlalchemy_exc.IntegrityError as exc:
-        await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
+    settings_service = get_service(ServiceType.SETTINGS_SERVICE)
+    if not skip_superuser_setup:
+        async with session_scope() as session:
+            await setup_superuser(settings_service, session)
+        try:
+            await get_db_service().assign_orphaned_flows_to_superuser()
+        except sqlalchemy_exc.IntegrityError as exc:
+            await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
 
     async with session_scope() as session:
         await clean_transactions(settings_service, session)

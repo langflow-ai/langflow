@@ -866,7 +866,7 @@ def superuser(
 
 async def _create_superuser(username: str, password: str, auth_token: str | None):
     """Create a superuser."""
-    await initialize_services()
+    await initialize_services(skip_superuser_setup=True)
 
     settings_service = get_settings_service()
     # Check if superuser creation via CLI is enabled
@@ -876,8 +876,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         raise typer.Exit(1)
 
     if settings_service.auth_settings.AUTO_LOGIN:
-        username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
-        password = get_auto_login_superuser_password(settings_service.auth_settings)
+        username = getattr(settings_service.auth_settings, "SUPERUSER", None) or DEFAULT_SUPERUSER
     else:
         # Production mode - prompt for credentials if not provided
         if not username:
@@ -889,8 +888,6 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
 
     existing_superusers = []
     async with session_scope() as session:
-        # Note that the default superuser is created by the initialize_services() function,
-        # but leaving this check here in case we change that behavior
         existing_superusers = await get_all_superusers(session)
     is_first_setup = len(existing_superusers) == 0
 
@@ -904,6 +901,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
             typer.echo("2. Run this command again with --auth-token")
             raise typer.Exit(1)
 
+        password = get_auto_login_superuser_password(settings_service.auth_settings)
         typer.echo(f"AUTO_LOGIN enabled. Creating default superuser '{username}'...")
         # Do not echo the default password to avoid exposing it in logs.
     # AUTO_LOGIN is false - production mode
