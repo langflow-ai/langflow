@@ -1403,8 +1403,8 @@ class Component(CustomComponent):
                         for x in result:
                             x.data = schema(**x.data).model_dump()
                 except ValidationError as e:
-                    logger.error(f"Schema validation failed for output {output.name}: {e}")
-                    raise ValueError(f"Schema validation failed for output {output.name}: {e}") from e
+                    logger.error(f"Schema validation failed for output {output.name}: {e.errors(include_input=False)}")
+                    raise ValueError(f"Schema validation failed for output {output.name}: {e.errors(include_input=False)}") from e
 
         output.value = result
 
