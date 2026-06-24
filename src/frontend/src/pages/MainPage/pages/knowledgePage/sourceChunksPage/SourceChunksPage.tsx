@@ -150,6 +150,7 @@ export const SourceChunksPage = () => {
               size="icon"
               onClick={handleBack}
               className="mr-2 h-8 w-8"
+              aria-label={t("knowledge.a11y.backToKnowledgeBases")}
             >
               <ForwardedIconComponent name="ArrowLeft" className="h-4 w-4" />
             </Button>
@@ -170,6 +171,7 @@ export const SourceChunksPage = () => {
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   data-testid="chunks-search-input"
+                  aria-label={t("knowledge.a11y.searchChunks")}
                 />
               </div>
 
@@ -180,6 +182,7 @@ export const SourceChunksPage = () => {
                 <SelectTrigger
                   className="w-44 shrink-0"
                   data-testid="chunks-source-type-filter"
+                  aria-label={t("knowledge.a11y.filterBySourceType")}
                 >
                   <SelectValue placeholder={t("knowledge.allSources")} />
                 </SelectTrigger>
@@ -220,6 +223,10 @@ export const SourceChunksPage = () => {
                       onClick={() => removeMetadataChip(key, value)}
                       className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs hover:bg-muted-foreground/10"
                       data-testid={`chunks-metadata-chip-${key}-${value}`}
+                      aria-label={t("knowledge.a11y.removeFilter", {
+                        key,
+                        value,
+                      })}
                     >
                       <span className="font-medium text-muted-foreground">
                         {key}:
@@ -288,6 +295,7 @@ export const SourceChunksPage = () => {
                             <SelectTrigger
                               className="h-8 w-[70px] text-sm"
                               data-testid="chunks-page-size-select"
+                              aria-label={t("knowledge.a11y.pageSize")}
                             >
                               <SelectValue />
                             </SelectTrigger>
@@ -318,6 +326,7 @@ export const SourceChunksPage = () => {
                             setPageInput("1");
                           }}
                           disabled={currentPage === 1}
+                          aria-label={t("knowledge.a11y.firstPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronsLeft"
@@ -334,6 +343,7 @@ export const SourceChunksPage = () => {
                             setPageInput(String(newPage));
                           }}
                           disabled={currentPage === 1}
+                          aria-label={t("knowledge.a11y.previousPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronLeft"
@@ -352,6 +362,10 @@ export const SourceChunksPage = () => {
                             }
                             onBlur={handlePageInputBlur}
                             onKeyDown={handlePageInputKeyDown}
+                            aria-label={t("knowledge.a11y.pageNumber", {
+                              current: currentPage,
+                              total: totalPages,
+                            })}
                             className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-inner-spin-button]:[filter:invert(1)] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:[filter:invert(1)]"
                           />
                           <span>
@@ -371,6 +385,7 @@ export const SourceChunksPage = () => {
                             setPageInput(String(newPage));
                           }}
                           disabled={currentPage === totalPages}
+                          aria-label={t("knowledge.a11y.nextPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronRight"
@@ -386,6 +401,7 @@ export const SourceChunksPage = () => {
                             setPageInput(String(totalPages));
                           }}
                           disabled={currentPage === totalPages}
+                          aria-label={t("knowledge.a11y.lastPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronsRight"

@@ -27,6 +27,9 @@ export const KnowledgePage = () => {
       if (e.key === "Shift") {
         setIsShiftPressed(true);
       }
+      if (e.key === "Escape" && isDrawerOpen) {
+        closeDrawer();
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -42,7 +45,7 @@ export const KnowledgePage = () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, []);
+  }, [isDrawerOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

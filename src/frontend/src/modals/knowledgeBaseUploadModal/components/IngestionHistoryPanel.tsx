@@ -51,6 +51,7 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
 
   const total = data?.total ?? 0;
   const runs = data?.runs ?? [];
+  const contentId = "kb-ingestion-history-content";
 
   return (
     <div
@@ -62,6 +63,8 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
         className="flex w-full items-center justify-between text-left"
         onClick={() => setExpanded((v) => !v)}
         data-testid="kb-ingestion-history-toggle"
+        aria-expanded={expanded}
+        aria-controls={contentId}
       >
         <div className="flex items-center gap-2">
           <ForwardedIconComponent
@@ -83,6 +86,7 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
 
       {expanded && (
         <div
+          id={contentId}
           className={cn(
             "flex flex-col gap-2",
             runs.length > 0 && "max-h-[200px] overflow-y-auto pr-1",

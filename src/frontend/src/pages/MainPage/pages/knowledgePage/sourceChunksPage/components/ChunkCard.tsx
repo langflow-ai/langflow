@@ -71,6 +71,7 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
   const [isCopied, setIsCopied] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const contentRef = useRef<HTMLParagraphElement>(null);
+  const contentId = `chunk-content-${index}`;
 
   const { fileName, userTags } = useMemo(
     () => parseChunkMetadata(chunk.metadata),
@@ -91,13 +92,14 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const toggleExpand = () => setIsExpanded((prev) => !prev);
+
   return (
     <div
       className={cn(
         "rounded-lg border border-muted bg-muted p-3 transition-all duration-200",
-        isOverflowing && "cursor-pointer",
       )}
-      onClick={() => isOverflowing && setIsExpanded(!isExpanded)}
+      onClick={() => isOverflowing && toggleExpand()}
     >
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -119,6 +121,11 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
               isCopied && "text-accent-emerald-foreground",
             )}
             onClick={handleCopy}
+            aria-label={
+              isCopied
+                ? t("knowledge.a11y.chunkCopied", { index })
+                : t("knowledge.a11y.copyChunk", { index })
+            }
           >
             <ForwardedIconComponent
               name={isCopied ? "Check" : "Copy"}
@@ -134,10 +141,26 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
         <div className="flex items-center gap-3">
           <div className="w-4">
             {isOverflowing && (
-              <ForwardedIconComponent
-                name={isExpanded ? "ChevronUp" : "ChevronDown"}
-                className="h-4 w-4 text-muted-foreground transition-transform duration-200"
-              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand();
+                }}
+                aria-expanded={isExpanded}
+                aria-controls={contentId}
+                aria-label={
+                  isExpanded
+                    ? t("knowledge.a11y.collapseChunk", { index })
+                    : t("knowledge.a11y.expandChunk", { index })
+                }
+                className="flex items-center justify-center rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <ForwardedIconComponent
+                  name={isExpanded ? "ChevronUp" : "ChevronDown"}
+                  className="h-4 w-4 text-muted-foreground transition-transform duration-200"
+                />
+              </button>
             )}
           </div>
         </div>
@@ -152,6 +175,7 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
         </div>
       )}
       <p
+        id={contentId}
         ref={contentRef}
         className={cn(
           "text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap break-words",

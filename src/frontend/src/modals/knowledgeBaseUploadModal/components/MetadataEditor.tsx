@@ -109,6 +109,9 @@ export function MetadataEditor({
 
         {pairs.map((pair, index) => {
           const rowError = validation.errors[index];
+          const errorId = rowError
+            ? `${testIdScope}-metadata-error-${index}`
+            : undefined;
           return (
             <div key={index} className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
@@ -119,6 +122,11 @@ export function MetadataEditor({
                   className={cn("h-8 flex-1", rowError && "border-destructive")}
                   data-testid={`${testIdScope}-metadata-key-${index}`}
                   disabled={disabled}
+                  aria-label={t("knowledge.a11y.metadataKey", {
+                    index: index + 1,
+                  })}
+                  aria-invalid={rowError ? true : undefined}
+                  aria-describedby={errorId}
                 />
                 <Input
                   placeholder={t("knowledge.metadataValuePlaceholder")}
@@ -128,6 +136,11 @@ export function MetadataEditor({
                   className={cn("h-8 flex-1", rowError && "border-destructive")}
                   data-testid={`${testIdScope}-metadata-value-${index}`}
                   disabled={disabled}
+                  aria-label={t("knowledge.a11y.metadataValue", {
+                    index: index + 1,
+                  })}
+                  aria-invalid={rowError ? true : undefined}
+                  aria-describedby={errorId}
                 />
                 <Button
                   type="button"
@@ -145,6 +158,7 @@ export function MetadataEditor({
               </div>
               {rowError && (
                 <span
+                  id={errorId}
                   className="text-xs text-destructive"
                   data-testid={`${testIdScope}-metadata-error-${index}`}
                 >

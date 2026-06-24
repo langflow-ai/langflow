@@ -235,6 +235,9 @@ export const createKnowledgeBaseColumns = (
                   size="icon"
                   data-testid="kb-row-actions-trigger"
                   onClick={(e) => e.stopPropagation()}
+                  aria-label={t("knowledge.a11y.moreActions", {
+                    name: params.data?.name ?? "",
+                  })}
                 >
                   <ForwardedIconComponent
                     name="EllipsisVertical"
