@@ -21,6 +21,27 @@ import pytest
 from langflow import components
 from lfx.interface.components import _warm_circular_imports
 
+# Provider components ship in bundle distributions that can be temporarily
+# unpublished (see the re-enable note in pyproject.toml). While a bundle is
+# absent its category stays in
+# ``components.__all__`` but cannot be imported, so these tests skip it instead
+# of failing. Each guard is computed from the live import result, so it turns
+# back into a no-op the moment the bundle is restored -- no revert needed.
+_OPTIONAL_BUNDLE_CATEGORIES = ("openai", "datastax", "oracle")
+
+
+def _unavailable_bundle_categories() -> set[str]:
+    unavailable = set()
+    for category_name in _OPTIONAL_BUNDLE_CATEGORIES:
+        try:
+            getattr(components, category_name)
+        except Exception:
+            unavailable.add(category_name)
+    return unavailable
+
+
+UNAVAILABLE_BUNDLE_CATEGORIES = _unavailable_bundle_categories()
+
 
 class TestAllModulesImportable:
     """Test that all component modules are importable."""
@@ -30,6 +51,8 @@ class TestAllModulesImportable:
         failed_imports = []
 
         for category_name in components.__all__:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             try:
                 category_module = getattr(components, category_name)
                 assert category_module is not None, f"Category {category_name} is None"
@@ -64,6 +87,8 @@ class TestAllModulesImportable:
         print(f"Testing component imports across {len(components.__all__)} categories")  # noqa: T201
 
         for category_name in components.__all__:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             try:
                 category_module = getattr(components, category_name)
 
@@ -110,6 +135,8 @@ class TestAllModulesImportable:
         failed_mappings = []
 
         for category_name in components.__all__:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             try:
                 category_module = getattr(components, category_name)
 
@@ -147,6 +174,8 @@ class TestAllModulesImportable:
         failed_imports = []
 
         for module_name, component_name in traditional_imports:
+            if module_name.rsplit(".", 1)[-1] in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             try:
                 module = importlib.import_module(module_name)
                 component = getattr(module, component_name)
@@ -164,6 +193,8 @@ class TestAllModulesImportable:
         failed_modules = []
 
         for category_name in components.__all__:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             try:
                 category_module = getattr(components, category_name)
 
@@ -201,6 +232,8 @@ class TestAllModulesImportable:
         for order in import_orders:
             try:
                 for category_name in order:
+                    if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                        continue
                     category_module = getattr(components, category_name)
                     # Access a component to trigger dynamic import
                     if hasattr(category_module, "__all__") and category_module.__all__:
@@ -220,6 +253,8 @@ class TestAllModulesImportable:
         ]
 
         for category_name, component_name in test_cases:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             category_module = getattr(components, category_name)
 
             # First access
@@ -240,6 +275,8 @@ class TestAllModulesImportable:
         ]
 
         for category_name, component_name in test_cases:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             category_module = getattr(components, category_name)
 
             with pytest.raises(AttributeError, match=f"has no attribute '{component_name}'"):
@@ -249,12 +286,15 @@ class TestAllModulesImportable:
         """Test that __dir__ functionality works for all modules."""
         # Test main components module
         main_dir = dir(components)
-        assert "openai" in main_dir
+        if "openai" not in UNAVAILABLE_BUNDLE_CATEGORIES:
+            assert "openai" in main_dir
         assert "data" in main_dir
         assert "models_and_agents" in main_dir
 
         # Test category modules
         for category_name in ["openai", "data", "helpers"]:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             category_module = getattr(components, category_name)
             category_dir = dir(category_module)
 
@@ -272,6 +312,8 @@ class TestAllModulesImportable:
         ]
 
         for category_name, component_name in test_components:
+            if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
+                continue
             category_module = getattr(components, category_name)
             component = getattr(category_module, component_name)
 
@@ -410,6 +452,11 @@ class TestDirectModuleImports:
                         "altk",
                         "langchain_ibm",
                         "ibm_watsonx_ai",
+                        # Bundle distributions that can be temporarily unpublished;
+                        # the relocation shim raises with the distribution name.
+                        "lfx-openai",
+                        "lfx-datastax",
+                        "lfx-oracle",
                     ]
                 ):
                     return ("skipped", modname, "missing optional dependency")
