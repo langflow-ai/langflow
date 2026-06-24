@@ -45,7 +45,19 @@ def set_advanced_true(component_input):
     return component_input
 
 
-MODEL_PROVIDERS_LIST = ["OpenAI"]
+MODEL_PROVIDERS_LIST = [provider for provider in ("OpenAI",) if provider in MODEL_PROVIDERS_DICT]
+DEFAULT_MODEL_PROVIDER = MODEL_PROVIDERS_LIST[0] if MODEL_PROVIDERS_LIST else "Custom"
+
+
+def _provider_input_fields() -> list[Any]:
+    return [
+        input_field for provider in MODEL_PROVIDERS_LIST for input_field in MODEL_PROVIDERS_DICT[provider]["inputs"]
+    ]
+
+
+def _provider_options_metadata() -> list[dict[str, str]]:
+    return [MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA] + [{"icon": "brain"}]
+
 
 _CUGA_CODE_AGENT_GUARD_ATTR = "_langflow_code_agent_guard_installed"
 
@@ -110,15 +122,12 @@ class CugaComponent(ToolCallingAgentComponent):
             display_name="Model Provider",
             info="The provider of the language model that the agent will use to generate responses.",
             options=[*MODEL_PROVIDERS_LIST, "Custom"],
-            value="OpenAI",
+            value=DEFAULT_MODEL_PROVIDER,
             real_time_refresh=True,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]
-            + [{"icon": "brain"}],
+            options_metadata=_provider_options_metadata(),
         ),
-        # OpenAI ships in a bundle that can be temporarily unpublished; fall back to no
-        # provider inputs so the component still imports until the bundle is restored.
-        *MODEL_PROVIDERS_DICT.get("OpenAI", {}).get("inputs", []),
+        *_provider_input_fields(),
         MultilineInput(
             name="instructions",
             display_name="Instructions",

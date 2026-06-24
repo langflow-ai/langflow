@@ -309,8 +309,6 @@ async def test_tool_calling_agent_component():
     tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
     input_value = "What is 2 + 2?"
     chat_history = []
-    pytest.importorskip("lfx_openai")
-    from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
     from tests.api_keys import get_openai_api_key
 
@@ -318,7 +316,8 @@ async def test_tool_calling_agent_component():
     temperature = 0.1
 
     # Default OpenAI Model Component
-    llm_component = OpenAIModelComponent().set(
+    openai_model_component = pytest.importorskip("lfx_openai.components.openai.openai_chat_model").OpenAIModelComponent
+    llm_component = openai_model_component().set(
         api_key=api_key,
         temperature=temperature,
     )

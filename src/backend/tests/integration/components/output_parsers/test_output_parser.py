@@ -4,12 +4,10 @@ from lfx.components.processing import OutputParserComponent
 
 from tests.integration.utils import ComponentInputHandle, run_single_component
 
-pytest.importorskip("lfx_openai")
-from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
-
 
 @pytest.mark.api_key_required
 async def test_csv_output_parser_openai():
+    openai_model_component = pytest.importorskip("lfx_openai.components.openai.openai_chat_model").OpenAIModelComponent
     format_instructions_ = ComponentInputHandle(
         clazz=OutputParserComponent,
         inputs={},
@@ -32,7 +30,7 @@ async def test_csv_output_parser_openai():
     from tests.api_keys import get_openai_api_key
 
     outputs = await run_single_component(
-        OpenAIModelComponent,
+        openai_model_component,
         inputs={
             "api_key": get_openai_api_key(),
             "output_parser": output_parser_handle,

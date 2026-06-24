@@ -1,18 +1,13 @@
 import random
 
 import pytest
-from faker import Faker
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 from langchain_core.vectorstores.in_memory import InMemoryVectorStore
-
-from tests.base import ComponentTestBaseWithoutClient
-
-pytest.importorskip("lfx_datastax")
 from lfx_datastax.components.datastax.graph_rag import GraphRAGComponent
 
 
-class TestGraphRAGComponent(ComponentTestBaseWithoutClient):
+class TestGraphRAGComponent:
     """Test suite for the GraphRAGComponent class, focusing on graph traversal and retrieval functionality.
 
     Fixtures:
@@ -46,10 +41,7 @@ class TestGraphRAGComponent(ComponentTestBaseWithoutClient):
         Returns:
             List[Document]: A list of generated Document objects.
         """
-        # Initialize Faker for generating random text
-        fake = Faker()
         random.seed(42)
-        fake.seed_instance(42)
 
         # Define possible attributes for animals
         animal_types = ["mammal", "bird", "reptile", "insect"]
@@ -74,13 +66,13 @@ class TestGraphRAGComponent(ComponentTestBaseWithoutClient):
         # Generate and return a list of documents
         return [
             Document(
-                id=fake.uuid4(),
-                page_content=fake.sentence(),
+                id=f"animal-{idx}",
+                page_content=f"animal document {idx}",
                 metadata=update_metadata(
                     {
                         "type": random.choice(animal_types),  # noqa: S311
                         "number_of_legs": random.choice([0, 2, 4, 6, 8]),  # noqa: S311
-                        "keywords": fake.words(random.randint(2, 5)),  # noqa: S311
+                        "keywords": [f"keyword-{idx}-{n}" for n in range(random.randint(2, 5))],  # noqa: S311
                         # Add optional tags with 30% probability
                         **(
                             {
@@ -97,7 +89,7 @@ class TestGraphRAGComponent(ComponentTestBaseWithoutClient):
                     }
                 ),
             )
-            for _ in range(n)
+            for idx in range(n)
         ]
 
     @pytest.fixture
@@ -110,10 +102,6 @@ class TestGraphRAGComponent(ComponentTestBaseWithoutClient):
         store = InMemoryVectorStore(embedding=embedding)
         store.add_documents(animals)
         return store
-
-    @pytest.fixture
-    def file_names_mapping(self):
-        """Return an empty list since this component doesn't have version-specific files."""
 
     @pytest.fixture
     def default_kwargs(self):
