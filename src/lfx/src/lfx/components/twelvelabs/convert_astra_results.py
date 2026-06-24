@@ -76,9 +76,9 @@ class ConvertAstraToTwelveLabs(Component):
     def get_video_id(self) -> Message:
         """Return the extracted video ID as a Message."""
         self.build()
-        return Message(text=self._video_id if self._video_id else "")
+        return Message(text=self._video_id or "")
 
     def get_index_id(self) -> Message:
         """Return the extracted index ID as a Message."""
         self.build()
-        return Message(text=self._index_id if self._index_id else "")
+        return Message(text=self._index_id or "")

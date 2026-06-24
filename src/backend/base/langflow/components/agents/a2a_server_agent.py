@@ -1,6 +1,7 @@
 from langflow.custom import Component
-from langflow.inputs import StrInput, MessageInput
+from langflow.inputs import StrInput
 from langflow.schema import Message
+
 
 class A2AServerAgent(Component):
     display_name = "A2A Server Agent"
@@ -11,9 +12,7 @@ class A2AServerAgent(Component):
     ]
 
     def build_config(self):
-        return {
-            "agent_name": {"display_name": "Agent Name"}
-        }
+        return {"agent_name": {"display_name": "Agent Name"}}
 
     async def build(self) -> Message:
         return Message(text=f"Server initialized: {self.agent_name}")

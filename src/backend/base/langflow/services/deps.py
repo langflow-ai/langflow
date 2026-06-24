@@ -298,4 +298,3 @@ def get_a2a_service():
     from langflow.services.a2a.factory import A2AServiceFactory
 
     return get_service(ServiceType.A2A_SERVICE, A2AServiceFactory())
-

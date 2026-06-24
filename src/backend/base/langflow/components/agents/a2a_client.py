@@ -1,6 +1,7 @@
 from langflow.custom import Component
-from langflow.inputs import StrInput, MessageInput
+from langflow.inputs import MessageInput, StrInput
 from langflow.schema import Message
+
 
 class A2AClientConnector(Component):
     display_name = "A2A Agent Connector"
@@ -8,9 +9,7 @@ class A2AClientConnector(Component):
 
     inputs = [
         StrInput(
-            name="agent_card_url",
-            display_name="Agent Card URL",
-            value="https://example.com/.well-known/agent.json"
+            name="agent_card_url", display_name="Agent Card URL", value="https://example.com/.well-known/agent.json"
         ),
         MessageInput(name="message", display_name="Message"),
     ]

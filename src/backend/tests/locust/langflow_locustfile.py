@@ -114,7 +114,7 @@ def log_detailed_error(
         "response_text": response_text[:1000] if response_text else None,  # Limit response size
         "request_data": request_data,
         "exception": str(exception) if exception else None,
-        "traceback": traceback if traceback else None,
+        "traceback": traceback or None,
     }
 
     DETAILED_ERRORS.append(error_info)

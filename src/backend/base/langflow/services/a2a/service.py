@@ -1,5 +1,6 @@
 from langflow.services.base import Service
 
+
 class A2AService(Service):
     name = "a2a_service"
 

@@ -87,7 +87,7 @@ def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -
     msg = str(exc)
     if "UNIQUE constraint failed" not in msg:
         return HTTPException(status_code=500, detail=msg)
-    columns = msg.split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
+    columns = msg.split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n", maxsplit=1)[0]
     column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
     return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
 

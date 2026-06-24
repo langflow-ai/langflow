@@ -368,7 +368,7 @@ class AstraDBBaseComponent(Component):
                         "keyspaces": db.keyspaces,
                         "collections": num_collections,
                         "status": db.status if db.status != "ACTIVE" else None,
-                        "org_id": db.org_id if db.org_id else None,
+                        "org_id": db.org_id or None,
                     }
                 except Exception as e:  # noqa: BLE001
                     logger.debug("Failed to get metadata for database %s: %s", db.name, e)

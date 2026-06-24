@@ -440,7 +440,7 @@ async def handle_list_tools(project_id: UUID | None = None, *, mcp_enabled_only:
                     )
                     name = get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, existing_names)
                     description = flow.action_description or (
-                        flow.description if flow.description else f"Tool generated from flow: {name}"
+                        flow.description or f"Tool generated from flow: {name}"
                     )
                 else:
                     # For global tools, use simple sanitized names
