@@ -53,12 +53,12 @@ test(
     // Add Update Data component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("data operations");
-    await page.waitForSelector('[data-testid="processingJSON Operations"]', {
+    await page.waitForSelector('[data-testid="processingOperations"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingJSON Operations")
+      .getByTestId("processingOperations")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 100 },
       });
@@ -119,7 +119,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-dataoperations-shownode-json-left")
+      .getByTestId("handle-operations-shownode-json-left")
       .first()
       .click();
 
@@ -172,7 +172,7 @@ test(
       .getByTestId("inputlist_str_urls_1")
       .fill("https://en.wikipedia.org/wiki/Human_intelligence");
 
-    await page.getByTestId("title-JSON Operations").click();
+    await page.getByTestId("title-Operations").click();
 
     await page.waitForTimeout(1000);
 
@@ -209,7 +209,7 @@ test(
     // Update Data -> Loop Item (left side)
 
     await page
-      .getByTestId("handle-dataoperations-shownode-json-right")
+      .getByTestId("handle-operations-shownode-json-right")
       .first()
       .click();
     await page
