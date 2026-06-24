@@ -33,8 +33,8 @@ _RESERVED_ENV_PREFIXES: tuple[str, ...] = (
 
 # Exact names that carry infrastructure secrets but do not use a reserved prefix. These are
 # never legitimate flow values (unlike LLM provider API keys, which intentionally remain
-# resolvable). Covers the database, cloud-IAM, cache, and VCS credentials an operator is most
-# likely to have in the process environment of a multi-tenant deployment.
+# resolvable). Covers the database, cache, cloud-IAM, token-signing, OAuth/SSO, mail-relay, and
+# VCS credentials an operator is most likely to have in a multi-tenant deployment's environment.
 _RESERVED_ENV_NAMES: frozenset[str] = frozenset(
     {
         # Application / database

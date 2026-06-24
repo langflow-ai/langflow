@@ -122,23 +122,12 @@ DANGEROUS_ENV_VARS = frozenset(
     }
 )
 
-# SECURITY: Docker-flag policy for MCP stdio servers. ``docker`` is allowlisted (a legitimate MCP
-# transport), but several flags turn a container run into host access (``-v /:/host`` mounts the
-# whole host filesystem, ``-v /var/run/docker.sock:/s`` grants Docker-API root, ``--device``
-# exposes host devices, ``--network host`` shares the host network, ...). There are TWO modes,
-# selected by ``LANGFLOW_MCP_SERVER_DOCKER_HARDENING`` (default off):
-#
-#   * Default (off) -- the lenient baseline that preserves existing single-tenant behavior, where
-#     docker MCP servers legitimately use volume mounts, custom networks, etc. Only ``--privileged``
-#     / ``--cap-add`` and the host-namespace ``=`` forms are rejected.
-#   * Hardened (on) -- the comprehensive policy below for multi-tenant / untrusted-tenant
-#     deployments: host filesystem/device mounts and privilege flags are rejected outright, the
-#     namespace flags are rejected only for the genuinely dangerous host / another-container
-#     values, the network is restricted to the default-isolated values, and ``--security-opt`` is
-#     rejected only when it downgrades the sandbox (``no-new-privileges`` stays allowed).
-#
-# Both modes handle the inline (``--volume=/:/host``) and space-separated (``--volume /:/host``)
-# forms.
+# SECURITY: docker-flag policy for MCP stdio servers. ``docker`` is allowlisted but several flags
+# turn a container run into host access. Two modes, selected by LANGFLOW_MCP_SERVER_DOCKER_HARDENING
+# (default off = lenient/previous behavior, on = strict multi-tenant policy) -- the
+# mcp_server_docker_hardening setting docstring has the operator-facing description; the per-set
+# comments below cover what each blocks. Both modes handle the inline (``--volume=/:/host``) and
+# space-separated (``--volume /:/host``) forms.
 
 # -- Default (lenient / previous behavior) --
 DOCKER_DANGEROUS_ARGS = frozenset({"--privileged", "--cap-add"})
@@ -303,17 +292,13 @@ def validate_mcp_stdio_config(
             wraps a non-allowed command, an env var is in the blocklist, or a docker arg
             breaks container isolation.
     """
-    # 0) Tokenize a command that carries its own arguments (e.g. "bash -c '<payload>'").
-    #    Without this, a tenant can pack the whole payload into ``command`` with empty ``args``:
-    #    extract_base_command() only inspects the first token for the allowlist, the metacharacter
-    #    scan only iterates ``args``, and the shell-wrapper check is skipped when ``args`` is empty
-    #    -- so the embedded ``-c '<payload>'`` would never be examined. Splitting here folds those
-    #    embedded tokens into ``args`` so every check below sees them. Applies to ALL callers
-    #    (update_tools, the REST MCPServerConfig, the legacy stdio component), keeping the
-    #    REST-layer and execution-time enforcement identical.
-    #    Do NOT split file-path commands: an absolute/relative/Windows path may legitimately
-    #    contain spaces (e.g. "C:\\Program Files\\nodejs\\node.exe") and carries no embedded
-    #    shell arguments -- extract_base_command resolves those directly.
+    # 0) Tokenize a command that carries its own arguments (e.g. "bash -c '<payload>'"). A tenant
+    #    could otherwise pack the whole payload into ``command`` with empty ``args`` and slip past
+    #    the checks below, which key off the first token / only scan ``args``. Folding the embedded
+    #    tokens into ``args`` makes every check see them -- at all callers (update_tools, the REST
+    #    MCPServerConfig, the legacy stdio component), so REST and execution enforcement stay equal.
+    #    Don't split file-path commands: a Windows/absolute path may contain spaces but carries no
+    #    embedded shell args (e.g. "C:\\Program Files\\nodejs\\node.exe").
     args = list(args or [])
     if command and not _is_file_path(command):
         try:
