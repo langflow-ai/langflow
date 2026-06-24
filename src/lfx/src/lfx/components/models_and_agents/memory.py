@@ -91,7 +91,7 @@ async def aget_agent_chat_history(
       more than ``MAX_CHAT_HISTORY_FETCH_LIMIT`` rows still see the genuine
       most-recent slice, not the chronological first window.
     """
-    if n_messages == 0:
+    if n_messages is not None and n_messages <= 0:
         return []
     fetch_limit = n_messages or MAX_CHAT_HISTORY_FETCH_LIMIT
     messages = await aget_messages(
