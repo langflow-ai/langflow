@@ -9,6 +9,8 @@ from lfx.components.models_and_agents import PromptComponent
 from lfx.components.processing.converter import TypeConverterComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.graph.constants import Finish
+
+pytest.importorskip("lfx_openai")
 from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 if TYPE_CHECKING:

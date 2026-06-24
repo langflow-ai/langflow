@@ -186,6 +186,7 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         This test verifies that the component's build configuration is properly
         updated when selecting different model providers using the provider system.
         """
+        pytest.importorskip("lfx_openai")
         component = await self.component_setup(component_class, default_kwargs)
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
@@ -393,6 +394,7 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         Requires:
             OPENAI_API_KEY environment variable
         """
+        pytest.importorskip("lfx_openai")
         from tests.api_keys import get_openai_api_key
 
         api_key = get_openai_api_key()
@@ -434,6 +436,7 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         Requires:
             OPENAI_API_KEY environment variable
         """
+        pytest.importorskip("lfx_openai")
         from tests.api_keys import get_openai_api_key
 
         api_key = get_openai_api_key()
@@ -485,6 +488,7 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         Requires:
             OPENAI_API_KEY environment variable
         """
+        pytest.importorskip("lfx_openai")
         from tests.api_keys import get_openai_api_key
 
         api_key = get_openai_api_key()

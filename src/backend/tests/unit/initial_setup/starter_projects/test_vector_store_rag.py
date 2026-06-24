@@ -13,6 +13,9 @@ from lfx.graph.graph.constants import Finish
 from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+
+pytest.importorskip("lfx_datastax")
+pytest.importorskip("lfx_openai")
 from lfx_datastax import AstraDBVectorStoreComponent
 from lfx_openai.components.openai.openai import OpenAIEmbeddingsComponent
 from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
