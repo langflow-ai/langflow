@@ -93,7 +93,7 @@ class CometAPIComponent(LCModelComponent):
 
         headers = {"Content-Type": "application/json"}
         # Add Bearer Authorization when API key is available.
-        api_key_source = token_override or getattr(self, "api_key", None)
+        api_key_source = token_override if token_override is not None else getattr(self, "api_key", None)
         if api_key_source:
             token = secret_value_to_str(api_key_source)
             headers["Authorization"] = f"Bearer {token}"
