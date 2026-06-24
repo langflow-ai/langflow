@@ -5,9 +5,11 @@ from faker import Faker
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 from langchain_core.vectorstores.in_memory import InMemoryVectorStore
-from lfx_datastax.components.datastax.graph_rag import GraphRAGComponent
 
 from tests.base import ComponentTestBaseWithoutClient
+
+pytest.importorskip("lfx_datastax")
+from lfx_datastax.components.datastax.graph_rag import GraphRAGComponent
 
 
 class TestGraphRAGComponent(ComponentTestBaseWithoutClient):
