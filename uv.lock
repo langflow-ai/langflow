@@ -2048,7 +2048,7 @@ wheels = [
 
 [[package]]
 name = "composio-client"
-version = "1.41.0"
+version = "1.40.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -2058,9 +2058,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2a/b1/3eaeb0bf6f45a5a4114c0464479aab3181b4676644cf84ff08ab7ef389e2/composio_client-1.41.0.tar.gz", hash = "sha256:5b37205123b38a4568d6a75c4227d38929b8f9526adc8d0810281733e547d8a6", size = 244988, upload-time = "2026-06-19T12:15:31.258Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/5a/f715690c950b40b5a2b5a801d27abed6dde3f1e9925e5a486813b677b7ec/composio_client-1.40.0.tar.gz", hash = "sha256:ccfb46c5909e3411fe63fa6275df1f3f7af180ae4bcd82d509e14470c615b0d3", size = 248822, upload-time = "2026-05-19T16:01:17.905Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/78/34/8841fcc4da6e4ccb74daac47c4714607f9314240c5bf43a0ef653f758e50/composio_client-1.41.0-py3-none-any.whl", hash = "sha256:18344f1b9209c56c25258c87c9a2f0423553690c94a4e62fb933072f76b37cd1", size = 276180, upload-time = "2026-06-19T12:15:29.949Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/5d/aa520ecaaf143f69b8d3e1dab5945aeecd25b1b068a9093b9164408fabbd/composio_client-1.40.0-py3-none-any.whl", hash = "sha256:1785bd210f948496d034059b3d5133c5f480a07f55fb4c2f8bfe5a1612f249e5", size = 284567, upload-time = "2026-05-19T16:01:16.597Z" },
 ]
 
 [[package]]
@@ -8173,6 +8173,7 @@ all = [
     { name = "cleanlab-tlm" },
     { name = "clickhouse-connect" },
     { name = "composio" },
+    { name = "composio-client" },
     { name = "composio-langchain" },
     { name = "couchbase" },
     { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64') or (python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
@@ -8330,6 +8331,7 @@ complete = [
     { name = "cleanlab-tlm" },
     { name = "clickhouse-connect" },
     { name = "composio" },
+    { name = "composio-client" },
     { name = "composio-langchain" },
     { name = "couchbase" },
     { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64') or (python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
@@ -8430,6 +8432,7 @@ complete = [
 ]
 composio = [
     { name = "composio" },
+    { name = "composio-client" },
     { name = "composio-langchain" },
 ]
 couchbase = [
@@ -8775,6 +8778,7 @@ requires-dist = [
     { name = "clickhouse-connect", specifier = "==0.7.19" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
     { name = "composio", marker = "extra == 'composio'", specifier = "==0.9.2" },
+    { name = "composio-client", marker = "extra == 'composio'", specifier = "<1.41.0" },
     { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.9.2" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=48.0.1" },
@@ -9592,6 +9596,7 @@ all = [
     { name = "cleanlab-tlm" },
     { name = "clickhouse-connect" },
     { name = "composio" },
+    { name = "composio-client" },
     { name = "composio-langchain" },
     { name = "couchbase" },
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
@@ -9700,6 +9705,7 @@ cometapi = [
 ]
 composio = [
     { name = "composio" },
+    { name = "composio-client" },
     { name = "composio-langchain" },
 ]
 confluence = [
@@ -9906,6 +9912,7 @@ requires-dist = [
     { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
     { name = "composio", marker = "extra == 'composio'", specifier = "==0.9.2" },
+    { name = "composio-client", marker = "extra == 'composio'", specifier = "<1.41.0" },
     { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.9.2" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cuga", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
