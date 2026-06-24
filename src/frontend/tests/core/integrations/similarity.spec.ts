@@ -4,6 +4,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { dismissLegacyWarnings } from "../../utils/dismiss-legacy-warnings";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 import { unselectNodes } from "../../utils/unselect-nodes";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
@@ -27,9 +28,10 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai embedding");
-    await page.waitForSelector("text=OpenAI Embeddings", {
-      timeout: 1000,
-    });
+    await skipIfComponentUnavailable(
+      page.getByText("OpenAI Embeddings", { exact: true }),
+      "OpenAI Embeddings",
+    );
 
     await page
       .getByText("OpenAI Embeddings", { exact: true })

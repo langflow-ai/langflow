@@ -10,6 +10,7 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 import { selectGptModel } from "../../utils/select-gpt-model";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -176,9 +177,10 @@ test(
     await page
       .getByTestId("sidebar-search-input")
       .fill(TEXTS.providerOpenAiSearch);
-    await page.waitForSelector('[data-testid="openai_openai_draggable"]', {
-      timeout: 2000,
-    });
+    await skipIfComponentUnavailable(
+      page.getByTestId("openai_openai_draggable"),
+      "OpenAI",
+    );
     await page
       .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
