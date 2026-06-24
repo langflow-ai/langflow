@@ -14,7 +14,6 @@ instead of crashing. ``trace_name`` defaults to ``None``.
 import uuid
 
 import pytest
-
 from lfx.schema.message import ErrorMessage
 
 
@@ -84,7 +83,7 @@ class TestBuildVertexErrorPathVertexIdGuard:
         class FakeGraph:
             """Graph stub whose get_vertex always raises."""
 
-            def get_vertex(self, _vid):  # noqa: ANN001, ANN202
+            def get_vertex(self, _vid):
                 msg = "Vertex not found"
                 raise KeyError(msg)
 
@@ -96,7 +95,7 @@ class TestBuildVertexErrorPathVertexIdGuard:
             try:
                 custom_component = graph.get_vertex(vertex_id).custom_component
                 trace_name = getattr(custom_component, "trace_name", None)
-            except Exception:  # noqa: BLE001 — mirrors build.py
+            except Exception:
                 # Lookup failed; trace_name stays None (warning logged in real code)
                 pass
 
@@ -134,7 +133,7 @@ class TestBuildVertexErrorPathVertexIdGuard:
             custom_component = FakeCustomComponent()
 
         class FakeGraph:
-            def get_vertex(self, _vid):  # noqa: ANN001, ANN202
+            def get_vertex(self, _vid):
                 return FakeVertex()
 
         graph = FakeGraph()
@@ -145,7 +144,7 @@ class TestBuildVertexErrorPathVertexIdGuard:
             try:
                 custom_component = graph.get_vertex(vertex_id).custom_component
                 trace_name = getattr(custom_component, "trace_name", None)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
 
         error_message = ErrorMessage(
