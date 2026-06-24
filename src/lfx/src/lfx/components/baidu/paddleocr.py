@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 class PaddleOCRComponent(BaseFileComponent):
     display_name = "PaddleOCR"
-    description = "Extract text and parse documents using PaddleOCR."
+    description = "Use PaddleOCR for either layout-aware document parsing into Markdown or plain OCR text recognition."
     documentation = "https://paddlepaddle.github.io/PaddleOCR/latest/en/version3.x/paddleocr_and_ppstructure.html"
     icon = "file-search"
     name = "PaddleOCR"
@@ -50,7 +50,11 @@ class PaddleOCRComponent(BaseFileComponent):
             display_name="Task Type",
             options=["document_parsing", "ocr"],
             value="document_parsing",
-            info="Choose document parsing for Markdown/layout extraction, or OCR for text recognition.",
+            info=(
+                "document_parsing: preserves reading order and layout as Markdown — "
+                "best when you need structure-aware text (PDFs, scanned documents, tables).\n"
+                "ocr: extracts text regions in scan order — best for images with simple text content."
+            ),
             real_time_refresh=True,
         ),
         DropdownInput(
@@ -358,7 +362,8 @@ class PaddleOCRComponent(BaseFileComponent):
             data={
                 self.SERVER_FILE_PATH_FIELDNAME: str(file_path),
                 "text": text,
-                "task_type": self.task_type,
+                "task_type": "ocr",
+                "output_format": "plain_text",
                 "model": self.model,
                 "job_id": job_id,
                 "pages": pages_payload,
@@ -377,13 +382,14 @@ class PaddleOCRComponent(BaseFileComponent):
                 continue
             self._append_ocr_fallback_results(result.get("ocrResults", []) or [], pages_payload, text_parts)
 
-        text = "\n\n".join(part for part in text_parts if part)
+        markdown_text = "\n\n".join(part for part in text_parts if part)
         return Data(
-            text=text,
+            text=markdown_text,
             data={
                 self.SERVER_FILE_PATH_FIELDNAME: str(file_path),
-                "text": text,
-                "task_type": self.task_type,
+                "text": markdown_text,
+                "task_type": "document_parsing",
+                "output_format": "markdown",
                 "model": self.model,
                 "job_id": job_id,
                 "pages": pages_payload,

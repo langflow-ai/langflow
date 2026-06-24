@@ -68,6 +68,7 @@ def test_paddleocr_ocr_mode_processes_text(monkeypatch, tmp_path):
     data = processed[0].data[0].data
     assert data["text"] == "hello\nworld"
     assert data["task_type"] == "ocr"
+    assert data["output_format"] == "plain_text"
     assert data["model"] == "PP-OCRv6"
     assert data["job_id"] == "ocr-job-id"
     assert data["pages"][0]["pruned_result"] == {"rec_texts": ["hello", "world"]}
@@ -136,6 +137,7 @@ def test_paddleocr_document_parsing_processes_markdown(monkeypatch, tmp_path):
     data = processed[0].data[0].data
     assert data["text"] == "# Title"
     assert data["task_type"] == "document_parsing"
+    assert data["output_format"] == "markdown"
     assert data["model"] == "PaddleOCR-VL-1.6"
     assert data["job_id"] == "doc-job-id"
     assert data["pages"][0]["markdown_text"] == "# Title"
