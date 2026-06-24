@@ -3,8 +3,8 @@ name: Release Bundles
 # Manually-triggered workflow for publishing stable `lfx-<name>` bundle wheels
 # from src/bundles/* to PyPI. Bundles change infrequently, so we release them
 # on demand rather than on a schedule. Re-running the workflow without a
-# version bump is a no-op (PyPI rejects the duplicate upload and we tolerate
-# the conflict).
+# version bump is a no-op; the publish job preflights PyPI and skips bundle
+# versions that are already present.
 
 on:
   workflow_dispatch:
@@ -182,6 +182,10 @@ jobs:
       needs.test-install.result == 'success'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
       - name: Download bundles artifact
         uses: actions/download-artifact@v7
         with:
@@ -196,26 +200,122 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
+          set -euo pipefail
           shopt -s nullglob
           wheels=(bundles-dist/*.whl)
           if [ ${#wheels[@]} -eq 0 ]; then
             echo "No bundle wheels to publish."
             exit 0
           fi
+
+          publish_plan="$(mktemp)"
+          uv run --with packaging --no-project python - "${wheels[@]}" > "$publish_plan" <<'PY'
+          import email
+          import json
+          import sys
+          import tomllib
+          import urllib.error
+          import urllib.request
+          import zipfile
+          from pathlib import Path
+
+          from packaging.requirements import Requirement
+          from packaging.utils import canonicalize_name
+          from packaging.version import InvalidVersion, Version
+
+          root_order = {}
+          root_dependencies = tomllib.loads(Path("pyproject.toml").read_text())["project"].get("dependencies", [])
+          for index, dependency in enumerate(root_dependencies):
+            try:
+              requirement = Requirement(dependency)
+            except Exception:
+              continue
+            root_order.setdefault(canonicalize_name(requirement.name), index)
+
+          def read_wheel_metadata(path: Path) -> tuple[str, Version]:
+            with zipfile.ZipFile(path) as wheel:
+              metadata_path = next(name for name in wheel.namelist() if name.endswith(".dist-info/METADATA"))
+              metadata = email.message_from_bytes(wheel.read(metadata_path))
+            return canonicalize_name(metadata["Name"]), Version(metadata["Version"])
+
+          plan = []
+          for wheel_arg in sys.argv[1:]:
+            wheel_path = Path(wheel_arg)
+            name, version = read_wheel_metadata(wheel_path)
+            url = f"https://pypi.org/pypi/{name}/json"
+            try:
+              with urllib.request.urlopen(url, timeout=30) as response:
+                project = json.load(response)
+            except urllib.error.HTTPError as exc:
+              if exc.code != 404:
+                raise
+              print(f"Will publish new PyPI project {name} {version}: {wheel_path}", file=sys.stderr)
+              plan.append((0, root_order.get(name, 9999), name, str(wheel_path)))
+              continue
+
+            published_versions = set()
+            for version_text in project.get("releases", {}):
+              try:
+                published_versions.add(Version(version_text))
+              except InvalidVersion:
+                continue
+
+            if version in published_versions:
+              print(f"Skipping {name} {version}: already published.", file=sys.stderr)
+              continue
+
+            print(f"Will publish new version {name} {version}: {wheel_path}", file=sys.stderr)
+            plan.append((1, root_order.get(name, 9999), name, str(wheel_path)))
+
+          for _, _, _, wheel_path in sorted(plan):
+            print(wheel_path)
+          PY
+
+          if [ ! -s "$publish_plan" ]; then
+            echo "No bundle wheels need publishing."
+            exit 0
+          fi
+
+          mapfile -t wheels < "$publish_plan"
           failed=0
+          pypi_publish_delay_seconds=60
+          pypi_publish_max_attempts=5
+          wheel_count=${#wheels[@]}
+          wheel_number=0
           for wheel in "${wheels[@]}"; do
+            wheel_number=$((wheel_number + 1))
             echo "Publishing $wheel"
-            # Capture stderr so we can tolerate "already exists" without failing
-            # the whole run — re-running this workflow without bumping a bundle
-            # version should be a no-op for that bundle.
-            if ! err=$(uv publish "$wheel" 2>&1); then
+            attempt=1
+            published=0
+            while true; do
+              # Capture stderr so we can tolerate "already exists" without failing
+              # the whole run — re-running this workflow without bumping a bundle
+              # version should be a no-op for that bundle.
+              if err=$(uv publish "$wheel" 2>&1); then
+                echo "$err"
+                published=1
+                break
+              fi
               echo "$err"
               if echo "$err" | grep -qiE 'already exists|file already exists|HTTP 400|duplicate'; then
                 echo "Skipping $wheel: already published."
-              else
-                echo "Publish failed for $wheel"
-                failed=1
+                break
               fi
+              if echo "$err" | grep -qiE 'HTTP 429|429 Too Many Requests|Too many new projects created'; then
+                if [ "$attempt" -lt "$pypi_publish_max_attempts" ]; then
+                  echo "PyPI rate limited $wheel; sleeping ${pypi_publish_delay_seconds}s before retry $((attempt + 1))/${pypi_publish_max_attempts}."
+                  sleep "$pypi_publish_delay_seconds"
+                  attempt=$((attempt + 1))
+                  continue
+                fi
+              fi
+              echo "Publish failed for $wheel"
+              failed=1
+              break
+            done
+            if [ "$published" = "1" ] && [ "$wheel_number" -lt "$wheel_count" ]; then
+              echo "Sleeping ${pypi_publish_delay_seconds}s before the next PyPI upload."
+              sleep "$pypi_publish_delay_seconds"
             fi
           done
           if [ "$failed" = "1" ]; then

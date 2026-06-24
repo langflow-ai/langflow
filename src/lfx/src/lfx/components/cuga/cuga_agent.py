@@ -48,6 +48,39 @@ def set_advanced_true(component_input):
 
 MODEL_PROVIDERS_LIST = ["OpenAI"]
 
+_CUGA_CODE_AGENT_GUARD_ATTR = "_langflow_code_agent_guard_installed"
+
+
+def _validate_cuga_code_agent_source(code_executor_cls: Any, security_validator_cls: Any, code: str) -> None:
+    """Apply CUGA's strict validation to CodeAgent-generated Python before execution."""
+    security_validator_cls.validate_imports(code)
+    wrapped_code = code_executor_cls._wrap_code_for_code_agent(code)  # noqa: SLF001
+    security_validator_cls.validate_wrapped_code(wrapped_code)
+
+
+def _install_cuga_code_agent_security_guard() -> None:
+    """Guard CUGA CodeAgent execution with the stricter CUGA Lite validator."""
+    from cuga.backend.cuga_graph.nodes.cuga_lite.executors.code_executor import CodeExecutor
+    from cuga.backend.cuga_graph.nodes.cuga_lite.executors.common import SecurityValidator
+
+    if getattr(CodeExecutor, _CUGA_CODE_AGENT_GUARD_ATTR, False):
+        return
+
+    original_eval_for_code_agent = CodeExecutor.eval_for_code_agent
+
+    async def guarded_eval_for_code_agent(
+        cls,
+        code: str,
+        state: Any,
+        mode: Any = None,
+        **kwargs: Any,
+    ) -> tuple[str, dict[str, Any]]:
+        _validate_cuga_code_agent_source(cls, SecurityValidator, code)
+        return await original_eval_for_code_agent(code=code, state=state, mode=mode, **kwargs)
+
+    CodeExecutor.eval_for_code_agent = classmethod(guarded_eval_for_code_agent)
+    setattr(CodeExecutor, _CUGA_CODE_AGENT_GUARD_ATTR, True)
+
 
 class CugaComponent(ToolCallingAgentComponent):
     """Cuga Agent Component for advanced AI task execution.
@@ -220,6 +253,8 @@ class CugaComponent(ToolCallingAgentComponent):
             )
             from cuga.backend.llm.models import LLMManager
             from cuga.configurations.instructions_manager import InstructionsManager
+
+            _install_cuga_code_agent_security_guard()
 
             # Reset var_manager if this is the first message in history
             logger.debug(f"[CUGA] Checking history_messages: count={len(history_messages) if history_messages else 0}")

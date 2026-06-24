@@ -193,6 +193,41 @@ async def test_authenticate_with_credentials_auto_login_skip_missing_superuser_r
 
 
 @pytest.mark.anyio
+async def test_auto_login_longterm_token_is_short_lived_with_refresh(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """auto_login must not mint a 365-day superuser token.
+
+    Regression for GHSA-fjgc-vj2f-77hm: create_user_longterm_token
+    previously issued a 365-day access token with no refresh token. It must now
+    issue a normally-scoped access token (ACCESS_TOKEN_EXPIRE_SECONDS) plus a
+    refresh token.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.SUPERUSER = "admin"
+    superuser = _dummy_user(uuid4())
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=superuser)),
+        patch("langflow.services.auth.service.update_user_last_login_at", new=AsyncMock()),
+    ):
+        user_id, tokens = await auth_service.create_user_longterm_token(AsyncMock())
+
+    assert user_id == superuser.id
+    # A refresh token is now issued (previously None).
+    assert tokens["refresh_token"]
+
+    # The access token lifetime is bounded by ACCESS_TOKEN_EXPIRE_SECONDS (60 in
+    # the fixture), nowhere near a year.
+    claims = jwt.decode(tokens["access_token"], options={"verify_signature": False})
+    lifetime = claims["exp"] - int(datetime.now(timezone.utc).timestamp())
+    assert lifetime > 0
+    assert lifetime <= auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS + 5
+    assert lifetime < 60 * 60 * 24  # far below a day, definitely not 365 days
+
+
+@pytest.mark.anyio
 async def test_authenticate_with_credentials_auto_login_skip_empty_superuser_config_raises():
     """AUTO_LOGIN + skip_auth_auto_login with an empty SUPERUSER config rejects without a DB lookup.
 
@@ -318,7 +353,7 @@ def test_encrypt_decrypt_roundtrip_with_base64_encoded_32_byte_key(tmp_path):
 
 
 def test_encrypt_decrypt_roundtrip_with_short_key(tmp_path):
-    """Keys shorter than 32 chars use the random.seed path and must work."""
+    """Keys shorter than 32 chars use the SHA-256 derivation and must work."""
     raw_key = "short-key"
 
     settings = AuthSettings(CONFIG_DIR=str(tmp_path))
@@ -365,6 +400,42 @@ def test_ensure_fernet_key_with_44_char_key():
     fernet = Fernet(ensure_fernet_key(raw_key))
     encrypted = fernet.encrypt(b"test-value")
     assert fernet.decrypt(encrypted) == b"test-value"
+
+
+def test_ensure_fernet_key_short_key_uses_sha256_derivation():
+    """Short-key derivation must be the SHA-256 hash, not the old PRNG output.
+
+    Regression for GHSA-jxw3-mjmx-3pqm: the key was previously derived with
+    ``random.seed(secret_key)`` + ``random.getrandbits`` — a predictable,
+    non-cryptographic PRNG. The guard that catches that regression is the
+    SHA-256 equality below: the derived key must equal
+    ``base64.urlsafe_b64encode(sha256(secret))``, which the old PRNG path could
+    never produce.
+
+    The random-state perturbation between the two calls is only a determinism
+    sanity check. On its own it would *not* catch the old bug — the vulnerable
+    code re-seeded with the secret on every call, so it was deterministic per
+    secret too; the SHA-256 assertion is what proves the path actually changed.
+    """
+    import base64
+    import hashlib
+    import random
+
+    from langflow.services.auth.utils import ensure_fernet_key
+
+    raw_key = "short-key"  # < 32 chars -> derivation branch
+
+    random.seed(0)
+    key_a = ensure_fernet_key(raw_key)
+    random.seed(123456789)
+    _ = [random.random() for _ in range(100)]  # noqa: S311  # perturb global PRNG state
+    key_b = ensure_fernet_key(raw_key)
+
+    # Determinism sanity check (held under the old impl too — not the regression guard).
+    assert key_a == key_b
+    # Regression guard: the key must be the SHA-256 derivation, not random.getrandbits output.
+    expected = base64.urlsafe_b64encode(hashlib.sha256(raw_key.encode()).digest())
+    assert key_a == expected
 
 
 def test_password_helpers_roundtrip(auth_service: AuthService):
