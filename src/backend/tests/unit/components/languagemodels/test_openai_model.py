@@ -2,10 +2,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_openai import ChatOpenAI
-from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 from tests.api_keys import get_openai_api_key, has_api_key
 from tests.base import ComponentTestBaseWithoutClient
+
+pytest.importorskip("lfx_openai")
+from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 
 class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):

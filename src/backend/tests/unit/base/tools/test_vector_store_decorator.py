@@ -1,9 +1,11 @@
 from typing import Any
 
 import pytest
-from lfx_datastax import AstraDBVectorStoreComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
+pytest.importorskip("lfx_datastax")
+from lfx_datastax import AstraDBVectorStoreComponent
 
 
 class TestVectorStoreDecorator(ComponentTestBaseWithoutClient):

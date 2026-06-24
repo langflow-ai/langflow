@@ -5,6 +5,7 @@ import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
   "should copy code from playground modal",
@@ -40,6 +41,11 @@ test(
     await page
       .getByTestId("sidebar-search-input")
       .fill(TEXTS.providerOpenAiSearch);
+
+    await skipIfComponentUnavailable(
+      page.getByTestId("openaiOpenAI"),
+      "OpenAI",
+    );
 
     await page
       .getByTestId("openaiOpenAI")
