@@ -1,0 +1,341 @@
+"""The shared v2 workflow HTTP router.
+
+lfx owns the entire env-neutral handler body: request parsing, stream-protocol
+validation, sync/stream dispatch, the single SSE framing loop, error -> HTTP
+mapping, and the ``developer_api_enabled`` router guard (which reads lfx's own
+settings service). The host (:mod:`lfx.workflow.host`) supplies only the
+DB/tenant-bound capabilities — caller resolution, fetch-and-authorize, the
+request session, and whether durable background runs exist.
+
+Both runtimes (langflow backend and bare ``lfx serve``) mount the same router
+via :func:`create_workflow_router`, so neither the wire contract nor the SSE
+shape can drift by construction.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import json
+import time
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
+
+from lfx.cli.common import execute_graph_with_capture
+from lfx.events.event_manager import create_stream_tokens_event_manager
+from lfx.processing.process import run_graph_internal
+from lfx.schema.schema import InputValueRequest
+
+# WorkflowRunRequest / WorkflowStopRequest stay runtime imports: FastAPI resolves
+# a route's body annotation at request-model build time, so they cannot live under
+# TYPE_CHECKING.
+from lfx.schema.workflow import WorkflowRunRequest, WorkflowStopRequest  # noqa: TC001
+from lfx.services.deps import get_settings_service
+from lfx.workflow.actions import WorkflowAction
+from lfx.workflow.adapters import (
+    STREAM_ADAPTERS,
+    StreamAdapterContext,
+    available_protocols,
+    get_stream_adapter,
+)
+from lfx.workflow.converters import (
+    create_error_response,
+    parse_workflow_run_request,
+    run_response_to_workflow_response,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from lfx.graph.graph.base import Graph
+    from lfx.schema.workflow import WorkflowExecutionResponse
+    from lfx.workflow.adapters import StreamAdapter
+    from lfx.workflow.converters import ParsedWorkflowRun
+    from lfx.workflow.host import WorkflowHost
+
+
+# Bounded queue between the graph run and the SSE consumer: a slow client applies
+# backpressure instead of letting frames accumulate without bound.
+_STREAM_QUEUE_MAX_SIZE = 256
+
+
+@dataclass
+class _RunResponse:
+    """Minimal ``RunResponseLike``: the two attributes the converter reads."""
+
+    outputs: list[Any] | None
+    session_id: str | None
+
+
+async def check_developer_api_enabled() -> None:
+    """Router guard: 403 when the developer API is disabled in lfx settings.
+
+    Reads lfx's own settings service, so the guard is host-independent and
+    applies identically on both runtimes.
+    """
+    settings_service = get_settings_service()
+    if settings_service is None or not settings_service.settings.developer_api_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": "Developer API disabled",
+                "code": "DEVELOPER_API_DISABLED",
+                "message": "The v2 workflow API is disabled. Set developer_api_enabled to enable it.",
+            },
+        )
+
+
+def _reject_unsupported_fields(parsed: ParsedWorkflowRun) -> None:
+    """Reject request fields a no-overrides host does not execute.
+
+    A host without per-request graph rebuild (bare ``lfx serve``) runs a
+    pre-registered, prepared graph, so live ``data`` overrides, ``tweaks``,
+    ``files``, partial-run boundaries, and request-level ``globals`` are not
+    supported. Reject explicitly rather than silently ignore.
+    """
+    unsupported: list[str] = []
+    if parsed.tweaks:
+        unsupported.append("tweaks")
+    if parsed.data is not None:
+        unsupported.append("data")
+    if parsed.files:
+        unsupported.append("files")
+    if parsed.globals:
+        unsupported.append("globals")
+    if parsed.start_component_id is not None:
+        unsupported.append("start_component_id")
+    if parsed.stop_component_id is not None:
+        unsupported.append("stop_component_id")
+    if unsupported:
+        fields = ", ".join(unsupported)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "Unsupported request fields",
+                "code": "LFX_SERVE_UNSUPPORTED_FIELDS",
+                "message": f"This runtime does not support these v2 fields yet: {fields}. Use the langflow "
+                "backend for live-data overrides, tweaks, files, partial-run boundaries, or "
+                "request-level globals.",
+                "fields": unsupported,
+            },
+        )
+
+
+def _build_inputs(parsed: ParsedWorkflowRun) -> list[InputValueRequest] | None:
+    """Build the single chat input for the run, scoped to the session, if any."""
+    if not parsed.input_value:
+        return None
+    return [InputValueRequest(components=[], input_value=parsed.input_value, type="chat", session=parsed.session_id)]
+
+
+def _terminal_node_ids(graph: Graph) -> list[str]:
+    """The flow's output (sink) vertices, computed the way the converter does."""
+    return [vertex.id for vertex in graph.vertices if not graph.successor_map.get(vertex.id, [])]
+
+
+async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: str) -> WorkflowExecutionResponse:
+    """Run a flow to completion and build a v2 ``WorkflowExecutionResponse``.
+
+    Uses ``run_graph_internal`` (the same primitive the langflow backend sync
+    path uses) so the result is the aggregated ``RunOutputs`` shape the shared
+    converter expects. Component-level failures are returned in the body
+    (HTTP 200) to match the v2 two-tier contract.
+    """
+    job_id = str(uuid4())
+    try:
+        run_outputs, session_id = await run_graph_internal(
+            graph,
+            flow_id,
+            stream=False,
+            session_id=parsed.session_id,
+            inputs=_build_inputs(parsed),
+            outputs=_terminal_node_ids(graph),
+        )
+    except Exception as exc:  # noqa: BLE001
+        return create_error_response(
+            flow_id=flow_id,
+            job_id=job_id,
+            inputs=parsed.tweaks,
+            error=exc,
+            effective_globals={},
+        )
+    run_response = _RunResponse(outputs=run_outputs, session_id=session_id)
+    return run_response_to_workflow_response(
+        run_response=run_response,
+        flow_id=flow_id,
+        job_id=job_id,
+        inputs=parsed.tweaks,
+        graph=graph,
+        effective_globals={},
+        selected_ids=parsed.output_ids,
+    )
+
+
+def _format_sse(data_json: str, seq: int) -> bytes:
+    """Frame one event as an SSE message with a monotonic id for ``Last-Event-ID``.
+
+    lfx has no ``format_sse_event`` helper, so frame manually to the same wire
+    shape the backend emits (``id:`` + ``data:`` lines).
+    """
+    return f"id: {seq}\ndata: {data_json}\n\n".encode()
+
+
+async def stream_workflow_frames(
+    graph: Graph, parsed: ParsedWorkflowRun, adapter: StreamAdapter
+) -> AsyncIterator[bytes]:
+    """Run a flow and stream its events through ``adapter`` as SSE frames.
+
+    The graph runs via ``execute_graph_with_capture`` with a token-stream
+    ``EventManager`` wired in, so component token/message/error events land on a
+    queue while this consumer translates them through the adapter. A failure
+    becomes the adapter's terminal-error event rather than an HTTP error.
+    """
+    queue: asyncio.Queue = asyncio.Queue(maxsize=_STREAM_QUEUE_MAX_SIZE)
+    event_manager = create_stream_tokens_event_manager(queue=queue)
+    drive_error: BaseException | None = None
+
+    async def drive() -> None:
+        nonlocal drive_error
+        try:
+            await execute_graph_with_capture(
+                graph, parsed.input_value or None, session_id=parsed.session_id, event_manager=event_manager
+            )
+            # lfx's async_start does not emit a terminal ``end`` event (the
+            # langflow build loop does). Emit one so the adapter closes the run
+            # cleanly: the agui adapter rides RUN_FINISHED on translating ``end``,
+            # and the langflow adapter emits its final ``end`` frame.
+            event_manager.on_end(data={})
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            drive_error = exc
+        finally:
+            await queue.put((None, None, time.time()))
+
+    seq = 0
+    run_task = asyncio.create_task(drive())
+    try:
+        for event in adapter.initial_events():
+            yield _format_sse(event.data_json, seq)
+            seq += 1
+        while True:
+            _event_id, value, _put_time = await queue.get()
+            if value is None:
+                break
+            payload = json.loads(value.decode("utf-8"))
+            for event in adapter.translate(payload.get("event", ""), payload.get("data") or {}):
+                yield _format_sse(event.data_json, seq)
+                seq += 1
+        for event in adapter.final_events():
+            yield _format_sse(event.data_json, seq)
+            seq += 1
+        # Guaranteed terminal-error fallback: if the run raised before a
+        # cooperative error reached the queue, emit the adapter's error event(s).
+        if drive_error is not None:
+            for event in adapter.error_events(drive_error):
+                yield _format_sse(event.data_json, seq)
+                seq += 1
+    finally:
+        if not run_task.done():
+            run_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await run_task
+
+
+def create_workflow_router(
+    host: WorkflowHost,
+    *,
+    prefix: str = "/workflows",
+    tags: tuple[str, ...] = ("Workflow",),
+    developer_api_guard: bool = True,
+) -> APIRouter:
+    """Build the v2 workflow router bound to ``host``.
+
+    Registers ``POST {prefix}`` (sync + stream + background-gated dispatch) on
+    every runtime. Background job endpoints (GET status, POST ``/stop``) are
+    registered ONLY when ``host.supports_background`` is ``True``; bare serve's
+    OpenAPI surface stays exactly ``POST {prefix}``.
+
+    ``developer_api_guard`` controls the ``developer_api_enabled`` 403 guard.
+    The langflow backend keeps it ``True`` (byte-identical to today's behavior).
+    Bare ``lfx serve`` passes ``False`` so its public surface stays unchanged —
+    serve never carried a developer-API gate and has no settings service to read.
+    """
+    dependencies = [Depends(check_developer_api_enabled)] if developer_api_guard else []
+    router = APIRouter(prefix=prefix, tags=list(tags), dependencies=dependencies)
+
+    @router.post(
+        "",
+        response_model=None,
+        summary="Execute Workflow (v2 sync or stream)",
+    )
+    async def execute_workflow(request: WorkflowRunRequest, http_request: Request):
+        caller = await host.resolve_caller(http_request)
+        flow = await host.get_flow(request.flow_id, caller)
+        await host.authorize(caller, flow, WorkflowAction.EXECUTE)
+
+        if request.stream_protocol not in STREAM_ADAPTERS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "error": "Unknown stream_protocol",
+                    "code": "UNKNOWN_STREAM_PROTOCOL",
+                    "message": f"Unknown stream_protocol {request.stream_protocol!r}.",
+                    "available": available_protocols(),
+                },
+            )
+
+        parsed = parse_workflow_run_request(request)
+        if not host.supports_request_overrides:
+            _reject_unsupported_fields(parsed)
+
+        if parsed.mode == "background":
+            if not host.supports_background:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={
+                        "error": "Unsupported mode",
+                        "code": "LFX_SERVE_UNSUPPORTED_MODE",
+                        "message": "This runtime supports mode 'sync' and 'stream'. Background runs need the "
+                        "langflow backend (durable jobs + queue).",
+                    },
+                )
+            return await host.submit_background(parsed, flow, caller, stream_protocol=request.stream_protocol)
+
+        session_id_default = flow.session_id_default or request.flow_id
+        if parsed.mode == "stream":
+            adapter = get_stream_adapter(
+                request.stream_protocol,
+                StreamAdapterContext(run_id=str(uuid4()), thread_id=parsed.session_id or session_id_default),
+            )
+            return StreamingResponse(
+                stream_workflow_frames(flow.graph, parsed, adapter),
+                media_type="text/event-stream",
+                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            )
+
+        return await run_workflow_sync(flow.graph, parsed, request.flow_id)
+
+    if host.supports_background:
+        _register_job_routes(router, host)
+
+    return router
+
+
+def _register_job_routes(router: APIRouter, host: WorkflowHost) -> None:
+    """Register the durable background job endpoints (LF-only, gated by the host)."""
+
+    @router.get("", response_model=None, summary="Get Workflow Job Status (v2 background)")
+    async def get_job_status(job_id: str, http_request: Request):
+        caller = await host.resolve_caller(http_request)
+        async with host.session() as session:
+            return await host.get_job_status(job_id, caller, session)
+
+    @router.post("/stop", summary="Stop Workflow Job (v2 background)")
+    async def stop_job(request: WorkflowStopRequest, http_request: Request):
+        caller = await host.resolve_caller(http_request)
+        return await host.stop_job(str(request.job_id), caller)
