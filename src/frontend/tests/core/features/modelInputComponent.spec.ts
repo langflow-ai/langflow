@@ -4,6 +4,13 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 
 test.describe("ModelInputComponent", () => {
+  test.beforeEach(() => {
+    test.skip(
+      process.platform === "win32",
+      "Flaky on Windows CI runners: SQLite 'database is locked' during flow teardown cascades into the next test's bootstrap (new-project modal / sidebar never render). The model-provider coverage is OS-agnostic and runs on Linux/macOS",
+    );
+  });
+
   test(
     "should display model selector in a node with model input",
     { tag: ["@release", "@components", "@workspace"] },

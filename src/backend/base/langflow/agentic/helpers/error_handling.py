@@ -24,9 +24,20 @@ _MODEL_UNAVAILABLE_MARKERS: tuple[str, ...] = (
     "the model does not exist",
     "model not available",
     "no access to model",
+    # Ollama: not-installed 404 (full suffix so a bad-URL "404 page not found" never matches) + cloud-only 403.
+    "not found (status code: 404)",
+    "requires a subscription",
 )
 
 ERROR_PATTERNS: list[tuple[list[str], str]] = [
+    (
+        ["recursion limit", "graph_recursion_limit"],
+        "The agent ran out of steps before finishing. Try again, or break the request into smaller parts.",
+    ),
+    (
+        ["error parsing tool call"],
+        "The model produced a malformed tool call. This is usually transient — please try again.",
+    ),
     (
         ["rate_limit", "rate limit", "429", "consumption_limit"],
         "Rate limit exceeded. Please wait a moment and try again.",
@@ -169,6 +180,11 @@ def is_model_unavailable_error(error_msg: str | None) -> bool:
         return False
     lowered = error_msg.lower()
     return any(marker in lowered for marker in _MODEL_UNAVAILABLE_MARKERS)
+
+
+def is_transient_tool_call_error(error_msg: str | None) -> bool:
+    """True for runtime tool-call parse failures (Ollama 500) — resampling usually fixes them."""
+    return bool(error_msg) and "error parsing tool call" in error_msg.lower()
 
 
 def format_models_exhausted_message(provider: str, tried_models: Iterable[str]) -> str:

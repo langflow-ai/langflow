@@ -41,6 +41,11 @@ def register(app: typer.Typer) -> None:
             show_default=True,
             help="Check global variables for environment compatibility",
         ),
+        check_dependencies: bool = typer.Option(
+            default=True,
+            show_default=True,
+            help="Preflight the flow's required packages; fail fast with install guidance when any are missing",
+        ),
         verbose: bool = typer.Option(
             False,
             "-v",
@@ -96,6 +101,7 @@ def register(app: typer.Typer) -> None:
             flow_json=flow_json,
             stdin=stdin,
             check_variables=check_variables,
+            check_dependencies=check_dependencies,
             verbose=verbose,
             verbose_detailed=verbose_detailed,
             verbose_full=verbose_full,

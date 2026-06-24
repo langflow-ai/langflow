@@ -1,9 +1,9 @@
 from lfx.components.helpers import MemoryComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents import PromptComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.processing.converter import TypeConverterComponent
 from lfx.graph import Graph
+from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 
 def memory_chatbot_graph(template: str | None = None):

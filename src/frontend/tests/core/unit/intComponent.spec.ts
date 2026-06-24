@@ -9,6 +9,7 @@ import {
   enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await openBlankFlow(page);
@@ -17,9 +18,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     .getByTestId("sidebar-search-input")
     .fill(TEXTS.providerOpenAiSearch);
 
-  await page.waitForSelector('[data-testid="openaiOpenAI"]', {
-    timeout: 3000,
-  });
+  await skipIfComponentUnavailable(page.getByTestId("openaiOpenAI"), "OpenAI");
 
   await page
     .getByTestId("openaiOpenAI")
