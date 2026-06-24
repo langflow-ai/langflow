@@ -178,5 +178,13 @@ test("should share component with share button", async ({ page }) => {
   await expect(page.getByText(flowDescription).last()).toBeVisible();
   await page.waitForTimeout(1000);
 
+  // Trigger the actual share before asserting the success toast; re-sharing an
+  // already-published flow surfaces a replace confirmation.
+  await page.getByTestId("share-modal-button-flow").click();
+  const replace = await page.getByTestId("replace-button").isVisible();
+  if (replace) {
+    await page.getByTestId("replace-button").click();
+  }
+
   await expect(page.getByText("Flow shared successfully").last()).toBeVisible();
 });
