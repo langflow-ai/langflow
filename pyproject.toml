@@ -431,6 +431,11 @@ external = ["RUF027"]
     "FBT001", # Bool flags are the standard typer pattern
     "FBT003", # Boolean positional values in typer.Option() calls
 ]
+"src/lfx/src/lfx/cli/_prewarm_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
 "src/lfx/src/lfx/cli/_authoring_commands.py" = [
     "B008",   # Typer CLI requires function calls in argument defaults
     "FBT001", # Bool flags are the standard typer pattern
