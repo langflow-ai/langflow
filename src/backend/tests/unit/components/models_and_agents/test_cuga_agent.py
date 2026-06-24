@@ -186,6 +186,7 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         This test verifies that the component's build configuration is properly
         updated when selecting different model providers using the provider system.
         """
+        pytest.importorskip("lfx_openai")
         component = await self.component_setup(component_class, default_kwargs)
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
@@ -194,14 +195,17 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "agent_llm" in build_config
         agent_llm_config = build_config["agent_llm"]
         assert "options" in agent_llm_config
-        assert "OpenAI" in agent_llm_config["options"]
+        assert "Custom" in agent_llm_config["options"]
 
-        # Test updating build config with OpenAI provider
-        updated_config = await component.update_build_config(build_config, "OpenAI", "agent_llm")
+        if "OpenAI" in agent_llm_config["options"]:
+            # Test updating build config with OpenAI provider when the provider bundle is installed.
+            updated_config = await component.update_build_config(build_config, "OpenAI", "agent_llm")
 
-        assert "agent_llm" in updated_config
-        # When OpenAI is selected, OpenAI-specific fields should be present
-        assert "openai_api_key" in updated_config or "model_name" in updated_config
+            assert "agent_llm" in updated_config
+            # When OpenAI is selected, OpenAI-specific fields should be present
+            assert "openai_api_key" in updated_config or "model_name" in updated_config
+        else:
+            assert agent_llm_config["options"] == ["Custom"]
 
         # Test updating build config with "Custom" (should add input types for LanguageModel)
         updated_config = await component.update_build_config(build_config, "Custom", "agent_llm")
@@ -393,6 +397,7 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         Requires:
             OPENAI_API_KEY environment variable
         """
+        pytest.importorskip("lfx_openai")
         from tests.api_keys import get_openai_api_key
 
         api_key = get_openai_api_key()
@@ -434,6 +439,7 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         Requires:
             OPENAI_API_KEY environment variable
         """
+        pytest.importorskip("lfx_openai")
         from tests.api_keys import get_openai_api_key
 
         api_key = get_openai_api_key()
@@ -485,6 +491,7 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         Requires:
             OPENAI_API_KEY environment variable
         """
+        pytest.importorskip("lfx_openai")
         from tests.api_keys import get_openai_api_key
 
         api_key = get_openai_api_key()

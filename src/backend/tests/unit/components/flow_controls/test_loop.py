@@ -10,13 +10,12 @@ from lfx.components.data_source.url import URLComponent
 from lfx.components.flow_controls import LoopComponent
 from lfx.components.input_output import ChatOutput
 from lfx.components.llm_operations import StructuredOutputComponent
+from lfx.components.models import LanguageModelComponent
 from lfx.components.models_and_agents import PromptComponent
 from lfx.components.processing import ParserComponent, SplitTextComponent
 from lfx.graph import Graph
 from lfx.schema.data import Data
-from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
-from tests.api_keys import get_openai_api_key, has_api_key
 from tests.base import ComponentTestBaseWithClient
 from tests.unit.build_utils import build_flow, get_build_events
 
@@ -126,7 +125,6 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert len(data["outputs"][-1]["outputs"]) > 0
 
 
-@pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not set")
 def loop_flow():
     """Complete loop flow that processes multiple URLs through a loop."""
     # Create URL component to fetch content from multiple sources
@@ -161,18 +159,14 @@ def loop_flow():
         input_text=parser_component.parse_combined_text,
     )
 
-    # Create OpenAI model component for processing
-    openai_component = OpenAIModelComponent()
-    openai_component.set(
-        api_key=get_openai_api_key(),
-        model_name="gpt-4.1-mini",
-        temperature=0.7,
-    )
+    # Create a generic language model component for processing.
+    language_model_component = LanguageModelComponent()
+    language_model_component.set(temperature=0.7)
 
     # Create StructuredOutput component to process content
     structured_output = StructuredOutputComponent()
     structured_output.set(
-        llm=openai_component.build_model,
+        llm=language_model_component.build_model,
         input_value=prompt_component.build_prompt,
         schema_name="ProcessedContent",
         system_prompt=(  # Added missing system_prompt - this was causing the "Multiple structured outputs" error
@@ -216,7 +210,7 @@ async def test_loop_flow():
         "LoopComponent",
         "ParserComponent",
         "PromptComponent",
-        "OpenAIModelComponent",
+        "LanguageModelComponent",
         "StructuredOutputComponent",
         "ChatOutput",
     }
@@ -224,7 +218,7 @@ async def test_loop_flow():
     assert all(vertex.id.split("-")[0] in expected_vertices for vertex in flow.vertices)
 
     expected_execution_order = [
-        "OpenAIModelComponent",
+        "LanguageModelComponent",
         "URLComponent",
         "SplitTextComponent",
         "LoopComponent",

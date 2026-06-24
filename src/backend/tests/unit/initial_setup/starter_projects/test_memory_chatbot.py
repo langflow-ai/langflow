@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 import pytest
 from lfx.components.helpers.memory import MemoryComponent
 from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.models import LanguageModelComponent
 from lfx.components.models_and_agents import PromptComponent
 from lfx.components.processing.converter import TypeConverterComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.graph.constants import Finish
-from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 if TYPE_CHECKING:
     from lfx.graph.graph.schema import GraphDump
@@ -33,23 +33,23 @@ AI: """
         user_message=chat_input.message_response,
         context=type_converter.convert_to_message,
     )
-    openai_component = OpenAIModelComponent(_id="openai")
-    openai_component.set(
+    language_model_component = LanguageModelComponent(_id="language_model")
+    language_model_component.set(
         input_value=prompt_component.build_prompt, max_tokens=100, temperature=0.1, api_key="test_api_key"
     )
-    openai_component.set_on_output(name="text_output", value="Mock response", cache=True)
+    language_model_component.set_on_output(name="text_output", value="Mock response", cache=True)
 
     chat_output = ChatOutput(_id="chat_output")
-    chat_output.set(input_value=openai_component.text_response)
+    chat_output.set(input_value=language_model_component.text_response)
 
     graph = Graph(chat_input, chat_output)
-    openai_vertex = graph.get_vertex("openai")
-    assert openai_vertex.data["node"]["template"]["api_key"]["load_from_db"] is False
+    language_model_vertex = graph.get_vertex("language_model")
+    assert language_model_vertex.data["node"]["template"]["api_key"]["load_from_db"] is False
     assert graph.in_degree_map == {
         "chat_output": 1,
         "type_converter": 1,
         "prompt": 2,
-        "openai": 1,
+        "language_model": 1,
         "chat_input": 0,
         "chat_memory": 0,
     }
@@ -59,16 +59,16 @@ AI: """
 @pytest.mark.usefixtures("client")
 def test_memory_chatbot(memory_chatbot_graph):
     # Now we run step by step
-    expected_order = deque(["chat_input", "chat_memory", "type_converter", "prompt", "openai", "chat_output"])
+    expected_order = deque(["chat_input", "chat_memory", "type_converter", "prompt", "language_model", "chat_output"])
     assert memory_chatbot_graph.in_degree_map == {
         "chat_output": 1,
         "type_converter": 1,
         "prompt": 2,
-        "openai": 1,
+        "language_model": 1,
         "chat_input": 0,
         "chat_memory": 0,
     }
-    assert memory_chatbot_graph.vertices_layers == [["type_converter"], ["prompt"], ["openai"], ["chat_output"]]
+    assert memory_chatbot_graph.vertices_layers == [["type_converter"], ["prompt"], ["language_model"], ["chat_output"]]
     assert memory_chatbot_graph.first_layer == ["chat_input", "chat_memory"]
 
     for step in expected_order:
@@ -130,8 +130,8 @@ def test_memory_chatbot_dump_components_and_edges(memory_chatbot_graph: Graph):
     assert nodes[2]["data"]["type"] == "ChatOutput"
     assert nodes[2]["id"] == "chat_output"
 
-    assert nodes[3]["data"]["type"] == "OpenAIModel"
-    assert nodes[3]["id"] == "openai"
+    assert nodes[3]["data"]["type"] == "LanguageModelComponent"
+    assert nodes[3]["id"] == "language_model"
 
     assert nodes[4]["data"]["type"] == "Prompt Template"
     assert nodes[4]["id"] == "prompt"
@@ -141,8 +141,8 @@ def test_memory_chatbot_dump_components_and_edges(memory_chatbot_graph: Graph):
         ("chat_input", "prompt"),
         ("chat_memory", "type_converter"),
         ("type_converter", "prompt"),
-        ("prompt", "openai"),
-        ("openai", "chat_output"),
+        ("prompt", "language_model"),
+        ("language_model", "chat_output"),
     ]
 
     assert len(edges) == len(expected_edges)

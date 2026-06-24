@@ -1,12 +1,7 @@
-from typing import Any
-
-import pytest
 from lfx_datastax import AstraDBVectorStoreComponent
 
-from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
-
-class TestVectorStoreDecorator(ComponentTestBaseWithoutClient):
+class TestVectorStoreDecorator:
     """Unit tests for the AstraDBVectorStoreComponent decorator.
 
     This test class inherits from ComponentTestBaseWithoutClient and includes
@@ -20,17 +15,7 @@ class TestVectorStoreDecorator(ComponentTestBaseWithoutClient):
         it is set to True.
     """
 
-    @pytest.fixture
-    def component_class(self) -> type[Any]:
-        """Return the component class to test."""
-        return AstraDBVectorStoreComponent
-
-    @pytest.fixture
-    def file_names_mapping(self) -> list[VersionComponentMapping]:
-        """Return the file names mapping for different versions."""
-        return []
-
-    def test_decorator_applied(self, component_class: type[Any]):
-        component: AstraDBVectorStoreComponent = component_class()
+    def test_decorator_applied(self):
+        component = AstraDBVectorStoreComponent()
         assert hasattr(component, "decorated")
         assert component.decorated
