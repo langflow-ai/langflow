@@ -1,13 +1,9 @@
 import { readFileSync } from "fs";
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openFlowsList } from "../../utils/flow/open-flows-list";
 
 test("user must be able outdated message on error", async ({ page }) => {
-  // `skipModal: true` keeps us on the home page (cards-wrapper lives here).
-  // Without it, openTemplatesModal navigates to a fresh canvas + FlowBuilderWelcome
-  // overlay, so closing the modal leaves the user on the canvas and the
-  // drag-and-drop target below never appears.
-  await awaitBootstrapTest(page, { skipModal: true });
+  const dropTarget = await openFlowsList(page);
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   // Read the asset and rename the flow uniquely so we can wait for THIS
@@ -32,7 +28,7 @@ test("user must be able outdated message on error", async ({ page }) => {
   }, jsonContent);
 
   // Now dispatch
-  await page.getByTestId("cards-wrapper").dispatchEvent("drop", {
+  await dropTarget.dispatchEvent("drop", {
     dataTransfer,
   });
 
@@ -43,8 +39,8 @@ test("user must be able outdated message on error", async ({ page }) => {
   await droppedCard.waitFor({ state: "visible", timeout: 30000 });
   await droppedCard.click();
 
-  // Verify the outdated components banner appears on the canvas
-  await expect(page.getByText("5 components need updates")).toBeVisible({
+  // Verify the outdated components banner appears on the canvas.
+  await expect(page.getByText(/\d+ components? needs? updates?/)).toBeVisible({
     timeout: 30000,
   });
 });

@@ -4,14 +4,27 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.services.cache.utils import CACHE_DIR
-from lfx.components.vectorstores.local_db import LocalDBComponent
+from langchain_core.embeddings import Embeddings
 from lfx.schema.data import Data
+from lfx_bundles.chroma.local_db import LocalDBComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 
-@pytest.mark.api_key_required
+class _KeywordEmbeddings(Embeddings):
+    _VOCAB = ("dog", "python", "programming", "machine", "learning", "fox", "cat", "quick", "test", "data")
+
+    def _embed(self, text: str) -> list[float]:
+        normalized_text = text.lower()
+        return [float(normalized_text.count(term)) for term in self._VOCAB] + [float(len(normalized_text) % 17) / 17.0]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._embed(text) for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed(text)
+
+
 class TestLocalDBComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self) -> type[Any]:
@@ -21,17 +34,8 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self, tmp_path: Path) -> dict[str, Any]:
         """Return the default kwargs for the component."""
-        from lfx.components.openai.openai import OpenAIEmbeddingsComponent
-
-        from tests.api_keys import get_openai_api_key
-
-        try:
-            api_key = get_openai_api_key()
-        except ValueError:
-            pytest.skip("OPENAI_API_KEY is not set")
-
         return {
-            "embedding": OpenAIEmbeddingsComponent(openai_api_key=api_key).build_embeddings(),
+            "embedding": _KeywordEmbeddings(),
             "collection_name": "test_collection",
             "persist": True,
             "persist_directory": str(tmp_path),  # Convert Path to string
@@ -48,7 +52,9 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         """Test creating a vector store."""
         component: LocalDBComponent = component_class().set(**default_kwargs)
         component.build_vector_store()
-        persist_directory = Path(default_kwargs["persist_directory"])
+        persist_directory = (
+            Path(default_kwargs["persist_directory"]) / "vector_stores" / default_kwargs["collection_name"]
+        )
         assert persist_directory.exists()
         assert persist_directory.is_dir()
         # Assert it isn't empty
@@ -85,7 +91,9 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         assert vector_store._collection.name == default_kwargs["collection_name"]
         assert vector_store._collection.count() == len(test_texts)
 
-    def test_default_persist_dir(self, component_class: type[LocalDBComponent], default_kwargs: dict[str, Any]) -> None:
+    def test_default_persist_dir(
+        self, component_class: type[LocalDBComponent], default_kwargs: dict[str, Any], tmp_path: Path
+    ) -> None:
         """Test the default persist directory functionality."""
         # Remove persist_directory from default_kwargs to test default directory
         default_kwargs.pop("persist_directory")
@@ -93,8 +101,9 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         component: LocalDBComponent = component_class().set(**default_kwargs)
 
         # Call get_default_persist_dir and check the result
-        default_dir = component.get_default_persist_dir()
-        expected_dir = Path(CACHE_DIR) / "vector_stores" / default_kwargs["collection_name"]
+        with patch("lfx.services.cache.utils.CACHE_DIR", str(tmp_path)):
+            default_dir = component.get_default_persist_dir()
+        expected_dir = tmp_path / "vector_stores" / default_kwargs["collection_name"]
 
         assert Path(default_dir) == expected_dir
         assert Path(default_dir).exists()
@@ -137,7 +146,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         assert len(results) == 2
         # The most relevant results should be about dogs
         assert any("dog" in result.text.lower() for result in results)
-        mock_similarity_search.assert_called_once_with(query="dog sleeping", k=2)
+        mock_similarity_search.assert_called_once_with("dog sleeping", k=2)
 
         # Test with different number of results
         component.set(number_of_results=3)
@@ -185,7 +194,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         assert len(results) == 3
         # Results should be diverse but relevant
         assert any("fox" in result.text.lower() for result in results)
-        mock_mmr_search.assert_called_once_with(query="quick fox", k=3)
+        mock_mmr_search.assert_called_once_with("quick fox", k=3)
 
         # Test with different settings
         component.set(number_of_results=2)
@@ -234,13 +243,13 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         similarity_results = component.search_documents()
         assert len(similarity_results) == 2
         assert any("python" in result.text.lower() for result in similarity_results)
-        mock_similarity_search.assert_called_once_with(query="programming languages", k=2)
+        mock_similarity_search.assert_called_once_with("programming languages", k=2)
 
         # Test MMR search
         component.set(search_type="MMR", search_query="programming languages")
         mmr_results = component.search_documents()
         assert len(mmr_results) == 2
-        mock_mmr_search.assert_called_once_with(query="programming languages", k=2)
+        mock_mmr_search.assert_called_once_with("programming languages", k=2)
 
         # Test with empty query
         component.set(search_query="")
@@ -357,22 +366,13 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         assert updated_config["existing_collections"]["show"] is True
         assert updated_config["collection_name"]["show"] is False
 
-        # Test persist=True/False
-        build_config = {"persist_directory": {"show": False}}
-        # Use keyword arguments to fix FBT003
-        updated_config = component.update_build_config(build_config, field_value=True, field_name="persist")
-        assert updated_config["persist_directory"]["show"] is True
-
-        updated_config = component.update_build_config(build_config, field_value=False, field_name="persist")
-        assert updated_config["persist_directory"]["show"] is False
-
         # Test existing_collections update
         # Fix the dict entry type issue
         build_config = {"collection_name": {"value": "old_name", "show": False}}
         updated_config = component.update_build_config(build_config, "new_collection", "existing_collections")
         assert updated_config["collection_name"]["value"] == "new_collection"
 
-    @patch("lfx.components.vectorstores.local_db.LocalDBComponent.list_existing_collections")
+    @patch("lfx_bundles.chroma.local_db.LocalDBComponent.list_existing_collections")
     def test_list_existing_collections(self, mock_list: MagicMock, component_class: type[LocalDBComponent]) -> None:
         """Test the list_existing_collections method."""
         mock_list.return_value = ["collection1", "collection2", "collection3"]

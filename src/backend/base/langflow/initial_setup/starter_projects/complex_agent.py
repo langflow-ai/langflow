@@ -2,15 +2,15 @@ from lfx.components.crewai.crewai import CrewAIAgentComponent
 from lfx.components.crewai.hierarchical_crew import HierarchicalCrewComponent
 from lfx.components.crewai.hierarchical_task import HierarchicalTaskComponent
 from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.models import LanguageModelComponent
 from lfx.components.models_and_agents import PromptComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.tools import SearchAPIComponent, YfinanceToolComponent
 from lfx.graph import Graph
 
 
 def complex_agent_graph():
-    llm = OpenAIModelComponent(model_name="gpt-4o-mini")
-    manager_llm = OpenAIModelComponent(model_name="gpt-4o")
+    llm = LanguageModelComponent()
+    manager_llm = LanguageModelComponent()
     search_api_tool = SearchAPIComponent()
     yahoo_search_tool = YfinanceToolComponent()
     dynamic_agent = CrewAIAgentComponent()
