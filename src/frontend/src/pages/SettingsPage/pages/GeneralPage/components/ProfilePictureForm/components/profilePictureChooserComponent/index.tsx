@@ -55,10 +55,15 @@ export default function ProfilePictureChooserComponent({
                     unstyled
                     onClick={() => onChange(folder + "/" + path)}
                     className="shrink-0 px-0.5 py-2"
+                    aria-pressed={value === folder + "/" + path}
                   >
                     <img
                       key={idx}
                       src={customPreLoadImageUrl(`${folder}/${path}`)}
+                      alt={t("settings.avatarAlt", {
+                        folder,
+                        index: idx + 1,
+                      })}
                       style={{
                         filter:
                           value === folder + "/" + path
