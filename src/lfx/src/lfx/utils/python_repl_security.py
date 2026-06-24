@@ -146,6 +146,63 @@ _BLOCKED_ATTRIBUTES = frozenset(
 _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 
 
+class CodeExecutionDisabledError(ValueError):
+    """Raised when code-execution components are disabled by policy.
+
+    Subclasses ``ValueError`` so existing ``except ValueError``/``except Exception``
+    handlers around the interpreter components surface the message gracefully.
+    """
+
+
+def ensure_code_execution_enabled() -> None:
+    """Refuse to run user code when ``allow_custom_components`` is disabled.
+
+    Code-execution components (the Python Interpreter and the legacy Python REPL
+    tool) run arbitrary user-supplied Python. They honor the same
+    ``allow_custom_components`` switch as custom components: when an operator
+    locks a deployment down with ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``,
+    running arbitrary Python must be refused too — otherwise an authenticated
+    user can still execute code despite the policy (GHSA-8qpj-27x8-pwpq).
+
+    Failure handling is deliberately asymmetric so the gate can never be
+    silently bypassed:
+
+    * ``ImportError`` importing the services layer means there is no settings
+      stack at all (e.g. a stripped-down lfx embedding). That context is local
+      and trusted, so execution is allowed.
+    * Any other exception from ``get_settings_service()`` propagates — a stack
+      that exists but errors must not fail open.
+    * A ``None`` settings service means the stack is registered but failed to
+      initialise (``get_service`` swallows init errors into ``None``). Fail
+      closed, matching ``validate_flow_for_current_settings``, rather than
+      bypass the very control this gate enforces.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
+
+        settings_service = get_settings_service()
+    except ImportError:
+        # Services layer absent (e.g. stripped-down lfx embed) -> local/trusted, allow.
+        # Only ImportError is treated as "no settings layer"; any other exception from
+        # get_settings_service() propagates rather than silently failing open and
+        # bypassing the allow_custom_components gate (GHSA-8qpj-27x8-pwpq).
+        return
+    if settings_service is None:
+        # Registered-but-failed settings stack (get_service swallows init errors into
+        # None). Fail closed rather than bypass the gate (GHSA-8qpj-27x8-pwpq).
+        msg = (
+            "Python code execution is disabled because the settings service could not "
+            "be resolved. Check the server configuration and try again."
+        )
+        raise CodeExecutionDisabledError(msg)
+    if not getattr(settings_service.settings, "allow_custom_components", True):
+        msg = (
+            "Python code execution is disabled because allow_custom_components is False. "
+            "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to enable this component."
+        )
+        raise CodeExecutionDisabledError(msg)
+
+
 def safe_builtins() -> dict:
     """Return a fresh curated ``__builtins__`` mapping for interpreter globals.
 

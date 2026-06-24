@@ -26,10 +26,11 @@ import uuid
 from copy import deepcopy
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException, Response, Security
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import APIKeyHeader, APIKeyQuery
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from rich.console import Console
 
 from lfx.cli.common import (
     execute_graph_with_capture,
@@ -37,6 +38,7 @@ from lfx.cli.common import (
     get_api_key,
 )
 from lfx.cli.runtime_variables import apply_global_vars_to_graph
+from lfx.cli.serve_identity import IdentityConfig, build_identity_verifier
 from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
 from lfx.utils.flow_validation import validate_flow_for_current_settings
@@ -46,6 +48,12 @@ if TYPE_CHECKING:
 
     from lfx.cli.flow_store import FlowStore
     from lfx.graph import Graph
+
+# Operator-facing startup notices go to stderr via Rich (same mechanism as the
+# CLI startup banner). The structlog ``logger`` is not reliably surfaced on the
+# ``lfx serve`` stdout path under uvicorn (single- and multi-worker alike), so
+# security-critical startup warnings must use a guaranteed channel.
+_startup_console = Console(stderr=True, soft_wrap=True)
 
 # Security - use the same pattern as Langflow main API
 API_KEY_NAME = "x-api-key"
@@ -75,7 +83,7 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", a
 _EXECUTE_GUARD = asyncio.Semaphore(1)
 
 
-async def guarded_execute(graph_copy, input_value, session_id=None):
+async def guarded_execute(graph_copy, input_value, session_id=None, user_id=None):
     """Run ``execute_graph_with_capture`` under the per-worker single-in-flight guard.
 
     Serializes the env-sensitive execution section so two concurrent requests in
@@ -91,7 +99,7 @@ async def guarded_execute(graph_copy, input_value, session_id=None):
         reset_environ = os.environ.get(_SERVE_RESET_ENVIRON_ENV) == "1"
         env_snapshot = dict(os.environ) if reset_environ else None
         try:
-            return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id)
+            return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id, user_id=user_id)
         finally:
             if env_snapshot is not None and os.environ != env_snapshot:
                 os.environ.clear()
@@ -534,6 +542,7 @@ async def run_flow_generator_for_serve(
     flow_id: str,
     event_manager,
     client_consumed_queue: asyncio.Queue,
+    user_id: str | None = None,
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -546,6 +555,10 @@ async def run_flow_generator_for_serve(
         flow_id (str): The ID of the flow being executed
         event_manager: Manages the streaming of events to the client
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
+        user_id (str | None): Verified caller identity threaded into execution as
+            the graph's ``user_id``. ``None`` means no verified identity — the
+            graph's existing ``user_id`` is used, or a UUID auto-generated if it
+            has none.
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
@@ -565,7 +578,9 @@ async def run_flow_generator_for_serve(
         # to integrate with the full LFX streaming pipeline from endpoints.py
         # Routed through the single-in-flight guard so a streaming run can never
         # overlap another run/stream in the same worker (see _EXECUTE_GUARD).
-        results, logs = await guarded_execute(graph, input_request.input_value, session_id=input_request.session_id)
+        results, logs = await guarded_execute(
+            graph, input_request.input_value, session_id=input_request.session_id, user_id=user_id
+        )
         result_data = extract_result_data(results, logs)
 
         # Send the final result
@@ -586,11 +601,16 @@ async def run_flow_generator_for_serve(
 def create_multi_serve_app(
     *,
     registry: FlowRegistry,
+    identity_config: IdentityConfig | None = None,
 ) -> FastAPI:
     """Create a FastAPI app exposing LFX flows via a mutable registry.
 
     Routes dispatch to ``registry`` at request time, so flows added after
     startup (via ``POST /flows/upload/``) are immediately reachable.
+
+    ``identity_config`` configures the optional per-user identity layer (see
+    :mod:`lfx.cli.serve_identity`). ``None`` (the default) means ``off`` mode —
+    no identity is read and execution behaves exactly as before.
     """
     app = FastAPI(
         title=f"LFX Multi-Flow Server ({len(registry)})",
@@ -602,6 +622,49 @@ def create_multi_serve_app(
         version="1.0.0",
     )
     app.state.registry = registry
+
+    identity_config = identity_config or IdentityConfig()
+    app.state.identity_config = identity_config
+    identity_verifier = build_identity_verifier(identity_config)
+    app.state.identity_verifier = identity_verifier
+    if identity_verifier is not None:
+        if identity_config.mode == "jwt":
+            # Prefetch so the first request never pays the JWKS round-trip. A failed
+            # prefetch does not abort startup (requests fail closed with 401), but the
+            # operator must be told, so warn on the guaranteed stderr channel as well.
+            if not identity_verifier.prefetch():
+                _startup_console.print(
+                    "[bold red]WARNING:[/bold red] JWKS prefetch failed — lfx serve started but JWT "
+                    "verification will reject all requests (401) until the JWKS endpoint recovers."
+                )
+        elif identity_config.mode == "header":
+            warning = (
+                f"lfx serve identity mode=header: trusting the plain {identity_config.trusted_header!r} header "
+                "as caller identity. This is only safe when network policy guarantees the gateway is the sole "
+                "caller — header trust rests entirely on topology, which fails open on non-enforcing CNIs."
+            )
+            logger.warning(warning)
+            _startup_console.print(f"[bold yellow]WARNING:[/bold yellow] {warning}")
+
+    def resolve_identity(request: Request, _api_key: str = Depends(verify_api_key)) -> str | None:
+        """Resolve the verified caller identity for an authenticated request.
+
+        Sub-depends on ``verify_api_key`` so identity processing only ever runs
+        on requests that already cleared the serve-key floor — identity annotates
+        authenticated requests, it never weakens or replaces the serve key.
+        Returns ``None`` in ``off`` mode (no per-user attribution).
+
+        Deliberately a sync ``def``: FastAPI runs sync dependencies in a worker
+        thread, so a rare blocking JWKS fetch (on key rotation or an issuer blip)
+        never stalls the event loop. The warm path is CPU-only and ~sub-millisecond.
+
+        The verifier is read from ``app.state`` at request time so it can be
+        swapped (e.g. by tests) after app construction.
+        """
+        verifier = request.app.state.identity_verifier
+        if verifier is None:
+            return None
+        return verifier.authenticate(request.headers)
 
     # ------------------------------------------------------------------
     # Global endpoints
@@ -727,7 +790,15 @@ def create_multi_serve_app(
         summary="Execute flow",
         dependencies=[Depends(verify_api_key)],
     )
-    async def run_flow(flow_id: str, request: RunRequest) -> RunResponse:
+    async def run_flow(
+        flow_id: str,
+        request: RunRequest,
+        # Depends() lives in the default (not Annotated) so FastAPI reads the live
+        # closure-local resolver — ``from __future__ import annotations`` stringizes
+        # annotations, and a closure-local name can't be resolved from module globals.
+        # (Hence the FAST002 suppression: the Annotated form ruff wants would break this.)
+        user_id: str | None = Depends(resolve_identity),  # noqa: FAST002
+    ) -> RunResponse:
         """Execute the flow synchronously and return its completed result.
 
         This endpoint runs the flow to completion within the request and returns a
@@ -742,7 +813,9 @@ def create_multi_serve_app(
             # deepcopy() drops graph.context; re-apply the registry's env policy.
             registry.stamp(graph_copy)
             apply_global_vars_to_graph(graph_copy, request.global_vars)
-            results, logs = await guarded_execute(graph_copy, request.input_value, session_id=request.session_id)
+            results, logs = await guarded_execute(
+                graph_copy, request.input_value, session_id=request.session_id, user_id=user_id
+            )
             result_data = extract_result_data(results, logs)
 
             if not result_data.get("success", True):
@@ -788,7 +861,11 @@ def create_multi_serve_app(
         summary="Stream flow execution",
         dependencies=[Depends(verify_api_key)],
     )
-    async def stream_flow(flow_id: str, request: StreamRequest) -> StreamingResponse:
+    async def stream_flow(
+        flow_id: str,
+        request: StreamRequest,
+        user_id: str | None = Depends(resolve_identity),  # noqa: FAST002 - see run_flow note on Depends-in-default
+    ) -> StreamingResponse:
         graph, _ = _get_flow_or_404(flow_id)
         try:
             validate_flow_for_current_settings(graph)
@@ -809,6 +886,7 @@ def create_multi_serve_app(
                     flow_id=flow_id,
                     event_manager=event_manager,
                     client_consumed_queue=asyncio_queue_client_consumed,
+                    user_id=user_id,
                 )
             )
 
@@ -904,10 +982,14 @@ def create_serve_app() -> FastAPI:
 
     Workers cannot inherit the parent's in-memory app object. Instead, each
     worker calls this factory, which reads the ``LFX_SERVE_*`` environment via
-    :func:`build_registry_from_env`, pre-warms its own in-memory cache from the
-    shared ``FilesystemFlowStore``, and returns a ready FastAPI app.
+    :func:`build_registry_from_env` (and the ``LFX_SERVE_IDENTITY_*`` identity
+    settings via :meth:`IdentityConfig.from_env`), pre-warms its own in-memory
+    cache from the shared ``FilesystemFlowStore``, and returns a ready FastAPI app.
 
     The parent process must set those env vars **before** calling
     ``uvicorn.run("lfx.cli.serve_app:create_serve_app", workers=N, ...)``.
     """
-    return create_multi_serve_app(registry=build_registry_from_env())
+    return create_multi_serve_app(
+        registry=build_registry_from_env(),
+        identity_config=IdentityConfig.from_env(os.environ),
+    )

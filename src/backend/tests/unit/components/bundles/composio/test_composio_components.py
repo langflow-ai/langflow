@@ -5,10 +5,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.base.composio.composio_base import ComposioBaseComponent
-from lfx.components.composio.composio_api import ComposioAPIComponent
-from lfx.components.composio.outlook_composio import ComposioOutlookAPIComponent
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx_bundles.composio.composio_api import ComposioAPIComponent
+from lfx_bundles.composio.outlook_composio import ComposioOutlookAPIComponent
 
 
 @pytest.mark.unit

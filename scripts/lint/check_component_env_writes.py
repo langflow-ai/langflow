@@ -53,7 +53,8 @@ ALLOWLIST: dict[str, set[str]] = {
     # The "Dotenv" component's entire purpose is to load a user-supplied .env blob into
     # the process environment. It is a known multi-tenant hazard flagged for separate
     # review; allow only the load_dotenv call, still flagging any direct os.environ write.
-    "src/lfx/src/lfx/components/datastax/dotenv.py": {"load_dotenv"},
+    # (Moved from src/lfx/src/lfx/components/datastax/ in the lfx-datastax graduation.)
+    "src/bundles/datastax/src/lfx_datastax/components/datastax/dotenv.py": {"load_dotenv"},
 }
 
 _MUTATING_METHODS = {"setdefault", "update", "pop", "clear", "popitem", "__setitem__", "__delitem__"}

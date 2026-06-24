@@ -254,7 +254,7 @@ async def test_guarded_execute_serializes(monkeypatch):
 
     timeline = []
 
-    async def fake_capture(graph, input_value, session_id=None):  # noqa: ARG001
+    async def fake_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
         timeline.append(("enter", input_value))
         await asyncio.sleep(0.05)
         timeline.append(("exit", input_value))
@@ -447,7 +447,7 @@ async def test_guarded_execute_restores_environ_when_enabled(monkeypatch):
     monkeypatch.setenv(serve_app._SERVE_RESET_ENVIRON_ENV, "1")
     monkeypatch.delenv("LEAKED_BY_FLOW", raising=False)
 
-    async def fake_capture(graph, input_value, session_id=None):  # noqa: ARG001
+    async def fake_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
         os.environ["LEAKED_BY_FLOW"] = "secret"
         return ([], "")
 
@@ -465,7 +465,7 @@ async def test_guarded_execute_does_not_reset_environ_by_default(monkeypatch):
     monkeypatch.delenv(serve_app._SERVE_RESET_ENVIRON_ENV, raising=False)
     monkeypatch.delenv("LEAKED_BY_FLOW", raising=False)
 
-    async def fake_capture(graph, input_value, session_id=None):  # noqa: ARG001
+    async def fake_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
         os.environ["LEAKED_BY_FLOW"] = "secret"
         return ([], "")
 

@@ -13,10 +13,16 @@ in the master immediately before each fork, which is the correct point to freeze
 the fully-built heap while preserving copy-on-write sharing.
 """
 
+import os
+
 from lfx.cli.serve_app import build_registry_from_env, create_multi_serve_app
+from lfx.cli.serve_identity import IdentityConfig
 
 registry = build_registry_from_env()
-app = create_multi_serve_app(registry=registry)
+# Same env round-trip as the uvicorn factory (create_serve_app): _launch_workers
+# exports LFX_SERVE_IDENTITY_* before importing this module for gunicorn --preload,
+# so the warm shared app enforces the operator's identity config.
+app = create_multi_serve_app(registry=registry, identity_config=IdentityConfig.from_env(os.environ))
 
 # WSGI bridge entrypoint for the opt-in ``lfx serve --sync-workers`` mode, which
 # runs gunicorn's blocking ``sync`` worker so the kernel routes each request to an

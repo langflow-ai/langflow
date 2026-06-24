@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from lfx.cli.flow_store import FlowStore
+    from lfx.cli.serve_identity import IdentityConfig
 
 # Initialize console
 console = Console()
@@ -329,6 +330,18 @@ def serve_command(
             "Off by default (async worker)."
         ),
     ),
+    # Plain defaults (not typer.Option): the CLI options live on serve_command_wrapper,
+    # which passes these through. Plain defaults keep clean values even if a direct
+    # caller omits them — a typer.Option default would leak an OptionInfo object
+    # (e.g. mode would arrive as <typer.models.OptionInfo>, not "off").
+    identity_mode: str = "off",
+    identity_jwt_issuer: str | None = None,
+    identity_jwt_audience: str | None = None,
+    identity_jwt_jwks_url: str | None = None,
+    identity_claim: str = "sub",
+    identity_jwt_header: str = "Authorization",
+    identity_header: str = "X-Consumer-Username",
+    identity_jwt_allow_insecure_http: bool = False,
     upgrade_flow: str | None = None,
 ) -> None:
     """Serve LFX flows as a web API.
@@ -374,6 +387,23 @@ def serve_command(
     if workers < 1:
         typer.echo("Error: --workers must be at least 1.", err=True)
         raise typer.Exit(1)
+
+    from lfx.cli.serve_identity import IdentityConfig, IdentityConfigError
+
+    try:
+        identity_config = IdentityConfig(
+            mode=identity_mode,  # type: ignore[arg-type]
+            jwt_issuer=identity_jwt_issuer,
+            jwt_audience=identity_jwt_audience,
+            jwt_jwks_url=identity_jwt_jwks_url,
+            claim=identity_claim,
+            jwt_header=identity_jwt_header,
+            trusted_header=identity_header,
+            allow_insecure_http=identity_jwt_allow_insecure_http,
+        )
+    except IdentityConfigError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
 
     os.environ["LANGFLOW_PRETTY_LOGS"] = "false"
     configure(log_level=log_level)
@@ -497,6 +527,7 @@ def serve_command(
                     reset_environ=reset_environ,
                     sync_workers=sync_workers,
                     timeout=timeout,
+                    identity_config=identity_config,
                 )
             else:
                 from lfx.cli.serve_app import _SERVE_RESET_ENVIRON_ENV
@@ -505,7 +536,7 @@ def serve_command(
                 # here (read per request by guarded_execute). --sync-workers is a
                 # multi-worker routing concern and has no effect with one worker.
                 os.environ[_SERVE_RESET_ENVIRON_ENV] = "1" if reset_environ else "0"
-                serve_app = create_multi_serve_app(registry=registry)
+                serve_app = create_multi_serve_app(registry=registry, identity_config=identity_config)
                 uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
         except KeyboardInterrupt:
             verbose_print("\nServer stopped")
@@ -536,6 +567,7 @@ def _launch_workers(
     reset_environ: bool = False,
     sync_workers: bool = False,
     timeout: int = 120,
+    identity_config: IdentityConfig | None = None,
 ) -> None:
     """Launch ``workers`` worker processes for ``lfx serve --workers N``.
 
@@ -566,6 +598,12 @@ def _launch_workers(
     request to an idle worker. Both default off. ``timeout`` (``--timeout``, default
     120s) sets gunicorn's worker timeout — raise it for long flows, especially under
     ``--sync-workers``.
+
+    ``identity_config`` (``--identity-mode`` and friends) is round-tripped to the
+    workers via ``LFX_SERVE_IDENTITY_*`` env vars so each worker reconstructs it in
+    ``create_serve_app`` (uvicorn) or ``serve_preloaded_app`` (gunicorn preload).
+    ``None`` means ``off`` (the default) — set explicitly so an inherited value
+    can't silently flip it on.
     """
     from lfx.cli.serve_app import (
         _SERVE_FLOW_DIR_ENV,
@@ -574,6 +612,7 @@ def _launch_workers(
         _SERVE_RESET_ENVIRON_ENV,
         _SERVE_STARTUP_PATHS_ENV,
     )
+    from lfx.cli.serve_identity import IdentityConfig
 
     # Set env vars so each worker can reconstruct config: the gunicorn preload
     # master via build_registry_from_env(), or each uvicorn factory worker via
@@ -595,6 +634,12 @@ def _launch_workers(
     # Read per request by guarded_execute in each worker. Always set explicitly so a
     # stray inherited value can't silently flip behavior.
     os.environ[_SERVE_RESET_ENVIRON_ENV] = "1" if reset_environ else "0"
+    # Round-trip identity config into the worker processes (each worker keeps its own
+    # JWKS cache — a few KB; no cross-worker sharing). Set explicitly (even for "off")
+    # so a stray inherited LFX_SERVE_IDENTITY_* var can't flip behavior.
+    identity_env = (identity_config or IdentityConfig()).to_env()
+    for identity_key, identity_value in identity_env.items():
+        os.environ[identity_key] = identity_value
 
     try:
         if sys.platform == "win32":
@@ -680,6 +725,7 @@ def _launch_workers(
             _SERVE_STARTUP_PATHS_ENV,
             _SERVE_LIMIT_CONCURRENCY_ENV,
             _SERVE_RESET_ENVIRON_ENV,
+            *identity_env,
         ):
             os.environ.pop(k, None)
 

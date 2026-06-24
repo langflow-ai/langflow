@@ -3,6 +3,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_core.embeddings import Embeddings
 from lfx.base.vectorstores.chroma_security import (
     chroma_client_create_collection_kwargs,
     chroma_langchain_collection_kwargs,
@@ -11,6 +12,20 @@ from lfx.components.chroma import ChromaVectorStoreComponent
 from lfx.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
+
+class _KeywordEmbeddings(Embeddings):
+    _VOCAB = ("dog", "python", "programming", "machine", "learning", "fox", "cat", "quick", "test", "data")
+
+    def _embed(self, text: str) -> list[float]:
+        normalized_text = text.lower()
+        return [float(normalized_text.count(term)) for term in self._VOCAB] + [float(len(normalized_text) % 17) / 17.0]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._embed(text) for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed(text)
 
 
 def test_remote_chroma_server_uses_http_client() -> None:
@@ -64,7 +79,6 @@ def test_chroma_collection_security_kwargs_are_fresh_dicts() -> None:
     }
 
 
-@pytest.mark.api_key_required
 class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self) -> type[Any]:
@@ -74,17 +88,8 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self, tmp_path: Path) -> dict[str, Any]:
         """Return the default kwargs for the component."""
-        from lfx.components.openai.openai import OpenAIEmbeddingsComponent
-
-        from tests.api_keys import get_openai_api_key
-
-        try:
-            api_key = get_openai_api_key()
-        except ValueError:
-            pytest.skip("OPENAI_API_KEY is not set")
-
         return {
-            "embedding": OpenAIEmbeddingsComponent(openai_api_key=api_key).build_embeddings(),
+            "embedding": _KeywordEmbeddings(),
             "collection_name": "test_collection",
             "persist_directory": tmp_path,
         }
