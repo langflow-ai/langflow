@@ -552,9 +552,7 @@ def test_get_embeddings_openai_basic(mock_get_class, mock_get_api_key):
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
-def test_get_embeddings_populates_available_models_from_provider_catalog(
-    mock_get_class, mock_get_api_key, monkeypatch
-):
+def test_get_embeddings_populates_available_models_from_provider_catalog(mock_get_class, mock_get_api_key, monkeypatch):
     monkeypatch.setattr(
         "lfx.base.models.unified_models.instantiation._get_provider_embedding_model_names",
         lambda provider, user_id: ["text-embedding-3-small", "text-embedding-3-large"],
