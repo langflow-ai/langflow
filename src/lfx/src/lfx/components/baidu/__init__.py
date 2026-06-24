@@ -6,12 +6,14 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from lfx.components.baidu.baidu_qianfan_chat import QianfanChatEndpoint
+    from lfx.components.baidu.paddleocr import PaddleOCRComponent
 
 _dynamic_imports = {
+    "PaddleOCRComponent": "paddleocr",
     "QianfanChatEndpoint": "baidu_qianfan_chat",
 }
 
-__all__ = ["QianfanChatEndpoint"]
+__all__ = ["PaddleOCRComponent", "QianfanChatEndpoint"]
 
 
 def __getattr__(attr_name: str) -> Any:
