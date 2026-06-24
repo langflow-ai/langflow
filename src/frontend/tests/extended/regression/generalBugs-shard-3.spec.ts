@@ -42,16 +42,12 @@ test(
       .getByTestId("sidebar-search-input")
       .fill(TEXTS.providerOpenAiSearch);
 
-    await skipIfComponentUnavailable(
-      page.getByTestId("openaiOpenAI"),
-      "OpenAI",
-    );
+    const openAIComponent = page.getByTestId("openaiOpenAI");
+    await skipIfComponentUnavailable(openAIComponent, "OpenAI");
 
-    await page
-      .getByTestId("openaiOpenAI")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 200 },
-      });
+    await openAIComponent.dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 100, y: 200 },
+    });
 
     await initialGPTsetup(page);
     await adjustScreenView(page);
