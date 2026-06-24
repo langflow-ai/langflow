@@ -1,11 +1,24 @@
 import sqlite3
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
-from lfx.components.data_source.sql_executor import SQLComponent
+from lfx.components.data_source.sql_executor import SQL_DATABASE_ENGINE_ARGS, SQLComponent
 from lfx.schema import DataFrame, Message
+from lfx.services.cache.utils import CacheMiss
 
 from tests.base import ComponentTestBaseWithoutClient
+
+
+class FakeSharedComponentCache:
+    def __init__(self, values=None):
+        self.values = values or {}
+
+    def get(self, key):
+        return self.values.get(key, CacheMiss())
+
+    def set(self, key, value):
+        self.values[key] = value
 
 
 class TestSQLComponent(ComponentTestBaseWithoutClient):
@@ -101,3 +114,33 @@ class TestSQLComponent(ComponentTestBaseWithoutClient):
         assert "name" in result.columns
         assert result.iloc[0]["id"] == 1
         assert result.iloc[0]["name"] == "name_test"
+
+    def test_maybe_create_db_reuses_cached_database(self, component_class: type[SQLComponent], default_kwargs):
+        """Test cached database reuse without creating a new engine."""
+        cached_db = Mock()
+        cache = FakeSharedComponentCache({default_kwargs["database_url"]: cached_db})
+        component = component_class(**default_kwargs)
+        component._shared_component_cache = cache
+
+        with patch("lfx.components.data_source.sql_executor.SQLDatabase.from_uri") as mock_from_uri:
+            component.maybe_create_db()
+
+        assert component.db is cached_db
+        mock_from_uri.assert_not_called()
+
+    def test_maybe_create_db_enables_pool_pre_ping(self, component_class: type[SQLComponent], default_kwargs):
+        """Test new cached databases validate stale pooled connections on checkout."""
+        created_db = Mock()
+        cache = FakeSharedComponentCache()
+        component = component_class(**default_kwargs)
+        component._shared_component_cache = cache
+
+        with patch(
+            "lfx.components.data_source.sql_executor.SQLDatabase.from_uri",
+            return_value=created_db,
+        ) as mock_from_uri:
+            component.maybe_create_db()
+
+        mock_from_uri.assert_called_once_with(default_kwargs["database_url"], engine_args=SQL_DATABASE_ENGINE_ARGS)
+        assert component.db is created_db
+        assert cache.values[default_kwargs["database_url"]] is created_db

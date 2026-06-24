@@ -16,7 +16,7 @@ from lfx.services.auth.base import BaseAuthService
 from sqlalchemy.exc import IntegrityError
 
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
-from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
+from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_SESSION_WARNING, AUTO_LOGIN_WARNING
 from langflow.services.auth.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
@@ -551,19 +551,18 @@ class AuthService(BaseAuthService):
 
         if not super_user:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Super user hasn't been created")
-        access_token_expires_longterm = timedelta(days=365)
-        access_token = self.create_token(
-            data={"sub": str(super_user.id), "type": "access"},
-            expires_delta=access_token_expires_longterm,
-        )
 
-        await update_user_last_login_at(super_user.id, db)
-
-        return super_user.id, {
-            "access_token": access_token,
-            "refresh_token": None,
-            "token_type": "bearer",
-        }
+        # Security (GHSA-fjgc-vj2f-77hm): AUTO_LOGIN defaults on, so an
+        # unauthenticated GET /api/v1/auto_login reaches this code. It previously
+        # minted a 365-day superuser access token (with no refresh token) — i.e.
+        # a year-long superuser bearer token handed out without credentials.
+        # Issue normally-scoped tokens instead: a short-lived access token plus a
+        # refresh token (see create_user_tokens). The auto-login session stays
+        # seamless via refresh, but a leaked token is now bounded by
+        # ACCESS_TOKEN_EXPIRE_SECONDS instead of a year.
+        logger.warning(AUTO_LOGIN_SESSION_WARNING)
+        tokens = await self.create_user_tokens(user_id=super_user.id, db=db, update_last_login=True)
+        return super_user.id, tokens
 
     def create_user_api_key(self, user_id: UUID) -> dict:
         access_token = self.create_token(

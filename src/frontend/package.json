@@ -1,6 +1,6 @@
 {
   "name": "langflow",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "private": true,
   "engines": {
     "node": ">=20.19.0"
@@ -18,12 +18,17 @@
     "jest-message-util": {
       "picomatch": "^4.0.4"
     },
+    "jest-junit": {
+      "uuid": "^11.1.0"
+    },
     "playwright": "^1.59.1",
     "brace-expansion": "^5.0.5",
     "handlebars": "^4.7.9",
     "minimatch": "^10.2.5",
     "serialize-javascript": ">=7.0.3",
-    "undici": ">=7.24.0"
+    "undici": ">=7.24.0",
+    "postcss-selector-parser": "^6.1.3",
+    "form-data": "^4.0.6"
   },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
@@ -96,7 +101,7 @@
     "react-icons": "^5.2.1",
     "react-markdown": "^9.1.0",
     "react-pdf": "^9.0.0",
-    "react-router-dom": "^6.23.1",
+    "react-router-dom": "^6.30.4",
     "react-sortablejs": "^6.1.4",
     "react-syntax-highlighter": "^16.1.0",
     "reactflow": "^11.11.3",
@@ -111,7 +116,7 @@
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
     "use-stick-to-bottom": "^1.1.1",
-    "uuid": "^10.0.0",
+    "uuid": "^14.0.0",
     "vanilla-jsoneditor": "^2.3.3",
     "web-vitals": "^4.1.1",
     "whatwg-fetch": "^3.6.20",

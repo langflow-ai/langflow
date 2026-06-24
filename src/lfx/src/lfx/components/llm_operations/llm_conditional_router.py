@@ -30,6 +30,7 @@ class SmartRouterComponent(Component):
         super().__init__(**kwargs)
         self._matched_category = None
         self._categorization_result: str | None = None
+        self._excluded_outputs: set[str] = set()
 
     inputs = [
         ModelInput(
@@ -245,6 +246,41 @@ class SmartRouterComponent(Component):
 
         return self._categorization_result
 
+    def _pre_run_setup(self) -> None:
+        """Reset per-run routing state before each build.
+
+        Called once per vertex build (before the output methods run), so the categorization
+        and branch-exclusion decisions are recomputed fresh on every execution.
+        """
+        self._matched_category = None
+        self._categorization_result = None
+        self._excluded_outputs = set()
+
+    def _deactivate_branches(self, output_names: list[str]) -> None:
+        """Deactivate the given output branches so their downstream nodes do not execute.
+
+        Two complementary mechanisms are used (mirroring ConditionalRouterComponent):
+
+        * ``stop()`` marks each branch INACTIVE for the current scheduling pass. It also
+          detaches the branch from any shared downstream node's pending-predecessor list,
+          so that node can still run from the *selected* branch.
+        * ``exclude_branches_conditionally()`` records a *persistent* exclusion. The INACTIVE
+          state is reset between scheduling passes, so without this a re-activated branch that
+          reconverges on a shared downstream node gets picked up again and executes -- the
+          unselected-branch-runs bug this guards against.
+
+        Exclusions accumulate across calls (``process_case`` runs once per connected output,
+        plus ``default_response``) so excluding one branch never clears its siblings.
+        """
+        for name in output_names:
+            self.stop(name)
+        # The persistent exclusion needs a real vertex/graph. Skip it when the component is
+        # exercised without one (e.g. direct unit tests that mock ``stop``).
+        if self._vertex is None:
+            return
+        self._excluded_outputs.update(output_names)
+        self._vertex.graph.exclude_branches_conditionally(self._id, sorted(self._excluded_outputs))
+
     def process_case(self) -> Message:
         """Process all categories using LLM categorization and return message for matching category."""
         # Clear any previous match state (only on first call)
@@ -271,18 +307,21 @@ class SmartRouterComponent(Component):
             # Store the matched category for other outputs to check
             self._matched_category = matched_category
 
-            # Stop all category outputs except the matched one
-            for i in range(len(categories)):
-                if i != matched_category:
-                    self.stop(f"category_{i + 1}_result")
-
-            # Also stop the default output (if it exists)
+            # Deactivate all category outputs except the matched one, plus the default
+            # output if present, so only the matched branch continues downstream.
+            outputs_to_deactivate = [
+                f"category_{i + 1}_result" for i in range(len(categories)) if i != matched_category
+            ]
             enable_else = getattr(self, "enable_else_output", False)
             if enable_else:
-                self.stop("default_result")
+                outputs_to_deactivate.append("default_result")
+            self._deactivate_branches(outputs_to_deactivate)
 
             route_category = categories[matched_category].get("route_category", f"Category {matched_category + 1}")
             self.status = f"Categorized as {route_category}"
+            matched_output_name = f"category_{matched_category + 1}_result"
+            if self._current_output and self._current_output != matched_output_name:
+                return Message(text="")
 
             # Check if there's an override output (takes precedence over everything)
             override_output = getattr(self, "message", None)
@@ -304,9 +343,10 @@ class SmartRouterComponent(Component):
                 return Message(text=str(custom_output))
             # Use input as default output
             return Message(text=input_text)
-        # No match found, stop all category outputs
-        for i in range(len(categories)):
-            self.stop(f"category_{i + 1}_result")
+        # No match found: deactivate every category output so none continue downstream.
+        # The default/Else output (if enabled) is intentionally left active and handled by
+        # default_response.
+        self._deactivate_branches([f"category_{i + 1}_result" for i in range(len(categories))])
 
         # Check if else output is enabled
         enable_else = getattr(self, "enable_else_output", False)
@@ -341,8 +381,8 @@ class SmartRouterComponent(Component):
                 break
 
         if has_match:
-            # A case matches, stop this output
-            self.stop("default_result")
+            # A case matches, so the Else branch must not continue downstream.
+            self._deactivate_branches(["default_result"])
             return Message(text="")
 
         # No case matches, check for override output first, then use input as default

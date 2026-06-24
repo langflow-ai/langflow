@@ -490,6 +490,11 @@ class TestHelperFunctions:
         agent_llm_inputs = [inp for inp in result if getattr(inp, "name", None) == "agent_llm"]
         assert len(agent_llm_inputs) == 0
 
+        verbose_inputs = [inp for inp in result if getattr(inp, "name", None) == "verbose"]
+        assert len(verbose_inputs) == 1
+        assert "LANGCHAIN_VERBOSE" in verbose_inputs[0].info
+        assert "stdout handler" in verbose_inputs[0].info
+
 
 class TestConversationContextBuilding:
     """Test conversation context building edge cases."""
