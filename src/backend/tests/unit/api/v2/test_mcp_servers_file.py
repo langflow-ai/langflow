@@ -54,11 +54,11 @@ class FakeSession:  # Minimal async session stub
         stmt_str = str(stmt)
         if "user_file.name" in stmt_str:
             # LIKE pattern extraction
-            pattern = stmt_str.split("like(")[-1].split(")")[0].strip('"%')
+            pattern = stmt_str.rsplit("like(", maxsplit=1)[-1].split(")", maxsplit=1)[0].strip('"%')
             rows = [f for name, f in self._db.items() if name.startswith(pattern)]
             return FakeResult(rows)
         if "user_file.id" in stmt_str:
-            uid = stmt_str.split("=")[-1].strip().strip("'")
+            uid = stmt_str.rsplit("=", maxsplit=1)[-1].strip().strip("'")
             rows = [f for f in self._db.values() if str(f.id) == uid]
             return FakeResult(rows)
         return FakeResult([])

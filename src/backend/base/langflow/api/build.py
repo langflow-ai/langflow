@@ -71,7 +71,7 @@ def _log_component_input_telemetry(
                 ComponentInputsPayload(
                     component_run_id=component_run_id,
                     component_id=vertex_id,
-                    component_name=vertex_id.split("-")[0],
+                    component_name=vertex_id.split("-", maxsplit=1)[0],
                     component_inputs=inputs_dict,
                 ),
             )
@@ -552,7 +552,7 @@ async def generate_flow_events(
             background_tasks.add_task(
                 telemetry_service.log_package_component,
                 ComponentPayload(
-                    component_name=vertex_id.split("-")[0],
+                    component_name=vertex_id.split("-", maxsplit=1)[0],
                     component_id=vertex_id,
                     component_seconds=int(time.perf_counter() - start_time),
                     component_success=valid,
@@ -569,7 +569,7 @@ async def generate_flow_events(
             background_tasks.add_task(
                 telemetry_service.log_package_component,
                 ComponentPayload(
-                    component_name=vertex_id.split("-")[0],
+                    component_name=vertex_id.split("-", maxsplit=1)[0],
                     component_id=vertex_id,
                     component_seconds=int(time.perf_counter() - start_time),
                     component_success=False,

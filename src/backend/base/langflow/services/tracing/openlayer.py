@@ -81,7 +81,7 @@ class OpenlayerTracer(BaseTracer):
         If no separator is found, both values default to the full trace_name.
         """
         if " - " in trace_name:
-            return trace_name.split(" - ")[0], trace_name.split(" - ")[-1]
+            return trace_name.split(" - ", maxsplit=1)[0], trace_name.rsplit(" - ", maxsplit=1)[-1]
         return trace_name, trace_name
 
     @property
@@ -536,7 +536,7 @@ class OpenlayerTracer(BaseTracer):
             elif not root_input:
                 # Look for input_value inside Chat Input / Agent component data
                 extracted = self._extract_input_from_components(flow_inputs)
-                root_input = {"flow_input": extracted if extracted else self._convert_to_openlayer_types(flow_inputs)}
+                root_input = {"flow_input": extracted or self._convert_to_openlayer_types(flow_inputs)}
         return root_input
 
     def _extract_input_from_components(self, flow_inputs: dict[str, Any]) -> str | None:

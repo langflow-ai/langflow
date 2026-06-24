@@ -93,7 +93,7 @@ async def aget_agent_chat_history(
     """
     if n_messages == 0:
         return []
-    fetch_limit = n_messages if n_messages else MAX_CHAT_HISTORY_FETCH_LIMIT
+    fetch_limit = n_messages or MAX_CHAT_HISTORY_FETCH_LIMIT
     messages = await aget_messages(
         session_id=session_id,
         context_id=context_id,
@@ -365,7 +365,7 @@ class MemoryComponent(Component):
             # Scope by flow_id so default session names (e.g. "New Session 0") do not
             # leak chat history across unrelated flows. See issue #13059.
             flow_id_scope = _coerce_flow_id_to_uuid(_safe_graph_flow_id(self))
-            fetch_limit = n_messages if n_messages else MAX_CHAT_HISTORY_FETCH_LIMIT
+            fetch_limit = n_messages or MAX_CHAT_HISTORY_FETCH_LIMIT
             stored = await aget_messages(
                 sender=sender_type,
                 sender_name=sender_name,

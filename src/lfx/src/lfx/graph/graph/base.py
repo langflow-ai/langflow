@@ -1905,7 +1905,7 @@ class Graph:
             params=params,
             data=result_data_response,
             artifacts={},
-            job_id=self._run_id if self._run_id else None,
+            job_id=self._run_id or None,
         )
 
     async def _execute_tasks(
@@ -1948,7 +1948,7 @@ class Graph:
                         params=result.params,
                         data=result.result_dict,
                         artifacts=result.artifacts,
-                        job_id=self._run_id if self._run_id else None,
+                        job_id=self._run_id or None,
                     )
                     # Store for SSE emission later
                     build_results[result.vertex.id] = result
@@ -2180,7 +2180,7 @@ class Graph:
     def _get_vertex_class(node_type: str, node_base_type: str, node_id: str) -> type[Vertex]:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
-        node_name = node_id.split("-")[0]
+        node_name = node_id.split("-", maxsplit=1)[0]
         if node_name in InterfaceComponentTypes or node_type in InterfaceComponentTypes:
             return InterfaceVertex
         if node_name in {"SharedState", "Notify", "Listen"}:

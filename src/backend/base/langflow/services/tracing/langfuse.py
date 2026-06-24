@@ -195,7 +195,7 @@ class LangFuseTracer(BaseTracer):
         self.user_id = user_id
         self.tracing_user_id = tracing_user_id
         self.session_id = session_id
-        self.flow_id = trace_name.split(" - ")[-1]
+        self.flow_id = trace_name.rsplit(" - ", maxsplit=1)[-1]
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
         self.langfuse_trace_id = None
 
