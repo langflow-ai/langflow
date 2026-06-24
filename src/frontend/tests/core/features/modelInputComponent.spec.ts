@@ -16,7 +16,7 @@ const addLanguageModelNode = async (page: Page) => {
     .getByText(TEXTS.componentLanguageModel, { exact: true })
     .first();
   await expect(languageModelComponent).toBeVisible({ timeout: 5000 });
-  await languageModelComponent.click();
+  await page.getByTestId("add-component-button-language-model").click();
   await page.waitForTimeout(1000);
 
   const node = page.locator(".react-flow__node").first();
@@ -24,7 +24,37 @@ const addLanguageModelNode = async (page: Page) => {
   return node;
 };
 
+const openBlankFlowForModelInput = async (page: Page) => {
+  await awaitBootstrapTest(page);
+  await page.getByTestId("blank-flow").click();
+
+  await expect(page.getByTestId("modal-title")).toBeHidden({
+    timeout: 30000,
+  });
+
+  const sidebarSearchInput = page.getByTestId("sidebar-search-input");
+  if (!(await sidebarSearchInput.isVisible())) {
+    const createdFlow = page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+
+    const createdFlowVisible = await createdFlow
+      .waitFor({ state: "visible", timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (createdFlowVisible) {
+      await createdFlow.click();
+    }
+  }
+
+  await expect(sidebarSearchInput).toBeVisible({ timeout: 30000 });
+};
+
 test.describe("ModelInputComponent", () => {
+  test.describe.configure({ mode: "serial" });
+
   test.beforeEach(() => {
     test.skip(
       process.platform === "win32",
@@ -36,13 +66,7 @@ test.describe("ModelInputComponent", () => {
     "should display model selector in a node with model input",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      // Create a new blank flow
-      await page.getByTestId("blank-flow").click();
-      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-        timeout: 3000,
-      });
+      await openBlankFlowForModelInput(page);
 
       const node = await addLanguageModelNode(page);
 
@@ -57,13 +81,7 @@ test.describe("ModelInputComponent", () => {
     "should open model dropdown and show providers",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      // Create a blank flow
-      await page.getByTestId("blank-flow").click();
-      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-        timeout: 3000,
-      });
+      await openBlankFlowForModelInput(page);
 
       await addLanguageModelNode(page);
 
@@ -84,13 +102,7 @@ test.describe("ModelInputComponent", () => {
     "should show Manage Model Providers button in dropdown",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      // Create a blank flow
-      await page.getByTestId("blank-flow").click();
-      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-        timeout: 3000,
-      });
+      await openBlankFlowForModelInput(page);
 
       await addLanguageModelNode(page);
 
@@ -112,13 +124,7 @@ test.describe("ModelInputComponent", () => {
     "should open Model Provider Modal from dropdown",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      // Create a blank flow
-      await page.getByTestId("blank-flow").click();
-      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-        timeout: 3000,
-      });
+      await openBlankFlowForModelInput(page);
 
       await addLanguageModelNode(page);
 
@@ -143,13 +149,7 @@ test.describe("ModelInputComponent", () => {
     "should show Refresh List button in dropdown",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      // Create a blank flow
-      await page.getByTestId("blank-flow").click();
-      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-        timeout: 3000,
-      });
+      await openBlankFlowForModelInput(page);
 
       await addLanguageModelNode(page);
 
@@ -170,13 +170,7 @@ test.describe("ModelInputComponent", () => {
     "should display selected model in trigger button",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      // Create a blank flow
-      await page.getByTestId("blank-flow").click();
-      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-        timeout: 3000,
-      });
+      await openBlankFlowForModelInput(page);
 
       await addLanguageModelNode(page);
 
