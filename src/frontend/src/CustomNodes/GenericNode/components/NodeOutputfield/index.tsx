@@ -36,6 +36,7 @@ import {
   logTypeIsError,
   logTypeIsUnknown,
 } from "../../../../utils/utils";
+import { classNameFromType } from "../../../utils/class-name-from-type";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
@@ -52,16 +53,6 @@ const _EyeIcon = memo(
 const SnowflakeIcon = memo(() => (
   <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
 ));
-
-// Extension components carry a namespaced ``data.type`` of the form
-// ``ext:<bundle>:<ClassName>@<slot>``.  The inspect-button test IDs
-// historically read ``output-inspection-<title>-<ClassName>``; without this
-// strip, extension components would yield verbose IDs containing ``:`` and
-// ``@`` that diverge from the built-in convention.
-const classNameFromType = (type: string): string => {
-  const match = type.match(/^ext:[^:]+:([^@]+)@.+$/);
-  return match?.[1] ?? type;
-};
 
 const InspectButton = memo(
   forwardRef(
@@ -326,9 +317,9 @@ function NodeOutputField({
           colors={colors}
           setFilterEdge={setFilterEdge}
           showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-${
-            showNode ? "shownode" : "noshownode"
-          }`}
+          testIdComplement={`${classNameFromType(
+            data?.type ?? "",
+          ).toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
           colorName={loopInputColorName}
         />
       );
@@ -358,9 +349,9 @@ function NodeOutputField({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-${
-          showNode ? "shownode" : "noshownode"
-        }`}
+        testIdComplement={`${classNameFromType(
+          data?.type ?? "",
+        ).toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
         colorName={
           data.node?.outputs?.[index].allows_loop
             ? loopInputColorName

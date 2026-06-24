@@ -10,6 +10,8 @@ import time
 import pytest
 from langflow.components.data import APIRequestComponent
 from langflow.components.models_and_agents import AgentComponent  # Backwards compatibility alias
+
+pytest.importorskip("lfx_openai")
 from langflow.components.openai import OpenAIModelComponent
 
 
@@ -342,7 +344,7 @@ class TestDynamicImportIntegration:
         assert not hasattr(lfx_datastax, "GetEnvVar"), "GetEnvVar should have been removed from lfx.components.datastax"
 
         with pytest.raises((ImportError, ModuleNotFoundError)):
-            importlib.import_module("lfx.components.datastax.getenvvar")
+            importlib.import_module("lfx_datastax.components.datastax.getenvvar")
 
     def test_python_code_structured_tool_removed(self):
         """Test that the removed PythonCodeStructuredTool component cannot be imported from lfx tools.

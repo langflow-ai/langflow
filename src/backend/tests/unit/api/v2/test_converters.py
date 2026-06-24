@@ -4,7 +4,7 @@ This test module provides extensive coverage of the converter functions that
 transform between V2 workflow schemas and V1 schemas. Tests include:
 
 Test Coverage:
-    - Input parsing and transformation (parse_flat_inputs)
+    - Native body parsing (parse_workflow_run_request)
     - Nested value extraction from various data structures
     - Text extraction from different message formats
     - Model source and file path extraction
@@ -34,16 +34,19 @@ from langflow.api.v2.converters import (
     _extract_nested_value,
     _extract_text_from_message,
     _get_raw_content,
+    _process_terminal_vertex,
+    _resolve_output,
     _simplify_output_content,
+    build_component_output,
     create_error_response,
     create_job_response,
-    parse_flat_inputs,
     run_response_to_workflow_response,
 )
 from lfx.schema.workflow import (
+    ComponentOutput,
     ErrorDetail,
     JobStatus,
-    WorkflowExecutionRequest,
+    OutputReason,
     WorkflowExecutionResponse,
     WorkflowJobResponse,
 )
@@ -58,194 +61,6 @@ def _setup_graph_get_vertex(graph: Mock, vertices: list[Mock]) -> None:
     """
     vertex_map = {v.id: v for v in vertices}
     graph.get_vertex = Mock(side_effect=lambda vid: vertex_map.get(vid))
-
-
-class TestParseFlatInputs:
-    """Test suite for parse_flat_inputs function."""
-
-    def test_parse_flat_inputs_basic(self):
-        """Test basic flat input parsing with component_id.param format."""
-        inputs = {
-            "ChatInput-abc.input_value": "hello",
-            "LLM-xyz.temperature": 0.7,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "ChatInput-abc": {"input_value": "hello"},
-            "LLM-xyz": {"temperature": 0.7},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_with_session_id(self):
-        """Test parsing with session_id extraction."""
-        inputs = {
-            "ChatInput-abc.input_value": "hello",
-            "ChatInput-abc.session_id": "session-123",
-            "LLM-xyz.temperature": 0.7,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "ChatInput-abc": {"input_value": "hello", "session_id": "session-123"},
-            "LLM-xyz": {"temperature": 0.7},
-        }
-        assert session_id == "session-123"
-
-    def test_parse_flat_inputs_multiple_session_ids(self):
-        """Test that first session_id is used when multiple are provided."""
-        inputs = {
-            "ChatInput-abc.session_id": "session-first",
-            "ChatInput-xyz.session_id": "session-second",
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert session_id == "session-first"
-        assert tweaks == {
-            "ChatInput-abc": {"session_id": "session-first"},
-            "ChatInput-xyz": {"session_id": "session-second"},
-        }
-
-    def test_parse_flat_inputs_dict_values(self):
-        """Test backward compatibility with dict values (no dot notation)."""
-        inputs = {
-            "ChatInput-abc": {"input_value": "hello", "temperature": 0.5},
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {"ChatInput-abc": {"input_value": "hello", "temperature": 0.5}}
-        assert session_id is None
-
-    def test_parse_flat_inputs_mixed_formats(self):
-        """Test mixed flat and dict formats."""
-        inputs = {
-            "ChatInput-abc.input_value": "hello",
-            "LLM-xyz": {"temperature": 0.7, "max_tokens": 100},
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "ChatInput-abc": {"input_value": "hello"},
-            "LLM-xyz": {"temperature": 0.7, "max_tokens": 100},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_empty(self):
-        """Test with empty inputs."""
-        tweaks, session_id = parse_flat_inputs({})
-
-        assert tweaks == {}
-        assert session_id is None
-
-    def test_parse_flat_inputs_multiple_params_same_component(self):
-        """Test multiple parameters for the same component."""
-        inputs = {
-            "LLM-xyz.temperature": 0.7,
-            "LLM-xyz.max_tokens": 100,
-            "LLM-xyz.top_p": 0.9,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "LLM-xyz": {
-                "temperature": 0.7,
-                "max_tokens": 100,
-                "top_p": 0.9,
-            }
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_malformed_key_no_dot(self):
-        """Test handling of non-dict value without dot notation (edge case)."""
-        # Non-dict values without dots are ignored (not valid component.param format)
-        inputs = {
-            "ChatInput-abc.input_value": "hello",
-            "invalid_key_no_dot": "should be ignored",
-            "LLM-xyz.temperature": 0.7,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        # Only valid dot-notation keys should be parsed
-        assert tweaks == {
-            "ChatInput-abc": {"input_value": "hello"},
-            "LLM-xyz": {"temperature": 0.7},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_null_values(self):
-        """Test handling of None/null values in inputs."""
-        inputs = {
-            "ChatInput-abc.input_value": None,
-            "LLM-xyz.temperature": 0.7,
-            "DataNode-123.data": None,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        # None values should be preserved
-        assert tweaks == {
-            "ChatInput-abc": {"input_value": None},
-            "LLM-xyz": {"temperature": 0.7},
-            "DataNode-123": {"data": None},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_deeply_nested_dict(self):
-        """Test handling of deeply nested dict structures (backward compatibility)."""
-        inputs = {"Component-abc": {"level1": {"level2": {"level3": {"value": "deeply nested"}}}}}
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        # Deeply nested dicts should be preserved as-is
-        assert tweaks == {"Component-abc": {"level1": {"level2": {"level3": {"value": "deeply nested"}}}}}
-        assert session_id is None
-
-    def test_parse_flat_inputs_empty_collections(self):
-        """Test handling of empty lists and dicts as values."""
-        inputs = {
-            "Component-1.list_param": [],
-            "Component-2.dict_param": {},
-            "Component-3.string_param": "",
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "Component-1": {"list_param": []},
-            "Component-2": {"dict_param": {}},
-            "Component-3": {"string_param": ""},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_explicit_none_values(self):
-        """Test explicit None checks - None should be preserved, not treated as missing."""
-        inputs = {
-            "Component-1.optional_param": None,
-            "Component-2.required_param": "value",
-            "Component-3.another_none": None,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        # None values should be explicitly preserved
-        assert tweaks == {
-            "Component-1": {"optional_param": None},
-            "Component-2": {"required_param": "value"},
-            "Component-3": {"another_none": None},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_special_characters_in_keys(self):
-        """Test handling of special characters (dashes, underscores) in component IDs and parameter names."""
-        inputs = {
-            "Component-with-dashes.param_with_underscores": "value1",
-            "Component_123.param-456": "value2",
-            "Component_With_Underscores.param_name": "value3",
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "Component-with-dashes": {"param_with_underscores": "value1"},
-            "Component_123": {"param-456": "value2"},
-            "Component_With_Underscores": {"param_name": "value3"},
-        }
-        assert session_id is None
 
 
 class TestExtractNestedValue:
@@ -704,6 +519,17 @@ class TestGetRawContent:
         result = _get_raw_content(data)
         assert result == {"from": "outputs"}
 
+    def test_get_raw_content_dict_outputs_priority(self):
+        """Dict form must prefer ``outputs`` like the object form does.
+
+        The stream's ``VertexBuildResponse.data`` is a dict carrying BOTH ``outputs``
+        and ``results``; to match sync (object form returns ``.outputs``) it must
+        resolve to ``outputs``, else sync/stream output content diverges.
+        """
+        data = {"outputs": {"from": "outputs"}, "results": {"from": "results"}}
+        result = _get_raw_content(data)
+        assert result == {"from": "outputs"}
+
     def test_get_raw_content_fallback(self):
         """Test fallback returns data as-is."""
         data = "raw string data"
@@ -863,10 +689,10 @@ class TestCreateErrorResponse:
         """Test error response structure."""
         flow_id = "flow-123"
         job_id = uuid4()
-        request = WorkflowExecutionRequest(flow_id=flow_id, inputs={"test": "input"})
+        request_inputs = {"test": "input"}
         error = ValueError("Test error message")
 
-        response = create_error_response(flow_id, str(job_id), request, error)
+        response = create_error_response(flow_id, str(job_id), request_inputs, error)
 
         assert isinstance(response, WorkflowExecutionResponse)
         assert response.flow_id == flow_id
@@ -879,7 +705,7 @@ class TestCreateErrorResponse:
         """Test error details in response."""
         error = RuntimeError("Runtime error occurred")
         job_id = str(uuid4())
-        response = create_error_response("flow-1", job_id, WorkflowExecutionRequest(flow_id="flow-1", inputs={}), error)
+        response = create_error_response("flow-1", job_id, {}, error)
 
         error_detail = response.errors[0]
         assert isinstance(error_detail, ErrorDetail)
@@ -891,20 +717,27 @@ class TestCreateErrorResponse:
     def test_create_error_response_preserves_inputs(self):
         """Test that original inputs are preserved in error response."""
         inputs = {"component.param": "value"}
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs=inputs)
+        request_inputs = inputs
         error = Exception("Error")
 
-        response = create_error_response("flow-1", str(uuid4()), request, error)
+        response = create_error_response("flow-1", str(uuid4()), request_inputs, error)
         assert response.inputs == inputs
 
     def test_create_error_response_preserves_globals(self):
         """Test that body globals are preserved in error response."""
         globals_ = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={}, globals=globals_)
         error = Exception("Error")
 
-        response = create_error_response("flow-1", str(uuid4()), request, error)
+        response = create_error_response("flow-1", str(uuid4()), {}, error, effective_globals=globals_)
         assert response.globals == globals_
+
+    def test_create_error_response_reports_failed_output_and_no_session(self):
+        """The failed path marks output.reason=failed with no text answer or session."""
+        response = create_error_response("flow-1", str(uuid4()), {}, Exception("boom"))
+        assert response.output.reason == OutputReason.FAILED
+        assert response.output.text is None
+        assert response.session_id is None
+        assert response.has_errors is True
 
 
 class TestRunResponseToWorkflowResponse:
@@ -927,6 +760,7 @@ class TestRunResponseToWorkflowResponse:
 
         # Create mock run response
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = "output-123"
         result_data.outputs = {"message": {"message": "Hello World"}}
@@ -937,11 +771,11 @@ class TestRunResponseToWorkflowResponse:
         run_response.outputs = [run_output]
 
         # Create request
-        request = WorkflowExecutionRequest(flow_id="flow-123", inputs={"test": "input"})
+        request_inputs = {"test": "input"}
 
         # Convert
         job_id = uuid4()
-        response = run_response_to_workflow_response(run_response, "flow-123", str(job_id), request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-123", str(job_id), request_inputs, graph)
 
         assert isinstance(response, WorkflowExecutionResponse)
         assert response.flow_id == "flow-123"
@@ -957,12 +791,14 @@ class TestRunResponseToWorkflowResponse:
         graph.get_terminal_nodes = Mock(return_value=[])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = []
 
         globals_ = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
-        request = WorkflowExecutionRequest(flow_id="flow-123", inputs={}, globals=globals_)
 
-        response = run_response_to_workflow_response(run_response, "flow-123", str(uuid4()), request, graph)
+        response = run_response_to_workflow_response(
+            run_response, "flow-123", str(uuid4()), {}, graph, effective_globals=globals_
+        )
 
         assert response.globals == globals_
 
@@ -983,6 +819,7 @@ class TestRunResponseToWorkflowResponse:
 
         # Create mock run response with model info
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = "llm-123"
         result_data.outputs = {"model_output": {"message": {"model_name": "gpt-4", "text": "response"}}}
@@ -992,10 +829,10 @@ class TestRunResponseToWorkflowResponse:
         run_output.outputs = [result_data]
         run_response.outputs = [run_output]
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         assert "llm-123" in response.outputs
         output = response.outputs["llm-123"]
@@ -1026,12 +863,13 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex1, vertex2])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = []
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Should use IDs instead of duplicate display names
         assert "output-1" in response.outputs
@@ -1056,6 +894,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = "data-123"
         result_data.outputs = {"result": {"message": {"result": "42"}}}
@@ -1065,10 +904,10 @@ class TestRunResponseToWorkflowResponse:
         run_output.outputs = [result_data]
         run_response.outputs = [run_output]
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Data type non-output nodes should show content
         assert response.outputs["data-123"].content == {"result": "42"}
@@ -1090,12 +929,13 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = []
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         assert "output-123" in response.outputs
 
@@ -1107,13 +947,14 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = []
 
         inputs = {"component.param": "value"}
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs=inputs)
+        request_inputs = inputs
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
         assert response.inputs == inputs
 
     def test_run_response_vector_store_terminal(self):
@@ -1131,6 +972,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = "pinecone-123"
         result_data.outputs = {"result": {"message": {"result": {"ids": ["vec1", "vec2"], "stored_count": 2}}}}
@@ -1140,10 +982,10 @@ class TestRunResponseToWorkflowResponse:
         run_output.outputs = [result_data]
         run_response.outputs = [run_output]
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Data type non-output nodes should show content
         assert "pinecone-123" in response.outputs
@@ -1165,6 +1007,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = "retriever-456"
         result_data.outputs = {
@@ -1176,10 +1019,10 @@ class TestRunResponseToWorkflowResponse:
         run_output.outputs = [result_data]
         run_response.outputs = [run_output]
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Should include content and metadata
         assert "retriever-456" in response.outputs
@@ -1199,12 +1042,13 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = None
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         assert response.outputs == {}
         assert response.status == JobStatus.COMPLETED
@@ -1226,13 +1070,14 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = []
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         # Should handle gracefully without crashing
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Should use ID as fallback when display_name is None
         assert "corrupted-123" in response.outputs
@@ -1254,6 +1099,7 @@ class TestRunResponseToWorkflowResponse:
 
         # Create result_data without component_id
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = None  # Missing component_id
         result_data.outputs = {"message": "test"}
@@ -1263,15 +1109,574 @@ class TestRunResponseToWorkflowResponse:
         run_output.outputs = [result_data]
         run_response.outputs = [run_output]
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         # Should handle gracefully - vertex won't match result_data
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Output should exist but with no content (no matching result_data)
         assert "output-123" in response.outputs
         assert response.outputs["output-123"].content is None
+
+
+_VALID_UUID = "67ccd2be-17f0-8190-81ff-3bb2cf6508e6"
+
+
+class TestParseWorkflowRunRequest:
+    """``parse_workflow_run_request`` projects ``WorkflowRunRequest`` onto ``ParsedWorkflowRun``."""
+
+    def test_minimal_body_round_trips_with_defaults(self):
+        from langflow.api.v2.converters import parse_workflow_run_request
+        from lfx.schema.workflow import WorkflowRunRequest
+
+        parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=_VALID_UUID))
+
+        assert parsed.flow_id == _VALID_UUID
+        assert parsed.tweaks == {}
+        assert parsed.input_value == ""
+        assert parsed.session_id is None
+        assert parsed.run_id is None
+        assert parsed.mode == "sync"
+        assert parsed.start_component_id is None
+        assert parsed.stop_component_id is None
+        assert parsed.data is None
+        assert parsed.files is None
+
+    def test_full_body_round_trip(self):
+        from langflow.api.v2.converters import parse_workflow_run_request
+        from lfx.schema.workflow import WorkflowMode, WorkflowRunRequest
+
+        request = WorkflowRunRequest(
+            flow_id=_VALID_UUID,
+            input_value="hello",
+            tweaks={"ChatInput-abc": {"some_param": "v"}},
+            session_id="session-123",
+            mode=WorkflowMode.STREAM,
+            stream_protocol="agui",
+            data={"nodes": [], "edges": []},
+            files=["a.txt", "b.png"],
+            start_component_id="ChatInput-abc",
+            stop_component_id="ChatOutput-xyz",
+        )
+
+        parsed = parse_workflow_run_request(request)
+
+        assert parsed.flow_id == _VALID_UUID
+        assert parsed.tweaks == {"ChatInput-abc": {"some_param": "v"}}
+        assert parsed.input_value == "hello"
+        assert parsed.session_id == "session-123"
+        assert parsed.mode == "stream"
+        assert parsed.start_component_id == "ChatInput-abc"
+        assert parsed.stop_component_id == "ChatOutput-xyz"
+        assert parsed.data == {"nodes": [], "edges": []}
+        assert parsed.files == ["a.txt", "b.png"]
+
+    def test_run_id_is_always_none_on_the_parsed_record(self):
+        """The endpoint generates run_id; callers cannot supply it via the body."""
+        from langflow.api.v2.converters import parse_workflow_run_request
+        from lfx.schema.workflow import WorkflowRunRequest
+
+        parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=_VALID_UUID))
+        assert parsed.run_id is None
+
+
+def _component_output(type_: str, content: Any) -> ComponentOutput:
+    return ComponentOutput(type=type_, status=JobStatus.COMPLETED, content=content)
+
+
+class TestResolveOutput:
+    """``_resolve_output`` surfaces the lone text answer and names the reason."""
+
+    def test_single_message_output_returns_its_text(self):
+        outputs = {"ChatOutput-abc": _component_output("message", "Hi there!")}
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == "Hi there!"
+        assert output.source == "ChatOutput-abc"
+
+    def test_single_text_output_returns_its_text(self):
+        outputs = {"TextOutput-abc": _component_output("text", "plain answer")}
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == "plain answer"
+        assert output.source == "TextOutput-abc"
+
+    def test_message_plus_data_returns_only_the_message(self):
+        # A side DataOutput must not suppress the single text answer.
+        outputs = {
+            "ChatOutput-abc": _component_output("message", "the reply"),
+            "DataOutput-xyz": _component_output("data", {"rows": [1, 2]}),
+        }
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == "the reply"
+        assert output.source == "ChatOutput-abc"
+
+    def test_two_message_outputs_are_multiple_with_no_text(self):
+        outputs = {
+            "ChatOutput-a": _component_output("message", "Hi"),
+            "ChatOutput-b": _component_output("message", "Bye"),
+        }
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.MULTIPLE
+        assert output.text is None
+        assert output.source is None
+
+    def test_data_only_is_none_reason(self):
+        outputs = {"DataOutput-xyz": _component_output("data", {"k": "v"})}
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.NONE
+        assert output.text is None
+
+    def test_no_outputs_is_none_reason(self):
+        output = _resolve_output({})
+        assert output.reason == OutputReason.NONE
+        assert output.text is None
+
+    def test_empty_string_answer_is_preserved(self):
+        # A single, intentionally empty answer stays "" (distinct from None).
+        outputs = {"ChatOutput-abc": _component_output("message", "")}
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == ""
+        assert output.source == "ChatOutput-abc"
+
+    def test_non_string_message_content_is_non_string_reason(self):
+        # A text channel exists but its content isn't a plain string (e.g. None on a
+        # non-output node). The reason distinguishes this from "no text channel at all".
+        outputs = {"ChatOutput-abc": _component_output("message", None)}
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.NON_STRING
+        assert output.text is None
+
+    def test_string_content_data_output_excluded_by_type(self):
+        # A data output whose content happens to be a plain string must still be
+        # excluded by the TYPE filter alone, not merely by the non-str guard. With no
+        # text channel present the reason is ``none``; adding "data" to the accepted
+        # set would surface this string as the answer (reason ``single``), which is
+        # exactly what we must not do.
+        outputs = {"DataOutput-xyz": _component_output("data", "looks like an answer but is data")}
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.NONE
+        assert output.text is None
+
+    # --- request-side output selection (steer-only) ---
+
+    def test_selected_id_disambiguates_two_messages_to_single(self):
+        # Two text outputs would be ``multiple``; naming one steers ``output.text``
+        # to it deterministically without hiding the other from ``outputs``.
+        outputs = {
+            "ChatOutput-a": _component_output("message", "Hi"),
+            "ChatOutput-b": _component_output("message", "Bye"),
+        }
+        output = _resolve_output(outputs, selected_ids=["ChatOutput-b"])
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == "Bye"
+        assert output.source == "ChatOutput-b"
+
+    def test_selecting_both_text_outputs_stays_multiple(self):
+        outputs = {
+            "ChatOutput-a": _component_output("message", "Hi"),
+            "ChatOutput-b": _component_output("message", "Bye"),
+        }
+        output = _resolve_output(outputs, selected_ids=["ChatOutput-a", "ChatOutput-b"])
+        assert output.reason == OutputReason.MULTIPLE
+        assert output.text is None
+
+    def test_selected_id_not_produced_resolves_among_produced(self):
+        # Branching: the caller lists candidate outputs; the one that didn't fire is
+        # simply absent from ``outputs``, so we resolve among the ones that did.
+        outputs = {
+            "ChatOutput-a": _component_output("message", "the reply"),
+            "DataOutput-c": _component_output("data", {"k": "v"}),
+        }
+        output = _resolve_output(outputs, selected_ids=["ChatOutput-a", "ChatOutput-b"])
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == "the reply"
+        assert output.source == "ChatOutput-a"
+
+    def test_selection_with_empty_intersection_is_none(self):
+        # Every named id is absent from this run's outputs -> nothing to resolve.
+        outputs = {"ChatOutput-a": _component_output("message", "Hi")}
+        output = _resolve_output(outputs, selected_ids=["ChatOutput-z"])
+        assert output.reason == OutputReason.NONE
+        assert output.text is None
+
+    def test_no_selection_preserves_default_resolution(self):
+        # selected_ids=None keeps the original behavior (two text outputs -> multiple).
+        outputs = {
+            "ChatOutput-a": _component_output("message", "Hi"),
+            "ChatOutput-b": _component_output("message", "Bye"),
+        }
+        assert _resolve_output(outputs, selected_ids=None).reason == OutputReason.MULTIPLE
+
+    def test_empty_selection_list_is_treated_as_no_selection(self):
+        # An empty list is not "select nothing"; it means no filter (same as None).
+        outputs = {
+            "ChatOutput-a": _component_output("message", "Hi"),
+            "ChatOutput-b": _component_output("message", "Bye"),
+        }
+        assert _resolve_output(outputs, selected_ids=[]).reason == OutputReason.MULTIPLE
+
+
+def _message_output_vertex(vertex_id: str) -> Mock:
+    vertex = Mock()
+    vertex.id = vertex_id
+    vertex.display_name = "Chat Output"
+    vertex.vertex_type = "ChatOutput"
+    vertex.is_output = True
+    vertex.outputs = [{"types": ["Message"]}]
+    return vertex
+
+
+def _message_result_data(component_id: str, text: str) -> Mock:
+    result_data = Mock()
+    result_data.component_id = component_id
+    result_data.outputs = {"message": {"message": text}}
+    result_data.metadata = {}
+    return result_data
+
+
+def _message_nonoutput_vertex(vertex_id: str) -> Mock:
+    """A terminal LLM-style message node that is NOT an output (is_output=False)."""
+    vertex = Mock()
+    vertex.id = vertex_id
+    vertex.display_name = "LLM"
+    vertex.vertex_type = "OpenAIModel"
+    vertex.is_output = False
+    vertex.outputs = [{"types": ["Message"]}]
+    return vertex
+
+
+def _data_output_vertex(vertex_id: str) -> Mock:
+    vertex = Mock()
+    vertex.id = vertex_id
+    vertex.display_name = "Data Output"
+    vertex.vertex_type = "DataOutput"
+    vertex.is_output = True
+    vertex.outputs = [{"types": ["Data"]}]
+    return vertex
+
+
+def _data_result_data(component_id: str, payload: Any) -> Mock:
+    result_data = Mock()
+    result_data.component_id = component_id
+    result_data.outputs = {"result": {"message": payload}}
+    result_data.metadata = {}
+    return result_data
+
+
+def _text_output_vertex(vertex_id: str) -> Mock:
+    vertex = Mock()
+    vertex.id = vertex_id
+    vertex.display_name = "Text Output"
+    vertex.vertex_type = "TextOutput"
+    vertex.is_output = True
+    vertex.outputs = [{"types": ["Text"]}]
+    return vertex
+
+
+def _text_result_data(component_id: str, text: str) -> Mock:
+    result_data = Mock()
+    result_data.component_id = component_id
+    result_data.outputs = {"text": {"text": text}}
+    result_data.metadata = {}
+    return result_data
+
+
+def _graph_for(vertices: list[Mock]) -> Mock:
+    graph = Mock()
+    graph.vertices = vertices
+    graph.get_terminal_nodes = Mock(return_value=[v.id for v in vertices])
+    _setup_graph_get_vertex(graph, vertices)
+    return graph
+
+
+class TestOutputAndSessionId:
+    """End-to-end: the sync response resolves ``output`` and echoes session_id."""
+
+    def test_single_chat_output_populates_output_and_session(self):
+        vertex = _message_output_vertex("ChatOutput-abc")
+        graph = _graph_for([vertex])
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [_message_result_data("ChatOutput-abc", "Hi there!")]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.output.reason == OutputReason.SINGLE
+        assert response.output.text == "Hi there!"
+        assert response.output.source == "ChatOutput-abc"
+        assert response.outputs["ChatOutput-abc"].content == "Hi there!"
+        assert response.session_id == "session-xyz"
+
+    def test_two_chat_outputs_resolve_to_multiple(self):
+        vertices = [_message_output_vertex("ChatOutput-a"), _message_output_vertex("ChatOutput-b")]
+        graph = _graph_for(vertices)
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [
+            _message_result_data("ChatOutput-a", "Hi"),
+            _message_result_data("ChatOutput-b", "Bye"),
+        ]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.output.reason == OutputReason.MULTIPLE
+        assert response.output.text is None
+        assert response.outputs["ChatOutput-a"].content == "Hi"
+        assert response.outputs["ChatOutput-b"].content == "Bye"
+
+    def test_output_ids_selection_steers_two_outputs_to_single(self):
+        # Two ChatOutputs would resolve to ``multiple``; selecting one steers
+        # ``output.text`` to it while ``outputs`` still carries both.
+        vertices = [_message_output_vertex("ChatOutput-a"), _message_output_vertex("ChatOutput-b")]
+        graph = _graph_for(vertices)
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [
+            _message_result_data("ChatOutput-a", "Hi"),
+            _message_result_data("ChatOutput-b", "Bye"),
+        ]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(
+            run_response, "flow-1", str(uuid4()), {}, graph, selected_ids=["ChatOutput-b"]
+        )
+
+        assert response.output.reason == OutputReason.SINGLE
+        assert response.output.text == "Bye"
+        assert response.output.source == "ChatOutput-b"
+        # Selection steers the answer but never hides the other output.
+        assert response.outputs["ChatOutput-a"].content == "Hi"
+        assert response.outputs["ChatOutput-b"].content == "Bye"
+
+    def test_session_id_none_passes_through(self):
+        vertex = _message_output_vertex("ChatOutput-abc")
+        graph = _graph_for([vertex])
+
+        run_response = Mock()
+        run_response.session_id = None
+        run_output = Mock()
+        run_output.outputs = [_message_result_data("ChatOutput-abc", "Hi")]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.session_id is None
+        assert response.output.reason == OutputReason.SINGLE
+        assert response.output.text == "Hi"
+
+    def test_terminal_non_output_message_resolves_to_non_string(self):
+        # A terminal LLM (is_output=False) carries EXTRACTABLE text: if it were an
+        # output node the converter would surface "raw model text" as content. But
+        # because it is not an output node, content is suppressed to None, so the
+        # answer must not surface that intermediate text. A message-typed channel
+        # exists with non-string content, so reason is ``non_string`` and text None.
+        # (If the is_output guard regressed, content would become "raw model text"
+        # and reason would flip to ``single`` — this test would fail.)
+        vertex = _message_nonoutput_vertex("LLM-xyz")
+        graph = _graph_for([vertex])
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [_message_result_data("LLM-xyz", "raw model text")]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.outputs["LLM-xyz"].type == "message"
+        assert response.outputs["LLM-xyz"].content is None
+        assert response.output.reason == OutputReason.NON_STRING
+        assert response.output.text is None
+
+    def test_chat_output_plus_data_output_still_surfaces_text(self):
+        # The realistic "chat answer plus structured data" flow: a side DataOutput
+        # classifies as type "data" and must not suppress the single text answer.
+        chat = _message_output_vertex("ChatOutput-abc")
+        data = _data_output_vertex("DataOutput-xyz")
+        graph = _graph_for([chat, data])
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [
+            _message_result_data("ChatOutput-abc", "the reply"),
+            _data_result_data("DataOutput-xyz", {"rows": [1, 2]}),
+        ]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.outputs["ChatOutput-abc"].type == "message"
+        assert response.outputs["DataOutput-xyz"].type == "data"
+        assert response.outputs["DataOutput-xyz"].content == {"rows": [1, 2]}
+        assert response.output.reason == OutputReason.SINGLE
+        assert response.output.text == "the reply"
+        assert response.output.source == "ChatOutput-abc"
+
+    def test_data_only_flow_resolves_to_none(self):
+        # A flow whose only terminal is a DataOutput produces a real type="data"
+        # output, which the answer resolver must exclude (reason ``none``).
+        data = _data_output_vertex("DataOutput-xyz")
+        graph = _graph_for([data])
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [_data_result_data("DataOutput-xyz", {"k": "v"})]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.outputs["DataOutput-xyz"].type == "data"
+        assert response.output.reason == OutputReason.NONE
+        assert response.output.text is None
+
+    def test_text_output_surfaces_text(self):
+        # The answer is not ChatOutput-specific: a TextOutput (type "text") feeds it too.
+        vertex = _text_output_vertex("TextOutput-abc")
+        graph = _graph_for([vertex])
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [_text_result_data("TextOutput-abc", "plain answer")]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.outputs["TextOutput-abc"].type == "text"
+        assert response.output.reason == OutputReason.SINGLE
+        assert response.output.text == "plain answer"
+
+    def test_output_entries_expose_the_de_nested_fields(self):
+        # The outputs dict key already IS the component id, so each ComponentOutput
+        # exposes exactly {type, status, display_name, content, metadata} and carries
+        # no redundant inner id. Pinning the exact field set means adding a
+        # component_id field to the ComponentOutput schema would fail here.
+        vertex = _message_output_vertex("ChatOutput-abc")
+        graph = _graph_for([vertex])
+
+        run_response = Mock()
+        run_response.session_id = None
+        run_output = Mock()
+        run_output.outputs = [_message_result_data("ChatOutput-abc", "Hi")]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert "ChatOutput-abc" in response.outputs
+        entry = response.outputs["ChatOutput-abc"]
+        assert set(entry.model_dump()) == {"type", "status", "display_name", "content", "metadata"}
+        assert entry.display_name == "Chat Output"
+
+
+class TestBuildComponentOutput:
+    """The shared builder both sync and the stream adapter use to make a ComponentOutput."""
+
+    def test_message_output_extracts_text_content(self):
+        result_data = _message_result_data("ChatOutput-abc", "Hi there!")
+        output = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="message",
+            display_name="Chat Output",
+            result_data=result_data,
+        )
+        assert output.type == "message"
+        assert output.status == JobStatus.COMPLETED
+        assert output.display_name == "Chat Output"
+        assert output.content == "Hi there!"
+        assert output.metadata["component_type"] == "ChatOutput"
+
+    def test_matches_sync_process_terminal_vertex(self):
+        # The builder must produce the byte-identical ComponentOutput the sync path
+        # produces for the same vertex — that's what makes sync/stream parity real.
+        vertex = _message_output_vertex("ChatOutput-abc")
+        result_data = _message_result_data("ChatOutput-abc", "Hi there!")
+        _, expected = _process_terminal_vertex(vertex, {"ChatOutput-abc": result_data})
+
+        built = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="message",
+            display_name="Chat Output",
+            result_data=result_data,
+        )
+        assert built.model_dump() == expected.model_dump()
+
+    def test_no_result_data_yields_empty_content(self):
+        output = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="message",
+            display_name="Chat Output",
+            result_data=None,
+        )
+        assert output.content is None
+        assert output.metadata == {"component_type": "ChatOutput"}
+
+    def test_error_output_type_yields_failed_status(self):
+        # An error artifact carries type "error"; per-component status must reflect
+        # the failure instead of the hardcoded COMPLETED a client would trust.
+        output = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="error",
+            display_name="Chat Output",
+            result_data=None,
+        )
+        assert output.status == JobStatus.FAILED
+
+    def test_invalid_build_yields_failed_status(self):
+        # The stream path passes the vertex ``valid`` flag (the agui translator keys
+        # node status on the same signal); an invalid build is FAILED, not COMPLETED.
+        output = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="message",
+            display_name="Chat Output",
+            result_data=None,
+            valid=False,
+        )
+        assert output.status == JobStatus.FAILED
+
+
+class TestGlobalsSyncOnlyDocumented:
+    """The ``globals`` field is honored on sync only; the schema must say so.
+
+    Stream/background converge on ``generate_flow_events`` which never receives
+    request globals, so the field description documents the sync-only limitation
+    the same way ``output_ids`` already documents "Ignored for stream/background".
+    """
+
+    def test_workflow_run_request_globals_documents_sync_only(self):
+        from lfx.schema.workflow import WorkflowRunRequest
+
+        description = WorkflowRunRequest.model_fields["globals"].description
+        assert "ignored for stream/background" in description.lower()
+
+    def test_workflow_execution_request_globals_documents_sync_only(self):
+        from lfx.schema.workflow import WorkflowExecutionRequest
+
+        description = WorkflowExecutionRequest.model_fields["globals"].description
+        assert "ignored for stream/background" in description.lower()
 
 
 if __name__ == "__main__":

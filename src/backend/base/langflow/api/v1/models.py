@@ -17,6 +17,7 @@ from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.authorization import VariableAction, ensure_variable_permission
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
@@ -593,6 +594,14 @@ async def update_enabled_models(
     Accepts a list of model IDs with their desired enabled status.
     This only affects model-level enablement - provider credentials must still be configured.
     """
+    # Persists the enabled/disabled model lists as the user's own Variables: a
+    # variable WRITE. Enforce so the external access ceiling caps a "viewer";
+    # the owner with no ceiling fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.WRITE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(
@@ -734,6 +743,14 @@ async def set_default_model(
     request: DefaultModelRequest,
 ):
     """Set the default model for the current user."""
+    # Creating/updating the default-model Variable is a variable WRITE. Enforce
+    # so the external access ceiling caps a "viewer"; the owner with no ceiling
+    # fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.WRITE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(
@@ -809,6 +826,14 @@ async def clear_default_model(
     model_type: Annotated[str, Query(description="Type of model: 'language' or 'embedding'")] = "language",
 ):
     """Clear the default model for the current user."""
+    # Deleting the default-model Variable is a variable DELETE. Enforce so the
+    # external access ceiling caps a "viewer"; the owner with no ceiling
+    # fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.DELETE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(

@@ -6,7 +6,6 @@ from lfx.base.tools.component_tool import ComponentToolkit
 from lfx.components.data_source.sql_executor import SQLComponent
 from lfx.components.input_output.chat_output import ChatOutput
 from lfx.components.langchain_utilities import ToolCallingAgentComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
 from lfx.graph.graph.base import Graph
 from pydantic import BaseModel
@@ -125,6 +124,9 @@ def test_component_tool():
 @pytest.mark.api_key_required
 @pytest.mark.usefixtures("client")
 async def test_component_tool_with_api_key():
+    pytest.importorskip("lfx_openai")
+    from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
+
     chat_output = ChatOutput()
     openai_llm = OpenAIModelComponent()
     openai_llm.set(api_key=get_openai_api_key())
@@ -147,6 +149,9 @@ async def test_component_tool_with_api_key():
 @pytest.mark.api_key_required
 @pytest.mark.usefixtures("client")
 async def test_sql_component_to_toolkit(test_db):
+    pytest.importorskip("lfx_openai")
+    from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
+
     sql_component = SQLComponent()
     sql_component.set(database_url=f"sqlite:///{test_db}")
     tool = await sql_component.to_toolkit()

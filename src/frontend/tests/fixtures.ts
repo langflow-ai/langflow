@@ -189,7 +189,7 @@ export const test = base.extend({
               /AttributeError: .+/,
               /ImportError: .+/,
               /KeyError: .+/,
-              /An error occured .+/,
+              /An error occurred .+/,
             ];
 
             for (const pattern of exceptionPatterns) {

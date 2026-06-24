@@ -12,6 +12,7 @@ from slowapi.wrappers import Limit
 from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.services.auth.exceptions import AuthenticationError
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
@@ -248,16 +249,22 @@ async def get_session(
     It does not raise an error if unauthenticated, allowing the frontend to gracefully
     handle the session state.
     """
-    from langflow.services.auth.utils import oauth2_login
+    from langflow.services.auth.utils import _get_external_token, oauth2_login
 
     # Try to get the token from the request (cookie or Authorization header)
     try:
         token = await oauth2_login(request)
-        if not token:
+        # Extract the external credential separately so a present-but-invalid
+        # native cookie can't shadow a valid external one (mirrors get_current_user
+        # and the WS/SSE paths). oauth2_login may already have collapsed to the
+        # external credential, in which case the service's dedup guard makes the
+        # fallback a no-op.
+        external_token = _get_external_token(request.headers, request.cookies)
+        if not token and not external_token:
             return SessionResponse(authenticated=False)
 
         # Validate the token and get user
-        user = await get_auth_service().get_current_user_from_access_token(token, db)
+        user = await get_auth_service().get_current_user_from_access_token(token, db, external_token=external_token)
         if not user or not user.is_active:
             return SessionResponse(authenticated=False)
 
@@ -265,7 +272,7 @@ async def get_session(
             authenticated=True,
             user=UserRead.model_validate(user, from_attributes=True),
         )
-    except (HTTPException, ValueError) as _:
+    except (AuthenticationError, HTTPException, ValueError) as _:
         # Any authentication error means not authenticated
         return SessionResponse(authenticated=False)
 
