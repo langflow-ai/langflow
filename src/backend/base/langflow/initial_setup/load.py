@@ -8,14 +8,13 @@ from .starter_projects import (
 
 
 def get_starter_projects_graphs():
-    builders = [
-        basic_prompting_graph,
-        blog_writer_graph,
-        document_qa_graph,
-        memory_chatbot_graph,
-        vector_store_rag_graph,
+    return [
+        basic_prompting_graph(),
+        blog_writer_graph(),
+        document_qa_graph(),
+        memory_chatbot_graph(),
+        vector_store_rag_graph(),
     ]
-    return [builder() for builder in builders if builder is not None]
 
 
 def get_starter_projects_dump():

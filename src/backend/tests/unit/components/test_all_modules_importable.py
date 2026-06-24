@@ -164,10 +164,9 @@ class TestAllModulesImportable:
         """Test that traditional import patterns still work."""
         # Test some key imports that should always work
         traditional_imports = [
-            ("langflow.components.openai", "OpenAIModelComponent"),
-            ("langflow.components.anthropic", "AnthropicModelComponent"),
             ("langflow.components.data", "APIRequestComponent"),
             ("langflow.components.models_and_agents", "AgentComponent"),
+            ("langflow.components.models_and_agents", "LanguageModelComponent"),
             ("langflow.components.helpers", "CalculatorComponent"),
         ]
 
@@ -224,9 +223,9 @@ class TestAllModulesImportable:
         """Test that there are no circular import issues."""
         # Test importing in different orders to catch circular imports
         import_orders = [
-            ["models_and_agents", "data", "openai"],
-            ["openai", "models_and_agents", "data"],
-            ["data", "openai", "models_and_agents"],
+            ["models_and_agents", "data", "helpers"],
+            ["helpers", "models_and_agents", "data"],
+            ["data", "helpers", "models_and_agents"],
         ]
 
         for order in import_orders:
@@ -247,8 +246,8 @@ class TestAllModulesImportable:
         """Test that component access caching works correctly."""
         # Access the same component multiple times and ensure caching works
         test_cases = [
-            ("openai", "OpenAIModelComponent"),
             ("data", "APIRequestComponent"),
+            ("models_and_agents", "LanguageModelComponent"),
             ("helpers", "CalculatorComponent"),
         ]
 
@@ -270,8 +269,8 @@ class TestAllModulesImportable:
     def test_error_handling_for_missing_components(self):
         """Test that appropriate errors are raised for missing components."""
         test_cases = [
-            ("openai", "NonExistentComponent"),
             ("data", "AnotherNonExistentComponent"),
+            ("models_and_agents", "NonExistentComponent"),
         ]
 
         for category_name, component_name in test_cases:
@@ -292,7 +291,7 @@ class TestAllModulesImportable:
         assert "models_and_agents" in main_dir
 
         # Test category modules
-        for category_name in ["openai", "data", "helpers"]:
+        for category_name in ["openai", "data", "helpers", "models_and_agents"]:
             if category_name in UNAVAILABLE_BUNDLE_CATEGORIES:
                 continue
             category_module = getattr(components, category_name)
@@ -306,9 +305,8 @@ class TestAllModulesImportable:
     def test_module_metadata_preservation(self):
         """Test that module metadata is preserved after dynamic loading."""
         test_components = [
-            ("openai", "OpenAIModelComponent"),
-            ("anthropic", "AnthropicModelComponent"),
             ("data", "APIRequestComponent"),
+            ("models_and_agents", "LanguageModelComponent"),
         ]
 
         for category_name, component_name in test_components:
@@ -447,6 +445,9 @@ class TestDirectModuleImports:
                         "redis",
                         "elasticsearch",
                         "langchain_community",
+                        "lfx-datastax",
+                        "lfx-openai",
+                        "lfx-oracle",
                         # Gated to python_version<'3.14' in pyproject.toml until
                         # upstream caps lift.
                         "altk",
