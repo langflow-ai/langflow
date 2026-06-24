@@ -168,6 +168,34 @@ def test_background_supported_registers_job_endpoints():
     assert body["flow_id"] == _FLOW_ID
 
 
+def test_background_supported_but_job_routes_suppressed():
+    """``supports_background=True`` with ``auto_register_job_routes=False`` keeps POST background.
+
+    The langflow backend passes exactly this combination: background submit must
+    still dispatch to ``host.submit_background`` (no 422), but the generic GET
+    status + POST ``/stop`` routes must NOT be auto-registered because langflow
+    mounts its own behaviorally-rich versions on the same prefix.
+    """
+    host = _FakeHost(_echo_graph(), supports_background=True)
+    app = FastAPI()
+    app.include_router(create_workflow_router(host, developer_api_guard=False, auto_register_job_routes=False))
+    client = TestClient(app)
+
+    paths = client.app.openapi()["paths"]
+    # The generic job routes are absent — langflow mounts those itself.
+    assert "/workflows/stop" not in paths
+    assert "get" not in paths["/workflows"]
+    # POST run path is present.
+    assert "post" in paths["/workflows"]
+
+    # Background submit still reaches the host instead of 422-ing.
+    resp = client.post("/workflows", json={"flow_id": _FLOW_ID, "input_value": "x", "mode": "background"})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["object"] == "job"
+    assert body["flow_id"] == _FLOW_ID
+
+
 def test_developer_api_guard_403_when_enabled_and_setting_off():
     """With the guard on and the lfx setting at its default (off), the router 403s."""
     host = _FakeHost(_echo_graph())

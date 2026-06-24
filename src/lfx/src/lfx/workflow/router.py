@@ -22,8 +22,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 
 from lfx.cli.common import execute_graph_with_capture
 from lfx.events.event_manager import create_stream_tokens_event_manager
@@ -38,9 +37,7 @@ from lfx.services.deps import get_settings_service
 from lfx.workflow.actions import WorkflowAction
 from lfx.workflow.adapters import (
     STREAM_ADAPTERS,
-    StreamAdapterContext,
     available_protocols,
-    get_stream_adapter,
 )
 from lfx.workflow.converters import (
     create_error_response,
@@ -252,13 +249,29 @@ def create_workflow_router(
     prefix: str = "/workflows",
     tags: tuple[str, ...] = ("Workflow",),
     developer_api_guard: bool = True,
+    auto_register_job_routes: bool = True,
 ) -> APIRouter:
     """Build the v2 workflow router bound to ``host``.
 
     Registers ``POST {prefix}`` (sync + stream + background-gated dispatch) on
     every runtime. Background job endpoints (GET status, POST ``/stop``) are
-    registered ONLY when ``host.supports_background`` is ``True``; bare serve's
-    OpenAPI surface stays exactly ``POST {prefix}``.
+    auto-registered ONLY when ``host.supports_background`` is ``True`` *and*
+    ``auto_register_job_routes`` is ``True``; bare serve's OpenAPI surface stays
+    exactly ``POST {prefix}``.
+
+    The two concerns are split on purpose. ``host.supports_background`` gates the
+    POST ``mode="background"`` dispatch to :meth:`WorkflowHost.submit_background`
+    (otherwise the branch 422s). ``auto_register_job_routes`` separately controls
+    whether *this* router also mounts the generic GET status + POST ``/stop``
+    handlers. The langflow backend passes ``supports_background=True`` (so
+    background submit works) but ``auto_register_job_routes=False``, because it
+    mounts its own behaviorally-richer GET ``""`` / POST ``/stop`` /
+    GET ``/{job_id}/events`` handlers on the same prefix; auto-registering the
+    generic ones too would put two handlers on identical method+path and shadow
+    the langflow versions. Bare ``lfx serve`` keeps the default
+    (``auto_register_job_routes=True``, ``supports_background=False``), so the
+    ``False`` short-circuits before the flag is consulted and its surface stays
+    exactly ``POST {prefix}``.
 
     ``developer_api_guard`` controls the ``developer_api_enabled`` 403 guard.
     The langflow backend keeps it ``True`` (byte-identical to today's behavior).
@@ -273,7 +286,7 @@ def create_workflow_router(
         response_model=None,
         summary="Execute Workflow (v2 sync or stream)",
     )
-    async def execute_workflow(request: WorkflowRunRequest, http_request: Request):
+    async def execute_workflow(request: WorkflowRunRequest, http_request: Request, background_tasks: BackgroundTasks):
         caller = await host.resolve_caller(http_request)
         flow = await host.get_flow(request.flow_id, caller)
         await host.authorize(caller, flow, WorkflowAction.EXECUTE)
@@ -306,21 +319,23 @@ def create_workflow_router(
                 )
             return await host.submit_background(parsed, flow, caller, stream_protocol=request.stream_protocol)
 
-        session_id_default = flow.session_id_default or request.flow_id
         if parsed.mode == "stream":
-            adapter = get_stream_adapter(
-                request.stream_protocol,
-                StreamAdapterContext(run_id=str(uuid4()), thread_id=parsed.session_id or session_id_default),
-            )
-            return StreamingResponse(
-                stream_workflow_frames(flow.graph, parsed, adapter),
-                media_type="text/event-stream",
-                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            # The host owns the SSE loop so a DB-backed runtime can inject its own
+            # build/persistence pipeline (langflow's v1 build-vertex loop, agui
+            # side-channel, vertex-build persistence). Bare serve falls back to
+            # lfx's leaner ``stream_workflow_frames`` via the base default.
+            return host.stream_response(
+                parsed,
+                flow,
+                caller,
+                stream_protocol=request.stream_protocol,
+                http_request=http_request,
+                background_tasks=background_tasks,
             )
 
-        return await run_workflow_sync(flow.graph, parsed, request.flow_id)
+        return await host.run_sync(parsed, flow, caller, http_request=http_request, background_tasks=background_tasks)
 
-    if host.supports_background:
+    if host.supports_background and auto_register_job_routes:
         _register_job_routes(router, host)
 
     return router
