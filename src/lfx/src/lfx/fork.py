@@ -12,14 +12,9 @@ Shared by Langflow's Gunicorn server (`pre_fork` hook) and lfx serve's prewarm.
 from __future__ import annotations
 
 import threading
-from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
 
 # Threads known to be safe to leave before a fork: they die in the child harmlessly and
 # produce no side effects when their fd is inherited.
@@ -48,12 +43,18 @@ def find_ghost_threads() -> list[threading.Thread]:
 def find_ghost_connections() -> list[str]:
     """Return non-listening TCP connections as formatted strings.
 
-    Returns ``[]`` when psutil is not installed. Any other failure (e.g. permission denied)
-    propagates; use :func:`fork_safety_report` for best-effort behaviour that swallows it.
+    psutil is required. lfx declares it, but if it is somehow unavailable the connection
+    check cannot run: we log a *warning* (not a silent skip — for a fork-safety check, a
+    silently-skipped check is worse than a loud one) and return ``[]``. Any other failure
+    (e.g. permission denied) propagates; use :func:`fork_safety_report` for best-effort.
     """
     try:
         import psutil
     except ImportError:
+        logger.warning(
+            "psutil is not installed; the pre-fork TCP connection check cannot run and is being "
+            "skipped. Install psutil so fork-safety can detect live connections before a fork."
+        )
         return []
     conns = psutil.Process().net_connections(kind="tcp")
     return [f"{c.laddr}->{c.raddr} ({c.status})" for c in conns if c.status != "LISTEN"]
@@ -65,10 +66,6 @@ class ForkSafetyReport:
 
     ghost_threads: list[str] = field(default_factory=list)
     ghost_connections: list[str] = field(default_factory=list)
-
-    @property
-    def is_clean(self) -> bool:
-        return not self.ghost_threads and not self.ghost_connections
 
 
 def fork_safety_report() -> ForkSafetyReport:
@@ -84,20 +81,3 @@ def fork_safety_report() -> ForkSafetyReport:
         ghost_threads=[t.name for t in find_ghost_threads()],
         ghost_connections=connections,
     )
-
-
-@contextmanager
-def fork_safe_teardown(*closers: Callable[[], object]) -> Iterator[None]:
-    """Run a block, then ALWAYS invoke each closer — even on exception.
-
-    Use this to dispose fork-unsafe resources (DB engines, cache sockets, clients) before a
-    fork/snapshot. A closer that raises is logged and the remaining closers still run.
-    """
-    try:
-        yield
-    finally:
-        for close in closers:
-            try:
-                close()
-            except Exception:  # noqa: BLE001 - one closer must not block the others
-                logger.exception("[fork] teardown closer failed")

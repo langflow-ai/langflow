@@ -119,6 +119,32 @@ def test_prewarm_warns_when_a_run_leaves_fork_unsafe_state(tmp_path, monkeypatch
     assert "leaked-worker" in result.stderr
 
 
+def test_prewarm_warns_about_fork_unsafe_state_even_when_run_errored(tmp_path, monkeypatch):
+    """A run that leaves ghost state AND errors mid-run must still emit the fork-unsafe warning.
+
+    --unsafe-run skips teardown, so dirty state left by a failed run would otherwise go
+    unannounced — the warning must not be gated behind the success branch.
+    """
+    import lfx.preload as preload_mod
+
+    flow_path = _write_hermetic_flow(tmp_path)
+
+    def _dirty_and_errored(*_args, **_kwargs):
+        return preload_mod.FlowPrewarmResult(
+            built=True, ran=True, error="RuntimeError: boom", ghost_connections=["a->b (ESTABLISHED)"]
+        )
+
+    monkeypatch.setattr(preload_mod, "prewarm_flow", _dirty_and_errored)
+
+    result = runner.invoke(
+        app, ["prewarm", "--skip-run", "--flow", str(flow_path), "--unsafe-run-may-leak-connections"]
+    )
+
+    assert result.exit_code == 1  # the error still fails the command
+    assert "FAIL flow" in result.stderr  # error is reported
+    assert "fork-unsafe" in result.stderr  # ...and the dirty-state warning still fires
+
+
 def test_prewarm_verbose_lists_imported_components():
     """`--verbose` lists each imported component, not just the summary count."""
     result = runner.invoke(app, ["prewarm", "--skip-run", "--verbose"])

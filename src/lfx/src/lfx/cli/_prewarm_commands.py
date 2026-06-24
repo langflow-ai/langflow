@@ -87,13 +87,15 @@ def register(app: typer.Typer) -> None:
             else:
                 state = "built+ran" if fr.ran else "built"
                 typer.echo(f"  flow {flow_path}: {state} in {fr.elapsed_s:.3f}s")
-                if fr.ghost_threads or fr.ghost_connections:
-                    typer.echo(
-                        f"    WARNING: run left fork-unsafe state "
-                        f"(threads={fr.ghost_threads or '[]'}, connections={fr.ghost_connections or '[]'}). "
-                        f"OK for Firecracker restore; do NOT capture this before a Gunicorn/preload fork.",
-                        err=True,
-                    )
+            # A run can leave fork-hostile state even when it errors mid-run (and --unsafe-run
+            # skips teardown), so warn regardless of whether the flow reported an error.
+            if fr.ghost_threads or fr.ghost_connections:
+                typer.echo(
+                    f"    WARNING: run left fork-unsafe state "
+                    f"(threads={fr.ghost_threads or '[]'}, connections={fr.ghost_connections or '[]'}). "
+                    f"OK for Firecracker restore; do NOT capture this before a Gunicorn/preload fork.",
+                    err=True,
+                )
 
         # Dispose any services warming instantiated so a Gunicorn/preload fork can't
         # inherit a real plugin's live pool/socket/thread.

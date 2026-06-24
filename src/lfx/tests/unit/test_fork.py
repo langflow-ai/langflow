@@ -44,7 +44,6 @@ def test_fork_safety_report_flags_a_ghost_thread():
     try:
         report = fork_safety_report()
         assert "report-ghost" in report.ghost_threads
-        assert report.is_clean is False
     finally:
         stop.set()
         ghost.join()
@@ -109,39 +108,3 @@ def test_fork_safety_report_swallows_connection_inspection_failure(monkeypatch):
     report = fork_mod.fork_safety_report()
 
     assert report.ghost_connections == []
-
-
-def test_fork_safe_teardown_runs_all_closers_in_order():
-    from lfx.fork import fork_safe_teardown
-
-    calls = []
-    with fork_safe_teardown(lambda: calls.append("a"), lambda: calls.append("b")):
-        calls.append("body")
-
-    assert calls == ["body", "a", "b"]
-
-
-def test_fork_safe_teardown_runs_closers_even_on_exception():
-    from lfx.fork import fork_safe_teardown
-
-    calls = []
-    msg = "boom"
-    with pytest.raises(ValueError, match="boom"), fork_safe_teardown(lambda: calls.append("closed")):
-        raise ValueError(msg)
-
-    assert calls == ["closed"]
-
-
-def test_fork_safe_teardown_continues_when_a_closer_raises():
-    from lfx.fork import fork_safe_teardown
-
-    calls = []
-
-    def bad():
-        msg = "closer failed"
-        raise RuntimeError(msg)
-
-    with fork_safe_teardown(bad, lambda: calls.append("ok")):
-        pass
-
-    assert calls == ["ok"]  # first closer failed (logged), second still ran
