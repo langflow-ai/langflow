@@ -32,12 +32,13 @@ dependencies = [
     "lfx-ibm>=0.1.0,<1.0.0",
     "lfx-docling>=0.1.0,<1.0.0",
     "lfx-bundles[all]>=1.0,<2.0",
-    "lfx-datastax>=0.1.0,<1.0.0",
-    "lfx-openai>=0.1.0,<1.0.0",
+    # TODO: Re-enable these direct dependencies after the PyPI projects are published.
+    # "lfx-datastax>=0.1.0,<1.0.0",
+    # "lfx-openai>=0.1.0,<1.0.0",
     "lfx-anthropic>=0.1.0,<1.0.0",
     "lfx-amazon>=0.1.0,<1.0.0",
     "lfx-cohere>=0.1.0,<1.0.0",
-    "lfx-oracle>=0.1.0,<1.0.0",
+    # "lfx-oracle>=0.1.0,<1.0.0",
     "lfx-firecrawl>=0.1.0,<1.0.0",
     "lfx-nextplaid>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end

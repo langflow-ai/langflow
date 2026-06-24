@@ -7880,14 +7880,11 @@ dependencies = [
     { name = "lfx-arxiv" },
     { name = "lfx-bundles", extra = ["all"] },
     { name = "lfx-cohere" },
-    { name = "lfx-datastax" },
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
     { name = "lfx-firecrawl" },
     { name = "lfx-ibm" },
     { name = "lfx-nextplaid" },
-    { name = "lfx-openai" },
-    { name = "lfx-oracle" },
 ]
 
 [package.optional-dependencies]
@@ -7979,7 +7976,6 @@ requires-dist = [
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
     { name = "lfx-bundles", extras = ["all"], editable = "src/bundles/lfx-bundles" },
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
-    { name = "lfx-datastax", editable = "src/bundles/datastax" },
     { name = "lfx-docling", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["chunking"], marker = "extra == 'docling-chunking'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
@@ -7988,8 +7984,6 @@ requires-dist = [
     { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
-    { name = "lfx-openai", editable = "src/bundles/openai" },
-    { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
