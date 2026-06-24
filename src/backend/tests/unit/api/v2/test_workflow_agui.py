@@ -272,38 +272,39 @@ class TestAGUIModeDispatch:
 class TestV2WorkflowAdmission:
     """Route-level admission checks before workflow execution dispatch."""
 
-    async def test_non_owner_data_override_is_hidden_as_404(self, monkeypatch: pytest.MonkeyPatch):
+    def test_non_owner_data_override_is_hidden_as_404(self):
         """Execute-only sharees must not inject alternate graph data into shared flows."""
         from langflow.api.v2 import workflow as workflow_module
         from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
 
         flow_id = uuid4()
-        owner_id = uuid4()
-        caller_id = uuid4()
         flow = SimpleNamespace(
             id=flow_id,
-            user_id=owner_id,
+            user_id=uuid4(),
             workspace_id=None,
             folder_id=None,
             data={"nodes": [], "edges": []},
             name="shared",
         )
-        current_user = SimpleNamespace(id=caller_id)
-
-        monkeypatch.setattr(workflow_module, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
-        monkeypatch.setattr(workflow_module, "ensure_flow_permission", AsyncMock(return_value=None))
+        # A non-owner caller passing a data override hits the gate the production
+        # router runs via host.stream_response -> build_stream_response.
+        parsed = parse_workflow_run_request(
+            WorkflowRunRequest(
+                flow_id=str(flow_id),
+                input_value="hi",
+                mode="stream",
+                data={"nodes": [], "edges": []},
+            )
+        )
 
         with pytest.raises(HTTPException) as exc_info:
-            await workflow_module.execute_workflow(
-                WorkflowRunRequest(
-                    flow_id=str(flow_id),
-                    input_value="hi",
-                    mode="stream",
-                    data={"nodes": [], "edges": []},
-                ),
+            workflow_module.build_stream_response(
+                parsed,
+                flow,
+                SimpleNamespace(id=uuid4()),
+                stream_protocol="langflow",
                 background_tasks=SimpleNamespace(),
-                http_request=SimpleNamespace(),
-                current_user=current_user,
             )
 
         assert exc_info.value.status_code == 404
@@ -312,10 +313,9 @@ class TestV2WorkflowAdmission:
     async def test_execute_permission_denial_is_hidden_as_404(self, monkeypatch: pytest.MonkeyPatch):
         """A denied share-aware fetch must not leak flow existence as a raw 403."""
         from langflow.api.v2 import workflow as workflow_module
-        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.actions import WorkflowAction
 
         flow_id = uuid4()
-        caller_id = uuid4()
         flow = SimpleNamespace(
             id=flow_id,
             user_id=uuid4(),
@@ -328,26 +328,22 @@ class TestV2WorkflowAdmission:
         async def _deny(*_args, **_kwargs):
             raise HTTPException(status_code=403, detail="denied")
 
-        monkeypatch.setattr(workflow_module, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
         monkeypatch.setattr(workflow_module, "ensure_flow_permission", _deny)
 
+        # authorize_flow_action is what host.authorize runs on the production path.
         with pytest.raises(HTTPException) as exc_info:
-            await workflow_module.execute_workflow(
-                WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"),
-                background_tasks=SimpleNamespace(),
-                http_request=SimpleNamespace(),
-                current_user=SimpleNamespace(id=caller_id),
-            )
+            await workflow_module.authorize_flow_action(SimpleNamespace(id=uuid4()), flow, WorkflowAction.EXECUTE)
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
 
-    async def test_private_route_applies_component_policy_gate(self, monkeypatch: pytest.MonkeyPatch):
+    def test_private_route_applies_component_policy_gate(self, monkeypatch: pytest.MonkeyPatch):
         """The authenticated v2 route must run server-side component policy validation."""
         from langflow.api.v2 import workflow as workflow_module
         from langflow.api.v2 import workflow_validation as wf_val
         from lfx.schema.workflow import WorkflowRunRequest
         from lfx.utils.flow_validation import CustomComponentValidationError
+        from lfx.workflow.converters import parse_workflow_run_request
 
         flow_id = uuid4()
         flow = SimpleNamespace(
@@ -363,16 +359,16 @@ class TestV2WorkflowAdmission:
             message = "custom components are disabled"
             raise CustomComponentValidationError(message)
 
-        monkeypatch.setattr(workflow_module, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
-        monkeypatch.setattr(workflow_module, "ensure_flow_permission", AsyncMock(return_value=None))
         monkeypatch.setattr(wf_val, "validate_flow_for_current_settings", _reject)
+        parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"))
 
         with pytest.raises(HTTPException) as exc_info:
-            await workflow_module.execute_workflow(
-                WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"),
+            workflow_module.build_stream_response(
+                parsed,
+                flow,
+                SimpleNamespace(id=flow.user_id),
+                stream_protocol="langflow",
                 background_tasks=SimpleNamespace(),
-                http_request=SimpleNamespace(),
-                current_user=SimpleNamespace(id=flow.user_id),
             )
 
         assert exc_info.value.status_code == 400

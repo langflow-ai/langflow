@@ -37,20 +37,16 @@ from lfx.schema.workflow import (
     JobStatus,
     WorkflowExecutionResponse,
     WorkflowJobResponse,
-    WorkflowRunRequest,
     WorkflowStopRequest,
     WorkflowStopResponse,
 )
 from lfx.services.deps import injectable_session_scope_readonly
 from lfx.workflow.actions import WorkflowAction
 from lfx.workflow.adapters import (
-    STREAM_ADAPTERS,
     StreamAdapterContext,
     UnknownStreamProtocolError,
-    available_protocols,
     get_stream_adapter,
 )
-from lfx.workflow.converters import parse_workflow_run_request
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
@@ -332,57 +328,11 @@ async def submit_background_with_mapping(
         ) from err
 
 
-async def execute_workflow(
-    request: WorkflowRunRequest,
-    background_tasks: BackgroundTasks,
-    http_request: Request,
-    current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
-) -> WorkflowExecutionResponse | WorkflowJobResponse | StreamingResponse:
-    """Execute a flow from a native ``WorkflowRunRequest`` body.
-
-    The HTTP ``POST /workflows`` route is served by the shared lfx router (bound
-    to :class:`~langflow.api.v2.workflow_host.LangflowWorkflowHost`), which calls
-    the same ``resolve_flow_for_execution`` / ``authorize_flow_action`` /
-    ``run_sync_with_mapping`` / ``build_stream_response`` /
-    ``submit_background_with_mapping`` helpers this function does. This function
-    is retained as the langflow-signature entry the direct-call tests exercise so
-    the admission path stays single-sourced.
-
-    ``mode`` selects the execution path:
-        - **sync** (default): run inline, return ``WorkflowExecutionResponse``.
-        - **stream**: SSE in ``stream_protocol`` (``langflow`` default, ``agui``).
-        - **background**: queue a job, return ``WorkflowJobResponse``.
-    """
-    if request.stream_protocol not in STREAM_ADAPTERS:
-        raise _unknown_protocol_http_exception(
-            UnknownStreamProtocolError(request.stream_protocol, available_protocols())
-        )
-
-    parsed = parse_workflow_run_request(request)
-    flow = await resolve_flow_for_execution(parsed.flow_id, current_user)
-    await authorize_flow_action(current_user, flow, WorkflowAction.EXECUTE)
-
-    if parsed.mode == "background":
-        return await submit_background_with_mapping(parsed, flow, current_user, stream_protocol=request.stream_protocol)
-    if parsed.mode == "stream":
-        return build_stream_response(
-            parsed,
-            flow,
-            current_user,
-            stream_protocol=request.stream_protocol,
-            background_tasks=background_tasks,
-        )
-    return await run_sync_with_mapping(
-        parsed, flow, current_user, http_request=http_request, background_tasks=background_tasks
-    )
-
-
 def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPException:
-    """Build the 422 response shared by ``stream`` and ``background`` paths.
+    """Build the 422 response for an unknown ``stream_protocol``.
 
-    Both branches validate ``stream_protocol`` against the live adapter registry
-    so the error body is identical: callers can switch ``mode`` without
-    learning a second error shape. ``available`` lists the registered protocol
+    Used by the public workflow router (``workflow_public.py``) so its error body
+    matches the shared lfx router's: ``available`` lists the registered protocol
     names so clients can self-correct.
     """
     return HTTPException(

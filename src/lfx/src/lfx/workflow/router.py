@@ -288,9 +288,10 @@ def create_workflow_router(
     )
     async def execute_workflow(request: WorkflowRunRequest, http_request: Request, background_tasks: BackgroundTasks):
         caller = await host.resolve_caller(http_request)
-        flow = await host.get_flow(request.flow_id, caller)
-        await host.authorize(caller, flow, WorkflowAction.EXECUTE)
 
+        # Validate the stream protocol before fetching the flow so an unknown
+        # protocol returns 422 regardless of whether the flow exists or the
+        # caller may access it (matches the pre-seam handler's precedence).
         if request.stream_protocol not in STREAM_ADAPTERS:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -301,6 +302,9 @@ def create_workflow_router(
                     "available": available_protocols(),
                 },
             )
+
+        flow = await host.get_flow(request.flow_id, caller)
+        await host.authorize(caller, flow, WorkflowAction.EXECUTE)
 
         parsed = parse_workflow_run_request(request)
         if not host.supports_request_overrides:
