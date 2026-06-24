@@ -675,6 +675,15 @@ async def generate_flow_events(
     cleanup_tasks: set[asyncio.Task] = set()
 
     async def _run_vertex_build() -> None:
+        """Build all sorted vertices concurrently and handle errors.
+
+        Creates an asyncio task per vertex id, gathers them, and routes any
+        exception through ``event_manager.on_error`` with an ``ErrorMessage``
+        that includes ``trace_name`` (resolved best-effort from the failing
+        vertex's custom component). When ``ids`` is empty or the failing
+        vertex cannot be resolved, ``trace_name`` defaults to ``None`` rather
+        than raising a secondary ``NameError``.
+        """
         tasks = []
         for vertex_id in ids:
             task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager, vertex_timedeltas))
