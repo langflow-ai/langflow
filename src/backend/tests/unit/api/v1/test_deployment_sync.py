@@ -1071,7 +1071,7 @@ def test_watsonx_mapper_extract_snapshot_bindings_for_get_requires_tool_ids():
 
     with pytest.raises(
         ValueError,
-        match=r"^An internal error occured\. provider_data must contain 'tool_ids' from wxO adapter for get\(\)\.$",
+        match=r"^An internal error occurred\. provider_data must contain 'tool_ids' from wxO adapter for get\(\)\.$",
     ):
         mapper.extract_snapshot_bindings_for_get(get_result, resource_key="agent-1")
 
@@ -1087,7 +1087,7 @@ def test_watsonx_mapper_extract_snapshot_bindings_for_get_requires_provider_data
 
     with pytest.raises(
         ValueError,
-        match=r"^An internal error occured\. provider_data is required from wxO adapter for get\(\)\.$",
+        match=r"^An internal error occurred\. provider_data is required from wxO adapter for get\(\)\.$",
     ):
         mapper.extract_snapshot_bindings_for_get(get_result, resource_key="agent-1")
 
@@ -1104,7 +1104,7 @@ def test_watsonx_mapper_extract_snapshot_bindings_for_get_requires_tool_ids_list
     with pytest.raises(
         ValueError,
         match=(
-            r"^An internal error occured\. provider_data\['tool_ids'\] must be a list "
+            r"^An internal error occurred\. provider_data\['tool_ids'\] must be a list "
             r"from wxO adapter for get\(\)\.$"
         ),
     ):
