@@ -222,6 +222,30 @@ def test_output_method_without_matching_def_still_flagged(tmp_path: Path) -> Non
     assert "build-method-missing" in _codes(report)
 
 
+def test_derived_component_base_inherits_entry_point(tmp_path: Path) -> None:
+    """A subclass of a derived Component base is accepted without inline build/outputs.
+
+    Mirrors the graduated partner bundles (datastax / openai / ...): classes
+    like ``AstraDBVectorStoreComponent(LCVectorStoreComponent)`` inherit the
+    class-level ``outputs`` declaration from the base and only override the
+    output method, so the subclass body shows neither ``build`` nor
+    ``outputs``.  The AST cannot resolve the base across modules; a base name
+    ending in ``Component`` (other than the root ``Component``) is treated as
+    supplying the entry-point.  Bare ``Component`` subclasses keep the strict
+    check (see ``test_build_method_missing_flagged``).
+    """
+    src = (
+        "from lfx.base.vectorstores.model import LCVectorStoreComponent\n\n"
+        "class AstraThing(LCVectorStoreComponent):\n"
+        "    display_name = 'X'\n\n"
+        "    def build_vector_store(self):\n"
+        "        return None\n"
+    )
+    _make_bundle(tmp_path, files={"text.py": src})
+    report = validate_extension(tmp_path)
+    assert "build-method-missing" not in _codes(report), report.errors.errors
+
+
 def test_import_star_flagged(tmp_path: Path) -> None:
     src = "from os.path import *\n" + _component_source()
     _make_bundle(tmp_path, files={"text.py": src})

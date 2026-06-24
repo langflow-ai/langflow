@@ -2,7 +2,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 from lfx.components.langchain_utilities import ToolCallingAgentComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
 
 
@@ -310,6 +309,9 @@ async def test_tool_calling_agent_component():
     tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
     input_value = "What is 2 + 2?"
     chat_history = []
+    pytest.importorskip("lfx_openai")
+    from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
+
     from tests.api_keys import get_openai_api_key
 
     api_key = get_openai_api_key()

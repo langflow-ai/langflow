@@ -1,9 +1,11 @@
 import pytest
 from lfx.components.models_and_agents import PromptComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.processing import OutputParserComponent
 
 from tests.integration.utils import ComponentInputHandle, run_single_component
+
+pytest.importorskip("lfx_openai")
+from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 
 @pytest.mark.api_key_required

@@ -259,8 +259,6 @@ def _simplify_output_content(content: Any, output_type: str) -> Any:
             result_data = _extract_nested_value(content, *path)
             if result_data is not None:
                 return result_data
-    # TODO: Future scope - Add dataframe-specific extraction logic
-    # The following code is commented out pending further requirements analysis:
     if output_type == "dataframe":
         # For dataframe types, try multiple path combinations in order
         dataframe_paths = [
@@ -337,6 +335,7 @@ def build_component_output(
     output_type: str,
     display_name: str | None,
     result_data: Any,
+    valid: bool = True,
 ) -> ComponentOutput:
     """Build a ``ComponentOutput`` from one component's result data.
 
@@ -363,7 +362,6 @@ def build_component_output(
             # Non-output nodes:
             # - For data types: extract and show content
             # - For message types: extract metadata only (source, file_path)
-            # TODO: Future scope - Add support for "dataframe" output type
             if output_type in ["data", "dataframe"]:
                 content = _simplify_output_content(raw_content, output_type)
             else:
@@ -381,9 +379,15 @@ def build_component_output(
             if isinstance(result_metadata, dict):
                 metadata.update(result_metadata)
 
+    # Derive per-component status instead of hardcoding COMPLETED so a client
+    # trusting it is not given a false positive: a build that produced an error
+    # artifact (``output_type == "error"``) or that the graph marked invalid is
+    # FAILED. This mirrors the agui translator, which already keys node status on
+    # the same ``valid`` flag, so sync and both stream protocols agree.
+    status = JobStatus.FAILED if (output_type == "error" or not valid) else JobStatus.COMPLETED
     return ComponentOutput(
         type=output_type,
-        status=JobStatus.COMPLETED,
+        status=status,
         display_name=resolved_display_name,
         content=content,
         metadata=metadata,

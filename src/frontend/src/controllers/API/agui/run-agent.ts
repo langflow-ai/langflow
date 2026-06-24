@@ -16,6 +16,8 @@ import {
   type HttpAgentConfig,
   type RunAgentInput,
 } from "@ag-ui/client";
+import { BASE_URL_API_V2 } from "@/constants/constants";
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 
 /** Execution mode accepted by the v2 workflows endpoint. */
 export type WorkflowMode = "sync" | "stream" | "background";
@@ -43,6 +45,8 @@ export interface WorkflowRunOptions {
   flowData?: { nodes: unknown[]; edges: unknown[] };
   /** Runtime file references the graph build needs (e.g. uploaded file paths). */
   files?: string[];
+  /** Suppress success build UI for chat/playground runs that should not show a build panel. */
+  silent?: boolean;
   /**
    * When true, route the request to the public-flow endpoint
    * (``/api/v2/workflows/public``) instead of the authenticated one.
@@ -60,10 +64,10 @@ export interface WorkflowRunOptions {
 }
 
 /** The v2 workflows endpoint path. */
-export const WORKFLOWS_ENDPOINT = "/api/v2/workflows";
+export const WORKFLOWS_ENDPOINT = `${BASE_URL_API_V2}workflows`;
 
 /** The v2 public workflows endpoint path (shareable playground). */
-export const WORKFLOWS_PUBLIC_ENDPOINT = "/api/v2/workflows/public";
+export const WORKFLOWS_PUBLIC_ENDPOINT = `${BASE_URL_API_V2}workflows/public`;
 
 /**
  * Wire shape for `POST /api/v2/workflows`. Mirrors
@@ -185,6 +189,7 @@ export function createWorkflowAgent(
       },
       body: JSON.stringify(agent.workflowBody),
       signal: agent.abortController.signal,
+      credentials: getFetchCredentials(),
     };
   };
   return agent;

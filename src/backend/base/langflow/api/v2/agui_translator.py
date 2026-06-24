@@ -88,6 +88,14 @@ class AGUITranslator:
         # Custom content blocks already emitted as CUSTOM events, mapped to a
         # fingerprint of their last-emitted payload so in-place updates re-emit.
         self._emitted_content_state: dict[str, str] = {}
+        # Nodes already emitted as ``inactive``. ``build.py`` keeps reporting a
+        # conditionally-excluded vertex in ``inactivated_vertices`` on every
+        # subsequent ``end_vertex`` (the excluded set persists until the router
+        # clears it), so without this the same inactive delta goes out once per
+        # remaining vertex. A node is dropped from this set when it actually runs
+        # again (``build_start``/``end_vertex`` for it), so a re-activation in a
+        # loop can re-emit ``inactive`` later.
+        self._inactivated_nodes: set[str] = set()
 
     def start(self) -> list[BaseEvent]:
         """Open the run.
@@ -143,6 +151,19 @@ class AGUITranslator:
             return events
         return []
 
+    def cancel(self, reason: str) -> list[BaseEvent]:
+        """Close any open text lifecycle, mark the run cancelled, then finish.
+
+        AG-UI has no cancel primitive, so a deliberate stop is surfaced as a
+        namespaced CUSTOM marker (generic clients ignore it) followed by a clean
+        ``RUN_FINISHED`` rather than ``RUN_ERROR``, which clients read as a
+        genuine failure.
+        """
+        events = self._drain_messages()
+        events.append(CustomEvent(name="langflow.run.cancelled", value={"reason": reason}))
+        events.append(RunFinishedEvent(run_id=self.run_id, thread_id=self.thread_id))
+        return events
+
     def _translate_token(self, data: dict) -> list[BaseEvent]:
         """Map a ``token`` event to text-message events.
 
@@ -197,6 +218,8 @@ class AGUITranslator:
         node_id = data.get("id")
         if not node_id:
             return []
+        # The node is running again, so a later exclusion may re-emit ``inactive``.
+        self._inactivated_nodes.discard(node_id)
         return [
             StepStartedEvent(step_name=node_id),
             StateDeltaEvent(delta=[self._set_node(node_id, "running", None)]),
@@ -209,9 +232,25 @@ class AGUITranslator:
         if not node_id:
             return []
         status = "success" if build_data.get("valid") else "error"
+        # This node just ran, so a later exclusion may re-emit ``inactive``.
+        self._inactivated_nodes.discard(node_id)
+        delta = [self._set_node(node_id, status, build_data.get("data"))]
+        # A branch component (If-Else, Conditional Router) reports the vertices on
+        # the not-taken branch in ``inactivated_vertices`` (already unioned with the
+        # transitively excluded set in ``build.py``). The canvas seeds those nodes as
+        # ``pending`` from ``vertices_sorted`` and never builds them, so without this
+        # they stay stuck on ``pending`` instead of rendering as inactive. Mark each
+        # one ``inactive`` so the frontend maps it to ``BuildStatus.INACTIVE``, but
+        # only once: ``build.py`` re-reports the persisted excluded set on every
+        # later ``end_vertex``, so dedupe to avoid sending the same delta repeatedly.
+        for inactive_id in build_data.get("inactivated_vertices") or []:
+            if inactive_id in self._inactivated_nodes:
+                continue
+            self._inactivated_nodes.add(inactive_id)
+            delta.append(self._set_node(inactive_id, "inactive", None))
         return [
             StepFinishedEvent(step_name=node_id),
-            StateDeltaEvent(delta=[self._set_node(node_id, status, build_data.get("data"))]),
+            StateDeltaEvent(delta=delta),
         ]
 
     def _translate_add_message(self, data: dict) -> list[BaseEvent]:
@@ -263,7 +302,7 @@ class AGUITranslator:
             # Skip text-message lifecycle emission without a stable message_id;
             # tool-call events above are namespaced by block/content index so
             # they can still ride a missing id, but TEXT_MESSAGE_* cannot.
-            if text and message_id and message_id not in self._emitted_text_message_ids:
+            if text and message_id and not is_partial and message_id not in self._emitted_text_message_ids:
                 if self._open_message_id is None:
                     self._emitted_text_message_ids.add(message_id)
                     events.append(TextMessageStartEvent(message_id=message_id, role="assistant"))
