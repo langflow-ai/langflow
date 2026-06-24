@@ -297,6 +297,18 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 
+### LANGFLOW_ENABLE_SIGNUP {#langflow-enable-signup}
+
+This variable controls whether public self-registration is allowed at the `POST /api/v1/users/` endpoint.
+
+| Value | Description |
+|-------|-------------|
+| `True` (default) | Anyone can create a new Langflow account by calling the registration endpoint directly. |
+| `False` | Public registration is disabled. Only superusers can create new accounts through the admin interface. |
+
+Self-registration is always disabled when `LANGFLOW_AUTO_LOGIN=True`, because single-user mode has no multi-account concept.
+Superusers can create accounts regardless of this setting.
+
 ### LANGFLOW_API_KEY_SOURCE {#langflow-api-key-source}
 
 This variable controls how Langflow validates API keys.
@@ -456,19 +468,21 @@ SSRF protection prevents requests to internal or private network resources, such
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
+| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `True` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 
 ### Login rate limiting {#login-rate-limiting}
 
-The following environment variables configure IP-based rate limiting on the `/login` endpoint to protect against brute-force attacks.
+The following environment variables configure IP-based rate limiting to protect against brute-force attacks on the `/login` endpoint and abuse of public flow endpoints.
 When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` header.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
+| `LANGFLOW_RATE_LIMIT_ENABLED` | Boolean | `True` | Enable rate limiting globally. Set to `False` to disable all rate limiting (not recommended in production). |
 | `LANGFLOW_RATE_LIMIT_PER_MINUTE` | Integer | `5` | Maximum number of login attempts allowed per minute from a single IP address. |
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
+| `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows run as the flow owner and consume resources, so anonymous callers are rate-limited separately from the `/login` endpoint. |
 
 ### LANGFLOW_WEBHOOK_AUTH_ENABLE {#langflow-webhook-auth-enable}
 
