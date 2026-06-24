@@ -256,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    roots = args.components_root if args.components_root else list(DEFAULT_COMPONENT_ROOTS)
+    roots = args.components_root or list(DEFAULT_COMPONENT_ROOTS)
     try:
         class_to_bundles = build_class_to_bundles(roots)
     except RuntimeError as exc:

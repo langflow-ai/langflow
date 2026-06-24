@@ -548,7 +548,7 @@ async def build_vertex(
         background_tasks.add_task(
             telemetry_service.log_package_component,
             ComponentPayload(
-                component_name=vertex_id.split("-")[0],
+                component_name=vertex_id.split("-", maxsplit=1)[0],
                 component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=valid,
@@ -560,7 +560,7 @@ async def build_vertex(
         background_tasks.add_task(
             telemetry_service.log_package_component,
             ComponentPayload(
-                component_name=vertex_id.split("-")[0],
+                component_name=vertex_id.split("-", maxsplit=1)[0],
                 component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=False,

@@ -287,9 +287,11 @@ class ApifyActorsComponent(Component):
 
         loader = ApifyDatasetLoader(
             dataset_id=dataset_id,
-            dataset_mapping_function=lambda item: item
-            if not fields
-            else {k.replace(".", "_"): ApifyActorsComponent.get_nested_value(item, k) for k in fields},
+            dataset_mapping_function=lambda item: (
+                item
+                if not fields
+                else {k.replace(".", "_"): ApifyActorsComponent.get_nested_value(item, k) for k in fields}
+            ),
         )
         return loader.load()
 
