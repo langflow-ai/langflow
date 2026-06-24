@@ -54,6 +54,10 @@ ALLOWLIST: dict[str, set[str]] = {
     # the process environment. It is a known multi-tenant hazard flagged for separate
     # review; allow only the load_dotenv call, still flagging any direct os.environ write.
     "src/lfx/src/lfx/components/datastax/dotenv.py": {"load_dotenv"},
+    # mem0 creates PostHog clients at import time unless MEM0_TELEMETRY is
+    # disabled. This import-time default is process-wide by design, preserves an
+    # explicit deployer opt-in, and does not carry per-request values or secrets.
+    "src/lfx/src/lfx/components/mem0/mem0_chat_memory.py": {"mutate:setdefault"},
 }
 
 _MUTATING_METHODS = {"setdefault", "update", "pop", "clear", "popitem", "__setitem__", "__delitem__"}
