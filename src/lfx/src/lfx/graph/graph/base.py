@@ -1592,6 +1592,8 @@ class Graph:
         )
 
     def _record_snapshot(self, vertex_id: str | None = None) -> None:
+        # Keep only the latest snapshot to prevent memory growth.
+        self._snapshots.clear()
         self._snapshots.append(self.get_snapshot())
         if vertex_id:
             self._call_order.append(vertex_id)

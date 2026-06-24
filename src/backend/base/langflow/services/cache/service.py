@@ -1,5 +1,6 @@
 import asyncio
 import atexit
+import contextlib
 import os
 import pickle
 import tempfile
@@ -77,6 +78,8 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         b = cache["b"]
     """
 
+    _SWEEP_INTERVAL = 60  # seconds between background expiry sweeps
+
     def __init__(self, max_size=None, expiration_time=60 * 60) -> None:
         """Initialize a new InMemoryCache instance.
 
@@ -88,6 +91,12 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         self._lock = threading.RLock()
         self.max_size = max_size
         self.expiration_time = expiration_time
+        self._stop_sweep = threading.Event()
+        if expiration_time is not None:
+            self._sweep_thread = threading.Thread(target=self._sweep_loop, daemon=True, name="cache-sweep")
+            self._sweep_thread.start()
+        else:
+            self._sweep_thread = None
 
     def get(self, key, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """Retrieve an item from the cache.
@@ -207,6 +216,25 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
     def __repr__(self) -> str:
         """Return a string representation of the InMemoryCache instance."""
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
+
+    def _sweep_loop(self) -> None:
+        """Daemon thread: periodically delete entries whose TTL has elapsed."""
+        while not self._stop_sweep.wait(timeout=self._SWEEP_INTERVAL):
+            self._sweep_expired()
+
+    def _sweep_expired(self) -> None:
+        """Remove all cache entries that have passed their expiration time."""
+        if self.expiration_time is None:
+            return
+        now = time.time()
+        with self._lock:
+            expired = [k for k, v in self._cache.items() if now - v["time"] >= self.expiration_time]
+            for k in expired:
+                self._cache.pop(k, None)
+
+    async def teardown(self) -> None:
+        """Signal the sweep thread to stop."""
+        self._stop_sweep.set()
 
 
 class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
@@ -341,12 +369,48 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
 
 
 class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
+    _SWEEP_INTERVAL = 60  # seconds between background expiry sweeps
+
     def __init__(self, max_size=None, expiration_time=3600) -> None:
         self.cache: OrderedDict = OrderedDict()
 
         self.lock = asyncio.Lock()
         self.max_size = max_size
         self.expiration_time = expiration_time
+        self._sweep_task: asyncio.Task | None = None
+
+    def _ensure_sweep_task(self) -> None:
+        """Start the background sweep task the first time the cache is written to."""
+        if self.expiration_time is None:
+            return
+        if self._sweep_task is None or self._sweep_task.done():
+            self._sweep_task = asyncio.create_task(self._sweep_loop())
+
+    async def _sweep_loop(self) -> None:
+        try:
+            while True:
+                await asyncio.sleep(self._SWEEP_INTERVAL)
+                await self._sweep_expired()
+        except asyncio.CancelledError:
+            pass
+
+    async def _sweep_expired(self) -> None:
+        """Remove all cache entries that have passed their expiration time."""
+        if self.expiration_time is None:
+            return
+        now = time.time()
+        async with self.lock:
+            expired = [k for k, v in self.cache.items() if now - v["time"] >= self.expiration_time]
+            for k in expired:
+                self.cache.pop(k, None)
+
+    async def teardown(self) -> None:
+        """Cancel the background sweep task."""
+        if self._sweep_task is not None:
+            self._sweep_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._sweep_task
+            self._sweep_task = None
 
     async def get(self, key, lock: asyncio.Lock | None = None):
         async with lock or self.lock:
@@ -363,6 +427,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         return CACHE_MISS
 
     async def set(self, key, value, lock: asyncio.Lock | None = None) -> None:
+        self._ensure_sweep_task()
         async with lock or self.lock:
             await self._set(
                 key,

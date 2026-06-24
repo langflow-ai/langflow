@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import os
 import platform
@@ -40,7 +41,7 @@ class TelemetryService(Service):
         super().__init__()
         self.settings_service = settings_service
         self.base_url = settings_service.settings.telemetry_base_url
-        self.telemetry_queue: asyncio.Queue = asyncio.Queue()
+        self.telemetry_queue: asyncio.Queue = asyncio.Queue(maxsize=10_000)
         self.client = httpx.AsyncClient(timeout=10.0)  # Set a reasonable timeout
         self.running = False
         self._stopping = False
@@ -127,7 +128,8 @@ class TelemetryService(Service):
     async def _queue_event(self, payload) -> None:
         if self.do_not_track or self._stopping:
             return
-        await self.telemetry_queue.put(payload)
+        with contextlib.suppress(asyncio.QueueFull):
+            self.telemetry_queue.put_nowait(payload)
 
     def _get_langflow_desktop(self) -> bool:
         # Coerce to bool, could be 1, 0, True, False, "1", "0", "True", "False"

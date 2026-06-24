@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -329,6 +330,8 @@ class TracingService(Service):
                 await trace_context.traces_queue.join()
             if trace_context.worker_task:
                 trace_context.worker_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await trace_context.worker_task
                 trace_context.worker_task = None
 
         except Exception:  # noqa: BLE001
@@ -360,16 +363,19 @@ class TracingService(Service):
         trace_context = trace_context_var.get()
         if trace_context is None:
             return
-        await self._stop(trace_context)
-        self._end_all_tracers(trace_context, outputs, error)
+        try:
+            await self._stop(trace_context)
+            self._end_all_tracers(trace_context, outputs, error)
 
-        native_tracer = trace_context.tracers.get("native")
-        if native_tracer:
-            # Deferred import breaks the circular dependency between service.py and native.py.
-            from langflow.services.tracing.native import NativeTracer
+            native_tracer = trace_context.tracers.get("native")
+            if native_tracer:
+                # Deferred import breaks the circular dependency between service.py and native.py.
+                from langflow.services.tracing.native import NativeTracer
 
-            if isinstance(native_tracer, NativeTracer):
-                await native_tracer.wait_for_flush()
+                if isinstance(native_tracer, NativeTracer):
+                    await native_tracer.wait_for_flush()
+        finally:
+            trace_context_var.set(None)
 
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):
@@ -456,25 +462,30 @@ class TracingService(Service):
         inputs = self._cleanup_inputs(inputs)
         component_trace_context = ComponentTraceContext(trace_id, trace_name, trace_type, vertex, inputs, metadata)
         component_context_var.set(component_trace_context)
-        trace_context = trace_context_var.get()
-        if trace_context is None:
-            msg = "called trace_component but no trace context found"
-            logger.warning(msg)
-            yield self
-            return
-        trace_context.all_inputs[trace_name] |= inputs or {}
-        await trace_context.traces_queue.put((self._start_component_traces, (component_trace_context, trace_context)))
         try:
-            yield self
-        except Exception as e:
+            trace_context = trace_context_var.get()
+            if trace_context is None:
+                msg = "called trace_component but no trace context found"
+                logger.warning(msg)
+                yield self
+                return
+            trace_context.all_inputs[trace_name] |= inputs or {}
             await trace_context.traces_queue.put(
-                (self._end_component_traces, (component_trace_context, trace_context, e))
+                (self._start_component_traces, (component_trace_context, trace_context))
             )
-            raise
-        else:
-            await trace_context.traces_queue.put(
-                (self._end_component_traces, (component_trace_context, trace_context, None))
-            )
+            try:
+                yield self
+            except Exception as e:
+                await trace_context.traces_queue.put(
+                    (self._end_component_traces, (component_trace_context, trace_context, e))
+                )
+                raise
+            else:
+                await trace_context.traces_queue.put(
+                    (self._end_component_traces, (component_trace_context, trace_context, None))
+                )
+        finally:
+            component_context_var.set(None)
 
     @property
     def project_name(self):

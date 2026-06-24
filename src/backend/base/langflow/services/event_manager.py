@@ -96,6 +96,9 @@ class WebhookEventManager:
                 # Clean up empty sets
                 if not self._listeners[flow_id]:
                     del self._listeners[flow_id]
+
+                    # Clear build-start timestamps for this flow when all listeners disconnect.
+                    self._vertex_start_times.pop(flow_id, None)
                     logger.info(f"All subscribers disconnected for flow {flow_id}")
                 else:
                     logger.info(f"Subscriber disconnected from flow {flow_id}. Remaining: {listener_count}")
