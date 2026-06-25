@@ -21,7 +21,7 @@
     "jest-junit": {
       "uuid": "^11.1.0"
     },
-    "playwright": "^1.59.1",
+    "playwright": "1.60.0",
     "brace-expansion": "^5.0.5",
     "handlebars": "^4.7.9",
     "minimatch": "^10.2.5",
@@ -165,7 +165,7 @@
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
     "@modelcontextprotocol/server-everything": "^2026.1.14",
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "1.60.0",
     "@storybook/addon-docs": "^10.1.0",
     "@storybook/addon-links": "^10.1.0",
     "@storybook/react": "^10.1.0",

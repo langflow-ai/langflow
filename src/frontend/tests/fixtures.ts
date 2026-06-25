@@ -11,9 +11,9 @@ import {
   formatA11yFailure,
   isCheckerReport,
 } from "./utils/accessibility-checker";
-import type { LangflowPage } from "./utils/types";
+import type { A11yScanOptions, LangflowPage } from "./utils/types";
 
-export type { LangflowPage } from "./utils/types";
+export type { A11yScanOptions, LangflowPage } from "./utils/types";
 
 const RUN_A11Y = process.env.RUN_A11Y === "true";
 const RUN_A11Y_ASSERT = process.env.RUN_A11Y_ASSERT === "true";
@@ -34,7 +34,7 @@ const CPU_THROTTLE_RATE = (() => {
 // Extend test to log backend errors
 export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
   _a11ySession: [
-    async ({}, use) => {
+    async (_, use) => {
       await use();
 
       if (RUN_A11Y) {
@@ -74,11 +74,18 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     let a11yScanIndex = 0;
     (
       page as Page & {
-        runA11yScan?: (label: string) => Promise<ICheckerResult | null>;
+        runA11yScan?: (
+          label: string,
+          options?: A11yScanOptions,
+        ) => Promise<ICheckerResult | null>;
       }
-    ).runA11yScan = async (label: string) => {
+    ).runA11yScan = async (label: string, options?: A11yScanOptions) => {
       if (!RUN_A11Y) {
         return null;
+      }
+
+      if (options?.colorScheme) {
+        await page.emulateMedia({ colorScheme: options.colorScheme });
       }
 
       const scanIndex = a11yScanIndex++;
