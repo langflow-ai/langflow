@@ -37,7 +37,7 @@ class LanguageModelComponent(LCModelComponent):
                 "Can be set from a global variable for runtime model selection."
             ),
             advanced=True,
-            load_from_db=True,
+            load_from_db=False,
         ),
         StrInput(
             name="provider",
@@ -46,7 +46,7 @@ class LanguageModelComponent(LCModelComponent):
                 "Optional provider to use with Model Name Override. Leave blank to use the selected model's provider."
             ),
             advanced=True,
-            load_from_db=True,
+            load_from_db=False,
         ),
         SecretStrInput(
             name="api_key",

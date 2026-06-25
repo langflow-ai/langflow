@@ -32,16 +32,16 @@ def _openai_embedding_selection() -> list[dict]:
     ]
 
 
-def test_language_model_override_fields_are_global_variable_eligible() -> None:
+def test_language_model_override_fields_accept_literals_by_default() -> None:
     from lfx.components.models_and_agents.language_model import LanguageModelComponent
 
     inputs = {component_input.name: component_input for component_input in LanguageModelComponent.inputs}
 
     assert inputs["model"].field_type.value == "model"
     assert inputs["model_name"].field_type.value == "str"
-    assert inputs["model_name"].load_from_db is True
+    assert inputs["model_name"].load_from_db is False
     assert inputs["provider"].field_type.value == "str"
-    assert inputs["provider"].load_from_db is True
+    assert inputs["provider"].load_from_db is False
 
 
 def test_language_model_uses_model_name_override_before_building_llm() -> None:
@@ -69,11 +69,14 @@ def test_language_model_uses_model_name_override_before_building_llm() -> None:
         "name": "gpt-4o-mini",
     }
     with (
-        patch.object(language_model_module, "get_language_model_options", return_value=[override_option]),
+        patch.object(
+            language_model_module, "get_language_model_options", return_value=[override_option]
+        ) as mock_get_options,
         patch.object(language_model_module, "get_llm", return_value=object()) as mock_get_llm,
     ):
         component.build_model()
 
+    mock_get_options.assert_called_once_with(user_id=component.user_id)
     model_arg = mock_get_llm.call_args.kwargs["model"]
     assert model_arg == [override_option]
 
@@ -99,11 +102,12 @@ def test_language_model_provider_override_drops_stale_metadata_when_option_looku
     )
 
     with (
-        patch.object(language_model_module, "get_language_model_options", return_value=[]),
+        patch.object(language_model_module, "get_language_model_options", return_value=[]) as mock_get_options,
         patch.object(language_model_module, "get_llm", return_value=object()) as mock_get_llm,
     ):
         component.build_model()
 
+    mock_get_options.assert_called_once_with(user_id=component.user_id)
     model_arg = mock_get_llm.call_args.kwargs["model"]
     assert model_arg == [
         {
@@ -115,16 +119,16 @@ def test_language_model_provider_override_drops_stale_metadata_when_option_looku
     ]
 
 
-def test_embedding_model_override_fields_are_global_variable_eligible() -> None:
+def test_embedding_model_override_fields_accept_literals_by_default() -> None:
     from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 
     inputs = {component_input.name: component_input for component_input in EmbeddingModelComponent.inputs}
 
     assert inputs["model"].field_type.value == "model"
     assert inputs["model_name"].field_type.value == "str"
-    assert inputs["model_name"].load_from_db is True
+    assert inputs["model_name"].load_from_db is False
     assert inputs["provider"].field_type.value == "str"
-    assert inputs["provider"].load_from_db is True
+    assert inputs["provider"].load_from_db is False
 
 
 def test_embedding_model_uses_model_name_override_before_building_embeddings() -> None:
@@ -158,10 +162,13 @@ def test_embedding_model_uses_model_name_override_before_building_embeddings() -
         "name": "text-embedding-3-large",
     }
     with (
-        patch.object(embedding_model_module, "get_embedding_model_options", return_value=[override_option]),
+        patch.object(
+            embedding_model_module, "get_embedding_model_options", return_value=[override_option]
+        ) as mock_get_options,
         patch.object(embedding_model_module, "get_embeddings", return_value=object()) as mock_get_embeddings,
     ):
         component.build_embeddings()
 
+    mock_get_options.assert_called_once_with(user_id=component.user_id)
     model_arg = mock_get_embeddings.call_args.kwargs["model"]
     assert model_arg == [override_option]
