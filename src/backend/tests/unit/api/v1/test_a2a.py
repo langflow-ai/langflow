@@ -286,11 +286,45 @@ def _text_message(text, message_id="m1"):
     return {"message": {"role": "user", "parts": [{"kind": "text", "text": text}], "messageId": message_id}}
 
 
-async def _jsonrpc(client: AsyncClient, flow_id, method, params, rpc_id=1):
+async def _jsonrpc(client: AsyncClient, flow_id, method, params, rpc_id=1, headers=None):
     return await client.post(
         f"api/v1/a2a/{flow_id}/jsonrpc",
         json={"jsonrpc": "2.0", "id": rpc_id, "method": method, "params": params},
+        headers=headers,
     )
+
+
+async def _create_api_key(user_id):
+    """Create a real langflow API key for a user; returns the raw (unmasked) key."""
+    from langflow.services.database.models.api_key.crud import create_api_key
+    from langflow.services.database.models.api_key.model import ApiKeyCreate
+
+    async with session_scope() as session:
+        unmasked = await create_api_key(session, ApiKeyCreate(name=f"a2a-key-{uuid.uuid4().hex[:8]}"), user_id)
+        await session.commit()
+        return unmasked.api_key
+
+
+async def _create_other_user():
+    """Create a distinct second user.
+
+    active_user / active_super_user share a username, so they resolve to the same row
+    and can't serve as separate owners.
+    """
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User
+
+    async with session_scope() as session:
+        user = User(
+            username=f"a2a-other-{uuid.uuid4().hex[:8]}",
+            password=get_password_hash("testpassword"),
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        return user.id
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -410,6 +444,102 @@ async def test_jsonrpc_non_agent_or_disabled_returns_404(client: AsyncClient, ac
     assert (await _jsonrpc(client, workflow_id, "message/send", _text_message("hi"))).status_code == 404
     assert (await _jsonrpc(client, disabled_id, "message/send", _text_message("hi"))).status_code == 404
     assert (await _jsonrpc(client, uuid.uuid4(), "message/send", _text_message("hi"))).status_code == 404
+
+
+# --- apikey auth enforcement ----------------------------------------------
+
+
+async def _apikey_flow(active_user, echo_flow_data):
+    """An agent flow inside an apikey-auth folder."""
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
+    return await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_apikey_folder_rejects_missing_key(client: AsyncClient, active_user, echo_flow_data):
+    """An apikey-folder flow 401s without an x-api-key."""
+    flow_id = await _apikey_flow(active_user, echo_flow_data)
+
+    assert (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).status_code == 401
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_apikey_folder_rejects_invalid_key(client: AsyncClient, active_user, echo_flow_data):
+    """An apikey-folder flow 401s with a bogus key."""
+    flow_id = await _apikey_flow(active_user, echo_flow_data)
+
+    resp = await _jsonrpc(client, flow_id, "message/send", _text_message("hi"), headers={"x-api-key": "bogus"})
+
+    assert resp.status_code == 401
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_apikey_folder_accepts_owner_key(client: AsyncClient, active_user, echo_flow_data):
+    """A valid key owned by the flow owner runs the flow."""
+    flow_id = await _apikey_flow(active_user, echo_flow_data)
+    key = await _create_api_key(active_user.id)
+
+    resp = await _jsonrpc(client, flow_id, "message/send", _text_message("hello a2a"), headers={"x-api-key": key})
+
+    assert resp.status_code == 200
+    result = resp.json()["result"]
+    assert result["status"]["state"] == "completed"
+    assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_apikey_folder_rejects_other_user_key(client: AsyncClient, active_user, echo_flow_data):
+    """A valid key owned by a different user 401s (owner-scoped; no privilege escalation)."""
+    flow_id = await _apikey_flow(active_user, echo_flow_data)
+    other_user_id = await _create_other_user()
+    other_key = await _create_api_key(other_user_id)
+
+    resp = await _jsonrpc(client, flow_id, "message/send", _text_message("hi"), headers={"x-api-key": other_key})
+
+    assert resp.status_code == 401
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_none_folder_stays_public(client: AsyncClient, active_user, echo_flow_data):
+    """A none-auth folder needs no key (the public A2A agent model)."""
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+
+    resp = await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))
+
+    assert resp.status_code == 200
+    assert resp.json()["result"]["status"]["state"] == "completed"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_oauth_folder_stays_public(client: AsyncClient, active_user, echo_flow_data):
+    """An oauth folder advertises no scheme yet, so the route stays public this slice."""
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "oauth"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+
+    assert (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).status_code == 200
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_card_get_public_for_apikey_folder(client: AsyncClient, active_user, echo_flow_data):
+    """Discovery stays public even for an apikey folder (only the jsonrpc route enforces)."""
+    flow_id = await _apikey_flow(active_user, echo_flow_data)
+
+    assert (await client.get(_card_url(flow_id))).status_code == 200
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_stream_rejects_missing_key_plain_401(client: AsyncClient, active_user, echo_flow_data):
+    """message/stream 401s before the SSE body opens (a plain 401, not an SSE error frame)."""
+    flow_id = await _apikey_flow(active_user, echo_flow_data)
+
+    async with client.stream(
+        "POST",
+        f"api/v1/a2a/{flow_id}/jsonrpc",
+        json={"jsonrpc": "2.0", "id": 1, "method": "message/stream", "params": _text_message("hi")},
+    ) as resp:
+        assert resp.status_code == 401
+        assert not resp.headers["content-type"].startswith("text/event-stream")
 
 
 def _response(*, output, outputs=None):

@@ -44,24 +44,30 @@ def _override_str_list(overrides: dict, key: str) -> list[str] | None:
     return None
 
 
+async def folder_auth_type(flow: Flow, session: AsyncSession) -> str:
+    """Read the flow's folder ``auth_type`` (``"none"`` | ``"apikey"`` | ``"oauth"``).
+
+    The single source of truth for what the card advertises (resolve_card_security)
+    and what the JSON-RPC route enforces, so the two can't drift. Plaintext read,
+    no decrypt. No folder / missing folder -> ``"none"`` (public).
+    """
+    if flow.folder_id is None:
+        return "none"
+    # Query the folder explicitly; lazy-loading flow.folder would raise in async.
+    folder = (await session.exec(select(Folder).where(Folder.id == flow.folder_id))).first()
+    return (folder.auth_settings or {}).get("auth_type", "none") if folder else "none"
+
+
 async def resolve_card_security(
     flow: Flow,
     session: AsyncSession,
 ) -> tuple[dict[str, a2a_types.SecurityScheme] | None, list[dict[str, list[str]]] | None]:
     """Reflect the flow's folder auth onto the A2A card (securitySchemes, security).
 
-    Reflect-only: enforcement is F6. No decryption needed — only ``auth_type``
-    is read, which is plaintext. Returns ``(None, None)`` when there is no
-    API-key requirement.
+    Reflects what the JSON-RPC route enforces. Returns ``(None, None)`` when there
+    is no API-key requirement.
     """
-    if flow.folder_id is None:
-        return None, None
-
-    # Query the folder explicitly; lazy-loading flow.folder would raise in async.
-    folder = (await session.exec(select(Folder).where(Folder.id == flow.folder_id))).first()
-    auth_type = (folder.auth_settings or {}).get("auth_type", "none") if folder else "none"
-
-    if auth_type == "apikey":
+    if await folder_auth_type(flow, session) == "apikey":
         scheme = a2a_types.SecurityScheme(
             a2a_types.APIKeySecurityScheme(
                 in_=a2a_types.In.header,
@@ -71,8 +77,8 @@ async def resolve_card_security(
         )
         return {A2A_APIKEY_SCHEME_NAME: scheme}, [{A2A_APIKEY_SCHEME_NAME: []}]
 
-    # "none" / missing / "oauth" -> advertise no security. oauth is out of F2
-    # scope; F6 maps it to the right scheme.
+    # "none" / missing / "oauth" -> advertise no security. oauth has no advertised
+    # scheme yet, so the route leaves it public until that scheme lands.
     return None, None
 
 
