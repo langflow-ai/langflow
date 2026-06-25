@@ -282,8 +282,11 @@ def echo_flow_data():
     return orjson.loads(_ECHO_FLOW.read_bytes())["data"]
 
 
-def _text_message(text, message_id="m1"):
-    return {"message": {"role": "user", "parts": [{"kind": "text", "text": text}], "messageId": message_id}}
+def _text_message(text, message_id="m1", context_id=None):
+    message = {"role": "user", "parts": [{"kind": "text", "text": text}], "messageId": message_id}
+    if context_id is not None:
+        message["contextId"] = context_id
+    return {"message": message}
 
 
 async def _jsonrpc(client: AsyncClient, flow_id, method, params, rpc_id=1, headers=None):
@@ -444,6 +447,80 @@ async def test_jsonrpc_non_agent_or_disabled_returns_404(client: AsyncClient, ac
     assert (await _jsonrpc(client, workflow_id, "message/send", _text_message("hi"))).status_code == 404
     assert (await _jsonrpc(client, disabled_id, "message/send", _text_message("hi"))).status_code == 404
     assert (await _jsonrpc(client, uuid.uuid4(), "message/send", _text_message("hi"))).status_code == 404
+
+
+# --- multi-turn / contextId ------------------------------------------------
+
+
+async def _session_texts(session_id) -> set[str]:
+    """The stored message texts under a chat session_id."""
+    from langflow.services.database.models import MessageTable
+    from sqlmodel import select
+
+    async with session_scope() as session:
+        rows = (await session.exec(select(MessageTable).where(MessageTable.session_id == session_id))).all()
+    return {row.text for row in rows}
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_context_id_threads_into_flow_session(client: AsyncClient, active_user, echo_flow_data):
+    """The A2A contextId becomes the flow session_id, so one conversation maps to one chat session.
+
+    The echo flow's ChatInput/ChatOutput persist messages under the run's session_id. After a
+    message/send carrying a contextId, the stored messages sit under that contextId, proving it
+    threaded through to the v2 run rather than the default str(flow.id) fallback. The returned
+    Task also echoes the same contextId.
+    """
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    context_id = f"conv-{uuid.uuid4().hex}"
+
+    resp = await _jsonrpc(client, flow_id, "message/send", _text_message("hello a2a", context_id=context_id))
+    result = resp.json()["result"]
+
+    assert result["contextId"] == context_id
+
+    # The run persists its output under the run's session_id. Finding the echoed answer
+    # under context_id proves graph.session_id == context_id (the default fallback would
+    # have been str(flow.id)).
+    assert "hello a2a" in await _session_texts(context_id), "the run's messages were not stored under the A2A contextId"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_distinct_context_ids_get_distinct_sessions(client: AsyncClient, active_user, echo_flow_data):
+    """Two different contextIds land in two different sessions (conversations stay isolated)."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    ctx_a = f"conv-{uuid.uuid4().hex}"
+    ctx_b = f"conv-{uuid.uuid4().hex}"
+
+    await _jsonrpc(client, flow_id, "message/send", _text_message("from a", context_id=ctx_a))
+    await _jsonrpc(client, flow_id, "message/send", _text_message("from b", context_id=ctx_b))
+
+    a_texts = await _session_texts(ctx_a)
+    b_texts = await _session_texts(ctx_b)
+
+    assert "from a" in a_texts
+    assert "from b" in b_texts
+    assert "from b" not in a_texts
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_oversized_context_id_falls_back_to_default_session(client: AsyncClient, active_user, echo_flow_data):
+    """An over-long client contextId doesn't reach the indexed session_id column.
+
+    contextId is client-controlled on a public flow, so an absurdly long value is bounded:
+    the run still succeeds, the Task still echoes the contextId, but nothing is stored under
+    it (it falls back to the per-flow default session rather than the unbounded value).
+    """
+    from lfx.schema.workflow import GLOBAL_KEY_MAX_LEN
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    huge_id = "x" * (GLOBAL_KEY_MAX_LEN + 1)
+
+    result = (await _jsonrpc(client, flow_id, "message/send", _text_message("hi", context_id=huge_id))).json()["result"]
+
+    assert result["status"]["state"] == "completed"
+    assert result["contextId"] == huge_id  # the protocol value is preserved, just not used as session_id
+    assert await _session_texts(huge_id) == set()
 
 
 # --- apikey auth enforcement ----------------------------------------------

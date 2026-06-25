@@ -32,7 +32,7 @@ from a2a.server.tasks import TaskStore
 from a2a.types import a2a_pb2 as pb
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
-from lfx.schema.workflow import WorkflowExecutionResponse, WorkflowRunRequest
+from lfx.schema.workflow import GLOBAL_KEY_MAX_LEN, WorkflowExecutionResponse, WorkflowRunRequest
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
 from lfx.workflow.converters import parse_workflow_run_request
 from sqlmodel import select
@@ -96,7 +96,7 @@ class _FlowContextBuilder(DefaultServerCallContextBuilder):
         return context
 
 
-async def _run_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecutionResponse:
+async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | None) -> WorkflowExecutionResponse:
     """Run a flow synchronously through the v2 surface, as the flow owner.
 
     The public A2A endpoint carries no caller identity, so the run executes as
@@ -104,6 +104,10 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecution
     session is held across the up-to-300s run. ``task_id`` doubles as the v2
     job_id when it is a UUID (so run_id == taskId on the sync path); a non-UUID
     client task id falls back to a fresh job_id.
+
+    The A2A ``context_id`` becomes the flow ``session_id`` so multi-turn calls
+    sharing a contextId share chat memory. The SDK mints a contextId when the
+    client omits one, so each conversation gets its own isolated session.
     """
     # Lazy import: langflow.api.v2.workflow pulls in the execution stack and this
     # module is imported during router assembly.
@@ -111,7 +115,15 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecution
 
     user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id)
-    parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow_id), input_value=text, mode="sync"))
+    # context_id is client-controlled on a public flow and lands in the indexed
+    # MessageTable.session_id, so bound it like the public run schema does (Postgres
+    # btree entries are size-capped, so an over-long value could fail the insert). An
+    # over-bound id falls back to the per-flow default session; truncating instead
+    # would collide two long ids into one conversation.
+    session_id = context_id if context_id and len(context_id) <= GLOBAL_KEY_MAX_LEN else None
+    parsed = parse_workflow_run_request(
+        WorkflowRunRequest(flow_id=str(flow_id), input_value=text, mode="sync", session_id=session_id)
+    )
     try:
         job_id = UUID(task_id)
     except ValueError:

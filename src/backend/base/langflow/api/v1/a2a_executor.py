@@ -25,8 +25,9 @@ from lfx.schema.workflow import JobStatus, OutputReason, WorkflowExecutionRespon
 
 logger = logging.getLogger(__name__)
 
-# (flow_id, task_id, input_text) -> the v2 sync run result.
-RunFlow = Callable[[UUID, str, str], Awaitable[WorkflowExecutionResponse]]
+# (flow_id, task_id, input_text, context_id) -> the v2 sync run result.
+# context_id scopes the run's chat memory (the A2A conversation = the flow session).
+RunFlow = Callable[[UUID, str, str, str | None], Awaitable[WorkflowExecutionResponse]]
 
 
 def _answer_texts(response: WorkflowExecutionResponse) -> list[str]:
@@ -71,7 +72,7 @@ class FlowAgentExecutor(AgentExecutor):
 
         text = context.get_user_input()
         try:
-            response = await self._run_flow(UUID(flow_id), context.task_id, text)
+            response = await self._run_flow(UUID(flow_id), context.task_id, text, context.context_id)
         except Exception:
             # Unexpected build/timeout/system failures become a failed Task, not a 500.
             # The endpoint is unauthenticated, so don't hand the caller raw exception
