@@ -10,7 +10,7 @@ from sqlalchemy.orm import aliased
 from sqlmodel import asc, desc, select
 
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead, FlowType
 from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
@@ -587,3 +587,38 @@ def json_schema_from_flow(flow: Flow) -> dict:
         }
 
     return {"type": "object", "properties": properties, "required": required}
+
+
+def suggest_flow_type(flow_data: dict | None) -> FlowType:
+    """Suggest ``agent`` vs ``workflow`` for a flow based on its graph contents.
+
+    Returns ``FlowType.AGENT`` if any node's component is (a subclass of)
+    ``LCAgentComponent``, else ``FlowType.WORKFLOW``. This is a UI default
+    suggestion only, never the stored source of truth, so it never raises:
+    any node it cannot resolve is skipped and the flow falls back to
+    ``WORKFLOW``. The node's class is recovered from its own stored source
+    (``node.data.node.template.code.value``) via ``eval_custom_component_code``,
+    which evaluates the class definition without instantiating or running it.
+    """
+    from lfx.base.agents.agent import LCAgentComponent
+    from lfx.custom.eval import eval_custom_component_code
+
+    nodes = (flow_data or {}).get("nodes") or []
+    for node in nodes:
+        try:
+            code = node["data"]["node"]["template"]["code"]["value"]
+        except (KeyError, TypeError):
+            continue
+        if not code:
+            continue
+        try:
+            component_class = eval_custom_component_code(code)
+        except Exception:  # noqa: BLE001 - a suggestion must never fail the caller
+            logger.debug("suggest_flow_type: skipping a node whose code could not be evaluated", exc_info=True)
+            continue
+        try:
+            if issubclass(component_class, LCAgentComponent):
+                return FlowType.AGENT
+        except TypeError:
+            continue
+    return FlowType.WORKFLOW
