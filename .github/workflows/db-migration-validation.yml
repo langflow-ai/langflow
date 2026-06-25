@@ -155,10 +155,12 @@ jobs:
 
       - name: Upgrade to nightly version
         working-directory: migration-test
+        env:
+          INPUT_NIGHTLY_TAG: ${{ inputs.nightly_tag }}
         run: |
           source .venv/bin/activate
 
-          NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow:latest' }}"
+          NIGHTLY_TAG="${INPUT_NIGHTLY_TAG:-langflowai/langflow:latest}"
           echo "Upgrading to nightly version: $NIGHTLY_TAG"
 
           # Remove the stable install first. The nightly now publishes as a `.devN` pre-release of
@@ -412,8 +414,10 @@ jobs:
 
       - name: Update to nightly image
         working-directory: docker-migration-test
+        env:
+          INPUT_NIGHTLY_TAG: ${{ inputs.nightly_tag }}
         run: |
-          NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow:latest' }}"
+          NIGHTLY_TAG="${INPUT_NIGHTLY_TAG:-langflowai/langflow:latest}"
           # Strip 'v' prefix from version part — Docker images are published without it
           # e.g. langflowai/langflow:v1.10.0.dev20260522 → langflowai/langflow:1.10.0.dev20260522
           VERSION_PART="${NIGHTLY_TAG##*:}"
