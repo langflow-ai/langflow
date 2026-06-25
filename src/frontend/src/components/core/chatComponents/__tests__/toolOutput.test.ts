@@ -1,5 +1,9 @@
 import type { JSONValue } from "@/types/chat";
-import { looksPreformatted, unwrapToolMessage } from "../toolOutput";
+import {
+  isToolMessageEnvelope,
+  looksPreformatted,
+  unwrapToolMessage,
+} from "../toolOutput";
 
 describe("unwrapToolMessage", () => {
   it("unwraps a canonical LangChain ToolMessage shape down to its .content", () => {
@@ -34,6 +38,53 @@ describe("unwrapToolMessage", () => {
     expect(unwrapToolMessage("hello")).toBe("hello");
     expect(unwrapToolMessage(42)).toBe(42);
     expect(unwrapToolMessage(null)).toBe(null);
+  });
+});
+
+describe("isToolMessageEnvelope", () => {
+  it("recognises an envelope carrying non-standard metadata", () => {
+    // The shape ToolOutputDisplay surfaces under a Metadata tab: a
+    // LangChain ToolMessage with the full plumbing (additional_kwargs,
+    // response_metadata, type, artifact) that the user might want to
+    // inspect.
+    expect(
+      isToolMessageEnvelope({
+        content: "Current date: 2026-05-28",
+        additional_kwargs: {},
+        response_metadata: {},
+        type: "tool",
+        name: "get_current_date",
+        id: "x",
+        tool_call_id: "toolu_y",
+        artifact: null,
+        status: "success",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not recognise outputs whose keys are only standard plumbing", () => {
+    // {content, name, id, tool_call_id, status} — no metadata worth
+    // hiding behind a tab. unwrapToolMessage handles this directly.
+    expect(
+      isToolMessageEnvelope({
+        content: "the body",
+        name: "fetch",
+        id: "abc",
+        tool_call_id: "toolu_x",
+        status: "success",
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects objects without a content key", () => {
+    expect(isToolMessageEnvelope({ result: "12" })).toBe(false);
+  });
+
+  it("rejects arrays, primitives, and null", () => {
+    expect(isToolMessageEnvelope([1, 2, 3] as JSONValue)).toBe(false);
+    expect(isToolMessageEnvelope("hi")).toBe(false);
+    expect(isToolMessageEnvelope(42)).toBe(false);
+    expect(isToolMessageEnvelope(null)).toBe(false);
   });
 });
 

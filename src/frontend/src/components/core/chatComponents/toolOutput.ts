@@ -4,13 +4,30 @@ import type { JSONValue } from "@/types/chat";
  * `.content`; the rest is plumbing already exposed by the surrounding
  * accordion trigger (tool name, id, status). Used to decide whether to
  * unwrap an output object down to its `.content` field. */
-const TOOL_MESSAGE_KEYS = new Set([
+export const TOOL_MESSAGE_KEYS = new Set([
   "content",
   "name",
   "id",
   "tool_call_id",
   "status",
 ]);
+
+/** Detect an "envelope" tool output worth surfacing in a tabbed view:
+ * a plain object with a `content` field AND at least one key OUTSIDE the
+ * standard ToolMessage subset (additional_kwargs, response_metadata,
+ * artifact, type, ...). Outputs that only carry standard plumbing keys
+ * (name, id, tool_call_id, status) get unwrapped by `unwrapToolMessage`
+ * — they don't earn a tab strip because there's nothing user-relevant
+ * to hide behind it. */
+export function isToolMessageEnvelope(
+  output: JSONValue,
+): output is Record<string, JSONValue> {
+  if (output === null || typeof output !== "object" || Array.isArray(output)) {
+    return false;
+  }
+  if (!("content" in output)) return false;
+  return Object.keys(output).some((k) => !TOOL_MESSAGE_KEYS.has(k));
+}
 
 /** Strip the LangChain ToolMessage envelope from a tool output, returning
  * the inner `content` value when the keys are a subset of the canonical
