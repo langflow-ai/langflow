@@ -42,7 +42,7 @@ jest.mock("@/customization/hooks/use-custom-navigate", () => ({
 }));
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
-  default: (sel) =>
+  default: (sel: (s: object) => unknown) =>
     sel({
       autoSaving: false,
       saveLoading: false,
@@ -51,11 +51,11 @@ jest.mock("@/stores/flowsManagerStore", () => ({
 }));
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
-  default: (sel) => sel({ setSuccessData: jest.fn() }),
+  default: (sel: (s: object) => unknown) => sel({ setSuccessData: jest.fn() }),
 }));
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: (sel) =>
+  default: jest.fn((sel: (s: object) => unknown) =>
     sel({
       onFlowPage: true,
       isBuilding: false,
@@ -68,18 +68,43 @@ jest.mock("@/stores/flowStore", () => ({
         locked: false,
       },
     }),
+  ),
 }));
 jest.mock("@/stores/shortcuts", () => ({
   __esModule: true,
-  useShortcutsStore: (sel) => sel({ changesSave: "mod+s" }),
+  useShortcutsStore: (sel: (s: object) => unknown) =>
+    sel({ changesSave: "mod+s" }),
 }));
 
 // Avoid pulling utils that depend on darkStore
 jest.mock("@/utils/utils", () => ({
   __esModule: true,
-  cn: (...args) => args.filter(Boolean).join(" "),
+  cn: (...args: unknown[]) => (args.filter(Boolean) as string[]).join(" "),
   getNumberFromString: () => 0,
 }));
+
+jest.mock("@/components/ui/popover", () => ({
+  Popover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PopoverAnchor: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  PopoverTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  PopoverContent: ({
+    children,
+    "aria-label": ariaLabel,
+  }: {
+    children: React.ReactNode;
+    "aria-label"?: string;
+  }) => (
+    <div data-testid="popover-content" aria-label={ariaLabel}>
+      {children}
+    </div>
+  ),
+}));
+
+import React from "react";
 
 // styleUtils imports lucide dynamic icons; stub to avoid resolution
 jest.mock("lucide-react/dynamicIconImports", () => ({}), { virtual: true });
@@ -100,5 +125,65 @@ describe("FlowMenu MenuBar", () => {
     render(<MenuBar />);
     fireEvent.click(screen.getByTestId("save-flow-button"));
     expect(mockSave).toHaveBeenCalled();
+  });
+
+  describe("Accessibility — aria labels", () => {
+    const flowStoreMock = jest.requireMock("@/stores/flowStore");
+
+    afterEach(() => {
+      flowStoreMock.default.mockReset();
+      flowStoreMock.default.mockImplementation((sel: (s: object) => unknown) =>
+        sel({
+          onFlowPage: true,
+          isBuilding: false,
+          currentFlow: {
+            id: "1",
+            name: "Flow",
+            folder_id: "f1",
+            icon: "Workflow",
+            gradient: "0",
+            locked: false,
+          },
+        }),
+      );
+    });
+
+    it("menu_bar_display is a button element for keyboard and screen reader access", () => {
+      render(<MenuBar />);
+      const trigger = screen.getByTestId("menu_bar_display");
+      expect(trigger.tagName).toBe("BUTTON");
+    });
+
+    it("menu_bar_display button has aria-label matching the flow name", () => {
+      render(<MenuBar />);
+      const trigger = screen.getByTestId("menu_bar_display");
+      expect(trigger).toHaveAttribute("aria-label", "Flow");
+    });
+
+    it("menu_bar_display aria-label falls back to untitled flow when name is absent", () => {
+      flowStoreMock.default.mockImplementation((sel: (s: object) => unknown) =>
+        sel({
+          onFlowPage: true,
+          isBuilding: false,
+          currentFlow: {
+            id: "1",
+            name: undefined,
+            folder_id: "f1",
+            icon: "Workflow",
+            gradient: "0",
+            locked: false,
+          },
+        }),
+      );
+      render(<MenuBar />);
+      const trigger = screen.getByTestId("menu_bar_display");
+      expect(trigger).toHaveAttribute("aria-label", "Untitled Flow");
+    });
+
+    it("popover content has an aria-label of 'Flow settings' for screen readers", () => {
+      render(<MenuBar />);
+      const content = screen.getByTestId("popover-content");
+      expect(content).toHaveAttribute("aria-label", "Flow settings");
+    });
   });
 });
