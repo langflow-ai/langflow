@@ -135,8 +135,13 @@ jobs:
         run: |
           cd src/frontend
           if ls coverage/accessibility-reports/*.json > /dev/null 2>&1; then
+            npm run a11y:html-report --silent
             npm run a11y:report --silent
             {
+              echo '## Accessibility Report'
+              echo ''
+              echo 'Download the `ibm-a11y-reports-*` artifact and open `index.html` for the route-by-route HTML report.'
+              echo ''
               echo '```text'
               npm run a11y:report --silent
               echo '```'

@@ -12,9 +12,10 @@ Use this skill when asked to scan Langflow frontend pages for accessibility issu
 Use the Python script:
 
 ```bash
-uv run python scripts/a11y_scan.py \
+uv run python scripts/a11y/a11y_scan.py \
   --url http://localhost:3000 \
-  --routes /flows,/components,/mcp,/assets/files,/settings/general \
+  --routes-file scripts/a11y/a11y_routes.json \
+  --route-group static \
   --out /tmp/langflow-a11y-report.json \
   --markdown /tmp/langflow-a11y-report.md \
   --html /tmp/langflow-a11y-report.html \
@@ -24,6 +25,8 @@ uv run python scripts/a11y_scan.py \
 Script options:
 
 - `--url`: base app URL, usually `http://localhost:3000`.
+- `--routes-file`: route manifest JSON file. Prefer `scripts/a11y/a11y_routes.json`.
+- `--route-group`: manifest group to scan. Default: `static`.
 - `--routes`: comma-separated route paths to scan.
 - `--route`: one route path; can be repeated instead of `--routes`.
 - `--levels`: comma-separated issue levels. Default: `violation`.
@@ -37,17 +40,21 @@ Script options:
 
 ## Route Selection
 
-Always inspect `src/frontend/src/routes.tsx` before choosing routes.
+Use `scripts/a11y/a11y_routes.json` as the source of truth for route selection.
 
-Pick routes that exist in that file. Prefer a small representative set unless the user asks for full coverage.
+The normal CI/local batch is the manifest `static` group. Prefer that unless the user asks for custom, dynamic, or gated routes.
 
-Common route set:
+Common manifest-backed command:
 
-- `/flows`
-- `/components`
-- `/mcp`
-- `/assets/files`
-- `/settings/general`
+```bash
+uv run python scripts/a11y/a11y_scan.py \
+  --url http://localhost:3000 \
+  --routes-file scripts/a11y/a11y_routes.json \
+  --route-group static \
+  --out /tmp/langflow-a11y-static.json \
+  --markdown /tmp/langflow-a11y-static.md \
+  --html /tmp/langflow-a11y-static.html
+```
 
 Dynamic routes need real IDs before scanning:
 
@@ -63,7 +70,7 @@ For dynamic routes, get IDs from the loaded app, API responses, or existing test
 Scan one route:
 
 ```bash
-uv run python scripts/a11y_scan.py \
+uv run python scripts/a11y/a11y_scan.py \
   --url http://localhost:3000 \
   --route /flows \
   --out /tmp/langflow-a11y-flows.json
@@ -72,9 +79,10 @@ uv run python scripts/a11y_scan.py \
 Scan multiple routes:
 
 ```bash
-uv run python scripts/a11y_scan.py \
+uv run python scripts/a11y/a11y_scan.py \
   --url http://localhost:3000 \
-  --routes /flows,/components,/settings/general \
+  --routes-file scripts/a11y/a11y_routes.json \
+  --route-group static \
   --out /tmp/langflow-a11y-report.json \
   --markdown /tmp/langflow-a11y-report.md \
   --html /tmp/langflow-a11y-report.html
@@ -83,9 +91,10 @@ uv run python scripts/a11y_scan.py \
 Scan more than violations:
 
 ```bash
-uv run python scripts/a11y_scan.py \
+uv run python scripts/a11y/a11y_scan.py \
   --url http://localhost:3000 \
-  --routes /flows,/settings/general \
+  --routes-file scripts/a11y/a11y_routes.json \
+  --route-group static \
   --levels violation,potentialviolation,recommendation \
   --out /tmp/langflow-a11y-expanded.json
 ```
@@ -93,7 +102,7 @@ uv run python scripts/a11y_scan.py \
 Scan route plus modal states:
 
 ```bash
-uv run python scripts/a11y_scan.py \
+uv run python scripts/a11y/a11y_scan.py \
   --url http://localhost:3000 \
   --states-file /tmp/langflow-a11y-states.json \
   --out /tmp/langflow-a11y-modal-report.json \

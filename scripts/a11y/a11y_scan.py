@@ -48,6 +48,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--routes", default="", help="Comma-separated routes to scan.")
     parser.add_argument("--route", action="append", default=[], help="Route to scan. Can repeat.")
     parser.add_argument(
+        "--routes-file",
+        default="",
+        help="Optional route manifest JSON file. Uses the selected route group when --routes/--route are omitted.",
+    )
+    parser.add_argument(
+        "--route-group",
+        default="static",
+        help="Route manifest group to scan. Default: static.",
+    )
+    parser.add_argument(
         "--states-file",
         default="",
         help="Optional JSON file with modal/state actions to scan after route load.",
@@ -122,6 +132,33 @@ def load_states_file(path_value: str) -> dict[str, list[dict[str, Any]]]:
             raise ValueError(f"states for route {entry['route']} must be a list")
         states_by_route[entry["route"]] = states
     return states_by_route
+
+
+def load_routes_file(path_value: str, route_group: str) -> list[str]:
+    if not path_value:
+        return []
+
+    with Path(path_value).open(encoding="utf-8") as file:
+        manifest = json.load(file)
+
+    if not isinstance(manifest, dict):
+        raise ValueError("--routes-file must contain a JSON object")
+
+    entries = manifest.get(route_group)
+    if not isinstance(entries, list):
+        raise ValueError(f"--routes-file has no list route group named {route_group!r}")
+
+    routes: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError(f"Route group {route_group!r} entries must be objects")
+        path_value = entry.get("path")
+        if isinstance(path_value, str):
+            routes.append(path_value)
+
+    if not routes:
+        raise ValueError(f"Route group {route_group!r} has no concrete path entries")
+    return routes
 
 
 def find_chromium_executable(explicit_path: str) -> str | None:
@@ -923,7 +960,8 @@ async def main() -> None:
     args = parse_args()
     states_by_route = load_states_file(args.states_file)
     route_args = split_csv(args.routes) + args.route
-    routes = route_args or list(states_by_route.keys()) or [urlparse(args.url).path or "/"]
+    manifest_routes = load_routes_file(args.routes_file, args.route_group)
+    routes = route_args or manifest_routes or list(states_by_route.keys()) or [urlparse(args.url).path or "/"]
     levels = split_csv(args.levels)
     ace_script = fetch_ace_script(args.ace_url)
     executable_path = find_chromium_executable(args.browser_executable)
