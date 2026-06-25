@@ -30,6 +30,7 @@ interface FormInputBranchProps {
   blurOnEnter: boolean;
   name?: string;
   id: string;
+  inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
   allowAutofill?: boolean;
 }
 
@@ -50,6 +51,7 @@ function FormInputBranch({
   blurOnEnter,
   name,
   id,
+  inputProps,
   allowAutofill,
 }: FormInputBranchProps) {
   const [cursor, setCursor] = useState<number | null>(null);
@@ -90,6 +92,7 @@ function FormInputBranch({
   return (
     <Form.Control asChild>
       <Input
+        {...inputProps}
         name={name}
         id={"form-" + id}
         ref={refInput}
@@ -149,6 +152,7 @@ export default function InputComponent({
   objectOptions,
   isObjectOption = false,
   name,
+  inputProps,
   onChangeFolderName,
   nodeStyle,
   isToolMode,
@@ -194,6 +198,7 @@ export default function InputComponent({
           blurOnEnter={blurOnEnter}
           name={name}
           id={id}
+          inputProps={inputProps}
           allowAutofill={allowAutofill}
         />
       ) : (
@@ -312,7 +317,8 @@ export default function InputComponent({
       {password && (!setSelectedOption || selectedOption === "") && (
         <button
           type="button"
-          tabIndex={-1}
+          aria-label={pwdVisible ? "Hide password" : "Show password"}
+          aria-pressed={pwdVisible}
           className={classNames(
             "mb-px mr-3 p-0",
             editNode

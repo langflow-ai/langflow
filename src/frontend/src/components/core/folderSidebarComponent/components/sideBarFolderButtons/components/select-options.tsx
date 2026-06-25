@@ -52,11 +52,12 @@ export const SelectOptions = ({
           styleClasses="z-50"
         >
           <SelectTrigger
-            className="w-fit"
+            className="h-6 w-6 min-h-[24px] min-w-[24px]"
             id={`options-trigger-${item.name}`}
             data-testid={
               "more-options-button" + `_${convertTestName(item?.name ?? "")}`
             }
+            aria-label={t("folder.optionsFor", { name: item.name })}
           >
             <IconComponent
               name={"MoreHorizontal"}
