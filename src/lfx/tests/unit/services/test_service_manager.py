@@ -359,6 +359,27 @@ class TestTeardown:
         # Services should be cleared
         assert ServiceType.STORAGE_SERVICE not in service_manager.services
 
+    @pytest.mark.asyncio
+    async def test_teardown_clears_factories_registered_flag(self, service_manager):
+        """teardown() must clear the factories-registered flag, not just the dict.
+
+        get_service() (both lfx and langflow) re-registers factories only when
+        are_factories_registered() returns False. teardown() empties
+        self.factories, so if it leaves the flag set, every later lookup skips
+        re-registration and raises NoFactoryRegisteredError. That surfaced as
+        flow-execution 500s once Graph.arun routed through the executor service
+        and a sibling test had torn the global manager down.
+        """
+        service_manager.register_service_class(ServiceType.STORAGE_SERVICE, LocalStorageService)
+        service_manager.get(ServiceType.STORAGE_SERVICE)
+        service_manager.set_factory_registered()
+        assert service_manager.are_factories_registered() is True
+
+        await service_manager.teardown()
+
+        assert service_manager.factories == {}
+        assert service_manager.are_factories_registered() is False
+
 
 class TestConfigDirectorySource:
     """Tests for config_dir parameter with real services."""
