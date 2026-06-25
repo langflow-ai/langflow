@@ -380,9 +380,22 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         self._sweep_task: asyncio.Task | None = None
 
     def _ensure_sweep_task(self) -> None:
-        """Start the background sweep task the first time the cache is written to."""
         if self.expiration_time is None:
             return
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return  # No running loop; cannot schedule a task right now
+
+        if (
+            self._sweep_task is not None
+            and not self._sweep_task.done()
+            and self._sweep_task.get_loop() is not running_loop
+        ):
+            # Task is bound to a different loop; discard it without awaiting.
+            self._sweep_task.cancel()
+            self._sweep_task = None
+
         if self._sweep_task is None or self._sweep_task.done():
             self._sweep_task = asyncio.create_task(self._sweep_loop())
 
@@ -405,12 +418,18 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
                 self.cache.pop(k, None)
 
     async def teardown(self) -> None:
-        """Cancel the background sweep task."""
-        if self._sweep_task is not None:
-            self._sweep_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._sweep_task
-            self._sweep_task = None
+        # Cancel the sweep task, awaiting it only if it's on the current event loop.
+        if self._sweep_task is None:
+            return
+        self._sweep_task.cancel()
+        try:
+            running_loop = asyncio.get_running_loop()
+            if self._sweep_task.get_loop() is running_loop:
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self._sweep_task
+        except RuntimeError:
+            pass
+        self._sweep_task = None
 
     async def get(self, key, lock: asyncio.Lock | None = None):
         async with lock or self.lock:
