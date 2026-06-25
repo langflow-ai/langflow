@@ -681,3 +681,58 @@ async def get_transactions(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+
+from pydantic import BaseModel as _BaseModel  # noqa: E402
+
+
+class MessageSummary(_BaseModel):
+    """Summary statistics for messages belonging to the current user."""
+
+    total_messages: int
+    total_sessions: int
+    flows_with_messages: int
+
+
+@router.get("/messages/summary", dependencies=[Depends(get_current_active_user)])
+async def get_messages_summary(
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> MessageSummary:
+    """Return aggregate counts of messages, sessions, and flows for the current user."""
+    from sqlmodel import func as sql_func
+
+    owned_flow_ids = select(Flow.id).where(Flow.user_id == current_user.id)
+
+    total_messages = (
+        await session.exec(
+            select(sql_func.count()).select_from(MessageTable).where(MessageTable.flow_id.in_(owned_flow_ids))
+        )
+    ).first() or 0
+
+    session_subq = (
+        select(MessageTable.session_id)
+        .where(MessageTable.flow_id.in_(owned_flow_ids))
+        .distinct()
+        .subquery()
+    )
+    total_sessions = (
+        await session.exec(select(sql_func.count()).select_from(session_subq))
+    ).first() or 0
+
+    flow_subq = (
+        select(MessageTable.flow_id)
+        .where(MessageTable.flow_id.in_(owned_flow_ids))
+        .distinct()
+        .subquery()
+    )
+    flows_with_messages = (
+        await session.exec(select(sql_func.count()).select_from(flow_subq))
+    ).first() or 0
+
+    return MessageSummary(
+        total_messages=total_messages,
+        total_sessions=total_sessions,
+        flows_with_messages=flows_with_messages,
+    )
