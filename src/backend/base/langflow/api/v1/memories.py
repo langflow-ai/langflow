@@ -28,6 +28,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.schema.legacy_render import render_v1_content_blocks
 from pydantic import BaseModel
 from sqlmodel import select
 
@@ -255,7 +256,7 @@ async def list_memory_base_messages(
                     sender_name=msg.sender_name,
                     session_id=msg.session_id,
                     text=msg.text,
-                    content_blocks=msg.content_blocks or [],
+                    content_blocks=render_v1_content_blocks(msg.content_blocks) or [],
                     job_id=mir.job_id,
                     ingested_at=mir.ingested_at,
                 )

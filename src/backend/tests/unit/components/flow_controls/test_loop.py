@@ -383,7 +383,7 @@ class TestLoopComponentSubgraphExecution:
         event_manager_received = []
 
         # Create an async generator that yields mock results
-        async def mock_async_start(event_manager=None):
+        async def mock_async_start(event_manager=None, **_kwargs):
             event_manager_received.append(event_manager)
             yield MagicMock(valid=True, result_dict={"outputs": {}})
 

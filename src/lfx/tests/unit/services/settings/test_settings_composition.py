@@ -178,6 +178,7 @@ EXPECTED_FIELDS = {
     "redis_queue_polling_stale_threshold_s",
     "redis_queue_polling_watchdog_interval_s",
     "max_ingestion_timeout_secs",
+    "executor_kind",
     # UiSettings
     "embedded_mode",
     "hide_getting_started_progress",
