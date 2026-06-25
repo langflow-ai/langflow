@@ -26,13 +26,14 @@ import time
 
 async def authenticate_setup_client(client) -> tuple[str, str, str]:
     """Return an access token using explicit credentials or AUTO_LOGIN."""
-    username = os.environ.get("LANGFLOW_SUPERUSER", "")
+    configured_username = os.environ.get("LANGFLOW_SUPERUSER", "")
     password = os.environ.get("LANGFLOW_SUPERUSER_PASSWORD", "")
 
-    if bool(username) != bool(password):
-        raise RuntimeError("Set both LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD, or neither.")
+    if configured_username and not password:
+        raise RuntimeError("Set LANGFLOW_SUPERUSER_PASSWORD when LANGFLOW_SUPERUSER is set, or unset both.")
 
-    if username and password:
+    if password:
+        username = configured_username or "langflow"
         login_response = await client.post(
             "/api/v1/login",
             data={"username": username, "password": password},
@@ -45,7 +46,7 @@ async def authenticate_setup_client(client) -> tuple[str, str, str]:
     auto_login_response = await client.get("/api/v1/auto_login")
     if auto_login_response.status_code != 200:
         raise RuntimeError(
-            "Authentication failed. Set LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD, "
+            "Authentication failed. Set LANGFLOW_SUPERUSER_PASSWORD and optionally LANGFLOW_SUPERUSER, "
             "or enable LANGFLOW_AUTO_LOGIN."
         )
     return auto_login_response.json()["access_token"], "auto-login", ""
