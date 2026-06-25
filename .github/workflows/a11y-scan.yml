@@ -136,15 +136,12 @@ jobs:
           cd src/frontend
           if ls coverage/accessibility-reports/*.json > /dev/null 2>&1; then
             npm run a11y:html-report --silent
-            npm run a11y:report --silent
             {
               echo '## Accessibility Report'
               echo ''
-              echo 'Download the `ibm-a11y-reports-*` artifact and open `index.html` for the route-by-route HTML report.'
+              echo 'Full route-by-route HTML report: download the `ibm-a11y-reports-${{ github.run_attempt }}` artifact from this run and open `index.html`.'
               echo ''
-              echo '```text'
-              npm run a11y:report --silent
-              echo '```'
+              npm run a11y:job-summary --silent
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No accessibility reports were generated." | tee -a "$GITHUB_STEP_SUMMARY"
