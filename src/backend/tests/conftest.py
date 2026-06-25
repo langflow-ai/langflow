@@ -318,6 +318,8 @@ def distributed_client_fixture(
         db_path = Path(db_dir) / "test.db"
         monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
         monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
         # monkeypatch langflow.services.task.manager.USE_CELERY to True
         # monkeypatch.setattr(manager, "USE_CELERY", True)
         monkeypatch.setattr(celery_app, "celery_app", celery_app.make_celery("langflow", Config))
@@ -470,6 +472,8 @@ async def client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
             monkeypatch.setenv("DO_NOT_TRACK", "true")
             if "load_flows" in request.keywords:
                 shutil.copyfile(
