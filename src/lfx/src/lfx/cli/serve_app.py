@@ -598,6 +598,22 @@ async def run_flow_generator_for_serve(
 # -----------------------------------------------------------------------------
 
 
+def _ensure_variable_service_registered() -> None:
+    """Register the minimal in-memory :class:`VariableService` if none is registered.
+
+    Idempotent and safe to call on every worker startup: a previously registered
+    service (e.g. a real DB-backed one in a full Langflow process) is left untouched.
+    """
+    from lfx.services.deps import get_variable_service
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+    from lfx.services.variable.service import VariableService
+
+    if get_variable_service() is not None:
+        return
+    get_service_manager().register_service_class(ServiceType.VARIABLE_SERVICE, VariableService, override=False)
+
+
 def create_multi_serve_app(
     *,
     registry: FlowRegistry,
@@ -622,6 +638,17 @@ def create_multi_serve_app(
         version="1.0.0",
     )
     app.state.registry = registry
+
+    # Register the minimal in-memory VariableService so the unified-model credential
+    # resolver can see request-scoped ``global_vars``. Standalone lfx ships no
+    # VariableService factory, so ``get_variable_service()`` is ``None`` by default;
+    # every credential path that resolves *through* the service
+    # (``get_api_key_for_provider``, ``get_all_variables_for_provider``,
+    # ``model_utils``, KB connectors) would then never consult the request scope and
+    # silently fall back to ``os.environ`` — defeating ``--no-env-fallback`` + per-request
+    # credential injection. The service reads request scope first, then env (honoring the
+    # no-env-fallback contract), so registering it makes those paths request-scope-aware.
+    _ensure_variable_service_registered()
 
     identity_config = identity_config or IdentityConfig()
     app.state.identity_config = identity_config

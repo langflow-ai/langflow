@@ -30,6 +30,98 @@ def _make_settings_service(*, allow_custom_components: bool = False):
     )
 
 
+_MISSING = object()
+
+
+def test_create_multi_serve_app_registers_variable_service():
+    """Regression: building the serve app must register the minimal VariableService.
+
+    The credential resolver (``get_api_key_for_provider``, ``get_all_variables_for_provider``,
+    ``model_utils``, KB connectors) resolves request-scoped ``global_vars`` only *through*
+    ``get_variable_service()``. Standalone lfx ships no VariableService factory, so before
+    this fix the serve worker left it unregistered (``None``) and request-scoped model
+    credentials silently fell through to ``os.environ`` — and to nothing under
+    ``--no-env-fallback``. Building the serve app must register it so all of those paths
+    become request-scope-aware.
+    """
+    from lfx.services.deps import get_variable_service
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+    from lfx.services.variable.service import VariableService
+
+    manager = get_service_manager()
+    prev_class = manager.service_classes.get(ServiceType.VARIABLE_SERVICE, _MISSING)
+    prev_instance = manager.services.get(ServiceType.VARIABLE_SERVICE, _MISSING)
+    manager.services.pop(ServiceType.VARIABLE_SERVICE, None)
+    manager.service_classes.pop(ServiceType.VARIABLE_SERVICE, None)
+    try:
+        assert get_variable_service() is None, "precondition: standalone lfx has no VariableService"
+        create_multi_serve_app(registry=FlowRegistry())
+        assert isinstance(get_variable_service(), VariableService)
+    finally:
+        manager.services.pop(ServiceType.VARIABLE_SERVICE, None)
+        manager.service_classes.pop(ServiceType.VARIABLE_SERVICE, None)
+        if prev_class is not _MISSING:
+            manager.service_classes[ServiceType.VARIABLE_SERVICE] = prev_class
+        if prev_instance is not _MISSING:
+            manager.services[ServiceType.VARIABLE_SERVICE] = prev_instance
+
+
+async def test_serve_app_resolves_request_scoped_credential(monkeypatch):
+    """End-to-end: the serve app's real registration lets a request-scoped global_var
+    resolve through ``get_api_key_for_provider`` under ``--no-env-fallback``.
+
+    Unlike the ``variable_service_registered`` fixture in ``test_credentials.py``, this
+    drives the *actual* registration path (``create_multi_serve_app``) — the exact chain
+    the original bug broke (service unregistered -> request scope never consulted). A
+    different value is left in ``os.environ`` to prove the request scope wins and env is
+    not the source.
+    """
+    from lfx.base.models.unified_models import (
+        get_api_key_for_provider,
+        get_model_provider_variable_mapping,
+    )
+    from lfx.services.deps import get_variable_service
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+    from lfx.services.variable.request_scope import (
+        activate_no_env_fallback,
+        activate_request_variables,
+        reset_no_env_fallback,
+        reset_request_variables,
+    )
+
+    var = get_model_provider_variable_mapping()["OpenAI"]
+    manager = get_service_manager()
+    prev_class = manager.service_classes.get(ServiceType.VARIABLE_SERVICE, _MISSING)
+    prev_instance = manager.services.get(ServiceType.VARIABLE_SERVICE, _MISSING)
+    manager.services.pop(ServiceType.VARIABLE_SERVICE, None)
+    manager.service_classes.pop(ServiceType.VARIABLE_SERVICE, None)
+    monkeypatch.setenv(var, "sk-env-must-not-win")  # pragma: allowlist secret
+
+    scope_token = nofb_token = None
+    try:
+        # The serve app factory performs the registration — no test fixture involved.
+        create_multi_serve_app(registry=FlowRegistry())
+        assert get_variable_service() is not None
+
+        nofb_token = activate_no_env_fallback(disabled=True)
+        scope_token = activate_request_variables({var: "sk-from-request"})  # pragma: allowlist secret
+        resolved = get_api_key_for_provider("11111111-1111-1111-1111-111111111111", "OpenAI", None)
+        assert resolved == "sk-from-request"  # request scope wins; env ignored under no_env_fallback
+    finally:
+        if scope_token is not None:
+            reset_request_variables(scope_token)
+        if nofb_token is not None:
+            reset_no_env_fallback(nofb_token)
+        manager.services.pop(ServiceType.VARIABLE_SERVICE, None)
+        manager.service_classes.pop(ServiceType.VARIABLE_SERVICE, None)
+        if prev_class is not _MISSING:
+            manager.service_classes[ServiceType.VARIABLE_SERVICE] = prev_class
+        if prev_instance is not _MISSING:
+            manager.services[ServiceType.VARIABLE_SERVICE] = prev_instance
+
+
 def _blocked_raw_graph() -> dict:
     return {
         "nodes": [
