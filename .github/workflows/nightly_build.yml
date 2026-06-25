@@ -314,8 +314,9 @@ jobs:
     with:
       # Pass Docker image reference for docker-compose and version without 'v' prefix for pip
       # release_tag format: v1.10.0.dev20260522
-      # We need: langflowai/langflow-nightly:1.10.0.dev20260522 for Docker
-      nightly_tag: langflowai/langflow-nightly:${{ needs.create-nightly-tag.outputs.release_tag }}
+      # We need: langflowai/langflow:1.10.0.dev20260522 for Docker (nightly .devX images are
+      # pushed to the canonical langflowai/langflow repo to match PyPI langflow package naming)
+      nightly_tag: langflowai/langflow:${{ needs.create-nightly-tag.outputs.release_tag }}
     secrets: inherit
 
   slack-notification:
