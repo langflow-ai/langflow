@@ -185,21 +185,21 @@ def test_windows_multiworker_default_falls_back_to_uvicorn(monkeypatch, tmp_path
         temp_file_to_cleanup=None,
         verbose_print=lambda *_a, **_k: None,
         max_requests=None,
-        limit_concurrency=1,
     )
 
     # Falls back to the uvicorn factory multi-worker path, not gunicorn.
     assert called["app"] == "lfx.cli.serve_app:create_serve_app"
     assert called["kwargs"].get("workers") == 2
     assert called["kwargs"].get("factory") is True
-    # --limit-concurrency is honored on Windows (uvicorn-native); +1 because uvicorn
-    # counts the active connection, so "1 in-flight" maps to uvicorn's 2.
-    assert called["kwargs"].get("limit_concurrency") == 2
     _assert_worker_env_cleaned()
 
 
-def test_windows_multiworker_with_max_requests_errors(monkeypatch, tmp_path):
-    """On Windows, requesting isolation via --max-requests is refused (gunicorn unavailable)."""
+def test_windows_multiworker_with_max_requests_errors(monkeypatch, tmp_path, capsys):
+    """On Windows, requesting isolation via --max-requests is refused (gunicorn unavailable).
+
+    The refusal must be visible without ``-v`` (verbose_print is a no-op by default), so the
+    message goes to stderr via typer.echo — assert it actually reaches the user.
+    """
     import typer
     from lfx.cli import commands
 
@@ -217,34 +217,11 @@ def test_windows_multiworker_with_max_requests_errors(monkeypatch, tmp_path):
             temp_file_to_cleanup=None,
             verbose_print=lambda *_a, **_k: None,
             max_requests=1,
-            limit_concurrency=None,
         )
 
+    # Loud failure: the error reaches stderr even though verbose_print is a no-op.
+    assert "--max-requests" in capsys.readouterr().err
     _assert_worker_env_cleaned()
-
-
-def test_lfx_uvicorn_worker_applies_limit_concurrency(monkeypatch):
-    """LFXUvicornWorker reads LFX_SERVE_LIMIT_CONCURRENCY and sets it on the uvicorn config.
-
-    Tested via the static helper so we don't have to construct a full gunicorn worker.
-    """
-    from types import SimpleNamespace
-
-    from lfx.cli.serve_app import _SERVE_LIMIT_CONCURRENCY_ENV
-    from lfx.cli.serve_gunicorn import LFXUvicornWorker
-
-    cfg = SimpleNamespace(limit_concurrency=None)
-    monkeypatch.setenv(_SERVE_LIMIT_CONCURRENCY_ENV, "1")
-    LFXUvicornWorker._apply_limit_concurrency(cfg)
-    # +1: uvicorn counts the active connection, so "1 in-flight" maps to uvicorn's 2
-    # (uvicorn's limit_concurrency=1 would reject every request).
-    assert cfg.limit_concurrency == 2
-
-    # Unset -> left at the uvicorn default (None), i.e. unlimited.
-    cfg2 = SimpleNamespace(limit_concurrency=None)
-    monkeypatch.delenv(_SERVE_LIMIT_CONCURRENCY_ENV, raising=False)
-    LFXUvicornWorker._apply_limit_concurrency(cfg2)
-    assert cfg2.limit_concurrency is None
 
 
 async def test_guarded_execute_serializes(monkeypatch):
@@ -434,7 +411,7 @@ def test_pre_fork_flags_ghost_thread_but_not_benign():
 
 
 # ---------------------------------------------------------------------------
-# Opt-in flags: --reset-environ (os.environ snapshot/restore) and --sync-workers
+# Opt-in flags: --reset-environ (os.environ snapshot/restore) and --use-sync-workers
 # (gunicorn sync worker + a2wsgi bridge). Both default OFF so the committed
 # behavior is unchanged; these tests assert the opt-in wiring.
 # ---------------------------------------------------------------------------
@@ -508,7 +485,6 @@ def _capture_gunicorn_launch(monkeypatch, **launch_overrides):
         "temp_file_to_cleanup": None,
         "verbose_print": lambda *_a, **_k: None,
         "max_requests": None,
-        "limit_concurrency": None,
     }
     kwargs.update(launch_overrides)
     commands._launch_workers(**kwargs)
@@ -516,26 +492,28 @@ def _capture_gunicorn_launch(monkeypatch, **launch_overrides):
 
 
 def test_launch_workers_default_uses_async_uvicorn_worker(monkeypatch):
-    """Default (no --sync-workers): the async LFXUvicornWorker serves the ASGI app."""
+    """Default (no --use-sync-workers): the async LFXUvicornWorker serves the ASGI app."""
     captured = _capture_gunicorn_launch(monkeypatch)
     assert captured["app_import_string"] == "lfx.cli.serve_preloaded_app:app"
     assert captured["options"]["worker_class"] == "lfx.cli.serve_gunicorn.LFXUvicornWorker"
 
 
 def test_launch_workers_sync_workers_uses_sync_worker(monkeypatch):
-    """--sync-workers swaps in gunicorn's sync worker serving the a2wsgi WSGI bridge."""
+    """--use-sync-workers swaps in gunicorn's sync worker serving the a2wsgi WSGI bridge."""
     captured = _capture_gunicorn_launch(monkeypatch, sync_workers=True)
     assert captured["app_import_string"] == "lfx.cli.serve_preloaded_app:wsgi_application"
     assert captured["options"]["worker_class"] == "sync"
 
 
-def test_launch_workers_sync_workers_without_a2wsgi_errors(monkeypatch):
-    """--sync-workers fails fast in the parent when a2wsgi is not installed."""
+def test_launch_workers_sync_workers_without_a2wsgi_errors(monkeypatch, capsys):
+    """--use-sync-workers fails fast in the parent when a2wsgi is not installed."""
     import typer
 
     monkeypatch.setitem(sys.modules, "a2wsgi", None)  # forces `import a2wsgi` to raise ImportError
     with pytest.raises(typer.Exit):
         _capture_gunicorn_launch(monkeypatch, sync_workers=True)
+    # Loud failure: the install hint reaches stderr (not gated behind -v / verbose_print).
+    assert "a2wsgi" in capsys.readouterr().err
     # env vars set before the failed launch are still cleaned up
     from lfx.cli.serve_app import _SERVE_RESET_ENVIRON_ENV
 

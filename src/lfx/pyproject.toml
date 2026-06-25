@@ -13,12 +13,16 @@ dependencies = [
     "pydantic>=2.0.0,<3.0.0",
     "pillow>=11.1.0,<13.0.0",
     "fastapi>=0.135.0,<1.0.0",
-    "uvicorn>=0.34.3,<1.0.0",
+    # [standard] pulls uvloop + httptools so the `lfx serve` gunicorn/uvicorn worker path
+    # gets the fast event loop and HTTP parser even for a standalone `pip install lfx`
+    # (matches FastAPI's `pip install "uvicorn[standard]" gunicorn` guidance). uvloop carries
+    # its own non-Windows marker, so this stays cross-platform.
+    "uvicorn[standard]>=0.34.3,<1.0.0",
     # gunicorn powers `lfx serve --workers N` (preload + max_requests=1 per-request
     # isolation). Unix-only; on Windows multi-worker serve is refused with a clear error.
     "gunicorn>=22.0; sys_platform != 'win32'",
     # a2wsgi bridges the ASGI app onto gunicorn's sync worker for
-    # `lfx serve --sync-workers` (one whole request per worker / idle-worker routing).
+    # `lfx serve --use-sync-workers` (one whole request per worker / idle-worker routing).
     # Unix-only like gunicorn; the sync-worker path is refused on Windows.
     "a2wsgi>=1.10.0; sys_platform != 'win32'",
     "typer>=0.16.0,<1.0.0",

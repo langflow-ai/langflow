@@ -2,6 +2,7 @@
 
 import typer
 
+from lfx.cli import _serve_help
 from lfx.upgrade.cli_gate import UpgradeFlowMode
 
 
@@ -147,43 +148,17 @@ def register(app: typer.Typer) -> None:
         flow_dir: str | None = typer.Option(
             None,
             "--flow-dir",
-            help=(
-                "Directory for filesystem-backed flow storage. "
-                "All uvicorn workers sharing this path will serve the same flows. "
-                "Use /tmp/lfx-flows for single-pod sharing or a PVC mount for cross-pod. "
-                "Defaults to in-memory only when omitted."
-            ),
+            help=_serve_help.FLOW_DIR,
         ),
         max_requests: int | None = typer.Option(
             None,
             "--max-requests",
-            help=(
-                "Recycle each worker after this many requests (gunicorn, Unix-only, --workers > 1). "
-                "Set to 1 for per-request worker recycling. Default (unset) means workers are never "
-                "recycled. Not supported on Windows, where multi-worker serving uses uvicorn. "
-                "For full per-request isolation, combine with --limit-concurrency 1."
-            ),
-        ),
-        limit_concurrency: int | None = typer.Option(
-            None,
-            "--limit-concurrency",
-            help=(
-                "Max in-flight requests per worker (--workers > 1); excess get HTTP 503. "
-                "Recycling alone does NOT stop a worker from accepting a 2nd concurrent request, so "
-                "without this two requests may share one process/os.environ. Set to 1 (with "
-                "--max-requests 1) so each worker handles exactly one request in its own process — "
-                "strict cross-request isolation. Default (unset) means unlimited concurrency."
-            ),
+            help=_serve_help.MAX_REQUESTS,
         ),
         timeout: int = typer.Option(
             120,
             "--timeout",
-            help=(
-                "Worker timeout in seconds (gunicorn, Unix, --workers > 1): a worker that does not "
-                "complete a request within this many seconds is killed and restarted. Raise it for "
-                "long-running flows, especially with --sync-workers (a blocking sync worker cannot "
-                "heartbeat mid-request). Default: 120. No effect on Windows (uvicorn fallback)."
-            ),
+            help=_serve_help.TIMEOUT,
         ),
         *,
         stdin: bool = typer.Option(
@@ -208,30 +183,17 @@ def register(app: typer.Typer) -> None:
         no_env_fallback: bool = typer.Option(
             False,
             "--no-env-fallback/--env-fallback",
-            help=(
-                "Disable os.environ fallback for credential variables. "
-                "Variables not supplied via global_vars on each request resolve to None "
-                "instead of reading from the process environment."
-            ),
+            help=_serve_help.NO_ENV_FALLBACK,
         ),
         reset_environ: bool = typer.Option(
             False,
             "--reset-environ/--no-reset-environ",
-            help=(
-                "Snapshot os.environ before each flow run and restore it afterward, so a "
-                "flow's environment mutations (or request-scoped credentials) cannot leak "
-                "into the next request served by the same warm worker. Off by default."
-            ),
+            help=_serve_help.RESET_ENVIRON,
         ),
         sync_workers: bool = typer.Option(
             False,
-            "--sync-workers/--no-sync-workers",
-            help=(
-                "Use gunicorn's blocking 'sync' worker (Unix, --workers > 1) so the kernel "
-                "routes each request to an idle worker instead of queueing it behind an "
-                "in-flight request on a busy async worker. Requires the 'a2wsgi' package. "
-                "Off by default (async worker)."
-            ),
+            "--use-sync-workers/--use-async-workers",
+            help=_serve_help.SYNC_WORKERS,
         ),
         identity_mode: str = typer.Option(
             "off",
@@ -302,7 +264,6 @@ def register(app: typer.Typer) -> None:
             upgrade_flow=upgrade_flow,
             no_env_fallback=no_env_fallback,
             max_requests=max_requests,
-            limit_concurrency=limit_concurrency,
             reset_environ=reset_environ,
             sync_workers=sync_workers,
             timeout=timeout,

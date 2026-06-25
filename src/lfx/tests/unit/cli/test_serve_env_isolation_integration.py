@@ -1,15 +1,22 @@
 """End-to-end env-isolation tests for `lfx serve` (spawns a live multi-worker server).
 
 Demonstrates the actual security guarantee — caller A writes os.environ, caller B
-must not read it — across real worker processes (fork + recycle), which can only be
-observed with live processes, not in-process unit tests.
+must not read it — across real worker processes, which can only be observed with
+live processes, not in-process unit tests.
 
-Two scenarios using a probe flow whose component writes a canary to os.environ and
-reports whether it SAW a prior write:
-- ``--workers 1`` (no recycle): a single persistent process -> later requests see the
-  canary -> ``LEAKED`` (proves the hazard is real, and that this harness detects it).
-- ``--workers 2 --max-requests 1 --limit-concurrency 1``: each request runs in a
-  freshly-forked, recycled, single-in-flight worker -> always ``clean``.
+Probe flow: a component writes a canary to os.environ and reports whether it SAW a
+prior write. What the scenarios establish about each isolation knob:
+- ``--workers 1 --reset-environ``: single persistent process, yet ``clean`` every
+  request — isolation comes from the per-run os.environ snapshot/restore, not a fresh
+  process. (Without --reset-environ this same setup LEAKS, proving the hazard is real.)
+- ``--workers 2 --max-requests 1 --reset-environ``: warm workers (recycling does the
+  work of hygiene, --reset-environ does the work of isolation) -> ``clean``.
+- ``--workers 2 --use-sync-workers``: the blocking sync worker exits synchronously after
+  each request, so requests land on fresh processes -> ``clean``.
+- ``--workers 2 --max-requests 1`` ALONE (async, no --reset-environ): XFAILS -> the
+  async worker recycles gracefully, so a winding-down worker still serves later
+  requests and LEAKS. Recycling is NOT a per-request isolation guarantee here; only
+  --use-sync-workers or --reset-environ are.
 
 Skipped in CI (spawns gunicorn + a real server; slow) — run locally as a harness.
 """
@@ -168,13 +175,43 @@ def test_no_env_leak_single_worker(tmp_path):
     assert len(pids) == 1, f"expected a single reused worker process, got pids={pids} results={results}"
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "KNOWN LIMITATION: async --max-requests recycling does NOT give per-request isolation. "
+        "uvicorn honors limit_max_requests (logs 'Maximum request limit exceeded. Terminating "
+        "process.') but the async worker shuts down GRACEFULLY/asynchronously — during the "
+        "deferred-exit window the still-alive worker keeps accepting and serving new requests, so "
+        "os.environ written by an earlier request LEAKS into a later one before the process exits. "
+        "Observed (workers=2, max_requests=1): recurring LEAKED across requests. Strict per-request "
+        "isolation IS available via --use-sync-workers (synchronous handle->check->exit; verified 8/8 "
+        "clean, 8 distinct PIDs) or via --reset-environ (env snapshot/restore). Remove this xfail "
+        "only if the async path is made to isolate (e.g. disable HTTP keep-alive + stop accepting "
+        "on the recycling worker so a dying worker cannot serve a second request)."
+    ),
+)
+def test_no_env_leak_multi_worker_recycle_async(tmp_path):
+    """workers=2 async worker with --max-requests 1 (no --reset-environ) -> SHOULD isolate, but leaks.
+
+    The module docstring's structural-isolation model assumes each request runs in a freshly-forked,
+    recycled worker. On the async (uvicorn) worker that does not hold: recycling is graceful/deferred,
+    so a worker keeps serving while it winds down and leaks a prior request's os.environ write.
+
+    Currently XFAILS — see decorator. The working isolation paths are --use-sync-workers and
+    --reset-environ; this test documents the async gap and will flip to passing if it's closed.
+    """
+    with _serve(tmp_path, ["--workers", "2", "--max-requests", "1"]) as (port, fid):
+        results = [_run_flow(port, fid, f"req{i}") for i in range(12)]
+    assert _statuses(results) == ["clean"] * 12, results
+
+
 def test_sync_workers_serves_requests(tmp_path):
-    """--sync-workers (gunicorn sync worker + a2wsgi bridge) serves requests via the real CLI.
+    """--use-sync-workers (gunicorn sync worker + a2wsgi bridge) serves requests via the real CLI.
 
     Proves the opt-in sync-worker path boots and the ASGI->WSGI bridge handles requests,
     and that --reset-environ still enforces isolation under the sync worker.
     """
-    with _serve(tmp_path, ["--workers", "2", "--sync-workers", "--reset-environ"]) as (port, fid):
+    with _serve(tmp_path, ["--workers", "2", "--use-sync-workers", "--reset-environ"]) as (port, fid):
         results = [_run_flow(port, fid, f"req{i}") for i in range(8)]
     assert all("pid=" in r for r in results), results  # the a2wsgi bridge served every request
     assert _statuses(results) == ["clean"] * 8, results  # reset-environ holds under sync worker

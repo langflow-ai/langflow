@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
 
+from lfx.cli import _serve_help
 from lfx.cli.common import (
     create_verbose_printer,
     flow_id_from_path,
@@ -41,6 +42,12 @@ console = Console()
 
 # Constants
 API_KEY_MASK_LENGTH = 8
+
+# Default gunicorn worker recycling (multi-worker, Unix). When --max-requests is unset we
+# still recycle every ~this-many requests so long-lived workers shed accumulated memory /
+# per-worker caches; jitter (10%) staggers workers so they don't all recycle on the same
+# request count. Explicit --max-requests 0 disables recycling; explicit N overrides this.
+DEFAULT_MAX_REQUESTS = 1000
 
 
 def _gate_flow_for_serve(
@@ -253,43 +260,17 @@ def serve_command(
     flow_dir: Path | None = typer.Option(
         None,
         "--flow-dir",
-        help=(
-            "Directory for filesystem-backed flow storage. "
-            "All uvicorn workers sharing this path will serve the same flows. "
-            "Use /tmp/lfx-flows for single-pod sharing or a PVC mount for cross-pod. "
-            "Defaults to in-memory only when omitted."
-        ),
+        help=_serve_help.FLOW_DIR,
     ),
     max_requests: int | None = typer.Option(
         None,
         "--max-requests",
-        help=(
-            "Recycle each worker after this many requests (gunicorn, Unix-only, --workers > 1). "
-            "Set to 1 for per-request worker recycling. Default (unset) means workers are never "
-            "recycled. Not supported on Windows, where multi-worker serving uses uvicorn. "
-            "For full per-request isolation, combine with --limit-concurrency 1."
-        ),
-    ),
-    limit_concurrency: int | None = typer.Option(
-        None,
-        "--limit-concurrency",
-        help=(
-            "Max in-flight requests per worker (--workers > 1); excess get HTTP 503. "
-            "Recycling alone does NOT stop a worker from accepting a 2nd concurrent request, so "
-            "without this two requests may share one process/os.environ. Set to 1 (with "
-            "--max-requests 1) so each worker handles exactly one request in its own process — "
-            "strict cross-request isolation. Default (unset) means unlimited concurrency."
-        ),
+        help=_serve_help.MAX_REQUESTS,
     ),
     timeout: int = typer.Option(
         120,
         "--timeout",
-        help=(
-            "Worker timeout in seconds (gunicorn, Unix, --workers > 1): a worker that does not "
-            "complete a request within this many seconds is killed and restarted. Raise it for "
-            "long-running flows, especially with --sync-workers (a blocking sync worker cannot "
-            "heartbeat mid-request). Default: 120. No effect on Windows (uvicorn fallback)."
-        ),
+        help=_serve_help.TIMEOUT,
     ),
     *,
     stdin: bool = typer.Option(
@@ -305,30 +286,17 @@ def serve_command(
     no_env_fallback: bool = typer.Option(
         False,  # noqa: FBT003
         "--no-env-fallback/--env-fallback",
-        help=(
-            "Disable os.environ fallback for credential variables. "
-            "Variables not supplied via global_vars on each request resolve to None "
-            "instead of reading from the process environment."
-        ),
+        help=_serve_help.NO_ENV_FALLBACK,
     ),
     reset_environ: bool = typer.Option(
         False,  # noqa: FBT003
         "--reset-environ/--no-reset-environ",
-        help=(
-            "Snapshot os.environ before each flow run and restore it afterward, so a "
-            "flow's environment mutations (or request-scoped credentials) cannot leak "
-            "into the next request served by the same warm worker. Off by default."
-        ),
+        help=_serve_help.RESET_ENVIRON,
     ),
     sync_workers: bool = typer.Option(
         False,  # noqa: FBT003
-        "--sync-workers/--no-sync-workers",
-        help=(
-            "Use gunicorn's blocking 'sync' worker (Unix, --workers > 1) so the kernel "
-            "routes each request to an idle worker instead of queueing it behind an "
-            "in-flight request on a busy async worker. Requires the 'a2wsgi' package. "
-            "Off by default (async worker)."
-        ),
+        "--use-sync-workers/--use-async-workers",
+        help=_serve_help.SYNC_WORKERS,
     ),
     # Plain defaults (not typer.Option): the CLI options live on serve_command_wrapper,
     # which passes these through. Plain defaults keep clean values even if a direct
@@ -387,6 +355,12 @@ def serve_command(
     if workers < 1:
         typer.echo("Error: --workers must be at least 1.", err=True)
         raise typer.Exit(1)
+
+    # When serve_command is invoked directly (not via the typer CLI), an omitted --max-requests
+    # arrives as a typer OptionInfo sentinel rather than None. Normalize it up front so the
+    # gunicorn recycling math sees None or a real int.
+    if not isinstance(max_requests, int):
+        max_requests = None
 
     from lfx.cli.serve_identity import IdentityConfig, IdentityConfigError
 
@@ -523,7 +497,6 @@ def serve_command(
                     temp_file_to_cleanup=temp_file_to_cleanup,
                     verbose_print=verbose_print,
                     max_requests=max_requests,
-                    limit_concurrency=limit_concurrency,
                     reset_environ=reset_environ,
                     sync_workers=sync_workers,
                     timeout=timeout,
@@ -532,12 +505,25 @@ def serve_command(
             else:
                 from lfx.cli.serve_app import _SERVE_RESET_ENVIRON_ENV
 
+                # These flags only affect multi-worker serving; with one worker they are
+                # silently inert, so warn loudly rather than appear to honor them.
+                if max_requests is not None or sync_workers:
+                    typer.echo(
+                        "Warning: --max-requests/--use-sync-workers apply only to multi-worker serving "
+                        "(--workers > 1) and are ignored with a single worker.",
+                        err=True,
+                    )
+
                 # Single worker also serves many requests warm, so honor --reset-environ
-                # here (read per request by guarded_execute). --sync-workers is a
+                # here (read per request by guarded_execute). --use-sync-workers is a
                 # multi-worker routing concern and has no effect with one worker.
                 os.environ[_SERVE_RESET_ENVIRON_ENV] = "1" if reset_environ else "0"
-                serve_app = create_multi_serve_app(registry=registry, identity_config=identity_config)
-                uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
+                try:
+                    serve_app = create_multi_serve_app(registry=registry, identity_config=identity_config)
+                    uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
+                finally:
+                    # Symmetry with _launch_workers: don't leave our key in the parent env.
+                    os.environ.pop(_SERVE_RESET_ENVIRON_ENV, None)
         except KeyboardInterrupt:
             verbose_print("\nServer stopped")
             raise typer.Exit(0) from None
@@ -549,6 +535,22 @@ def serve_command(
         if temp_file_to_cleanup:
             with contextlib.suppress(OSError):
                 Path(temp_file_to_cleanup).unlink()
+
+
+@contextlib.contextmanager
+def _exported_env(env: dict[str, str]):
+    """Export ``env`` into ``os.environ`` for the body, then remove exactly those keys.
+
+    Only the keys we set are removed (not a prefix sweep), so a ``LFX_SERVE_*`` var the
+    operator exported before launch survives.
+    """
+    for key, value in env.items():
+        os.environ[key] = value
+    try:
+        yield
+    finally:
+        for key in env:
+            os.environ.pop(key, None)
 
 
 def _launch_workers(
@@ -563,7 +565,6 @@ def _launch_workers(
     temp_file_to_cleanup: str | None,
     verbose_print: Callable[[str], None],
     max_requests: int | None,
-    limit_concurrency: int | None,
     reset_environ: bool = False,
     sync_workers: bool = False,
     timeout: int = 120,
@@ -573,31 +574,30 @@ def _launch_workers(
 
     On Unix this runs gunicorn with ``preload_app=True`` (the master builds the
     warm app once and forks workers via copy-on-write). ``max_requests`` controls
-    per-request recycling: ``None`` (the default) maps to gunicorn's ``0`` (workers
-    are never recycled — warm and shared, but no per-request isolation), while
-    ``--max-requests 1`` recycles each worker after one request.
+    worker recycling: ``None`` (the default) maps to ``DEFAULT_MAX_REQUESTS`` so warm
+    workers recycle periodically and shed accumulated memory (with 10% jitter so they
+    don't recycle in lockstep); ``0`` disables recycling; ``N`` recycles after N
+    requests.
 
-    ``limit_concurrency`` caps the in-flight requests a single worker accepts
-    (excess get HTTP 503). Recycling alone does NOT prevent a worker from accepting
-    a second concurrent request — two requests can then share one process /
-    ``os.environ``. ``--limit-concurrency 1`` together with ``--max-requests 1``
-    closes that window: each worker handles exactly one request, in its own process,
-    then recycles — making cross-request ``os.environ`` leakage structurally
-    impossible.
+    **Isolation note.** ``--max-requests`` is worker hygiene, not per-request isolation:
+    the async worker recycles gracefully, so a worker that has hit its limit keeps serving
+    while it winds down and a later request can observe an earlier one's ``os.environ``
+    writes. Strict isolation comes from ``--use-sync-workers`` (the blocking sync worker
+    exits synchronously after each request) or ``--reset-environ`` (snapshot/restore
+    ``os.environ`` around every run).
 
     gunicorn is Unix-only. On Windows it cannot run at all, so multi-worker serving
-    falls back to uvicorn's own multi-worker supervisor (no preload, no per-request
-    recycling). ``--limit-concurrency`` is still honored there (uvicorn-native), but
-    ``--max-requests`` (recycling) is refused, since it cannot be supported.
+    falls back to uvicorn's own multi-worker supervisor (no preload, no recycling);
+    ``--max-requests`` is refused there, since it cannot be supported.
 
     ``reset_environ`` (``--reset-environ``) is forwarded to the workers via
     ``LFX_SERVE_RESET_ENVIRON`` so each worker snapshots/restores ``os.environ``
     around every flow run (see ``guarded_execute``). ``sync_workers``
-    (``--sync-workers``, Unix only) swaps the async worker for gunicorn's blocking
+    (``--use-sync-workers``, Unix only) swaps the async worker for gunicorn's blocking
     ``sync`` worker wrapped by an a2wsgi ASGI->WSGI bridge, so the kernel routes each
     request to an idle worker. Both default off. ``timeout`` (``--timeout``, default
     120s) sets gunicorn's worker timeout — raise it for long flows, especially under
-    ``--sync-workers``.
+    ``--use-sync-workers``.
 
     ``identity_config`` (``--identity-mode`` and friends) is round-tripped to the
     workers via ``LFX_SERVE_IDENTITY_*`` env vars so each worker reconstructs it in
@@ -607,66 +607,62 @@ def _launch_workers(
     """
     from lfx.cli.serve_app import (
         _SERVE_FLOW_DIR_ENV,
-        _SERVE_LIMIT_CONCURRENCY_ENV,
         _SERVE_NO_ENV_FALLBACK_ENV,
         _SERVE_RESET_ENVIRON_ENV,
         _SERVE_STARTUP_PATHS_ENV,
     )
     from lfx.cli.serve_identity import IdentityConfig
 
-    # Set env vars so each worker can reconstruct config: the gunicorn preload
-    # master via build_registry_from_env(), or each uvicorn factory worker via
-    # create_serve_app(). When flow_dir is set, startup flows are already in the
-    # store (written by _build_serve_registry) so workers load them via
-    # warm_from_store(). When flow_dir is NOT set, workers re-read original files.
-    os.environ[_SERVE_FLOW_DIR_ENV] = str(flow_dir) if flow_dir else ""
-    os.environ[_SERVE_NO_ENV_FALLBACK_ENV] = "1" if no_env_fallback else "0"
+    # Env vars each worker reads to reconstruct config: the gunicorn preload master via
+    # build_registry_from_env(), or each uvicorn factory worker via create_serve_app().
+    # When flow_dir is set, startup flows are already in the store (written by
+    # _build_serve_registry) so workers load them via warm_from_store(); otherwise workers
+    # re-read the original files from LFX_SERVE_STARTUP_PATHS.
     startup_paths_for_workers: list[str] = []
     if not flow_dir:
         if script_paths:
             startup_paths_for_workers = [str(Path(p).resolve()) for p in script_paths]
         elif temp_file_to_cleanup:
             startup_paths_for_workers = [temp_file_to_cleanup]
-    os.environ[_SERVE_STARTUP_PATHS_ENV] = json.dumps(startup_paths_for_workers)
-    # Read per worker by LFXUvicornWorker (Unix); passed to uvicorn.run on Windows.
-    if limit_concurrency is not None:
-        os.environ[_SERVE_LIMIT_CONCURRENCY_ENV] = str(limit_concurrency)
-    # Read per request by guarded_execute in each worker. Always set explicitly so a
-    # stray inherited value can't silently flip behavior.
-    os.environ[_SERVE_RESET_ENVIRON_ENV] = "1" if reset_environ else "0"
-    # Round-trip identity config into the worker processes (each worker keeps its own
-    # JWKS cache — a few KB; no cross-worker sharing). Set explicitly (even for "off")
-    # so a stray inherited LFX_SERVE_IDENTITY_* var can't flip behavior.
-    identity_env = (identity_config or IdentityConfig()).to_env()
-    for identity_key, identity_value in identity_env.items():
-        os.environ[identity_key] = identity_value
+    worker_env = {
+        _SERVE_FLOW_DIR_ENV: str(flow_dir) if flow_dir else "",
+        _SERVE_NO_ENV_FALLBACK_ENV: "1" if no_env_fallback else "0",
+        _SERVE_STARTUP_PATHS_ENV: json.dumps(startup_paths_for_workers),
+        # Read per request by guarded_execute. Set explicitly (even "0") so a stray
+        # inherited value can't silently flip behavior.
+        _SERVE_RESET_ENVIRON_ENV: "1" if reset_environ else "0",
+        # Round-trip identity config into the workers (each keeps its own JWKS cache — a
+        # few KB; no cross-worker sharing). Set explicitly even for "off".
+        **(identity_config or IdentityConfig()).to_env(),
+    }
 
-    try:
+    with _exported_env(worker_env):
         if sys.platform == "win32":
-            if max_requests is not None:
-                verbose_print(
-                    "Error: --max-requests enables per-request worker recycling via gunicorn, "
-                    "which is not available on Windows. Omit --max-requests to run multi-worker "
-                    "without isolation, or deploy on Linux/macOS for per-request isolation."
+            if max_requests is not None and max_requests > 0:
+                typer.echo(
+                    "Error: --max-requests enables gunicorn worker recycling, which is not "
+                    "available on Windows. Omit --max-requests to run multi-worker on Windows. "
+                    "For cross-request os.environ isolation use --reset-environ (any platform); "
+                    "for per-process isolation deploy on Linux/macOS with --use-sync-workers.",
+                    err=True,
                 )
                 raise typer.Exit(1)
             if sync_workers:
-                verbose_print(
-                    "Error: --sync-workers uses gunicorn's sync worker, which is not available on "
-                    "Windows. Omit --sync-workers to run multi-worker on Windows, or deploy on "
-                    "Linux/macOS for idle-worker routing."
+                typer.echo(
+                    "Error: --use-sync-workers uses gunicorn's sync worker, which is not available on "
+                    "Windows. Omit --use-sync-workers to run multi-worker on Windows, or deploy on "
+                    "Linux/macOS for idle-worker routing.",
+                    err=True,
                 )
                 raise typer.Exit(1)
             # gunicorn cannot run on Windows; fall back to uvicorn's multi-worker
-            # supervisor. No preload/COW and no per-request recycling (no isolation),
-            # though --limit-concurrency is still honored (uvicorn-native).
+            # supervisor. No preload/COW and no gunicorn recycling, though --reset-environ
+            # still isolates per request (applied in guarded_execute, not gunicorn).
             verbose_print(
-                "Note: multi-worker serving on Windows uses uvicorn (no per-request recycling); "
-                "deploy on Linux/macOS and pass --max-requests 1 for full isolation."
+                "Note: multi-worker serving on Windows uses uvicorn (no gunicorn recycling); "
+                "use --reset-environ for cross-request os.environ isolation, or deploy on "
+                "Linux/macOS with --use-sync-workers for per-process isolation."
             )
-            # +1: uvicorn counts the active connection, so its limit must exceed the
-            # desired in-flight count (limit_concurrency=1 would reject everything).
-            uvicorn_limit = (limit_concurrency + 1) if limit_concurrency is not None else None
             uvicorn.run(
                 "lfx.cli.serve_app:create_serve_app",
                 host=host,
@@ -674,7 +670,6 @@ def _launch_workers(
                 workers=workers,
                 log_level=log_level,
                 factory=True,
-                limit_concurrency=uvicorn_limit,
             )
         else:
             from lfx.cli.serve_gunicorn import LFXGunicornApp
@@ -684,8 +679,9 @@ def _launch_workers(
                 try:
                     import a2wsgi  # noqa: F401
                 except ImportError as exc:
-                    verbose_print(
-                        "Error: --sync-workers requires the 'a2wsgi' package. Install it with: pip install a2wsgi"
+                    typer.echo(
+                        "Error: --use-sync-workers requires the 'a2wsgi' package. Install it with: pip install a2wsgi",
+                        err=True,
                     )
                     raise typer.Exit(1) from exc
                 # gunicorn's blocking sync worker stops accepting while a request runs,
@@ -694,10 +690,12 @@ def _launch_workers(
                 app_import_string = "lfx.cli.serve_preloaded_app:wsgi_application"
                 worker_class = "sync"
             else:
-                # Async worker; applies LFX_SERVE_LIMIT_CONCURRENCY (gunicorn's
-                # UvicornWorker cannot forward uvicorn's limit_concurrency).
                 app_import_string = "lfx.cli.serve_preloaded_app:app"
                 worker_class = "lfx.cli.serve_gunicorn.LFXUvicornWorker"
+
+            # Unset (None) -> DEFAULT_MAX_REQUESTS so warm workers recycle periodically and
+            # shed accumulated memory. Explicit 0 disables recycling; explicit N overrides.
+            effective_max_requests = max_requests if max_requests is not None else DEFAULT_MAX_REQUESTS
 
             LFXGunicornApp(
                 app_import_string,
@@ -706,28 +704,17 @@ def _launch_workers(
                     "workers": workers,
                     "worker_class": worker_class,
                     "preload_app": True,
-                    # None -> 0 (gunicorn's default: never recycle). 1 -> recycle per request.
-                    "max_requests": max_requests if max_requests is not None else 0,
-                    "max_requests_jitter": 0,
+                    "max_requests": effective_max_requests,
+                    # 10% jitter so workers don't all hit the limit on the same request count
+                    # (avoids a synchronized recycle/latency blip). 0 stays 0 (never recycle).
+                    "max_requests_jitter": effective_max_requests // 10,
                     "loglevel": log_level,
                     # Worker timeout (--timeout, default 120). gunicorn's own default is 30s,
-                    # which would kill long LLM flows — especially under --sync-workers, where a
+                    # which would kill long LLM flows — especially under --use-sync-workers, where a
                     # blocking worker cannot heartbeat mid-request.
                     "timeout": timeout,
                 },
             ).run()
-    finally:
-        # Only remove the keys we set above — a prefix sweep would also delete any
-        # LFX_SERVE_* var the operator intentionally exported before launch.
-        for k in (
-            _SERVE_FLOW_DIR_ENV,
-            _SERVE_NO_ENV_FALLBACK_ENV,
-            _SERVE_STARTUP_PATHS_ENV,
-            _SERVE_LIMIT_CONCURRENCY_ENV,
-            _SERVE_RESET_ENVIRON_ENV,
-            *identity_env,
-        ):
-            os.environ.pop(k, None)
 
 
 async def _load_graph_and_meta(

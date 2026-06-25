@@ -1,8 +1,8 @@
 """gunicorn process manager for ``lfx serve --workers N`` on Unix.
 
 Uses ``preload_app=True`` so the master builds the warm app once and forks
-workers (copy-on-write). ``--max-requests 1`` recycles each worker after a single
-request so no request inherits another's process environment.
+workers (copy-on-write). ``--max-requests`` recycles workers to bound memory (worker
+hygiene, not per-request isolation — see ``_launch_workers`` for the isolation story).
 
 The ``pre_fork`` hook (mirrors ``langflow.server.LangflowApplication``) runs in
 the master immediately before each worker is forked: it ``gc.freeze()``s the
@@ -20,39 +20,11 @@ from uvicorn.workers import UvicornWorker
 
 
 class LFXUvicornWorker(UvicornWorker):
-    """UvicornWorker that applies ``LFX_SERVE_LIMIT_CONCURRENCY`` per worker.
+    """Async worker class for ``lfx serve --workers N`` (the default, non-sync path).
 
-    gunicorn's stock ``UvicornWorker`` maps ``max_requests`` (recycling) but never
-    exposes uvicorn's ``limit_concurrency``, and gunicorn has no setting that
-    forwards to it. So we read the limit from the ``LFX_SERVE_*`` environment (set
-    by ``serve_command`` and inherited by each forked worker) and apply it to the
-    worker's uvicorn ``Config``.
-
-    The env var holds the user-facing cap N (max in-flight requests per worker).
-    uvicorn's ``limit_concurrency`` counts the active connection itself, so it
-    rejects once ``len(connections) >= limit`` — i.e. ``limit_concurrency=1``
-    rejects EVERY request. To allow exactly N in-flight we set uvicorn's value to
-    ``N + 1`` (empirically verified). With ``--limit-concurrency 1`` a worker then
-    accepts one in-flight request and returns HTTP 503 for a concurrent second —
-    combined with ``--max-requests 1`` this guarantees no two requests ever share a
-    worker process / ``os.environ``.
+    A thin named subclass of gunicorn's ``UvicornWorker`` so the worker class is owned
+    here and can host per-worker customization if needed later.
     """
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._apply_limit_concurrency(self.config)
-
-    @staticmethod
-    def _apply_limit_concurrency(config) -> None:
-        import os
-
-        from lfx.cli.serve_app import _SERVE_LIMIT_CONCURRENCY_ENV
-
-        raw = os.environ.get(_SERVE_LIMIT_CONCURRENCY_ENV)
-        if raw:
-            # +1: uvicorn counts the active connection, so its limit must exceed the
-            # desired in-flight count (limit_concurrency=1 would reject everything).
-            config.limit_concurrency = int(raw) + 1
 
 
 class LFXGunicornApp(BaseApplication):
@@ -130,7 +102,7 @@ class LFXGunicornApp(BaseApplication):
 
     def load(self):
         # preload_app=True -> gunicorn imports this "module:attr" string in the master
-        # pre-fork. The async path passes the ASGI app ("...:app"); --sync-workers
+        # pre-fork. The async path passes the ASGI app ("...:app"); --use-sync-workers
         # passes the WSGI bridge ("...:wsgi_application"). Honor whichever was given
         # rather than hardcoding one, so the worker gets the callable it expects.
         import importlib

@@ -3,8 +3,8 @@
 gunicorn's master imports this module ONCE before forking. Building + warming the
 registry here means the library, imported component modules, and warm flow graphs
 all live in the master heap and are inherited by every forked worker via
-copy-on-write. Workers are recycled per request when ``--max-requests 1`` is set;
-each new fork re-inherits this warm image.
+copy-on-write. Workers are recycled after ``--max-requests`` requests; each new fork
+re-inherits this warm image.
 
 The ``gc.freeze()`` that keeps this heap out of the GC (so refcount/GC traversal
 doesn't dirty the shared pages) is NOT done here — it runs in the gunicorn
@@ -24,7 +24,7 @@ registry = build_registry_from_env()
 # so the warm shared app enforces the operator's identity config.
 app = create_multi_serve_app(registry=registry, identity_config=IdentityConfig.from_env(os.environ))
 
-# WSGI bridge entrypoint for the opt-in ``lfx serve --sync-workers`` mode, which
+# WSGI bridge entrypoint for the opt-in ``lfx serve --use-sync-workers`` mode, which
 # runs gunicorn's blocking ``sync`` worker so the kernel routes each request to an
 # idle worker (an async worker keeps accepting connections while busy, which can
 # queue a second request behind an in-flight one even when other workers are idle).
@@ -41,8 +41,8 @@ def wsgi_application(environ, start_response):
     if _bridge is None:
         try:
             from a2wsgi import ASGIMiddleware
-        except ImportError as exc:  # pragma: no cover - exercised via --sync-workers without the dep
-            msg = "lfx serve --sync-workers requires the 'a2wsgi' package. Install it with: pip install a2wsgi"
+        except ImportError as exc:  # pragma: no cover - exercised via --use-sync-workers without the dep
+            msg = "lfx serve --use-sync-workers requires the 'a2wsgi' package. Install it with: pip install a2wsgi"
             raise RuntimeError(msg) from exc
         _bridge = ASGIMiddleware(app)
     return _bridge(environ, start_response)
