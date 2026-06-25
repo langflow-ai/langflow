@@ -110,13 +110,13 @@ async def test_get_agent_card_returns_valid_card(client: AsyncClient, active_use
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_capabilities_advertised_false(client: AsyncClient, active_user, flow_data):
-    """Streaming and pushNotifications must be present and explicitly false."""
+async def test_capabilities_advertises_streaming(client: AsyncClient, active_user, flow_data):
+    """Streaming is advertised; pushNotifications stays present and explicitly false."""
     flow_id = await _create_flow(active_user.id, data=flow_data)
 
     body = (await client.get(_card_url(flow_id))).json()
 
-    assert body["capabilities"] == {"streaming": False, "pushNotifications": False}
+    assert body["capabilities"] == {"streaming": True, "pushNotifications": False}
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -305,6 +305,56 @@ async def test_message_send_runs_flow_and_returns_completed_task(client: AsyncCl
     assert result["kind"] == "task"
     assert result["status"]["state"] == "completed"
     assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_message_stream_yields_lifecycle_sse(client: AsyncClient, active_user, echo_flow_data):
+    """message/stream streams the run as SSE: a working status, the echoed artifact, then a final completed status."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+
+    async with client.stream(
+        "POST",
+        f"api/v1/a2a/{flow_id}/jsonrpc",
+        json={"jsonrpc": "2.0", "id": 1, "method": "message/stream", "params": _text_message("hello a2a")},
+    ) as resp:
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/event-stream")
+        events = [
+            orjson.loads(line[len("data:") :])["result"]
+            async for line in resp.aiter_lines()
+            if line.startswith("data:")
+        ]
+
+    assert any(e["kind"] == "status-update" and e["status"]["state"] == "working" for e in events)
+    artifacts = [e for e in events if e["kind"] == "artifact-update"]
+    assert artifacts[0]["artifact"]["parts"][0]["text"] == "hello a2a"
+    assert events[-1]["kind"] == "status-update"
+    assert events[-1]["status"]["state"] == "completed"
+    assert events[-1]["final"] is True
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_resubscribe_to_terminal_task_errors_without_hanging(client: AsyncClient, active_user, echo_flow_data):
+    """tasks/resubscribe to an already-finished task ends with an error frame, not a hang.
+
+    The sync run is terminal by the time a client could re-attach, so the SDK returns a
+    spec error (terminal/no-live-queue) rather than streaming. The test completing at all
+    is the no-hang proof.
+    """
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    sent = (await _jsonrpc(client, flow_id, "message/send", _text_message("done"))).json()["result"]
+    task_id = sent["id"]
+
+    async with client.stream(
+        "POST",
+        f"api/v1/a2a/{flow_id}/jsonrpc",
+        json={"jsonrpc": "2.0", "id": 1, "method": "tasks/resubscribe", "params": {"id": task_id}},
+    ) as resp:
+        assert resp.status_code == 200
+        frames = [orjson.loads(line[len("data:") :]) async for line in resp.aiter_lines() if line.startswith("data:")]
+
+    assert any("error" in f for f in frames)
+    assert not any(f.get("result", {}).get("kind") == "artifact-update" for f in frames)
 
 
 @pytest.mark.usefixtures("a2a_flag_on")

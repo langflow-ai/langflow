@@ -107,8 +107,10 @@ async def build_agent_card(flow: Flow, *, rpc_url: str, session: AsyncSession) -
         input_modes=["application/json"],
         output_modes=["application/json"],
     )
-    # streaming / push_notifications must be explicit False, or exclude_none drops them.
-    capabilities = a2a_types.AgentCapabilities(streaming=False, push_notifications=False)
+    # streaming / push_notifications must be explicit, or exclude_none drops them.
+    # streaming matches the handler card's capability (message/stream + tasks/resubscribe);
+    # push_notifications stays False until that surface lands.
+    capabilities = a2a_types.AgentCapabilities(streaming=True, push_notifications=False)
     security_schemes, security = await resolve_card_security(flow, session)
 
     card = a2a_types.AgentCard(
