@@ -1,0 +1,177 @@
+---
+title: External authentication
+slug: /external-authentication
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+Langflow can accept tokens issued by an upstream identity provider (IdP) or reverse proxy and use them to provision and authenticate local users without requiring a separate login.
+This is useful when Langflow is deployed behind a gateway that already handles authentication (such as an OIDC proxy, an API gateway, or a corporate SSO system) and you want users to land in Langflow without a second login step.
+
+:::warning
+External authentication is disabled by default. When you enable it, Langflow performs Just-in-Time (JIT) user provisioning: an account is automatically created the first time a valid external credential is presented. Ensure that your upstream identity source is trusted before enabling this feature.
+:::
+
+## How external authentication works
+
+1. An upstream proxy or IdP issues a credential (typically a JWT) to the user.
+2. Langflow extracts the credential from a configured HTTP header or cookie on each request.
+3. The credential is validated — either by verifying its signature against a JWKS endpoint, or by decoding it without signature verification when the upstream proxy has already validated it.
+4. Langflow maps the JWT claims to a local user identity. If no local account matches the external subject, one is created (JIT provisioning).
+5. The request proceeds as the provisioned user.
+
+The native Langflow JWT path is always attempted first. If that fails, the external path is tried as a fallback, so existing Langflow-native credentials continue to work alongside external ones.
+
+## Enable external authentication
+
+Set `LANGFLOW_EXTERNAL_AUTH_ENABLED=true` and configure at least one validation mode:
+
+- **JWKS verification** (recommended): Langflow fetches your IdP's public keys and verifies signatures.
+- **Trusted-decode mode**: Langflow decodes the JWT without signature verification. Only use this when Langflow sits behind a proxy that has already validated the token.
+
+## Configure external authentication environment variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `LANGFLOW_EXTERNAL_AUTH_ENABLED` | Enable external authentication and JIT user provisioning. | `false` |
+| `LANGFLOW_EXTERNAL_AUTH_PROVIDER` | Stable key written to the user profile to identify the external provider. Used to associate API-key restrictions with external users. | `external` |
+| `LANGFLOW_EXTERNAL_AUTH_TOKEN_HEADER` | HTTP header from which the credential is extracted. Supports `Bearer`-prefixed values. | `Authorization` |
+| `LANGFLOW_EXTERNAL_AUTH_TOKEN_COOKIE` | Optional cookie name from which the credential is extracted. The header is checked first. | _(none)_ |
+
+### JWKS signature verification
+
+| Variable | Description | Default |
+|---|---|---|
+| `LANGFLOW_EXTERNAL_AUTH_JWKS_URL` | HTTPS URL of the IdP's JWKS endpoint. Required unless trusted-decode mode is enabled. | _(none)_ |
+| `LANGFLOW_EXTERNAL_AUTH_AUDIENCE` | Expected `aud` claim value. Comma-separated values are accepted. Required alongside JWKS to prevent cross-service token reuse. | _(none)_ |
+| `LANGFLOW_EXTERNAL_AUTH_ISSUER` | Expected `iss` claim value. Leave empty to skip issuer validation. | _(none)_ |
+| `LANGFLOW_EXTERNAL_AUTH_ALGORITHMS` | Comma-separated list of accepted JWT signing algorithms. | `RS256` |
+
+:::warning
+`LANGFLOW_EXTERNAL_AUTH_JWKS_URL` must use `https`. A `http` URL is accepted only for `localhost` and loopback addresses in development environments, because an unencrypted JWKS endpoint allows a network attacker to substitute signing keys and forge tokens.
+:::
+
+### Trusted-decode mode
+
+| Variable | Description | Default |
+|---|---|---|
+| `LANGFLOW_EXTERNAL_AUTH_TRUSTED_JWT_DECODE` | Decode the JWT without verifying its signature. Only enable this when Langflow is behind a trusted proxy that has already verified the token. | `false` |
+
+:::danger
+Trusted-decode mode skips all cryptographic verification. Only enable it when Langflow is not reachable directly from the internet and the upstream proxy is responsible for token validation.
+:::
+
+### JIT user provisioning claim mapping
+
+Langflow maps JWT claims to local user attributes when creating or updating the provisioned account.
+
+| Variable | Description | Default |
+|---|---|---|
+| `LANGFLOW_EXTERNAL_AUTH_SUBJECT_CLAIM` | JWT claim used as the stable external user identifier. | `sub` |
+| `LANGFLOW_EXTERNAL_AUTH_USERNAME_CLAIM` | JWT claim preferred for the local Langflow username. Falls back to email, name, or a deterministic hash. | `preferred_username` |
+| `LANGFLOW_EXTERNAL_AUTH_EMAIL_CLAIM` | JWT claim containing the user's email address. | `email` |
+| `LANGFLOW_EXTERNAL_AUTH_NAME_CLAIM` | JWT claim containing the user's display name. | `name` |
+
+## Configure an access ceiling from JWT claims
+
+The access ceiling is a coarse, deny-only mechanism that maps a JWT claim value to one of three access levels: `viewer`, `editor`, or `admin`.
+It is not a full RBAC engine.
+When enabled, requests from external users whose ceiling is below the required level are denied before reaching the resource.
+
+| Variable | Description | Default |
+|---|---|---|
+| `LANGFLOW_EXTERNAL_AUTH_ACCESS_CEILING_ENABLED` | Enable claim-based access ceiling for external users. | `false` |
+| `LANGFLOW_EXTERNAL_AUTH_ACCESS_CLAIM` | JWT claim name from which the access level is derived. | _(none)_ |
+| `LANGFLOW_EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING` | JSON object or comma-separated `claim_value:level` pairs that map external claim values to `viewer`, `editor`, or `admin`. When this is set it is authoritative — values absent from the mapping fall back to the default level rather than being interpreted through built-in aliases. | _(none)_ |
+| `LANGFLOW_EXTERNAL_AUTH_DEFAULT_ACCESS_LEVEL` | Fallback level used when the access claim is absent or unmapped. | `viewer` |
+| `LANGFLOW_EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS` | Reject Langflow API-key authentication for users provisioned through the external provider, so API keys cannot bypass the JWT claim ceiling. | `true` |
+
+**Built-in access level aliases** (used when no explicit mapping is configured):
+
+| Claim value | Maps to |
+|---|---|
+| `view`, `viewer`, `read`, `readonly`, `read_only`, `read-only` | `viewer` |
+| `edit`, `editor`, `write`, `developer` | `editor` |
+| `admin`, `administrator` | `admin` |
+
+**Mapping examples:**
+
+```bash
+# JSON object
+LANGFLOW_EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING='{"read_access":"viewer","write_access":"editor","superadmin":"admin"}'
+
+# Comma-separated
+LANGFLOW_EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING="read_access:viewer,write_access:editor,superadmin:admin"
+```
+
+## Use a custom identity resolver
+
+By default, Langflow validates the credential as a JWT and maps the resulting claims to a local identity.
+You can replace this logic with a custom resolver by pointing `LANGFLOW_EXTERNAL_AUTH_IDENTITY_RESOLVER` at a Python import path.
+
+```bash
+LANGFLOW_EXTERNAL_AUTH_IDENTITY_RESOLVER="mypackage.auth:MyResolver"
+```
+
+The resolver must be a class with an async `resolve(token, auth_settings)` method, or a plain async callable with the same signature.
+It must return either an `ExternalIdentity` instance or a dict of claims that Langflow maps using the standard claim settings.
+
+```python
+from langflow.services.auth.external import ExternalIdentity
+from lfx.services.settings.auth import AuthSettings
+
+class MyResolver:
+    async def resolve(self, token: str, auth_settings: AuthSettings) -> ExternalIdentity:
+        # Validate token against your IdP and return identity
+        return ExternalIdentity(
+            provider="my-idp",
+            subject="user-id-from-idp",
+            username="alice",
+            email="alice@example.com",
+        )
+```
+
+## Example: OIDC proxy setup
+
+A common deployment places Langflow behind an OIDC-aware reverse proxy (such as oauth2-proxy or Nginx with `auth_request`).
+The proxy validates the OIDC token and forwards the original JWT (or an identity header) to Langflow.
+
+```bash
+# The proxy forwards the IdP-issued JWT in Authorization
+LANGFLOW_EXTERNAL_AUTH_ENABLED=true
+LANGFLOW_EXTERNAL_AUTH_TOKEN_HEADER=Authorization
+
+# Validate signatures against the IdP's JWKS
+LANGFLOW_EXTERNAL_AUTH_JWKS_URL=https://idp.example.com/.well-known/jwks.json
+LANGFLOW_EXTERNAL_AUTH_ISSUER=https://idp.example.com
+LANGFLOW_EXTERNAL_AUTH_AUDIENCE=langflow
+
+# Map the IdP role claim to an access level
+LANGFLOW_EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=true
+LANGFLOW_EXTERNAL_AUTH_ACCESS_CLAIM=role
+LANGFLOW_EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING='{"viewer":"viewer","editor":"editor","admin":"admin"}'
+```
+
+## Example: trusted-proxy setup
+
+When Langflow is not directly reachable from the internet and the proxy has already validated the token:
+
+```bash
+LANGFLOW_EXTERNAL_AUTH_ENABLED=true
+LANGFLOW_EXTERNAL_AUTH_TRUSTED_JWT_DECODE=true
+LANGFLOW_EXTERNAL_AUTH_TOKEN_HEADER=X-Forwarded-User-Token
+```
+
+## SSO provider integrations
+
+Full provider-specific SSO (OIDC, SAML, LDAP) is available as a plugin (`SSO_ENABLED`, `SSO_PROVIDER`, `SSO_CONFIG_FILE`).
+The external authentication settings above work independently of the SSO plugin and are the recommended starting point for deployments behind an OIDC proxy.
+Contact your Langflow account team for information about the SSO plugin.
+
+## See also
+
+- [JWT authentication](/jwt-authentication)
+- [API keys and authentication](/api-keys-and-authentication)
+- [Authorization](./authorization)
+- [Security](/security)

@@ -117,6 +117,8 @@ module.exports = {
       items: [
         "Develop/api-keys-and-authentication",
         "Develop/jwt-authentication",
+        "Develop/external-authentication",
+        "Develop/authorization",
         "Develop/install-custom-dependencies",
         "Develop/configuration-global-variables",
         "Develop/environment-variables",
