@@ -13,6 +13,15 @@ async function toggleNodeState(page: Page, action: "minimize" | "expand") {
   expect(await page.getByTestId("hide-node-content").count()).toBe(
     expectedCount,
   );
+  // Minimizing also hides the node's connection handles via the `.no-show`
+  // class; expanding removes it. (Migrated from the former minimize.spec.ts.)
+  if (action === "minimize") {
+    await expect(page.locator(".react-flow__handle.no-show")).not.toHaveCount(
+      0,
+    );
+  } else {
+    await expect(page.locator(".react-flow__handle.no-show")).toHaveCount(0);
+  }
 }
 
 test(
