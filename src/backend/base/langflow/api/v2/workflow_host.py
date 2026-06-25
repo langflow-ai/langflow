@@ -86,7 +86,7 @@ class LangflowWorkflowHost(WorkflowHostBase):
         """Map the workflow action to a flow action and enforce it (deny -> 404)."""
         from langflow.api.v2.workflow import authorize_flow_action
 
-        await authorize_flow_action(caller, flow.graph, action)
+        await authorize_flow_action(caller, flow.graph, action, requested_id=flow.flow_id)
 
     async def run_sync(
         self,

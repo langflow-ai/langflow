@@ -37,14 +37,19 @@ if TYPE_CHECKING:
 class ResolvedFlow(BaseModel):
     """Post-auth, post-RBAC artifact the router runs.
 
-    No tenant fields leak into the router body. ``graph`` is the run-ready
-    ``Graph``; the host owns any deepcopy/stamp semantics before handing it back.
+    No tenant fields leak into the router body. ``flow_id`` is the identifier the
+    caller requested (an endpoint name or a UUID), kept so error bodies can echo
+    it instead of the resolved internal id. ``graph`` is a host-defined execution
+    artifact, NOT necessarily an ``lfx`` ``Graph``: bare serve stores a run-ready
+    ``Graph`` (the default ``run_sync``/``stream_response`` consume it directly),
+    while the langflow host stores a ``FlowRead`` and overrides those methods. The
+    host owns any deepcopy/stamp semantics before handing it back.
     """
 
     model_config = {"arbitrary_types_allowed": True}
 
-    flow_id: str
-    graph: Any  # the run-ready Graph (deep-copied/stamped by the host)
+    flow_id: str  # the caller-requested identifier (endpoint name or UUID)
+    graph: Any  # host-defined execution artifact (Graph for serve, FlowRead for langflow)
     session_id_default: str | None = None  # SSE thread_id / session fallback
 
 

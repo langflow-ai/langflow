@@ -146,13 +146,20 @@ async def resolve_flow_for_execution(flow_id: str, current_user: UserRead):
         ) from err
 
 
-async def authorize_flow_action(current_user: UserRead, flow, action: WorkflowAction) -> None:
+async def authorize_flow_action(
+    current_user: UserRead, flow, action: WorkflowAction, *, requested_id: str | None = None
+) -> None:
     """Map a ``WorkflowAction`` to a ``FlowAction`` and enforce it.
 
     A denied share-aware fetch is reframed to 404 so flow existence is not
-    leaked through a raw 403.
+    leaked through a raw 403. ``requested_id`` is the identifier the caller sent
+    (an endpoint name or a UUID); the reframed body echoes it instead of the
+    resolved internal UUID. Falls back to ``flow.id`` when not provided.
     """
     flow_action = FlowAction.READ if action == WorkflowAction.READ else FlowAction.EXECUTE
+    # Echo the identifier the caller requested (which may be an endpoint name),
+    # not the resolved internal UUID, so a denial does not leak the canonical id.
+    echo_id = requested_id if requested_id is not None else str(flow.id)
     try:
         await ensure_flow_permission(
             current_user,
@@ -163,11 +170,11 @@ async def authorize_flow_action(current_user: UserRead, flow, action: WorkflowAc
             folder_id=getattr(flow, "folder_id", None),
         )
     except HTTPException as exc:
-        privacy = _flow_not_found_privacy_exception(exc, str(flow.id))
+        privacy = _flow_not_found_privacy_exception(exc, echo_id)
         # Preserve the legacy contract: any 404 on this path surfaces as the
         # structured FLOW_NOT_FOUND body, not the privacy-reframe's string detail.
         if privacy.status_code == status.HTTP_404_NOT_FOUND:
-            raise _flow_not_found_http_exception(str(flow.id)) from exc
+            raise _flow_not_found_http_exception(echo_id) from exc
         raise privacy from exc
 
 
@@ -178,9 +185,10 @@ def _apply_execution_gates(parsed, flow, current_user: UserRead) -> None:
         _enforce_flow_data_override_owner(parsed, flow, current_user)
     except HTTPException as exc:
         # The owner-override deny is a privacy 404 (string detail); re-wrap to the
-        # structured FLOW_NOT_FOUND body to match the legacy single-try contract.
+        # structured FLOW_NOT_FOUND body using the requested identifier (parsed.flow_id
+        # may be an endpoint name) so the resolved UUID is not leaked.
         if exc.status_code == status.HTTP_404_NOT_FOUND:
-            raise _flow_not_found_http_exception(str(flow.id)) from exc
+            raise _flow_not_found_http_exception(str(parsed.flow_id)) from exc
         raise
     _validate_flow_data_for_execution(parsed, flow)
 
