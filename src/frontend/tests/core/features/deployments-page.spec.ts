@@ -19,25 +19,34 @@ async function navigateToDeploymentsTab(
   await page.waitForSelector('[data-testid="subtab-deployments"]');
 }
 
+// Empty providers + empty deployments — the catch-all the empty-state tests
+// share. Kept local (the shared setupDeploymentMocks returns a populated
+// providers list, which would break these empty-state assertions).
+async function mockEmptyDeploymentsAndProviders(
+  page: Parameters<typeof test>[2]["page"],
+) {
+  await page.route("**/api/v1/deployments/providers*", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ provider_accounts: [] }),
+    });
+  });
+
+  await page.route("**/api/v1/deployments*", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ deployments: [] }),
+    });
+  });
+}
+
 test(
   "Renders Deployments tab with sub-tab toggles",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    await page.route("**/api/v1/deployments/providers*", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ provider_accounts: [] }),
-      });
-    });
-
-    await page.route("**/api/v1/deployments*", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ deployments: [] }),
-      });
-    });
+    await mockEmptyDeploymentsAndProviders(page);
 
     await awaitBootstrapTest(page, { skipModal: true });
     await page.getByTestId("deployments-btn").click();
@@ -52,21 +61,7 @@ test(
   "Deployments empty state shows create button when no providers exist",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    await page.route("**/api/v1/deployments/providers*", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ provider_accounts: [] }),
-      });
-    });
-
-    await page.route("**/api/v1/deployments*", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ deployments: [] }),
-      });
-    });
+    await mockEmptyDeploymentsAndProviders(page);
 
     await awaitBootstrapTest(page, { skipModal: true });
     await page.getByTestId("deployments-btn").click();
@@ -80,21 +75,7 @@ test(
   "Providers empty state shows add provider button when switching to providers tab",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    await page.route("**/api/v1/deployments/providers*", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ provider_accounts: [] }),
-      });
-    });
-
-    await page.route("**/api/v1/deployments*", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ deployments: [] }),
-      });
-    });
+    await mockEmptyDeploymentsAndProviders(page);
 
     await awaitBootstrapTest(page, { skipModal: true });
     await page.getByTestId("deployments-btn").click();
