@@ -680,12 +680,15 @@ def _launch_workers(
             from lfx.cli.serve_gunicorn import LFXGunicornApp
 
             if sync_workers:
-                # Fail fast in the parent rather than per-worker on first request.
+                # Fail fast in the parent rather than per-worker on first request. a2wsgi
+                # ships with lfx on Linux/macOS, so a missing import means a broken
+                # environment, not a forgotten optional install.
                 try:
                     import a2wsgi  # noqa: F401
                 except ImportError as exc:
                     typer.echo(
-                        "Error: --use-sync-workers requires the 'a2wsgi' package. Install it with: pip install a2wsgi",
+                        "Error: --use-sync-workers needs 'a2wsgi', which ships with lfx on Linux/macOS; "
+                        "it is missing, so reinstall lfx to restore your environment.",
                         err=True,
                     )
                     raise typer.Exit(1) from exc

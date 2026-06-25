@@ -42,7 +42,10 @@ def wsgi_application(environ, start_response):
         try:
             from a2wsgi import ASGIMiddleware
         except ImportError as exc:  # pragma: no cover - exercised via --use-sync-workers without the dep
-            msg = "lfx serve --use-sync-workers requires the 'a2wsgi' package. Install it with: pip install a2wsgi"
+            msg = (
+                "lfx serve --use-sync-workers needs 'a2wsgi', which ships with lfx on Linux/macOS; "
+                "it is missing, so reinstall lfx to restore your environment."
+            )
             raise RuntimeError(msg) from exc
         _bridge = ASGIMiddleware(app)
     return _bridge(environ, start_response)

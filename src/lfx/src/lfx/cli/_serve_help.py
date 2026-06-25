@@ -45,6 +45,6 @@ RESET_ENVIRON = (
 SYNC_WORKERS = (
     "Use gunicorn's blocking 'sync' worker (Unix, --workers > 1) so the kernel "
     "routes each request to an idle worker instead of queueing it behind an "
-    "in-flight request on a busy async worker. Requires the 'a2wsgi' package. "
-    "Off by default (async worker)."
+    "in-flight request on a busy async worker. Uses the 'a2wsgi' bridge bundled "
+    "with lfx on Unix. Off by default (async worker)."
 )
