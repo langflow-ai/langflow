@@ -1,4 +1,7 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
+from langflow.services.auth.exceptions import InvalidTokenError
 from langflow.services.database.models.user import User
 from langflow.services.deps import get_auth_service, session_scope
 from sqlalchemy.exc import IntegrityError
@@ -47,6 +50,21 @@ async def test_login_unsuccessful_wrong_password(client, test_user, async_sessio
 async def test_session_endpoint_unauthenticated(client):
     """Test /session endpoint returns authenticated=False for unauthenticated requests."""
     response = await client.get("api/v1/session")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["authenticated"] is False
+    assert data["user"] is None
+    assert data["store_api_key"] is None
+
+
+async def test_session_endpoint_invalid_token_returns_unauthenticated(client):
+    """Test /session endpoint handles invalid tokens as unauthenticated sessions."""
+    auth_service = AsyncMock()
+    auth_service.get_current_user_from_access_token.side_effect = InvalidTokenError("Invalid token")
+
+    with patch("langflow.api.v1.login.get_auth_service", return_value=auth_service):
+        response = await client.get("api/v1/session", headers={"Authorization": "Bearer invalid-token"})
+
     assert response.status_code == 200
     data = response.json()
     assert data["authenticated"] is False
