@@ -23,7 +23,9 @@ class _FakeAsyncSession:
         self.added: list[Any] = []
         self.deleted: list[Any] = []
         self.flushed = 0
+        self.committed = 0
         self.rolled_back = 0
+        self.events: list[str] = []
 
     async def get(self, model: type, key: UUID) -> Any:
         return self._get_by_type.get((model, key))
@@ -36,6 +38,11 @@ class _FakeAsyncSession:
 
     async def flush(self) -> None:
         self.flushed += 1
+        self.events.append("flush")
+
+    async def commit(self) -> None:
+        self.committed += 1
+        self.events.append("commit")
 
     async def refresh(self, obj: Any) -> None:  # noqa: ARG002
         return None
@@ -58,6 +65,8 @@ class _StubAuthz:
         self.enforce_calls: list[dict] = []
         self.invalidated_users: list[UUID] = []
         self.invalidate_all_calls = 0
+        self.sync_shares_calls = 0
+        self.events: list[str] = []
 
     async def supports_cross_user_fetch(self) -> bool:
         return self._cross_user
@@ -74,9 +83,17 @@ class _StubAuthz:
 
     async def invalidate_user(self, user_id: UUID, *_args, **_kwargs) -> None:
         self.invalidated_users.append(user_id)
+        self.events.append("invalidate_user")
 
     async def invalidate_all(self, *_args, **_kwargs) -> None:
         self.invalidate_all_calls += 1
+        self.events.append("invalidate_all")
+
+
+class _SyncingAuthz(_StubAuthz):
+    async def sync_shares(self) -> None:
+        self.sync_shares_calls += 1
+        self.events.append("sync_shares")
 
 
 @pytest.fixture
@@ -178,6 +195,24 @@ async def test_create_share_allows_owner_under_oss_passthrough(patch_authz, sile
     assert result.resource_id == flow.id
     assert len(session.added) == 1
     assert session.flushed == 1
+    assert session.committed == 1
+
+
+@pytest.mark.asyncio
+async def test_create_share_commits_before_policy_refresh(patch_authz, silence_audit):  # noqa: ARG001
+    """Policy refresh happens only after the authz_share row is committed."""
+    from langflow.services.database.models.flow.model import Flow
+
+    stub = patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+    stub.events = session.events
+
+    await shares_module.create_share(payload=_payload_for(flow.id), current_user=owner, session=session)
+
+    assert session.events == ["flush", "commit", "invalidate_user"]
 
 
 @pytest.mark.asyncio
@@ -197,6 +232,7 @@ async def test_create_share_allows_superuser_under_oss_passthrough(patch_authz, 
 
     assert result.resource_id == flow.id
     assert len(session.added) == 1
+    assert session.committed == 1
 
 
 @pytest.mark.asyncio
@@ -284,6 +320,7 @@ async def test_update_share_allows_owner_under_oss_passthrough(patch_authz, sile
 
     assert result.permission_level == SharePermissionLevel.WRITE.value
     assert session.flushed == 1
+    assert session.committed == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -343,6 +380,7 @@ async def test_delete_share_allows_owner_under_oss_passthrough(patch_authz, sile
     await shares_module.delete_share(share_id=share.id, current_user=owner, session=session)
 
     assert len(session.deleted) == 1
+    assert session.committed == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -567,6 +605,19 @@ async def test_invalidate_for_share_non_user_scope_invalidates_all(patch_authz, 
     await shares_module._invalidate_for_share(scope, resolved)
     assert stub.invalidate_all_calls == 1
     assert stub.invalidated_users == []
+
+
+@pytest.mark.asyncio
+async def test_refresh_policy_for_share_prefers_sync_shares(monkeypatch):
+    """A plugin-provided share sync hook runs instead of the legacy invalidate path."""
+    stub = _SyncingAuthz()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+
+    await shares_module._refresh_policy_for_share(ShareScope.USER.value, uuid4(), op="share:test")
+
+    assert stub.sync_shares_calls == 1
+    assert stub.invalidated_users == []
+    assert stub.invalidate_all_calls == 0
 
 
 # --------------------------------------------------------------------------- #
