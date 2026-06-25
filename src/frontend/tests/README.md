@@ -24,3 +24,14 @@ already covers.
 
 Prefer seeding state through `seedFlowViaApi` over rebuilding flows on the
 canvas — UI rebuilds are the suite's main CI cost.
+
+## Tags
+
+Specs are tagged (`{ tag: [...] }`) so CI can filter which suites run. Use a tag
+that already exists — don't invent variants or introduce typos (e.g.
+`@starter-projects`, never `@starter-projectss`). The tags currently in use:
+
+`@release` · `@workspace` · `@api` · `@components` · `@starter-projects` ·
+`@database` · `@deployment` · `@a11y` · `@mainpage` · `@features` · `@agents` ·
+`@folder` · `@regression` · `@notes` · `@workflow` · `@routes` · `@right-click` ·
+`@dropdown`
