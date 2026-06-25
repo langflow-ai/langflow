@@ -34,7 +34,8 @@ const CPU_THROTTLE_RATE = (() => {
 // Extend test to log backend errors
 export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
   _a11ySession: [
-    async (_, use) => {
+    async ({ browserName }, use) => {
+      void browserName;
       await use();
 
       if (RUN_A11Y) {
