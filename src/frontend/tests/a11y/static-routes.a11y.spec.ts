@@ -2,11 +2,13 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { AriaRole } from "@playwright/test";
 import { expect, type LangflowPage, test } from "../fixtures";
+import { awaitBootstrapTest } from "../utils/await-bootstrap-test";
 import { TIMEOUTS } from "../utils/constants/timeouts";
 
 type StaticRoute = {
   id: string;
   path: string;
+  requiresMainContent?: boolean;
   ready?: ReadyCheck[];
 };
 
@@ -98,6 +100,10 @@ async function disableAnimations(page: LangflowPage) {
 }
 
 async function waitForRouteToSettle(page: LangflowPage, route: StaticRoute) {
+  if (route.requiresMainContent) {
+    await awaitBootstrapTest(page, { skipModal: true });
+  }
+
   await page.goto(route.path);
   await disableAnimations(page);
   await expect(page).toHaveURL(new RegExp(`${route.path}/?$`), {

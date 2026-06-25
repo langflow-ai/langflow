@@ -29,6 +29,7 @@
       "id": "assets-files",
       "path": "/assets/files",
       "surface": "Files page",
+      "requiresMainContent": true,
       "ready": [
         { "testId": "mainpage_title", "containsText": "Files" },
         { "testId": "upload-file-btn" }
@@ -38,6 +39,7 @@
       "id": "assets-knowledge-bases",
       "path": "/assets/knowledge-bases",
       "surface": "Knowledge bases page",
+      "requiresMainContent": true,
       "ready": [
         { "testId": "mainpage_title", "containsText": "Knowledge" },
         {
