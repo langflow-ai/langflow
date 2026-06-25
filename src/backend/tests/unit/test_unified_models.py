@@ -420,7 +420,7 @@ def _skip_available_models_catalog(monkeypatch):
     """Keep existing get_embeddings tests focused on the primary instance."""
     monkeypatch.setattr(
         "lfx.base.models.unified_models.instantiation._get_provider_embedding_model_names",
-        lambda provider, user_id: [],
+        lambda _provider, _user_id: [],
     )
 
 
@@ -555,7 +555,7 @@ def test_get_embeddings_openai_basic(mock_get_class, mock_get_api_key):
 def test_get_embeddings_populates_available_models_from_provider_catalog(mock_get_class, mock_get_api_key, monkeypatch):
     monkeypatch.setattr(
         "lfx.base.models.unified_models.instantiation._get_provider_embedding_model_names",
-        lambda provider, user_id: ["text-embedding-3-small", "text-embedding-3-large"],
+        lambda _provider, _user_id: ["text-embedding-3-small", "text-embedding-3-large"],
     )
     mock_get_api_key.return_value = "sk-test"
     primary = MagicMock(name="primary")
