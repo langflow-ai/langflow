@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { TEXTS } from "../../utils/constants/texts";
 import { TID } from "../constants/testIds";
 import { TIMEOUTS } from "../constants/timeouts";
@@ -46,4 +46,30 @@ export async function sendPlaygroundMessage(
   const stop = page.getByRole("button", { name: TEXTS.stop });
   await stop.waitFor({ state: "visible", timeout: TIMEOUTS.standard });
   await stop.waitFor({ state: "hidden", timeout: TIMEOUTS.buildComplete });
+}
+
+export type RunPlaygroundPromptOptions = SendOpts & {
+  /** Prompt to type into the playground chat input. */
+  prompt: string;
+  /** Substring expected to appear in the assistant's reply. */
+  expect: string;
+  /** Visibility timeout for the expected reply (default: build-complete). */
+  timeout?: number;
+};
+
+/**
+ * Send a prompt in the playground, wait for the build to finish, and assert
+ * the reply contains `expect`. Wraps {@link sendPlaygroundMessage} with the
+ * wait-for-text + web-first assertion that the per-template specs hand-roll.
+ * The playground panel must already be open.
+ */
+export async function runPlaygroundPrompt(
+  page: Page,
+  options: RunPlaygroundPromptOptions,
+): Promise<void> {
+  const { prompt, expect: expected, timeout, ...sendOpts } = options;
+  await sendPlaygroundMessage(page, prompt, sendOpts);
+  await expect(page.getByText(expected).last()).toBeVisible({
+    timeout: timeout ?? TIMEOUTS.buildComplete,
+  });
 }
