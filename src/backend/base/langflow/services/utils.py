@@ -224,6 +224,11 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         await logger.aerror(f"Missing credentials: username={username}, password={'set' if password else 'not set'}")
         raise ValueError(msg)
 
+    if password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
+        msg = "LANGFLOW_SUPERUSER_PASSWORD cannot use the legacy default password"
+        await logger.aerror(msg)
+        raise ValueError(msg)
+
     is_default = (username == DEFAULT_SUPERUSER) and (password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
 
     try:
