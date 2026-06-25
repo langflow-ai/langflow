@@ -149,7 +149,7 @@ This Dockerfile uses the official Langflow image as the base, creates a director
 
     ```bash
     docker build -t myuser/langflow-custom:1.0.0 .
-    docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    docker run -p 7860:7860 -e LANGFLOW_AUTO_LOGIN=true myuser/langflow-custom:1.0.0
     ```
 
 5. Push your image to Docker Hub (optional):
@@ -219,7 +219,7 @@ In this example, Langflow expects `memory.py` to exist in the `/helpers` directo
 
     ```bash
     docker build -t myuser/langflow-custom:1.0.0 .
-    docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    docker run -p 7860:7860 -e LANGFLOW_AUTO_LOGIN=true myuser/langflow-custom:1.0.0
     ```
 
 This approach can be adapted for any other components or custom code you want to add to Langflow by modifying the file paths and component names.

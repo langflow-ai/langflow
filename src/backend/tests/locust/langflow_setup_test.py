@@ -495,7 +495,9 @@ Examples:
 
                 except Exception as e:
                     print(f"❌ Authentication failed: {e}")
-                    print("Set LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD, or enable LANGFLOW_AUTO_LOGIN.")
+                    print(
+                        "Set LANGFLOW_SUPERUSER_PASSWORD and optionally LANGFLOW_SUPERUSER, or enable LANGFLOW_AUTO_LOGIN."
+                    )
                     sys.exit(1)
 
                 # Get flows from API
