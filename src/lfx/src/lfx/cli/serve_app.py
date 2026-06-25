@@ -63,9 +63,6 @@ _SERVE_ENV_PREFIX = "LFX_SERVE_"
 _SERVE_FLOW_DIR_ENV = f"{_SERVE_ENV_PREFIX}FLOW_DIR"
 _SERVE_NO_ENV_FALLBACK_ENV = f"{_SERVE_ENV_PREFIX}NO_ENV_FALLBACK"
 _SERVE_STARTUP_PATHS_ENV = f"{_SERVE_ENV_PREFIX}STARTUP_PATHS"
-# uvicorn limit_concurrency applied per worker by LFXUvicornWorker (gunicorn's
-# UvicornWorker doesn't expose it). Set by serve_command; read in each worker.
-_SERVE_LIMIT_CONCURRENCY_ENV = f"{_SERVE_ENV_PREFIX}LIMIT_CONCURRENCY"
 # Opt-in (`lfx serve --reset-environ`): when "1", guarded_execute snapshots
 # os.environ before each flow run and restores it after, so env mutations made by
 # one request (or request-scoped credentials) cannot leak into the next request

@@ -155,8 +155,8 @@ def register(app: typer.Typer) -> None:
             "--max-requests",
             help=_serve_help.MAX_REQUESTS,
         ),
-        timeout: int = typer.Option(
-            120,
+        timeout: int | None = typer.Option(
+            None,
             "--timeout",
             help=_serve_help.TIMEOUT,
         ),

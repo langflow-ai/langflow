@@ -48,6 +48,9 @@ API_KEY_MASK_LENGTH = 8
 # per-worker caches; jitter (10%) staggers workers so they don't all recycle on the same
 # request count. Explicit --max-requests 0 disables recycling; explicit N overrides this.
 DEFAULT_MAX_REQUESTS = 1000
+# Default gunicorn worker timeout (seconds) for multi-worker serving. gunicorn's own
+# default is 30s, which would kill long LLM flows. None (omitted --timeout) maps to this.
+DEFAULT_TIMEOUT = 120
 
 
 def _gate_flow_for_serve(
@@ -267,8 +270,8 @@ def serve_command(
         "--max-requests",
         help=_serve_help.MAX_REQUESTS,
     ),
-    timeout: int = typer.Option(
-        120,
+    timeout: int | None = typer.Option(
+        None,
         "--timeout",
         help=_serve_help.TIMEOUT,
     ),
@@ -357,10 +360,12 @@ def serve_command(
         raise typer.Exit(1)
 
     # When serve_command is invoked directly (not via the typer CLI), an omitted --max-requests
-    # arrives as a typer OptionInfo sentinel rather than None. Normalize it up front so the
-    # gunicorn recycling math sees None or a real int.
+    # or --timeout arrives as a typer OptionInfo sentinel rather than None. Normalize up front so
+    # the gunicorn recycling math and the single-worker warning see None or a real int.
     if not isinstance(max_requests, int):
         max_requests = None
+    if not isinstance(timeout, int):
+        timeout = None
 
     from lfx.cli.serve_identity import IdentityConfig, IdentityConfigError
 
@@ -507,10 +512,10 @@ def serve_command(
 
                 # These flags only affect multi-worker serving; with one worker they are
                 # silently inert, so warn loudly rather than appear to honor them.
-                if max_requests is not None or sync_workers:
+                if max_requests is not None or sync_workers or timeout is not None:
                     typer.echo(
-                        "Warning: --max-requests/--use-sync-workers apply only to multi-worker serving "
-                        "(--workers > 1) and are ignored with a single worker.",
+                        "Warning: --max-requests/--use-sync-workers/--timeout apply only to multi-worker "
+                        "serving (--workers > 1) and are ignored with a single worker.",
                         err=True,
                     )
 
@@ -567,7 +572,7 @@ def _launch_workers(
     max_requests: int | None,
     reset_environ: bool = False,
     sync_workers: bool = False,
-    timeout: int = 120,
+    timeout: int | None = None,
     identity_config: IdentityConfig | None = None,
 ) -> None:
     """Launch ``workers`` worker processes for ``lfx serve --workers N``.
@@ -595,9 +600,9 @@ def _launch_workers(
     around every flow run (see ``guarded_execute``). ``sync_workers``
     (``--use-sync-workers``, Unix only) swaps the async worker for gunicorn's blocking
     ``sync`` worker wrapped by an a2wsgi ASGI->WSGI bridge, so the kernel routes each
-    request to an idle worker. Both default off. ``timeout`` (``--timeout``, default
-    120s) sets gunicorn's worker timeout — raise it for long flows, especially under
-    ``--use-sync-workers``.
+    request to an idle worker. Both default off. ``timeout`` (``--timeout``) sets
+    gunicorn's worker timeout; ``None`` maps to ``DEFAULT_TIMEOUT`` (120s) — raise it for
+    long flows, especially under ``--use-sync-workers``.
 
     ``identity_config`` (``--identity-mode`` and friends) is round-tripped to the
     workers via ``LFX_SERVE_IDENTITY_*`` env vars so each worker reconstructs it in
@@ -696,6 +701,8 @@ def _launch_workers(
             # Unset (None) -> DEFAULT_MAX_REQUESTS so warm workers recycle periodically and
             # shed accumulated memory. Explicit 0 disables recycling; explicit N overrides.
             effective_max_requests = max_requests if max_requests is not None else DEFAULT_MAX_REQUESTS
+            # Unset (None) -> DEFAULT_TIMEOUT; explicit --timeout N overrides.
+            effective_timeout = timeout if timeout is not None else DEFAULT_TIMEOUT
 
             LFXGunicornApp(
                 app_import_string,
@@ -712,7 +719,7 @@ def _launch_workers(
                     # Worker timeout (--timeout, default 120). gunicorn's own default is 30s,
                     # which would kill long LLM flows — especially under --use-sync-workers, where a
                     # blocking worker cannot heartbeat mid-request.
-                    "timeout": timeout,
+                    "timeout": effective_timeout,
                 },
             ).run()
 
