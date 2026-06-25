@@ -59,8 +59,8 @@ for (const template of TEMPLATES) {
     template.name,
     { tag: ["@release", "@starter-projects"] },
     async ({ page }) => {
-      skipIfMissing.openAiKey();
       loadDotenvIfLocal(__dirname);
+      skipIfMissing.openAiKey();
       await page.goto("/");
 
       if ((template.open ?? "starter") === "heading") {
