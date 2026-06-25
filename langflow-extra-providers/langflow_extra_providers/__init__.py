@@ -26,5 +26,5 @@ try:
     from .hook import install as _install
 
     _install()
-except Exception:  # noqa: BLE001
+except Exception:
     logger.exception("langflow-extra-providers: failed to install auto-apply hook")

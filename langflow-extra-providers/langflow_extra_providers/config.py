@@ -89,9 +89,7 @@ def _load_override() -> dict[str, dict[str, Any]]:
         if path.is_file():
             text = path.read_text(encoding="utf-8")
         else:
-            logger.warning(
-                "%s does not look like JSON and is not an existing file: %r", _ENV_SPECS, raw
-            )
+            logger.warning("%s does not look like JSON and is not an existing file: %r", _ENV_SPECS, raw)
             return {}
     try:
         data = json.loads(text)

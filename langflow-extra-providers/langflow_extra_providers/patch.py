@@ -21,7 +21,8 @@ from __future__ import annotations
 import logging
 import re
 import sys
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .config import load_provider_specs
 

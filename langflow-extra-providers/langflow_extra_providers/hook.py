@@ -30,7 +30,7 @@ def _run_apply() -> None:
         from .patch import apply
 
         apply()
-    except Exception:  # noqa: BLE001 - never break a host process on our account
+    except Exception:
         logger.exception("langflow-extra-providers: auto-apply failed")
 
 
