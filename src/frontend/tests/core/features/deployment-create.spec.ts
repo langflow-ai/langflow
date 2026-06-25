@@ -2,126 +2,17 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
-  CONFIGS_MOCK,
   DEPLOY_RESPONSE,
-  FLOW_VERSIONS_MOCK,
   FLOWS_MOCK,
-  LLMS_MOCK,
-  PROVIDERS_MOCK,
   SNAPSHOTS_DUPLICATE_MOCK,
   SNAPSHOTS_EMPTY_MOCK,
+  setupDeploymentMocks,
 } from "../../utils/deployment-mocks";
 
 test.skip(
   process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
   "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
 );
-
-// ---------------------------------------------------------------------------
-// Helper: set up all required API route mocks
-// ---------------------------------------------------------------------------
-async function setupDeploymentMocks(
-  page: Page,
-  folderId: string,
-  snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
-  flowsMock: typeof FLOWS_MOCK = FLOWS_MOCK,
-) {
-  // Broad catch-all registered FIRST so specific routes (registered after) take priority via LIFO
-  await page.route("**/api/v1/deployments*", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ deployments: [] }),
-    });
-  });
-
-  // Snapshots (used for duplicate tool name check on review step).
-  // When snapshotsMock is SNAPSHOTS_DUPLICATE_MOCK, echo back the requested names
-  // as existing tools so the check works regardless of the scoped tool name format.
-  await page.route("**/api/v1/deployments/snapshots**", (route) => {
-    if (snapshotsMock === SNAPSHOTS_DUPLICATE_MOCK) {
-      const url = new URL(route.request().url());
-      const names = url.searchParams.getAll("names");
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          provider_data: {
-            tools: names.map((name, i) => ({ id: `tool-${i}`, name })),
-            page: 1,
-            size: 50,
-            total: names.length,
-          },
-        }),
-      });
-      return;
-    }
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(snapshotsMock),
-    });
-  });
-
-  // Provider accounts
-  await page.route("**/api/v1/deployments/providers**", (route) => {
-    if (route.request().method() === "GET") {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(PROVIDERS_MOCK),
-      });
-    } else {
-      route.continue();
-    }
-  });
-
-  // LLMs
-  await page.route("**/api/v1/deployments/llms**", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(LLMS_MOCK),
-    });
-  });
-
-  // Deployment configs (connections)
-  await page.route("**/api/v1/deployments/configs**", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(CONFIGS_MOCK),
-    });
-  });
-
-  // Flows list — inject the captured folderId so the component's folder filter passes
-  await page.route("**/api/v1/flows/**", (route) => {
-    const url = route.request().url();
-    if (url.includes("/versions/")) {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(FLOW_VERSIONS_MOCK),
-      });
-      return;
-    }
-    const flows = flowsMock.map((f) => ({ ...f, folder_id: folderId }));
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(flows),
-    });
-  });
-
-  // Global variables (used in attach-flows step)
-  await page.route("**/api/v1/variables**", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify([]),
-    });
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Helper: navigate to the deployments page and open the stepper
