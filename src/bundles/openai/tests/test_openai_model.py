@@ -1,16 +1,22 @@
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_openai import ChatOpenAI
-
-from tests.api_keys import get_openai_api_key, has_api_key
-from tests.base import ComponentTestBaseWithoutClient
-
-pytest.importorskip("lfx_openai")
 from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
+_FAKE_OPENAI_API_KEY = "test-api-key"  # pragma: allowlist secret
 
-class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
+
+def get_openai_api_key() -> str:
+    return os.getenv("OPENAI_API_KEY", "")
+
+
+def has_openai_api_key() -> bool:
+    return bool(get_openai_api_key())
+
+
+class TestOpenAIModelComponent:
     @pytest.fixture
     def component_class(self):
         return OpenAIModelComponent
@@ -23,7 +29,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
             "json_mode": False,
             "model_name": "gpt-4.1-nano",
             "openai_api_base": "https://api.openai.com/v1",
-            "api_key": "test-api-key",
+            "api_key": _FAKE_OPENAI_API_KEY,
             "temperature": 0.1,
             "seed": 1,
             "max_retries": 5,
@@ -43,7 +49,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         model = component.build_model()
 
         mock_chat_openai.assert_called_once_with(
-            api_key="test-api-key",
+            api_key=_FAKE_OPENAI_API_KEY,
             model_name="gpt-4.1-nano",
             max_tokens=1000,
             model_kwargs={},
@@ -66,7 +72,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
 
         # For reasoning models, temperature and seed should be excluded
         mock_chat_openai.assert_called_once_with(
-            api_key="test-api-key",
+            api_key=_FAKE_OPENAI_API_KEY,
             model_name="o1",
             max_tokens=1000,
             model_kwargs={},
@@ -237,7 +243,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         assert updated_config["temperature"]["show"] is True
         assert updated_config["seed"]["show"] is True
 
-    @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not set or is empty")
+    @pytest.mark.skipif(not has_openai_api_key(), reason="OPENAI_API_KEY is not set or is empty")
     def test_build_model_integration(self):
         component = OpenAIModelComponent()
         try:
@@ -257,7 +263,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         assert model.model_name == "gpt-4.1-nano"
         assert model.openai_api_base == "https://api.openai.com/v1"
 
-    @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not set or is empty")
+    @pytest.mark.skipif(not has_openai_api_key(), reason="OPENAI_API_KEY is not set or is empty")
     def test_build_model_integration_reasoning(self):
         component = OpenAIModelComponent()
         component.api_key = get_openai_api_key()
