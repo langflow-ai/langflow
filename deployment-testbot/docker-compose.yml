@@ -1,0 +1,23 @@
+services:
+  langflow:
+    build:
+      context: ${UPSTREAM_CHECKOUT:-..}
+      dockerfile: docker/build_and_push_backend.Dockerfile
+    ports:
+      # host 8094 -> container 7860 (default LANGFLOW_PORT)
+      - "8094:7860"
+    environment:
+      LANGFLOW_HOST: 0.0.0.0
+      LANGFLOW_PORT: "7860"
+      # Superuser — seeded on first boot via LANGFLOW_SUPERUSER_* vars
+      LANGFLOW_SUPERUSER: admin@langflow.test
+      LANGFLOW_SUPERUSER_PASSWORD: Password123!
+      # Disable auto-login so the testbot uses bearer-token auth
+      LANGFLOW_AUTO_LOGIN: "false"
+      # SQLite by default (no LANGFLOW_DATABASE_URL → sqlite in LANGFLOW_CONFIG_DIR)
+      LANGFLOW_CONFIG_DIR: /app/langflow
+    volumes:
+      - langflow-data:/app/langflow
+
+volumes:
+  langflow-data:

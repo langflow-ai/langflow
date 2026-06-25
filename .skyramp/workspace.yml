@@ -1,0 +1,21 @@
+# Skyramp Workspace Configuration
+workspace:
+  repoName: kslee/langflow
+  repoUrl: https://github.com/kslee/langflow
+metadata:
+  schemaVersion: v1
+services:
+  - serviceName: langflow-testb-server
+    language: python
+    framework: pytest
+    testDirectory: tests/skyramp
+    api:
+      schemaPath: http://localhost:8094/openapi.json
+      authType: bearer
+      authHeader: Authorization
+      authScheme: Bearer
+      baseUrl: http://localhost:8094
+    runtimeDetails:
+      serverStartCommand: docker compose -f deployment-testbot/docker-compose.yml up -d --build
+      runtime: docker
+      dockerNetwork: deployment-testbot_default

@@ -41,3 +41,9 @@ jobs:
           anthropicApiKey: ${{ secrets.SKYRAMP_TESTBOT_API_KEY }}
           githubToken: ${{ steps.skyramp-testbot-app-token.outputs.token }}
           skyrampMcpVersion: 0.2.150-rc.ui.mntnc
+          targetSetupCommand: './deployment-testbot/setup.sh'
+          targetReadyCheckCommand: 'curl -f http://localhost:8094/health_check'
+          targetReadyCheckTimeout: 1200
+          authTokenCommand: './deployment-testbot/get-token.sh'
+          autoCommit: true
+          postPrComment: true
