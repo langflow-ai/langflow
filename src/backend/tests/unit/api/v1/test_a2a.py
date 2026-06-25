@@ -309,7 +309,7 @@ async def test_message_send_runs_flow_and_returns_completed_task(client: AsyncCl
 
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_tasks_get_returns_prior_task(client: AsyncClient, active_user, echo_flow_data):
-    """tasks/get reads back the Task a prior message/send created (shared in-memory store)."""
+    """tasks/get reads back the Task a prior message/send created (durable DB-backed store)."""
     flow_id = await _create_flow(active_user.id, data=echo_flow_data)
     sent = (await _jsonrpc(client, flow_id, "message/send", _text_message("remember me"))).json()["result"]
     task_id = sent["id"]
@@ -387,3 +387,180 @@ def test_answer_texts_resolves_each_output_reason():
 
     none = _response(output=WorkflowOutput(reason=OutputReason.NONE))
     assert _answer_texts(none) == []
+
+
+# --- durable task store ----------------------------------------------------
+
+
+@pytest.mark.usefixtures("client")
+async def test_durable_store_roundtrips_across_instances():
+    """A task saved by one store instance is read back by a fresh instance.
+
+    Two independent DurableTaskStore instances share only the DB, so this is the
+    survives-restart / visible-across-workers property the in-memory store lacked.
+    """
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import DurableTaskStore
+
+    task_id = str(uuid.uuid4())
+    task = pb.Task(
+        id=task_id,
+        context_id="c1",
+        status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED),
+    )
+    ctx = ServerCallContext()  # default UnauthenticatedUser -> owner ""
+
+    await DurableTaskStore().save(task, ctx)
+    got = await DurableTaskStore().get(task_id, ctx)
+
+    assert got is not None
+    assert got.id == task_id
+    assert got.context_id == "c1"
+    assert got.status.state == pb.TaskState.TASK_STATE_COMPLETED
+
+    # Pin durability to the DB: this row must exist in the table, so the test fails if
+    # the store ever stops being DB-backed (composite PK is (id, owner), owner "").
+    from langflow.services.database.models import A2ATask
+    from langflow.services.deps import session_scope
+
+    async with session_scope() as session:
+        assert await session.get(A2ATask, (task_id, "")) is not None
+
+
+@pytest.mark.usefixtures("client")
+async def test_durable_store_is_owner_scoped():
+    """get() is scoped to the saving owner; a different owner doesn't see the task."""
+    from a2a.auth.user import User
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import DurableTaskStore
+
+    class _NamedUser(User):
+        @property
+        def is_authenticated(self) -> bool:
+            return True
+
+        @property
+        def user_name(self) -> str:
+            return "someone-else"
+
+    task_id = str(uuid.uuid4())
+    task = pb.Task(id=task_id, status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_SUBMITTED))
+
+    await DurableTaskStore().save(task, ServerCallContext())  # owner ""
+
+    # Positive control: the saving owner sees it, so a None below is the owner filter,
+    # not a failed save.
+    hit = await DurableTaskStore().get(task_id, ServerCallContext())
+    assert hit is not None
+    assert hit.id == task_id
+
+    miss = await DurableTaskStore().get(task_id, ServerCallContext(user=_NamedUser()))
+    assert miss is None
+
+
+def _pg_url(raw: str) -> str:
+    """Strip any driver suffix to a bare ``postgresql://`` URL.
+
+    DatabaseService then applies langflow's own async driver (psycopg), which is the
+    production path; forcing ``+asyncpg`` here breaks because the postgres connect args
+    (e.g. ``prepare_threshold``) are psycopg-specific.
+    """
+    for prefix in ("postgresql+asyncpg://", "postgresql+psycopg://", "postgresql+psycopg2://"):
+        if raw.startswith(prefix):
+            return "postgresql://" + raw[len(prefix) :]
+    if raw.startswith("postgres://"):
+        return "postgresql://" + raw[len("postgres://") :]
+    return raw
+
+
+@pytest.fixture(params=["sqlite", "postgres"])
+async def a2a_migrated_db(request, tmp_path, monkeypatch):
+    """Bind ``session_scope`` to a real, migration-built DB and yield its URL.
+
+    Runs the production Alembic migrations (not ``create_all``) so the ``a2a_tasks``
+    DDL — and its JSONB ``task`` column on Postgres — is actually exercised. SQLite
+    always runs; Postgres runs only when ``LANGFLOW_TEST_DATABASE_URI`` is set (CI sets
+    it), else the param skips.
+
+    ponytail: mirrors the background_execution real_services harness fixture, kept local
+    so this slice doesn't refactor that package's conftest. ``LANGFLOW_DATABASE_URL`` is
+    set (not just the settings attribute) because the settings validator lets that env
+    var win, so a bare attribute assignment would silently fall back to the default DB.
+    """
+    import contextlib
+    import os
+
+    from langflow.services.database.factory import DatabaseServiceFactory
+    from langflow.services.deps import get_settings_service
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    if request.param == "sqlite":
+        url = f"sqlite+aiosqlite:///{tmp_path}/a2a_real.db"
+    else:
+        raw = os.environ.get("LANGFLOW_TEST_DATABASE_URI")
+        if not raw:
+            pytest.skip("LANGFLOW_TEST_DATABASE_URI not set")
+        url = _pg_url(raw)
+
+    manager = get_service_manager()
+    settings_service = get_settings_service()
+    original_db = manager.services.pop(ServiceType.DATABASE_SERVICE, None)
+
+    monkeypatch.setenv("LANGFLOW_DATABASE_URL", url)  # the validator honors this over the attribute
+    settings_service.settings.database_url = url  # re-runs the validator, now picking up the env
+    db_service = DatabaseServiceFactory().create(settings_service)
+    manager.services[ServiceType.DATABASE_SERVICE] = db_service  # run_migrations()/session_scope resolve here
+    try:
+        await db_service.run_migrations()
+        yield url
+    finally:
+        manager.services.pop(ServiceType.DATABASE_SERVICE, None)
+        with contextlib.suppress(Exception):
+            await db_service.teardown()
+        if original_db is not None:
+            manager.services[ServiceType.DATABASE_SERVICE] = original_db
+
+
+@pytest.mark.real_services
+@pytest.mark.usefixtures("a2a_migrated_db")
+async def test_durable_store_roundtrips_on_real_migrated_db():
+    """The durable store round-trips a Task on a real migration-built DB (sqlite + postgres).
+
+    Each ``DurableTaskStore()`` is a fresh instance sharing only the DB, so this also
+    proves the cross-instance / survives-restart property on the real engine, and that
+    the proto<->JSON round-trip survives the JSONB column on Postgres.
+    """
+    from a2a.auth.user import User
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import DurableTaskStore
+
+    task_id = str(uuid.uuid4())
+    task = pb.Task(
+        id=task_id,
+        context_id="ctx-1",
+        status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED),
+    )
+    ctx = ServerCallContext()
+
+    await DurableTaskStore().save(task, ctx)
+    got = await DurableTaskStore().get(task_id, ctx)
+
+    assert got is not None
+    assert got.id == task_id
+    assert got.context_id == "ctx-1"
+    assert got.status.state == pb.TaskState.TASK_STATE_COMPLETED
+
+    class _Other(User):
+        @property
+        def is_authenticated(self) -> bool:
+            return True
+
+        @property
+        def user_name(self) -> str:
+            return "other"
+
+    assert await DurableTaskStore().get(task_id, ServerCallContext(user=_Other())) is None
