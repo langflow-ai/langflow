@@ -1,0 +1,97 @@
+"""Protocol-pure A2A AgentExecutor for Langflow flows.
+
+Deliberately free of langflow imports (only the a2a SDK, ``lfx.schema.workflow``,
+and stdlib) so it can move to lfx when the A2A protocol layer is extracted. The
+langflow-bound seam (flow lookup, v2 execution, gating) lives in ``a2a.py`` and
+is injected as the ``run_flow`` callable.
+
+The a2a-sdk 1.x server stack is protobuf-based (``a2a.types.a2a_pb2``); the
+spec-name methods ``message/send`` / ``tasks/get`` reach it through the v0.3
+compat adapter wired up in ``a2a.py``.
+"""
+
+from __future__ import annotations
+
+import logging
+from collections.abc import Awaitable, Callable
+from uuid import UUID
+
+from a2a.helpers.proto_helpers import new_text_part
+from a2a.server.agent_execution import AgentExecutor, RequestContext
+from a2a.server.events import EventQueue
+from a2a.server.tasks import TaskUpdater
+from a2a.types import a2a_pb2 as pb
+from lfx.schema.workflow import JobStatus, OutputReason, WorkflowExecutionResponse
+
+logger = logging.getLogger(__name__)
+
+# (flow_id, task_id, input_text) -> the v2 sync run result.
+RunFlow = Callable[[UUID, str, str], Awaitable[WorkflowExecutionResponse]]
+
+
+def _answer_texts(response: WorkflowExecutionResponse) -> list[str]:
+    """The run's text answer(s) for the A2A artifact.
+
+    SINGLE is the canonical agent shape (one ChatOutput); preserve its text,
+    including an intentional "". A multi-output agent flow resolves to MULTIPLE
+    with the answers in ``outputs`` (output.text is None), so emit each text
+    channel rather than silently dropping them. NONE/NON_STRING have no string
+    text channel, so there's nothing to return.
+    """
+    if response.output.reason == OutputReason.SINGLE:
+        return [response.output.text or ""]
+    return [
+        output.content
+        for output in response.outputs.values()
+        if output.type in {"message", "text"} and isinstance(output.content, str)
+    ]
+
+
+class FlowAgentExecutor(AgentExecutor):
+    """Runs a Langflow flow for one A2A ``message/send`` and reports a terminal Task."""
+
+    def __init__(self, run_flow: RunFlow) -> None:
+        self._run_flow = run_flow
+
+    async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        flow_id = context.call_context.state["flow_id"]
+
+        # DefaultRequestHandlerV2 rejects a status/artifact event before a Task
+        # event ("Agent should enqueue Task before TaskStatusUpdateEvent"), and
+        # this SDK version has no new_task helper, so enqueue the proto Task first.
+        await event_queue.enqueue_event(
+            pb.Task(
+                id=context.task_id,
+                context_id=context.context_id,
+                status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_SUBMITTED),
+            )
+        )
+        updater = TaskUpdater(event_queue, context.task_id, context.context_id)
+        await updater.start_work()
+
+        text = context.get_user_input()
+        try:
+            response = await self._run_flow(UUID(flow_id), context.task_id, text)
+        except Exception:
+            # Unexpected build/timeout/system failures become a failed Task, not a 500.
+            # The endpoint is unauthenticated, so don't hand the caller raw exception
+            # text (graph-build internals, DB errors); log it server-side instead.
+            logger.exception("A2A flow execution failed for task %s", context.task_id)
+            await updater.failed(updater.new_agent_message([new_text_part("Flow execution failed")]))
+            return
+
+        # Component/runtime errors come back in-band as a FAILED status, not raised.
+        # ponytail: this in-band branch needs a flow that builds then errors at a
+        # component to exercise; left to the suite's raised-failure coverage this slice.
+        if response.status == JobStatus.FAILED or response.has_errors:
+            detail = "; ".join(error.error for error in response.errors) or "Flow execution failed"
+            await updater.failed(updater.new_agent_message([new_text_part(detail)]))
+            return
+
+        parts = [new_text_part(answer) for answer in _answer_texts(response)]
+        await updater.add_artifact(parts or [new_text_part("")], name="result")
+        await updater.complete()
+
+    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
+        # ponytail: synchronous message/send runs aren't cancelable; tasks/cancel is out of scope.
+        raise NotImplementedError
