@@ -19,10 +19,27 @@ maintainers = [
 dependencies = [
     "langflow-base[complete]>=0.11.0",
     # langflow-extensions:bundle-deps-start
-    "lfx-duckduckgo>=0.1.0",
-    "lfx-arxiv>=0.1.0",
-    "lfx-ibm>=0.1.0",
-    "lfx-docling>=0.1.0",
+    # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
+    # curated lfx-* package, never exact pins -- exact pins in reusable library
+    # metadata create resolver conflicts for downstreams that depend on a
+    # different version. Exact pins for reproducibility live in uv.lock and the
+    # release-build manifests. Bundles follow their own 0.1.x cadence (bound
+    # <1.0.0); lfx-bundles versions with the metapackage contract (bound <2.0).
+    # The cross-bundle CI matrix verifies these ranges resolve together across
+    # the supported lfx axis.
+    "lfx-duckduckgo>=0.1.0,<1.0.0",
+    "lfx-arxiv>=0.1.0,<1.0.0",
+    "lfx-ibm>=0.1.0,<1.0.0",
+    "lfx-docling>=0.1.0,<1.0.0",
+    "lfx-bundles[all]>=1.0,<2.0",
+    "lfx-datastax>=0.1.0,<1.0.0",
+    "lfx-openai>=0.1.0,<1.0.0",
+    "lfx-anthropic>=0.1.0,<1.0.0",
+    "lfx-amazon>=0.1.0,<1.0.0",
+    "lfx-cohere>=0.1.0,<1.0.0",
+    "lfx-oracle>=0.1.0,<1.0.0",
+    "lfx-firecrawl>=0.1.0,<1.0.0",
+    "lfx-nextplaid>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -84,6 +101,15 @@ lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
 lfx-docling = { workspace = true }
+lfx-bundles = { workspace = true }
+lfx-datastax = { workspace = true }
+lfx-openai = { workspace = true }
+lfx-anthropic = { workspace = true }
+lfx-amazon = { workspace = true }
+lfx-cohere = { workspace = true }
+lfx-oracle = { workspace = true }
+lfx-firecrawl = { workspace = true }
+lfx-nextplaid = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -100,6 +126,15 @@ members = [
     "src/bundles/arxiv",
     "src/bundles/ibm",
     "src/bundles/docling",
+    "src/bundles/lfx-bundles",
+    "src/bundles/datastax",
+    "src/bundles/openai",
+    "src/bundles/anthropic",
+    "src/bundles/amazon",
+    "src/bundles/cohere",
+    "src/bundles/oracle",
+    "src/bundles/firecrawl",
+    "src/bundles/nextplaid",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -112,15 +147,15 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "lfx-docling[local]>=0.1.0",
+    "lfx-docling[local]>=0.1.0,<1.0.0",
 ]
 
 docling-chunking = [
-    "lfx-docling[chunking]>=0.1.0",
+    "lfx-docling[chunking]>=0.1.0,<1.0.0",
 ]
 
 docling-image-description = [
-    "lfx-docling[image-description]>=0.1.0",
+    "lfx-docling[image-description]>=0.1.0,<1.0.0",
 ]
 
 audio = [
@@ -172,6 +207,7 @@ override-dependencies = [
     "mako>=1.3.12,<2.0.0",  # CVE-2026-44307
     "urllib3>=2.7.0,<3.0.0",  # CVE-2026-44431, CVE-2026-44432
     "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
+    "torchvision<0.27.1",
 ]
 
 [project.scripts]
@@ -349,16 +385,13 @@ external = ["RUF027"]
 "src/lfx/src/lfx/components/data/save_file.py" = [
     "SLF001",  # Google API client private member access
 ]
-"src/lfx/src/lfx/components/datastax/astradb_vectorstore.py" = [
-    "S110",  # Try-except-pass for optional metadata
-]
 "src/lfx/src/lfx/components/google/google_generative_ai_embeddings.py" = [
     "SLF001",  # Google AI library private member access
 ]
 "src/lfx/src/lfx/components/knowledge_bases/retrieval.py" = [
     "SLF001",  # Chroma client private member access
 ]
-"src/lfx/src/lfx/components/mongodb/mongodb_atlas.py" = [
+"src/bundles/lfx-bundles/src/lfx_bundles/mongodb/mongodb_atlas.py" = [
     "SLF001",  # MongoDB collection private member access
 ]
 "src/lfx/src/lfx/components/tools/{python_code_structured_tool.py,searxng.py}" = [
@@ -392,6 +425,11 @@ external = ["RUF027"]
     "FBT003", # Boolean positional values in typer.Option() calls
 ]
 "src/lfx/src/lfx/cli/_setup_commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+]
+"src/lfx/src/lfx/cli/_prewarm_commands.py" = [
     "B008",   # Typer CLI requires function calls in argument defaults
     "FBT001", # Bool flags are the standard typer pattern
     "FBT003", # Boolean positional values in typer.Option() calls

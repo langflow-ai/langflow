@@ -351,6 +351,8 @@ export const lazyIconsMapping = {
   Neon: () => import("@/icons/Neon").then((mod) => ({ default: mod.NeonIcon })),
   Newsapi: () =>
     import("@/icons/Newsapi").then((mod) => ({ default: mod.NewsapiIcon })),
+  NextPlaid: () =>
+    import("@/icons/NextPlaid").then((mod) => ({ default: mod.NextPlaidIcon })),
   NotDiamond: () =>
     import("@/icons/NotDiamond").then((mod) => ({
       default: mod.NotDiamondIcon,
@@ -375,6 +377,8 @@ export const lazyIconsMapping = {
     })),
   OpenSearch: () =>
     import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
+  Oracle: () =>
+    import("@/icons/Oracle").then((mod) => ({ default: mod.OracleIcon })),
   Perplexity: () =>
     import("@/icons/Perplexity").then((mod) => ({
       default: mod.PerplexityIcon,

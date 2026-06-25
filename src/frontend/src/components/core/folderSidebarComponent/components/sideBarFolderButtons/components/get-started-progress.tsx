@@ -108,6 +108,7 @@ export const GetStartedProgress: FC<{
           onClick={() => handleUserTrack("dialog_dismissed")}
           className="text-muted-foreground hover:text-foreground"
           data-testid="close_get_started_dialog"
+          aria-label={t("sidebar.closeGetStarted")}
         >
           <IconComponent name="X" className="h-4 w-4" />
         </button>

@@ -302,7 +302,7 @@ def _build_model_config(provider: str, model_name: str) -> list[dict]:
         "api_key_param": param_mapping.get("api_key_param", "api_key"),
         "context_length": 128000,
         "model_class": param_mapping.get("model_class", "ChatOpenAI"),
-        "model_name_param": param_mapping.get("model_name_param", "model"),
+        "model_name_param": param_mapping.get("model_param", "model"),
     }
     # Include extra params like base_url_param for providers like Ollama
     for extra_param in ("url_param", "project_id_param", "base_url_param"):

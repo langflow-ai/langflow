@@ -68,14 +68,17 @@ COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
 # Increase memory and disable concurrent builds to avoid esbuild crashes on emulated architectures
 # Force esbuild to use JS implementation on emulated architectures to avoid native binary crashes
-RUN npm install \
+# PUPPETEER_SKIP_DOWNLOAD: puppeteer (via accessibility-checker, test-only)
+# must not download Chrome here - the build env can't fetch it and the
+# production image never runs it.
+RUN PUPPETEER_SKIP_DOWNLOAD=true npm install \
     && ESBUILD_BINARY_PATH="" NODE_OPTIONS="--max-old-space-size=4096" JOBS=1 npm run build \
     && cp -r build /app/src/backend/base/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
 WORKDIR /app/src/backend/base
 # langflow-base ships the core framework only.  The extension bundles
-# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling) are intentionally NOT
+# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling, lfx-oracle, lfx-firecrawl) are intentionally NOT
 # installed in this image: they are dependencies of the full ``langflow``
 # distribution, not of the lean ``langflow-base`` core, and we keep that
 # boundary at the image layer too.  Consumers who want those components

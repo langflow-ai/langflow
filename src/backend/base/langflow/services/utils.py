@@ -487,6 +487,7 @@ def register_all_service_factories() -> None:
     from lfx.services.schema import ServiceType
 
     service_manager = get_service_manager()
+    from lfx.services.executor import factory as executor_factory
     from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.settings import factory as settings_factory
 
@@ -542,6 +543,7 @@ def register_all_service_factories() -> None:
     )
     service_manager.register_factory(authorization_factory.AuthorizationServiceFactory())
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
+    service_manager.register_factory(executor_factory.ExecutorServiceFactory())
     service_manager.set_factory_registered()
 
 

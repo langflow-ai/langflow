@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "assumptions": [
+    "BASENAME is empty, so route paths start at /.",
+    "ENABLE_CUSTOM_PARAM is false, so tenant/custom-prefix variants are not active.",
+    "ENABLE_FILE_MANAGEMENT is true, so /assets routes are active.",
+    "ENABLE_KNOWLEDGE_BASES is true, so knowledge-base routes are active."
+  ],
+  "static": [
+    {
+      "id": "flows",
+      "path": "/flows",
+      "surface": "Flows list",
+      "ready": [{ "testId": "mainpage_title" }]
+    },
+    {
+      "id": "components",
+      "path": "/components",
+      "surface": "Components list",
+      "ready": [{ "testId": "mainpage_title" }]
+    },
+    {
+      "id": "mcp",
+      "path": "/mcp",
+      "surface": "MCP list",
+      "ready": [{ "testId": "mainpage_title" }]
+    },
+    {
+      "id": "assets-files",
+      "path": "/assets/files",
+      "surface": "Files page",
+      "requiresMainContent": true,
+      "ready": [
+        { "testId": "mainpage_title", "containsText": "Files" },
+        { "testId": "upload-file-btn" }
+      ]
+    },
+    {
+      "id": "assets-knowledge-bases",
+      "path": "/assets/knowledge-bases",
+      "surface": "Knowledge bases page",
+      "requiresMainContent": true,
+      "ready": [
+        { "testId": "mainpage_title", "containsText": "Knowledge" },
+        {
+          "oneOf": [
+            { "role": "button", "name": "add knowledge" },
+            { "testId": "search-kb-input" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "settings-general",
+      "path": "/settings/general",
+      "surface": "General settings page",
+      "ready": [{ "testId": "settings_menu_header" }]
+    },
+    {
+      "id": "settings-global-variables",
+      "path": "/settings/global-variables",
+      "surface": "Global variables settings page",
+      "ready": [{ "testId": "settings_menu_header" }]
+    },
+    {
+      "id": "settings-model-providers",
+      "path": "/settings/model-providers",
+      "surface": "Model providers settings page",
+      "ready": [{ "testId": "settings_menu_header" }]
+    },
+    {
+      "id": "settings-db-providers",
+      "path": "/settings/db-providers",
+      "surface": "DB providers settings page",
+      "ready": [{ "testId": "settings_menu_header" }]
+    },
+    {
+      "id": "settings-mcp-servers",
+      "path": "/settings/mcp-servers",
+      "surface": "MCP servers settings page",
+      "ready": [{ "testId": "settings_menu_header" }]
+    },
+    {
+      "id": "settings-mcp-client",
+      "path": "/settings/mcp-client",
+      "surface": "MCP client settings page",
+      "ready": [{ "role": "heading", "name": "Langflow MCP Client" }]
+    },
+    {
+      "id": "settings-api-keys",
+      "path": "/settings/api-keys",
+      "surface": "API keys settings page",
+      "ready": [{ "testId": "settings_menu_header" }]
+    },
+    {
+      "id": "settings-shortcuts",
+      "path": "/settings/shortcuts",
+      "surface": "Shortcuts settings page",
+      "ready": [{ "testId": "settings_menu_header" }]
+    },
+    {
+      "id": "settings-messages",
+      "path": "/settings/messages",
+      "surface": "Messages settings page",
+      "ready": [{ "testId": "settings_menu_header" }]
+    },
+    {
+      "id": "settings-store",
+      "path": "/settings/store",
+      "surface": "Store API key settings page",
+      "ready": [{ "testId": "settings_menu_header" }]
+    },
+    {
+      "id": "account-delete",
+      "path": "/account/delete",
+      "surface": "Delete account page",
+      "ready": [{ "role": "button", "name": "delete", "first": true }]
+    }
+  ],
+  "dynamic": [
+    {
+      "template": "/flow/:id/",
+      "surface": "Flow editor",
+      "requiredData": "Flow ID"
+    },
+    {
+      "template": "/flow/:id/view",
+      "surface": "Flow view page",
+      "requiredData": "Flow ID"
+    },
+    {
+      "template": "/playground/:id/",
+      "surface": "Shared playground page",
+      "requiredData": "Shared flow/playground ID"
+    },
+    {
+      "template": "/assets/knowledge-bases/:sourceId/chunks",
+      "surface": "Knowledge-base source chunks page",
+      "requiredData": "Knowledge-base source ID"
+    }
+  ],
+  "gated": [
+    {
+      "path": "/admin",
+      "surface": "Admin page",
+      "currentBehavior": "Redirects to /flows for current user/session. Scan with an admin user."
+    },
+    {
+      "path": "/login",
+      "surface": "Login page",
+      "currentBehavior": "Redirects to /flows while authenticated. Scan in logged-out/no-auto-login mode."
+    },
+    {
+      "path": "/signup",
+      "surface": "Sign-up page",
+      "currentBehavior": "Redirects to /flows while authenticated. Scan in logged-out/no-auto-login mode."
+    },
+    {
+      "path": "/login/admin",
+      "surface": "Admin login page",
+      "currentBehavior": "Redirects to /flows while authenticated. Scan in logged-out/no-auto-login mode."
+    },
+    {
+      "path": "/store",
+      "surface": "Store page",
+      "currentBehavior": "Redirects to /all when store guard blocks access. Scan only when store is available."
+    },
+    {
+      "path": "/store/:id/",
+      "surface": "Store detail page",
+      "currentBehavior": "Requires store access and store item ID."
+    }
+  ],
+  "excluded": [
+    {
+      "path": "/",
+      "canonical": "/flows",
+      "reason": "Runtime redirect to /flows."
+    },
+    {
+      "path": "/all",
+      "canonical": "/flows",
+      "reason": "Same HomePage surface with type=flows in route source."
+    },
+    {
+      "path": "/assets",
+      "canonical": "/assets/files",
+      "reason": "Runtime redirect to /assets/files."
+    },
+    {
+      "path": "/settings",
+      "canonical": "/settings/general",
+      "reason": "Runtime redirect to /settings/general."
+    },
+    {
+      "path": "/settings/general/:scrollId?",
+      "canonical": "/settings/general",
+      "reason": "Same GeneralPage; scrollId only scrolls within the page."
+    },
+    {
+      "path": "/components/folder/:folderId",
+      "canonical": "/components",
+      "reason": "Same components list page, folder-filtered data."
+    },
+    {
+      "path": "/all/folder/:folderId",
+      "canonical": "/flows",
+      "reason": "Same flows list page, folder-filtered data."
+    },
+    {
+      "path": "/mcp/folder/:folderId",
+      "canonical": "/mcp",
+      "reason": "Same MCP list page, folder-filtered data."
+    },
+    {
+      "path": "/flow/:id/folder/:folderId/",
+      "canonical": "/flow/:id/",
+      "reason": "Same flow editor page with folder context."
+    },
+    {
+      "path": "*",
+      "canonical": "/flows",
+      "reason": "Fallback redirect chain ends at /flows."
+    }
+  ]
+}

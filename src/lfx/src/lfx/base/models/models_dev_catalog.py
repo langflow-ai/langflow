@@ -334,14 +334,25 @@ def _provider_model_dicts(provider_block: dict[str, Any]) -> list[dict[str, Any]
 
 
 def _model_catalog_key(entry: dict[str, Any], *, provider: str | None = None) -> tuple[Any, Any, Any]:
-    """Return the identity used to deduplicate catalog rows."""
+    """Return the identity used to deduplicate catalog rows.
+
+    Model name alone is not enough: the same provider can expose same-name
+    chat and embedding rows as distinct custom static entries.
+    """
     return (entry.get("provider") or provider, entry.get("name"), entry.get("model_type", "llm"))
 
 
 def _append_custom_static_entries(
     override_models: list[dict[str, Any]], static_group: list[dict[str, Any]], *, provider: str
 ) -> None:
-    """Add static rows that models.dev does not cover to an override list."""
+    """Append static rows models.dev does not cover into an override list.
+
+    models.dev only knows the models it ships, so any model a user added to
+    the bundled ``*_constants.py`` lists would otherwise be silently dropped
+    when its provider's group is replaced. Carrying those rows over keeps
+    user-added models selectable while models.dev still wins for every model
+    it does cover.
+    """
     override_keys = {_model_catalog_key(m, provider=provider) for m in override_models if isinstance(m, dict)}
     for entry in static_group:
         if not isinstance(entry, dict):
@@ -364,6 +375,14 @@ def apply_models_dev_overrides(
     Static lists for providers models.dev doesn't cover (or that aren't in
     :data:`MODELS_DEV_PROVIDER_KEYS`) pass through unchanged. Override groups
     for covered providers that had no static group at all are appended.
+
+    User-added models survive the override: any entry in the bundled
+    ``*_constants.py`` lists whose name models.dev does not cover is carried
+    over (appended after the models.dev rows) rather than discarded. This
+    matters most for embedding models, whose component dropdown has no
+    free-text combobox, so a custom embedding must be present in the list to be
+    selectable. models.dev still wins for every model name it does cover, so
+    the fresher metadata (context windows, pricing, capabilities) is preserved.
 
     models.dev exposes no ``deprecated`` field of its own, so this function
     preserves the static-list curation by name: any model that was already
@@ -420,13 +439,16 @@ def apply_models_dev_overrides(
         if len(provider_names) == 1:
             (provider,) = provider_names
             if provider in overrides:
+                # Preserve any user-added static models models.dev doesn't know
+                # about before the group is replaced (or skipped as a duplicate).
                 _append_custom_static_entries(overrides[provider], group, provider=provider)
                 if provider in consumed_providers:
                     # A second (or later) static group for the same provider
                     # — e.g. OPENAI_EMBEDDING_MODELS_DETAILED appears after
-                    # OPENAI_MODELS_DETAILED. The override already contains
-                    # known models from that provider, so only custom static
-                    # rows that models.dev does not cover are merged above.
+                    # OPENAI_MODELS_DETAILED. The override already contains both
+                    # LLMs and embeddings from that provider (plus any custom
+                    # rows just folded in), so appending this static group would
+                    # duplicate the rows.
                     continue
                 replaced.append(overrides[provider])
                 consumed_providers.add(provider)

@@ -103,3 +103,16 @@ This jump can affect existing dependency pins in unexpected ways:
 | `lfx>=0.5` (no upper bound) | Upgrades automatically to 1.10.0 on the next install. |
 
 Going forward, pin with `lfx~=1.10.0` so you receive compatible patches without silently crossing minor lines.
+
+## Engine-only LFX and `lfx[bundles]`
+
+`pip install lfx` installs the engine only — no component bundles.
+For headless or serverless deployments that execute flows using provider components without the full Langflow server, install the long-tail bundle package alongside the engine:
+
+```bash
+uv pip install "lfx[bundles]"
+```
+
+This is equivalent to installing `lfx` plus `lfx-bundles[all]`.
+For a slimmer image, install only the provider packages a deployment actually executes, for example `uv pip install lfx lfx-openai "lfx-bundles[qdrant]"`.
+There is intentionally no `lfx[all]` extra; `pip install langflow` remains the everything-included install.
