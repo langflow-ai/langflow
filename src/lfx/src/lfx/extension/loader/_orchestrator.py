@@ -421,6 +421,20 @@ def load_extension(
 # This is intentionally a tiny shape; full manifest support belongs at
 # the @official slot.
 _INLINE_BUNDLE_DEFAULT_VERSION = "0.0.0"
+_INLINE_BUNDLE_SKIP_MARKERS = frozenset({"# lfx-bundles-shim", "# lfx-compat-shim"})
+
+
+def _is_marked_component_shim(path: Path) -> bool:
+    """Return True for Langflow-owned compatibility dirs that are not inline bundles."""
+    init_py = path / "__init__.py"
+    if not init_py.is_file():
+        return False
+    try:
+        with init_py.open(encoding="utf-8") as f:
+            head = f.readline()
+    except OSError:
+        return False
+    return any(head.startswith(marker) for marker in _INLINE_BUNDLE_SKIP_MARKERS)
 
 
 def _validate_inline_bundle_id(
@@ -642,6 +656,8 @@ def discover_inline_bundles(
             name = child.name
             # Skip clearly-internal directories without surfacing an error.
             if name.startswith(".") or name in SKIP_DIR_NAMES:
+                continue
+            if _is_marked_component_shim(child):
                 continue
             result = LoadResult(slot=SLOT_EXTRA, source_path=child)
 
