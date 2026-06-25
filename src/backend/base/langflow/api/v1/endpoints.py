@@ -339,7 +339,7 @@ async def simple_run_flow(
         except (RuntimeError, ValueError, OSError):
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
-        return _v1_run_response(RunResponse(outputs=task_result, session_id=session_id))
+        return RunResponse(outputs=task_result, session_id=session_id)
 
     except sa.exc.StatementError as exc:
         raise ValueError(str(exc)) from exc
@@ -775,7 +775,7 @@ async def _run_flow_internal(
         )
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
-    return result
+    return _v1_run_response(result)
 
 
 @router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
