@@ -674,11 +674,29 @@ jobs:
           BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
+            INSTALL_WHEELS=("$BASE_WHEEL")
             NO_DEPS="--no-deps"
             if [ "${{ inputs.pre_release }}" = "true" ]; then
+              # Keep local pre-release roots explicit while re-resolving deps. uv's
+              # if-necessary-or-explicit mode does not allow pre-release transitive
+              # deps found only through --find-links, such as langflow-sdk dev wheels.
               NO_DEPS=""
+              LOCAL_WHEELS=()
+              if [ -d ./sdk-dist ]; then
+                SDK_WHEEL=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+                if [ -n "$SDK_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$SDK_WHEEL")
+                fi
+              fi
+              if [ -d ./lfx-dist ]; then
+                LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+                if [ -n "$LFX_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$LFX_WHEEL")
+                fi
+              fi
+              INSTALL_WHEELS=("${LOCAL_WHEELS[@]}" "$BASE_WHEEL")
             fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/Scripts/python.exe "$BASE_WHEEL"
+            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
           fi
         shell: bash
 
@@ -724,11 +742,29 @@ jobs:
           BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
+            INSTALL_WHEELS=("$BASE_WHEEL")
             NO_DEPS="--no-deps"
             if [ "${{ inputs.pre_release }}" = "true" ]; then
+              # Keep local pre-release roots explicit while re-resolving deps. uv's
+              # if-necessary-or-explicit mode does not allow pre-release transitive
+              # deps found only through --find-links, such as langflow-sdk dev wheels.
               NO_DEPS=""
+              LOCAL_WHEELS=()
+              if [ -d ./sdk-dist ]; then
+                SDK_WHEEL=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+                if [ -n "$SDK_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$SDK_WHEEL")
+                fi
+              fi
+              if [ -d ./lfx-dist ]; then
+                LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+                if [ -n "$LFX_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$LFX_WHEEL")
+                fi
+              fi
+              INSTALL_WHEELS=("${LOCAL_WHEELS[@]}" "$BASE_WHEEL")
             fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/bin/python "$BASE_WHEEL"
+            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
           fi
         shell: bash
 
