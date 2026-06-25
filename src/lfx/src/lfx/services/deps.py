@@ -106,6 +106,13 @@ def get_variable_service() -> VariableServiceProtocol | None:
     return get_service(ServiceType.VARIABLE_SERVICE)
 
 
+def get_capability_service():
+    """Retrieves the capability service instance."""
+    from lfx.services.schema import ServiceType
+
+    return get_service(ServiceType.CAPABILITY_SERVICE)
+
+
 def get_shared_component_cache_service() -> CacheServiceProtocol | None:
     """Retrieves the shared component cache service instance."""
     from lfx.services.shared_component_cache.factory import SharedComponentCacheServiceFactory

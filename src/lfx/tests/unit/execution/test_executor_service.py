@@ -219,10 +219,10 @@ def test_entry_point_returning_non_executor_is_skipped(monkeypatch):
     assert isinstance(fresh.get("in-process"), InProcessExecutor)
 
 
-def test_factory_declares_settings_dependency():
-    """Pin the factory contract: ExecutorService depends on settings_service only."""
+def test_factory_declares_settings_and_capability_dependencies():
+    """Pin the factory contract for ExecutorService dependencies."""
     from lfx.services.executor.factory import ExecutorServiceFactory
 
     factory = ExecutorServiceFactory()
     assert factory.service_class is ExecutorService
-    assert factory.dependencies == [ServiceType.SETTINGS_SERVICE]
+    assert factory.dependencies == [ServiceType.SETTINGS_SERVICE, ServiceType.CAPABILITY_SERVICE]
