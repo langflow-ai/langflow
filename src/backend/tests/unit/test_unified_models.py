@@ -552,28 +552,44 @@ def test_get_embeddings_openai_basic(mock_get_class, mock_get_api_key):
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
-def test_get_embeddings_populates_available_models_from_provider_catalog(mock_get_class, mock_get_api_key, monkeypatch):
+def test_get_embeddings_populates_available_models_from_all_configured_providers(
+    mock_get_class, mock_get_api_key, monkeypatch
+):
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.instantiation._get_configured_embedding_providers",
+        lambda _user_id, _selected_provider: ["OpenAI", "Google Generative AI"],
+    )
+
+    def _embedding_names_for_provider(provider, _user_id):
+        if provider == "OpenAI":
+            return ["text-embedding-3-small", "text-embedding-3-large"]
+        if provider == "Google Generative AI":
+            return ["models/text-embedding-004"]
+        return []
+
     monkeypatch.setattr(
         "lfx.base.models.unified_models.instantiation._get_provider_embedding_model_names",
-        lambda _provider, _user_id: ["text-embedding-3-small", "text-embedding-3-large"],
+        _embedding_names_for_provider,
     )
     mock_get_api_key.return_value = "sk-test"
     primary = MagicMock(name="primary")
-    secondary = MagicMock(name="secondary")
-    mock_embedding_class = MagicMock(side_effect=[primary, secondary])
+    openai_secondary = MagicMock(name="openai-secondary")
+    google_embedding = MagicMock(name="google-embedding")
+    mock_embedding_class = MagicMock(side_effect=[primary, openai_secondary, google_embedding])
     mock_get_class.return_value = mock_embedding_class
 
     result = get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
 
     assert isinstance(result, EmbeddingsWithModels)
     assert result.embeddings is primary
-    assert set(result.available_models.keys()) == {"text-embedding-3-small", "text-embedding-3-large"}
+    assert set(result.available_models.keys()) == {
+        "text-embedding-3-small",
+        "text-embedding-3-large",
+        "models/text-embedding-004",
+    }
     assert result.available_models["text-embedding-3-small"] is primary
-    assert result.available_models["text-embedding-3-large"] is secondary
-
-    calls = mock_embedding_class.call_args_list
-    assert calls[0].kwargs["model"] == "text-embedding-3-small"
-    assert calls[1].kwargs["model"] == "text-embedding-3-large"
+    assert result.available_models["text-embedding-3-large"] is openai_secondary
+    assert result.available_models["models/text-embedding-004"] is google_embedding
 
 
 @pytest.mark.parametrize(
