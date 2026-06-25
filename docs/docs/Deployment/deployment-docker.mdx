@@ -238,6 +238,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
         image: langflowai/langflow:1.8.0
         environment:
           - LANGFLOW_CONFIG_DIR=/app/langflow
+          - LANGFLOW_SUPERUSER_PASSWORD=${LANGFLOW_SUPERUSER_PASSWORD}
         volumes:
           - ./langflow-data:/app/langflow
       postgres:
@@ -279,7 +280,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
     With `docker run`, use the same volume mount and the new image tag:
 
     ```bash
-    docker run -p 7860:7860 -v langflow-data:/app/langflow langflowai/langflow:1.8.0
+    docker run -p 7860:7860 -v langflow-data:/app/langflow -e LANGFLOW_SUPERUSER_PASSWORD=replace-with-a-strong-password langflowai/langflow:1.8.0
     ```
 
 This approach keeps the persistent volumes separate from the Langflow container, so you can upgrade the Langflow application without losing data.
