@@ -52,7 +52,13 @@ class LFXGunicornApp(BaseApplication):
 
     @classmethod
     def _is_benign_thread(cls, thread) -> bool:
-        return any(thread.name.startswith(prefix) for prefix in cls._BENIGN_THREAD_PREFIXES)
+        if any(thread.name.startswith(prefix) for prefix in cls._BENIGN_THREAD_PREFIXES):
+            return True
+        # gunicorn's own master-only threads (e.g. the control-socket server's `_run_loop`,
+        # added in gunicorn 23) are managed by gunicorn's own fork handlers and are meant to
+        # be absent in workers — they are gunicorn infrastructure, not app state to flag.
+        target = getattr(thread, "_target", None)
+        return (getattr(target, "__module__", "") or "").startswith("gunicorn")
 
     @classmethod
     def pre_fork(cls, server, _worker) -> None:

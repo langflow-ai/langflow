@@ -410,6 +410,28 @@ def test_pre_fork_flags_ghost_thread_but_not_benign():
     assert "OTel-benign" not in blob  # benign-named threads are filtered out
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="gunicorn is Unix-only")
+def test_pre_fork_does_not_flag_gunicorn_own_threads():
+    """Gunicorn's own master-only threads (target in the gunicorn package) must not be flagged."""
+    import threading
+
+    from lfx.cli.serve_gunicorn import LFXGunicornApp
+
+    stop = threading.Event()
+
+    def _run_loop():  # mimics gunicorn.ctl.server.ControlSocketServer._run_loop
+        stop.wait()
+
+    _run_loop.__module__ = "gunicorn.ctl.server"  # benign discriminator: target owned by gunicorn
+    gthread = threading.Thread(target=_run_loop, daemon=True)
+    gthread.start()
+    try:
+        assert LFXGunicornApp._is_benign_thread(gthread) is True
+    finally:
+        stop.set()
+        gthread.join(timeout=2)
+
+
 # ---------------------------------------------------------------------------
 # Opt-in flags: --reset-environ (os.environ snapshot/restore) and --use-sync-workers
 # (gunicorn sync worker + a2wsgi bridge). Both default OFF so the committed
