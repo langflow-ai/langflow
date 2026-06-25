@@ -242,6 +242,16 @@
       "added_in": "1.11.0"
     },
     {
+      "import_path": "lfx.components.tools.tavily_search_tool.TavilySearchToolComponent",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.tools.TavilySearchToolComponent",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
       "bare_class_name": "WikidataComponent",
       "target": "ext:wikipedia:WikidataComponent@official",
       "added_in": "1.11.0"

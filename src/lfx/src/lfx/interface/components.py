@@ -396,6 +396,28 @@ def _warm_circular_imports() -> None:
 
 
 _LFX_BUNDLES_SHIM_MARKER = "# lfx-bundles-shim"
+_LFX_COMPAT_SHIM_MARKER = "# lfx-compat-shim"
+
+
+def _discover_marked_component_dirs(search_paths: list[str], markers: set[str]) -> set[str]:
+    """Top-level ``lfx.components`` subdirs whose ``__init__.py`` starts with a known marker."""
+    marked: set[str] = set()
+    for root in search_paths:
+        root_path = Path(root)
+        if not root_path.is_dir():
+            continue
+        for child in sorted(root_path.iterdir()):
+            init_py = child / "__init__.py"
+            if not (child.is_dir() and init_py.is_file()):
+                continue
+            try:
+                with init_py.open(encoding="utf-8") as f:
+                    head = f.readline()
+            except OSError:
+                continue
+            if any(head.startswith(marker) for marker in markers):
+                marked.add(child.name)
+    return marked
 
 
 def _discover_shimmed_component_dirs(search_paths: list[str]) -> set[str]:
@@ -408,27 +430,21 @@ def _discover_shimmed_component_dirs(search_paths: list[str]) -> set[str]:
     discovery path, so the in-tree walk must skip them or each component would
     be registered twice (once in-tree, once at @official).
     """
-    shimmed: set[str] = set()
-    for root in search_paths:
-        root_path = Path(root)
-        if not root_path.is_dir():
-            continue
-        for child in sorted(root_path.iterdir()):
-            init_py = child / "__init__.py"
-            if not (child.is_dir() and init_py.is_file()):
-                continue
-            # The shim contract puts the marker on line 1 (enforced by
-            # test_shim_source_contract), so only the first line is read --
-            # a non-shim file that merely mentions the marker further down
-            # can never be misclassified and silently skipped.
-            try:
-                with init_py.open(encoding="utf-8") as f:
-                    head = f.readline()
-            except OSError:
-                continue
-            if head.startswith(_LFX_BUNDLES_SHIM_MARKER):
-                shimmed.add(child.name)
-    return shimmed
+    return _discover_marked_component_dirs(search_paths, {_LFX_BUNDLES_SHIM_MARKER})
+
+
+def _discover_component_skip_dirs(search_paths: list[str]) -> set[str]:
+    """Top-level ``lfx.components`` subdirs that contain no palette components.
+
+    Besides bundle provider shims, Langflow keeps a few package-rename shims
+    solely for import compatibility (for example ``knowledge_bases`` ->
+    ``files_and_knowledge``). They must stay importable, but the component
+    discovery walk should not treat them as palette categories.
+    """
+    return _discover_marked_component_dirs(
+        search_paths,
+        {_LFX_BUNDLES_SHIM_MARKER, _LFX_COMPAT_SHIM_MARKER},
+    )
 
 
 async def _load_components_dynamically(
@@ -450,10 +466,9 @@ async def _load_components_dynamically(
         await logger.aerror(f"Failed to import langflow.components package: {e}", exc_info=True)
         return modules_dict
 
-    # Providers consolidated into lfx-bundles leave an import shim here; they load
-    # dynamically at @official via lfx.bundles discovery, so exclude them from the
-    # in-tree walk to avoid registering each component twice.
-    shimmed_providers = _discover_shimmed_component_dirs(list(components_pkg.__path__))
+    # Skip compatibility-only packages that should stay importable but should not
+    # be treated as palette categories during the in-tree walk.
+    skip_component_dirs = _discover_component_skip_dirs(list(components_pkg.__path__))
 
     # Collect all module names to process
     module_names = []
@@ -467,9 +482,9 @@ async def _load_components_dynamically(
         if len(parts) > MIN_MODULE_PARTS:
             component_type = parts[2]
 
-            # Consolidated providers (lfx-bundles shims) load at @official via
-            # lfx.bundles discovery, not in-tree -- skip to avoid double registration.
-            if component_type in shimmed_providers:
+            # Compatibility-only packages are either discovered through their
+            # real extension path or intentionally contain no palette components.
+            if component_type in skip_component_dirs:
                 continue
 
             # Skip disabled components when ASTRA_CLOUD_DISABLE_COMPONENT is true
