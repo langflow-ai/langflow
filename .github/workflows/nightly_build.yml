@@ -110,9 +110,9 @@ jobs:
       - name: Generate shared nightly tag (main == base, lockstep)
         id: generate_shared_tag
         run: |
-          # langflow-nightly pins langflow-base-nightly[complete]==<exact dev>, so both tags
-          # MUST be identical. Compute them in ONE invocation (single PyPI snapshot) so they
-          # cannot drift across separate calls.
+          # langflow (nightly .devN pre-release) pins langflow-base[complete]==<exact dev>, so
+          # both tags MUST be identical. Compute them in ONE invocation (single PyPI snapshot)
+          # so they cannot drift across separate calls.
           # NOTE: This outputs the tag with the `v` prefix.
           TAGS_OUTPUT="$(uv run ./scripts/ci/pypi_nightly_tag.py both)"
           RELEASE_TAG="$(printf '%s\n' "$TAGS_OUTPUT" | sed -n '1p')"
