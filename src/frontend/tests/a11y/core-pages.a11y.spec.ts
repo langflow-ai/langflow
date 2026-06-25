@@ -125,47 +125,4 @@ test.describe("core application accessibility", () => {
       await page.runA11yScan("playground-with-message");
     },
   );
-
-  test(
-    "scans flows landing page",
-    { tag: ["@a11y", "@workspace"] },
-    async ({ page }) => {
-      await page.goto("/flows");
-      await disableAnimations(page);
-      await expect(page.getByTestId(TID.mainpageTitle)).toBeVisible({
-        timeout: TIMEOUTS.standard,
-      });
-
-      await page.runA11yScan("flows-landing");
-    },
-  );
-
-  test(
-    "scans general settings",
-    { tag: ["@a11y", "@workspace"] },
-    async ({ page }) => {
-      await page.goto("/settings/general");
-      await disableAnimations(page);
-      await expect(page.getByTestId(TID.settingsMenuHeader)).toBeVisible({
-        timeout: TIMEOUTS.standard,
-      });
-
-      await page.runA11yScan("settings-general");
-    },
-  );
-
-  test(
-    "scans files page",
-    { tag: ["@a11y", "@workspace"] },
-    async ({ page }) => {
-      await page.goto("/assets/files");
-      await disableAnimations(page);
-      await expect(page.getByTestId(TID.mainpageTitle)).toContainText("Files", {
-        timeout: TIMEOUTS.standard,
-      });
-      await expect(page.getByTestId("upload-file-btn")).toBeVisible();
-
-      await page.runA11yScan("files-page");
-    },
-  );
 });

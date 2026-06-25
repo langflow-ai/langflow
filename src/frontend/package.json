@@ -132,6 +132,8 @@
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
     "a11y:report": "node tests/utils/aggregate-a11y-reports.mjs",
+    "a11y:html-report": "node tests/utils/build-a11y-html-report.mjs",
+    "a11y:job-summary": "node tests/utils/build-a11y-job-summary.mjs",
     "serve": "vite preview",
     "format": "npx @biomejs/biome format --write",
     "lint": "npx @biomejs/biome lint",
