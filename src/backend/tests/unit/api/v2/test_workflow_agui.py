@@ -340,20 +340,22 @@ class TestV2WorkflowAdmission:
     async def test_denial_echoes_requested_identifier_not_resolved_uuid(self, monkeypatch: pytest.MonkeyPatch):
         """A denial on a flow referenced by endpoint name must not leak the resolved UUID."""
         from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2.workflow_host import LangflowWorkflowHost
         from lfx.workflow.actions import WorkflowAction
+        from lfx.workflow.host import ResolvedFlow
 
         resolved_uuid = uuid4()
         flow = SimpleNamespace(id=resolved_uuid, user_id=uuid4(), workspace_id=None, folder_id=None)
+        resolved = ResolvedFlow(flow_id="my-endpoint", graph=flow)
 
         async def _deny(*_args, **_kwargs):
             raise HTTPException(status_code=403, detail="denied")
 
         monkeypatch.setattr(workflow_module, "ensure_flow_permission", _deny)
 
+        # Through the host, so the requested-id wiring is what's exercised, not just the helper.
         with pytest.raises(HTTPException) as exc_info:
-            await workflow_module.authorize_flow_action(
-                SimpleNamespace(id=uuid4()), flow, WorkflowAction.EXECUTE, requested_id="my-endpoint"
-            )
+            await LangflowWorkflowHost().authorize(SimpleNamespace(id=uuid4()), resolved, WorkflowAction.EXECUTE)
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"

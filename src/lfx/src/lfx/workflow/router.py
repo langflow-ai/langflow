@@ -1,15 +1,17 @@
 """The shared v2 workflow HTTP router.
 
-lfx owns the entire env-neutral handler body: request parsing, stream-protocol
-validation, sync/stream dispatch, the single SSE framing loop, error -> HTTP
-mapping, and the ``developer_api_enabled`` router guard (which reads lfx's own
-settings service). The host (:mod:`lfx.workflow.host`) supplies only the
-DB/tenant-bound capabilities — caller resolution, fetch-and-authorize, the
-request session, and whether durable background runs exist.
+lfx owns the env-neutral handler body: request parsing, stream-protocol
+validation, sync/stream dispatch, error -> HTTP mapping, the lfx-default SSE
+framing loop, and the ``developer_api_enabled`` router guard (which reads lfx's
+own settings service). The host (:mod:`lfx.workflow.host`) supplies the
+DB/tenant-bound capabilities (caller resolution, fetch-and-authorize, the
+request session, durable background runs) and may override sync/stream
+execution; the langflow host does, keeping its richer SSE pipeline.
 
-Both runtimes (langflow backend and bare ``lfx serve``) mount the same router
-via :func:`create_workflow_router`, so neither the wire contract nor the SSE
-shape can drift by construction.
+Both runtimes mount the same router via :func:`create_workflow_router`, so the
+request/response contract and the admission + error mapping are single-sourced.
+The SSE framing is single-sourced only for hosts using the lfx default (bare
+``lfx serve``); langflow overrides it.
 """
 
 from __future__ import annotations
@@ -250,6 +252,7 @@ def create_workflow_router(
     tags: tuple[str, ...] = ("Workflow",),
     developer_api_guard: bool = True,
     auto_register_job_routes: bool = True,
+    responses: dict | None = None,
 ) -> APIRouter:
     """Build the v2 workflow router bound to ``host``.
 
@@ -284,6 +287,7 @@ def create_workflow_router(
     @router.post(
         "",
         response_model=None,
+        responses=responses or {},
         summary="Execute Workflow (v2 sync or stream)",
     )
     async def execute_workflow(request: WorkflowRunRequest, http_request: Request, background_tasks: BackgroundTasks):

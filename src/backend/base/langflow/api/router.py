@@ -1,5 +1,6 @@
 # Router for base api
 from fastapi import APIRouter
+from lfx.schema.workflow import WORKFLOW_EXECUTION_RESPONSES
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from lfx.workflow.host import WorkflowHost
 from lfx.workflow.router import create_workflow_router
@@ -138,7 +139,12 @@ router_v2.include_router(registration_router_v2)
 _workflow_host = LangflowWorkflowHost()
 assert isinstance(_workflow_host, WorkflowHost)  # noqa: S101
 router_v2.include_router(
-    create_workflow_router(_workflow_host, developer_api_guard=False, auto_register_job_routes=False)
+    create_workflow_router(
+        _workflow_host,
+        developer_api_guard=False,
+        auto_register_job_routes=False,
+        responses=WORKFLOW_EXECUTION_RESPONSES,
+    )
 )
 # The langflow-owned durable routes: GET status, POST /stop, GET /{job_id}/events.
 router_v2.include_router(workflow_background_router_v2)

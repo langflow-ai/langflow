@@ -13,7 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
@@ -113,7 +113,25 @@ def test_authorize_receives_workflow_action_member():
     assert action is WorkflowAction.EXECUTE
 
 
+def test_unknown_protocol_422_precedes_flow_fetch():
+    """An unknown stream_protocol must 422 before get_flow runs, even if the flow is missing."""
+
+    class _NoFlowHost(_FakeHost):
+        async def get_flow(self, flow_id, caller):  # noqa: ARG002
+            raise HTTPException(status_code=404, detail="get_flow should not run for a bad protocol")
+
+    client = _client(_NoFlowHost(_echo_graph()))
+    resp = client.post(
+        "/workflows",
+        json={"flow_id": _FLOW_ID, "input_value": "hi", "mode": "stream", "stream_protocol": "nope"},
+    )
+    assert resp.status_code == 422, resp.text
+    assert resp.json()["detail"]["code"] == "UNKNOWN_STREAM_PROTOCOL"
+
+
 def test_sse_frame_shape_and_terminal_frame():
+    # Pins the lfx-default framing (id line first), which bare serve uses. The langflow
+    # host overrides stream_response, so this does not assert cross-runtime SSE identity.
     host = _FakeHost(_echo_graph())
     client = _client(host)
     resp = client.post(
