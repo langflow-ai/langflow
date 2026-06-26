@@ -20,7 +20,6 @@ type A11yFixtures = {
   _a11ySession: void;
 };
 
-
 // Optional CPU throttling for reproducing race conditions seen on slower
 // runners (Windows CI). Enable with LF_CPU_THROTTLE=<rate>, e.g. 4.
 const CPU_THROTTLE_RATE = (() => {
