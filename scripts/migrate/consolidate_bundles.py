@@ -247,8 +247,7 @@ def _shim_source(provider: str, slug: str) -> str:
         '    if exc.name is not None and (exc.name == "lfx_bundles" or exc.name.startswith("lfx_bundles.")):\n'
         "        msg = (\n"
         f"            \"The '{provider}' components moved to the 'lfx-bundles' distribution. \"\n"
-        '            "Install it with:  pip install lfx-bundles   "\n'
-        "            \"(or 'pip install langflow', which bundles it).\"\n"
+        '            "Install it with:  pip install lfx-bundles."\n'
         "        )\n"
         '        raise ModuleNotFoundError(msg, name="lfx_bundles") from exc\n'
         "    raise\n"
