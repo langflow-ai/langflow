@@ -424,7 +424,8 @@ async def test_resubscribe_to_terminal_task_errors_without_hanging(client: Async
         assert resp.status_code == 200
         frames = [orjson.loads(line[len("data:") :]) async for line in resp.aiter_lines() if line.startswith("data:")]
 
-    assert any("error" in f for f in frames)
+    errors = [f["error"]["message"] for f in frames if "error" in f]
+    assert any("no active stream to resubscribe" in msg for msg in errors), errors
     assert not any(f.get("result", {}).get("kind") == "artifact-update" for f in frames)
 
 
@@ -699,10 +700,11 @@ async def test_resubscribe_to_input_required_task_does_not_hang(
     """tasks/resubscribe to a paused (non-terminal) task with no live producer ends with an error, not a hang.
 
     After a sync pause the task is input-required in the durable store but has no live streaming
-    producer. The SDK's default handler would tap the stale in-memory queue and block waiting for a
-    terminal event that never arrives; the handler's resubscribe guard rejects re-attach when the
-    producer task has finished, so this returns a spec error frame instead. wait_for bounds it so a
-    regression that reintroduces the hang fails fast rather than stalling the suite.
+    producer. The SDK's default handler would tap the idle in-memory queue and block waiting for a
+    terminal event that never arrives, so _FlowRequestHandler rejects resubscribe outright. The
+    assertion checks for that specific rejection message rather than just "an error frame": a
+    regression that reintroduces the hang fails the wait_for, and a regression that errors for the
+    wrong reason (e.g. an internal AttributeError) carries a different message and fails here too.
     """
     flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
     paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
@@ -719,7 +721,8 @@ async def test_resubscribe_to_input_required_task_does_not_hang(
             return [orjson.loads(line[len("data:") :]) async for line in resp.aiter_lines() if line.startswith("data:")]
 
     frames = await asyncio.wait_for(_drain(), timeout=10)
-    assert any("error" in f for f in frames)
+    errors = [f["error"]["message"] for f in frames if "error" in f]
+    assert any("no active stream to resubscribe" in msg for msg in errors), errors
 
 
 # --- apikey auth enforcement ----------------------------------------------

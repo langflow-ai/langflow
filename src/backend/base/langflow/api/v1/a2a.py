@@ -104,7 +104,12 @@ class _FlowContextBuilder(DefaultServerCallContextBuilder):
 
     def build(self, request: Request) -> ServerCallContext:
         context = super().build(request)
-        context.state["flow_id"] = request.path_params["flow_id"]
+        # Canonicalize the raw URL path segment to the same string form the checkpoint
+        # guard uses (str(UUID(...))), so the durable-store scope and the resume guard
+        # agree across non-canonical encodings (uppercase/hyphenless). The /{flow_id}
+        # route types flow_id as UUID, so FastAPI 422s a malformed segment before dispatch
+        # and UUID() here always parses.
+        context.state["flow_id"] = str(UUID(request.path_params["flow_id"]))
         return context
 
 
@@ -370,26 +375,23 @@ _PUSH_SENDER = BasePushNotificationSender(_PUSH_HTTP_CLIENT, _PUSH_CONFIG_STORE)
 
 
 class _FlowRequestHandler(DefaultRequestHandler):
-    """DefaultRequestHandler with a resubscribe guard for the synchronous run model.
+    """DefaultRequestHandler that disables tasks/resubscribe for the synchronous run model.
 
-    Our flow runs are synchronous: the producer task only exists while a message/stream
-    (or message/send) request is actively running the flow. The SDK's on_subscribe_to_task
-    assumes a long-lived background producer and, for a non-terminal task, taps the event
-    queue and blocks waiting for events. A task that paused at input-required from a sync
-    send has no live producer, so re-attaching would block forever on a queue that will
-    never receive another event. ``producer.done()`` is the race-free signal: still running
-    means there's a live stream to re-attach to; finished (or absent) means there isn't, so
-    return a spec error instead of hanging. tasks/get still covers reading a paused/terminal
-    task back.
+    Our flow runs are synchronous: a producer streams events only for the duration of the
+    originating message/stream request. By the time a client can resubscribe, that request
+    has returned, so there is no live producer to tail. The SDK's on_subscribe_to_task taps
+    the task's event queue and waits for events; for a task parked at input-required (or any
+    task whose ActiveTask lingers idle in the registry) that queue never receives another
+    event, so the tap blocks forever. Re-attaching to a still-running producer is the only
+    case that would not hang, and that case no longer exists once the synchronous request
+    returns, so always return a spec error here and let tasks/get cover reading a
+    paused/terminal task back.
     """
 
-    async def on_subscribe_to_task(self, params, context):
-        producer = self._running_agents.get(params.id)
-        if producer is None or producer.done():
-            msg = f"Task {params.id} has no active stream to resubscribe to"
-            raise UnsupportedOperationError(message=msg)
-        async for event in super().on_subscribe_to_task(params, context):
-            yield event
+    async def on_subscribe_to_task(self, params, _context):
+        msg = f"Task {params.id} has no active stream to resubscribe to"
+        raise UnsupportedOperationError(message=msg)
+        yield  # unreachable: the raise above always fires, but the yield makes this an async generator
 
 
 # One shared handler/store/dispatcher serve every flow; the per-request flow_id
@@ -399,10 +401,11 @@ class _FlowRequestHandler(DefaultRequestHandler):
 # GET route. The stores do no DB work at construction, so the import-time singletons are safe.
 # ponytail: streaming emits the run's lifecycle events (submitted -> working ->
 # artifact -> completed) as SSE; per-token deltas would inject a stream_flow callable
-# into the executor. tasks/resubscribe re-attaches only to a live message/stream producer
-# (the default in-memory QueueManager); a terminal, paused, or cross-worker task returns a
-# spec error and tasks/get covers terminal reads. Push configs are in-memory per-worker;
-# durable cross-worker re-attach and push delivery are a later slice.
+# into the executor. tasks/resubscribe is advertised (streaming=True gates it) but always
+# returns a spec error: synchronous runs leave no live producer to re-attach to once the
+# request returns, so _FlowRequestHandler rejects it and tasks/get covers terminal/paused
+# reads. Push configs are in-memory per-worker; durable cross-worker re-attach and push
+# delivery are a later slice.
 _HANDLER = _FlowRequestHandler(
     agent_executor=FlowAgentExecutor(_run_flow, _resume_flow),
     task_store=DurableTaskStore(),
