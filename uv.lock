@@ -3938,6 +3938,24 @@ wheels = [
 ]
 
 [[package]]
+name = "exa-py"
+version = "2.12.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpcore" },
+    { name = "httpx" },
+    { name = "openai" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/71/e4/11bbbc076ae420b9e00537945d48a03cb42cc6da63edc65bf50d23e4778e/exa_py-2.12.1.tar.gz", hash = "sha256:9ff1924fbfbcae822b20c0ddef0650fabc04ac75906b9153623eadc18135b7ce", size = 55792, upload-time = "2026-04-22T20:00:38.528Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/49/19/0a504b6ce7c468595cd0551f65e5c464832a1d3af8dc8acd681e21696a5f/exa_py-2.12.1-py3-none-any.whl", hash = "sha256:9e735802161482a7d5b231376257883cb4e34dbd6f75ded04ab1a5a171b69d9f", size = 74512, upload-time = "2026-04-22T20:00:34.326Z" },
+]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -8386,6 +8404,9 @@ elasticsearch = [
     { name = "elasticsearch" },
     { name = "langchain-elasticsearch" },
 ]
+exa = [
+    { name = "exa-py" },
+]
 faiss = [
     { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "faiss-cpu", version = "1.14.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
@@ -8489,9 +8510,6 @@ mem0 = [
 ]
 metal = [
     { name = "metal-sdk" },
-]
-exa = [
-    { name = "exa-py" },
 ]
 metaphor = [
     { name = "exa-py" },
@@ -8816,6 +8834,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["docx"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["easyocr"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["elasticsearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["exa"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["faiss"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["fake-useragent"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["fastavro"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8845,7 +8864,6 @@ requires-dist = [
     { name = "langflow-base", extras = ["mcp"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["mem0"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["metal"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["metaphor"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["milvus"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["mistral"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["mlx"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -10475,24 +10493,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f2/dc/d51166c151501716906bb21a1563298d5abd6abe6fbf3a6dba5d4800d6ee/metal_sdk-2.5.1.tar.gz", hash = "sha256:97ac85e16669f256d2502b7c9606a5f0d4aa4cecc3938834b6064867ee47a34a", size = 15476, upload-time = "2023-11-10T13:33:28.922Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/22/6d/1c1b181328cdae858797ccbcad7a74be6e3d81f06041fde9a25c698cb5db/metal_sdk-2.5.1-py3-none-any.whl", hash = "sha256:22eb44609d789d772664fe6eb502bb07b5f645a370c7d7fb993ffb28ecb59bbd", size = 14043, upload-time = "2023-11-10T13:33:24.666Z" },
-]
-
-[[package]]
-name = "exa-py"
-version = "2.12.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpcore" },
-    { name = "httpx" },
-    { name = "openai" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/71/e4/11bbbc076ae420b9e0053795d48a03cb42cc6da63edc65bf50d23e4778e/exa_py-2.12.1.tar.gz", hash = "sha256:9ff1924fbfbcae822b20c0ddef0650fabc04ac75906b9153623eadc18135b7ce", size = 55792, upload-time = "2026-04-22T20:00:38.528484Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/19/0a504b6ce7c468595cd0551f65e5c464832a1d3af8dc8acd681e21696a5f/exa_py-2.12.1-py3-none-any.whl", hash = "sha256:9e735802161482a7d5b231376257883cb4e34dbd6f75ded04ab1a5a171b69d9f", size = 74512, upload-time = "2026-04-22T20:00:34.326822Z" },
 ]
 
 [[package]]
