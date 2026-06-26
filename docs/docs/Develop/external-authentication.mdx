@@ -6,29 +6,168 @@ slug: /external-authentication
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
-Langflow can accept tokens issued by an upstream identity provider (IdP) or reverse proxy and use them to provision and authenticate local users without requiring a separate login.
-This is useful when Langflow is deployed behind a gateway that already handles authentication (such as an OIDC proxy, an API gateway, or a corporate SSO system) and you want users to land in Langflow without a second login step.
+External authentication lets an upstream identity provider, OIDC proxy, or corporate SSO gateway handle login. Langflow accepts the token the proxy forwards, validates it against the identity provider's JWKS endpoint, and provisions a local user automatically.
+This is useful when Langflow is deployed behind a gateway that already handles authentication, such as an OIDC proxy, an API gateway, or a corporate SSO system.
 
-:::warning
-External authentication is disabled by default. When you enable it, Langflow performs Just-in-Time (JIT) user provisioning: an account is automatically created the first time a valid external credential is presented. Ensure that your upstream identity source is trusted before enabling this feature.
-:::
+The built-in Langflow JWT path is always attempted first. If that fails, the external path is tried as a fallback, so existing Langflow credentials continue to work alongside external ones.
 
-## How external authentication works
+To enable external authentication, set `LANGFLOW_EXTERNAL_AUTH_ENABLED=true` and configure at least one validation mode.
 
-1. An upstream proxy or IdP issues a credential (typically a JWT) to the user.
-2. Langflow extracts the credential from a configured HTTP header or cookie on each request.
-3. The credential is validated — either by verifying its signature against a JWKS endpoint, or by decoding it without signature verification when the upstream proxy has already validated it.
-4. Langflow maps the JWT claims to a local user identity. If no local account matches the external subject, one is created (JIT provisioning).
-5. The request proceeds as the provisioned user.
+The following example connects Langflow to [Keycloak](https://www.keycloak.org/) using JWKS verification.
+The same pattern applies to other OIDC identity providers.
+You create a client, point Langflow at the identity provider's JWKS URL and issuer, set the expected audience, and forward the access token in the `Authorization` header.
 
-The native Langflow JWT path is always attempted first. If that fails, the external path is tried as a fallback, so existing Langflow-native credentials continue to work alongside external ones.
+## Prerequisites
 
-## Enable external authentication
+* [Docker](https://docs.docker.com/get-docker/) or [Podman](https://docs.podman.io/) installed and running
 
-Set `LANGFLOW_EXTERNAL_AUTH_ENABLED=true` and configure at least one validation mode:
+### Create a Keycloak realm and OIDC client
 
-- **JWKS verification** (recommended): Langflow fetches your IdP's public keys and verifies signatures.
-- **Trusted-decode mode**: Langflow decodes the JWT without signature verification. Only use this when Langflow sits behind a proxy that has already validated the token.
+1. Start the Keycloak container in dev mode and publish **both** ports.
+
+   Keycloak must be run with `start-dev` so HTTP is allowed on `localhost` for the admin console, token endpoint, and JWKS URL. Production mode requires HTTPS.
+   Port `7860` must be published on the Keycloak container for Langflow to be reachable from your host. Langflow shares Keycloak's network namespace in the Docker example.
+
+   ```bash
+   docker run -d --name keycloak \
+     -p 8080:8080 -p 7860:7860 \
+     -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+     -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+     quay.io/keycloak/keycloak:latest start-dev
+   ```
+1. Open the Keycloak admin console at `http://localhost:8080/admin`, and then sign in with `admin` / `admin`.
+2. Create a new realm named `langflow`.
+3. Click **Clients**, and then create an OpenID Connect client named `langflow-app`.
+4. Set **Client authentication** to **On**.
+5. Click **Capability config**, and then enable **Direct access grants**.
+
+   For this example, tokens will be requested with `curl` with a password grant, so you do not need a redirect URI.
+   If your users will sign in through an OIDC proxy, set a redirect URI later, such as `http://localhost:7860/*`.
+
+6. Copy the client secret from the **Credentials** tab.
+   You will use it to form the request for an access token.
+
+### Add an audience mapper to the access token
+
+Langflow requires the token `aud` claim to match `LANGFLOW_EXTERNAL_AUTH_AUDIENCE`.
+Keycloak access tokens do not include your client ID in `aud` by default, so you need to add a mapper.
+
+1. Open the **langflow-app** client, and click **Client scopes** > **langflow-app-dedicated** > **Add mapper** > **By configuration**.
+2. Select **Audience**.
+3. Set **Included Client Audience** to `langflow-app`.
+4. Enable **Add to access token**.
+5. Click **Create**.
+
+   Access tokens issued for `langflow-app` will now include `langflow-app` in the `aud` claim.
+
+### Create a test user
+
+1. In the **langflow** realm, click **Users** > **Create new user**.
+2. Set **Username** to `alice`, **Email** to `alice@example.com`, and enable **Email verified**.
+3. Open the **Credentials** tab, set a password, and turn off **Temporary**.
+
+### Connect Langflow to Keycloak
+
+1. Add the following values to your Langflow `.env` file:
+
+   ```bash
+   LANGFLOW_AUTO_LOGIN=False
+   LANGFLOW_EXTERNAL_AUTH_ENABLED=true
+   LANGFLOW_EXTERNAL_AUTH_PROVIDER=keycloak
+   LANGFLOW_EXTERNAL_AUTH_TOKEN_HEADER=Authorization
+
+   # Keycloak realm endpoints (http is allowed for localhost in development)
+   LANGFLOW_EXTERNAL_AUTH_JWKS_URL=http://localhost:8080/realms/langflow/protocol/openid-connect/certs
+   LANGFLOW_EXTERNAL_AUTH_ISSUER=http://localhost:8080/realms/langflow
+   LANGFLOW_EXTERNAL_AUTH_AUDIENCE=langflow-app
+   ```
+
+2. Start the Langflow container.
+
+   ```bash
+   docker run -d --name langflow \
+     --network container:keycloak \
+     -e LANGFLOW_AUTO_LOGIN=False \
+     -e LANGFLOW_EXTERNAL_AUTH_ENABLED=true \
+     -e LANGFLOW_EXTERNAL_AUTH_PROVIDER=keycloak \
+     -e LANGFLOW_EXTERNAL_AUTH_TOKEN_HEADER=Authorization \
+     -e LANGFLOW_EXTERNAL_AUTH_JWKS_URL=http://127.0.0.1:8080/realms/langflow/protocol/openid-connect/certs \
+     -e LANGFLOW_EXTERNAL_AUTH_ISSUER=http://localhost:8080/realms/langflow \
+     -e LANGFLOW_EXTERNAL_AUTH_AUDIENCE=langflow-app \
+     langflowai/langflow-nightly:latest
+   ```
+
+3. Request a token for the test user:
+
+   ```bash
+   curl -s -X POST "http://localhost:8080/realms/langflow/protocol/openid-connect/token" \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     --data-urlencode "client_id=langflow-app" \
+     --data-urlencode "client_secret=YOUR_CLIENT_SECRET" \
+     --data-urlencode "grant_type=password" \
+     --data-urlencode "username=YOUR_USERNAME" \
+     --data-urlencode "password=YOUR_USER_PASSWORD"
+   ```
+
+   Replace `YOUR_CLIENT_SECRET`, `YOUR_USERNAME`, and `YOUR_USER_PASSWORD` with the values from Keycloak.
+
+   Keycloak returns a JSON object like this:
+
+   ```json
+   {
+     "access_token": "eyJhbG...t5",
+     "token_type": "Bearer",
+     "not-before-policy": 0,
+     "session_state": "...",
+     "scope": "email profile"
+   }
+   ```
+
+   :::tip
+   By default, Keycloak access tokens expire in 5 minutes.
+   An expired token returns `{"detail":"Invalid token"}` with HTTP status `401`.
+   If you get this error, request a new token.
+   :::
+4. Copy the `access_token` value, which Langflow expects in the `Authorization: Bearer` header.
+5. To save the `access_token` from the response as a terminal environment variable, run:
+
+   ```bash
+   export KEYCLOAK_TOKEN="ey..."
+   ```
+
+6. To confirm Langflow is reachable, send a request to the `whoami` endpoint with the Keycloak token:
+
+   ```bash
+   curl -s http://localhost:7860/health
+   curl -s "http://localhost:7860/api/v1/users/whoami" \
+     -H "Authorization: Bearer $KEYCLOAK_TOKEN"
+   ```
+
+   On the first successful request, Langflow JIT-provisions a local user from the token claims.
+   Subsequent requests authenticate as that user.
+
+   ```json
+   {
+     "id": "a5d2f129-ef52-481d-a92f-e1f3fccda3ec",
+     "username": "alice",
+     "profile_image": null,
+     "store_api_key": null,
+     "is_active": true,
+     "is_superuser": false,
+     "create_at": "2026-06-26T17:24:13.733158",
+     "updated_at": "2026-06-26T17:24:13.733165",
+     "last_login_at": "2026-06-26T17:24:13.526866",
+     "optins": {
+       "github_starred": false,
+       "dialog_dismissed": false,
+       "discord_clicked": false
+     }
+   }
+   ```
+
+   If authentication fails, mismatched `aud` or `iss` values are the most common causes.
+   Optionally, decode the token at [jwt.io](https://jwt.io/) and confirm `iss`, `aud`, and `exp` match the audience mapper.
+   The `aud` array should include `langflow-app` from the audience mapper.
 
 ## Configure external authentication environment variables
 
@@ -171,7 +310,7 @@ Contact your Langflow account team for information about the SSO plugin.
 
 ## See also
 
-- [JWT authentication](/jwt-authentication)
+- [API keys and authentication — Configure JWT token signing](/api-keys-and-authentication#configure-jwt-token-signing)
 - [API keys and authentication](/api-keys-and-authentication)
 - [Authorization](./authorization)
 - [Security](/security)
