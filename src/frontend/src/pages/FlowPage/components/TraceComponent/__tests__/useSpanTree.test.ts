@@ -6,7 +6,6 @@ const makeKey = (key: string): React.KeyboardEvent =>
   ({ key, preventDefault: jest.fn() }) as unknown as React.KeyboardEvent;
 
 describe("useSpanTree", () => {
-
   // ── initial state ────────────────────────────────────────────────────────────
 
   describe("initial state", () => {
@@ -118,10 +117,9 @@ describe("useSpanTree", () => {
         );
         const focusMock = jest.fn();
         act(() =>
-          result.current.registerNodeRef(
-            "b",
-            { focus: focusMock } as unknown as HTMLElement,
-          ),
+          result.current.registerNodeRef("b", {
+            focus: focusMock,
+          } as unknown as HTMLElement),
         );
 
         act(() => result.current.handleTreeKeyDown(makeKey("ArrowDown")));
@@ -150,10 +148,9 @@ describe("useSpanTree", () => {
         );
         const focusMock = jest.fn();
         act(() =>
-          result.current.registerNodeRef(
-            "a",
-            { focus: focusMock } as unknown as HTMLElement,
-          ),
+          result.current.registerNodeRef("a", {
+            focus: focusMock,
+          } as unknown as HTMLElement),
         );
 
         act(() => result.current.handleTreeKeyDown(makeKey("ArrowUp")));
@@ -210,10 +207,9 @@ describe("useSpanTree", () => {
         );
         const focusMock = jest.fn();
         act(() =>
-          result.current.registerNodeRef(
-            "leaf",
-            { focus: focusMock } as unknown as HTMLElement,
-          ),
+          result.current.registerNodeRef("leaf", {
+            focus: focusMock,
+          } as unknown as HTMLElement),
         );
 
         act(() => result.current.handleTreeKeyDown(makeKey("ArrowRight")));
@@ -291,10 +287,9 @@ describe("useSpanTree", () => {
       );
       const focusMock = jest.fn();
       act(() =>
-        result.current.registerNodeRef(
-          "b",
-          { focus: focusMock } as unknown as HTMLElement,
-        ),
+        result.current.registerNodeRef("b", {
+          focus: focusMock,
+        } as unknown as HTMLElement),
       );
 
       act(() => result.current.handleTreeKeyDown(makeKey("ArrowDown")));
@@ -322,10 +317,9 @@ describe("useSpanTree", () => {
       );
       const focusMock = jest.fn();
       act(() =>
-        result.current.registerNodeRef(
-          "a",
-          { focus: focusMock } as unknown as HTMLElement,
-        ),
+        result.current.registerNodeRef("a", {
+          focus: focusMock,
+        } as unknown as HTMLElement),
       );
       act(() => result.current.registerNodeRef("a", null));
 

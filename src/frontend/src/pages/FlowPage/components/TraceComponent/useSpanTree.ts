@@ -34,16 +34,13 @@ export function useSpanTree({
   // raw CSS selectors. SpanNode registers itself here via registerNodeRef.
   const nodeRefs = useRef<Map<string, HTMLElement>>(new Map());
 
-  const registerNodeRef = useCallback(
-    (id: string, el: HTMLElement | null) => {
-      if (el) {
-        nodeRefs.current.set(id, el);
-      } else {
-        nodeRefs.current.delete(id);
-      }
-    },
-    [],
-  );
+  const registerNodeRef = useCallback((id: string, el: HTMLElement | null) => {
+    if (el) {
+      nodeRefs.current.set(id, el);
+    } else {
+      nodeRefs.current.delete(id);
+    }
+  }, []);
 
   // Refs let the reconciliation effects read current values without making
   // them trigger re-runs they shouldn't own.
@@ -83,8 +80,7 @@ export function useSpanTree({
       return hasNew || hasMissing ? next : prev;
     });
     setFocusedId((prev) => {
-      const want =
-        selectedSpanIdRef.current ?? spansRef.current[0]?.id ?? null;
+      const want = selectedSpanIdRef.current ?? spansRef.current[0]?.id ?? null;
       return prev === want ? prev : want;
     });
   }, [spansKey]);
