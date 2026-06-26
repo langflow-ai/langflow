@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import shutil
 import tempfile
+import warnings
 from pathlib import Path
 from uuid import uuid4
 
@@ -340,6 +341,21 @@ async def test_flush_inserts_transactions_and_vertex_builds(writer_with_engine) 
     # Sweeper-driven retention requires dirty-flow tracking; flush populates it.
     assert str(flow_id) in writer._dirty_tx_flows
     assert str(flow_id) in writer._dirty_vb_flows
+
+
+async def test_flush_and_retention_do_not_emit_deprecated_session_execute_warning(writer_with_engine) -> None:
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.max_transactions_to_keep = 1
+    writer.settings_service.settings.max_vertex_builds_to_keep = 1
+    flow_id = uuid4()
+
+    tx_batch = [_make_transaction_row(flow_id) for _ in range(3)]
+    vb_batch = [_make_vertex_build_row(flow_id, vertex_id="v1") for _ in range(3)]
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message="(?s).*session\\.exec\\(\\).*", category=DeprecationWarning)
+        await writer._flush(tx_batch, vb_batch)
+        await writer._run_retention_pass()
 
 
 async def test_retention_sweep_caps_transactions_per_flow(writer_with_engine) -> None:
