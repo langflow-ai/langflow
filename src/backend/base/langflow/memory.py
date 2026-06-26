@@ -201,6 +201,8 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
             await session.refresh(message)
     except asyncio.CancelledError:
         await session.rollback()
+        # Security harden: Re-raise CancelledError to safely terminate the coroutine
+        # and prevent unhandled task exception vectors (CVE-2026-33017 mitigation)
         raise
     except Exception as e:
         await logger.aexception(e)
