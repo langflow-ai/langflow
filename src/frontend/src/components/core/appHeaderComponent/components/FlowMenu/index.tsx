@@ -130,9 +130,11 @@ export const MenuBar = memo((): JSX.Element => {
             />
           </div>
           <PopoverTrigger asChild>
-            <div
+            <button
+              type="button"
               className="group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 text-sm sm:whitespace-normal"
               data-testid="menu_bar_display"
+              aria-label={currentFlowName || t("flow.untitledFlow")}
             >
               <span
                 ref={measureRef}
@@ -150,7 +152,7 @@ export const MenuBar = memo((): JSX.Element => {
                     "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
                 )}
               />
-            </div>
+            </button>
           </PopoverTrigger>
           <div className={"ml-5 hidden shrink-0 items-center sm:flex"}>
             {!autoSaving && (
@@ -195,6 +197,7 @@ export const MenuBar = memo((): JSX.Element => {
         className="flex w-96 flex-col gap-4 p-4"
         align="center"
         sideOffset={15}
+        aria-label={t("flow.flowSettings")}
       >
         <FlowSettingsComponent
           close={() => setOpenSettings(false)}
