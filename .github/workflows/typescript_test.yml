@@ -378,21 +378,28 @@ jobs:
       - name: Execute Playwright Tests
         uses: nick-fields/retry@v3
         with:
-          # Bumped from 12 → 18 minutes. Shard 38 carries all four
-          # starter-projects-shardN tests + the sentiment streaming test;
-          # iterating 8 templates per test under Linux nightly load
-          # consistently runs past 12 minutes once a single iteration
-          # triggers a per-test Playwright retry.
+          # Bumped from 12 → 18 minutes. The shard carrying the
+          # starter-projects-shardN tests iterates every starter template;
+          # under Linux CI load that work can run past 12 minutes once a
+          # single iteration triggers a per-test Playwright retry.
           timeout_minutes: 18
           max_attempts: 2
           command: |
             cd src/frontend
             echo 'Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}'
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list --retries=3
-            # echo command before running
-            echo "npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2 --retries=3"
+            TEST_LIST="$(npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list --retries=3)"
+            printf '%s\n' "$TEST_LIST"
 
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2 --retries=3
+            WORKERS=2
+            if printf '%s\n' "$TEST_LIST" | grep -q 'starter-projects-shard'; then
+              echo "Detected starter project template sweep in this shard; running it with one worker to avoid shared backend contention."
+              WORKERS=1
+            fi
+
+            # echo command before running
+            echo "npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers $WORKERS --retries=3"
+
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers "$WORKERS" --retries=3
 
       - name: Upload Test Results
         if: always()
