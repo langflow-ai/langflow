@@ -1,11 +1,48 @@
-from unittest.mock import Mock, patch
+"""Tests for the URL component.
+
+The URL component fetches pages with ``httpx`` and enforces DNS-pinned SSRF
+protection (see ``test_dns_rebinding.py`` for the rebinding-specific coverage).
+These tests exercise content extraction, output formats, URL normalization, and
+the SSRF guard without making real network requests by stubbing the per-URL
+fetch (``_fetch_url_with_pinning``) and, for SSRF, validating direct IPs.
+"""
 
 import pytest
 from lfx.components.data_source.url import URLComponent
 from lfx.schema import DataFrame
-from lfx.utils.ssrf_protection import SSRFProtectionError
 
 from tests.base import ComponentTestBaseWithoutClient
+
+
+def _static_fetch(html: str, metadata: dict):
+    """Build an async stand-in for ``URLComponent._fetch_url_with_pinning``.
+
+    Returns the same ``(html, metadata)`` for every URL so tests can drive the
+    extraction / formatting logic without any network access.
+    """
+
+    async def _fetch(_self, _url, _validated_ips, _headers):
+        return html, metadata
+
+    return _fetch
+
+
+def _per_url_fetch(pages: dict):
+    """Async stand-in returning ``(html, metadata)`` keyed by the requested URL.
+
+    Unknown URLs yield empty content (treated as "nothing fetched").
+    """
+
+    async def _fetch(_self, url, _validated_ips, _headers):
+        return pages.get(url, ("", {}))
+
+    return _fetch
+
+
+@pytest.fixture
+def disable_ssrf(monkeypatch):
+    """Disable SSRF protection so ``ensure_url`` skips DNS resolution."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
 
 
 class TestURLComponent(ComponentTestBaseWithoutClient):
@@ -35,30 +72,26 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
             {"version": "1.2.0", "module": "data", "file_name": "url"},
         ]
 
-    @pytest.fixture
-    def mock_recursive_loader(self):
-        """Mock the RecursiveUrlLoader.load method."""
-        with patch("langchain_community.document_loaders.RecursiveUrlLoader.load") as mock:
-            yield mock
-
-    def test_url_component_basic_functionality(self, mock_recursive_loader):
-        """Test basic URLComponent functionality."""
-        component = URLComponent()
-        component.set_attributes({"urls": ["https://example.com"], "max_depth": 2})
-
-        mock_doc = Mock(
-            page_content="test content",
-            metadata={
-                "source": "https://example.com",
-                "title": "Test Page",
-                "description": "Test Description",
-                "content_type": "text/html",
-                "language": "en",
-            },
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("disable_ssrf")
+    async def test_url_component_basic_functionality(self, monkeypatch):
+        """Fetched content and metadata are surfaced on the output DataFrame."""
+        metadata = {
+            "source": "https://example.com",
+            "title": "Test Page",
+            "description": "Test Description",
+            "content_type": "text/html",
+            "language": "en",
+        }
+        monkeypatch.setattr(
+            URLComponent,
+            "_fetch_url_with_pinning",
+            _static_fetch("<html><body>test content</body></html>", metadata),
         )
-        mock_recursive_loader.return_value = [mock_doc]
+        component = URLComponent()
+        component.set_attributes({"urls": ["https://example.com"], "max_depth": 1, "format": "Text"})
 
-        data_frame = component.fetch_content()
+        data_frame = await component.fetch_content()
         assert isinstance(data_frame, DataFrame)
         assert len(data_frame) == 1
 
@@ -70,260 +103,168 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         assert row["content_type"] == "text/html"
         assert row["language"] == "en"
 
-    def test_url_component_multiple_urls(self, mock_recursive_loader):
-        """Test URLComponent with multiple URL inputs."""
-        # Setup component with multiple URLs
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("disable_ssrf")
+    async def test_url_component_multiple_urls(self, monkeypatch):
+        """Each provided URL produces its own row."""
+        pages = {
+            "https://example.com": ("<html><body>first</body></html>", {"source": "https://example.com"}),
+            "https://example.org": ("<html><body>second</body></html>", {"source": "https://example.org"}),
+        }
+        monkeypatch.setattr(URLComponent, "_fetch_url_with_pinning", _per_url_fetch(pages))
         component = URLComponent()
-        urls = ["https://example1.com", "https://example2.com"]
-        component.set_attributes({"urls": urls})
+        component.set_attributes({"urls": ["https://example.com", "https://example.org"], "max_depth": 1})
 
-        # Create mock documents for each URL
-        mock_docs = [
-            Mock(
-                page_content="Content from first URL",
-                metadata={
-                    "source": "https://example1.com",
-                    "title": "First Page",
-                    "description": "First Description",
-                    "content_type": "text/html",
-                    "language": "en",
-                },
-            ),
-            Mock(
-                page_content="Content from second URL",
-                metadata={
-                    "source": "https://example2.com",
-                    "title": "Second Page",
-                    "description": "Second Description",
-                    "content_type": "text/html",
-                    "language": "en",
-                },
-            ),
-        ]
+        data_frame = await component.fetch_content()
+        assert len(data_frame) == 2
+        texts = set(data_frame["text"])
+        assert texts == {"first", "second"}
 
-        # Configure mock to return both documents
-        mock_recursive_loader.return_value = mock_docs
-
-        # Execute component
-        result = component.fetch_content()
-
-        # Verify results
-        assert isinstance(result, DataFrame)
-        assert len(result) == 4
-
-        # Verify first URL content
-        first_row = result.iloc[0]
-        assert first_row["text"] == "Content from first URL"
-        assert first_row["url"] == "https://example1.com"
-        assert first_row["title"] == "First Page"
-        assert first_row["description"] == "First Description"
-
-        # Verify second URL content
-        second_row = result.iloc[1]
-        assert second_row["text"] == "Content from second URL"
-        assert second_row["url"] == "https://example2.com"
-        assert second_row["title"] == "Second Page"
-        assert second_row["description"] == "Second Description"
-
-    def test_url_component_text_format(self, mock_recursive_loader):
-        """Test URLComponent with text format."""
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("disable_ssrf")
+    async def test_url_component_text_format(self, monkeypatch):
+        """Text format strips HTML tags to plain text."""
+        html = "<html><body><h1>Heading</h1><p>Hello world</p></body></html>"
+        monkeypatch.setattr(
+            URLComponent, "_fetch_url_with_pinning", _static_fetch(html, {"source": "https://example.com"})
+        )
         component = URLComponent()
         component.set_attributes({"urls": ["https://example.com"], "format": "Text"})
 
-        mock_recursive_loader.return_value = [
-            Mock(
-                page_content="extracted text",
-                metadata={
-                    "source": "https://example.com",
-                    "title": "Test Page",
-                    "description": "Test Description",
-                    "content_type": "text/html",
-                    "language": "en",
-                },
-            )
-        ]
-        data_frame = component.fetch_content()
-        assert data_frame.iloc[0]["text"] == "extracted text"
-        assert data_frame.iloc[0]["content_type"] == "text/html"
+        data_frame = await component.fetch_content()
+        text = data_frame.iloc[0]["text"]
+        assert "<h1>" not in text
+        assert "Heading" in text
+        assert "Hello world" in text
 
-    def test_url_component_html_format(self, mock_recursive_loader):
-        """Test URLComponent with different format options."""
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("disable_ssrf")
+    async def test_url_component_html_format(self, monkeypatch):
+        """HTML format preserves the raw markup."""
+        html = "<html><body><h1>Heading</h1><p>Hello world</p></body></html>"
+        monkeypatch.setattr(
+            URLComponent, "_fetch_url_with_pinning", _static_fetch(html, {"source": "https://example.com"})
+        )
         component = URLComponent()
-
-        # Test with HTML format
         component.set_attributes({"urls": ["https://example.com"], "format": "HTML"})
-        mock_recursive_loader.return_value = [
-            Mock(
-                page_content="<html>raw html</html>",
-                metadata={
-                    "source": "https://example.com",
-                    "title": "Test Page",
-                    "description": "Test Description",
-                    "content_type": "text/html",
-                    "language": "en",
-                },
-            )
-        ]
-        data_frame = component.fetch_content()
-        assert data_frame.iloc[0]["text"] == "<html>raw html</html>"
-        assert data_frame.iloc[0]["content_type"] == "text/html"
 
-    def test_url_component_markdown_format(self, mock_recursive_loader):
-        """Test URLComponent with Markdown format."""
+        data_frame = await component.fetch_content()
+        text = data_frame.iloc[0]["text"]
+        assert "<h1>Heading</h1>" in text
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("disable_ssrf")
+    async def test_url_component_markdown_format(self, monkeypatch):
+        """Markdown format converts HTML headings/paragraphs to markdown."""
+        html = "<html><body><h1>Heading</h1><p>Hello world</p></body></html>"
+        monkeypatch.setattr(
+            URLComponent, "_fetch_url_with_pinning", _static_fetch(html, {"source": "https://example.com"})
+        )
         component = URLComponent()
-
         component.set_attributes({"urls": ["https://example.com"], "format": "Markdown"})
-        mock_recursive_loader.return_value = [
-            Mock(
-                page_content="# Header\n\nParagraph with a [link](https://link.com).\n",
-                metadata={
-                    "source": "https://example.com",
-                    "title": "Test Page",
-                    "description": "Test Description",
-                    "content_type": "text/html",
-                    "language": "en",
-                },
-            )
-        ]
 
-        data_frame = component.fetch_content()
-        assert data_frame.iloc[0]["text"] == "# Header\n\nParagraph with a [link](https://link.com).\n"
-        assert data_frame.iloc[0]["content_type"] == "text/html"
+        data_frame = await component.fetch_content()
+        text = data_frame.iloc[0]["text"]
+        assert "# Heading" in text
+        assert "Hello world" in text
 
-    def test_url_component_missing_metadata(self, mock_recursive_loader):
-        """Test URLComponent with missing metadata fields."""
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("disable_ssrf")
+    async def test_url_component_missing_metadata(self, monkeypatch):
+        """Missing metadata fields default to empty strings."""
+        monkeypatch.setattr(
+            URLComponent,
+            "_fetch_url_with_pinning",
+            _static_fetch("<html><body>test content</body></html>", {"source": "https://example.com"}),
+        )
         component = URLComponent()
         component.set_attributes({"urls": ["https://example.com"]})
 
-        mock_doc = Mock(
-            page_content="test content",
-            metadata={"source": "https://example.com"},  # Only source is provided
-        )
-        mock_recursive_loader.return_value = [mock_doc]
-
-        data_frame = component.fetch_content()
+        data_frame = await component.fetch_content()
         row = data_frame.iloc[0]
         assert row["text"] == "test content"
         assert row["url"] == "https://example.com"
-        assert row["title"] == ""  # Default empty string
-        assert row["description"] == ""  # Default empty string
-        assert row["content_type"] == ""  # Default empty string
-        assert row["language"] == ""  # Default empty string
+        assert row["title"] == ""
+        assert row["description"] == ""
+        assert row["content_type"] == ""
+        assert row["language"] == ""
 
-    def test_url_component_error_handling(self, mock_recursive_loader):
-        """Test error handling in URLComponent."""
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("disable_ssrf")
+    async def test_url_component_error_handling_empty_urls(self):
+        """An empty URL list raises a clear error."""
         component = URLComponent()
-
-        # Test empty URLs
         component.set_attributes({"urls": []})
         with pytest.raises(ValueError, match="Error loading documents:"):
-            component.fetch_content()
+            await component.fetch_content()
 
-        # Test request exception
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("disable_ssrf")
+    async def test_url_component_error_handling_no_documents(self, monkeypatch):
+        """When no page yields content, a 'no documents' error is raised."""
+        monkeypatch.setattr(URLComponent, "_fetch_url_with_pinning", _static_fetch("", {}))
+        component = URLComponent()
         component.set_attributes({"urls": ["https://example.com"]})
-        mock_recursive_loader.side_effect = Exception("Connection error")
         with pytest.raises(ValueError, match="Error loading documents:"):
-            component.fetch_content()
+            await component.fetch_content()
 
-        # Test no documents found
-        mock_recursive_loader.side_effect = None
-        mock_recursive_loader.return_value = []
-        with pytest.raises(ValueError, match="Error loading documents:"):
-            component.fetch_content()
-
+    @pytest.mark.usefixtures("disable_ssrf")
     def test_url_component_ensure_url(self):
-        """Test URLComponent's ensure_url method."""
+        """ensure_url normalizes the scheme and rejects malformed URLs."""
         component = URLComponent()
 
-        # Test URL without protocol
-        url = "example.com"
-        fixed_url = component.ensure_url(url)
-        assert fixed_url == "https://example.com"
+        # Missing scheme defaults to https; returns (url, pinned_ips).
+        url, ips = component.ensure_url("example.com")
+        assert url == "https://example.com"
+        assert ips == []
 
-        # Test URL with protocol
-        url = "https://example.com"
-        fixed_url = component.ensure_url(url)
-        assert fixed_url == "https://example.com"
+        # Existing scheme is preserved.
+        url, _ips = component.ensure_url("https://example.com")
+        assert url == "https://example.com"
 
-        # Test URL with https protocol
-        url = "https://example.com"
-        fixed_url = component.ensure_url(url)
-        assert fixed_url == "https://example.com"
-
-        # Test invalid URL
+        # Malformed URL is rejected.
         with pytest.raises(ValueError, match="Invalid URL"):
             component.ensure_url("not a url")
 
 
 class TestURLComponentSSRFProtection:
-    """Test SSRF protection in URLComponent."""
+    """SSRF protection is enforced when ensuring and fetching URLs."""
 
-    def test_ssrf_validation_called_on_ensure_url(self):
-        """Test that SSRF validation is called when ensuring URL."""
+    @pytest.fixture(autouse=True)
+    def enable_ssrf(self, monkeypatch):
+        """Enable SSRF protection with an empty allowlist for these tests."""
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    def test_ensure_url_blocks_localhost(self):
+        """Loopback addresses are blocked."""
         component = URLComponent()
+        with pytest.raises(ValueError, match="SSRF Protection"):
+            component.ensure_url("http://127.0.0.1:8080")
 
-        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
-            component.ensure_url("https://example.com")
-            mock_validate.assert_called_once_with("https://example.com", warn_only=False)
-
-    def test_ssrf_blocks_localhost(self):
-        """Test that localhost is blocked when SSRF validation raises."""
+    def test_ensure_url_blocks_private_ip(self):
+        """RFC 1918 private addresses are blocked."""
         component = URLComponent()
+        with pytest.raises(ValueError, match="SSRF Protection"):
+            component.ensure_url("http://192.168.1.1/admin")
 
-        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
-            mock_validate.side_effect = SSRFProtectionError("Access to IP address 127.0.0.1 is blocked")
-
-            with pytest.raises(ValueError, match="SSRF Protection"):
-                component.ensure_url("http://127.0.0.1:8080")
-
-    def test_ssrf_blocks_private_ip(self):
-        """Test that private IPs are blocked when SSRF validation raises."""
+    def test_ensure_url_blocks_metadata_endpoint(self):
+        """The cloud metadata endpoint is blocked."""
         component = URLComponent()
+        with pytest.raises(ValueError, match="SSRF Protection"):
+            component.ensure_url("http://169.254.169.254/latest/meta-data/")
 
-        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
-            mock_validate.side_effect = SSRFProtectionError("Access to IP address 192.168.1.1 is blocked")
-
-            with pytest.raises(ValueError, match="SSRF Protection"):
-                component.ensure_url("http://192.168.1.1/admin")
-
-    def test_ssrf_blocks_metadata_endpoint(self):
-        """Test that cloud metadata endpoints are blocked when SSRF validation raises."""
+    def test_ensure_url_allows_public_ip(self):
+        """A public IP passes and is returned for DNS pinning."""
         component = URLComponent()
+        url, ips = component.ensure_url("http://8.8.8.8/")
+        assert url == "http://8.8.8.8/"
+        assert ips == ["8.8.8.8"]
 
-        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
-            mock_validate.side_effect = SSRFProtectionError("Access to IP address 169.254.169.254 is blocked")
-
-            with pytest.raises(ValueError, match="SSRF Protection"):
-                component.ensure_url("http://169.254.169.254/latest/meta-data/")
-
-    def test_ssrf_allows_public_urls(self):
-        """Test that public URLs are allowed when validation passes."""
-        component = URLComponent()
-
-        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
-            mock_validate.return_value = None
-
-            url = component.ensure_url("https://www.google.com")
-            assert url == "https://www.google.com"
-            mock_validate.assert_called_once()
-
-    def test_ssrf_blocking_mode(self):
-        """Test that warn_only=False is passed to validation for actual blocking."""
-        component = URLComponent()
-
-        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
-            component.ensure_url("https://example.com")
-
-            # Verify warn_only=False is passed to enforce blocking when SSRF protection is enabled
-            mock_validate.assert_called_with("https://example.com", warn_only=False)
-
-    def test_ssrf_protection_in_fetch_content(self):
-        """Test that SSRF protection is applied during fetch_content."""
+    @pytest.mark.asyncio
+    async def test_ssrf_protection_in_fetch_content(self):
+        """A blocked URL surfaces the SSRF error from fetch_content (not a generic message)."""
         component = URLComponent()
         component.set_attributes({"urls": ["http://127.0.0.1:9999"]})
-
-        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
-            mock_validate.side_effect = SSRFProtectionError("Access to IP address 127.0.0.1 is blocked")
-
-            with pytest.raises(ValueError, match="SSRF Protection"):
-                component.fetch_content()
+        with pytest.raises(ValueError, match="SSRF Protection"):
+            await component.fetch_url_contents()

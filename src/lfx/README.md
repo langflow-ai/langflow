@@ -9,10 +9,32 @@ There is no `langflow.db` database file when using LFX.
 You can run flows with the API, but any stateful operations that depend on the Langflow database, like saving flows, storing messages, or managing users **will not** persist data.
 Operations that depend on `langflow.db` will not work as they do in the full Langflow application.
 
-LFX includes two commands for executing flows:
+Memory operations are dispatched at call time, not at import time.
+If the `langflow` package is installed in the same Python environment as `lfx` and a real database service is registered, memory operations are routed to the full `langflow.memory` implementation instead. This applies when `lfx` is used as a Python library inside a running Langflow server, not when running `lfx run` or `lfx serve` from the command line.
 
-- **`lfx serve`**: Starts a FastAPI server hosting a Langflow API endpoint with your flow available at `/flows/{flow_id}/run`. The flow graph is stored in memory at all times, so there is less overhead for loading the graph from a database.
-- **`lfx run`**: Executes a flow locally and returns the results to `stdout`.
+## Commands
+
+**Runtime commands** — documented in this README:
+
+| Command | Description |
+|---------|-------------|
+| [`lfx serve`](#serve-the-simple-agent-starter-flow-with-lfx-serve) | Serve one or more flows as FastAPI endpoints at `/flows/{flow_id}/run` |
+| [`lfx run`](#run-the-simple-agent-flow-with-lfx-run) | Execute a flow locally and stream results to `stdout` |
+| [`lfx-mcp`](#lfx-mcp) | Start an MCP server that connects to a running Langflow instance |
+
+**Flow DevOps SDK commands** — documented in the [Flow DevOps Toolkit](https://docs.langflow.org/flow-devops-sdk):
+
+| Command | Description |
+|---------|-------------|
+| `lfx init` | Scaffold a versioned flow project with CI templates |
+| `lfx login` | Validate credentials against a remote Langflow instance |
+| `lfx create` | Create a new flow JSON from a built-in or custom template |
+| `lfx validate` | Validate flow JSON before pushing |
+| `lfx requirements` | Generate `requirements.txt` from a flow's component dependencies |
+| `lfx status` | Compare local flow files against a remote Langflow instance |
+| `lfx push` | Push flows to a remote instance by stable ID |
+| `lfx pull` | Pull flows from a remote instance to local files |
+| `lfx export` | Normalize flow JSON for clean git diffs |
 
 ## Prerequisites
 
@@ -62,10 +84,10 @@ LFX can be installed in multiple ways. If you have installed Langflow OSS versio
    uv pip install lfx
    ```
 
-   To install the latest nightly version of LFX:
+   To install the latest nightly (pre-release) version of LFX:
 
    ```bash
-   uv pip install lfx-nightly
+   uv pip install --pre lfx
    ```
 
    To run `lfx` commands, continue to [lfx serve](#serve-the-simple-agent-starter-flow-with-lfx-serve) or [lfx run](#run-the-simple-agent-flow-with-lfx-run).
@@ -90,7 +112,11 @@ Run LFX without installing it locally using `uvx`.
 
 ## Serve the simple agent starter flow with `lfx serve`
 
-To serve a flow as a REST API endpoint, set a `LANGFLOW_API_KEY` and run the flow JSON.
+`lfx serve` starts a FastAPI server that hosts one or more flows. You can load flows at startup from files or a directory, or start with an empty registry and upload flows via the API. Once running, flows are available at `POST /flows/{flow_id}/run`.
+
+`lfx serve` accepts a `.json` flow file or a `.py` Python script (same as `lfx run`), as well as inline JSON via `--flow-json` or piped input via `--stdin`.
+
+`lfx serve` accepts a `.json` flow file or a `.py` Python script (same as `lfx run`), as well as inline JSON via `--flow-json` or piped input via `--stdin`.
 
 The API key is required for security because `lfx serve` can create a publicly accessible FastAPI server.
 
@@ -178,25 +204,11 @@ This example uses the **Agent** component's built-in OpenAI model, which require
 5. The startup process displays a `flow_id` value in the output. Copy the `flow_id` to use in the test API call in the next step. In this example, the `flow_id` is `c1dab29d-3364-58ef-8fef-99311d32ee42`:
 
    ```
-    ╭───────────────────────────── LFX Server ─────────────────────────────╮
-    │ 🎯 Single Flow Served Successfully!                                  │
-    │                                                                      │
-    │ Source: /Users/mendonkissling/Downloads/simple-agent-flow.json       │
-    │ Server: http://127.0.0.1:8000                                        │
-    │ API Key: sk-...                                                      │
-    │                                                                      │
-    │ Send POST requests to:                                               │
-    │ http://127.0.0.1:8000/flows/c1dab29d-3364-58ef-8fef-99311d32ee42/run │
-    │                                                                      │
-    │ With headers:                                                        │
-    │ x-api-key: sk-...                                                    │
-    │                                                                      │
-    │ Or query parameter:                                                  │
-    │ ?x-api-key=sk-...                                                    │
-    │                                                                      │
-    │ Request body:                                                        │
-    │ {'input_value': 'Your input message'}                                │
-    ╰──────────────────────────────────────────────────────────────────────╯
+    LFX Server
+    Flow loaded: simple-agent-flow.json (c1dab29d-3364-58ef-8fef-99311d32ee42)
+    Server:      http://127.0.0.1:8000
+    Run flows at: POST /flows/{flow_id}/run
+    API key:     x-api-key header or ?x-api-key= query parameter
    ```
 
 6. To send a test request to the server, open a new terminal and export your `flow_id` and Langflow API key values as variables:
@@ -231,7 +243,56 @@ Your flow is now running as a lightweight API endpoint, with only the flow's req
 
 To make your server publicly accessible, use a tunneling service like ngrok or deploy to a public cloud provider.
 
-### LFX response schema
+### HTTP endpoints
+
+The LFX server exposes the following endpoints. All `/flows/{flow_id}` routes require the `x-api-key` header or `?x-api-key=` query parameter.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/flows` | GET | List all served flows and their metadata |
+| `/flows/upload/` | POST | Upload a flow JSON to the registry (accepts full Langflow export format) |
+| `/flows/{flow_id}/run` | POST | Run the flow and return a single response |
+| `/flows/{flow_id}/stream` | POST | Run the flow and stream output as server-sent events |
+| `/flows/{flow_id}/info` | GET | Return flow metadata (title, description, input/output types) |
+| `/health` | GET | Global health check — returns `{"status": "ok"}` |
+| `/docs` | GET | Auto-generated OpenAPI/Swagger UI |
+
+### Request body schema
+
+**`POST /flows/{flow_id}/run`**
+
+```json
+{
+  "input_value": "Your message here",
+  "session_id": "optional-conversation-id"
+}
+```
+
+`session_id` is optional. When set, Agent and Memory components use it to maintain conversation history across multiple calls. If omitted, a new session ID is generated for each request.
+
+**`POST /flows/{flow_id}/stream`**
+
+```json
+{
+  "input_value": "Your message here",
+  "input_type": "chat",
+  "output_type": "chat",
+  "output_component": null,
+  "session_id": "optional-conversation-id",
+  "tweaks": {"ComponentName": {"param": "value"}}
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `input_value` | — | Required. Input passed to the flow. |
+| `input_type` | `"chat"` | Input type: `chat` or `text`. |
+| `output_type` | `"chat"` | Output type: `chat`, `text`, `debug`, or `any`. |
+| `output_component` | `null` | Pin output to a specific component by name. |
+| `session_id` | `null` | Conversation ID for memory continuity across requests. |
+| `tweaks` | `null` | Per-request parameter overrides. Keys are component names; values are dicts of parameter overrides. Use this to parameterize a flow without modifying the JSON. |
+
+### Response schema
 
 The LFX server's response schema is different from the Langflow API `/run` endpoint's schema. Requests to the LFX server's `/flows/{flow_id}/run` endpoint return the following fields:
 
@@ -245,7 +306,121 @@ The LFX server's response schema is different from the Langflow API `/run` endpo
 }
 ```
 
-To view the LFX server's API docs and schema, see the `/docs` endpoint at `http://localhost:8000/docs`.
+The `/stream` endpoint returns the same fields as server-sent events, with one event per component output.
+
+### Serve multiple flows at startup
+
+You can pass a directory, multiple file paths, or a mix of both to load several flows at startup. Each flow is registered under its own ID.
+
+```bash
+# Serve every .json file in a directory (top-level only, not recursive)
+uv run lfx serve flows/
+
+# Serve specific files
+uv run lfx serve flow-a.json flow-b.json
+
+# Mix directory and individual files
+uv run lfx serve flows/ extra-flow.json
+```
+
+Python `.py` script flows are also supported when using a single worker:
+
+```bash
+uv run lfx serve my_flow.py
+```
+
+### Start with no flows
+
+`lfx serve` starts with an empty registry when no flow path is provided. Flows can then be uploaded via the API:
+
+```bash
+uv run lfx serve --env-file .env
+```
+
+### Upload flows dynamically
+
+While the server is running, upload flows with `POST /flows/upload/`.
+
+The endpoint accepts the full Langflow export JSON directly, the same format you get from the Langflow UI's **Export** button:
+
+```bash
+# Upload a flow JSON file
+curl -X POST http://localhost:8000/flows/upload/ \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @my-flow.json
+
+# Upload and replace an existing flow with the same ID
+curl -X POST "http://localhost:8000/flows/upload/?replace=true" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @my-flow.json
+```
+
+The server returns a `409 Conflict` error if you upload a flow whose ID is already registered and `replace=true` is not set.
+
+### Multi-worker deployment
+
+Use `--workers N` to start multiple uvicorn worker processes, and `--flow-dir` to point all workers at a shared directory so they serve the same flows.
+
+```bash
+# 4 workers, flows shared via a local temp directory
+uv run lfx serve flows/ --workers 4 --flow-dir /tmp/lfx-flows
+
+# Cross-pod sharing (Kubernetes PVC or similar network volume)
+uv run lfx serve flows/ --workers 4 --flow-dir /mnt/shared-flows
+```
+
+How it works:
+
+- Each startup flow file is persisted to `--flow-dir` as `{flow_id}.json` when the server starts.
+- Uploads via `POST /flows/upload/` are also written to `--flow-dir`, making them visible to every worker on the next request.
+- Deletes propagate across workers: each worker detects a missing file on the next request to that flow and returns `404`.
+- Without `--flow-dir`, each worker maintains an isolated in-memory registry. Uploads reach only the worker that received the request.
+
+> **Note:** `--workers > 1` with `--flow-dir` does not support `.py` script flows — Python graphs cannot be serialized to the filesystem store.
+
+A warning is printed when `--workers > 1` is used without `--flow-dir`, because in that case each worker has its own isolated in-memory registry.
+
+### Isolate credentials with `--no-env-fallback` _(experimental)_
+
+By default, `lfx serve` resolves component credentials from the process environment (`os.environ`). In multi-tenant deployments, this means every request shares the same credentials.
+
+Use `--no-env-fallback` to disable process-environment fallback. With this flag set, credentials must be supplied per-request in the `global_vars` field of the request body:
+
+```bash
+uv run lfx serve my-flow.json --no-env-fallback --env-file .env
+```
+
+Pass per-request credentials in the `global_vars` map under `LANGFLOW_REQUEST_VARIABLES`:
+
+```bash
+curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "input_value": "Hello world",
+    "global_vars": {
+      "LANGFLOW_REQUEST_VARIABLES": {
+        "OPENAI_API_KEY": "sk-per-request-key"
+      }
+    }
+  }'
+```
+
+Credentials supplied in `LANGFLOW_REQUEST_VARIABLES` are scoped to the current request using Python `contextvars`. Langflow's built-in components do not write them to `os.environ`, so they do not bleed into other concurrent requests on the same worker. Custom components that explicitly write to `os.environ` are outside this guarantee.
+
+### Check or upgrade flow compatibility at startup
+
+Use `--upgrade-flow` to check compatibility between a flow and the current LFX version before serving it. See [LFX and Langflow version compatibility](https://docs.langflow.org/lfx-compatibility) for details on the version model.
+
+```bash
+# Fail at startup if any component is incompatible
+uv run lfx serve my-flow.json --upgrade-flow=check
+
+# Apply safe upgrades in memory, then start serving
+uv run lfx serve my-flow.json --upgrade-flow=safe
+```
 
 ### LFX serve options
 
@@ -253,12 +428,16 @@ To view the LFX server's API docs and schema, see the `/docs` endpoint at `http:
 |--------|--------------|
 | `--check-variables` / `--no-check-variables` | Check global variables for environment compatibility. Default: `--check-variables`. |
 | `--env-file` | Path to the `.env` file containing environment variables. |
+| `--flow-dir` | Directory for the filesystem-backed flow store shared across workers. When set, startup flows and uploads are persisted here. |
+| `--flow-json` | Read inline flow JSON content as a string. Example: `uv run lfx serve --flow-json '{...}'`. |
 | `--host`, `-h` | Host to bind the server to. Default: `127.0.0.1`. |
 | `--log-level` | Logging level. One of: `debug`, `info`, `warning`, `error`, `critical`. Default: `warning`. |
+| `--no-env-fallback` / `--env-fallback` | Disable process-environment fallback for credential resolution. Use with per-request `LANGFLOW_REQUEST_VARIABLES`. Default: `--env-fallback`. |
 | `--port`, `-p` | Port to bind the server to. Default: `8000`. |
-| `--verbose`, `-v` | Show diagnostic output and execution details. |
-| `--flow-json` | Read inline flow JSON content as a string. Example: `uv run lfx serve --flow-json '{...}'`. |
 | `--stdin` | Read JSON flow content from `stdin`. Example: `cat flow.json | uv run lfx serve --stdin`. |
+| `--upgrade-flow` | Compatibility mode: `check` reports issues and fails, `safe` applies safe upgrades in memory. |
+| `--verbose`, `-v` | Show diagnostic output and execution details. |
+| `--workers`, `-w` | Number of uvicorn worker processes. Default: `1`. Use with `--flow-dir` for multi-worker flow sharing. |
 
 ## Run the simple agent flow with `lfx run`
 
@@ -358,8 +537,10 @@ uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' \
 | `--flow-json` | Load inline JSON flow content as a string. |
 | `--format`, `-f` | Output format. One of: `json`, `text`, `message`, `result`. Default: `json`. |
 | `--input-value` | Input value to pass to the graph. |
+| `--session-id` | Session ID for conversation tracking. Agent and Memory components use this to maintain history across runs. Auto-generated if not set. |
 | `--stdin` | Read JSON flow content from `stdin`. |
 | `--timing` | Include detailed timing information in output. |
+| `--upgrade-flow` | Compatibility mode: `check` reports issues and fails, `safe` applies safe upgrades in memory before running. |
 | `--verbose`, `-v` | Show basic progress and diagnostic output. |
 | `-vv` | Show detailed progress and debug information. |
 | `-vvv` | Show full debugging output including component logs. |
@@ -416,6 +597,12 @@ Install dependencies and set your OpenAI API key, then run:
 ```bash
 uv run lfx run simple_agent.py "How are you?" --verbose
 ```
+
+## lfx-mcp
+
+`lfx-mcp` is a separate binary installed with `lfx`. It starts an MCP server that gives any MCP-compatible client programmatic control over a Langflow instance for building flows, managing components, and running executions.
+
+For more information, see [LFX_MCP.md](./LFX_MCP.md).
 
 ## Development
 

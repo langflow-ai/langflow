@@ -18,10 +18,11 @@ import { SearchConfigTrigger } from "./searchConfigTrigger";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
 
 type McpSidebarGroupProps = {
+  // biome-ignore lint/suspicious/noExplicitAny: MCP component shape extends APIClassType with server-specific fields
   mcpComponents?: any[];
-  nodeColors: any;
+  nodeColors: Record<string, string>;
   onDragStart: (
-    event: React.DragEvent<any>,
+    event: React.DragEvent<HTMLElement>,
     data: { type: string; node?: APIClassType },
   ) => void;
   openCategories: string[];
@@ -125,7 +126,7 @@ const McpSidebarGroup = ({
       )}
       <SidebarGroupContent className="h-full">
         <SidebarMenu className={!hasMcpServers ? " h-full" : ""}>
-          {isLoading && <span>Loading...</span>}
+          {isLoading && <span>{t("mcp.servers.statusLoading")}</span>}
           {isSuccess && !hasMcpServers && (
             <McpEmptyState isLoading={isLoading} />
           )}

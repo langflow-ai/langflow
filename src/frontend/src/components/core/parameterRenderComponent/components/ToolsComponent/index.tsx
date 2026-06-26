@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import ToolsModal from "@/modals/toolsModal";
@@ -24,8 +24,15 @@ export default function ToolsComponent({
   disabled = false,
   template,
   showParameter = true,
+  hideButton = false,
+  open,
+  setOpen,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element | null {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { t } = useTranslation();
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isModalOpen = open ?? internalOpen;
+  const setIsModalOpen = setOpen ?? setInternalOpen;
   const actions = value
     ?.filter((action) => action.status === true)
     .map((action) => {
@@ -69,7 +76,7 @@ export default function ToolsComponent({
         className="relative flex items-center w-full gap-3"
         data-testid={"div-" + id}
       >
-        {(visibleActions.length > 0 || isAction) && (
+        {!hideButton && (visibleActions.length > 0 || isAction) && (
           <Button
             variant={
               ENABLE_MCP_COMPOSER && button_description ? "outline" : "ghost"
@@ -103,7 +110,12 @@ export default function ToolsComponent({
             ))}
           </div>
         ) : visibleActions.length > 0 ? (
-          <div className="flex w-full flex-wrap gap-1 overflow-hidden py-1.5">
+          <div
+            className={cn(
+              "flex w-full flex-wrap gap-1 overflow-hidden pb-1.5",
+              hideButton ? "pt-0" : "pt-3",
+            )}
+          >
             {visibleActions.map((action, index) => (
               <Badge
                 key={index}
@@ -113,28 +125,36 @@ export default function ToolsComponent({
                 data-testid={testIdCase(`tool_${action.name}`)}
               >
                 <span className="truncate text-xxs font-medium">
-                  {action.name.toUpperCase()}
+                  {(action.name === "unnamed"
+                    ? t("common.unnamed")
+                    : action.name
+                  ).toUpperCase()}
                 </span>
               </Badge>
             ))}
             {remainingCount > 0 && (
               <span className="ml-1 self-center text-xs font-normal text-muted-foreground">
-                +{remainingCount} more
+                {t("input.moreActions", { count: remainingCount })}
               </span>
             )}
           </div>
         ) : (
           visibleActions.length === 0 &&
-          isAction && (
+          isAction &&
+          (hideButton ? (
+            <span className="py-1.5 text-sm text-muted-foreground">
+              {t("input.noActionsAddedToServer")}
+            </span>
+          ) : (
             <div className="mt-2 flex w-full flex-col items-center gap-2 rounded-md border border-dashed p-8">
               <span className="text-sm text-muted-foreground">
-                No actions added to this server
+                {t("input.noActionsAddedToServer")}
               </span>
               <Button size={"sm"} onClick={() => setIsModalOpen(true)}>
-                <span>Add actions</span>
+                <span>{t("input.addActions")}</span>
               </Button>
             </div>
-          )
+          ))
         )}
 
         {visibleActions.length === 0 && !isAction && value && (
@@ -150,8 +170,8 @@ export default function ToolsComponent({
             <span>
               {placeholder ||
                 (value.length === 0
-                  ? "No actions available"
-                  : "Select actions")}
+                  ? t("input.noActionsAvailable")
+                  : t("input.selectActions"))}
             </span>
           </Button>
         )}

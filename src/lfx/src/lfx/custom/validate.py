@@ -57,80 +57,26 @@ def validate_code(code):
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
 
-    # Evaluate the function definition with langflow context
+    # Validate each function definition WITHOUT executing it.
+    #
+    # Security (GHSA-2wcq-pvw2-xh7v): this endpoint only
+    # *validates* code, but it previously compiled and exec()'d every function
+    # definition. Executing a function definition evaluates its decorators and
+    # default-argument expressions at definition time, so a payload such as
+    #     def f(x=__import__("os").system("...")): ...
+    # achieves arbitrary code execution during "validation" — the function never
+    # has to be called. Compile only, to surface syntax/compile errors; never
+    # exec untrusted code on the validation path.
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
-            code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
-                # Create execution context with common langflow imports
-                exec_globals = _create_langflow_execution_context()
-                exec(code_obj, exec_globals)
+                compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             except Exception as e:  # noqa: BLE001
-                logger.debug("Error executing function code", exc_info=True)
+                logger.debug("Error compiling function code", exc_info=True)
                 errors["function"]["errors"].append(str(e))
 
     # Return the errors dictionary
     return errors
-
-
-def _create_langflow_execution_context():
-    """Create execution context with common langflow imports."""
-    context = {}
-
-    # Import common langflow types that are used in templates
-    try:
-        from lfx.schema.dataframe import DataFrame
-
-        context["DataFrame"] = DataFrame
-    except ImportError:
-        # Create a mock DataFrame if import fails
-        context["DataFrame"] = type("DataFrame", (), {})
-
-    try:
-        from lfx.schema.message import Message
-
-        context["Message"] = Message
-    except ImportError:
-        context["Message"] = type("Message", (), {})
-
-    try:
-        from lfx.schema.data import Data
-
-        context["Data"] = Data
-    except ImportError:
-        context["Data"] = type("Data", (), {})
-
-    try:
-        from lfx.custom import Component
-
-        context["Component"] = Component
-    except ImportError:
-        context["Component"] = type("Component", (), {})
-
-    try:
-        from lfx.io import HandleInput, Output, TabInput
-
-        context["HandleInput"] = HandleInput
-        context["Output"] = Output
-        context["TabInput"] = TabInput
-    except ImportError:
-        context["HandleInput"] = type("HandleInput", (), {})
-        context["Output"] = type("Output", (), {})
-        context["TabInput"] = type("TabInput", (), {})
-
-    # Add common Python typing imports
-    try:
-        from typing import Any, Optional, Union
-
-        context["Any"] = Any
-        context["Dict"] = dict
-        context["List"] = list
-        context["Optional"] = Optional
-        context["Union"] = Union
-    except ImportError:
-        pass
-
-    return context
 
 
 def eval_function(function_string: str):
@@ -272,8 +218,9 @@ def create_class(code, class_name):
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module)
 
+        future_imports = [n for n in module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
         class_code = extract_class_code(module, class_name)
-        compiled_class = compile_class_code(class_code)
+        compiled_class = compile_class_code(class_code, future_imports)
 
         return build_class_constructor(compiled_class, exec_globals, class_name)
 
@@ -394,11 +341,15 @@ def prepare_global_scope(module):
     exec_globals = globals().copy()
     imports = []
     import_froms = []
+    future_imports = []
     definitions = []
 
     for node in module.body:
         if isinstance(node, ast.Import):
             imports.append(node)
+        elif isinstance(node, ast.ImportFrom) and node.module == "__future__":
+            # __future__ imports are compiler directives — collect separately
+            future_imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
         elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign | ast.AnnAssign):
@@ -468,7 +419,8 @@ def prepare_global_scope(module):
             raise ModuleNotFoundError(msg)
 
     if definitions:
-        combined_module = ast.Module(body=definitions, type_ignores=[])
+        # Prepend __future__ imports so compiler directives (e.g. PEP 563 annotations) take effect
+        combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
         compiled_code = compile(combined_module, "<string>", "exec")
         exec(compiled_code, exec_globals)
 
@@ -491,16 +443,18 @@ def extract_class_code(module, class_name):
     return class_code
 
 
-def compile_class_code(class_code):
+def compile_class_code(class_code, future_imports=None):
     """Compiles the AST node of a class into a code object.
 
     Args:
         class_code: AST node of the class
+        future_imports: Optional list of __future__ ImportFrom nodes to prepend as compiler directives
 
     Returns:
         Compiled code object of the class
     """
-    return compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
+    body = (future_imports or []) + [class_code]
+    return compile(ast.Module(body=body, type_ignores=[]), "<string>", "exec")
 
 
 def build_class_constructor(compiled_class, exec_globals, class_name):

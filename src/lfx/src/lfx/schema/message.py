@@ -29,11 +29,31 @@ from lfx.schema.validators import timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 from lfx.utils.mustache_security import safe_mustache_render
+from lfx.utils.secrets import is_secret_value
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
 
 MAX_ATTACHMENT_SIZE_BYTES: int = 50 * 1024 * 1024
+
+
+def _is_text_like_extension(file_path: Any) -> bool:
+    """Return True for files whose extension we recognize as plain text / structured text.
+
+    Used as a guard before falling back to latin-1 decoding in
+    ``get_file_content_dicts`` — see ``read_text_file`` for the encoding chain.
+    Files with no extension are treated as text-like so callers passing CLI-style
+    stdin captures or extension-less plain text continue to work.
+    """
+    from lfx.base.data.utils import TEXT_FILE_TYPES
+
+    try:
+        suffix = Path(file_path).suffix.lstrip(".").lower()
+    except (OSError, TypeError, ValueError):
+        return False
+    if not suffix:
+        return True
+    return suffix in TEXT_FILE_TYPES
 
 
 class Message(Data):
@@ -66,8 +86,9 @@ class Message(Data):
     files: list[str | Image] | None = Field(default=[])
     session_id: str | UUID | None = Field(default="")
     context_id: str | UUID | None = Field(default="")
+    run_id: str | UUID | None = Field(default=None)
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
     )
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
@@ -84,6 +105,20 @@ class Message(Data):
     def validate_flow_id(cls, value):
         if isinstance(value, UUID):
             value = str(value)
+        return value
+
+    @field_validator("run_id", mode="before")
+    @classmethod
+    def validate_run_id(cls, value):
+        if isinstance(value, UUID):
+            value = str(value)
+        return value
+
+    @field_validator("text", mode="before")
+    @classmethod
+    def validate_text(cls, value):
+        if is_secret_value(value):
+            return str(value)
         return value
 
     @field_validator("content_blocks", mode="before")
@@ -114,14 +149,15 @@ class Message(Data):
             return str(value)
         return value
 
+    @field_serializer("run_id")
+    def serialize_run_id(self, value):
+        if isinstance(value, UUID):
+            return str(value)
+        return value
+
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
-        try:
-            # Try parsing with timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
-        except ValueError:
-            # Try parsing without timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        return timestamp_to_str(value)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -231,6 +267,7 @@ class Message(Data):
             files=data.files,
             session_id=data.session_id,
             context_id=data.context_id,
+            run_id=data.run_id,
             timestamp=data.timestamp,
             flow_id=data.flow_id,
             error=data.error,
@@ -280,6 +317,19 @@ class Message(Data):
                     content_dicts.append(create_image_content_dict(file, None, model_name))
                     continue
 
+                # Refuse to text-decode files whose extension is not in
+                # TEXT_FILE_TYPES (and that didn't pass is_image_file above).
+                # `read_text_file` falls back to latin-1 which ALWAYS succeeds,
+                # so binary payloads (e.g. a PNG that PIL refused to verify)
+                # used to slip through and get injected into the HumanMessage
+                # as a long latin-1-garbled string (QA API-010).
+                if not _is_text_like_extension(file):
+                    logger.debug(
+                        "Skipping attachment during message conversion: unsupported binary extension",
+                        file_name=_safe_attachment_name(file),
+                    )
+                    continue
+
                 try:
                     file_size_bytes = Path(file).stat().st_size
                 except (OSError, ValueError) as exc:
@@ -303,10 +353,16 @@ class Message(Data):
 
                 parsed_text_str = parsed_text if isinstance(parsed_text, str) else json.dumps(parsed_text)
                 file_name = _safe_attachment_name(file) or "attachment"
+                # Avoid the literal "Attachment:" framing — Gemini 2.5 Flash
+                # (and likely related models) treats it as a multimodal-attach
+                # request and refuses with "I cannot process attachments in
+                # this environment" (QA GAP-M-3). A neutral "File … contents"
+                # header keeps the same context for the LLM without tripping
+                # provider refusal heuristics.
                 content_dicts.append(
                     {
                         "type": "text",
-                        "text": f"Attachment: {file_name}\n{parsed_text_str}",
+                        "text": f"File '{file_name}' contents:\n{parsed_text_str}",
                     }
                 )
             except PermissionError as exc:

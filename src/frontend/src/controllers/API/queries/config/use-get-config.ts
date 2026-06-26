@@ -21,6 +21,10 @@ interface BaseConfig {
   voice_mode_available: boolean;
   allow_custom_components: boolean;
   mcp_base_url: string;
+  // Mode A only: backend's ``LANGFLOW_ENABLE_EXTENSION_RELOAD`` mirrored
+  // through to the frontend so a packaged build can light up the palette
+  // Reload button without a rebuild.  See utilityStore.enableExtensionReload.
+  enable_extension_reload: boolean;
 }
 
 // Public config = base config (unauthenticated users get only base fields)
@@ -37,6 +41,13 @@ export interface ConfigResponse extends BaseConfig {
   webhook_auth_enable: boolean;
   default_folder_name: string;
   hide_getting_started_progress: boolean;
+  embedded_mode: boolean;
+  hide_logout_button: boolean;
+  hide_new_project_button: boolean;
+  hide_new_flow_button: boolean;
+  hide_starter_projects: boolean;
+  mcp_servers_locked: boolean;
+  custom_component_admin_only: boolean;
 }
 
 // Union type for the response (can be either public or full config)
@@ -84,6 +95,28 @@ export const useGetConfig: useQueryFunctionType<
     (state) => state.setAllowCustomComponents,
   );
   const setMcpBaseUrl = useUtilityStore((state) => state.setMcpBaseUrl);
+  const setEnableExtensionReload = useUtilityStore(
+    (state) => state.setEnableExtensionReload,
+  );
+  const setEmbeddedMode = useUtilityStore((state) => state.setEmbeddedMode);
+  const setHideLogoutButton = useUtilityStore(
+    (state) => state.setHideLogoutButton,
+  );
+  const setHideNewProjectButton = useUtilityStore(
+    (state) => state.setHideNewProjectButton,
+  );
+  const setHideNewFlowButton = useUtilityStore(
+    (state) => state.setHideNewFlowButton,
+  );
+  const setHideStarterProjects = useUtilityStore(
+    (state) => state.setHideStarterProjects,
+  );
+  const setMcpServersLocked = useUtilityStore(
+    (state) => state.setMcpServersLocked,
+  );
+  const setCustomComponentAdminOnly = useUtilityStore(
+    (state) => state.setCustomComponentAdminOnly,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -103,10 +136,11 @@ export const useGetConfig: useQueryFunctionType<
 
       // Set fields present in both public and full config
       setMaxFileSizeUpload(data.max_file_size_upload);
-      setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
+      setEventDelivery(data.event_delivery ?? EventDeliveryType.STREAMING);
       const allowCustomComponents = data.allow_custom_components ?? true;
       setAllowCustomComponents(allowCustomComponents);
       setMcpBaseUrl(data.mcp_base_url ?? "");
+      setEnableExtensionReload(Boolean(data.enable_extension_reload));
       recomputeComponentsToUpdateIfNeeded();
 
       // Set authenticated-only fields if present (full config)
@@ -124,6 +158,14 @@ export const useGetConfig: useQueryFunctionType<
         setHideGettingStartedProgress(
           data.hide_getting_started_progress ?? false,
         );
+        // Embedded mode flags
+        setEmbeddedMode(data.embedded_mode ?? false);
+        setHideLogoutButton(data.hide_logout_button ?? false);
+        setHideNewProjectButton(data.hide_new_project_button ?? false);
+        setHideNewFlowButton(data.hide_new_flow_button ?? false);
+        setHideStarterProjects(data.hide_starter_projects ?? false);
+        setMcpServersLocked(data.mcp_servers_locked ?? false);
+        setCustomComponentAdminOnly(data.custom_component_admin_only ?? false);
       }
     }
     return data;

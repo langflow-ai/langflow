@@ -9,6 +9,13 @@ export interface DeploymentListResponse {
   page: number;
   size: number;
   total: number;
+  provider_data?: {
+    deployments?: Array<{
+      name?: string;
+      display_name?: string;
+      [key: string]: unknown;
+    }>;
+  };
 }
 
 interface GetDeploymentsParams {

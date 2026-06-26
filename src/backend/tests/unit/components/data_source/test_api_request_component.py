@@ -1,4 +1,6 @@
+import ipaddress
 import os
+import socket
 from pathlib import Path
 from unittest.mock import patch
 
@@ -361,6 +363,86 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         assert file_path is not None
         assert file_path.suffix == ".bin"
 
+    async def test_response_info_content_disposition_path_traversal(self, component):
+        """A malicious Content-Disposition filename must not escape the component temp dir.
+
+        Regression for GHSA-h3c6-fqr4-m99p path traversal.
+        """
+        import tempfile
+        from pathlib import Path
+
+        component_temp_dir = Path(tempfile.gettempdir()) / component.__class__.__name__
+        request = httpx.Request("GET", "https://example.com/download")
+        malicious = Response(
+            200,
+            content=b"payload",
+            headers={"Content-Disposition": 'attachment; filename="../../../../tmp/evil.sh"'},
+            request=request,
+        )
+
+        _, file_path = await component._response_info(malicious, with_file_path=True)
+
+        assert file_path is not None
+        # The filename was reduced to its basename, so the file stays inside the temp dir.
+        assert file_path.parent.resolve() == component_temp_dir.resolve()
+        assert file_path.name.endswith("evil.sh")
+        assert ".." not in file_path.parts
+
+    async def test_response_info_content_disposition_backslash_traversal(self, component):
+        """Windows-style backslash separators must also be reduced to the basename.
+
+        On POSIX, ``Path(...).name`` treats backslashes as ordinary filename
+        characters, so the header value must be normalized before stripping
+        directory parts. Regression for GHSA-h3c6-fqr4-m99p path traversal.
+        """
+        import tempfile
+        from pathlib import Path
+
+        component_temp_dir = Path(tempfile.gettempdir()) / component.__class__.__name__
+        request = httpx.Request("GET", "https://example.com/download")
+        malicious = Response(
+            200,
+            content=b"payload",
+            headers={"Content-Disposition": r'attachment; filename="..\..\..\..\tmp\evil.sh"'},
+            request=request,
+        )
+
+        _, file_path = await component._response_info(malicious, with_file_path=True)
+
+        assert file_path is not None
+        assert file_path.parent.resolve() == component_temp_dir.resolve()
+        assert file_path.name.endswith("evil.sh")
+        assert "\\" not in file_path.name
+        assert ".." not in file_path.parts
+
+    async def test_response_info_content_disposition_null_byte(self, component):
+        """A NUL byte in the Content-Disposition filename must be stripped, not crash.
+
+        A NUL byte survives ``Path(...).name`` and would otherwise make the
+        defense-in-depth ``.resolve()`` raise a cryptic "embedded null character"
+        ValueError. It must be stripped so the path stays inside the temp dir and
+        the file is written cleanly. Regression for GHSA-h3c6-fqr4-m99p.
+        """
+        import tempfile
+        from pathlib import Path
+
+        component_temp_dir = Path(tempfile.gettempdir()) / component.__class__.__name__
+        request = httpx.Request("GET", "https://example.com/download")
+        malicious = Response(
+            200,
+            content=b"payload",
+            headers={"Content-Disposition": 'attachment; filename="evil\x00.sh"'},
+            request=request,
+        )
+
+        _, file_path = await component._response_info(malicious, with_file_path=True)
+
+        assert file_path is not None
+        assert file_path.parent.resolve() == component_temp_dir.resolve()
+        assert "\x00" not in str(file_path)
+        assert file_path.name.endswith("evil.sh")
+        assert ".." not in file_path.parts
+
 
 class TestAPIRequestSSRFProtection:
     """Rewritten SSRF Protection Tests for API Request Component.
@@ -684,3 +766,209 @@ class TestAPIRequestSSRFProtection:
     async def test_follow_redirects_disabled_by_default(self, component):
         """Test that follow_redirects is disabled by default for security."""
         assert component.follow_redirects is False
+
+
+def _resolve_public(host, *_args, **_kwargs):
+    """socket.getaddrinfo stub: hostnames resolve to a public IP, literal IPs to themselves.
+
+    Mirrors real DNS: the public redirector hostnames map to a public address, while a
+    literal IP (e.g. an internal 127.0.0.1 / 192.168.x redirect target) resolves to
+    itself so SSRF validation still classifies it as internal.
+    """
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        ip = "93.184.216.34"  # hostname -> public IP
+    else:
+        ip = host  # literal IP -> itself
+    family = socket.AF_INET6 if ":" in ip else socket.AF_INET
+    return [(family, socket.SOCK_STREAM, 6, "", (ip, 0))]
+
+
+class TestAPIRequestRedirectSSRFProtection:
+    """Regression tests for the SSRF redirect-following bypass.
+
+    When SSRF protection is enabled, a validated public URL must not be able to reach
+    internal services by redirecting to them. The component follows redirects manually
+    and re-validates every hop with the same denylist + DNS pinning used for the
+    initial request, instead of trusting httpx to auto-follow unvalidated redirects.
+    """
+
+    @pytest.fixture
+    def component(self):
+        """Return a component configured to follow redirects."""
+        return APIRequestComponent(
+            url_input="http://public.example.com/start",
+            method="GET",
+            headers=[],
+            body=[],
+            timeout=30,
+            follow_redirects=True,
+            save_to_file=False,
+            include_httpx_metadata=True,
+            mode="URL",
+            curl_input="",
+            query_params={},
+        )
+
+    @respx.mock
+    @pytest.mark.parametrize(
+        ("internal_url", "description"),
+        [
+            ("http://127.0.0.1:9999/secret", "loopback"),
+            ("http://192.168.0.10/admin", "rfc1918-192"),
+            ("http://10.0.0.5/internal", "rfc1918-10"),
+            ("http://172.16.0.9/internal", "rfc1918-172"),
+            ("http://169.254.169.254/latest/meta-data/", "link-local-metadata"),
+            ("http://0.0.0.0:8080/admin", "unspecified"),
+        ],
+    )
+    async def test_redirect_to_internal_address_is_blocked(self, component, internal_url, description):
+        """A public URL that redirects to an internal address must be blocked, not followed."""
+        marker = "INTERNAL_REDIRECT_SECRET_7a51f4"
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": internal_url})
+        )
+        # If the fix regresses, the component would follow the redirect and serve this marker.
+        internal_route = respx.get(internal_url).mock(return_value=Response(200, text=marker))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="blocked redirect"),
+        ):
+            await component.make_api_request()
+
+        assert not internal_route.called, f"Redirect to {description} ({internal_url}) must not be followed"
+
+    @respx.mock
+    async def test_redirect_scheme_change_is_blocked(self, component):
+        """A redirect that switches to a non-http(s) scheme (e.g. file://) must be blocked."""
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "file:///etc/passwd"})
+        )
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="blocked redirect"),
+        ):
+            await component.make_api_request()
+
+    @respx.mock
+    async def test_redirect_to_hostname_resolving_internal_is_blocked(self, component):
+        """A redirect to a hostname that resolves to an internal IP must be blocked.
+
+        Covers the DNS-rebinding-across-hops vector at the validation layer: the redirect
+        target host resolves to a blocked address and is rejected before any connection.
+        """
+
+        def resolve(host, *_args, **_kwargs):
+            ip = "127.0.0.1" if host == "internal.example.com" else "93.184.216.34"
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 0))]
+
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "http://internal.example.com/secret"})
+        )
+        internal_route = respx.get("http://internal.example.com/secret").mock(return_value=Response(200, text="SECRET"))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=resolve),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="blocked redirect"),
+        ):
+            await component.make_api_request()
+
+        assert not internal_route.called
+
+    @respx.mock
+    async def test_chained_public_redirects_are_followed(self, component):
+        """Legitimate public-to-public redirect chains still work (redirects are not disabled)."""
+        component.url_input = "http://hop1.example.com/a"
+        respx.get("http://hop1.example.com/a").mock(
+            return_value=Response(302, headers={"Location": "http://hop2.example.com/b"})
+        )
+        respx.get("http://hop2.example.com/b").mock(
+            return_value=Response(307, headers={"Location": "http://hop3.example.com/c"})
+        )
+        respx.get("http://hop3.example.com/c").mock(return_value=Response(200, json={"status": "ok"}))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        assert result.data["status_code"] == 200
+        assert result.data["result"]["status"] == "ok"
+        assert result.data["redirection_history"] == [
+            {"url": "http://hop2.example.com/b", "status_code": 302},
+            {"url": "http://hop3.example.com/c", "status_code": 307},
+        ]
+
+    @respx.mock
+    async def test_too_many_redirects_raises(self, component):
+        """A redirect loop is bounded and raises instead of looping forever."""
+        component.url_input = "http://loop.example.com/a"
+        respx.get("http://loop.example.com/a").mock(
+            return_value=Response(302, headers={"Location": "http://loop.example.com/b"})
+        )
+        respx.get("http://loop.example.com/b").mock(
+            return_value=Response(302, headers={"Location": "http://loop.example.com/a"})
+        )
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            pytest.raises(ValueError, match="exceeded the maximum"),
+        ):
+            await component.make_api_request()
+
+    @respx.mock
+    async def test_redirect_to_internal_allowed_when_protection_disabled(self, component):
+        """With SSRF protection disabled, redirect behavior is unchanged (user opted out)."""
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "http://127.0.0.1:9999/ok"})
+        )
+        respx.get("http://127.0.0.1:9999/ok").mock(return_value=Response(200, json={"status": "reached"}))
+
+        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}):
+            result = await component.make_api_request()
+
+        assert result.data["status_code"] == 200
+        assert result.data["result"]["status"] == "reached"
+
+    @respx.mock
+    async def test_sensitive_headers_dropped_on_cross_host_redirect(self, component):
+        """Authorization/Cookie must not be forwarded to a different host on redirect."""
+        component.headers = [
+            {"key": "Authorization", "value": "Bearer secret-token"},
+            {"key": "X-Custom", "value": "keep-me"},
+        ]
+
+        respx.get("http://public.example.com/start").mock(
+            return_value=Response(302, headers={"Location": "http://other.example.com/next"})
+        )
+        final_route = respx.get("http://other.example.com/next").mock(return_value=Response(200, json={"ok": True}))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        assert final_route.called
+        forwarded = final_route.calls.last.request.headers
+        assert "authorization" not in {k.lower() for k in forwarded}, "Authorization must be stripped cross-host"
+        assert forwarded.get("X-Custom") == "keep-me", "Non-sensitive headers should be preserved"
+
+    def test_method_for_redirect_semantics(self):
+        """301/302/303 downgrade POST to GET; 307/308 preserve the method."""
+        assert APIRequestComponent._method_for_redirect("POST", 301) == "GET"
+        assert APIRequestComponent._method_for_redirect("POST", 302) == "GET"
+        assert APIRequestComponent._method_for_redirect("POST", 303) == "GET"
+        assert APIRequestComponent._method_for_redirect("POST", 307) == "POST"
+        assert APIRequestComponent._method_for_redirect("POST", 308) == "POST"
+        assert APIRequestComponent._method_for_redirect("GET", 302) == "GET"

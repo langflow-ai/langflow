@@ -2,6 +2,7 @@ import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -41,13 +42,23 @@ test(
 
     const cleanCode = await extractAndCleanCode(page);
 
-    // Replace the multiline string in the code
+    // Sanity-check: the original Ollama source has many lines. If we read it
+    // back as a single concatenated line, the textarea-value path is the
+    // problem and Ace surgery downstream cannot save us.
+    const cleanCodeNewlines = (cleanCode.match(/\n/g) || []).length;
+    if (cleanCodeNewlines < 50) {
+      throw new Error(
+        `extractAndCleanCode returned code with only ${cleanCodeNewlines} newlines (length ${cleanCode.length}); expected the multi-line Ollama source. The hidden #codeValue textarea may be returning a stripped value on this platform.`,
+      );
+    }
+
+    // Replace the multiline string in the code.
+    // Use a regex so the match is resilient to line-ending differences
+    // (LF on macOS/Linux vs CRLF on Windows after git checkout).
+    const originalSliderBlockRegex =
+      /name="temperature",\s+display_name="Temperature",\s+value=0\.1,\s+range_spec=RangeSpec\(min=0, max=1, step=0\.01\),\s+advanced=True,/;
     const newCode = cleanCode.replace(
-      `name="temperature",
-            display_name="Temperature",
-            value=0.1,
-            range_spec=RangeSpec(min=0, max=1, step=0.01),
-            advanced=True,`,
+      originalSliderBlockRegex,
       `name="temperature",
             display_name="Temperature",
             value=0.2,
@@ -63,10 +74,19 @@ test(
     );
     // make sure codes are different
     expect(cleanCode).not.toEqual(newCode);
-    await page.locator("textarea").last().press(`ControlOrMeta+a`);
-    await page.keyboard.press("Backspace");
-    await page.locator("textarea").last().fill(newCode);
+    await setAceEditorValue(page, newCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
+
+    // Wait for the code modal to CLOSE before validating the node. The modal
+    // only closes on a successful save (processDynamicField → setOpen(false));
+    // if validation fails it stays open showing an error. Asserting the close
+    // first (a) confirms the new code actually committed, and (b) makes a save
+    // failure surface here with a clear signal instead of downstream as a
+    // confusing stale-slider value. On a slow Windows runner the node re-render
+    // also lags the click, so this doubles as the settle wait.
+    await expect(page.locator('//*[@id="checkAndSaveBtn"]')).toBeHidden({
+      timeout: 15000,
+    });
     await adjustScreenView(page);
 
     await mutualValidation(page);
@@ -103,30 +123,49 @@ test(
   },
 );
 
-async function extractAndCleanCode(page: Page): Promise<string> {
-  const outerHTML = await page
-    .locator('//*[@id="codeValue"]')
-    .evaluate((el) => el.outerHTML);
-
-  const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
-  if (!valueMatch) {
-    throw new Error("Could not find value attribute in the HTML");
+// Set the Ace editor's content using the exact same pattern that
+// queryInputComponent.spec.ts uses successfully on Windows CI:
+// `textarea.last().fill(newCode)` against Ace's hidden text-input textarea.
+// Textareas (unlike single-line `<input>`s) preserve `\n` in `.value`, so
+// fill() reliably round-trips the multi-line source. Ace's text-input
+// listener picks up the resulting `input` event, applies it to the buffer,
+// and fires the `change` event that react-ace listens to — which is what
+// updates the React `code` state that gets POSTed on save.
+async function setAceEditorValue(page: Page, newCode: string): Promise<void> {
+  // Normalize to LF before filling. A Windows checkout (autocrlf) or the
+  // extract→replace round-trip can introduce CRLF; feeding mixed line endings
+  // through Ace's hidden textarea has produced a saved buffer that diverges
+  // from the asserted code on Windows. LF round-trips identically everywhere.
+  const normalizedCode = newCode.replace(/\r\n/g, "\n");
+  const expectedNewlines = (normalizedCode.match(/\n/g) || []).length;
+  if (expectedNewlines < 10) {
+    throw new Error(
+      `setAceEditorValue: newCode has only ${expectedNewlines} newlines (length ${normalizedCode.length}); upstream extractAndCleanCode likely lost newlines.`,
+    );
   }
 
-  const codeContent = valueMatch[1]
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, "/");
+  await page.locator("textarea").last().press("ControlOrMeta+a");
+  await page.keyboard.press("Backspace");
+  await page.locator("textarea").last().fill(normalizedCode);
 
-  return codeContent;
+  // Wait for the change to propagate into the controlled React state. The
+  // `#codeValue` mirror is rendered by `<Input>` (single-line), so browsers
+  // strip newlines from its `.value` — matching the substring is enough to
+  // confirm the new code landed.
+  await expect(page.locator("#codeValue")).toHaveValue(
+    /range_spec=RangeSpec\(min=3, max=30, step=1\)/,
+    { timeout: 10000 },
+  );
 }
 
 async function mutualValidation(page: Page) {
+  // Longer timeout on the first post-save assertion: the slider only reflects
+  // the new range_spec (min=3, which clamps the preserved value to 3.00) once
+  // the node has fully re-rendered with the saved code. That re-render lags on
+  // a slow Windows runner; the default 5s poll can read the pre-save value.
   await expect(page.getByTestId("default_slider_display_value")).toHaveText(
     "3.00",
+    { timeout: 15000 },
   );
   await expect(page.getByTestId("min_label")).toHaveText("test");
   await expect(page.getByTestId("max_label")).toHaveText("test2");

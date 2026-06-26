@@ -1,10 +1,11 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDarkStore } from "@/stores/darkStore";
-import { useTranslation } from "react-i18next";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import type { ColDef } from "ag-grid-community";
 import type { TableOptionsTypeAPI } from "@/types/api";
+import { suppressAutofillOnElement } from "@/utils/inputAutofill";
 import { cn } from "@/utils/utils";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
@@ -15,6 +16,7 @@ import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
 
 export interface TableComponentProps extends AgGridReactProps {
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   columnDefs: NonNullable<ColDef<any, any>[]>;
   rowData: NonNullable<AgGridReactProps["rowData"]>;
   displayEmptyAlert?: boolean;
@@ -25,6 +27,7 @@ export interface TableComponentProps extends AgGridReactProps {
     | string[]
     | {
         field: string;
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
         onUpdate: (value: any) => void;
         editableCell: boolean;
       }[];
@@ -50,7 +53,9 @@ const TableComponent = forwardRef<
       alertDescription ?? t("table.noDataMessage");
     const isSingleToggleRowEditable = (
       colField: string,
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       rowData: any,
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       currentRowValue: any,
     ) => {
       try {
@@ -184,6 +189,7 @@ const TableComponent = forwardRef<
           const field = (
             props.editable as Array<{
               field: string;
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
               onUpdate: (value: any) => void;
               editableCell: boolean;
             }>
@@ -326,6 +332,22 @@ const TableComponent = forwardRef<
         params.api.sizeColumnsToFit();
       }
     };
+    const onCellEditingStarted = (event) => {
+      // ag-grid mounts its cell editor <input>/<textarea> outside React, so the
+      // hardened Input primitive doesn't cover them. Stamp the autofill-
+      // suppression attributes on the active editor so the browser can't inject
+      // saved credentials into editable cells (which autosave persists). Defer a
+      // frame so the editor DOM exists; cover inline and popup (large-text)
+      // editors.
+      requestAnimationFrame(() => {
+        document
+          .querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+            ".ag-cell-inline-editing input, .ag-cell-inline-editing textarea, .ag-popup-editor input, .ag-popup-editor textarea",
+          )
+          .forEach(suppressAutofillOnElement);
+      });
+      props.onCellEditingStarted?.(event);
+    };
     if (props.rowData.length === 0 && displayEmptyAlert) {
       return (
         <div className="flex h-full w-full items-center justify-center rounded-md border">
@@ -368,6 +390,16 @@ const TableComponent = forwardRef<
       >
         <AgGridReact
           {...props}
+          localeText={{
+            noRowsToShow: t("table.noRowsToShow"),
+            page: t("table.page"),
+            of: t("table.of"),
+            to: t("table.to"),
+            nextPage: t("table.nextPage"),
+            lastPage: t("table.lastPage"),
+            firstPage: t("table.firstPage"),
+            previousPage: t("table.previousPage"),
+          }}
           defaultColDef={{
             minWidth: 100,
             suppressColumnsToolPanel: true, // Don't show hidden columns in tool panel
@@ -391,6 +423,7 @@ const TableComponent = forwardRef<
           }}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
+          onCellEditingStarted={onCellEditingStarted}
           onCellValueChanged={
             props.onCellValueChanged
               ? (e) => {

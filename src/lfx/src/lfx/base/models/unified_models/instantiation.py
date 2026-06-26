@@ -6,11 +6,25 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.model_utils import _to_str
+from lfx.services.variable.request_scope import is_env_fallback_disabled
 
+from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
 from .provider_queries import model_provider_metadata
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+
+def _env_if_allowed(key: str) -> str | None:
+    """Return ``os.environ.get(key)`` unless the active request disables env fallback.
+
+    Connection config (provider URLs, project IDs, attribution headers) falls back to
+    process env only when env fallback is allowed, so a served flow under
+    ``no_env_fallback`` stays isolated from process-wide environment.
+    """
+    if is_env_fallback_disabled():
+        return None
+    return os.environ.get(key)
 
 
 def get_llm(
@@ -57,21 +71,74 @@ def get_llm(
     provider = model.get("provider")
     metadata = model.get("metadata", {})
 
+    # Stored selections sourced from ``get_unified_models_detailed`` (e.g. the
+    # ``GET /api/v1/models`` catalog the frontend uses to augment its dropdown
+    # right after a provider is configured, before the backend repopulates
+    # ``template[model]["options"]``) carry only the raw ``create_model_metadata``
+    # fields — none of the enriched ``*_param`` keys. Derive those param names
+    # from the provider mapping (the same source ``get_language_model_options``
+    # uses) so provider-specific names are honored instead of the generic
+    # ``model`` / ``api_key`` defaults. This matters for IBM WatsonX: passing a
+    # foundation-model id under the generic ``model`` kwarg routes ChatWatsonx to
+    # the Model Gateway (a different, OpenAI-style catalog), surfacing as
+    # "model <id> not found" / IAM "Provided user not found or active" even
+    # though the dropdown, connection test, and standalone component all work.
+    from lfx.base.models.model_metadata import get_provider_param_mapping
+
+    provider_param_mapping = get_provider_param_mapping(provider) if provider else {}
+
     # Get model class and parameter names from metadata
-    api_key_param = metadata.get("api_key_param", "api_key")
+    api_key_param = metadata.get("api_key_param") or provider_param_mapping.get("api_key_param", "api_key")
+
+    # Capture the user-supplied api_key BEFORE resolution so we can name
+    # it back in the error message if it was a Global Variable reference
+    # the resolver couldn't find — see PR-12575 Bug 2.
+    original_api_key_input = api_key.strip() if isinstance(api_key, str) else None
 
     # Get API key from user input or global variables
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
 
     # Validate API key (Ollama doesn't require one)
     if not api_key and provider != "Ollama":
+        # Bug 2 [P1] — Defensive guard: provider arriving as empty / None /
+        # literal "Unknown" produces a nonsense error message (the worst
+        # case being ``Unknown API key is required when using Unknown
+        # provider … configure it globally as UNKNOWN_API_KEY``). The root
+        # cause is the frontend ``ModelInputComponent`` falling back to
+        # ``provider: "Unknown"`` when an option has no provider — but
+        # regardless of how the bad value arrived, surfacing the literal
+        # placeholder gives the user zero hint about what to do. Replace it
+        # with a message that points back to the actionable fix: reselect
+        # the model in the dropdown.
+        if not provider or provider == "Unknown":
+            msg = (
+                "The selected model is missing a provider. "
+                "Please reselect a model from the dropdown in the Language Model field "
+                "so the component knows which provider's API key to use."
+            )
+            raise ValueError(msg)
+
         # Get the correct variable name from the provider variable mapping
         provider_variable_map = unified_models_module.get_model_provider_variable_mapping()
         variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
-        msg = (
-            f"{provider} API key is required when using {provider} provider. "
-            f"Please provide it in the component or configure it globally as {variable_name}."
-        )
+        # Bug 2 [P1] — when the user (or the assistant) passed a Global
+        # Variable name as ``api_key`` that the resolver couldn't find,
+        # name it back so the user can fix the actual reference instead
+        # of being pointed at the canonical key (which may not be what
+        # they configured).
+        if original_api_key_input and original_api_key_input != variable_name:
+            msg = (
+                f"{provider} API key is required when using {provider} provider. "
+                f"The variable '{original_api_key_input}' referenced by the component's "
+                f"`api_key` field could not be resolved from environment variables or "
+                f"Global Variables. Configure '{original_api_key_input}' (or the canonical "
+                f"'{variable_name}') in Settings → Model Providers."
+            )
+        else:
+            msg = (
+                f"{provider} API key is required when using {provider} provider. "
+                f"Please provide it in the component or configure it globally as {variable_name}."
+            )
         raise ValueError(msg)
 
     # Get model class from metadata, falling back to the provider-level
@@ -85,16 +152,16 @@ def get_llm(
     # carries the raw ``create_model_metadata`` fields, so we have to derive
     # ``model_class`` from the provider mapping that
     # ``get_language_model_options`` would have used.
-    model_class_name = metadata.get("model_class")
-    if not model_class_name and provider:
-        from lfx.base.models.model_metadata import get_provider_param_mapping
-
-        model_class_name = get_provider_param_mapping(provider).get("model_class")
+    model_class_name = metadata.get("model_class") or provider_param_mapping.get("model_class")
     if not model_class_name:
         msg = f"No model class defined for {model_name}"
         raise ValueError(msg)
     model_class = unified_models_module.get_model_class(model_class_name)
-    model_name_param = metadata.get("model_name_param", "model")
+    # The provider mapping stores the model-name param under ``model_param``
+    # (``get_language_model_options`` re-keys it to ``model_name_param``); fall
+    # back to it so e.g. IBM WatsonX resolves to ``model_id`` rather than the
+    # generic ``model``.
+    model_name_param = metadata.get("model_name_param") or provider_param_mapping.get("model_param", "model")
 
     # Check if this is a reasoning model that doesn't support temperature
     reasoning_models = metadata.get("reasoning_models", [])
@@ -134,20 +201,22 @@ def get_llm(
     if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
         # For watsonx, url and project_id are required parameters
         # Try database first, then component values, then environment variables
-        url_param = metadata.get("url_param", "url")
-        project_id_param = metadata.get("project_id_param", "project_id")
+        url_param = metadata.get("url_param") or provider_param_mapping.get("url_param", "url")
+        project_id_param = metadata.get("project_id_param") or provider_param_mapping.get(
+            "project_id_param", "project_id"
+        )
 
         # Get all provider variables from database
         provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
 
         # Priority: component value > database value > env var
         watsonx_url_value = (
-            watsonx_url if watsonx_url else provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
+            watsonx_url if watsonx_url else provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
         )
         watsonx_project_id_value = (
             watsonx_project_id
             if watsonx_project_id
-            else provider_vars.get("WATSONX_PROJECT_ID") or os.environ.get("WATSONX_PROJECT_ID")
+            else provider_vars.get("WATSONX_PROJECT_ID") or _env_if_allowed("WATSONX_PROJECT_ID")
         )
 
         has_url = bool(watsonx_url_value)
@@ -179,10 +248,41 @@ def get_llm(
         ollama_base_url_value = (
             ollama_base_url
             if ollama_base_url
-            else provider_vars.get("OLLAMA_BASE_URL") or os.environ.get("OLLAMA_BASE_URL")
+            else provider_vars.get("OLLAMA_BASE_URL") or _env_if_allowed("OLLAMA_BASE_URL")
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
+    elif provider == "OpenAI":
+        from lfx.utils.util import transform_localhost_url
+
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        openai_base_url_value = provider_vars.get("OPENAI_BASE_URL") or _env_if_allowed("OPENAI_BASE_URL")
+        if openai_base_url_value:
+            kwargs["base_url"] = transform_localhost_url(openai_base_url_value)
+    elif provider == "OpenRouter":
+        # OpenRouter speaks the OpenAI wire format. Point ChatOpenAI at the
+        # OpenRouter base URL (declared in MODEL_PROVIDER_METADATA) and forward
+        # any configured attribution headers (HTTP-Referer, X-Title) so usage
+        # shows up correctly in the OpenRouter dashboard.
+        provider_meta = model_provider_metadata.get(provider, {})
+        base_url_value = provider_meta.get("base_url")
+        if base_url_value:
+            kwargs["base_url"] = base_url_value
+
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        default_headers: dict[str, str] = {}
+        for var in provider_meta.get("variables", []):
+            if not var.get("is_header"):
+                continue
+            header_name = var.get("header_name")
+            # KeyError on a misconfigured metadata entry beats silently
+            # skipping a header the operator expects to be sent.
+            variable_key = var["variable_key"]
+            value = provider_vars.get(variable_key) or _env_if_allowed(variable_key)
+            if header_name and value:
+                default_headers[header_name] = value
+        if default_headers:
+            kwargs["default_headers"] = default_headers
 
     try:
         return model_class(**kwargs)
@@ -246,6 +346,11 @@ def get_embeddings(
     model_name = model_dict.get("name")
     provider = model_dict.get("provider")
     metadata = model_dict.get("metadata", {})
+    api_base_value = _to_str(api_base)
+    if provider == "OpenAI" and not api_base_value:
+        api_base_value = _to_str(os.environ.get("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
+            os.environ.get("OPENAI_API_BASE")
+        )
 
     # --- resolve API key -----------------------------------------------------
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
@@ -262,15 +367,22 @@ def get_embeddings(
         msg = "Embedding model name is required"
         raise ValueError(msg)
 
-    # Get embedding class from metadata
-    embedding_class_name = metadata.get("embedding_class")
+    # Get embedding class from metadata. Selections persisted via the
+    # generic ``/models`` catalog (e.g. saved into ``KnowledgeBase.model_selection``
+    # by the KB upload flow) lack the enriched embedding metadata, so we
+    # fall back to deriving it from the provider name. Both lookups
+    # share the same source of truth in ``class_registry``.
+    embedding_class_name = metadata.get("embedding_class") or EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
     if not embedding_class_name:
-        msg = f"No embedding class defined in metadata for {model_name}"
+        msg = (
+            f"No embedding class defined in metadata for {model_name} (provider: {provider}). "
+            "Add the provider to EMBEDDING_PROVIDER_CLASS_MAPPING or re-select the model."
+        )
         raise ValueError(msg)
     embedding_class = unified_models_module.get_embedding_class(embedding_class_name)
 
     # --- build kwargs from param_mapping -------------------------------------
-    param_mapping: dict[str, str] = metadata.get("param_mapping", {})
+    param_mapping: dict[str, str] = metadata.get("param_mapping") or EMBEDDING_PARAM_MAPPINGS.get(provider, {})
     if not param_mapping:
         msg = (
             f"Parameter mapping not found in metadata for model '{model_name}' (provider: {provider}). "
@@ -294,7 +406,7 @@ def get_embeddings(
     # Optional parameters - only add when both a value is supplied *and* the
     # provider's param_mapping declares the corresponding key.
     optional_params: dict[str, Any] = {
-        "api_base": _to_str(api_base) or None,
+        "api_base": api_base_value or None,
         "dimensions": int(dimensions) if dimensions else None,
         "chunk_size": int(chunk_size) if chunk_size else None,
         "request_timeout": float(request_timeout) if request_timeout else None,
@@ -306,11 +418,11 @@ def get_embeddings(
     # Watson-specific parameters
     if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
         watsonx_provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
-        url_value = watsonx_url or watsonx_provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
+        url_value = watsonx_url or watsonx_provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
         pid_value = (
             watsonx_project_id
             or watsonx_provider_vars.get("WATSONX_PROJECT_ID")
-            or os.environ.get("WATSONX_PROJECT_ID")
+            or _env_if_allowed("WATSONX_PROJECT_ID")
         )
 
         has_url = bool(url_value)
@@ -356,7 +468,7 @@ def get_embeddings(
         base_url_value = (
             ollama_base_url
             or provider_vars.get("OLLAMA_BASE_URL")
-            or os.environ.get("OLLAMA_BASE_URL")
+            or _env_if_allowed("OLLAMA_BASE_URL")
             or "http://localhost:11434"
         )
         kwargs[param_mapping["base_url"]] = base_url_value

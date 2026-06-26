@@ -23,15 +23,36 @@ from langflow.api.utils import (
     get_top_level_vertices,
     parse_exception,
 )
-from langflow.api.v1.schemas import FlowDataRequest, ResultDataResponse, VertexBuildResponse
+from langflow.api.v1.schemas import (
+    FlowDataRequest,
+    ResultDataResponse,
+    VertexBuildResponse,
+)
 from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
+from langflow.services.database.models.jobs.model import JobType
+from langflow.services.deps import (
+    get_chat_service,
+    get_job_service,
+    get_memory_base_service,
+    get_task_service,
+    get_telemetry_service,
+    session_scope,
+)
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
-from langflow.services.telemetry.schema import ComponentInputsPayload, ComponentPayload, PlaygroundPayload
+from langflow.services.telemetry.schema import (
+    ComponentInputsPayload,
+    ComponentPayload,
+    PlaygroundPayload,
+)
+
+# Interval (seconds) at which the streaming response's heartbeat refreshes
+# the polling-watchdog activity key. Exposed at module scope so tests can
+# patch it down for fast verification of the heartbeat task itself.
+STREAMING_ACTIVITY_REFRESH_S = 10.0
 
 
 def _log_component_input_telemetry(
@@ -125,14 +146,37 @@ async def get_flow_events_response(
     """Get events for a specific build job, either as a stream or single event."""
     try:
         main_queue, event_manager, event_task, _ = queue_service.get_queue_data(job_id)
+        # Refresh the polling-watchdog heartbeat for any client-driven access
+        # (polling and streaming both count as "client alive"). No-op for the
+        # in-memory queue or when the watchdog is disabled.
+        touch = getattr(queue_service, "touch_activity", None)
+        if touch is not None:
+            await touch(job_id)
         if event_delivery in (EventDeliveryType.STREAMING, EventDeliveryType.DIRECT):
-            if event_task is None:
-                await logger.aerror(f"No event task found for job {job_id}")
-                raise HTTPException(status_code=404, detail="No event task found for job")
             return await create_flow_response(
                 queue=main_queue,
                 event_manager=event_manager,
                 event_task=event_task,
+                queue_service=queue_service,
+                job_id=job_id,
+            )
+
+        if event_delivery != EventDeliveryType.POLLING:
+            # Defensive exhaustiveness check: if a new EventDeliveryType is added
+            # without wiring it up here, surface a clear error instead of silently
+            # treating it as polling. Each delivery mode has different cross-worker
+            # guarantees (DIRECT/STREAMING use signal_cancel + heartbeat; POLLING
+            # uses the watchdog), so silent fallthrough hides real configuration
+            # bugs in multi-worker Redis setups.
+            supported = ", ".join(sorted(t.value for t in EventDeliveryType))
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unsupported event_delivery {event_delivery!r}. "
+                    f"Use one of: {supported}. "
+                    "For multi-worker Redis deployments, all three values are supported; "
+                    "set LANGFLOW_EVENT_DELIVERY to override the default."
+                ),
             )
 
         # Polling mode - get all available events
@@ -185,26 +229,91 @@ async def get_flow_events_response(
 async def create_flow_response(
     queue: asyncio.Queue,
     event_manager: EventManager,
-    event_task: asyncio.Task,
+    event_task: asyncio.Task | None,
+    *,
+    queue_service: JobQueueService | None = None,
+    job_id: str | None = None,
 ) -> DisconnectHandlerStreamingResponse:
-    """Create a streaming response for the flow build process."""
+    """Create a streaming response for the flow build process.
 
-    async def consume_and_yield() -> AsyncIterator[str]:
+    When *queue_service* and *job_id* are provided and the service exposes a
+    ``signal_cancel`` method (RedisJobQueueService with cancel_channel_enabled),
+    a client disconnect on a non-owner worker (``event_task is None``) publishes
+    a cross-worker cancel so the producer worker stops emitting events promptly
+    instead of running the build to natural completion.
+    """
+    # Interval at which the heartbeat task refreshes the polling-watchdog
+    # activity key while the streaming response is open. The heartbeat is
+    # INDEPENDENT of the event yield cadence so a quiet build (long graph
+    # step, slow LLM, no tokens for a while) keeps proving its client is
+    # alive and does not get reclaimed by the watchdog. Read from the module
+    # constant at call time so tests can monkeypatch it down.
+    streaming_activity_refresh_s = STREAMING_ACTIVITY_REFRESH_S
+    touch = getattr(queue_service, "touch_activity", None) if queue_service is not None and job_id is not None else None
+
+    async def _heartbeat() -> None:
+        # Strong reference is the local variable `heartbeat_task` below; this
+        # closure also keeps `touch` and `job_id` alive for the task's lifetime.
         while True:
             try:
-                event_id, value, put_time = await queue.get()
-                if value is None:
-                    break
-                get_time = time.time()
-                yield value.decode("utf-8")
-                await logger.adebug(f"Event {event_id} consumed in {get_time - put_time:.4f}s")
+                await asyncio.sleep(streaming_activity_refresh_s)
+            except asyncio.CancelledError:
+                return
+            try:
+                await touch(job_id)  # type: ignore[misc]  # guarded by `if touch is not None` at task creation
+            except asyncio.CancelledError:
+                return
             except Exception as exc:  # noqa: BLE001
-                await logger.aexception(f"Error consuming event: {exc}")
-                break
+                # touch_activity already counts errors; a heartbeat hiccup must
+                # not crash the streaming response. Debug-log and continue.
+                await logger.adebug(f"streaming heartbeat: touch_activity failed for {job_id}: {exc}")
 
-    def on_disconnect() -> None:
+    heartbeat_task: asyncio.Task | None = (
+        asyncio.create_task(_heartbeat(), name=f"stream-heartbeat-{job_id}") if touch is not None else None
+    )
+
+    def _cancel_heartbeat() -> None:
+        if heartbeat_task is not None and not heartbeat_task.done():
+            heartbeat_task.cancel()
+
+    async def consume_and_yield() -> AsyncIterator[str]:
+        try:
+            while True:
+                try:
+                    event_id, value, put_time = await queue.get()
+                    if value is None:
+                        break
+                    get_time = time.time()
+                    yield value.decode("utf-8")
+                    await logger.adebug(f"Event {event_id} consumed in {get_time - put_time:.4f}s")
+                except Exception as exc:  # noqa: BLE001
+                    await logger.aexception(f"Error consuming event: {exc}")
+                    break
+        finally:
+            # Natural stream end (sentinel reached) → stop heartbeating.
+            _cancel_heartbeat()
+
+    async def on_disconnect() -> None:
         logger.debug("Client disconnected, closing tasks")
-        event_task.cancel()
+        _cancel_heartbeat()
+        if event_task is not None:
+            event_task.cancel()
+        elif queue_service is not None and job_id is not None:
+            # Cross-worker passive disconnect: publish a cancel signal so the
+            # owning worker stops emitting events instead of running to natural
+            # completion. signal_cancel is a no-op when the side-channel is
+            # disabled or the backend is the in-memory queue.
+            signal = getattr(queue_service, "signal_cancel", None)
+            if signal is not None:
+                try:
+                    await signal(job_id)
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning(f"Cross-worker disconnect: signal_cancel for {job_id} failed: {exc}")
+        queue_cancel = getattr(queue, "cancel", None)
+        if queue_cancel is not None:
+            maybe_coro = queue_cancel()
+            if asyncio.iscoroutine(maybe_coro):
+                await maybe_coro
         event_manager.on_end(data={})
 
     return DisconnectHandlerStreamingResponse(
@@ -268,7 +377,13 @@ async def generate_flow_events(
             await log_telemetry(start_time, components_count, run_id=run_id, success=True)
 
         except Exception as exc:
-            await log_telemetry(start_time, components_count, run_id=run_id, success=False, error_message=str(exc))
+            await log_telemetry(
+                start_time,
+                components_count,
+                run_id=run_id,
+                success=False,
+                error_message=str(exc),
+            )
 
             if "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -484,8 +599,8 @@ async def generate_flow_events(
         """
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
-        except asyncio.CancelledError as exc:
-            await logger.ainfo(f"Build cancelled: {exc}")
+        except asyncio.CancelledError:
+            await logger.ainfo("Build cancelled")
             raise
 
         # Accumulate the vertex timedelta
@@ -527,35 +642,91 @@ async def generate_flow_events(
         event_manager.on_error(data=error_message.data)
         raise
 
+    # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
+    # Best-effort: failures here must never break the build path.
+    _build_job_svc = None
+    _build_run_id: uuid.UUID | None = None
+    try:
+        _build_run_id = uuid.UUID(graph.run_id) if graph.run_id else None
+        if _build_run_id is not None:
+            _build_job_svc = get_job_service()
+            await _build_job_svc.create_job(
+                job_id=_build_run_id,
+                flow_id=flow_id,
+                user_id=current_user.id,
+                job_type=JobType.WORKFLOW,
+            )
+    except Exception:  # noqa: BLE001
+        await logger.awarning(
+            "Failed to create workflow job for /build — memory base tracking disabled for flow %s",
+            flow_id,
+            exc_info=True,
+        )
+        _build_job_svc = None
+
     event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
 
     vertex_timedeltas: list[float] = []
     event_manager.on_build_start(data={})
-    tasks = []
-    for vertex_id in ids:
-        task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager, vertex_timedeltas))
-        tasks.append(task)
-    try:
-        await asyncio.gather(*tasks)
-    except asyncio.CancelledError:
-        background_tasks.add_task(graph.end_all_traces_in_context())
-        raise
-    except Exception as e:
-        await logger.aerror(f"Error building vertices: {e}")
-        custom_component = graph.get_vertex(vertex_id).custom_component
-        trace_name = getattr(custom_component, "trace_name", None)
-        error_message = ErrorMessage(
-            flow_id=flow_id,
-            exception=e,
-            session_id=graph.session_id,
-            trace_name=trace_name,
-        )
-        event_manager.on_error(data=error_message.data)
-        raise
+
+    # Strong references for fire-and-forget cleanup tasks created outside the
+    # FastAPI background_tasks queue (which is already drained by the time we
+    # reach the cancel path below). Each task removes itself on completion.
+    cleanup_tasks: set[asyncio.Task] = set()
+
+    async def _run_vertex_build() -> None:
+        tasks = []
+        for vertex_id in ids:
+            task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager, vertex_timedeltas))
+            tasks.append(task)
+        try:
+            await asyncio.gather(*tasks)
+        except asyncio.CancelledError:
+            # background_tasks is already drained after the POST /build response
+            # is sent; add_task() is silently dropped here. Use create_task()
+            # so the trace cleanup runs independently of background_tasks lifecycle.
+            cleanup_task = asyncio.create_task(graph.end_all_traces_in_context()())
+            cleanup_tasks.add(cleanup_task)
+            cleanup_task.add_done_callback(cleanup_tasks.discard)
+            raise
+        except Exception as e:
+            await logger.aerror(f"Error building vertices: {e}")
+            custom_component = graph.get_vertex(vertex_id).custom_component
+            trace_name = getattr(custom_component, "trace_name", None)
+            error_message = ErrorMessage(
+                flow_id=flow_id,
+                exception=e,
+                session_id=graph.session_id,
+                trace_name=trace_name,
+            )
+            event_manager.on_error(data=error_message.data)
+            raise
+
+    if _build_job_svc and _build_run_id:
+        await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
+    else:
+        await _run_vertex_build()
 
     build_duration = sum(vertex_timedeltas)
     event_manager.on_end(data={"build_duration": build_duration})
     await graph.end_all_traces()
+
+    # Fire memory-base auto-capture hook — non-blocking background effect.
+    # Must use fire_and_forget_task (not background_tasks.add_task) because
+    # generate_flow_events runs as an asyncio task; by the time the flow
+    # finishes, FastAPI has already drained the background_tasks queue and any
+    # tasks added after that point are silently dropped.
+    try:
+        _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+        await get_task_service().fire_and_forget_task(
+            get_memory_base_service().on_flow_output,
+            flow_id=flow_id,
+            session_id=graph.session_id or str(flow_id),
+            job_id=_run_id_uuid,
+        )
+    except (RuntimeError, ValueError, OSError):
+        await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
+
     await event_manager.queue.put((None, None, time.time()))
 
 
@@ -582,8 +753,36 @@ async def cancel_flow_build(
     _, _, event_task, _ = queue_service.get_queue_data(job_id)
 
     if event_task is None:
-        await logger.awarning(f"No event task found for job_id {job_id}")
-        return True  # Nothing to cancel is still a success
+        # Cross-worker cancel: this worker doesn't own the build task. If the
+        # queue service supports a cancel side-channel (RedisJobQueueService with
+        # cancel_channel_enabled=True), publish there so the owning worker can
+        # cancel locally. Falls back to a no-op for the in-memory queue or for
+        # Redis with cancel_channel_enabled=False (signal_cancel exists but
+        # short-circuits to 0 without setting the marker).
+        signal = getattr(queue_service, "signal_cancel", None)
+        cross_worker_available = getattr(queue_service, "cross_worker_cancel_enabled", False)
+        if signal is not None and cross_worker_available:
+            try:
+                receivers = await signal(job_id)
+            except Exception as exc:  # noqa: BLE001
+                # Redis publish failed; the marker isn't reliable either. Surface
+                # this so the client can retry rather than silently no-op.
+                await logger.aerror(f"signal_cancel for {job_id} failed: {exc}")
+                return False
+            # A return of 0 is not a failure: the persistent marker key was also
+            # set, so a worker that picks up the job later will still apply the
+            # cancel during its start_job marker check.
+            await logger.ainfo(f"Cross-worker cancel signaled for job_id {job_id} (reached {receivers} subscriber(s))")
+            return True
+        # No cross-worker cancel support (in-memory backend or Redis without
+        # cancel_channel_enabled). Two possible races: the job already finished
+        # and was cleaned up, or it is running on an unreachable worker. We
+        # cannot distinguish them cheaply, so return False.
+        await logger.awarning(
+            f"No event task found for job_id {job_id}. "
+            "Cross-worker cancel is not available; cancellation could not be confirmed."
+        )
+        return False
 
     if event_task.done():
         await logger.ainfo(f"Task for job_id {job_id} is already completed")
@@ -593,8 +792,9 @@ async def cancel_flow_build(
     task_before_cleanup = event_task
 
     try:
-        # Perform cleanup using the queue service
-        await queue_service.cleanup_job(job_id)
+        # Perform cancel using the queue service so backends can preserve any
+        # backend-specific end-of-stream guarantees before resource cleanup.
+        await queue_service.cancel_job(job_id)
     except asyncio.CancelledError:
         # Check if the task was actually cancelled
         if task_before_cleanup.cancelled():

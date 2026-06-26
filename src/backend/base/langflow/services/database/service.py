@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import sqlite3
 import sys
 import time
-from contextlib import asynccontextmanager, nullcontext
+from contextlib import asynccontextmanager, contextmanager, nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,7 +19,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import session_scope
 from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, select, text
@@ -49,6 +50,119 @@ class UnsupportedPostgreSQLVersionError(Exception):
 
 _PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), current_setting('server_version')")
 
+# Stable namespace for the schema-migration advisory lock. The lock serializes
+# concurrent ``alembic upgrade`` runs across workers so they do not race to
+# CREATE TYPE / CREATE TABLE on a fresh database. Picked once and never changed
+# so independent processes converge on the same lock; the value itself is
+# arbitrary, just has to fit in a Postgres bigint and not collide with other
+# advisory locks the application takes (currently none).
+_MIGRATION_ADVISORY_LOCK_ID = 0x4C616E67666C6F77  # ASCII "Langflow"
+_MIGRATION_LOCK_DEFAULT_TIMEOUT_S = 300.0
+_MIGRATION_LOCK_POLL_INTERVAL_S = 2.0
+
+
+def _migration_lock_timeout_s() -> float:
+    raw = os.getenv("LANGFLOW_MIGRATION_LOCK_TIMEOUT_S")
+    if raw is None:
+        return _MIGRATION_LOCK_DEFAULT_TIMEOUT_S
+    try:
+        return float(raw)
+    except ValueError:
+        logger.warning(
+            "Ignoring invalid LANGFLOW_MIGRATION_LOCK_TIMEOUT_S=%r; falling back to %.0fs.",
+            raw,
+            _MIGRATION_LOCK_DEFAULT_TIMEOUT_S,
+        )
+        return _MIGRATION_LOCK_DEFAULT_TIMEOUT_S
+
+
+def _acquire_migration_lock_or_raise(conn, lock_id: int) -> None:
+    """Acquire the advisory lock with a bounded wait, logging progress.
+
+    Blocking ``pg_advisory_lock`` has no upper bound and ``lock_timeout`` does
+    not apply to advisory locks, so a worker hung mid-migration would silently
+    block every other worker forever. Instead poll ``pg_try_advisory_lock`` with
+    a configurable timeout and log when we're waiting, so operators see why
+    boot is stuck.
+    """
+    if conn.execute(sa.text(f"SELECT pg_try_advisory_lock({lock_id})")).scalar():
+        return
+
+    timeout = _migration_lock_timeout_s()
+    logger.info(
+        "Migration advisory lock %s held by another worker; waiting up to %.0fs.",
+        lock_id,
+        timeout,
+    )
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        time.sleep(_MIGRATION_LOCK_POLL_INTERVAL_S)
+        if conn.execute(sa.text(f"SELECT pg_try_advisory_lock({lock_id})")).scalar():
+            logger.info("Acquired migration advisory lock %s after waiting.", lock_id)
+            return
+
+    msg = (
+        f"Could not acquire migration advisory lock {lock_id} within "
+        f"{timeout:.0f}s. Another worker is likely hung mid-migration. "
+        "Investigate the worker holding the lock or restart the deployment "
+        "with a single worker so migrations can run cleanly. Override the "
+        "wait via LANGFLOW_MIGRATION_LOCK_TIMEOUT_S (seconds) if your migration "
+        "legitimately needs longer."
+    )
+    raise RuntimeError(msg)
+
+
+def _normalize_sync_postgres_url(database_url: str) -> str:
+    """Return a sync-driver Postgres URL from a possibly async one.
+
+    Strips the ``+asyncpg`` / ``+aiosqlite`` suffix and upgrades the legacy
+    ``postgres://`` scheme to ``postgresql://`` so :func:`sa.create_engine`
+    picks the default sync driver. Centralised so the advisory-lock helper and
+    the table-creation lock path stay in sync with :func:`check_postgresql_version_sync`.
+    """
+    sync_url = database_url
+    if sync_url.startswith("postgres://"):
+        sync_url = "postgresql://" + sync_url.split("://", 1)[1]
+    for async_driver in ("+asyncpg", "+aiosqlite"):
+        sync_url = sync_url.replace(async_driver, "")
+    return sync_url
+
+
+@contextmanager
+def _postgres_migration_lock(database_url: str):
+    """Hold a Postgres session-level advisory lock for the duration of the block.
+
+    Workers starting concurrently against a fresh PostgreSQL each call
+    ``command.upgrade("head")``; without coordination they race on
+    ``CREATE TYPE`` / ``CREATE TABLE`` and the losers fail with
+    ``UniqueViolation``. Holding a session-level advisory lock serialises the
+    upgrade so only one worker mutates the schema at a time; the others wait
+    here (bounded, with progress logging) and then find the schema already at
+    head.
+
+    No-op for non-PostgreSQL URLs. SQLite has no advisory locks (and Langflow
+    runs single-process on it anyway).
+    """
+    if not database_url.startswith(("postgresql", "postgres")):
+        yield
+        return
+
+    engine = sa.create_engine(_normalize_sync_postgres_url(database_url))
+    try:
+        with engine.connect() as conn:
+            logger.debug("Acquiring migration advisory lock %s", _MIGRATION_ADVISORY_LOCK_ID)
+            _acquire_migration_lock_or_raise(conn, _MIGRATION_ADVISORY_LOCK_ID)
+            try:
+                yield
+            finally:
+                logger.debug("Releasing migration advisory lock %s", _MIGRATION_ADVISORY_LOCK_ID)
+                # Session-level locks auto-release on connection close, but
+                # explicit unlock keeps the connection reusable if alembic
+                # internals ever hand us one back.
+                conn.execute(sa.text(f"SELECT pg_advisory_unlock({_MIGRATION_ADVISORY_LOCK_ID})"))
+    finally:
+        engine.dispose()
+
 
 def _check_version_row(version_num_str: str, version_str: str) -> None:
     """Raise ``UnsupportedPostgreSQLVersionError`` when the version is too old."""
@@ -70,21 +184,72 @@ def check_postgresql_version_sync(database_url: str) -> None:
 
     from sqlalchemy import create_engine
 
-    # Normalise the async URL to a sync-compatible one.
-    url = database_url
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url.split("://", 1)[1]
-    # Strip async driver suffixes so create_engine picks the default sync driver.
-    for async_driver in ("+asyncpg", "+aiosqlite"):
-        url = url.replace(async_driver, "")
-
-    engine = create_engine(url)
+    engine = create_engine(_normalize_sync_postgres_url(database_url))
     try:
         with engine.connect() as conn:
             row = conn.execute(_PG_VERSION_QUERY).fetchone()
             _check_version_row(*row)
     finally:
         engine.dispose()
+
+
+def get_sqlite_database_file_path(database_url: str) -> Path | None:
+    """Return the on-disk file path for a SQLite URL, or ``None`` when there is none.
+
+    Returns ``None`` for non-SQLite URLs and for in-memory SQLite databases
+    (``sqlite://`` and ``sqlite:///:memory:``), which have no file on disk. The
+    returned path is kept exactly as written in the URL (relative paths are *not*
+    resolved) so callers can report it back to the user verbatim.
+    """
+    if not database_url.startswith("sqlite"):
+        return None
+    try:
+        database = make_url(database_url).database
+    except Exception:  # noqa: BLE001 - defensive: malformed URLs are handled elsewhere
+        return None
+    if not database or database == ":memory:":
+        return None
+    return Path(database)
+
+
+def check_sqlite_database_path(database_url: str) -> None:
+    """Fail fast with an actionable message when a SQLite database cannot be opened.
+
+    SQLite does not create intermediate directories, and relative paths in
+    ``LANGFLOW_DATABASE_URL`` are resolved by SQLAlchemy against the current
+    working directory at connect time. When the resolved parent directory is
+    missing the raw ``sqlite3.OperationalError`` ("unable to open database file")
+    is opaque, so surface where Langflow actually tried to open the database and
+    how a relative path was resolved. No-op for non-SQLite and in-memory URLs.
+
+    Note: this only improves diagnostics; it does not change which URLs are
+    accepted nor create any directories. See issue #13634.
+    """
+    db_path = get_sqlite_database_file_path(database_url)
+    if db_path is None:
+        return
+
+    resolved = db_path.resolve()
+    logger.debug(f"Using SQLite database at {resolved}")
+
+    parent = resolved.parent
+    if parent.exists():
+        return
+
+    msg = (
+        f"Cannot open the SQLite database at '{resolved}': the parent directory "
+        f"'{parent}' does not exist, and SQLite does not create intermediate "
+        f"directories. "
+    )
+    if db_path.is_absolute():
+        msg += "Create the directory before starting Langflow, or point LANGFLOW_DATABASE_URL at an existing path."
+    else:
+        msg += (
+            f"The relative path '{db_path}' from LANGFLOW_DATABASE_URL was resolved against the current working "
+            f"directory ('{Path.cwd()}'). Set LANGFLOW_DATABASE_URL to an absolute path "
+            f"(e.g. 'sqlite:///{resolved}'), or create the directory before starting Langflow."
+        )
+    raise ValueError(msg)
 
 
 class DatabaseService(Service):
@@ -134,14 +299,32 @@ class DatabaseService(Service):
         elif Path(alembic_log_file).is_absolute():
             self.alembic_log_path = Path(alembic_log_file)
         else:
-            self.alembic_log_path = Path(langflow_dir) / alembic_log_file
+            # Resolve relative log paths against the writable runtime config
+            # directory, not the installed package directory. The package dir is
+            # read-only in hardened deployments (non-root containers, read-only
+            # root filesystems, Kubernetes), where writing into it raises OSError
+            # and crashes startup. config_dir is always writable (it defaults to
+            # platformdirs' user cache dir and is created on startup).
+            config_dir = getattr(self.settings_service.settings, "config_dir", None)
+            base_dir = Path(config_dir) if config_dir else langflow_dir
+            self.alembic_log_path = base_dir / alembic_log_file
 
     async def initialize_alembic_log_file(self):
-        if self.alembic_log_to_stdout:
+        log_path = self.alembic_log_path
+        if self.alembic_log_to_stdout or log_path is None:
             return
-        # Ensure the directory and file for the alembic log file exists
-        await anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
-        await anyio.Path(self.alembic_log_path).touch(exist_ok=True)
+        # Ensure the directory and file for the alembic log file exists. The
+        # migration log is diagnostic-only, so a read-only filesystem (hardened
+        # containers / Kubernetes) must never abort startup: warn and move on.
+        try:
+            await anyio.Path(log_path.parent).mkdir(parents=True, exist_ok=True)
+            await anyio.Path(log_path).touch(exist_ok=True)
+        except OSError as exc:
+            await logger.awarning(
+                f"Could not initialize the Alembic migration log at '{log_path}' ({exc}). "
+                "Migration output falls back to stdout. Set LANGFLOW_ALEMBIC_LOG_FILE to a writable path "
+                "or LANGFLOW_ALEMBIC_LOG_TO_STDOUT=true to silence this warning."
+            )
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
@@ -412,6 +595,33 @@ class DatabaseService(Service):
         # alembic_cfg.attributes["connection"].commit()
         command.upgrade(alembic_cfg, "head")
 
+    def _open_alembic_log_buffer(self):
+        """Open the Alembic migration log for writing, falling back to stdout.
+
+        The migration log is diagnostic-only output. If the target path cannot
+        be written -- e.g. the installed package directory or the root
+        filesystem is read-only, as in hardened container/Kubernetes deployments
+        (non-root user or read-only root filesystem) -- startup must not abort.
+        Fall back to stdout rather than letting OSError propagate through the
+        FastAPI lifespan. Returns a context manager yielding the buffer Alembic
+        writes its output to.
+        """
+        log_path = self.alembic_log_path
+        if self.alembic_log_to_stdout or log_path is None:
+            return nullcontext(sys.stdout)
+        try:
+            # _run_migrations can run before initialize_alembic_log_file(), so
+            # make sure the parent directory exists before opening for writing.
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            return log_path.open("w", encoding="utf-8")
+        except OSError as exc:
+            logger.warning(
+                f"Could not open the Alembic migration log at '{log_path}' ({exc}). "
+                "Falling back to stdout. Set LANGFLOW_ALEMBIC_LOG_FILE to a writable path "
+                "or LANGFLOW_ALEMBIC_LOG_TO_STDOUT=true to silence this warning."
+            )
+            return nullcontext(sys.stdout)
+
     def _run_migrations(self, should_initialize_alembic, fix) -> None:
         # First we need to check if alembic has been initialized
         # If not, we need to initialize it
@@ -422,10 +632,10 @@ class DatabaseService(Service):
         # which is a buffer
         # I don't want to output anything
         # subprocess.DEVNULL is an int
-        buffer_context = (
-            nullcontext(sys.stdout) if self.alembic_log_to_stdout else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
-        )
-        with buffer_context as buffer:
+        buffer_context = self._open_alembic_log_buffer()
+        # The advisory lock serialises concurrent migration runs across workers
+        # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
+        with _postgres_migration_lock(self.database_url), buffer_context as buffer:
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
@@ -578,17 +788,44 @@ class DatabaseService(Service):
         await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
-        async with self.engine.begin() as conn:
-            await conn.run_sync(self._create_db_and_tables)
+        if not self.database_url.startswith(("postgresql", "postgres")):
+            # SQLite / non-PG: original async path; advisory lock does not apply.
+            async with self.engine.begin() as conn:
+                await conn.run_sync(self._create_db_and_tables)
+            return
+
+        # Postgres: serialise CREATE TYPE / CREATE TABLE across workers under
+        # the same advisory lock that protects run_migrations. Without this,
+        # concurrent workers booting against a fresh database race on
+        # ``table.create(checkfirst=True)`` and the losers fail with
+        # ``UniqueViolation`` on ``pg_type_typname_nsp_index``. The lock is
+        # acquired synchronously; run in a worker thread so a contended-lock
+        # poll does not block the event loop.
+        await asyncio.to_thread(self._create_db_and_tables_with_lock)
+
+    def _create_db_and_tables_with_lock(self) -> None:
+        """Postgres path: hold the migration advisory lock for the DDL.
+
+        Opens its own sync engine so the DDL runs on the same driver the lock
+        uses; the application's async engine is unaffected.
+        """
+        with _postgres_migration_lock(self.database_url):
+            sync_engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
+            try:
+                with sync_engine.begin() as conn:
+                    self._create_db_and_tables(conn)
+            finally:
+                sync_engine.dispose()
 
     async def teardown(self) -> None:
         await logger.adebug("Tearing down database")
         try:
             settings_service = get_settings_service()
-            # remove the default superuser if auto_login is enabled
-            # using the SUPERUSER to get the user
+            # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
             async with session_scope() as session:
                 await teardown_superuser(settings_service, session)
-        except Exception:  # noqa: BLE001
+        except Exception:
             await logger.aexception("Error tearing down database")
-        await self.engine.dispose()
+            raise
+        finally:
+            await self.engine.dispose()

@@ -1,4 +1,6 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import VersionLabel from "@/components/common/versionLabelComponent";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +29,7 @@ export default function VersionListItem({
   onExport,
   onDeleteClick,
 }: VersionListItemProps) {
+  const { t } = useTranslation();
   return (
     <SidebarMenuItem
       className={cn(
@@ -42,8 +45,12 @@ export default function VersionListItem({
           isSelected && "border-l-2 border-l-[#6366F1] !bg-[#6366F1]/10",
         )}
       >
-        <div className="flex flex-col items-start">
-          <span className="font-medium text-sm pb-1">{entry.version_tag}</span>
+        <div className="flex min-w-0 flex-col items-start">
+          <VersionLabel
+            versionTag={entry.version_tag}
+            description={entry.description}
+            className="w-full truncate font-medium text-sm pb-1"
+          />
           <span className="text-xs text-muted-foreground">
             {formatTimestamp(entry.created_at)}
           </span>
@@ -54,7 +61,7 @@ export default function VersionListItem({
               <button
                 onClick={(e) => e.stopPropagation()}
                 className="group/trigger flex h-6 w-6 items-center justify-center rounded"
-                title="More options"
+                title={t("flow.moreOptions")}
               >
                 {isSelected ? (
                   <>
@@ -81,7 +88,7 @@ export default function VersionListItem({
                   name="Download"
                   className="mr-2 h-3.5 w-3.5"
                 />
-                Export
+                {t("flow.menu.export")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onDeleteClick(entry)}
@@ -91,7 +98,7 @@ export default function VersionListItem({
                   name="Trash2"
                   className="mr-2 h-3.5 w-3.5"
                 />
-                Delete
+                {t("flow.menu.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

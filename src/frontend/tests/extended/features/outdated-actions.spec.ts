@@ -5,13 +5,24 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 test("user must be able to update outdated components by update all button", async ({
   page,
 }) => {
-  await awaitBootstrapTest(page);
-
-  await page.locator("span").filter({ hasText: "Close" }).first().click();
+  // `skipModal: true` keeps us on the home page (cards-wrapper lives here).
+  // Without it, openTemplatesModal navigates to a fresh canvas + FlowBuilderWelcome
+  // overlay, so closing the modal leaves the user on the canvas and the
+  // drag-and-drop target below never appears.
+  await awaitBootstrapTest(page, { skipModal: true });
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  // Read your file into a buffer.
-  const jsonContent = readFileSync("tests/assets/outdated_flow.json", "utf-8");
+  // Read the asset and rename the flow uniquely so we can wait for THIS
+  // upload to appear in the list — avoids racing against the bootstrap-seeded
+  // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.
+  const rawJson = readFileSync("tests/assets/outdated_flow.json", "utf-8");
+  const flowName = `Outdated Test Flow ${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+  const jsonContent = JSON.stringify({
+    ...JSON.parse(rawJson),
+    name: flowName,
+  });
 
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
@@ -29,15 +40,14 @@ test("user must be able to update outdated components by update all button", asy
     dataTransfer,
   });
 
-  await page.waitForTimeout(1000);
+  // Wait for the freshly-dropped flow card (by unique name) to appear, then click it.
+  const droppedCard = page
+    .getByTestId("list-card")
+    .filter({ hasText: flowName });
+  await droppedCard.waitFor({ state: "visible", timeout: 30000 });
+  await droppedCard.click();
 
-  await page.waitForSelector("data-testid=list-card", {
-    timeout: 3000,
-  });
-
-  await page.getByTestId("list-card").first().click();
-
-  await expect(page.getByText("Updates are available for 5")).toBeVisible({
+  await expect(page.getByText("5 components need updates")).toBeVisible({
     timeout: 30000,
   });
 
@@ -71,7 +81,7 @@ test("user must be able to update outdated components by update all button", asy
     ).toBe(true);
   }
 
-  expect(await page.getByTestId("backup-flow-checkbox").isChecked()).toBe(true);
+  await expect(page.getByTestId("backup-flow-checkbox")).toBeChecked();
   await page.getByTestId("backup-flow-checkbox").click();
 
   await page.getByRole("button", { name: "Update Components" }).click();
@@ -88,13 +98,24 @@ test("user must be able to update outdated components by update all button", asy
 test("user must be able to update outdated components by each outdated component", async ({
   page,
 }) => {
-  await awaitBootstrapTest(page);
-
-  await page.locator("span").filter({ hasText: "Close" }).first().click();
+  // `skipModal: true` keeps us on the home page (cards-wrapper lives here).
+  // Without it, openTemplatesModal navigates to a fresh canvas + FlowBuilderWelcome
+  // overlay, so closing the modal leaves the user on the canvas and the
+  // drag-and-drop target below never appears.
+  await awaitBootstrapTest(page, { skipModal: true });
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  // Read your file into a buffer.
-  const jsonContent = readFileSync("tests/assets/outdated_flow.json", "utf-8");
+  // Read the asset and rename the flow uniquely so we can wait for THIS
+  // upload to appear in the list — avoids racing against the bootstrap-seeded
+  // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.
+  const rawJson = readFileSync("tests/assets/outdated_flow.json", "utf-8");
+  const flowName = `Outdated Test Flow ${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+  const jsonContent = JSON.stringify({
+    ...JSON.parse(rawJson),
+    name: flowName,
+  });
 
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
@@ -112,15 +133,14 @@ test("user must be able to update outdated components by each outdated component
     dataTransfer,
   });
 
-  await page.waitForTimeout(1000);
+  // Wait for the freshly-dropped flow card (by unique name) to appear, then click it.
+  const droppedCard = page
+    .getByTestId("list-card")
+    .filter({ hasText: flowName });
+  await droppedCard.waitFor({ state: "visible", timeout: 30000 });
+  await droppedCard.click();
 
-  await page.waitForSelector("data-testid=list-card", {
-    timeout: 3000,
-  });
-
-  await page.getByTestId("list-card").first().click();
-
-  await expect(page.getByText("Updates are available for 5")).toBeVisible({
+  await expect(page.getByText("5 components need updates")).toBeVisible({
     timeout: 30000,
   });
 
@@ -140,7 +160,7 @@ test("user must be able to update outdated components by each outdated component
     timeout: 30000,
   });
 
-  expect(await page.getByTestId("backup-flow-checkbox").isChecked()).toBe(true);
+  await expect(page.getByTestId("backup-flow-checkbox")).toBeChecked();
 
   await page.getByRole("button", { name: "Update Component" }).click();
 
@@ -152,7 +172,7 @@ test("user must be able to update outdated components by each outdated component
     timeout: 5000,
   });
 
-  await expect(page.getByText("Updates are available for 4")).toBeVisible({
+  await expect(page.getByText("4 components need updates")).toBeVisible({
     timeout: 30000,
   });
 

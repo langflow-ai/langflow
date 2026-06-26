@@ -4,10 +4,45 @@ Plugins register via the ``langflow.plugins`` entry-point group. They receive
 a wrapper so they cannot overwrite or shadow existing Langflow routes.
 """
 
+from collections.abc import Iterable, Iterator
 from importlib.metadata import entry_points
+from typing import Any
 
 from fastapi import FastAPI
+from lfx.extension import filter_component_entry_points
 from lfx.log.logger import logger
+
+
+def _iter_route_keys(routes: Iterable[Any], prefix: str = "") -> Iterator[tuple[str, str]]:
+    """Yield ``(path, method)`` for every concrete route reachable from ``routes``.
+
+    FastAPI >=0.137 includes sub-routers lazily: ``include_router`` stores an
+    internal ``_IncludedRouter`` wrapper instead of copying the child
+    ``APIRoute`` objects onto the parent. Descend through that wrapper (via its
+    public ``original_router`` / ``include_context``) so route discovery sees the
+    routes the app will actually serve, on both eager (<=0.136) and lazy
+    (>=0.137) FastAPI. ``HEAD`` is skipped (it usually mirrors ``GET``); mounts
+    are reported as ``(path, "*")``.
+    """
+    for route in routes:
+        original_router = getattr(route, "original_router", None)
+        if original_router is not None:
+            include_context = getattr(route, "include_context", None)
+            include_prefix = getattr(include_context, "prefix", "") or ""
+            yield from _iter_route_keys(original_router.routes, prefix + include_prefix)
+            continue
+        path = getattr(route, "path", None)
+        if path is None:
+            continue
+        full_path = prefix + path
+        methods = getattr(route, "methods", None)
+        if methods is not None:
+            for method in methods:
+                if method != "HEAD":  # often same as GET
+                    yield (full_path, method)
+        elif hasattr(route, "path_regex"):
+            # Mount or similar: reserve path for all methods
+            yield (full_path, "*")
 
 
 def _get_route_keys(app: FastAPI) -> set[tuple[str, str]]:
@@ -16,16 +51,7 @@ def _get_route_keys(app: FastAPI) -> set[tuple[str, str]]:
     Used to build the reserved set before loading plugins so that plugin
     routes cannot overwrite or shadow existing Langflow routes.
     """
-    keys: set[tuple[str, str]] = set()
-    for route in app.router.routes:
-        if hasattr(route, "path") and hasattr(route, "methods"):
-            for method in route.methods:
-                if method != "HEAD":  # often same as GET
-                    keys.add((route.path, method))
-        elif hasattr(route, "path") and hasattr(route, "path_regex"):
-            # Mount or similar: reserve path for all methods
-            keys.add((route.path, "*"))
-    return keys
+    return set(_iter_route_keys(app.router.routes))
 
 
 class _PluginAppWrapper:
@@ -98,7 +124,7 @@ class _PluginAppWrapper:
 
 
 def load_plugin_routes(app: FastAPI) -> None:
-    """Discover and register additional routers from enterprise plugins.
+    """Discover and register additional routers from authorization plugins.
 
     Plugins register themselves via the ``langflow.plugins`` entry-point group.
     Each entry point must expose a callable with the signature::
@@ -109,8 +135,19 @@ def load_plugin_routes(app: FastAPI) -> None:
     reserved = _get_route_keys(app)
     wrapper = _PluginAppWrapper(app, reserved)
 
-    eps = entry_points(group="langflow.plugins")
-    for ep in sorted(eps, key=lambda e: e.name):
+    raw_eps = list(entry_points(group="langflow.plugins"))
+    # Manifest-first precedence: if a distribution ships an
+    # extension manifest, its COMPONENT-typed entry-points are skipped here;
+    # the Extension System loader registers those components via the
+    # manifest. Non-component entry-points (route registrars like the ones
+    # this loader expects) on the same distribution still load normally.
+    kept_eps, skipped_eps = filter_component_entry_points(raw_eps)
+    for skipped in skipped_eps:
+        logger.info(
+            "Skipping component entry-point '%s' (manifest-first precedence; loaded via extension instead)",
+            skipped.name,
+        )
+    for ep in sorted(kept_eps, key=lambda e: e.name):
         try:
             plugin_register = ep.load()
         except Exception:  # noqa: BLE001

@@ -43,6 +43,8 @@ AI: """
     chat_output.set(input_value=openai_component.text_response)
 
     graph = Graph(chat_input, chat_output)
+    openai_vertex = graph.get_vertex("openai")
+    assert openai_vertex.data["node"]["template"]["api_key"]["load_from_db"] is False
     assert graph.in_degree_map == {
         "chat_output": 1,
         "type_converter": 1,

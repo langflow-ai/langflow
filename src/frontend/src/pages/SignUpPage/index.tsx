@@ -2,6 +2,7 @@ import * as Form from "@radix-ui/react-form";
 import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -87,24 +88,30 @@ export default function SignUp(): JSX.Element {
       className="h-screen w-full"
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
-        <div className="flex w-72 flex-col items-center justify-center gap-2">
+        <div className="flex w-full max-w-xs flex-col items-center justify-center gap-2">
           <LangflowLogo
-            title="Langflow logo"
+            title={t("common.langflowLogo")}
             className="mb-4 h-10 w-10 scale-[1.5]"
           />
-          <span className="mb-6 text-2xl font-semibold text-primary">
+          <span className="mb-6 text-2xl font-semibold text-primary text-center">
             {t("auth.signupTitle")}
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
-              <Form.Label className="data-[invalid]:label-invalid">
-                {t("auth.usernameLabel")}{" "}
-                <span className="font-medium text-destructive">*</span>
+              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+                <ShadTooltip
+                  content={t("auth.usernameLabel")}
+                  styleClasses="z-50"
+                >
+                  <span className="truncate">{t("auth.usernameLabel")}</span>
+                </ShadTooltip>
+                <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>
 
               <Form.Control asChild>
                 <Input
                   type="username"
+                  allowAutofill
                   onChange={({ target: { value } }) => {
                     handleInput({ target: { name: "username", value } });
                   }}
@@ -122,9 +129,14 @@ export default function SignUp(): JSX.Element {
           </div>
           <div className="mb-3 w-full">
             <Form.Field name="password" serverInvalid={password != cnfPassword}>
-              <Form.Label className="data-[invalid]:label-invalid">
-                {t("auth.passwordLabel")}{" "}
-                <span className="font-medium text-destructive">*</span>
+              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+                <ShadTooltip
+                  content={t("auth.passwordLabel")}
+                  styleClasses="z-50"
+                >
+                  <span className="truncate">{t("auth.passwordLabel")}</span>
+                </ShadTooltip>
+                <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>
               <InputComponent
                 onChange={(value) => {
@@ -132,6 +144,7 @@ export default function SignUp(): JSX.Element {
                 }}
                 value={password}
                 isForm
+                allowAutofill
                 password={true}
                 required
                 placeholder={t("auth.passwordPlaceholder")}
@@ -154,9 +167,16 @@ export default function SignUp(): JSX.Element {
               name="confirmpassword"
               serverInvalid={password != cnfPassword}
             >
-              <Form.Label className="data-[invalid]:label-invalid">
-                {t("auth.confirmPasswordLabel")}{" "}
-                <span className="font-medium text-destructive">*</span>
+              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+                <ShadTooltip
+                  content={t("auth.confirmPasswordLabel")}
+                  styleClasses="z-50"
+                >
+                  <span className="truncate">
+                    {t("auth.confirmPasswordLabel")}
+                  </span>
+                </ShadTooltip>
+                <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>
 
               <InputComponent
@@ -165,6 +185,7 @@ export default function SignUp(): JSX.Element {
                 }}
                 value={cnfPassword}
                 isForm
+                allowAutofill
                 password={true}
                 required
                 placeholder={t("auth.confirmPasswordPlaceholder")}
@@ -192,9 +213,16 @@ export default function SignUp(): JSX.Element {
           </div>
           <div className="w-full">
             <CustomLink to="/login">
-              <Button className="w-full" variant="outline">
-                {t("auth.haveAccount")}&nbsp;<b>{t("auth.signInLink")}</b>
-              </Button>
+              <ShadTooltip
+                content={`${t("auth.haveAccount")} ${t("auth.signInLink")}`}
+                styleClasses="z-50"
+              >
+                <Button className="w-full overflow-hidden" variant="outline">
+                  <span className="truncate">
+                    {t("auth.haveAccount")}&nbsp;<b>{t("auth.signInLink")}</b>
+                  </span>
+                </Button>
+              </ShadTooltip>
             </CustomLink>
           </div>
         </div>

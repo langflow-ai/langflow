@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -29,10 +30,11 @@ function EnvironmentPickerRow({
   selectedProviderId: string;
   onSelect: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-center gap-2">
       <span className="shrink-0 text-sm text-muted-foreground">
-        Environment:
+        {t("deployments.environmentLabel")}
       </span>
       <Select value={selectedProviderId} onValueChange={onSelect}>
         <SelectTrigger className="w-[220px]">
@@ -51,6 +53,7 @@ function EnvironmentPickerRow({
 }
 
 export default function DeploymentsPage() {
+  const { t } = useTranslation();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const currentFolderId = folderId ?? myCollectionId ?? undefined;
@@ -70,9 +73,16 @@ export default function DeploymentsPage() {
     providerIdsToQuery,
     providerMap,
   } = useProviderFilter(providers);
+  const providerIdsForActiveTab =
+    activeSubTab === "providers"
+      ? providers.map((provider) => provider.id)
+      : providerIdsToQuery;
 
-  const { deployments, isLoading: isLoadingDeployments } =
-    useGetDeploymentsByProviders(providerIdsToQuery, currentFolderId);
+  const {
+    deployments,
+    deploymentTotalsByProvider,
+    isLoading: isLoadingDeployments,
+  } = useGetDeploymentsByProviders(providerIdsForActiveTab, currentFolderId);
 
   const showEnvironmentToolbar = providers.length > 1 && !isLoadingProviders;
 
@@ -82,7 +92,7 @@ export default function DeploymentsPage() {
       : !isLoadingProviders && !isLoadingDeployments && deployments.length > 0;
 
   return (
-    <div className="flex flex-col gap-4 pt-4">
+    <div className="flex flex-col gap-10 pt-4">
       <div className="flex min-h-10 items-center justify-between">
         <SubTabToggle activeTab={activeSubTab} onTabChange={setActiveSubTab} />
         {showHeaderButton && (
@@ -100,22 +110,11 @@ export default function DeploymentsPage() {
           >
             <ForwardedIconComponent name="Plus" className="h-4 w-4" />
             {activeSubTab === "providers"
-              ? "New Environment"
-              : "New Deployment"}
+              ? t("deployments.newEnvironment")
+              : t("deployments.newDeployment")}
           </Button>
         )}
       </div>
-
-      {providers.length > 1 && activeSubTab === "providers" && (
-        <div
-          className="flex h-8 min-h-8 shrink-0 items-center gap-2"
-          data-testid="deployments-shared-toolbar"
-        >
-          <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-            These environments are used when you create or run deployments.
-          </p>
-        </div>
-      )}
 
       {showEnvironmentToolbar && activeSubTab === "deployments" && (
         <div
@@ -143,8 +142,9 @@ export default function DeploymentsPage() {
 
       {activeSubTab === "providers" && (
         <ProvidersContent
-          isLoading={isLoadingProviders}
+          isLoading={isLoadingProviders || isLoadingDeployments}
           providers={providers}
+          deploymentTotalsByProvider={deploymentTotalsByProvider}
           addProviderOpen={addProviderOpen}
           setAddProviderOpen={setAddProviderOpen}
         />

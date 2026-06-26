@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import FilesTab from "./components/FilesTab";
 
 export const FilesPage = () => {
+  const { t } = useTranslation();
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
@@ -64,7 +67,7 @@ export const FilesPage = () => {
                   </SidebarTrigger>
                 </div>
               </div>
-              Files
+              {t("files.pageTitle")}
             </div>
             <div className="flex h-full flex-col">
               <FilesTab {...tabProps} />

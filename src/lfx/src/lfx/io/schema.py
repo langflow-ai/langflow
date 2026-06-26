@@ -50,6 +50,20 @@ _convert_type_to_field_type = {
 }
 
 
+# Input types assigned to schema-generated inputs so the frontend renders
+# connection handles for non-string fields (MCP tools, dynamic Composio tools, etc.).
+# Without these, int/float/bool/dict inputs render as UI-only widgets with no
+# input port, preventing values from being wired in from other components.
+# See https://github.com/langflow-ai/langflow/issues/9424
+_SCHEMA_INPUT_TYPES_BY_CLS: dict[type[InputTypes], list[str]] = {
+    IntInput: ["Message"],
+    FloatInput: ["Message"],
+    BoolInput: ["Message"],
+    DictInput: ["JSON"],
+    NestedDictInput: ["JSON"],
+}
+
+
 def _resolve_input_type(annotation: Any, *, required: bool) -> tuple[type[InputTypes], bool, list[Any] | None]:
     """Resolve a Pydantic annotation into a Langflow input type."""
     ann = annotation
@@ -114,6 +128,29 @@ def _get_langflow_input_default(model_field: Any, input_cls: type[InputTypes]) -
         return PydanticUndefined
 
     return default
+
+
+def _coerce_default_value(value: Any) -> Any:
+    """Coerce non-native scalars (e.g. numpy.int64) to native Python types.
+
+    Values may originate from a DB round-trip where integers/floats are
+    deserialized as numpy scalars. Pydantic's Field cannot introspect these
+    as defaults and raises TypeError. numpy/pandas scalars expose .item() which
+    returns the equivalent native Python value.
+    """
+    if value is None:
+        return value
+    cls = type(value)
+    module = getattr(cls, "__module__", "") or ""
+    if not module.startswith(("numpy", "pandas")):
+        return value
+    item = getattr(value, "item", None)
+    if not callable(item):
+        return value
+    try:
+        return item()
+    except (TypeError, ValueError, AttributeError):
+        return value
 
 
 def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
@@ -243,6 +280,10 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list[InputTypes]:
         if options is not None:
             input_kwargs["options"] = options
 
+        handle_input_types = _SCHEMA_INPUT_TYPES_BY_CLS.get(lf_cls)
+        if handle_input_types is not None:
+            input_kwargs["input_types"] = list(handle_input_types)
+
         inputs.append(lf_cls(**input_kwargs))
 
     return inputs
@@ -284,7 +325,7 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
             "description": input_model.info or "",
         }
         if input_model.required is False:
-            field_dict["default"] = input_model.value  # type: ignore[assignment]
+            field_dict["default"] = _coerce_default_value(input_model.value)  # type: ignore[assignment]
         pydantic_field = Field(**field_dict)
 
         fields[input_model.name] = (field_type, pydantic_field)
@@ -326,7 +367,7 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
             "description": input_model.info or "",
         }
         if input_model.required is False:
-            field_dict["default"] = input_model.value  # type: ignore[assignment]
+            field_dict["default"] = _coerce_default_value(input_model.value)  # type: ignore[assignment]
         pydantic_field = Field(**field_dict)
 
         fields[input_model.name] = (field_type, pydantic_field)

@@ -9,6 +9,7 @@ import pytest
 from langflow.agentic.helpers.sse import (
     format_complete_event,
     format_error_event,
+    format_flow_update_event,
     format_progress_event,
     format_token_event,
 )
@@ -241,6 +242,59 @@ class TestFormatTokenEvent:
         parsed = json.loads(result[6:-2])
 
         assert parsed["chunk"] == "Hello 世界 🌍"
+
+
+class TestFormatFlowUpdateEventProposePlan:
+    """Contract tests for the propose_plan action flowing through
+    format_flow_update_event.
+
+    The ProposePlan MCP tool pushes ``{"action": "propose_plan", "markdown": "..."}``
+    onto the flow-event queue. The assistant service drains it and feeds it to
+    ``format_flow_update_event``, which spreads the dict into the SSE payload.
+    The frontend then routes by ``action`` to render the plan card.
+
+    These tests lock in the wire format so future refactors of the SSE layer
+    cannot silently break the assistant's planning step.
+    """  # noqa: D205
+
+    def test_should_emit_flow_update_event_with_propose_plan_action(self):
+        update = {"action": "propose_plan", "markdown": "Plan text."}
+
+        result = format_flow_update_event(update)
+
+        assert result.startswith("data: ")
+        assert result.endswith("\n\n")
+        parsed = json.loads(result[6:-2])
+        assert parsed["event"] == "flow_update"
+        assert parsed["action"] == "propose_plan"
+        assert parsed["markdown"] == "Plan text."
+
+    def test_should_preserve_markdown_with_newlines_as_escaped_json(self):
+        # Multi-line markdown must round-trip cleanly. SSE protocol uses
+        # blank lines as delimiters, so a raw newline inside the payload
+        # would split the event. json.dumps must escape them.
+        plan = "## Plan\n\n- Step 1\n- Step 2"
+        update = {"action": "propose_plan", "markdown": plan}
+
+        result = format_flow_update_event(update)
+
+        json_str = result[6:-2]
+        # SSE payload must be on a single line (no raw newlines mid-event).
+        assert "\n" not in json_str
+        parsed = json.loads(json_str)
+        # But the markdown content must round-trip with newlines intact.
+        assert parsed["markdown"] == plan
+
+    def test_should_keep_event_type_when_action_is_propose_plan(self):
+        # Regression guard: someone might be tempted to overwrite ``event``
+        # if ``action`` is set. The SSE consumer relies on the outer event
+        # type to dispatch handlers — it must stay "flow_update".
+        update = {"action": "propose_plan", "markdown": "x"}
+
+        result = format_flow_update_event(update)
+        parsed = json.loads(result[6:-2])
+
+        assert parsed["event"] == "flow_update"
 
 
 class TestSSEFormatConsistency:

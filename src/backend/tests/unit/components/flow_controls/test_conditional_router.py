@@ -23,8 +23,8 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
             "operator": "equals",
             "match_text": "test input",
             "case_sensitive": True,
-            "true_case_message": Message(content="true result"),
-            "false_case_message": Message(content="false result"),
+            "true_case_message": Message(text="true result"),
+            "false_case_message": Message(text="false result"),
             "max_iterations": 10,
             "default_route": "true_result",
         }
@@ -223,7 +223,7 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
         component.match_text = "hello"
         component.operator = "equals"
         component.case_sensitive = True
-        component.true_case_message = Message(content="True case")
+        component.true_case_message = Message(text="True case")
 
         with (
             patch.object(component, "iterate_and_stop_once") as mock_iterate,
@@ -252,7 +252,7 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
             result = component.true_response()
 
             assert isinstance(result, Message)
-            assert result.content == ""
+            assert result.text == ""
             mock_iterate.assert_called_once_with("true_result")
 
     async def test_false_response_condition_false(self, component_class, default_kwargs):
@@ -262,7 +262,7 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
         component.match_text = "world"
         component.operator = "equals"
         component.case_sensitive = True
-        component.false_case_message = Message(content="False case")
+        component.false_case_message = Message(text="False case")
 
         with patch.object(component, "iterate_and_stop_once") as mock_iterate:
             result = component.false_response()
@@ -283,8 +283,137 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
             result = component.false_response()
 
             assert isinstance(result, Message)
-            assert result.content == ""
+            assert result.text == ""
             mock_iterate.assert_called_once_with("false_result")
+
+    async def test_true_response_blank_case_message_falls_back_to_input_text(self, component_class, default_kwargs):
+        """Blank Case True should route the original Text Input on the true branch."""
+        component = await self.component_setup(component_class, default_kwargs)
+        component.input_text = "passthrough text"
+        component.match_text = "passthrough text"
+        component.operator = "equals"
+        component.case_sensitive = True
+        # Unset MessageInput resolves to an empty Message
+        component.true_case_message = Message(text="")
+
+        with (
+            patch.object(component, "iterate_and_stop_once") as mock_iterate,
+            patch.object(type(component), "ctx", new_callable=dict),
+            patch.object(component, "_id", "test_id"),
+        ):
+            result = component.true_response()
+
+            assert isinstance(result, Message)
+            assert result.text == "passthrough text"
+            mock_iterate.assert_called_once_with("false_result")
+
+    async def test_false_response_blank_case_message_falls_back_to_input_text(self, component_class, default_kwargs):
+        """Blank Case False should route the original Text Input on the false branch."""
+        component = await self.component_setup(component_class, default_kwargs)
+        component.input_text = "passthrough text"
+        component.match_text = "no match"
+        component.operator = "equals"
+        component.case_sensitive = True
+        # Unset MessageInput resolves to an empty Message
+        component.false_case_message = Message(text="")
+
+        with patch.object(component, "iterate_and_stop_once") as mock_iterate:
+            result = component.false_response()
+
+            assert isinstance(result, Message)
+            assert result.text == "passthrough text"
+            mock_iterate.assert_called_once_with("true_result")
+
+    async def test_true_response_preserves_override_with_files(self, component_class, default_kwargs):
+        """An override Message with empty text but files must be preserved, not dropped."""
+        component = await self.component_setup(component_class, default_kwargs)
+        component.input_text = "passthrough text"
+        component.match_text = "passthrough text"
+        component.operator = "equals"
+        component.case_sensitive = True
+        # Empty text but a meaningful file payload
+        override = Message(text="", files=["x.png"])
+        component.true_case_message = override
+
+        with (
+            patch.object(component, "iterate_and_stop_once") as mock_iterate,
+            patch.object(type(component), "ctx", new_callable=dict),
+            patch.object(component, "_id", "test_id"),
+        ):
+            result = component.true_response()
+
+            assert result is override
+            assert result.files == ["x.png"]
+            assert result.text != "passthrough text"
+            mock_iterate.assert_called_once_with("false_result")
+
+    async def test_false_response_preserves_override_with_content_blocks(self, component_class, default_kwargs):
+        """An override Message with empty text but content blocks must be preserved, not dropped."""
+        from lfx.schema.content_block import ContentBlock
+
+        component = await self.component_setup(component_class, default_kwargs)
+        component.input_text = "passthrough text"
+        component.match_text = "no match"
+        component.operator = "equals"
+        component.case_sensitive = True
+        # Empty text but a meaningful content-block payload
+        override = Message(text="", content_blocks=[ContentBlock(title="block", contents=[])])
+        component.false_case_message = override
+
+        with patch.object(component, "iterate_and_stop_once") as mock_iterate:
+            result = component.false_response()
+
+            assert result is override
+            assert len(result.content_blocks) == 1
+            assert result.text != "passthrough text"
+            mock_iterate.assert_called_once_with("true_result")
+
+    async def test_true_response_string_case_message_override(self, component_class, default_kwargs):
+        """A raw string override is wrapped and routed, not dropped.
+
+        ``MessageInput`` wraps user input into a ``Message`` on the validated graph path, but a raw
+        ``str`` can still reach ``_resolve_case_message`` via direct/programmatic assignment (e.g.
+        ``component.set(true_case_message="...")``). The ``str`` branch is intentionally retained
+        rather than dead, so it is exercised here.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+        component.input_text = "passthrough text"
+        component.match_text = "passthrough text"
+        component.operator = "equals"
+        component.case_sensitive = True
+        component.true_case_message = "literal string override"
+
+        with (
+            patch.object(component, "iterate_and_stop_once") as mock_iterate,
+            patch.object(type(component), "ctx", new_callable=dict),
+            patch.object(component, "_id", "test_id"),
+        ):
+            result = component.true_response()
+
+            assert isinstance(result, Message)
+            assert result.text == "literal string override"
+            assert result.text != "passthrough text"
+            mock_iterate.assert_called_once_with("false_result")
+
+    @pytest.mark.parametrize(
+        ("case_message", "expected_text"),
+        [
+            ("literal string override", "literal string override"),  # non-empty str -> wrapped as Message
+            ("", "passthrough text"),  # empty str -> falls back to input_text
+            (None, "passthrough text"),  # unset / None -> falls back to input_text
+        ],
+    )
+    async def test_resolve_case_message_str_and_none_fallback(
+        self, component_class, default_kwargs, case_message, expected_text
+    ):
+        """_resolve_case_message handles raw str and None defensively, falling back to input_text when blank."""
+        component = await self.component_setup(component_class, default_kwargs)
+        component.input_text = "passthrough text"
+
+        result = component._resolve_case_message(case_message)
+
+        assert isinstance(result, Message)
+        assert result.text == expected_text
 
     async def test_update_build_config_regex_operator(self, component_class, default_kwargs):
         """Test update_build_config when operator is regex."""

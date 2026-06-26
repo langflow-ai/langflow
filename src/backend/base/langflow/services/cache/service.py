@@ -1,8 +1,14 @@
 import asyncio
+import atexit
+import hashlib
+import hmac
+import os
 import pickle
+import tempfile
 import threading
 import time
 from collections import OrderedDict
+from pathlib import Path
 from typing import Generic, Union
 
 import dill
@@ -17,6 +23,36 @@ from langflow.services.cache.base import (
     ExternalAsyncBaseCacheService,
     LockType,
 )
+
+_redis_cache_experimental_warning_lock = threading.Lock()
+_redis_cache_experimental_warning_emitted = False
+
+
+def _warn_redis_experimental_once() -> None:
+    """Emit the RedisCache experimental warning only once per server run."""
+    global _redis_cache_experimental_warning_emitted  # noqa: PLW0603
+
+    with _redis_cache_experimental_warning_lock:
+        if _redis_cache_experimental_warning_emitted:
+            return
+        _redis_cache_experimental_warning_emitted = True
+
+    # Cross-process deduplication: all workers forked from the same master
+    # share the same getppid() value, so they all target the same sentinel.
+    sentinel = Path(tempfile.gettempdir()) / f"langflow_redis_cache_warned_{os.getppid()}.sentinel"
+    try:
+        fd = os.open(sentinel, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.close(fd)
+    except FileExistsError:
+        return  # Another worker already logged the warning
+
+    # Best-effort cleanup so we don't leave a stale file in /tmp after every restart.
+    atexit.register(sentinel.unlink, missing_ok=True)
+
+    logger.warning(
+        "RedisCache is an experimental feature and may not work as expected."
+        " Please report any issues to our GitHub repository."
+    )
 
 
 class ThreadingInMemoryCache(CacheService, Generic[LockType]):
@@ -196,6 +232,11 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         b = cache["b"]
     """
 
+    KEY_PREFIX = "langflow:cache:"
+
+    # Size of the HMAC-SHA256 tag prepended to every stored payload.
+    _HMAC_DIGEST_SIZE = hashlib.sha256().digest_size
+
     def __init__(self, host="localhost", port=6379, db=0, url=None, expiration_time=60 * 60) -> None:
         """Initialize a new RedisCache instance.
 
@@ -210,15 +251,50 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         # Redis is a main dependency, no need to import check
         from redis.asyncio import StrictRedis
 
-        logger.warning(
-            "RedisCache is an experimental feature and may not work as expected."
-            " Please report any issues to our GitHub repository."
-        )
+        _warn_redis_experimental_once()
         if url:
             self._client = StrictRedis.from_url(url)
         else:
             self._client = StrictRedis(host=host, port=port, db=db)
         self.expiration_time = expiration_time
+        self._signing_key: bytes | None = None
+
+    def _key(self, key) -> str:
+        """Return the namespaced Redis key."""
+        return f"{self.KEY_PREFIX}{key}"
+
+    def _get_signing_key(self) -> bytes:
+        """Derive the HMAC key for cache payload integrity from the server secret.
+
+        Bound to the same ``SECRET_KEY`` used elsewhere, so no extra config is
+        required. Cached after first use (the secret does not change at runtime).
+        """
+        if self._signing_key is None:
+            from langflow.services.deps import get_settings_service
+
+            secret = get_settings_service().auth_settings.SECRET_KEY.get_secret_value()
+            self._signing_key = hashlib.sha256(b"langflow-redis-cache-hmac:" + secret.encode()).digest()
+        return self._signing_key
+
+    def _integrity_tag(self, namespaced_key: str, payload: bytes) -> bytes:
+        """Compute the HMAC-SHA256 tag binding ``payload`` to ``namespaced_key``.
+
+        The Redis key is mixed in as associated authenticated data so a tag is
+        only valid for the exact key the payload was written under. Without this
+        binding, a payload signed for one key verifies under any other key,
+        letting anyone with write access to the ``langflow:cache:`` namespace
+        relocate/replay a validly-signed entry across keys (cross-key
+        substitution → type confusion / stale-value injection) without ever
+        knowing the secret. The key is length-prefixed so the (key, payload)
+        framing is unambiguous and bytes cannot be shifted across the boundary
+        while keeping a valid tag.
+        """
+        mac = hmac.new(self._get_signing_key(), digestmod=hashlib.sha256)
+        key_bytes = namespaced_key.encode("utf-8")
+        mac.update(len(key_bytes).to_bytes(8, "big"))
+        mac.update(key_bytes)
+        mac.update(payload)
+        return mac.digest()
 
     async def is_connected(self) -> bool:
         """Check if the Redis client is connected."""
@@ -236,20 +312,58 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
     async def get(self, key, lock=None):
         if key is None:
             return CACHE_MISS
-        value = await self._client.get(str(key))
-        return dill.loads(value) if value else CACHE_MISS
+        namespaced_key = self._key(key)
+        value = await self._client.get(namespaced_key)
+        if not value:
+            return CACHE_MISS
+        # Integrity check before deserializing. The Redis datastore is an
+        # untrusted boundary (a co-tenant on a shared Redis, an exposed/un-ACL'd
+        # port, or anyone able to write under the langflow:cache: namespace could
+        # plant a payload). dill.loads() executes embedded reduce gadgets, so we
+        # only deserialize bytes carrying a valid HMAC produced with the server
+        # secret. Unsigned/tampered/legacy entries are treated as a miss and are
+        # never passed to dill.loads (CWE-502).
+        if len(value) < self._HMAC_DIGEST_SIZE:
+            return CACHE_MISS
+        tag, payload = value[: self._HMAC_DIGEST_SIZE], value[self._HMAC_DIGEST_SIZE :]
+        expected = self._integrity_tag(namespaced_key, payload)
+        if not hmac.compare_digest(tag, expected):
+            await logger.awarning("RedisCache: discarding cache entry with an invalid integrity tag")
+            return CACHE_MISS
+        return dill.loads(payload)
 
     @override
     async def set(self, key, value, lock=None) -> None:
+        # Serialize first, in isolation from the network write. Live objects built during
+        # a flow run -- LLM clients holding an ``ssl.SSLContext``, httpx clients, thread
+        # locks, dynamically-created pydantic models -- are inherently unpicklable, and
+        # dill signals this with a variety of exception types (a bare ``TypeError`` for an
+        # SSLContext, ``AttributeError`` for dynamic classes, ``RecursionError`` for deep
+        # graphs, etc.) -- not only ``pickle.PicklingError``. Failing to serialize must not
+        # crash the caller (e.g. the vertex build); skip the cache write instead, which
+        # just means the value is recomputed on the next access. See issue #13764.
         try:
-            if pickled := dill.dumps(value, recurse=True):
-                result = await self._client.setex(str(key), self.expiration_time, pickled)
-                if not result:
-                    msg = "RedisCache could not set the value."
-                    raise ValueError(msg)
-        except pickle.PicklingError as exc:
-            msg = "RedisCache only accepts values that can be pickled. "
-            raise TypeError(msg) from exc
+            pickled = dill.dumps(value, recurse=True)
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(
+                f"RedisCache skipping cache for key '{key}': value is not serializable ({type(exc).__name__}: {exc})."
+            )
+            # Drop any previously-cached value for this key. ``upsert`` does
+            # get -> merge -> set, so leaving an older entry in place would let a
+            # later get() serve stale data instead of recomputing. (DEL of a
+            # missing key is a harmless no-op.)
+            await self._client.delete(self._key(key))
+            return
+        if pickled:
+            # Prefix an HMAC tag so get() can reject tampered/forged payloads
+            # before deserialization (see get()). The tag is bound to the
+            # namespaced key so it cannot be replayed under a different key.
+            namespaced_key = self._key(key)
+            tag = self._integrity_tag(namespaced_key, pickled)
+            result = await self._client.setex(namespaced_key, self.expiration_time, tag + pickled)
+            if not result:
+                msg = "RedisCache could not set the value."
+                raise ValueError(msg)
 
     @override
     async def upsert(self, key, value, lock=None) -> None:
@@ -273,18 +387,30 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
 
     @override
     async def delete(self, key, lock=None) -> None:
-        await self._client.delete(key)
+        await self._client.delete(self._key(key))
 
     @override
     async def clear(self, lock=None) -> None:
-        """Clear all items from the cache."""
-        await self._client.flushdb()
+        """Clear all items from the cache using a key-prefix scan to avoid nuking unrelated data."""
+        cursor = 0
+        pattern = f"{self.KEY_PREFIX}*"
+        while True:
+            cursor, keys = await self._client.scan(cursor, match=pattern, count=100)
+            if keys:
+                await self._client.delete(*keys)
+            if cursor == 0:
+                break
 
     async def contains(self, key) -> bool:
         """Check if the key is in the cache."""
         if key is None:
             return False
-        return bool(await self._client.exists(str(key)))
+        return bool(await self._client.exists(self._key(key)))
+
+    @override
+    async def teardown(self) -> None:
+        """Close the Redis client connection to prevent socket leaks across fork."""
+        await self._client.aclose()
 
     def __repr__(self) -> str:
         """Return a string representation of the RedisCache instance."""

@@ -20,6 +20,13 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
 
     database_service: DatabaseService = get_db_service()
     await database_service.ensure_postgresql_version()
+    # Fail fast with a clear, actionable message when a SQLite path cannot be
+    # opened (e.g. a relative LANGFLOW_DATABASE_URL whose parent directory does
+    # not exist), instead of the opaque "Error creating DB and tables" below.
+    # See issue #13634.
+    from langflow.services.database.service import check_sqlite_database_path
+
+    check_sqlite_database_path(database_service.database_url)
     try:
         if database_service.settings_service.settings.database_connection_retry:
             await database_service.create_db_and_tables_with_retry()
@@ -99,6 +106,15 @@ def validate_non_empty_string(v: str, info: object) -> str:
         msg = f"{field} must not be empty"
         raise ValueError(msg)
     return stripped
+
+
+def validate_non_empty_string_preserve_value(v: str, info: object) -> str:
+    """Validate a string field is non-empty without normalizing its value."""
+    if not v.strip():
+        field = getattr(info, "field_name", "Field")
+        msg = f"{field} must not be empty"
+        raise ValueError(msg)
+    return v
 
 
 def validate_non_empty_string_optional(v: str | None, info: object) -> str | None:

@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -34,21 +35,21 @@ test(
 
     await page.getByTestId("add-project-button").click();
 
-    let countFolders = await page.getByText("New Project").count();
+    let countFolders = await page.getByText(TEXTS.labelNewProject).count();
 
     while (countFolders > 1) {
-      await page.getByText("New Project").first().hover();
+      await page.getByText(TEXTS.labelNewProject).first().hover();
 
       await page.getByTestId("more-options-button").first().click();
       await page.getByTestId("btn-delete-project").click();
-      await page.getByText("Delete").last().click();
+      await page.getByText(TEXTS.delete).last().click();
       countFolders--;
       await page.waitForTimeout(1000);
     }
 
     // Get the bounding boxes of the elements
     const sourceElement = await page.getByTestId(`card-${randomName}`).first();
-    const targetElement = await page.getByText("New Project").last();
+    const targetElement = await page.getByText(TEXTS.labelNewProject).last();
 
     const sourceBox = await sourceElement.boundingBox();
     const targetBox = await targetElement.boundingBox();
@@ -67,7 +68,7 @@ test(
 
     await page.waitForTimeout(3000);
 
-    await page.getByText("New Project").last().click();
+    await page.getByText(TEXTS.labelNewProject).last().click();
 
     expect(await page.getByTestId(`card-${randomName}`).first().isVisible());
 
@@ -79,7 +80,7 @@ test(
 
     await page.waitForTimeout(3000);
 
-    await page.getByText("New Project").last().click();
+    await page.getByText(TEXTS.labelNewProject).last().click();
     expect(
       await page.getByTestId(`card-${secondRandomName}`).first().isVisible(),
     );
@@ -88,7 +89,9 @@ test(
     const secondSourceElement = await page
       .getByTestId(`card-${secondRandomName}`)
       .first();
-    const secondTargetElement = await page.getByText("New Project").last();
+    const secondTargetElement = await page
+      .getByText(TEXTS.labelNewProject)
+      .last();
 
     const secondSourceBox = await secondSourceElement.boundingBox();
     const secondTargetBox = await secondTargetElement.boundingBox();

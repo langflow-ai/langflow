@@ -9,9 +9,9 @@ import shlex
 import shutil
 import subprocess
 import unicodedata
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from types import UnionType
-from typing import Any, Union, get_args, get_origin
+from typing import Any, TypedDict, Union, get_args, get_origin
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -26,6 +26,7 @@ from pydantic import BaseModel
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.log.logger import logger
+from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
@@ -37,6 +38,7 @@ HTTP_NOT_FOUND = 404
 HTTP_METHOD_NOT_ALLOWED = 405
 HTTP_NOT_ACCEPTABLE = 406
 HTTP_BAD_REQUEST = 400
+HTTP_TOO_MANY_REQUESTS = 429
 HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
@@ -51,6 +53,28 @@ def _get_mcp_setting(key: str, default: Any = None) -> Any:
         settings = get_settings_service().settings
         _mcp_settings_cache[key] = getattr(settings, key, default)
     return _mcp_settings_cache[key]
+
+
+def _resolve_mcp_tool_execution_timeout(tool_execution_timeout: float | None) -> float:
+    """Resolve MCP tool execution timeout from explicit input or MCP settings.
+
+    Priority for picking the timeout:
+    1. `tool_execution_timeout`: Custom UI override directly on the component (Highest).
+    2. Global Settings: The maximum value between `mcp_tool_execution_timeout`
+       and `mcp_server_timeout` from global settings.
+    3. Fallback: 180.0 seconds if no custom or global settings exist (Lowest).
+
+    Negative values are treated as unset (use system default) because
+    ``asyncio.wait_for`` immediately raises ``TimeoutError`` for any timeout < 0.
+    """
+    if tool_execution_timeout is not None and float(tool_execution_timeout) > 0:
+        return float(tool_execution_timeout)
+
+    configured = _get_mcp_setting("mcp_tool_execution_timeout", None)
+    mcp_server_timeout = _get_mcp_setting("mcp_server_timeout", None)
+
+    configured_timeouts = [float(value) for value in (configured, mcp_server_timeout) if value is not None]
+    return max(configured_timeouts) if configured_timeouts else 180.0
 
 
 def get_max_sessions_per_server() -> int:
@@ -335,6 +359,13 @@ def _is_pydantic_model_type(annotation: Any) -> bool:
     return isinstance(ann, type) and issubclass(ann, BaseModel)
 
 
+def _unwrap_langflow_json_value(value: Any) -> Any:
+    """Return the payload dict from Langflow JSON/Data values wired into MCP object parameters."""
+    if isinstance(value, Data):
+        return value.data
+    return value
+
+
 def _try_convert_value(value: Any, expected_type: type, field_name: str, tool_name: str) -> Any:
     """Try to convert value to expected type. Raise ValueError with clear message on failure."""
 
@@ -346,6 +377,9 @@ def _try_convert_value(value: Any, expected_type: type, field_name: str, tool_na
 
     if value is None and expected_type in (int, float, bool, dict, list):
         raise _err(expected_type_desc, "but received None.")
+
+    if expected_type in (dict, list):
+        value = _unwrap_langflow_json_value(value)
 
     # return correctly typed value, but handle the
     # special case of bool as this is a subclass of int
@@ -426,24 +460,25 @@ def _normalize_arguments_for_mcp(
         expected = _resolve_expected_type(model_field.annotation)
         if expected is None:
             # Nested Pydantic model (object with properties): UI/API often sends as JSON string
-            if _is_pydantic_model_type(model_field.annotation) and isinstance(value, str):
-                try:
-                    parsed = json.loads(value)
-                except json.JSONDecodeError as e:
-                    msg = (
-                        f"Tool '{tool_name}': Parameter '{field_name}' expects object "
-                        f"but received invalid JSON string {value!r}; {e}"
-                    )
-                    raise ValueError(msg) from e
-                if not isinstance(parsed, dict):
-                    msg = (
-                        f"Tool '{tool_name}': Parameter '{field_name}' expects object "
-                        f"but JSON parsed to {type(parsed).__name__}."
-                    )
-                    raise ValueError(msg)
-                result[field_name] = parsed
-            else:
-                result[field_name] = value
+            if _is_pydantic_model_type(model_field.annotation):
+                value = _unwrap_langflow_json_value(value)
+                if isinstance(value, str):
+                    try:
+                        parsed = json.loads(value)
+                    except json.JSONDecodeError as e:
+                        msg = (
+                            f"Tool '{tool_name}': Parameter '{field_name}' expects object "
+                            f"but received invalid JSON string {value!r}; {e}"
+                        )
+                        raise ValueError(msg) from e
+                    if not isinstance(parsed, dict):
+                        msg = (
+                            f"Tool '{tool_name}': Parameter '{field_name}' expects object "
+                            f"but JSON parsed to {type(parsed).__name__}."
+                        )
+                        raise ValueError(msg)  # noqa: TRY004
+                    value = parsed
+            result[field_name] = value
             continue
         if expected is str:
             result[field_name] = value
@@ -722,6 +757,115 @@ async def _validate_connection_params(mode: str, command: str | None = None, url
         raise ValueError(msg)
 
 
+# Streamable HTTP connect: retries before giving up (transient network / server restart)
+STREAMABLE_HTTP_CONNECT_ATTEMPTS = 3
+STREAMABLE_HTTP_RETRY_BASE_DELAY_SEC = 0.35
+
+
+def _iter_exception_leaves(exc: BaseException) -> list[BaseException]:
+    """Flatten ExceptionGroup / TaskGroup failures to individual exceptions (Python 3.11+)."""
+    beg = getattr(__import__("builtins"), "BaseExceptionGroup", None)
+    if beg is not None and isinstance(exc, beg):
+        leaves: list[BaseException] = []
+        for sub in exc.exceptions:
+            leaves.extend(_iter_exception_leaves(sub))
+        return leaves
+    return [exc]
+
+
+def _is_transient_streamable_http_error(exc: BaseException) -> bool:
+    """True when Streamable HTTP failed for a likely-temporary reason; do not fall back to SSE."""
+    for leaf in _iter_exception_leaves(exc):
+        if isinstance(leaf, (asyncio.TimeoutError, ConnectionError, OSError, BrokenPipeError)):
+            return True
+        if isinstance(leaf, ClosedResourceError):
+            return True
+        if isinstance(leaf, httpx.RequestError):
+            return True
+        if isinstance(leaf, httpx.HTTPStatusError):
+            # Server errors and rate limits — retry Streamable HTTP, not SSE switch
+            if leaf.response.status_code >= HTTP_INTERNAL_SERVER_ERROR:
+                return True
+            if leaf.response.status_code == HTTP_TOO_MANY_REQUESTS:
+                return True
+            # 404/405/406: try SSE; other 4xx: retry Streamable HTTP
+            return leaf.response.status_code not in (
+                HTTP_NOT_FOUND,
+                HTTP_METHOD_NOT_ALLOWED,
+                HTTP_NOT_ACCEPTABLE,
+            )
+        if isinstance(leaf, McpError):
+            msg = str(leaf).lower()
+            return not any(x in msg for x in ("404", "405", "406", "not found", "method not allowed"))
+        msg = str(leaf).lower()
+        if any(
+            x in msg
+            for x in (
+                "session terminated",
+                "connection closed",
+                "connection lost",
+                "connection reset",
+                "taskgroup",
+                "unhandled errors in a taskgroup",
+                "broken pipe",
+                "transport closed",
+                "stream closed",
+            )
+        ):
+            return True
+    return False
+
+
+def _should_attempt_sse_after_streamable_failure(exc: BaseException) -> bool:
+    """True when Streamable HTTP likely failed because the endpoint expects legacy SSE, not transient outage."""
+    if _is_transient_streamable_http_error(exc):
+        return False
+    for leaf in _iter_exception_leaves(exc):
+        if isinstance(leaf, httpx.HTTPStatusError) and leaf.response.status_code in (
+            HTTP_NOT_FOUND,
+            HTTP_METHOD_NOT_ALLOWED,
+            HTTP_NOT_ACCEPTABLE,
+        ):
+            return True
+        if isinstance(leaf, McpError):
+            msg = str(leaf).lower()
+            if any(x in msg for x in ("404", "405", "406", "not found", "method not allowed", "not acceptable")):
+                return True
+    lowered = str(exc).lower()
+    return any(x in lowered for x in ("404", "405", "406", "not found", "method not allowed", "not acceptable"))
+
+
+def _is_mcp_session_bust_error(exc: BaseException) -> bool:
+    """Whether cached ClientSession should be discarded and re-established (run_tool / list_tools)."""
+    for leaf in _iter_exception_leaves(exc):
+        if isinstance(leaf, ClosedResourceError):
+            return True
+        if isinstance(leaf, McpError):
+            msg = str(leaf).lower()
+            if any(x in msg for x in ("connection closed", "session terminated", "connection lost")):
+                return True
+        msg = str(leaf).lower()
+        if any(x in msg for x in ("session terminated", "connection closed", "connection lost")):
+            return True
+    return False
+
+
+class _ServerLockEntry(TypedDict):
+    """Shape of each value in ``MCPSessionManager._server_locks``.
+
+    ``pins`` is the number of callers that have obtained (but not yet
+    released) the lock via ``_server_lock``; it gates reclamation of the
+    entry so a new caller can't grab a fresh lock while an older caller is
+    about to enter the old one.
+    """
+
+    lock: asyncio.Lock
+    pins: int
+
+
+# TODO(langflow-ai/langflow#12541-followup): MCPSessionManager lives in this
+# 2k+ line module; extract it (and the concurrency primitives below) into a
+# dedicated ``mcp/session_manager.py`` so future edits stay small.
 class MCPSessionManager:
     """Manages persistent MCP sessions with proper context manager lifecycle.
 
@@ -744,8 +888,102 @@ class MCPSessionManager:
         # Cache which transport works for each server to avoid retrying failed transports
         # server_key -> "streamable_http" | "sse"
         self._transport_preference: dict[str, str] = {}
+        # Per-server asyncio locks to serialize session create/reuse/cleanup under
+        # concurrent access. Without this, two concurrent flow executions sharing
+        # the same MCP server URL can race on the sessions dict and raise a
+        # KeyError from `del sessions[session_id]` in `_cleanup_session_by_id`, or
+        # create colliding session_ids from `len(sessions)`.
+        #
+        # Each entry is a `_ServerLockEntry` {"lock": asyncio.Lock(), "pins": int}.
+        # The pin count is the number of callers that have obtained (but not yet
+        # released) the lock via `_server_lock`. We reclaim the entry only when
+        # pins == 0 and the lock is not held, to avoid a new caller grabbing a
+        # fresh lock while an older caller is about to enter the old one.
+        self._server_locks: dict[str, _ServerLockEntry] = {}
+        self._locks_guard = asyncio.Lock()
+        # Monotonic counter per server_key to generate unique session_ids even
+        # when sessions are removed between allocations.
+        self._session_id_counters: dict[str, int] = {}
         self._cleanup_task = None
         self._start_cleanup_task()
+
+    @contextlib.asynccontextmanager
+    async def _server_lock(self, server_key: str) -> AsyncIterator[None]:
+        """Acquire the per-server lock with pin counting for safe reclamation.
+
+        The pin count prevents reclaiming a lock that another task is about to
+        enter (e.g. between obtaining a reference and calling ``async with``).
+        Reclamation in `_cleanup_idle_sessions` / `_release_server_lock_if_idle`
+        only runs when pins drop to zero *and* the lock is not held.
+        """
+        async with self._locks_guard:
+            entry = self._server_locks.get(server_key)
+            if entry is None:
+                entry = _ServerLockEntry(lock=asyncio.Lock(), pins=0)
+                self._server_locks[server_key] = entry
+            entry["pins"] += 1
+            lock = entry["lock"]
+        try:
+            async with lock:
+                yield
+        finally:
+            await self._release_server_lock_if_idle(server_key)
+
+    async def _release_server_lock_if_idle(self, server_key: str):
+        """Drop the pin and, once the server is fully idle, reclaim the maps.
+
+        Reclamation is deliberately conservative: we only drop the lock entry
+        (and the matching session-id counter) when *both* conditions hold —
+        pin count is zero and the server has no remaining sessions. This
+        prevents two problems:
+        - Churning the lock on every `get_session` call while a server is
+          actively in use (pin count oscillates 0↔1 between callers).
+        - Rotating auth/session headers (which change `server_key` via
+          `_get_server_key`) leaking per-key entries forever in long-lived
+          processes.
+        """
+        async with self._locks_guard:
+            entry = self._server_locks.get(server_key)
+            if entry is None:
+                return
+            entry["pins"] -= 1
+            if entry["pins"] < 0:
+                # A negative pin count means a missing acquire or a double release.
+                # Log loudly so it surfaces in telemetry instead of being swept.
+                await logger.awarning(
+                    f"Negative pin count ({entry['pins']}) for server_key {server_key}; "
+                    "this indicates a missing _server_lock acquire or a double release.",
+                )
+            if entry["pins"] <= 0 and not entry["lock"].locked() and server_key not in self.sessions_by_server:
+                self._server_locks.pop(server_key, None)
+                self._session_id_counters.pop(server_key, None)
+
+    def _next_session_id(self, server_key: str) -> str:
+        """Generate a monotonically unique session_id for *server_key*.
+
+        Caller must hold ``self._server_lock(server_key)`` while invoking this.
+        The increment is otherwise unsynchronised — two concurrent callers
+        without the lock would race on ``_session_id_counters[server_key]`` and
+        produce colliding ids.
+        """
+        current = self._session_id_counters.get(server_key, 0)
+        self._session_id_counters[server_key] = current + 1
+        return f"{server_key}_{current}"
+
+    def _sessions_for(self, server_key: str) -> dict[str, dict[str, Any]]:
+        """Return the sessions dict for *server_key* (empty dict if absent).
+
+        Encapsulates the ``sessions_by_server[server_key]["sessions"]`` shape
+        so callers don't have to reach through the outer envelope. Handles the
+        legacy structure (sessions stored directly under the server_key)
+        uniformly as well.
+        """
+        server_data = self.sessions_by_server.get(server_key)
+        if server_data is None:
+            return {}
+        if isinstance(server_data, dict) and "sessions" in server_data:
+            return server_data["sessions"]
+        return server_data  # legacy flat structure
 
     def _start_cleanup_task(self):
         """Start the periodic cleanup task."""
@@ -767,30 +1005,37 @@ class MCPSessionManager:
                 await logger.awarning(f"Error in periodic cleanup: {e}")
 
     async def _cleanup_idle_sessions(self):
-        """Clean up sessions that have been idle for too long."""
+        """Clean up sessions that have been idle for too long.
+
+        Acquires the per-server lock before mutating the sessions dict so we
+        don't race with `get_session()` — otherwise a concurrent `get_session`
+        could finish validating a session while this task pops and cancels it,
+        handing the caller a dead session plus a dangling refcount entry.
+        """
         current_time = asyncio.get_event_loop().time()
-        servers_to_remove = []
 
-        for server_key, server_data in self.sessions_by_server.items():
-            sessions = server_data.get("sessions", {})
-            sessions_to_remove = []
+        # Snapshot keys to avoid mutating-while-iterating.
+        for server_key in list(self.sessions_by_server.keys()):
+            async with self._server_lock(server_key):
+                sessions = self._sessions_for(server_key)
+                if not sessions and server_key not in self.sessions_by_server:
+                    continue
 
-            for session_id, session_info in list(sessions.items()):
-                if current_time - session_info["last_used"] > get_session_idle_timeout():
-                    sessions_to_remove.append(session_id)
+                sessions_to_remove = [
+                    session_id
+                    for session_id, session_info in list(sessions.items())
+                    if current_time - session_info["last_used"] > get_session_idle_timeout()
+                ]
 
-            # Clean up idle sessions
-            for session_id in sessions_to_remove:
-                await logger.ainfo(f"Cleaning up idle session {session_id} for server {server_key}")
-                await self._cleanup_session_by_id(server_key, session_id)
+                for session_id in sessions_to_remove:
+                    await logger.ainfo(f"Cleaning up idle session {session_id} for server {server_key}")
+                    await self._cleanup_session_by_id(server_key, session_id)
 
-            # Remove server entry if no sessions left
-            if not sessions:
-                servers_to_remove.append(server_key)
-
-        # Clean up empty server entries
-        for server_key in servers_to_remove:
-            del self.sessions_by_server[server_key]
+                # Remove server entry if no sessions left. The counter for
+                # this server_key is reclaimed by `_release_server_lock_if_idle`
+                # once this lock's pin count hits zero.
+                if not sessions:
+                    self.sessions_by_server.pop(server_key, None)
 
     def _get_server_key(self, connection_params, transport_type: str) -> str:
         """Generate a consistent server key based on connection parameters."""
@@ -813,31 +1058,32 @@ class MCPSessionManager:
         # Fallback to a generic key
         return f"{transport_type}_{hash(str(connection_params))}"
 
+    async def invalidate_server_key(self, server_key: str) -> None:
+        """Tear down all sessions for this server and reset transport preference (e.g. remote MCP restart)."""
+        self._transport_preference.pop(server_key, None)
+        if server_key in self.sessions_by_server:
+            server_data = self.sessions_by_server[server_key]
+            sessions = server_data.get("sessions", {}) if isinstance(server_data, dict) else server_data
+            for sid in list(sessions.keys()):
+                await self._cleanup_session_by_id(server_key, sid)
+            self.sessions_by_server.pop(server_key, None)
+        for k in list(self._session_refcount):
+            if k[0] == server_key:
+                self._session_refcount.pop(k, None)
+        for ctx, pair in list(self._context_to_session.items()):
+            if pair[0] == server_key:
+                self._context_to_session.pop(ctx, None)
+
     async def _validate_session_connectivity(self, session) -> bool:
         """Validate that the session is actually usable by testing a simple operation."""
         try:
             # Try to list tools as a connectivity test (this is a lightweight operation)
             # Use a shorter timeout for the connectivity test to fail fast
             response = await asyncio.wait_for(session.list_tools(), timeout=3.0)
-        except (asyncio.TimeoutError, ConnectionError, OSError, ValueError) as e:
-            await logger.adebug(f"Session connectivity test failed (standard error): {e}")
+        except Exception as e:  # noqa: BLE001
+            # Any failure means the session is not safe to reuse (SDK errors, terminated session, etc.)
+            await logger.adebug(f"Session connectivity test failed: {type(e).__name__}: {e}")
             return False
-        except Exception as e:
-            # Handle MCP-specific errors that might not be in the standard list
-            error_str = str(e)
-            if (
-                "ClosedResourceError" in str(type(e))
-                or "Connection closed" in error_str
-                or "Connection lost" in error_str
-                or "Connection failed" in error_str
-                or "Transport closed" in error_str
-                or "Stream closed" in error_str
-            ):
-                await logger.adebug(f"Session connectivity test failed (MCP connection error): {e}")
-                return False
-            # Re-raise unexpected errors
-            await logger.awarning(f"Unexpected error in connectivity test: {e}")
-            raise
         else:
             # Validate that we got a meaningful response
             if response is None:
@@ -862,83 +1108,95 @@ class MCPSessionManager:
         The key insight is that we should reuse sessions based on the server
         identity (command + args for stdio, URL for Streamable HTTP) rather than the context_id.
         This prevents creating a new subprocess for each unique context.
+
+        Concurrent callers for the same server are serialized via a per-server
+        lock. This is required to keep the `sessions` dict consistent across
+        concurrent flow executions that share a single `MCPSessionManager`
+        (e.g. two `MCPTools` components pointing at the same SSE URL).
         """
         server_key = self._get_server_key(connection_params, transport_type)
 
-        # Ensure server entry exists
-        if server_key not in self.sessions_by_server:
-            self.sessions_by_server[server_key] = {"sessions": {}, "last_cleanup": asyncio.get_event_loop().time()}
+        async with self._server_lock(server_key):
+            # Ensure server entry exists
+            if server_key not in self.sessions_by_server:
+                self.sessions_by_server[server_key] = {
+                    "sessions": {},
+                    "last_cleanup": asyncio.get_event_loop().time(),
+                }
 
-        server_data = self.sessions_by_server[server_key]
-        sessions = server_data["sessions"]
+            server_data = self.sessions_by_server[server_key]
+            sessions = server_data["sessions"]
 
-        # Try to find a healthy existing session
-        for session_id, session_info in list(sessions.items()):
-            session = session_info["session"]
-            task = session_info["task"]
+            # Try to find a healthy existing session
+            for session_id, session_info in list(sessions.items()):
+                session = session_info["session"]
+                task = session_info["task"]
 
-            # Check if session is still alive
-            if not task.done():
-                # Update last used time
-                session_info["last_used"] = asyncio.get_event_loop().time()
+                # Check if session is still alive
+                if not task.done():
+                    # Update last used time
+                    session_info["last_used"] = asyncio.get_event_loop().time()
 
-                # Quick health check
-                if await self._validate_session_connectivity(session):
-                    await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
-                    # record mapping & bump ref-count for backwards compatibility
-                    self._context_to_session[context_id] = (server_key, session_id)
-                    self._session_refcount[(server_key, session_id)] = (
-                        self._session_refcount.get((server_key, session_id), 0) + 1
-                    )
-                    return session
-                await logger.ainfo(f"Session {session_id} for server {server_key} failed health check, cleaning up")
-                await self._cleanup_session_by_id(server_key, session_id)
+                    # Quick health check
+                    if await self._validate_session_connectivity(session):
+                        await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
+                        # record mapping & bump ref-count for backwards compatibility
+                        self._context_to_session[context_id] = (server_key, session_id)
+                        self._session_refcount[(server_key, session_id)] = (
+                            self._session_refcount.get((server_key, session_id), 0) + 1
+                        )
+                        return session
+                    await logger.ainfo(f"Session {session_id} for server {server_key} failed health check, cleaning up")
+                    await self._cleanup_session_by_id(server_key, session_id)
+                else:
+                    # Task is done, clean up
+                    await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
+                    await self._cleanup_session_by_id(server_key, session_id)
+
+            # Check if we've reached the maximum number of sessions for this server
+            if len(sessions) >= get_max_sessions_per_server():
+                # Remove the oldest session
+                oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
+                await logger.ainfo(
+                    f"Maximum sessions reached for server {server_key}, removing oldest session {oldest_session_id}"
+                )
+                await self._cleanup_session_by_id(server_key, oldest_session_id)
+
+            # Create new session. Use a monotonic counter so removed sessions
+            # don't cause id collisions with newly-created sessions.
+            session_id = self._next_session_id(server_key)
+            await logger.ainfo(f"Creating new session {session_id} for server {server_key}")
+
+            if transport_type == "stdio":
+                session, task = await self._create_stdio_session(session_id, connection_params)
+                actual_transport = "stdio"
+            elif transport_type == "streamable_http":
+                # Pass the cached transport preference if available (SSE only when last success required it)
+                preferred_transport = self._transport_preference.get(server_key)
+                session, task, actual_transport, sse_pref_lock = await self._create_streamable_http_session(
+                    session_id, connection_params, preferred_transport
+                )
+                if actual_transport == "streamable_http":
+                    self._transport_preference[server_key] = "streamable_http"
+                elif sse_pref_lock:
+                    self._transport_preference[server_key] = "sse"
             else:
-                # Task is done, clean up
-                await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
-                await self._cleanup_session_by_id(server_key, session_id)
+                msg = f"Unknown transport type: {transport_type}"
+                raise ValueError(msg)
 
-        # Check if we've reached the maximum number of sessions for this server
-        if len(sessions) >= get_max_sessions_per_server():
-            # Remove the oldest session
-            oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
-            await logger.ainfo(
-                f"Maximum sessions reached for server {server_key}, removing oldest session {oldest_session_id}"
-            )
-            await self._cleanup_session_by_id(server_key, oldest_session_id)
+            # Store session info with the actual transport used
+            sessions[session_id] = {
+                "session": session,
+                "task": task,
+                "type": actual_transport,
+                "last_used": asyncio.get_event_loop().time(),
+            }
 
-        # Create new session
-        session_id = f"{server_key}_{len(sessions)}"
-        await logger.ainfo(f"Creating new session {session_id} for server {server_key}")
+            # register mapping & initial ref-count for the new session
+            self._context_to_session[context_id] = (server_key, session_id)
+            self._session_refcount[(server_key, session_id)] = 1
 
-        if transport_type == "stdio":
-            session, task = await self._create_stdio_session(session_id, connection_params)
-            actual_transport = "stdio"
-        elif transport_type == "streamable_http":
-            # Pass the cached transport preference if available
-            preferred_transport = self._transport_preference.get(server_key)
-            session, task, actual_transport = await self._create_streamable_http_session(
-                session_id, connection_params, preferred_transport
-            )
-            # Cache the transport that worked for future connections
-            self._transport_preference[server_key] = actual_transport
-        else:
-            msg = f"Unknown transport type: {transport_type}"
-            raise ValueError(msg)
-
-        # Store session info with the actual transport used
-        sessions[session_id] = {
-            "session": session,
-            "task": task,
-            "type": actual_transport,
-            "last_used": asyncio.get_event_loop().time(),
-        }
-
-        # register mapping & initial ref-count for the new session
-        self._context_to_session[context_id] = (server_key, session_id)
-        self._session_refcount[(server_key, session_id)] = 1
-
-        return session
+            return session
 
     async def _create_stdio_session(self, session_id: str, connection_params):
         """Create a new stdio session as a background task to avoid context issues."""
@@ -997,30 +1255,26 @@ class MCPSessionManager:
     async def _create_streamable_http_session(
         self, session_id: str, connection_params, preferred_transport: str | None = None
     ):
-        """Create a new Streamable HTTP session with SSE fallback as a background task to avoid context issues.
+        """Create Streamable HTTP session with selective SSE fallback (background task lifecycle).
 
-        Args:
-            session_id: Unique identifier for this session
-            connection_params: Connection parameters including URL, headers, timeouts, verify_ssl
-            preferred_transport: If set to "sse", skip Streamable HTTP and go directly to SSE
+        SSE is attempted only when Streamable HTTP fails with an endpoint/transport mismatch signal
+        (e.g. HTTP 404/405/406), not for transient outages (connection reset, TaskGroup teardown, etc.).
 
         Returns:
-            tuple: (session, task, transport_used) where transport_used is "streamable_http" or "sse"
+            tuple: (session, task, transport_used, sse_preference_lock) where sse_preference_lock is True
+            iff SSE connected successfully and the server key should prefer legacy SSE in the future.
         """
         import asyncio
 
         from mcp.client.sse import sse_client
         from mcp.client.streamable_http import streamablehttp_client
 
-        # Create a future to get the session
         session_future: asyncio.Future[ClientSession] = asyncio.Future()
-        # Track which transport succeeded
         used_transport: list[str] = []
+        sse_preference_locked: list[bool] = [False]
 
-        # Get verify_ssl option from connection params, default to True
         verify_ssl = connection_params.get("verify_ssl", True)
 
-        # Create custom httpx client factory with SSL verification option
         def custom_httpx_factory(
             headers: dict[str, str] | None = None,
             timeout: httpx.Timeout | None = None,
@@ -1034,117 +1288,128 @@ class MCPSessionManager:
             """Background task that keeps the session alive."""
             streamable_error = None
 
-            # Skip Streamable HTTP if we know SSE works for this server
             if preferred_transport != "sse":
-                # Try Streamable HTTP first with a quick timeout
-                try:
-                    await logger.adebug(f"Attempting Streamable HTTP connection for session {session_id}")
-                    # Use a shorter timeout for the initial connection attempt (2 seconds)
-                    async with streamablehttp_client(
-                        url=connection_params["url"],
-                        headers=connection_params["headers"],
-                        timeout=connection_params["timeout_seconds"],
-                        httpx_client_factory=custom_httpx_factory,
-                    ) as (read, write, _):
-                        session = ClientSession(read, write)
-                        async with session:
-                            # Initialize with a timeout to fail fast
-                            await asyncio.wait_for(session.initialize(), timeout=2.0)
-                            used_transport.append("streamable_http")
-                            await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
-                            # Signal that session is ready
-                            session_future.set_result(session)
+                for attempt in range(STREAMABLE_HTTP_CONNECT_ATTEMPTS):
+                    try:
+                        await logger.adebug(
+                            f"Attempting Streamable HTTP connection for session {session_id} "
+                            f"(attempt {attempt + 1}/{STREAMABLE_HTTP_CONNECT_ATTEMPTS})"
+                        )
+                        async with streamablehttp_client(
+                            url=connection_params["url"],
+                            headers=connection_params["headers"],
+                            timeout=connection_params["timeout_seconds"],
+                            httpx_client_factory=custom_httpx_factory,
+                        ) as (read, write, _):
+                            session = ClientSession(read, write)
+                            async with session:
+                                await asyncio.wait_for(session.initialize(), timeout=2.0)
+                                used_transport.append("streamable_http")
+                                await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
+                                session_future.set_result(session)
 
-                            # Keep the session alive until cancelled
-                            import anyio
+                                import anyio
 
-                            event = anyio.Event()
-                            try:
-                                await event.wait()
-                            except asyncio.CancelledError:
-                                await logger.ainfo(f"Session {session_id} (Streamable HTTP) is shutting down")
-                except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001
-                    # If Streamable HTTP fails or times out, try SSE as fallback immediately
-                    streamable_error = e
-                    error_type = "timed out" if isinstance(e, asyncio.TimeoutError) else "failed"
+                                event = anyio.Event()
+                                try:
+                                    await event.wait()
+                                except asyncio.CancelledError:
+                                    await logger.ainfo(f"Session {session_id} (Streamable HTTP) is shutting down")
+                        return  # noqa: TRY300
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        if _is_transient_streamable_http_error(e) and attempt < STREAMABLE_HTTP_CONNECT_ATTEMPTS - 1:
+                            await logger.awarning(
+                                f"Streamable HTTP transient failure for session {session_id} "
+                                f"(attempt {attempt + 1}): {e}; retrying..."
+                            )
+                            await asyncio.sleep(STREAMABLE_HTTP_RETRY_BASE_DELAY_SEC * (attempt + 1))
+                            continue
+                        streamable_error = e
+                        break
+
+                if streamable_error is not None:
+                    if _is_transient_streamable_http_error(streamable_error):
+                        await logger.aerror(
+                            f"Streamable HTTP failed after {STREAMABLE_HTTP_CONNECT_ATTEMPTS} attempt(s) "
+                            f"for session {session_id}: {streamable_error}. Not attempting SSE fallback."
+                        )
+                        if not session_future.done():
+                            session_future.set_exception(streamable_error)
+                        return
+                    if not _should_attempt_sse_after_streamable_failure(streamable_error):
+                        if not session_future.done():
+                            session_future.set_exception(streamable_error)
+                        return
                     await logger.awarning(
-                        f"Streamable HTTP {error_type} for session {session_id}: {e}. Falling back to SSE..."
+                        f"Streamable HTTP failed for session {session_id}: {streamable_error}. "
+                        "Trying SSE (endpoint may require legacy transport)..."
                     )
             else:
                 await logger.adebug(f"Skipping Streamable HTTP for session {session_id}, using cached SSE preference")
 
-            # Try SSE if Streamable HTTP failed or if SSE is preferred
-            if streamable_error is not None or preferred_transport == "sse":
-                try:
-                    await logger.adebug(f"Attempting SSE connection for session {session_id}")
-                    # Extract SSE read timeout from connection params, default to 30s if not present
-                    sse_read_timeout = connection_params.get("sse_read_timeout_seconds", 30)
+            # SSE path: preferred mode, or Streamable indicated legacy transport
+            try:
+                await logger.adebug(f"Attempting SSE connection for session {session_id}")
+                sse_read_timeout = connection_params.get("sse_read_timeout_seconds", 30)
 
-                    async with sse_client(
-                        connection_params["url"],
-                        connection_params["headers"],
-                        connection_params["timeout_seconds"],
-                        sse_read_timeout,
-                        httpx_client_factory=custom_httpx_factory,
-                    ) as (read, write):
-                        session = ClientSession(read, write)
-                        async with session:
-                            await session.initialize()
-                            used_transport.append("sse")
-                            fallback_msg = " (fallback)" if streamable_error else " (preferred)"
-                            await logger.ainfo(f"Session {session_id} connected via SSE{fallback_msg}")
-                            # Signal that session is ready
-                            if not session_future.done():
-                                session_future.set_result(session)
-
-                            # Keep the session alive until cancelled
-                            import anyio
-
-                            event = anyio.Event()
-                            try:
-                                await event.wait()
-                            except asyncio.CancelledError:
-                                await logger.ainfo(f"Session {session_id} (SSE) is shutting down")
-                except Exception as sse_error:  # noqa: BLE001
-                    # Both transports failed (or just SSE if it was preferred)
-                    if streamable_error:
-                        await logger.aerror(
-                            f"Both Streamable HTTP and SSE failed for session {session_id}. "
-                            f"Streamable HTTP error: {streamable_error}. SSE error: {sse_error}"
-                        )
+                async with sse_client(
+                    connection_params["url"],
+                    connection_params["headers"],
+                    connection_params["timeout_seconds"],
+                    sse_read_timeout,
+                    httpx_client_factory=custom_httpx_factory,
+                ) as (read, write):
+                    session = ClientSession(read, write)
+                    async with session:
+                        await session.initialize()
+                        used_transport.append("sse")
+                        sse_preference_locked[0] = True
+                        fallback_msg = " (fallback)" if streamable_error else " (preferred)"
+                        await logger.ainfo(f"Session {session_id} connected via SSE{fallback_msg}")
                         if not session_future.done():
-                            session_future.set_exception(
-                                ValueError(
-                                    f"Failed to connect via Streamable HTTP ({streamable_error}) or SSE ({sse_error})"
-                                )
+                            session_future.set_result(session)
+
+                        import anyio
+
+                        event = anyio.Event()
+                        try:
+                            await event.wait()
+                        except asyncio.CancelledError:
+                            await logger.ainfo(f"Session {session_id} (SSE) is shutting down")
+            except Exception as sse_error:  # noqa: BLE001
+                if streamable_error:
+                    await logger.aerror(
+                        f"Both Streamable HTTP and SSE failed for session {session_id}. "
+                        f"Streamable HTTP error: {streamable_error}. SSE error: {sse_error}"
+                    )
+                    if not session_future.done():
+                        session_future.set_exception(
+                            ValueError(
+                                f"Failed to connect via Streamable HTTP ({streamable_error}) or SSE ({sse_error})"
                             )
-                    else:
-                        await logger.aerror(f"SSE connection failed for session {session_id}: {sse_error}")
-                        if not session_future.done():
-                            session_future.set_exception(ValueError(f"Failed to connect via SSE: {sse_error}"))
+                        )
+                else:
+                    await logger.aerror(f"SSE connection failed for session {session_id}: {sse_error}")
+                    if not session_future.done():
+                        session_future.set_exception(ValueError(f"Failed to connect via SSE: {sse_error}"))
 
-        # Start the background task
         task = asyncio.create_task(session_task())
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
 
-        # Wait for session to be ready (use longer timeout for remote connections)
         try:
             session = await asyncio.wait_for(session_future, timeout=30.0)
-            # Log which transport was used
             if used_transport:
                 transport_used = used_transport[0]
                 await logger.ainfo(f"Session {session_id} successfully established using {transport_used}")
-                return session, task, transport_used
-            # This shouldn't happen, but handle it just in case
+                return session, task, transport_used, sse_preference_locked[0]
             msg = f"Session {session_id} established but transport not recorded"
             raise ValueError(msg)
         except asyncio.TimeoutError as timeout_err:
-            # Clean up the failed task
             if not task.done():
                 task.cancel()
-                import contextlib
-
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
             self._background_tasks.discard(task)
@@ -1153,22 +1418,24 @@ class MCPSessionManager:
             raise ValueError(msg) from timeout_err
 
     async def _cleanup_session_by_id(self, server_key: str, session_id: str):
-        """Clean up a specific session by server key and session ID."""
-        if server_key not in self.sessions_by_server:
+        """Clean up a specific session by server key and session ID.
+
+        Safe against concurrent cleanup of the same session: we `pop` the entry
+        up front so two concurrent callers don't both try to cancel the same
+        task or `del` the same key (which raised `KeyError: 'streamable_http_..._0'`
+        previously under concurrent flow execution).
+        """
+        sessions = self._sessions_for(server_key)
+        if not sessions and server_key not in self.sessions_by_server:
             return
 
-        server_data = self.sessions_by_server[server_key]
-        # Handle both old and new session structure
-        if isinstance(server_data, dict) and "sessions" in server_data:
-            sessions = server_data["sessions"]
-        else:
-            # Handle old structure where sessions were stored directly
-            sessions = server_data
-
-        if session_id not in sessions:
+        # Atomically remove the session entry; only the caller that wins this
+        # pop performs the actual teardown. Concurrent callers get None and
+        # return early instead of racing on del/task.cancel().
+        session_info = sessions.pop(session_id, None)
+        if session_info is None:
             return
 
-        session_info = sessions[session_id]
         try:
             # First try to properly close the session if it exists
             if "session" in session_info:
@@ -1214,10 +1481,11 @@ class MCPSessionManager:
                     except asyncio.CancelledError:
                         await logger.ainfo(f"Cancelled task for session {session_id}")
         except Exception as e:  # noqa: BLE001
+            # Teardown is load-bearing: MCP transports (stdio subprocess, SSE,
+            # streamable HTTP) all raise their own exception hierarchies on
+            # shutdown, and a leak on cleanup is far worse than a swallowed
+            # error. Log and continue rather than propagating.
             await logger.awarning(f"Error cleaning up session {session_id}: {e}")
-        finally:
-            # Remove from sessions dict
-            del sessions[session_id]
 
     async def cleanup_all(self):
         """Clean up all sessions."""
@@ -1229,15 +1497,7 @@ class MCPSessionManager:
 
         # Clean up all sessions
         for server_key in list(self.sessions_by_server.keys()):
-            server_data = self.sessions_by_server[server_key]
-            # Handle both old and new session structure
-            if isinstance(server_data, dict) and "sessions" in server_data:
-                sessions = server_data["sessions"]
-            else:
-                # Handle old structure where sessions were stored directly
-                sessions = server_data
-
-            for session_id in list(sessions.keys()):
+            for session_id in list(self._sessions_for(server_key).keys()):
                 await self._cleanup_session_by_id(server_key, session_id)
 
         # Clear the sessions_by_server structure completely
@@ -1246,6 +1506,13 @@ class MCPSessionManager:
         # Clear compatibility maps
         self._context_to_session.clear()
         self._session_refcount.clear()
+
+        # Reclaim per-server lock and counter maps. Safe here because
+        # cleanup_all is a shutdown/reset operation; no other manager state
+        # should be in use past this point.
+        async with self._locks_guard:
+            self._server_locks.clear()
+            self._session_id_counters.clear()
 
         # Clear all background tasks
         for task in list(self._background_tasks):
@@ -1264,6 +1531,19 @@ class MCPSessionManager:
         Decrements the ref-count for the session used by *context_id* and only
         tears the session down when the last context that references it goes
         away.
+
+        Acquires the per-server lock so concurrent `get_session()` calls don't
+        observe a half-torn-down session (e.g. returning a ClientSession whose
+        background task was just cancelled out from under them).
+
+        Uses a compare-and-swap on `_context_to_session[context_id]` before
+        popping it: if a concurrent `get_session()` has re-pointed the same
+        context at a *different* server (e.g. a component reconnecting to a
+        new MCP URL while the old disconnect is in flight), we must not wipe
+        out the fresh mapping — otherwise the new session leaks. The per-
+        server lock doesn't cover this case because the new and old sessions
+        live under different server_keys, so the two operations run in
+        parallel.
         """
         mapping = self._context_to_session.get(context_id)
         if not mapping:
@@ -1271,26 +1551,32 @@ class MCPSessionManager:
             return
 
         server_key, session_id = mapping
-        ref_key = (server_key, session_id)
-        remaining = self._session_refcount.get(ref_key, 1) - 1
+        async with self._server_lock(server_key):
+            ref_key = (server_key, session_id)
+            remaining = self._session_refcount.get(ref_key, 1) - 1
 
-        if remaining <= 0:
-            await self._cleanup_session_by_id(server_key, session_id)
-            self._session_refcount.pop(ref_key, None)
-        else:
-            self._session_refcount[ref_key] = remaining
+            if remaining <= 0:
+                await self._cleanup_session_by_id(server_key, session_id)
+                self._session_refcount.pop(ref_key, None)
+            else:
+                self._session_refcount[ref_key] = remaining
 
-        # Remove the mapping for this context
-        self._context_to_session.pop(context_id, None)
+            # CAS: only drop the context->session mapping if it still points
+            # at the session we just cleaned up. The get() and pop() below run
+            # synchronously with no `await` between them, so no other coroutine
+            # can interleave and re-point the mapping after our check.
+            if self._context_to_session.get(context_id) == (server_key, session_id):
+                self._context_to_session.pop(context_id, None)
 
 
 class MCPStdioClient:
-    def __init__(self, component_cache=None):
+    def __init__(self, component_cache=None, tool_execution_timeout: float | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
+        self._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style).
@@ -1384,12 +1670,13 @@ class MCPStdioClient:
         session_manager = self._get_session_manager()
         return await session_manager.get_session(self._session_context, self._connection_params, "stdio")
 
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+    async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
         """Run a tool with the given arguments using context-specific session.
 
         Args:
             tool_name: Name of the tool to run
             arguments: Dictionary of arguments to pass to the tool
+            timeout: Optional timeout in seconds. If not provided, uses the client's configured timeout.
 
         Returns:
             The result of the tool execution
@@ -1409,6 +1696,9 @@ class MCPStdioClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_{param_hash}"
 
+        # Use provided timeout or fall back to client's configured timeout
+        effective_timeout = timeout if timeout is not None else self._tool_execution_timeout
+
         max_retries = 2
         last_error_type = None
 
@@ -1420,7 +1710,7 @@ class MCPStdioClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=effective_timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -1514,12 +1804,13 @@ class MCPStdioClient:
 
 
 class MCPStreamableHttpClient:
-    def __init__(self, component_cache=None):
+    def __init__(self, component_cache=None, tool_execution_timeout: float | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
+        self._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     def _get_session_manager(self) -> MCPSessionManager:
         """Get or create session manager from component cache."""
@@ -1591,9 +1882,17 @@ class MCPStreamableHttpClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_http_{param_hash}"
 
-        # Get or create a persistent session (will try Streamable HTTP, then SSE fallback)
+        # Get or create a persistent session (will try Streamable HTTP, then selective SSE fallback)
         session = await self._get_or_create_session()
-        response = await session.list_tools()
+        try:
+            response = await session.list_tools()
+        except Exception:
+            self._connected = False
+            if self._connection_params:
+                session_manager = self._get_session_manager()
+                sk = session_manager._get_server_key(self._connection_params, "streamable_http")
+                await session_manager.invalidate_server_key(sk)
+            raise
         self._connected = True
         return response.tools
 
@@ -1656,12 +1955,13 @@ class MCPStreamableHttpClient:
             # DELETE is advisory—log and continue
             logger.debug(f"Unable to send session DELETE to '{url}': {e}")
 
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+    async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
         """Run a tool with the given arguments using context-specific session.
 
         Args:
             tool_name: Name of the tool to run
             arguments: Dictionary of arguments to pass to the tool
+            timeout: Optional timeout in seconds. If not provided, uses the client's configured timeout.
 
         Returns:
             The result of the tool execution
@@ -1681,6 +1981,9 @@ class MCPStreamableHttpClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_http_{param_hash}"
 
+        # Use provided timeout or fall back to client's configured timeout
+        effective_timeout = timeout if timeout is not None else self._tool_execution_timeout
+
         max_retries = 2
         last_error_type = None
 
@@ -1692,22 +1995,13 @@ class MCPStreamableHttpClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=effective_timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
                 await logger.awarning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
 
-                # Import specific MCP error types for detection
-                try:
-                    from anyio import ClosedResourceError
-                    from mcp.shared.exceptions import McpError
-
-                    is_closed_resource_error = isinstance(e, ClosedResourceError)
-                    is_mcp_connection_error = isinstance(e, McpError) and "Connection closed" in str(e)
-                except ImportError:
-                    is_closed_resource_error = "ClosedResourceError" in str(type(e))
-                    is_mcp_connection_error = "Connection closed" in str(e)
+                bust_session = _is_mcp_session_bust_error(e)
 
                 # Detect timeout errors
                 is_timeout_error = isinstance(e, asyncio.TimeoutError | TimeoutError)
@@ -1719,16 +2013,14 @@ class MCPStreamableHttpClient:
 
                 last_error_type = current_error_type
 
-                # If it's a connection error (ClosedResourceError or MCP connection closed) and we have retries left
-                if (is_closed_resource_error or is_mcp_connection_error) and attempt < max_retries - 1:
+                if bust_session and attempt < max_retries - 1:
                     await logger.awarning(
-                        f"MCP session connection issue for tool '{tool_name}', retrying with fresh session..."
+                        f"MCP session issue for tool '{tool_name}', invalidating server sessions and retrying..."
                     )
-                    # Clean up the dead session
-                    if self._session_context:
+                    if self._connection_params:
                         session_manager = self._get_session_manager()
-                        await session_manager._cleanup_session(self._session_context)
-                    # Add a small delay before retry
+                        sk = session_manager._get_server_key(self._connection_params, "streamable_http")
+                        await session_manager.invalidate_server_key(sk)
                     await asyncio.sleep(0.5)
                     continue
 
@@ -1742,8 +2034,7 @@ class MCPStreamableHttpClient:
                 # For other errors or no retries left, handle as before
                 if (
                     isinstance(e, ConnectionError | TimeoutError | OSError | ValueError)
-                    or is_closed_resource_error
-                    or is_mcp_connection_error
+                    or bust_session
                     or is_timeout_error
                 ):
                     msg = f"Failed to run tool '{tool_name}' after {attempt + 1} attempts: {e}"
@@ -1800,6 +2091,7 @@ async def update_tools(
     mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
     request_variables: dict[str, str] | None = None,
+    tool_execution_timeout: float | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -1810,17 +2102,35 @@ async def update_tools(
         mcp_streamable_http_client: Optional streamable HTTP client instance
         mcp_sse_client: Optional SSE client instance (backward compatibility)
         request_variables: Optional dict of global variables to resolve in headers
+        tool_execution_timeout: Optional timeout in seconds for tool execution (int or float)
     """
     if server_config is None:
         server_config = {}
     if not server_name:
         return "", [], {}
+
     if mcp_stdio_client is None:
-        mcp_stdio_client = MCPStdioClient()
+        mcp_stdio_client = MCPStdioClient(tool_execution_timeout=tool_execution_timeout)
+    # Update timeout on existing client only if a new timeout is provided.
+    # Route through _resolve_mcp_tool_execution_timeout so that negative values
+    # (entered before UI validation fires) never reach asyncio.wait_for.
+    elif tool_execution_timeout is not None:
+        mcp_stdio_client._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     # Backward compatibility: accept mcp_sse_client parameter
     if mcp_streamable_http_client is None:
-        mcp_streamable_http_client = mcp_sse_client if mcp_sse_client is not None else MCPStreamableHttpClient()
+        if mcp_sse_client is not None:
+            mcp_streamable_http_client = mcp_sse_client
+            # Set timeout on the aliased client if provided
+            if tool_execution_timeout is not None:
+                mcp_streamable_http_client._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(
+                    tool_execution_timeout
+                )
+        else:
+            mcp_streamable_http_client = MCPStreamableHttpClient(tool_execution_timeout=tool_execution_timeout)
+    # Update timeout on existing client only if a new timeout is provided
+    elif tool_execution_timeout is not None:
+        mcp_streamable_http_client._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     # Fetch server config from backend
     # Determine mode from config, defaulting to Streamable_HTTP if URL present

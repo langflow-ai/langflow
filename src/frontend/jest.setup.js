@@ -1,13 +1,49 @@
 // Jest setup file to mock globals and Vite-specific syntax
+const React = require("react");
 
 // Mock react-i18next globally so t(key) returns the English string from en.json
 const enTranslations = require("./src/locales/en.json");
+const interpolate = (str, params) => {
+  if (!params || typeof str !== "string") return str;
+  return str.replace(/\{\{(\w+)\}\}/g, (_, k) =>
+    k in params ? params[k] : `{{${k}}}`,
+  );
+};
+const resolveKey = (key, params) => {
+  if (params && typeof params.count === "number") {
+    const suffix = params.count === 1 ? "one" : "other";
+    const pluralKey = `${key}_${suffix}`;
+    if (enTranslations[pluralKey] !== undefined) return pluralKey;
+  }
+  return key;
+};
+// Parse <N>text</N> interpolation tags used by Trans i18nKey values.
+const renderTrans = ({ i18nKey, children, components }) => {
+  if (!i18nKey || !enTranslations[i18nKey]) return children ?? null;
+  const raw = enTranslations[i18nKey];
+  if (!components) return raw.replace(/<\d+>([\s\S]*?)<\/\d+>/g, "$1");
+  const parts = raw.split(/(<\d+>[\s\S]*?<\/\d+>)/);
+  return React.createElement(
+    React.Fragment,
+    null,
+    ...parts.map((part, idx) => {
+      const m = part.match(/^<(\d+)>([\s\S]*?)<\/\d+>$/);
+      if (m) {
+        const comp = components[Number(m[1])];
+        if (comp) return React.cloneElement(comp, { key: idx }, m[2]);
+        return m[2];
+      }
+      return part;
+    }),
+  );
+};
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key) => enTranslations[key] ?? key,
+    t: (key, params) =>
+      interpolate(enTranslations[resolveKey(key, params)] ?? key, params),
     i18n: { changeLanguage: jest.fn(), language: "en" },
   }),
-  Trans: ({ children }) => children,
+  Trans: renderTrans,
   initReactI18next: { type: "3rdParty", init: jest.fn() },
   withTranslation: () => (Component) => Component,
 }));
@@ -73,6 +109,17 @@ jest.mock("@radix-ui/react-form", () => ({
 }));
 
 jest.mock("react-markdown", () => ({ __esModule: true, default: () => null }));
+
+// Render children only — tests don't need TooltipProvider context
+jest.mock("@/components/common/shadTooltipComponent", () => ({
+  __esModule: true,
+  default: ({ children }) => children,
+}));
+
+// Return empty data — tests don't need QueryClientProvider context
+jest.mock("@/controllers/API/queries/flows/use-get-note-translations", () => ({
+  useGetNoteTranslationsQuery: () => ({ data: undefined }),
+}));
 
 jest.mock("lucide-react/dynamicIconImports", () => ({}), { virtual: true });
 

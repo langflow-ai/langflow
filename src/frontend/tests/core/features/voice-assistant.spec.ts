@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
+
 // TODO: Need to review the voice assistant vs text to voice
 test.skip(
   "should able to see and interact with voice assistant",
@@ -29,7 +31,9 @@ test.skip(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.getByTestId("playground-btn-flow-io").click();
 
     await expect(page.getByTestId("voice-button")).toBeVisible();
@@ -95,7 +99,9 @@ test.skip(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.getByTestId("playground-btn-flow-io").click();
 
     await expect(page.getByTestId("voice-button")).not.toBeVisible();
@@ -123,7 +129,9 @@ test.skip(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.getByTestId("playground-btn-flow-io").click();
 
     await expect(page.getByTestId("voice-button")).toBeVisible();

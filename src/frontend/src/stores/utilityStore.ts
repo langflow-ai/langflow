@@ -49,7 +49,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   currentSessionId: "",
   setCurrentSessionId: (sessionId: string) =>
     set({ currentSessionId: sessionId }),
-  eventDelivery: EventDeliveryType.POLLING,
+  eventDelivery: EventDeliveryType.STREAMING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
   webhookAuthEnable: true,
@@ -66,4 +66,29 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
     set({ allowCustomComponents }),
   mcpBaseUrl: "",
   setMcpBaseUrl: (mcpBaseUrl: string) => set({ mcpBaseUrl }),
+  // Default ``false`` so a misconfigured store (no ``/config`` reply yet)
+  // matches the backend default of "reload disabled".  The /config query
+  // overwrites this on first load.
+  enableExtensionReload: false,
+  setEnableExtensionReload: (enableExtensionReload: boolean) =>
+    set({ enableExtensionReload }),
+  // Embedded mode flags
+  embeddedMode: false,
+  setEmbeddedMode: (embeddedMode: boolean) => set({ embeddedMode }),
+  hideLogoutButton: false,
+  setHideLogoutButton: (hideLogoutButton: boolean) => set({ hideLogoutButton }),
+  hideNewProjectButton: false,
+  setHideNewProjectButton: (hideNewProjectButton: boolean) =>
+    set({ hideNewProjectButton }),
+  hideNewFlowButton: false,
+  setHideNewFlowButton: (hideNewFlowButton: boolean) =>
+    set({ hideNewFlowButton }),
+  hideStarterProjects: false,
+  setHideStarterProjects: (hideStarterProjects: boolean) =>
+    set({ hideStarterProjects }),
+  mcpServersLocked: false,
+  setMcpServersLocked: (mcpServersLocked: boolean) => set({ mcpServersLocked }),
+  customComponentAdminOnly: false,
+  setCustomComponentAdminOnly: (customComponentAdminOnly: boolean) =>
+    set({ customComponentAdminOnly }),
 }));

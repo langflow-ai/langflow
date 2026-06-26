@@ -2,6 +2,7 @@ import base64
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
@@ -76,6 +77,13 @@ def test_message_from_ai_text():
 
     assert isinstance(lc_message, AIMessage)
     assert lc_message.content == text
+
+
+def test_message_serializes_run_id_as_string():
+    run_id = uuid4()
+    message = Message(text="hello", run_id=run_id)
+    dumped = message.model_dump()
+    assert dumped["run_id"] == str(run_id)
 
 
 def test_message_with_single_image(sample_image):
@@ -166,13 +174,17 @@ def test_message_serialization():
     # Create a timestamp with timezone
     message = Message(text="Test message", sender=MESSAGE_SENDER_USER)
     timestamp_str = message.timestamp
-    timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+    timestamp_dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+
     serialized = message.model_dump()
 
     assert serialized["text"] == "Test message"
     assert serialized["sender"] == MESSAGE_SENDER_USER
-    assert serialized["timestamp"] == timestamp
-    assert serialized["timestamp"].tzinfo == timezone.utc
+    assert serialized["timestamp"] == timestamp_str
+
+    parsed = datetime.strptime(serialized["timestamp"], "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    assert parsed.tzinfo == timezone.utc
+    assert parsed == timestamp_dt
 
 
 def test_message_to_lc_without_sender():
@@ -188,17 +200,26 @@ def test_timestamp_serialization():
     # Test with timezone
     msg1 = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45 UTC")
     serialized1 = msg1.model_dump()
-    assert serialized1["timestamp"].tzinfo == timezone.utc
+    ts1 = datetime.strptime(serialized1["timestamp"], "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    assert ts1.tzinfo == timezone.utc
 
     # Test without timezone
     msg2 = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45")
     serialized2 = msg2.model_dump()
-    assert serialized2["timestamp"].tzinfo == timezone.utc
+    ts2 = datetime.strptime(serialized2["timestamp"], "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    assert ts2.tzinfo == timezone.utc
 
     # Test that both formats result in equivalent UTC times when appropriate
     msg_with_tz = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45 UTC")
     msg_without_tz = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45")
-    assert msg_with_tz.model_dump()["timestamp"] == msg_without_tz.model_dump()["timestamp"]
+
+    ser_with_tz = msg_with_tz.model_dump()["timestamp"]
+    ser_without_tz = msg_without_tz.model_dump()["timestamp"]
+
+    parsed_with_tz = datetime.strptime(ser_with_tz, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    parsed_without_tz = datetime.strptime(ser_without_tz, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+
+    assert parsed_with_tz == parsed_without_tz
 
 
 def test_message_with_image_object_direct():
@@ -303,6 +324,71 @@ def test_get_file_content_dicts_with_string_paths():
         assert "image_url" in content_dicts[0]
         assert "url" in content_dicts[0]["image_url"]
         assert content_dicts[0]["image_url"]["url"].startswith("data:image/")
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+def test_should_not_inject_binary_payload_as_text_when_file_is_neither_image_nor_known_text_type():
+    """QA API-010: refuse to text-decode unknown binary files.
+
+    ``tweaks.ChatInput.files=['<path>']`` was injecting raw bytes as text into the
+    HumanMessage when the file was not detected as an image.
+
+    Root cause: ``read_text_file`` falls back to ``latin-1`` decoding (which always
+    succeeds), so binary content like a non-PIL-readable PNG slips through and is
+    embedded as a long stream of garbled latin-1 characters in the message. The
+    guard MUST refuse to text-decode files whose extension is neither a known text
+    type nor a known image type — silently skipping is safer than feeding the LLM
+    a binary blob.
+    """
+    import tempfile
+
+    binary_content = b"\x00\x01\x02\xff\xfe\xfd" + bytes(range(256)) * 4
+    with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as tmp:
+        tmp.write(binary_content)
+        tmp_path = tmp.name
+
+    try:
+        message = Message(text="Look at this", sender=MESSAGE_SENDER_USER)
+        message.files = [tmp_path]
+
+        content_dicts = message.get_file_content_dicts()
+
+        assert content_dicts == [], (
+            f"Binary attachment with an unknown extension must be skipped, not decoded as text. "
+            f"Got {len(content_dicts)} content dict(s) with text starting "
+            f"{content_dicts[0].get('text', '')[:60]!r}..."
+        )
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+def test_should_not_use_attachment_prefix_that_triggers_gemini_refusal_in_file_text_content():
+    r"""QA GAP-M-3: avoid attachment framing that triggers Gemini refusals.
+
+    The ``Attachment: <filename>\n<contents>`` framing triggers Gemini refusals
+    (``"I cannot process attachments in this environment"``). Wrap text-file
+    contents in a neutral header that doesn't read as a multimodal-attachment request.
+    """
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w", encoding="utf-8") as tmp:
+        tmp.write("hello world, this is the file body")
+        tmp_path = tmp.name
+
+    try:
+        message = Message(text="Summarize this", sender=MESSAGE_SENDER_USER)
+        message.files = [tmp_path]
+
+        content_dicts = message.get_file_content_dicts()
+
+        assert len(content_dicts) == 1
+        text = content_dicts[0].get("text", "")
+        assert "hello world, this is the file body" in text
+        assert not text.startswith("Attachment:"), (
+            "The 'Attachment:' prefix triggers Gemini refusals. Use a neutral header that does "
+            "not look like a multimodal-attachment request to the model."
+        )
     finally:
         Path(tmp_path).unlink(missing_ok=True)
 

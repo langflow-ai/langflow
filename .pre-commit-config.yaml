@@ -42,6 +42,36 @@ repos:
         language: python
         files: (alembic|migrations)/versions/.*\.py$
         pass_filenames: true
+      - id: extension-migration-bare-names
+        name: Extension migration table - bare-name uniqueness
+        entry: python scripts/migrate/check_bare_names.py
+        language: system
+        files: ^(src/lfx/src/lfx/extension/migration/migration_table\.json|src/lfx/src/lfx/components/.*\.py|src/bundles/.*\.py)$
+        pass_filenames: false
+      - id: extension-migration-append-only
+        name: Extension migration table - append-only
+        entry: python scripts/migrate/check_migration_append_only.py
+        language: system
+        files: ^src/lfx/src/lfx/extension/migration/migration_table\.json$
+        pass_filenames: false
+      - id: bundle-api-changelog
+        name: BUNDLE_API.md changelog gate
+        entry: python scripts/migrate/check_bundle_api_changelog.py
+        language: system
+        files: ^(BUNDLE_API\.md|src/lfx/src/lfx/extension/(manifest|schema|errors|discovery|registry|reload|bundle_registry|validate|__init__)\.py|src/lfx/src/lfx/extension/loader/(__init__|_orchestrator|_plugins|_types)\.py|src/lfx/src/lfx/extension/migration/schema\.py|src/backend/base/langflow/api/v1/extensions\.py)$
+        pass_filenames: false
+      - id: extension-router-trust
+        name: Extension router trust - no install/uninstall under /api/v1/extensions
+        entry: python scripts/migrate/check_router_trust.py
+        language: system
+        files: ^src/backend/base/langflow/api/.*\.py$
+        pass_filenames: false
+      - id: component-env-writes
+        name: Components must not write to os.environ (process-global; bleeds across requests)
+        entry: python scripts/lint/check_component_env_writes.py
+        language: system
+        files: ^(src/lfx/src/lfx/components/.*\.py|src/backend/base/langflow/components/.*\.py|src/bundles/.*\.py)$
+        pass_filenames: false
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:

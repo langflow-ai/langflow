@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import { useTranslation } from "react-i18next";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { getBaseUrl } from "@/customization/utils/urls";
 import { createFileUpload } from "@/helpers/create-file-upload";
@@ -12,7 +12,7 @@ import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import type { IOFileInputProps } from "../../../../../types/components";
 
 export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
-  //component to handle file upload from chatIO
+  const { t } = useTranslation();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const [isDragging, setIsDragging] = useState(false);
@@ -107,7 +107,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
           },
           onError: (error) => {
             setErrorData({
-              title: "Error uploading file",
+              title: t("files.errorUploading"),
               list: [error.response?.data?.detail],
             });
             console.error("Error occurred while uploading file");
@@ -148,7 +148,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
         {isDragging ? (
           <>
             <IconComponent name="ArrowUpToLine" className="h-5 w-5 stroke-1" />
-            "Drop your file here"
+            {t("ioModal.dropFileHere")}
           </>
         ) : image ? (
           <img

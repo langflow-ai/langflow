@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -7,10 +8,12 @@ from uuid import UUID, uuid4
 
 import jwt
 import pytest
-from fastapi import HTTPException, status
+from fastapi import HTTPException, WebSocketException, status
+from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.exceptions import (
     InactiveUserError,
     InvalidTokenError,
+    MissingCredentialsError,
     TokenExpiredError,
 )
 from langflow.services.auth.service import AuthService
@@ -107,6 +110,172 @@ async def test_get_current_user_from_access_token_requires_active_user(auth_serv
 
 
 @pytest.mark.anyio
+async def test_authenticate_with_credentials_missing_creds_raises(
+    auth_service: AuthService,
+):
+    """Default config (AUTO_LOGIN off, skip_auth_auto_login off) rejects callers with no creds."""
+    with pytest.raises(MissingCredentialsError):
+        await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_credentials_auto_login_alone_still_rejects(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """AUTO_LOGIN without skip_auth_auto_login must still require credentials.
+
+    Without this guard the AUTO_LOGIN security-tightening from #8513 would
+    silently regress for every ``get_current_user``-protected endpoint.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = False
+    auth_settings.SUPERUSER = "admin"
+
+    with pytest.raises(MissingCredentialsError):
+        await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_credentials_auto_login_skip_returns_superuser(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """With AUTO_LOGIN + skip_auth_auto_login, missing creds fall back to the superuser.
+
+    Restores parity with ``api_key_security`` so ``CurrentActiveUser``-protected
+    endpoints (e.g. ``GET /api/v1/flows/``) work for ADK/dev environments that
+    relied on the v1.7.1 behavior.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    auth_settings.SUPERUSER = "admin"
+    superuser = _dummy_user(uuid4())
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=superuser),
+        ) as mock_lookup,
+        patch("langflow.services.auth.service.logger") as mock_logger,
+    ):
+        result = await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+    assert result is superuser
+    mock_lookup.assert_awaited_once()
+    mock_logger.warning.assert_called_once_with(AUTO_LOGIN_WARNING)
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_credentials_auto_login_skip_missing_superuser_raises(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """AUTO_LOGIN + skip_auth_auto_login with no superuser row in the DB rejects.
+
+    Mirrors the safety check inside ``_api_key_security_impl`` when the
+    configured superuser is absent from the database.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    auth_settings.SUPERUSER = "admin"
+
+    from langflow.services.auth.exceptions import InvalidCredentialsError
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=None),
+        ),
+        pytest.raises(InvalidCredentialsError),
+    ):
+        await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+
+@pytest.mark.anyio
+async def test_auto_login_longterm_token_is_short_lived_with_refresh(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """auto_login must not mint a 365-day superuser token.
+
+    Regression for GHSA-fjgc-vj2f-77hm: create_user_longterm_token
+    previously issued a 365-day access token with no refresh token. It must now
+    issue a normally-scoped access token (ACCESS_TOKEN_EXPIRE_SECONDS) plus a
+    refresh token.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.SUPERUSER = "admin"
+    superuser = _dummy_user(uuid4())
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=superuser)),
+        patch("langflow.services.auth.service.update_user_last_login_at", new=AsyncMock()),
+    ):
+        user_id, tokens = await auth_service.create_user_longterm_token(AsyncMock())
+
+    assert user_id == superuser.id
+    # A refresh token is now issued (previously None).
+    assert tokens["refresh_token"]
+
+    # The access token lifetime is bounded by ACCESS_TOKEN_EXPIRE_SECONDS (60 in
+    # the fixture), nowhere near a year.
+    claims = jwt.decode(tokens["access_token"], options={"verify_signature": False})
+    lifetime = claims["exp"] - int(datetime.now(timezone.utc).timestamp())
+    assert lifetime > 0
+    assert lifetime <= auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS + 5
+    assert lifetime < 60 * 60 * 24  # far below a day, definitely not 365 days
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_credentials_auto_login_skip_empty_superuser_config_raises():
+    """AUTO_LOGIN + skip_auth_auto_login with an empty SUPERUSER config rejects without a DB lookup.
+
+    The ``if not auth_settings.SUPERUSER:`` guard at the top of the bypass branch
+    must fire before ``get_user_by_username`` is called. Uses SimpleNamespace to
+    bypass Pydantic model validation so SUPERUSER can be set to an empty string.
+    """
+    from langflow.services.auth.exceptions import InvalidCredentialsError
+
+    settings_service = SimpleNamespace(
+        auth_settings=SimpleNamespace(
+            AUTO_LOGIN=True,
+            skip_auth_auto_login=True,
+            SUPERUSER="",
+        )
+    )
+    service = AuthService(settings_service)
+
+    with pytest.raises(InvalidCredentialsError):
+        await service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_credentials_auto_login_skip_rejects_inactive_superuser(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """AUTO_LOGIN fallback must enforce ``is_active`` like token/API-key paths.
+
+    ``CurrentActiveUser`` re-checks this for HTTP routes, but SSE/websocket
+    dependencies delegate directly to ``authenticate_with_credentials``, so
+    the active-user guard must live in this method.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    inactive_superuser = _dummy_user(uuid4(), active=False)
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=inactive_superuser),
+        ),
+        pytest.raises(InactiveUserError),
+    ):
+        await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+
+@pytest.mark.anyio
 async def test_create_refresh_token_requires_refresh_type(auth_service: AuthService):
     invalid_refresh = auth_service.create_token({"sub": str(uuid4()), "type": "access"}, timedelta(minutes=1))
 
@@ -184,7 +353,7 @@ def test_encrypt_decrypt_roundtrip_with_base64_encoded_32_byte_key(tmp_path):
 
 
 def test_encrypt_decrypt_roundtrip_with_short_key(tmp_path):
-    """Keys shorter than 32 chars use the random.seed path and must work."""
+    """Keys shorter than 32 chars use the SHA-256 derivation and must work."""
     raw_key = "short-key"
 
     settings = AuthSettings(CONFIG_DIR=str(tmp_path))
@@ -231,6 +400,42 @@ def test_ensure_fernet_key_with_44_char_key():
     fernet = Fernet(ensure_fernet_key(raw_key))
     encrypted = fernet.encrypt(b"test-value")
     assert fernet.decrypt(encrypted) == b"test-value"
+
+
+def test_ensure_fernet_key_short_key_uses_sha256_derivation():
+    """Short-key derivation must be the SHA-256 hash, not the old PRNG output.
+
+    Regression for GHSA-jxw3-mjmx-3pqm: the key was previously derived with
+    ``random.seed(secret_key)`` + ``random.getrandbits`` — a predictable,
+    non-cryptographic PRNG. The guard that catches that regression is the
+    SHA-256 equality below: the derived key must equal
+    ``base64.urlsafe_b64encode(sha256(secret))``, which the old PRNG path could
+    never produce.
+
+    The random-state perturbation between the two calls is only a determinism
+    sanity check. On its own it would *not* catch the old bug — the vulnerable
+    code re-seeded with the secret on every call, so it was deterministic per
+    secret too; the SHA-256 assertion is what proves the path actually changed.
+    """
+    import base64
+    import hashlib
+    import random
+
+    from langflow.services.auth.utils import ensure_fernet_key
+
+    raw_key = "short-key"  # < 32 chars -> derivation branch
+
+    random.seed(0)
+    key_a = ensure_fernet_key(raw_key)
+    random.seed(123456789)
+    _ = [random.random() for _ in range(100)]  # noqa: S311  # perturb global PRNG state
+    key_b = ensure_fernet_key(raw_key)
+
+    # Determinism sanity check (held under the old impl too — not the regression guard).
+    assert key_a == key_b
+    # Regression guard: the key must be the SHA-256 derivation, not random.getrandbits output.
+    expected = base64.urlsafe_b64encode(hashlib.sha256(raw_key.encode()).digest())
+    assert key_a == expected
 
 
 def test_password_helpers_roundtrip(auth_service: AuthService):
@@ -557,3 +762,93 @@ async def test_get_current_active_user_mcp_inactive(auth_service: AuthService):
         await auth_service.get_current_active_user_mcp(user)
 
     assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# =============================================================================
+# ws_api_key_security Tests
+# =============================================================================
+
+
+@asynccontextmanager
+async def _mock_session_scope():
+    yield AsyncMock()
+
+
+@pytest.mark.anyio
+async def test_ws_api_key_security_auto_login_skip_rejects_missing_superuser(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """ws_api_key_security must reject with WS_1011 when the superuser row is absent from DB."""
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    auth_settings.SUPERUSER = "admin"
+
+    with (
+        patch("langflow.services.auth.service.session_scope", _mock_session_scope),
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=None),
+        ),
+        pytest.raises(WebSocketException) as exc,
+    ):
+        await auth_service.ws_api_key_security(api_key=None)
+
+    assert exc.value.code == status.WS_1011_INTERNAL_ERROR
+
+
+@pytest.mark.anyio
+async def test_ws_api_key_security_auto_login_skip_rejects_inactive_superuser(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """ws_api_key_security must enforce is_active in the AUTO_LOGIN + skip_auth bypass path."""
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    auth_settings.SUPERUSER = "admin"
+    inactive_superuser = _dummy_user(uuid4(), active=False)
+
+    with (
+        patch("langflow.services.auth.service.session_scope", _mock_session_scope),
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=inactive_superuser),
+        ),
+        pytest.raises(WebSocketException) as exc,
+    ):
+        await auth_service.ws_api_key_security(api_key=None)
+
+    assert exc.value.code == status.WS_1008_POLICY_VIOLATION
+
+
+# =============================================================================
+# _api_key_security_impl Tests
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_api_key_security_impl_auto_login_skip_rejects_inactive_superuser(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """_api_key_security_impl must enforce is_active in the AUTO_LOGIN + skip_auth bypass path."""
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    auth_settings.SUPERUSER = "admin"
+    inactive_superuser = _dummy_user(uuid4(), active=False)
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=inactive_superuser),
+        ),
+        pytest.raises(HTTPException) as exc,
+    ):
+        await auth_service._api_key_security_impl(
+            query_param=None,
+            header_param=None,
+            db=AsyncMock(),
+            settings_service=auth_service.settings,
+        )
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN

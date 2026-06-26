@@ -11,6 +11,12 @@ import { useAssistantChat } from "../use-assistant-chat";
 
 // --- Mocks ---
 
+// useUpdateNodeInternals needs a ReactFlow provider at runtime; mock it out
+// for pure-logic tests of the chat hook.
+jest.mock("@xyflow/react", () => ({
+  useUpdateNodeInternals: () => () => {},
+}));
+
 const mockPostAssistStream = jest.fn();
 jest.mock("@/controllers/API/queries/agentic", () => ({
   postAssistStream: (...args: unknown[]) => mockPostAssistStream(...args),
@@ -27,6 +33,11 @@ jest.mock(
 
 jest.mock("@/hooks/use-add-component", () => ({
   useAddComponent: () => jest.fn(),
+}));
+
+jest.mock("@/hooks/flows/use-save-flow", () => ({
+  __esModule: true,
+  default: () => jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("@/stores/flowsManagerStore", () => {
@@ -387,5 +398,42 @@ describe("useAssistantChat — progress field propagation", () => {
       // Error from the previous step should be replaced (undefined in validating)
       expect(progress?.error).toBeUndefined();
     });
+  });
+});
+
+describe("useAssistantChat — retrying clears stale partial output", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockPostAssistStream.mockResolvedValue(undefined);
+  });
+
+  it("should clear streamed content when the backend retries the attempt", async () => {
+    // Observed live (2026-06-12): a leaked tool-call fragment from a failed
+    // attempt stayed on screen while the next attempt ran.
+    mockPostAssistStream.mockImplementation(
+      async (_request: unknown, callbacks: Record<string, Function>) => {
+        callbacks.onToken({
+          event: "token",
+          chunk: '{"component_type":"Memory"}',
+        });
+        callbacks.onProgress({
+          event: "progress",
+          step: "retrying",
+          attempt: 2,
+          max_attempts: 4,
+          message: "No canvas changes detected — retrying...",
+        });
+      },
+    );
+
+    const { result } = renderHook(() => useAssistantChat());
+    await act(async () => {
+      await result.current.handleSend("crie um flow", TEST_MODEL);
+    });
+
+    const assistant = result.current.messages.find(
+      (m) => m.role === "assistant",
+    );
+    expect(assistant?.content).toBe("");
   });
 });

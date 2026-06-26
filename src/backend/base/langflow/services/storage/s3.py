@@ -65,6 +65,39 @@ class S3StorageService(StorageService):
             f"region={os.getenv('AWS_DEFAULT_REGION', 'default')}"
         )
 
+    def _validate_identifiers(self, flow_id: str, file_name: str | None = None) -> None:
+        """Reject flow_id / file_name values that could escape the flow namespace.
+
+        Defense in depth at the S3 backend for GHSA-rcjh-r59h-gq37: the public-flow
+        boundary in chat.py is the primary gate, but any caller reaching this
+        backend with untrusted identifiers must still fail safely. Validation is
+        synchronous and runs before any AWS call so a malformed input cannot be
+        turned into a get_object on an arbitrary bucket key.
+        """
+        if (
+            not isinstance(flow_id, str)
+            or not flow_id
+            or "/" in flow_id
+            or "\\" in flow_id
+            or ".." in flow_id
+            or "\x00" in flow_id
+        ):
+            logger.error("Invalid flow_id contains path separators or traversal sequences")
+            msg = "Invalid flow_id: contains path separators"
+            raise ValueError(msg)
+
+        if file_name is not None and (
+            not isinstance(file_name, str)
+            or not file_name
+            or "/" in file_name
+            or "\\" in file_name
+            or ".." in file_name
+            or "\x00" in file_name
+        ):
+            logger.error("Invalid file_name contains path separators or traversal sequences")
+            msg = "Invalid file name: contains path separators"
+            raise ValueError(msg)
+
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full S3 key for a file.
 
@@ -143,6 +176,7 @@ class S3StorageService(StorageService):
             msg = "Append mode is not supported for S3 storage"
             raise NotImplementedError(msg)
 
+        self._validate_identifiers(flow_id, file_name)
         key = self.build_full_path(flow_id, file_name)
 
         try:
@@ -197,6 +231,7 @@ class S3StorageService(StorageService):
         Raises:
             FileNotFoundError: If the file does not exist in S3
         """
+        self._validate_identifiers(flow_id, file_name)
         key = self.build_full_path(flow_id, file_name)
 
         try:
@@ -230,6 +265,7 @@ class S3StorageService(StorageService):
         Raises:
             FileNotFoundError: If the file does not exist in S3
         """
+        self._validate_identifiers(flow_id, file_name)
         key = self.build_full_path(flow_id, file_name)
 
         try:
@@ -266,8 +302,7 @@ class S3StorageService(StorageService):
         Raises:
             Exception: If there's an error listing files from S3
         """
-        if not isinstance(flow_id, str):
-            flow_id = str(flow_id)
+        self._validate_identifiers(flow_id)
 
         prefix = self.build_full_path(flow_id, "")
 
@@ -302,6 +337,7 @@ class S3StorageService(StorageService):
         Note:
             S3 delete_object doesn't raise an error if the object doesn't exist
         """
+        self._validate_identifiers(flow_id, file_name)
         key = self.build_full_path(flow_id, file_name)
 
         try:
@@ -325,6 +361,7 @@ class S3StorageService(StorageService):
         Raises:
             FileNotFoundError: If the file does not exist in S3
         """
+        self._validate_identifiers(flow_id, file_name)
         key = self.build_full_path(flow_id, file_name)
 
         try:

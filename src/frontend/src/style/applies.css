@@ -16,6 +16,14 @@
   }
 }
 
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
 @keyframes slideDown {
   from {
     height: 0;
@@ -32,6 +40,26 @@
   to {
     height: 0;
   }
+}
+
+/* Breathing glow used by the FlowBuilderWelcome's input shine — gently
+ * oscillates opacity and scale so the gradient feels alive without
+ * grabbing attention. Used together with the static blurred gradient
+ * below the input. */
+@keyframes welcome-glow-breath {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translateX(-50%) scale(0.95);
+  }
+  50% {
+    opacity: 0.75;
+    transform: translateX(-50%) scale(1.05);
+  }
+}
+
+.welcome-glow-breath {
+  animation: welcome-glow-breath 4s ease-in-out infinite;
 }
 
 @keyframes gradient-motion-start {

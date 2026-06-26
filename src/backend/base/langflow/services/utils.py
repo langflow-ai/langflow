@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+from enum import Enum
 from importlib import import_module
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
@@ -23,6 +25,16 @@ from .deps import get_auth_service, get_db_service, get_service, get_settings_se
 if TYPE_CHECKING:
     from lfx.services.settings.manager import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+class SetupSuperuserResult(str, Enum):
+    """Distinct outcomes from ``setup_superuser`` (AUTO_LOGIN and credential paths)."""
+
+    AUTO_LOGIN_INITIALIZED = "auto_login_initialized"
+    AUTO_LOGIN_ALREADY_SATISFIED = "auto_login_already_satisfied"
+    AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT = "auto_login_lock_timeout_superuser_present"
+    SUPERUSER_CREATED = "superuser_created"
+    SUPERUSER_UNCHANGED = "superuser_unchanged"
 
 
 async def get_or_create_super_user(session: AsyncSession, username, password, is_default):
@@ -69,62 +81,268 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     return await auth.create_super_user(username, password, db=session)
 
 
-async def setup_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
+async def setup_superuser(settings_service: SettingsService, session: AsyncSession) -> SetupSuperuserResult:
     if settings_service.auth_settings.AUTO_LOGIN:
-        await logger.adebug("AUTO_LOGIN is set to True. Creating default superuser.")
+        await logger.adebug("AUTO_LOGIN is set to True. Creating default superuser with full initialization.")
+        # Use file lock to prevent race conditions in multi-worker environments
+        from tempfile import gettempdir
+
+        from filelock import FileLock
+
         username = DEFAULT_SUPERUSER
         password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
-    else:
-        # Remove the default superuser if it exists
-        await teardown_superuser(settings_service, session)
-        # If AUTO_LOGIN is disabled, attempt to use configured credentials
-        # or fall back to default credentials if none are provided.
-        username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
-        password = (settings_service.auth_settings.SUPERUSER_PASSWORD or DEFAULT_SUPERUSER_PASSWORD).get_secret_value()
+
+        # Use file lock similar to starter projects
+        lock_file = Path(gettempdir()) / "langflow_auto_login_superuser.lock"
+        lock = FileLock(lock_file, timeout=5)
+
+        try:
+            with lock:
+                # Create user and initialize all related resources
+                super_user = await get_or_create_super_user(session, username, password, is_default=True)
+                if super_user:  # Only initialize if user was created
+                    from langflow.initial_setup.setup import get_or_create_default_folder
+                    from langflow.services.deps import get_variable_service
+
+                    # Recover MCP server config files orphaned when DB was reset but LANGFLOW_CONFIG_DIR was kept.
+                    await migrate_orphaned_mcp_servers_config(session, settings_service, super_user)
+
+                    await get_variable_service().initialize_user_variables(super_user.id, session)
+
+                    # NOTE: Agentic variables are initialized separately in preload or main lifespan
+                    # via initialize_agentic_global_variables() which handles all users at once.
+                    # Do NOT initialize them here to avoid conflicts during preload.
+
+                    _ = await get_or_create_default_folder(session, super_user.id)
+                    await logger.adebug("Auto-login superuser initialized successfully")
+                    return SetupSuperuserResult.AUTO_LOGIN_INITIALIZED
+                return SetupSuperuserResult.AUTO_LOGIN_ALREADY_SATISFIED
+        except TimeoutError as exc:
+            # Another worker may be handling it - but a stale/abandoned lock or dead holder
+            # yields the same timeout with no initialization.
+            await logger.awarning(
+                "Timed out waiting for AUTO_LOGIN superuser initialization lock "
+                "(another worker may hold it, or the lock file may be stale). "
+                "Verifying whether the default superuser exists.",
+            )
+            from langflow.services.database.models.user.model import User
+
+            stmt = select(User).where(
+                User.username == username,
+                User.is_superuser == True,  # noqa: E712
+            )
+            exists = (await session.exec(stmt)).first() is not None
+            if not exists:
+                msg = (
+                    "AUTO_LOGIN is enabled but the default superuser was not initialized: "
+                    "could not acquire the initialization lock within the timeout and no matching "
+                    "superuser exists in the database. Retry startup or create a superuser manually."
+                )
+                await logger.aerror(msg)
+                raise RuntimeError(msg) from exc
+            return SetupSuperuserResult.AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT
+    # Remove the default superuser if it exists
+    await teardown_superuser(settings_service, session)
+    # If AUTO_LOGIN is disabled, attempt to use configured credentials
+    # or fall back to default credentials if none are provided.
+    username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+    password = (settings_service.auth_settings.SUPERUSER_PASSWORD or DEFAULT_SUPERUSER_PASSWORD).get_secret_value()
+
+    await logger.adebug(f"Setup superuser: username={username}, has_password={bool(password)}")
 
     if not username or not password:
         msg = "Username and password must be set"
+        await logger.aerror(f"Missing credentials: username={username}, password={'set' if password else 'not set'}")
         raise ValueError(msg)
 
     is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
 
     try:
+        await logger.adebug(f"Creating/getting superuser: username={username}, is_default={is_default}")
         user = await get_or_create_super_user(
             session=session, username=username, password=password, is_default=is_default
         )
         if user is not None:
             await logger.adebug("Superuser created successfully.")
+            outcome = SetupSuperuserResult.SUPERUSER_CREATED
+            # When the default superuser is recreated (e.g. after a DB reset in
+            # AUTO_LOGIN mode) the per-user MCP servers config file saved under the
+            # previous UUID becomes orphaned on disk. Best-effort recover it so
+            # users don't lose their MCP server configuration across restarts.
+            if is_default and settings_service.auth_settings.AUTO_LOGIN:
+                await migrate_orphaned_mcp_servers_config(session, settings_service, user)
+        else:
+            outcome = SetupSuperuserResult.SUPERUSER_UNCHANGED
     except Exception as exc:
-        logger.exception(exc)
+        await logger.aexception(f"Failed to create superuser: {exc}")
         msg = "Could not create superuser. Please create a superuser manually."
         raise RuntimeError(msg) from exc
+    else:
+        return outcome
     finally:
         # Scrub credentials from in-memory settings after setup
         settings_service.auth_settings.reset_credentials()
 
 
-async def teardown_superuser(settings_service, session: AsyncSession) -> None:
-    """Teardown the superuser."""
-    # If AUTO_LOGIN is True, we will remove the default superuser
-    # from the database.
+async def migrate_orphaned_mcp_servers_config(
+    session: AsyncSession,
+    settings_service: SettingsService,
+    current_user,
+) -> bool:
+    """Best-effort recovery of MCP servers config files orphaned by a DB reset.
 
+    The MCP servers config is persisted on disk at
+    ``{config_dir}/{user_id}/_mcp_servers_{user_id}.json`` and tracked in the DB
+    via a ``File`` row. When Langflow starts with a fresh database but the same
+    config directory (common in containerized deployments without a persisted DB
+    volume), the default superuser is recreated with a new UUID and the
+    previously saved MCP config files become unreachable.
+
+    Recovery rules (intentionally conservative to avoid importing another user's
+    config — MCP server entries can contain ``env`` and ``headers`` auth material):
+
+    * If the new user already has an MCP config file on disk without a matching
+      ``File`` row, re-register the row (self-heal a partial previous migration).
+    * If exactly one orphaned ``_mcp_servers_{uuid}.json`` is found in the config
+      directory, migrate it.
+    * If multiple orphans are found, skip and log — we can't safely identify the
+      previous default superuser's file without extra metadata, so leave manual
+      recovery to the operator.
+
+    Returns True when a file was migrated or a missing DB row was restored.
+    """
+    from uuid import UUID
+
+    import aiofiles
+    import anyio
+
+    from langflow.services.database.models.file.model import File as UserFile
+
+    try:
+        config_dir_value = settings_service.settings.config_dir
+        if not config_dir_value:
+            return False
+
+        config_dir = Path(config_dir_value)
+        if not config_dir.exists() or not config_dir.is_dir():
+            return False
+
+        name_without_ext = f"_mcp_servers_{current_user.id}"
+        existing_stmt = (
+            select(UserFile).where(UserFile.user_id == current_user.id).where(UserFile.name == name_without_ext)
+        )
+        if (await session.exec(existing_stmt)).first() is not None:
+            return False
+
+        current_user_dir = str(current_user.id)
+        new_dir = config_dir / current_user_dir
+        new_filename = f"_mcp_servers_{current_user.id}.json"
+        new_file_path = new_dir / new_filename
+        db_path = f"{current_user.id}/{new_filename}"
+
+        # Case 1: a previous migration attempt copied the file but failed before
+        # committing the DB row. Re-register the existing file instead of
+        # returning early and leaving the user with an invisible config.
+        if new_file_path.exists():
+            try:
+                size = new_file_path.stat().st_size
+            except OSError as exc:
+                await logger.awarning(
+                    "Cannot stat existing MCP config %s while self-healing DB row: %s",
+                    new_file_path,
+                    exc,
+                )
+                return False
+            session.add(UserFile(user_id=current_user.id, name=name_without_ext, path=db_path, size=size))
+            await session.commit()
+            await logger.ainfo(
+                "Restored missing MCP servers config DB row for user %s from existing file %s",
+                current_user.id,
+                new_file_path,
+            )
+            return True
+
+        def _find_orphans() -> list[tuple[float, Path]]:
+            orphans: list[tuple[float, Path]] = []
+            for entry in config_dir.iterdir():
+                if not entry.is_dir() or entry.name == current_user_dir:
+                    continue
+                try:
+                    UUID(entry.name)
+                except ValueError:
+                    continue
+                mcp_path = entry / f"_mcp_servers_{entry.name}.json"
+                if mcp_path.is_file():
+                    try:
+                        mtime = mcp_path.stat().st_mtime
+                    except OSError:
+                        continue
+                    orphans.append((mtime, mcp_path))
+            return orphans
+
+        orphans = await anyio.to_thread.run_sync(_find_orphans)
+        if not orphans:
+            return False
+
+        if len(orphans) > 1:
+            orphan_paths = ", ".join(str(p) for _, p in sorted(orphans, key=lambda i: i[0], reverse=True))
+            await logger.awarning(
+                "Found %d orphaned MCP servers config files in %s; skipping automatic "
+                "migration to avoid restoring the wrong one. Move the intended file to "
+                "%s to recover. Candidates: %s",
+                len(orphans),
+                config_dir,
+                new_file_path,
+                orphan_paths,
+            )
+            return False
+
+        _, orphan_path = orphans[0]
+
+        async with aiofiles.open(str(orphan_path), "rb") as src:
+            data = await src.read()
+
+        await anyio.to_thread.run_sync(lambda: new_dir.mkdir(parents=True, exist_ok=True))
+        async with aiofiles.open(str(new_file_path), "wb") as dst:
+            await dst.write(data)
+
+        session.add(UserFile(user_id=current_user.id, name=name_without_ext, path=db_path, size=len(data)))
+        await session.commit()
+
+        await logger.ainfo(
+            "Migrated orphaned MCP servers config from %s to user %s",
+            orphan_path,
+            current_user.id,
+        )
+    except Exception as exc:  # noqa: BLE001
+        await logger.awarning("Failed to migrate orphaned MCP servers config: %s", exc)
+        return False
+    else:
+        return True
+
+
+async def teardown_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
+    """Remove the default superuser when AUTO_LOGIN is disabled and it was never used to sign in.
+
+    If the default account has ``last_login_at`` set, it is kept. Deletion can still fail with
+    an integrity error when the user owns rows (e.g. flows) without ORM cascade — callers see
+    ``RuntimeError`` so startup or shutdown does not silently ignore the problem.
+    """
     if not settings_service.auth_settings.AUTO_LOGIN:
+        await logger.adebug("AUTO_LOGIN is set to False. Removing default superuser if unused.")
         try:
-            await logger.adebug("AUTO_LOGIN is set to False. Removing default superuser if exists.")
             username = DEFAULT_SUPERUSER
             from langflow.services.database.models.user.model import User
 
             stmt = select(User).where(User.username == username)
             result = await session.exec(stmt)
             user = result.first()
-            # Check if super was ever logged in, if not delete it
-            # if it has logged in, it means the user is using it to login
+
             if user and user.is_superuser is True and not user.last_login_at:
                 await session.delete(user)
                 await logger.adebug("Default superuser removed successfully.")
-
         except Exception as exc:
-            logger.exception(exc)
+            await logger.aexception("Could not remove default superuser.")
             msg = "Could not remove default superuser."
             raise RuntimeError(msg) from exc
 
@@ -192,6 +410,49 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         # Don't re-raise since this is a cleanup task
 
 
+async def clean_authz_audit_log(settings_service: SettingsService, session: AsyncSession) -> int:
+    """Delete authz_audit_log rows older than ``AUTHZ_AUDIT_RETENTION_DAYS``.
+
+    Retention is configured via ``AuthSettings.AUTHZ_AUDIT_RETENTION_DAYS``;
+    setting it to ``0`` disables pruning so operators relying on an external
+    archival pipeline (Postgres partitioning, SIEM export) can opt out without
+    losing rows here. The function is intentionally best-effort: failures are
+    logged and swallowed so startup never fails because the audit table is
+    transiently unreachable.
+
+    Returns the number of rows deleted (best-effort; ``-1`` when the rowcount
+    is unavailable from the driver).
+    """
+    try:
+        retention_days = int(getattr(settings_service.auth_settings, "AUTHZ_AUDIT_RETENTION_DAYS", 90))
+    except Exception:  # noqa: BLE001 — settings shape can vary in tests/stubs
+        retention_days = 90
+    if retention_days <= 0:
+        logger.debug("authz_audit_log retention disabled (AUTHZ_AUDIT_RETENTION_DAYS=%d)", retention_days)
+        return 0
+
+    from datetime import datetime, timedelta, timezone
+
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+    try:
+        delete_stmt = delete(AuthzAuditLog).where(col(AuthzAuditLog.timestamp) < cutoff)
+        result = await session.exec(delete_stmt)
+        deleted = getattr(result, "rowcount", None)
+        deleted_count = int(deleted) if deleted is not None and deleted >= 0 else -1
+        logger.debug(
+            "authz_audit_log cleanup removed %s rows older than %d days",
+            deleted_count if deleted_count >= 0 else "?",
+            retention_days,
+        )
+    except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
+        logger.warning("authz_audit_log cleanup failed: %s", exc)
+        return -1
+    else:
+        return deleted_count
+
+
 async def clean_vertex_builds(settings_service: SettingsService, session: AsyncSession) -> None:
     """Clean up old vertex builds from the database.
 
@@ -231,6 +492,8 @@ def register_all_service_factories() -> None:
 
     from langflow.services.auth import factory as auth_factory
     from langflow.services.auth.service import AuthService
+    from langflow.services.authorization import factory as authorization_factory
+    from langflow.services.authorization.service import LangflowAuthorizationService
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
     from langflow.services.database import factory as database_factory
@@ -242,6 +505,7 @@ def register_all_service_factories() -> None:
     from langflow.services.store import factory as store_factory
     from langflow.services.task import factory as task_factory
     from langflow.services.telemetry import factory as telemetry_factory
+    from langflow.services.telemetry_writer import factory as telemetry_writer_factory
     from langflow.services.tracing import factory as tracing_factory
     from langflow.services.transaction import factory as transaction_factory
     from langflow.services.variable import factory as variable_factory
@@ -257,6 +521,7 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(telemetry_factory.TelemetryServiceFactory())
     service_manager.register_factory(tracing_factory.TracingServiceFactory())
     service_manager.register_factory(transaction_factory.TransactionServiceFactory())
+    service_manager.register_factory(telemetry_writer_factory.TelemetryWriterServiceFactory())
     service_manager.register_factory(state_factory.StateServiceFactory())
     service_manager.register_factory(job_queue_factory.JobQueueServiceFactory())
     service_manager.register_factory(task_factory.TaskServiceFactory())
@@ -265,16 +530,26 @@ def register_all_service_factories() -> None:
     # Override LFX's no-op auth service with Langflow's full JWT implementation
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
     service_manager.register_factory(auth_factory.AuthServiceFactory())
+    # Same pattern as ``auth_service``: register the OSS pass-through here with
+    # ``override=True`` so Langflow always has a default. A registered
+    # authorization plugin replaces it by listing its class in
+    # ``LANGFLOW_CONFIG_DIR/lfx.toml`` (config files use ``override=True`` via
+    # ``_discover_from_config``). Plain entry-point discovery uses
+    # ``override=False`` and would lose to this default — the supported
+    # override path is the ``lfx.toml`` config, matching SSO.
+    service_manager.register_service_class(
+        ServiceType.AUTHORIZATION_SERVICE, LangflowAuthorizationService, override=True
+    )
+    service_manager.register_factory(authorization_factory.AuthorizationServiceFactory())
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
     service_manager.set_factory_registered()
 
 
 def register_builtin_adapters() -> None:
-    """Import built-in adapter modules so ``@register_adapter`` decorators fire.
+    """Import built-in adapter registration modules.
 
     Mirrors ``register_all_service_factories()`` for the adapter registry system.
-    Each import triggers the ``@register_adapter`` decorator at module scope,
-    registering the adapter class on the AdapterRegistry singleton.
+    Each import registers the adapter class on the AdapterRegistry singleton.
 
     TODO: Watsonx risks are documented here because registration is runtime-optional:
     missing ``ibm_*`` modules should skip adapter registration, but broad
@@ -289,7 +564,7 @@ def register_builtin_adapters() -> None:
         return
 
     try:
-        import_module("langflow.services.adapters.deployment.watsonx_orchestrate")
+        import_module("langflow.services.adapters.deployment.watsonx_orchestrate.register")
     except ModuleNotFoundError as exc:
         logger.info("Skipping Watsonx Orchestrate adapter registration: %s", exc)
 
@@ -338,3 +613,4 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     async with session_scope() as session:
         await clean_transactions(settings_service, session)
         await clean_vertex_builds(settings_service, session)
+        await clean_authz_audit_log(settings_service, session)

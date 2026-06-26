@@ -1,11 +1,13 @@
 import httpx
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import IntInput, SecretStrInput, SliderInput, StrInput
+from lfx.utils.secrets import secret_value_to_str
+from lfx.utils.ssrf_httpx import ssrf_protected_openai_clients_for_url, ssrf_safe_httpx_get
+from lfx.utils.ssrf_protection import SSRFProtectionError
 
 
 class LiteLLMProxyComponent(LCModelComponent):
@@ -71,9 +73,8 @@ class LiteLLMProxyComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:
         """Build the LiteLLM proxy model."""
-        api_key = self.api_key
-        if isinstance(api_key, SecretStr):
-            api_key = api_key.get_secret_value()
+        api_key = secret_value_to_str(self.api_key) or ""
+        ssrf_client_kwargs = ssrf_protected_openai_clients_for_url(self.api_base)
 
         self._validate_proxy_connection(api_key)
 
@@ -86,6 +87,7 @@ class LiteLLMProxyComponent(LCModelComponent):
             timeout=self.timeout,
             max_retries=self.max_retries,
             streaming=self.stream,
+            **ssrf_client_kwargs,
         )
 
     def _validate_proxy_connection(self, api_key: str) -> None:
@@ -94,11 +96,14 @@ class LiteLLMProxyComponent(LCModelComponent):
         models_url = f"{base_url}/models"
 
         try:
-            response = httpx.get(
+            response = ssrf_safe_httpx_get(
                 models_url,
                 headers={"Authorization": f"Bearer {api_key}"},
                 timeout=10,
             )
+        except SSRFProtectionError as e:
+            msg = f"SSRF Protection: {e}"
+            raise ValueError(msg) from e
         except httpx.ConnectError as e:
             msg = (
                 f"Could not connect to LiteLLM Proxy at {base_url}. Verify the URL is correct and the proxy is running."

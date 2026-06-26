@@ -81,7 +81,7 @@ module.exports = {
         {
           type: "doc",
           id: "Flows/langflow-assistant",
-          label: "Build components with Langflow Assistant"
+          label: "Build flows and components with Langflow Assistant"
         },
       ],
     },
@@ -146,6 +146,7 @@ module.exports = {
               label: "Database guide for enterprise administrators"
             },
             "Develop/knowledge",
+            "Develop/memory-bases",
           ],
         },
         {
@@ -153,12 +154,14 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-grafana-loki",
             "Develop/traces",
             {
               type: "category",
               label: "Monitoring",
               items: [
                 "Develop/integrations-arize",
+                "Develop/observability-grafana-loki",
                 "Develop/integrations-langfuse",
                 "Develop/integrations-langsmith",
                 "Develop/integrations-langwatch",
@@ -185,6 +188,15 @@ module.exports = {
           id: "Develop/configuration-cli",
           label: "Use the Langflow CLI"
         },
+        {
+          type: "category",
+          label: "Bundle extensions",
+          items: [
+            "Develop/extensions-overview",
+            "Develop/extensions-quickstart",
+            "Develop/extensions-manifest",
+          ],
+        },
       ],
     },
     {
@@ -206,6 +218,11 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-nginx-ssl",
           label: "Deploy Langflow with Nginx and SSL"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-wxo",
+          label: "Deploy flows on watsonx Orchestrate"
         },
         {
           type: "category",
@@ -266,11 +283,6 @@ module.exports = {
             },
             {
               type: "doc",
-              id: "Deployment/deployment-wxo",
-              label: "IBM watsonx Orchestrate"
-            },
-            {
-              type: "doc",
               id: "Deployment/deployment-railway",
               label: "Railway"
             },
@@ -280,6 +292,16 @@ module.exports = {
               label: "Render"
             },
           ]
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-multi-worker",
+          label: "Deploy Langflow with multiple workers",
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-lfx-compatibility",
+          label: "LFX and Langflow version compatibility",
         },
         {
           type: "doc",
@@ -313,7 +335,6 @@ module.exports = {
               label: "Input / Output",
               items: [
                 "Components/chat-input-and-output",
-                "Components/text-input-and-output",
                 "Components/webhook",
               ]
             },
@@ -326,6 +347,7 @@ module.exports = {
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
+                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
@@ -343,8 +365,9 @@ module.exports = {
               type: "category",
               label: "Files and Knowledge",
               items: [
-                "Components/directory",
+                "Components/file-system",
                 "Components/knowledge-base",
+                "Components/memory-base",
                 "Components/read-file",
                 "Components/write-file",
               ]
@@ -416,6 +439,7 @@ module.exports = {
             "Components/bundles-cassandra",
             "Components/bundles-chroma",
             "Components/bundles-cleanlab",
+            "Components/bundles-codeagents",
             "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
@@ -430,6 +454,8 @@ module.exports = {
             "Components/bundles-elastic",
             "Components/bundles-exa",
             "Components/bundles-faiss",
+            "Components/bundles-files-ingestion",
+            "Components/bundles-firecrawl",
             "Components/bundles-glean",
             "Components/bundles-google",
             "Components/bundles-groq",
@@ -550,6 +576,11 @@ module.exports = {
           type: "doc",
           id: "Support/troubleshooting",
           label: "Troubleshoot",
+        },
+        {
+          type: "doc",
+          id: "Support/macos-support-matrix",
+          label: "macOS support",
         },
         {
           type: "doc",

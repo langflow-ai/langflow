@@ -11,7 +11,7 @@ export interface DeploymentUpdateFlowItem {
   flow_version_id: string;
   add_app_ids: string[];
   remove_app_ids: string[];
-  tool_name?: string;
+  tool_display_name?: string;
 }
 
 export interface DeploymentUpdateUpsertToolItem
@@ -20,6 +20,7 @@ export interface DeploymentUpdateUpsertToolItem
 }
 
 export interface DeploymentUpdateProviderData {
+  display_name?: string;
   llm?: string;
   connections?: DeploymentConnectionPayload[];
   upsert_flows?: DeploymentUpdateFlowItem[];
@@ -30,7 +31,6 @@ export interface DeploymentUpdateProviderData {
 
 export interface DeploymentUpdateRequest {
   deployment_id: string;
-  name?: string;
   description?: string;
   provider_data?: DeploymentUpdateProviderData;
 }
@@ -50,10 +50,8 @@ export const usePatchDeployment: useMutationFunctionType<
     return res.data;
   };
 
-  // TODO: Add retries for transient server-side errors (5xx, timeouts).
   return mutate(["usePatchDeployment"], fn, {
     ...options,
-    retry: false,
     onSuccess: (...args) => {
       queryClient.refetchQueries({ queryKey: ["useGetDeployments"] });
       queryClient.removeQueries({

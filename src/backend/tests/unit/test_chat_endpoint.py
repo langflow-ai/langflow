@@ -563,6 +563,73 @@ async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatb
 
 
 @pytest.mark.benchmark
+@pytest.mark.security
+@pytest.mark.parametrize(
+    "malicious_files",
+    [
+        ["/etc/hosts"],
+        ["/etc/passwd"],
+        ["../../etc/passwd"],
+        ["..\\..\\windows\\system32\\drivers\\etc\\hosts"],
+        ["s3://other-bucket/secret.txt"],
+        ["just_a_filename.txt"],
+        # foreign flow_id segment — looks well-formed but isn't this flow's namespace
+        ["00000000-0000-0000-0000-000000000000/file.png"],
+        # null byte smuggling
+        ["abc\x00/file.png"],
+    ],
+)
+async def test_build_public_tmp_rejects_malicious_files(
+    client, json_memory_chatbot_no_llm, logged_in_headers, malicious_files
+):
+    """Regression for GHSA-rcjh-r59h-gq37 — unauth public build must not accept arbitrary file paths."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-files-validation-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            "inputs": {"session": "test_session"},
+            "files": malicious_files,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert "file" in response.json()["detail"].lower()
+
+
+@pytest.mark.benchmark
+async def test_build_public_tmp_accepts_files_in_own_namespace(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Files namespaced under the public flow's own UUID must still be accepted."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-files-allowed-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            "inputs": {"session": "test_session"},
+            "files": [f"{flow_id}/example_attachment.png"],
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.OK
+
+
+@pytest.mark.benchmark
 async def test_build_public_tmp_checks_public_access_before_validation(
     client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
 ):
@@ -587,6 +654,99 @@ async def test_build_public_tmp_checks_public_access_before_validation(
 
     assert response.status_code == codes.FORBIDDEN
     assert response.json()["detail"] == "Flow is not public"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rejects_code_execution_components(
+    client, json_memory_chatbot_no_llm, logged_in_headers
+):
+    """Report H1-3754930: unauthenticated public builds must reject code-execution components.
+
+    A public flow containing a Python interpreter/REPL (or the legacy Python Code
+    Structured tool) would otherwise let any anonymous visitor trigger
+    server-side code execution through /build_public_tmp.
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "PythonREPLComponent-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "PythonREPLComponent-pub1",
+                "type": "PythonREPLComponent",
+                "display_name": "Python Interpreter",
+                "node": {"display_name": "Python Interpreter", "template": {}},
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-code-exec-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rejects_flow_invoking_components(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Report H1-3754930 (transitive case): public builds must reject flow-invoking components.
+
+    A public wrapper flow with no directly-blocked nodes could otherwise embed a
+    Run Flow / Sub Flow / Flow as Tool node that loads and executes another saved
+    owner flow by id/name at runtime — a private flow which may itself contain a
+    code-execution component that is never re-validated on the run path. Blocking
+    the flow-invoking node type on the public path closes that indirection.
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "RunFlow-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "RunFlow-pub1",
+                "type": "RunFlow",
+                "display_name": "Run Flow",
+                "node": {
+                    "display_name": "Run Flow",
+                    "template": {"flow_id_selected": {"value": str(uuid.uuid4())}},
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-flow-invoke-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
 
 
 @pytest.mark.benchmark
@@ -734,6 +894,52 @@ async def test_build_public_tmp_without_data_parameter(client, json_memory_chatb
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_build_public_tmp_rejects_custom_component(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """H1-3754930 follow-up: an unrecognized custom component must be rejected on the public path.
+
+    Under the default allow_public_custom_components=False, the unauthenticated public build path
+    runs only the server's trusted code for known component types and rejects custom/unknown
+    component code, so an anonymous visitor cannot trigger arbitrary server-side code execution
+    even when allow_custom_components is True (the default).
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "EvilCustom-1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "EvilCustom-1",
+                "type": "TotallyCustomEvilComponent",
+                "node": {
+                    "display_name": "Evil Custom",
+                    "template": {"code": {"value": "import os\nos.system('id')\n"}},
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-custom-component-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_get_build_events_public_tmp_job_accessible_by_any_auth_user(
     client, json_memory_chatbot_no_llm, logged_in_headers, user_two, monkeypatch
 ):
@@ -836,13 +1042,13 @@ async def test_job_owner_cleaned_up_after_cleanup_job():
 
         service.start_job(job_id, _noop())
         await asyncio.sleep(0.05)
-        service.register_job_owner(job_id, user_id)
+        await service.register_job_owner(job_id, user_id)
 
-        assert service.get_job_owner(job_id) == user_id
+        assert await service.get_job_owner(job_id) == user_id
 
         await service.cleanup_job(job_id)
 
-        assert service.get_job_owner(job_id) is None
+        assert await service.get_job_owner(job_id) is None
     finally:
         service._closed = True
         if service._cleanup_task:
@@ -1159,3 +1365,138 @@ def test_scope_session_to_namespace_helper():
     assert scope_session_to_namespace("victim-session", "namespace-B") == "namespace-B:victim-session"
     # A foreign-namespace prefix is treated as out-of-namespace and gets re-wrapped.
     assert scope_session_to_namespace("namespace-B:victim", "namespace-A") == "namespace-A:namespace-B:victim"
+
+
+# ── Public job registry unit tests ───────────────────────────────────────────
+# CVE fix: unauthenticated callers must not access private-flow job streams
+# by guessing or leaking a job_id from the authenticated build endpoint.
+
+
+async def test_job_queue_service_register_and_check_public_job():
+    """register_public_job marks a job as public; is_public_job reflects that."""
+    svc = JobQueueService()
+    job_id = str(uuid.uuid4())
+
+    # Why: job not registered yet — must return False before registration
+    assert svc.is_public_job(job_id) is False
+
+    await svc.register_public_job(job_id)
+
+    # Why: job registered — must return True after registration
+    assert svc.is_public_job(job_id) is True
+
+
+def test_job_queue_service_unregistered_job_not_public():
+    """A job_id that was never registered is not considered public."""
+    svc = JobQueueService()
+    assert svc.is_public_job(str(uuid.uuid4())) is False
+
+
+async def test_job_queue_service_is_public_job_async_base():
+    """is_public_job_async on base class delegates to in-memory is_public_job."""
+    svc = JobQueueService()
+    job_id = str(uuid.uuid4())
+
+    # Why: async variant must mirror sync variant — False before, True after
+    assert await svc.is_public_job_async(job_id) is False
+    await svc.register_public_job(job_id)
+    assert await svc.is_public_job_async(job_id) is True
+
+
+async def test_job_queue_service_cleanup_removes_public_registration():
+    """cleanup_job discards the public registration so the job_id cannot be reused.
+
+    Why: tests the actual cleanup_job contract — not the internal set.
+    If cleanup_job stops calling discard, this test must catch it.
+    """
+    svc = JobQueueService()
+    job_id = str(uuid.uuid4())
+    await svc.register_public_job(job_id)
+    assert svc.is_public_job(job_id) is True
+
+    # Call the real cleanup path — not svc._public_jobs.discard directly.
+    # cleanup_job early-returns when job_id is not in _queues, but the
+    # _public_jobs.discard call is unconditional (after the early-return guard),
+    # so we need to reach it. Seed a minimal queue entry first.
+    svc._queues[job_id] = (asyncio.Queue(), None, None, None)  # type: ignore[arg-type]
+    await svc.cleanup_job(job_id)
+
+    # Why: if cleanup_job ever drops the discard call, is_public_job still returns True here
+    assert svc.is_public_job(job_id) is False
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_private_job_id_blocked_on_public_events_endpoint(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """A job_id started via the authenticated build endpoint must be rejected by the public events endpoint.
+
+    Security proof: before the fix, any caller who knew or guessed a private job_id
+    could read the live event stream (LLM output, API keys, tracebacks) without auth.
+    After the fix, _assert_public_job returns HTTP 404 because the job was never
+    registered via register_public_job.
+
+    Why 404 not 403: returning 403 would confirm the job exists under a different
+    access tier, leaking information about private builds.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start a PRIVATE (authenticated) build — job_id never passed through build_public_tmp
+    private_start = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert private_start.status_code == codes.OK
+    private_job_id = private_start.json()["job_id"]
+
+    # Why: the shared AsyncClient persists access-token cookies from logged_in_headers.
+    # Without clearing them, get_current_user_optional could resolve a user on this
+    # "public" request, which would not exercise the unauthenticated attack path.
+    client.cookies.clear()
+
+    # Attempt to read the private job's events via the unauthenticated public endpoint
+    # Why: this is the exact attack vector — attacker has job_id, tries public endpoint
+    events_response = await client.get(
+        f"api/v1/build_public_tmp/{private_job_id}/events?event_delivery=polling",
+        headers={"Accept": "application/x-ndjson"},
+    )
+
+    # Must be 404 — gate blocks private job from public endpoint
+    assert events_response.status_code == codes.NOT_FOUND
+    assert events_response.json()["detail"] == "Job not found"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_private_job_id_blocked_on_public_cancel_endpoint(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """A job_id started via the authenticated build endpoint must be rejected by the public cancel endpoint.
+
+    Security proof: before the fix, an unauthenticated attacker could cancel any
+    in-flight private build as a denial-of-service by supplying a known job_id.
+    After the fix, _assert_public_job returns HTTP 404.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start a PRIVATE (authenticated) build
+    private_start = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert private_start.status_code == codes.OK
+    private_job_id = private_start.json()["job_id"]
+
+    # Why: the shared AsyncClient persists access-token cookies from logged_in_headers.
+    # Without clearing them, get_current_user_optional could resolve a user on this
+    # "public" request, which would not exercise the unauthenticated attack path.
+    client.cookies.clear()
+
+    # Attempt to cancel the private job via the unauthenticated public endpoint
+    cancel_response = await client.post(
+        f"api/v1/build_public_tmp/{private_job_id}/cancel",
+        headers={"Content-Type": "application/json"},
+    )
+
+    # Must be 404 — gate blocks private job from public cancel endpoint
+    assert cancel_response.status_code == codes.NOT_FOUND
+    assert cancel_response.json()["detail"] == "Job not found"
