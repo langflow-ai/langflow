@@ -18,12 +18,17 @@
     "jest-message-util": {
       "picomatch": "^4.0.4"
     },
-    "playwright": "^1.59.1",
+    "jest-junit": {
+      "uuid": "^11.1.0"
+    },
+    "playwright": "1.60.0",
     "brace-expansion": "^5.0.5",
     "handlebars": "^4.7.9",
     "minimatch": "^10.2.5",
     "serialize-javascript": ">=7.0.3",
-    "undici": ">=7.24.0"
+    "undici": ">=7.24.0",
+    "postcss-selector-parser": "^6.1.3",
+    "form-data": "^4.0.6"
   },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
@@ -52,6 +57,7 @@
     "@tabler/icons-react": "^3.6.0",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/line-clamp": "^0.4.4",
+    "@ag-ui/client": "0.0.53",
     "@tanstack/react-query": "^5.49.2",
     "@types/axios": "^0.14.0",
     "@types/mustache": "^4.2.6",
@@ -96,7 +102,7 @@
     "react-icons": "^5.2.1",
     "react-markdown": "^9.1.0",
     "react-pdf": "^9.0.0",
-    "react-router-dom": "^6.23.1",
+    "react-router-dom": "^6.30.4",
     "react-sortablejs": "^6.1.4",
     "react-syntax-highlighter": "^16.1.0",
     "reactflow": "^11.11.3",
@@ -111,7 +117,7 @@
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
     "use-stick-to-bottom": "^1.1.1",
-    "uuid": "^10.0.0",
+    "uuid": "^14.0.0",
     "vanilla-jsoneditor": "^2.3.3",
     "web-vitals": "^4.1.1",
     "whatwg-fetch": "^3.6.20",
@@ -126,6 +132,8 @@
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
     "a11y:report": "node tests/utils/aggregate-a11y-reports.mjs",
+    "a11y:html-report": "node tests/utils/build-a11y-html-report.mjs",
+    "a11y:job-summary": "node tests/utils/build-a11y-job-summary.mjs",
     "serve": "vite preview",
     "format": "npx @biomejs/biome format --write",
     "lint": "npx @biomejs/biome lint",
@@ -157,7 +165,7 @@
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
     "@modelcontextprotocol/server-everything": "^2026.1.14",
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "1.60.0",
     "@storybook/addon-docs": "^10.1.0",
     "@storybook/addon-links": "^10.1.0",
     "@storybook/react": "^10.1.0",

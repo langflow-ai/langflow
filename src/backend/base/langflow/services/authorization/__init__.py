@@ -24,8 +24,13 @@ from langflow.services.authorization.guards import (
     ensure_project_permission,
     ensure_share_permission,
     ensure_variable_permission,
+    should_apply_owner_override,
 )
-from langflow.services.authorization.listing import filter_visible_resources
+from langflow.services.authorization.listing import (
+    filter_visible_resources,
+    restrict_to_owned_or_visible,
+    visible_id_prefilter,
+)
 from langflow.services.authorization.service import LangflowAuthorizationService
 
 __all__ = [
@@ -52,4 +57,7 @@ __all__ = [
     "filter_visible_resources",
     "requires_flow_permission",
     "requires_resource_permission",
+    "restrict_to_owned_or_visible",
+    "should_apply_owner_override",
+    "visible_id_prefilter",
 ]

@@ -124,7 +124,7 @@ def _get_google_generative_ai_inputs_and_fields():
 
 def _get_openai_inputs_and_fields():
     try:
-        from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+        from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
         openai_inputs = get_filtered_inputs(OpenAIModelComponent)
     except ImportError as e:
@@ -157,7 +157,7 @@ def _get_groq_inputs_and_fields():
 
 def _get_anthropic_inputs_and_fields():
     try:
-        from lfx.components.anthropic.anthropic import AnthropicModelComponent
+        from lfx_anthropic.components.anthropic.anthropic import AnthropicModelComponent
 
         anthropic_inputs = get_filtered_inputs(AnthropicModelComponent)
     except ImportError as e:
@@ -179,7 +179,7 @@ def _get_nvidia_inputs_and_fields():
 
 def _get_amazon_bedrock_inputs_and_fields():
     try:
-        from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+        from lfx_amazon.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
         amazon_bedrock_inputs = get_filtered_inputs(AmazonBedrockComponent)
     except ImportError as e:
@@ -203,7 +203,7 @@ MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
 try:
-    from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+    from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
     openai_inputs, openai_fields = _get_openai_inputs_and_fields()
     MODEL_PROVIDERS_DICT["OpenAI"] = {
@@ -248,7 +248,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.anthropic.anthropic import AnthropicModelComponent
+    from lfx_anthropic.components.anthropic.anthropic import AnthropicModelComponent
 
     anthropic_inputs, anthropic_fields = _get_anthropic_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Anthropic"] = {
@@ -278,7 +278,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+    from lfx_amazon.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
     bedrock_inputs, bedrock_fields = _get_amazon_bedrock_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Amazon Bedrock"] = {

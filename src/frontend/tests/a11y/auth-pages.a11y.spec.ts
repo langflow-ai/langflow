@@ -1,4 +1,5 @@
-import { expect, type LangflowPage, test } from "../fixtures";
+import { expect, test } from "../fixtures";
+import type { LangflowPage } from "../utils/types";
 
 async function disableAutoLogin(page: LangflowPage) {
   await page.route("**/api/v1/auto_login", (route) => {
@@ -166,6 +167,6 @@ test.describe("auth page accessibility", () => {
     await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
     await expect(page.locator("body")).toHaveClass(/dark/);
 
-    await page.runA11yScan("auth-login-dark-empty");
+    await page.runA11yScan("auth-login-dark-empty", { colorScheme: "dark" });
   });
 });

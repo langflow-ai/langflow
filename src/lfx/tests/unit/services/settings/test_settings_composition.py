@@ -133,6 +133,7 @@ EXPECTED_FIELDS = {
     "dev",
     "event_delivery",
     "worker_timeout",
+    "workflow_execution_timeout",
     "public_flow_cleanup_interval",
     "public_flow_expiration",
     "webhook_polling_interval",
@@ -161,6 +162,7 @@ EXPECTED_FIELDS = {
     "rate_limit_per_minute",
     "rate_limit_storage_uri",
     "rate_limit_trust_proxy",
+    "public_flow_rate_limit_per_minute",
     "custom_component_admin_only",
     "allow_components_paths_override",
     # RuntimeSettings
@@ -176,6 +178,7 @@ EXPECTED_FIELDS = {
     "redis_queue_polling_stale_threshold_s",
     "redis_queue_polling_watchdog_interval_s",
     "max_ingestion_timeout_secs",
+    "executor_kind",
     # UiSettings
     "embedded_mode",
     "hide_getting_started_progress",
@@ -195,6 +198,9 @@ EXPECTED_FIELDS = {
     "telemetry_writer_size_strategy",
     "telemetry_writer_batch_size_bytes",
     "telemetry_writer_max_queue_bytes",
+    # ---- Added in 1.10.1 ----
+    # SecuritySettings
+    "allow_public_custom_components",
 }
 
 

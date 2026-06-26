@@ -129,6 +129,7 @@ export default function LoginPage(): JSX.Element {
                 id="login-username"
                 name="username"
                 type="text"
+                allowAutofill
                 autoComplete="username"
                 onChange={({ target: { value } }) => {
                   handleInput({ target: { name: "username", value } });
@@ -172,6 +173,7 @@ export default function LoginPage(): JSX.Element {
                 }}
                 value={password}
                 isForm
+                allowAutofill
                 password={true}
                 required
                 id="login-password"

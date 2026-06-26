@@ -26,6 +26,13 @@ export type InputComponentType = {
   password: boolean;
   required?: boolean;
   isForm?: boolean;
+  /**
+   * Opt back into browser / password-manager autofill (default false). Only set
+   * by real credential-entry forms (login / signup / admin login); node-config
+   * inputs leave it false so autofill cannot inject values that autosave
+   * persists. See utils/inputAutofill.ts.
+   */
+  allowAutofill?: boolean;
   editNode?: boolean;
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;

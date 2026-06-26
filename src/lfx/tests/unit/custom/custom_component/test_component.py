@@ -140,6 +140,31 @@ async def test_send_message_without_database():
     assert event_manager.on_message.called
 
 
+@pytest.mark.asyncio
+async def test_process_chunk_marks_first_event_partial_without_mutating_message():
+    component = Component()
+    messages: list[dict] = []
+    tokens: list[dict] = []
+
+    class EventManager:
+        def on_message(self, data):
+            messages.append(data)
+
+        def on_token(self, data):
+            tokens.append(data)
+
+    component._event_manager = EventManager()
+    message = Message(text="", sender="AI")
+    message.properties.state = "complete"
+
+    complete_message = await component._process_chunk("", "", "message-id", message, first_chunk=True)
+
+    assert complete_message == ""
+    assert message.properties.state == "complete"
+    assert messages[0]["properties"]["state"] == "partial"
+    assert tokens == [{"chunk": "", "id": "message-id"}]
+
+
 @pytest.mark.usefixtures("use_noop_session")
 @pytest.mark.asyncio
 async def test_agent_component_send_message_events(monkeypatch):  # noqa: ARG001

@@ -96,6 +96,11 @@ async def _api_key_scopes_require_plugin_enforcement() -> bool:
         return False
 
 
+async def should_apply_owner_override() -> bool:
+    """Return True when Langflow should apply the built-in owner override."""
+    return not await _api_key_scopes_require_plugin_enforcement()
+
+
 def _coerce_action(
     act: DeploymentAction
     | FlowAction
@@ -224,11 +229,7 @@ async def _ensure_resource_permission(
             detail="External credentials do not allow this action",
         )
 
-    if (
-        owner_id is not None
-        and getattr(user, "id", None) == owner_id
-        and not await _api_key_scopes_require_plugin_enforcement()
-    ):
+    if owner_id is not None and getattr(user, "id", None) == owner_id and await should_apply_owner_override():
         await _audit.audit_decision(
             user_id=user.id,
             action=f"{resource_type}:{act_str}",

@@ -13,19 +13,31 @@ from uuid import UUID
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    computed_field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
 
 if TYPE_CHECKING:
     from langchain_core.prompts.chat import BaseChatPromptTemplate
 
+from pydantic import TypeAdapter
+
 from lfx.base.prompts.utils import dict_values_to_string
 from lfx.log.logger import logger
-from lfx.schema.content_block import ContentBlock
-from lfx.schema.content_types import ErrorContent
+from lfx.schema.content_block import ContentBlock, ContentType
+from lfx.schema.content_types import ErrorContent, TextContent
 from lfx.schema.data import Data
 from lfx.schema.image import Image, get_file_paths, is_image_file
+from lfx.schema.legacy_render import legacy_text, render_v1_content_blocks
 from lfx.schema.properties import Properties, Source
-from lfx.schema.validators import timestamp_to_str, timestamp_to_str_validator
+from lfx.schema.validators import str_to_timestamp_validator, timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 from lfx.utils.mustache_security import safe_mustache_render
@@ -35,6 +47,8 @@ if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
 
 MAX_ATTACHMENT_SIZE_BYTES: int = 50 * 1024 * 1024
+
+_CONTENT_TYPE_ADAPTER = TypeAdapter(ContentType)
 
 
 def _is_text_like_extension(file_path: Any) -> bool:
@@ -80,7 +94,6 @@ class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text_key: str = "text"
-    text: str | AsyncIterator | Iterator | None = Field(default="")
     sender: str | None = None
     sender_name: str | None = None
     files: list[str | Image] | None = Field(default=[])
@@ -96,9 +109,73 @@ class Message(Data):
 
     properties: Properties = Field(default_factory=Properties)
     category: Literal["message", "error", "warning", "info"] | None = "message"
-    content_blocks: list[ContentBlock] = Field(default_factory=list)
+    content_blocks: list[ContentType] = Field(default_factory=list)
     duration: int | None = None
     session_metadata: dict | None = None
+
+    # Text is intentionally NOT auto-folded into content_blocks. Text-only
+    # messages keep content_blocks empty for frontend backwards compatibility;
+    # content_blocks is populated explicitly by components that produce rich
+    # content (agents, multimodal, etc.). Streaming text (AsyncIterator/Iterator)
+    # is left in data for model_post_init to handle.
+
+    @computed_field
+    @property
+    def text(self) -> str | AsyncIterator | Iterator:
+        """Extract text from content_blocks, or fall back to data dict.
+
+        Always returns a string. For streaming access, use `text_stream` property.
+        """
+        stream = self.__dict__.get("_text_stream")
+        if stream is not None:
+            return stream
+        # If content_blocks has TextContent, derive from there
+        text_from_blocks = "".join(b.text for b in self.content_blocks if isinstance(b, TextContent))
+        if text_from_blocks:
+            return text_from_blocks
+        # Fall back to data dict (text-only messages, backwards compat)
+        return self.data.get(self.text_key, "") or ""
+
+    @text.setter
+    def text(self, value: str | AsyncIterator | Iterator | None) -> None:
+        """Replace text content or set a stream for later consumption.
+
+        Drops every existing TextContent in ``content_blocks`` and, if
+        ``value`` is non-empty, appends a single TextContent at the end.
+        Non-text blocks keep their position so ``content_blocks`` reflects
+        chronological order: tool calls / reasoning / media first, final
+        text last.
+        """
+        if isinstance(value, AsyncIterator | Iterator):
+            object.__setattr__(self, "_text_stream", value)
+            return
+        # Clear any pending/exhausted stream
+        self.__dict__.pop("_text_stream", None)
+        non_text = [b for b in self.content_blocks if not isinstance(b, TextContent)]
+        if value:
+            object.__setattr__(self, "content_blocks", [*non_text, TextContent(text=str(value))])
+        else:
+            object.__setattr__(self, "content_blocks", non_text)
+        # Keep self.data["text"] in sync for backwards compatibility
+        self.data[self.text_key] = value or ""
+
+    @property
+    def text_stream(self) -> AsyncIterator | Iterator | None:
+        """Access the pending text stream, if any. Used by streaming infrastructure."""
+        return self.__dict__.get("_text_stream")
+
+    def get_text(self):
+        """Return text derived from content_blocks (overrides Data.get_text)."""
+        return self.text
+
+    @model_serializer(mode="plain", when_used="json")
+    def serialize_model(self):
+        """Override Data.serialize_model to filter out non-serializable stream objects."""
+        return {
+            k: v.to_json() if hasattr(v, "to_json") else v
+            for k, v in self.data.items()
+            if not isinstance(v, AsyncIterator | Iterator)
+        }
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -114,24 +191,33 @@ class Message(Data):
             value = str(value)
         return value
 
-    @field_validator("text", mode="before")
-    @classmethod
-    def validate_text(cls, value):
-        if is_secret_value(value):
-            return str(value)
-        return value
-
     @field_validator("content_blocks", mode="before")
     @classmethod
     def validate_content_blocks(cls, value):
-        # value may start with [ or not
-        if isinstance(value, list):
-            return [
-                ContentBlock.model_validate_json(v) if isinstance(v, str) else ContentBlock.model_validate(v)
-                for v in value
-            ]
+        def _parse_item(item):
+            # Already a Pydantic model instance -- keep as-is
+            if isinstance(item, BaseModel):
+                return item
+            # JSON string -- parse it
+            if isinstance(item, str):
+                parsed = json.loads(item)
+                return _parse_item(parsed)
+            # Dict -- discriminator handles every ContentType (including the
+            # grouped ContentBlock with type="group"). Legacy JSON without
+            # an explicit "type" but with title+contents still validates as
+            # a ContentBlock for backwards compat.
+            if isinstance(item, dict):
+                if "type" in item:
+                    return _CONTENT_TYPE_ADAPTER.validate_python(item)
+                if "title" in item and "contents" in item:
+                    return ContentBlock.model_validate(item)
+                return _CONTENT_TYPE_ADAPTER.validate_python(item)
+            return item
+
         if isinstance(value, str):
-            value = json.loads(value) if value.startswith("[") else [ContentBlock.model_validate_json(value)]
+            value = json.loads(value) if value.startswith("[") else [value]
+        if isinstance(value, list):
+            return [_parse_item(v) for v in value]
         return value
 
     @field_validator("properties", mode="before")
@@ -169,6 +255,17 @@ class Message(Data):
         return value
 
     def model_post_init(self, /, _context: Any) -> None:
+        # If text in data dict is an iterator/stream, move it to __dict__ for direct access.
+        # Coerce SecretStr first so a secret value isn't mistaken for a stream
+        # (``text`` is now a computed_field, so the old before-validator that
+        # did this coercion no longer runs).
+        text_val = self.data.get("text")
+        if is_secret_value(text_val):
+            text_val = str(text_val)
+            self.data[self.text_key] = text_val
+        if text_val is not None and not isinstance(text_val, str):
+            self.data.pop("text", None)
+            self.__dict__["_text_stream"] = text_val
         new_files: list[Any] = []
         for file in self.files or []:
             # Skip if already an Image instance
@@ -193,6 +290,27 @@ class Message(Data):
         self.files = new_files
         if "timestamp" not in self.data:
             self.data["timestamp"] = self.timestamp
+        # Sync self.data["text"] from content_blocks when content_blocks has
+        # text content. Otherwise preserve whatever the caller passed in,
+        # including an explicit ``None`` — downstream code (e.g.
+        # ``MessageTable.from_message``) uses ``None`` vs ``""`` to tell
+        # "missing required field" apart from "intentionally empty input."
+        text_from_blocks = "".join(b.text for b in self.content_blocks if isinstance(b, TextContent))
+        if text_from_blocks:
+            self.data[self.text_key] = text_from_blocks
+        elif self.text_key in self.data:
+            existing = self.data[self.text_key]
+            if existing is not None and not isinstance(existing, str):
+                self.data[self.text_key] = ""
+        else:
+            # Bare-default message (``text`` never provided): restore the
+            # release-1.11.0 default of ``text == ""`` so a sender-only message
+            # still persists via ``from_message`` and v1 consumers keep finding
+            # ``data["text"]``. This matches baseline for both v1 and v2 (``text``
+            # was a stored field defaulting to ""); only the ``text`` value is
+            # seeded, ``content_blocks`` is untouched. An explicit ``text=None``
+            # keeps the key present with ``None`` (handled by the elif above).
+            self.data[self.text_key] = ""
 
     def set_flow_id(self, flow_id: str) -> None:
         self.flow_id = flow_id
@@ -201,7 +319,7 @@ class Message(Data):
         self,
         model_name: str | None = None,
     ) -> BaseMessage:
-        """Converts the Data to a BaseMessage.
+        """Converts the Message to a BaseMessage.
 
         Args:
             model_name: The model name to use for conversion. Optional.
@@ -209,24 +327,19 @@ class Message(Data):
         Returns:
             BaseMessage: The converted BaseMessage.
         """
-        # The idea of this function is to be a helper to convert a Data to a BaseMessage
-        # It will use the "sender" key to determine if the message is Human or AI
-        # If the key is not present, it will default to AI
-        # But first we check if all required keys are present in the data dictionary
-        # they are: "text", "sender"
-        if self.text is None or not self.sender:
+        text = self.text  # reads from content_blocks via computed property
+        if not isinstance(text, str):
+            text = ""
+        if not text or not self.sender:
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
-        text = "" if not isinstance(self.text, str) else self.text
 
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
                 file_contents = self.get_file_content_dicts(model_name)
                 contents.extend(file_contents)
-                human_message = HumanMessage(content=contents)
-            else:
-                human_message = HumanMessage(content=text)
-            return human_message
+                return HumanMessage(content=contents)
+            return HumanMessage(content=text)
 
         return AIMessage(content=text)
 
@@ -248,7 +361,82 @@ class Message(Data):
             sender = lc_message.type
             sender_name = lc_message.type
 
-        return cls(text=lc_message.content, sender=sender, sender_name=sender_name)
+        from lfx.schema.content_types import ImageContent
+
+        blocks: list[Any] = []
+        content = lc_message.content
+        if isinstance(content, str):
+            if content:
+                blocks.append(TextContent(text=content))
+        else:
+            for item in content:
+                if isinstance(item, str):
+                    blocks.append(TextContent(text=item))
+                elif isinstance(item, dict):
+                    item_type = item.get("type", "")
+                    if item_type == "text":
+                        blocks.append(TextContent(text=item.get("text", "")))
+                    elif item_type == "image_url":
+                        url = item.get("image_url", {}).get("url", "")
+                        blocks.append(ImageContent(urls=[url]))
+                    elif item_type == "image":
+                        # ``source`` can be missing OR explicitly None on
+                        # malformed payloads; guard both cases (``.get(key, {})``
+                        # only defaults when the key is absent, not when it's
+                        # explicitly None).
+                        source = item.get("source") or {}
+                        url = item.get("url") or source.get("url", "")
+                        b64 = source.get("data") or item.get("base64")
+                        mime = source.get("media_type") or item.get("mime_type")
+                        if b64 and mime:
+                            blocks.append(ImageContent(base64=b64, mime_type=mime))
+                        elif url:
+                            blocks.append(ImageContent(urls=[url]))
+                        else:
+                            # Log shape only, never the payload, so a provider
+                            # emitting an undecodable image part leaves a trace
+                            # instead of silently dropping content.
+                            logger.debug(
+                                "from_lc_message: dropping image item with no usable url/base64 "
+                                f"(keys={sorted(item.keys())})"
+                            )
+                    else:
+                        logger.debug(f"from_lc_message: skipping unsupported content type '{item_type}'")
+
+        # Tool calls and usage metadata live as AIMessage attributes, not in
+        # ``content``. Tool-calling agents typically emit ``content=""`` with
+        # only ``tool_calls`` set, so this must run regardless of content shape.
+        if hasattr(lc_message, "tool_calls") and lc_message.tool_calls:
+            from lfx.schema.content_types import ToolContent
+
+            # ``tc["id"]`` is LangChain's stable ``tool_call_id``: same value
+            # at start, during args streaming, and on the result, so the same
+            # logical tool call dedups to one ``ToolContent`` across re-fires.
+            blocks.extend(
+                ToolContent(name=tc.get("name", ""), tool_input=tc.get("args", {}), id=tc.get("id"))
+                for tc in lc_message.tool_calls
+            )
+
+        if hasattr(lc_message, "usage_metadata") and lc_message.usage_metadata:
+            from lfx.schema.content_types import UsageContent
+
+            um = lc_message.usage_metadata
+            blocks.append(
+                UsageContent(
+                    input_tokens=um.get("input_tokens"),
+                    output_tokens=um.get("output_tokens"),
+                    model=lc_message.response_metadata.get("model_name")
+                    if hasattr(lc_message, "response_metadata")
+                    else None,
+                )
+            )
+
+        # Preserve the text-only fast path: a string-content message with no
+        # tool calls or usage data keeps ``content_blocks=[]`` (frontend
+        # compat) and routes content through the ``text=`` parameter.
+        if isinstance(content, str) and not any(not isinstance(b, TextContent) for b in blocks):
+            return cls(text=content, sender=sender, sender_name=sender_name)
+        return cls(content_blocks=blocks, sender=sender, sender_name=sender_name)
 
     @classmethod
     def from_data(cls, data: Data) -> Message:
@@ -260,26 +448,30 @@ class Message(Data):
         Returns:
             The converted Message.
         """
-        return cls(
-            text=data.text,
-            sender=data.sender,
-            sender_name=data.sender_name,
-            files=data.files,
-            session_id=data.session_id,
-            context_id=data.context_id,
-            run_id=data.run_id,
-            timestamp=data.timestamp,
-            flow_id=data.flow_id,
-            error=data.error,
-            edit=data.edit,
-            session_metadata=getattr(data, "session_metadata", None),
-        )
-
-    @field_serializer("text", mode="plain")
-    def serialize_text(self, value):
-        if isinstance(value, AsyncIterator | Iterator):
-            return ""
-        return value
+        kwargs: dict[str, Any] = {"text": data.get_text()}
+        # Safely extract optional fields that may not exist on a plain Data object.
+        # ``run_id`` and ``session_metadata`` are not present on the base ``Data``
+        # class but are copied when the source is a ``Message`` so message
+        # provenance round-trips through ``Message.from_data(msg.to_data())``.
+        for field in (
+            "sender",
+            "sender_name",
+            "files",
+            "session_id",
+            "context_id",
+            "run_id",
+            "timestamp",
+            "flow_id",
+            "error",
+            "edit",
+            "session_metadata",
+        ):
+            try:
+                value = getattr(data, field)
+                kwargs[field] = value
+            except AttributeError:
+                pass
+        return cls(**kwargs)
 
     # Keep this async method for backwards compatibility
     def get_file_content_dicts(self, model_name: str | None = None):
@@ -543,7 +735,13 @@ class DefaultModel(BaseModel):
 class MessageResponse(DefaultModel):
     id: str | UUID | None = Field(default=None)
     flow_id: UUID | None = Field(default=None)
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # ``Message.timestamp`` is a string with microsecond+timezone precision
+    # (``%Y-%m-%d %H:%M:%S.%f %Z``) which Pydantic's default datetime parser
+    # rejects. Reuse the shared parser so MessageResponse.from_message
+    # accepts any of the formats ``Message`` itself recognises.
+    timestamp: Annotated[datetime, str_to_timestamp_validator] = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     sender: str
     sender_name: str
     session_id: str
@@ -555,19 +753,21 @@ class MessageResponse(DefaultModel):
 
     properties: Properties | None = None
     category: str | None = None
-    content_blocks: list[ContentBlock] | None = None
+    # v1 wire shape: content_blocks is held as plain legacy dicts, not the new
+    # ContentType union, so the v1 API keeps emitting the release-1.11.0 shape.
+    # The new (v2) shape never flows through MessageResponse.
+    content_blocks: list[dict] | None = None
     session_metadata: dict | None = None
 
     @field_validator("content_blocks", mode="before")
     @classmethod
     def validate_content_blocks(cls, v):
-        if isinstance(v, str):
-            v = json.loads(v)
-        if isinstance(v, list):
-            return [cls.validate_content_blocks(block) for block in v]
-        if isinstance(v, dict):
-            return ContentBlock.model_validate(v)
-        return v
+        # Project the new content_blocks model onto the legacy (release-1.11.0)
+        # v1 shape. Accepts ContentType models (from ``from_message``), serialized
+        # dicts (from a DB-row ``model_validate``), or a JSON string. The agent
+        # answer is folded back into the "Agent Steps" group; the new (v2) shape
+        # never flows through MessageResponse.
+        return render_v1_content_blocks(v)
 
     @field_validator("properties", mode="before")
     @classmethod
@@ -597,19 +797,31 @@ class MessageResponse(DefaultModel):
 
     @classmethod
     def from_message(cls, message: Message, flow_id: str | None = None):
-        # first check if the record has all the required fields
-        if message.text is None or not message.sender or not message.sender_name:
+        # first check if the record has all the required fields. ``message.text``
+        # is a computed_field over content_blocks now, so it always returns a
+        # string. The "content present" signal is: ``data["text"]`` explicitly
+        # set (covers ``text=""`` from ChatInput), or a pending text stream
+        # (iterator), or any ``content_blocks`` entries (covers tool-call-only
+        # / media-only agent messages whose ``content_blocks`` carry the
+        # whole payload).
+        no_content = message.data.get("text") is None and message.text_stream is None and not message.content_blocks
+        if no_content or not message.sender or not message.sender_name:
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
+        text = legacy_text(message)
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
-            text=message.text,
+            text=text,
             session_id=message.session_id,
             context_id=message.context_id,
             files=message.files or [],
             timestamp=message.timestamp,
             flow_id=flow_id,
+            edit=message.edit,
+            content_blocks=message.content_blocks,
+            properties=message.properties,
+            category=message.category,
             session_metadata=getattr(message, "session_metadata", None),
         )
 
@@ -681,7 +893,6 @@ class ErrorMessage(Message):
             context_id=context_id,
             sender=source.display_name if source else None,
             sender_name=source.display_name if source else None,
-            text=plain_reason,
             properties=Properties(
                 text_color="red",
                 background_color="red",
@@ -694,6 +905,7 @@ class ErrorMessage(Message):
             category="error",
             error=True,
             content_blocks=[
+                TextContent(text=plain_reason),
                 ContentBlock(
                     title="Error",
                     contents=[
@@ -706,7 +918,7 @@ class ErrorMessage(Message):
                             traceback=traceback.format_exc(),
                         )
                     ],
-                )
+                ),
             ],
             flow_id=flow_id,
             session_metadata=session_metadata,
