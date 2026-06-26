@@ -6,7 +6,7 @@ Verifies that starter project JSON files are properly structured and that:
 - Agent nodes never ship with the legacy one-line prompt that QA flagged
   during the structured-default rollout
 - Agent nodes that previously had purpose-specific instructions (e.g.
-  Market Research, Pokédex) do not regress to the generic default
+  Market Research, SaaS Pricing) do not regress to the generic default
 """
 
 import json
@@ -28,15 +28,14 @@ AGENT_NODE_TYPES = ("Agent", "ToolCallingAgent")
 # pairs (starter project filename, agent node id) with a substring that must
 # appear in the agent's system_prompt.value.
 TEMPLATES_WITH_CUSTOM_AGENT_PROMPTS: dict[tuple[str, str], str] = {
-    ("Instagram Copywriter.json", "Agent-DYPjp"): "information from a web search",
+    ("Instagram Copywriter.json", "Agent-caption"): "expert Instagram copywriter",
     ("Market Research.json", "Agent-Hz2it"): "expert business research agent",
-    ("News Aggregator.json", "Agent-ZH2Rd"): "content writer researching news",
-    ("Pokédex Agent.json", "Agent-R27kt"): "You are a pokedex",
-    ("Research Agent.json", "Agent-mIgZ5"): "research analyst with access to Tavily Search",
-    ("SaaS Pricing.json", "Agent-bNGtH"): "Subscription Pricing Calculator",
-    ("Travel Planning Agents.json", "Agent-9tDeE"): "knowledgeable Local Expert",
-    ("Travel Planning Agents.json", "Agent-C8zRS"): "Amazing Travel Concierge",
-    ("Youtube Analysis.json", "Agent-2FN2V"): "comprehensive YouTube video analysis",
+    ("Content Aggregator.json", "Agent-ZH2Rd"): "content aggregator",
+    ("Deep Research Agent.json", "Agent-mIgZ5"): "research analyst with access to Tavily Search",
+    ("SaaS Pricing.json", "Agent-Zm0pK"): "calculate the price",
+    ("Travel Planning Agents.json", "Agent-v7SnN"): "knowledgeable Local Expert",
+    ("Travel Planning Agents.json", "Agent-1ON2c"): "Amazing Travel Concierge",
+    ("Youtube Analysis.json", "Agent-s4EYR"): "comprehensive YouTube video analysis",
 }
 
 
@@ -121,7 +120,7 @@ class TestStarterProjects:
         this test asserted that every Agent in every starter project use
         the new DEFAULT_SYSTEM_PROMPT_TEMPLATE — that assertion caused a
         regression: starter projects with purpose-specific Agent
-        Instructions (Market Research, Pokédex, SaaS Pricing, etc.) had
+        Instructions (Market Research, SaaS Pricing, etc.) had
         their custom prompts overwritten by the generic default to keep
         the test green.
 
@@ -169,7 +168,7 @@ def test_agent_keeps_template_specific_prompt(template_file: str, agent_id: str,
     Regression guard for #12855: that PR's auto-bake replaced every starter
     Agent's system_prompt.value with DEFAULT_SYSTEM_PROMPT_TEMPLATE,
     silently dropping role-specific prompts (Market Research's business
-    researcher, Pokédex's API guidance, etc.). The flows that depend on
+    researcher, SaaS Pricing's calculation guidance, etc.). The flows that depend on
     those instructions broke at runtime. If you legitimately need to
     change one of these prompts, update the substring in
     TEMPLATES_WITH_CUSTOM_AGENT_PROMPTS in the same change.
