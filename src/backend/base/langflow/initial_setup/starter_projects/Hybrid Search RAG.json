@@ -4775,5 +4775,5 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Hybrid Search RAG",
-  "tags": null
+  "tags": ["rag", "q-a", "hybrid"]
 }

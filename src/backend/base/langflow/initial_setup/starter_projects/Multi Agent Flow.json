@@ -2962,5 +2962,5 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Multi Agent Flow",
-  "tags": null
+  "tags": ["agents", "chatbots"]
 }

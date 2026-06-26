@@ -1608,5 +1608,5 @@
   "last_tested_version": "1.10.1",
   "locked": false,
   "name": "SaaS Pricing",
-  "tags": []
+  "tags": ["agents", "assistants"]
 }

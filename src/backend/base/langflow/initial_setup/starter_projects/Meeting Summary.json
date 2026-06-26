@@ -2198,5 +2198,5 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Meeting Summary",
-  "tags": null
+  "tags": ["chatbots", "content-generation"]
 }

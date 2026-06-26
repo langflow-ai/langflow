@@ -3917,5 +3917,5 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Text Sentiment Analysis",
-  "tags": null
+  "tags": ["classification"]
 }
