@@ -4,6 +4,9 @@ import os
 from unittest.mock import Mock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.mem0.mem0_chat_memory import Mem0MemoryComponent
 
 
