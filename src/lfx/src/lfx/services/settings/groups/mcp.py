@@ -69,6 +69,11 @@ class McpSettings(BaseModel):
     """If set to True, Langflow serves spec-valid A2A agent cards at a per-flow
     discovery endpoint for agent-typed, a2a_enabled flows. Default off (opt-in).
     Env var: LANGFLOW_A2A_ENABLED."""
+    a2a_allow_private_webhooks: bool = False
+    """If True, A2A push-notification webhooks may target private/loopback/link-local
+    addresses. Default False blocks them (SSRF protection on the public endpoint); enable
+    only in a trusted network where agents notify internal services.
+    Env var: LANGFLOW_A2A_ALLOW_PRIVATE_WEBHOOKS."""
 
     # MCP Server management
     mcp_servers_locked: bool = False

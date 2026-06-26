@@ -6,8 +6,14 @@ to a non-spec shape (no top-level ``url``, oneof-wrapped ``securitySchemes``,
 ``location`` instead of ``in``).
 """
 
+import asyncio
+import ipaddress
+import socket
+from urllib.parse import urlparse
+
 from a2a.compat.v0_3 import types as a2a_types
 from lfx.log.logger import logger
+from lfx.services.deps import get_settings_service
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -42,6 +48,42 @@ def _override_str_list(overrides: dict, key: str) -> list[str] | None:
     if isinstance(value, list) and value and all(isinstance(item, str) for item in value):
         return value
     return None
+
+
+async def validate_webhook_url(url: str) -> None:
+    """Raise ``ValueError`` when a push-notification webhook URL is unsafe (SSRF guard).
+
+    The A2A endpoint is public, so the webhook target is caller-controlled. Require
+    http/https and a host whose every resolved address is public; reject loopback,
+    private, link-local (incl. the cloud metadata IP 169.254.169.254), reserved,
+    multicast, and unspecified. ``LANGFLOW_A2A_ALLOW_PRIVATE_WEBHOOKS`` skips the IP
+    check for a trusted internal network.
+
+    Validated at registration; a host that later re-resolves to a private address
+    (DNS rebinding) is a residual a dispatch-time check would close.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        msg = "webhook url must be http or https"
+        raise ValueError(msg)
+    host = parsed.hostname
+    if not host:
+        msg = "webhook url has no host"
+        raise ValueError(msg)
+    if get_settings_service().settings.a2a_allow_private_webhooks:
+        return
+    try:
+        # getaddrinfo is blocking; resolve off the event loop. An IP-literal host
+        # returns that IP without a DNS lookup.
+        infos = await asyncio.to_thread(socket.getaddrinfo, host, parsed.port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        msg = f"webhook host does not resolve: {host}"
+        raise ValueError(msg) from exc
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if any((ip.is_loopback, ip.is_private, ip.is_link_local, ip.is_reserved, ip.is_multicast, ip.is_unspecified)):
+            msg = f"webhook url resolves to a non-public address: {ip}"
+            raise ValueError(msg)
 
 
 async def folder_auth_type(flow: Flow, session: AsyncSession) -> str:
@@ -114,9 +156,9 @@ async def build_agent_card(flow: Flow, *, rpc_url: str, session: AsyncSession) -
         output_modes=["application/json"],
     )
     # streaming / push_notifications must be explicit, or exclude_none drops them.
-    # streaming matches the handler card's capability (message/stream + tasks/resubscribe);
-    # push_notifications stays False until that surface lands.
-    capabilities = a2a_types.AgentCapabilities(streaming=True, push_notifications=False)
+    # Both match the handler card's capabilities: streaming gates message/stream +
+    # tasks/resubscribe; push_notifications gates the tasks/pushNotificationConfig methods.
+    capabilities = a2a_types.AgentCapabilities(streaming=True, push_notifications=True)
     security_schemes, security = await resolve_card_security(flow, session)
 
     card = a2a_types.AgentCard(

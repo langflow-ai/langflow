@@ -24,13 +24,15 @@ import asyncio
 from typing import Any
 from uuid import UUID, uuid4
 
+import httpx
 from a2a.server.context import ServerCallContext
 from a2a.server.owner_resolver import resolve_user_scope
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.routes.common import DefaultServerCallContextBuilder
 from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
-from a2a.server.tasks import TaskStore
+from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, TaskStore
 from a2a.types import a2a_pb2 as pb
+from a2a.utils.errors import InvalidParamsError
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
 from lfx.graph.checkpoint.schema import GraphCheckpoint
@@ -49,7 +51,7 @@ from sqlmodel import select
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.a2a_executor import FlowAgentExecutor
-from langflow.api.v1.a2a_utils import A2A_APIKEY_HEADER, build_agent_card, folder_auth_type
+from langflow.api.v1.a2a_utils import A2A_APIKEY_HEADER, build_agent_card, folder_auth_type, validate_webhook_url
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.database.models import A2ACheckpoint, A2ATask, Flow
@@ -255,6 +257,23 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
     )
 
 
+class _SafePushConfigStore(InMemoryPushNotificationConfigStore):
+    """Push-notification config store that SSRF-guards the webhook URL at registration.
+
+    The webhook target is caller-controlled on a public endpoint, so reject one that
+    resolves to a private/loopback/link-local address before storing it (rather than
+    letting the sender POST there). In-memory + per-worker for now; durable cross-worker
+    push configs are a later slice (like the streaming queue manager).
+    """
+
+    async def set_info(self, task_id: str, notification_config: pb.TaskPushNotificationConfig, context) -> None:
+        try:
+            await validate_webhook_url(notification_config.url)
+        except ValueError as exc:
+            raise InvalidParamsError(message=str(exc)) from exc
+        await super().set_info(task_id, notification_config, context)
+
+
 class A2ACheckpointStore(CheckpointStore):
     """DB-backed graph checkpoint store for A2A HITL resume, keyed by ``run_id`` (the task id).
 
@@ -337,25 +356,36 @@ class DurableTaskStore(TaskStore):
         raise NotImplementedError
 
 
+# One shared httpx client sends webhooks; a short timeout so a slow/hostile webhook
+# can't tie up the run. Created at import (no I/O) and reused across requests.
+_PUSH_HTTP_CLIENT = httpx.AsyncClient(timeout=10.0)
+_PUSH_CONFIG_STORE = _SafePushConfigStore()
+_PUSH_SENDER = BasePushNotificationSender(_PUSH_HTTP_CLIENT, _PUSH_CONFIG_STORE)
+
 # One shared handler/store/dispatcher serve every flow; the per-request flow_id
-# selects the flow. The handler card carries only capabilities the SDK reads to
-# gate methods: streaming=True lets the @validate guard admit message/stream and
-# tasks/resubscribe. The real per-flow discovery card is the GET route.
-# DurableTaskStore does no DB work at construction, so the import-time singleton is safe.
+# selects the flow. The handler card carries only capabilities the SDK reads to gate
+# methods: streaming=True admits message/stream + tasks/resubscribe; push_notifications=True
+# admits the tasks/pushNotificationConfig methods. The real per-flow discovery card is the
+# GET route. The stores do no DB work at construction, so the import-time singletons are safe.
 # ponytail: streaming emits the run's lifecycle events (submitted -> working ->
 # artifact -> completed) as SSE; per-token deltas would inject a stream_flow callable
 # into the executor. tasks/resubscribe is best-effort same-worker live re-attach (the
 # default in-memory QueueManager); a terminal or cross-worker task returns a spec error
-# and tasks/get covers terminal reads. Durable cross-worker re-attach is a later slice.
+# and tasks/get covers terminal reads. Push configs are in-memory per-worker; durable
+# cross-worker re-attach and push delivery are a later slice.
 _HANDLER = DefaultRequestHandler(
     agent_executor=FlowAgentExecutor(_run_flow, _resume_flow),
     task_store=DurableTaskStore(),
-    agent_card=pb.AgentCard(capabilities=pb.AgentCapabilities(streaming=True)),
+    agent_card=pb.AgentCard(capabilities=pb.AgentCapabilities(streaming=True, push_notifications=True)),
+    push_config_store=_PUSH_CONFIG_STORE,
+    push_sender=_PUSH_SENDER,
 )
 _DISPATCHER = JsonRpcDispatcher(
     request_handler=_HANDLER,
     context_builder=_FlowContextBuilder(),
-    enable_v0_3_compat=True,  # routes spec method names: message/send, message/stream, tasks/get, tasks/resubscribe
+    # routes spec method names: message/send, message/stream, tasks/get, tasks/resubscribe,
+    # tasks/pushNotificationConfig/{set,get,list,delete}
+    enable_v0_3_compat=True,
 )
 
 

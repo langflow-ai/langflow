@@ -111,12 +111,12 @@ async def test_get_agent_card_returns_valid_card(client: AsyncClient, active_use
 
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_capabilities_advertises_streaming(client: AsyncClient, active_user, flow_data):
-    """Streaming is advertised; pushNotifications stays present and explicitly false."""
+    """Streaming and push notifications are both advertised."""
     flow_id = await _create_flow(active_user.id, data=flow_data)
 
     body = (await client.get(_card_url(flow_id))).json()
 
-    assert body["capabilities"] == {"streaming": True, "pushNotifications": False}
+    assert body["capabilities"] == {"streaming": True, "pushNotifications": True}
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -727,6 +727,66 @@ async def test_stream_rejects_missing_key_plain_401(client: AsyncClient, active_
     ) as resp:
         assert resp.status_code == 401
         assert not resp.headers["content-type"].startswith("text/event-stream")
+
+
+# --- push notifications ----------------------------------------------------
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_card_advertises_push_notifications(client: AsyncClient, active_user, flow_data):
+    """The card advertises push notifications, matching the handler capability that gates the methods."""
+    flow_id = await _create_flow(active_user.id, data=flow_data)
+
+    body = (await client.get(_card_url(flow_id))).json()
+
+    assert body["capabilities"]["pushNotifications"] is True
+
+
+@pytest.mark.usefixtures("client")
+async def test_validate_webhook_url_blocks_internal_targets():
+    """The SSRF guard rejects private/loopback/link-local/non-http webhook targets, allows public ones."""
+    from langflow.api.v1.a2a_utils import validate_webhook_url
+
+    for bad in (
+        "http://127.0.0.1/h",
+        "http://169.254.169.254/latest/meta-data",  # cloud metadata
+        "http://10.0.0.1/h",
+        "http://[::1]/h",
+        "ftp://8.8.8.8/h",
+        "https:///nohost",
+    ):
+        with pytest.raises(ValueError, match="webhook"):
+            await validate_webhook_url(bad)
+
+    # Public IP literal: resolves without DNS, passes.
+    await validate_webhook_url("https://8.8.8.8/hook")
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_push_config_internal_url_rejected(client: AsyncClient, active_user, echo_flow_data):
+    """Registering a webhook that targets an internal address is rejected by the SSRF guard."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    sent = (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).json()["result"]
+    task_id = sent["id"]
+
+    params = {"taskId": task_id, "pushNotificationConfig": {"url": "http://169.254.169.254/hook"}}
+    body = (await _jsonrpc(client, flow_id, "tasks/pushNotificationConfig/set", params)).json()
+
+    assert "error" in body
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_push_config_public_url_accepted(client: AsyncClient, active_user, echo_flow_data):
+    """A public webhook URL registers cleanly (the guard only blocks internal targets)."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    sent = (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).json()["result"]
+    task_id = sent["id"]
+
+    params = {"taskId": task_id, "pushNotificationConfig": {"url": "https://8.8.8.8/hook"}}
+    body = (await _jsonrpc(client, flow_id, "tasks/pushNotificationConfig/set", params)).json()
+
+    assert "error" not in body
+    assert "result" in body
 
 
 def _response(*, output, outputs=None):
