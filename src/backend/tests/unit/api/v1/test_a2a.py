@@ -789,6 +789,26 @@ async def test_push_config_public_url_accepted(client: AsyncClient, active_user,
     assert "result" in body
 
 
+# --- client component (consume a remote A2A agent) -------------------------
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_a2a_agent_component_calls_remote_agent(client: AsyncClient, active_user, echo_flow_data):
+    """The A2A Agent component sends a message to a remote agent and returns its reply.
+
+    Drives the real a2a-sdk client against this app's own A2A server (an echo agent flow),
+    so the full card-resolve + message/send round-trip runs in-process, no mocks.
+    """
+    from lfx.components.models_and_agents.a2a_agent import call_a2a_agent
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    agent_url = f"{str(client.base_url).rstrip('/')}/api/v1/a2a/{flow_id}"
+
+    answer = await call_a2a_agent(agent_url, "hello a2a", httpx_client=client)
+
+    assert answer == "hello a2a"
+
+
 def _response(*, output, outputs=None):
     from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 
