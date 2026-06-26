@@ -24,7 +24,6 @@ export const AddFolderButton = ({
         aria-label={t("folder.createNewProject")}
         disabled={disabled}
         loading={loading}
-        aria-label={t("folder.createNewProject")}
       >
         <IconComponent name="Plus" className="h-4 w-4" />
       </Button>

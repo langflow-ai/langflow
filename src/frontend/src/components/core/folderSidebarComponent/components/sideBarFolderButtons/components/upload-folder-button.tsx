@@ -15,7 +15,6 @@ export const UploadFolderButton = ({ onClick, disabled }) => {
         data-testid="upload-project-button"
         aria-label={t("folder.uploadFlow")}
         disabled={disabled}
-        aria-label={t("folder.uploadFlow")}
       >
         <IconComponent name="Upload" className="h-4 w-4" />
       </Button>

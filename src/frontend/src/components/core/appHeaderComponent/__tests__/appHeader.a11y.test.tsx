@@ -70,12 +70,12 @@ describe("AppHeader accessibility", () => {
     );
   });
 
-  it("should_name_home_logo_button", () => {
+  it("should_name_home_navigation_button", () => {
     renderHeader();
 
     expect(screen.getByTestId("icon-ChevronLeft")).toHaveAttribute(
       "aria-label",
-      "Langflow Logo",
+      "Go to home",
     );
   });
 });
