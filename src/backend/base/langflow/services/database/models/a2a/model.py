@@ -19,12 +19,17 @@ class A2ATask(SQLModel, table=True):  # type: ignore[call-arg]
     mirrors the SDK TaskStore's owner-scoped keying — ``owner`` is '' on the anonymous public
     endpoint. ``id`` is declared first so ``session.get(A2ATask, (id, owner))`` passes the
     tuple in primary-key order.
+
+    ``flow_id`` records which flow created the task so a read can be scoped to its owning
+    flow, the same flow_id guard ``_resume_flow`` applies to checkpoints. Without it a task
+    id known to one flow's endpoint could read another flow's task off the shared store.
     """
 
     __tablename__ = "a2a_tasks"
 
     id: str = Field(primary_key=True)
     owner: str = Field(default="", primary_key=True)
+    flow_id: str | None = Field(default=None)
     task: dict[str, Any] = Field(sa_column=Column(JsonVariant, nullable=False))
 
 

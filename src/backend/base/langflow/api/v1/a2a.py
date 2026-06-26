@@ -327,19 +327,25 @@ class DurableTaskStore(TaskStore):
 
     async def save(self, task: pb.Task, context: ServerCallContext) -> None:
         owner = resolve_user_scope(context)
+        flow_id = str(context.state.get("flow_id", ""))
         blob: dict[str, Any] = MessageToDict(task)
         async with session_scope() as session:
             row = await session.get(A2ATask, (task.id, owner))
             if row is None:
-                session.add(A2ATask(id=task.id, owner=owner, task=blob))
+                session.add(A2ATask(id=task.id, owner=owner, flow_id=flow_id, task=blob))
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
+                row.flow_id = flow_id  # keep the scope in sync across re-saves
 
     async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
         owner = resolve_user_scope(context)
+        flow_id = str(context.state.get("flow_id", ""))
         async with session_scope_readonly() as session:  # pure read, no commit
             row = await session.get(A2ATask, (task_id, owner))
-            blob = row.task if row is not None else None
+            # Scope the read to the owning flow: a task id known to one flow's endpoint
+            # must not read another flow's task off the shared store (the resume path
+            # applies the same flow_id guard to checkpoints).
+            blob = row.task if row is not None and row.flow_id == flow_id else None
         if blob is None:
             return None
         task = pb.Task()
