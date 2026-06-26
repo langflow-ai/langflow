@@ -81,10 +81,13 @@ class TestValidateCodeSafety:
             '"{0.__globals__}".format(f)',
             '"{0[__builtins__]}".format(f)',
             '"{0.__class__}".format(obj)',
+            "'{0}'.format(1)",
+            "'{name}'.format_map({'name': 'x'})",
+            "template = '{0.' + 'value' + '}'\ntemplate.format(obj)",
         ],
     )
     def test_blocks_escape_and_import(self, code):
-        """Inline imports, dunder/frame escape gadgets, and format-string dunder access are rejected."""
+        """Inline imports, escape gadgets, and formatter method access are rejected."""
         with pytest.raises(ValueError, match="not allowed"):
             validate_code_safety(code)
 
@@ -97,9 +100,8 @@ class TestValidateCodeSafety:
             "math.sqrt(16)",
             "result = [i * 2 for i in range(5)]\nprint(sum(result))",
             "data = {'a': 1, 'b': 2}\nprint(sorted(data.items()))",
-            "'{0} and {1}'.format(1, 2)",
-            "'{name}'.format(name='x')",
-            "'{0:.2f}'.format(3.14159)",
+            "name = 'x'\nprint(f'{name}')",
+            "print(format(3.14159, '.2f'))",
         ],
     )
     def test_allows_safe_code(self, code):

@@ -5,6 +5,12 @@ from lfx.components.utilities.python_repl_core import PythonREPLComponent
 
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
+DYNAMIC_FORMAT_TRAVERSAL_CODE = """
+parts = ["__loader__", "find_spec", "__globals__"]
+field = "{0." + parts[0] + "." + parts[1] + "." + parts[2] + "[sys].modules[os].environ}"
+print("canary_present=" + str("PVR0800453_CANARY" in field.format(math)))
+"""
+
 
 class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
@@ -109,6 +115,14 @@ class TestPythonREPLComponentSecurity:
         assert "error" in data
         assert "not allowed" in data["error"]
 
+    def test_dynamic_format_string_traversal_is_blocked(self, monkeypatch):
+        """Dynamically-built str.format() fields cannot bypass the AST validator."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(DYNAMIC_FORMAT_TRAVERSAL_CODE)
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
     def test_default_global_imports_excludes_pandas(self):
         """The default allow-list is minimal (no pandas) to avoid bundling a deserialization sink."""
         template = PythonREPLComponent().to_frontend_node()["data"]["node"]["template"]
@@ -155,6 +169,12 @@ class TestPythonREPLToolComponentSecurity:
     def test_tool_blocks_subclasses_escape(self):
         with pytest.raises(ToolException, match="not allowed"):
             self._func()("().__class__.__bases__[0].__subclasses__()")
+
+    def test_tool_blocks_dynamic_format_string_traversal(self, monkeypatch):
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        with pytest.raises(ToolException, match="not allowed") as exc_info:
+            self._func()(DYNAMIC_FORMAT_TRAVERSAL_CODE)
+        assert "SHOULD_NOT_LEAK" not in str(exc_info.value)
 
     def test_tool_blocks_import_builtin(self):
         """__import__ is a bare name; PythonREPL surfaces the NameError as a string."""
