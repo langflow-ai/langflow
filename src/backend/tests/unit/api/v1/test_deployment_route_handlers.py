@@ -807,6 +807,175 @@ class TestListDeploymentsMetadataSync:
 
 
 # ---------------------------------------------------------------------------
+# list_deployments: cross-user shared listing (authz prefilter relaxes the gate)
+# ---------------------------------------------------------------------------
+
+
+class TestListDeploymentsSharedPrefilter:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.visible_id_prefilter", new_callable=AsyncMock)
+    async def test_concrete_prefilter_relaxes_provider_gate_and_threads_allowed_ids(
+        self,
+        mock_prefilter,
+        mock_get_owned_pa,
+        mock_get_shared_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_synced,
+    ):
+        """A concrete prefilter list resolves the provider account by id alone.
+
+        Regression for the cross-user shared-deployment listing gap: a caller
+        granted READ on a deployment under *another user's* provider account
+        used to 404 on the strict owner gate before the ``allowed_ids`` union
+        could surface the row. When ``visible_id_prefilter`` returns a concrete
+        list, the strict owner gate must be skipped, the relaxed (id-only) gate
+        must run, and the prefilter ids must be threaded into
+        ``list_deployments_synced`` so the row is actually listed.
+        """
+        from langflow.api.v1.deployments import list_deployments
+
+        shared_id = uuid4()
+        pa = _fake_provider_account()
+        row = _fake_deployment_row(deployment_provider_account_id=pa.id, id=shared_id)
+
+        mock_prefilter.return_value = [shared_id]
+        mock_get_shared_pa.return_value = pa
+        mock_resolve_adapter.return_value = AsyncMock()
+        mapper = MagicMock()
+        mapper.shape_deployment_list_items.return_value = [
+            DeploymentListItem(
+                id=row.id,
+                provider_id=pa.id,
+                provider_key=pa.provider_key,
+                resource_key=row.resource_key,
+                type=row.deployment_type,
+                description=row.description,
+                attached_count=0,
+                provider_data={},
+            )
+        ]
+        mock_get_mapper.return_value = mapper
+        mock_synced.return_value = ([(row, 0, [])], 1, {})
+
+        result = await list_deployments(
+            provider_id=pa.id,
+            session=MagicMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+        )
+
+        # The strict owner gate must be skipped (it would 404 the cross-user
+        # reader); the relaxed id-only gate resolves the foreign provider account.
+        mock_get_owned_pa.assert_not_awaited()
+        mock_get_shared_pa.assert_awaited_once()
+        # The prefilter ids are threaded into the synced query as allowed_ids so
+        # the (owner ⊕ visible) union actually constrains the page + total.
+        assert mock_synced.await_args.kwargs["allowed_ids"] == [shared_id]
+        assert result.total == 1
+        assert result.deployments[0].id == shared_id
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.visible_id_prefilter", new_callable=AsyncMock)
+    async def test_none_prefilter_keeps_strict_owner_gate(
+        self,
+        mock_prefilter,
+        mock_get_owned_pa,
+        mock_get_shared_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_synced,
+    ):
+        """OSS / no-plugin path (prefilter declines → None) keeps the owner gate.
+
+        The relaxed id-only fetch must never run, and ``allowed_ids`` stays
+        ``None`` so the listing remains owner-scoped exactly as before.
+        """
+        from langflow.api.v1.deployments import list_deployments
+
+        pa = _fake_provider_account()
+
+        mock_prefilter.return_value = None
+        mock_get_owned_pa.return_value = pa
+        mock_resolve_adapter.return_value = AsyncMock()
+        mapper = MagicMock()
+        mapper.shape_deployment_list_items.return_value = []
+        mock_get_mapper.return_value = mapper
+        mock_synced.return_value = ([], 0, {})
+
+        await list_deployments(
+            provider_id=pa.id,
+            session=MagicMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+        )
+
+        mock_get_owned_pa.assert_awaited_once()
+        mock_get_shared_pa.assert_not_awaited()
+        assert mock_synced.await_args.kwargs["allowed_ids"] is None
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.visible_id_prefilter", new_callable=AsyncMock)
+    async def test_empty_prefilter_keeps_strict_owner_gate(
+        self,
+        mock_prefilter,
+        mock_get_owned_pa,
+        mock_get_shared_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_synced,
+    ):
+        """An empty prefilter list (plugin engaged, no extra visibility) keeps the gate.
+
+        An empty list means the caller has no cross-user visibility, so there is
+        nothing to surface under a provider they don't own — the strict owner gate
+        must stay (preserving its 404) rather than relax to the id-only fetch.
+        """
+        from langflow.api.v1.deployments import list_deployments
+
+        pa = _fake_provider_account()
+
+        mock_prefilter.return_value = []
+        mock_get_owned_pa.return_value = pa
+        mock_resolve_adapter.return_value = AsyncMock()
+        mapper = MagicMock()
+        mapper.shape_deployment_list_items.return_value = []
+        mock_get_mapper.return_value = mapper
+        mock_synced.return_value = ([], 0, {})
+
+        await list_deployments(
+            provider_id=pa.id,
+            session=MagicMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+        )
+
+        mock_get_owned_pa.assert_awaited_once()
+        mock_get_shared_pa.assert_not_awaited()
+        # The (empty) prefilter is still threaded through as allowed_ids so the
+        # union stays authoritative and the per-row in-memory filter is skipped.
+        assert mock_synced.await_args.kwargs["allowed_ids"] == []
+
+
+# ---------------------------------------------------------------------------
 # config/snapshot passthrough listing routes
 # ---------------------------------------------------------------------------
 

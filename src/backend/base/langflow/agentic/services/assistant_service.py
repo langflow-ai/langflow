@@ -18,6 +18,7 @@ from lfx.mcp.flow_builder_tools import (
     get_working_flow,
     init_working_flow,
     reset_working_flow,
+    set_apply_edits_live,
     set_propose_existing_edits,
 )
 from lfx.mcp.tool_cache import reset_tool_cache
@@ -28,6 +29,7 @@ from langflow.agentic.helpers.error_handling import (
     extract_friendly_error,
     format_models_exhausted_message,
     is_model_unavailable_error,
+    is_transient_tool_call_error,
 )
 from langflow.agentic.helpers.input_sanitization import REFUSAL_MESSAGE, sanitize_input
 from langflow.agentic.helpers.sse import (
@@ -78,7 +80,7 @@ from langflow.agentic.services.flow_types import (
 from langflow.agentic.services.flow_verification import FlowVerificationStatus, verify_built_flow
 from langflow.agentic.services.helpers.intent_classification import _looks_like_run_request, classify_intent
 from langflow.agentic.services.helpers.intent_context import build_intent_context
-from langflow.agentic.services.provider_service import get_provider_model_candidates
+from langflow.agentic.services.provider_service import get_provider_model_candidates, is_probably_small_model
 from langflow.agentic.services.request_framing import decide_progress_step
 from langflow.agentic.services.user_components import register_user_component_if_valid
 from langflow.agentic.services.user_components_context import (
@@ -519,6 +521,7 @@ async def execute_flow_with_validation_streaming(
     model_name: str | None = None,
     api_key_var: str | None = None,
     is_disconnected: Callable[[], Coroutine[Any, Any, bool]] | None = None,
+    apply_edits_immediately: bool = False,
 ) -> AsyncGenerator[str, None]:
     """Execute flow with validation, yielding SSE progress and token events.
 
@@ -696,6 +699,15 @@ async def execute_flow_with_validation_streaming(
             f"{'; '.join(_model_parts)}]\n\n{current_input}"
         )
 
+    # Headless callers (MCP) have no review UI, so steer the agent away from a
+    # "proposed/pending approval" narration the user can never act on (#13641).
+    if apply_edits_immediately:
+        current_input = (
+            "[Headless session: there is NO canvas UI and NO review step. Every field edit you make "
+            "is applied IMMEDIATELY and live. Do NOT say a change is 'proposed', 'pending approval', or "
+            "'for review' — report edits as already APPLIED/DONE.]\n\n" + current_input
+        )
+
     # Capture the original user prompt BEFORE history/canvas injection so we
     # can record it verbatim in the buffer at end-of-turn. The wrapped
     # input is what the LLM sees; the recorded user message is what the
@@ -738,6 +750,7 @@ async def execute_flow_with_validation_streaming(
             and not is_continuation_signal
         )
     )
+    set_apply_edits_live(enabled=apply_edits_immediately)
 
     current_input = inject_conversation_history(user_id=user_id, session_id=session_id, input_value=current_input)
 
@@ -843,11 +856,9 @@ async def execute_flow_with_validation_streaming(
             result: dict | None = None
             cancelled = False
             execution_error: str | None = None
+            transient_tool_call_error = False
             has_flow_updates = False
-            # Track whether a destructive `set_flow` action was emitted by the
-            # agent — only that case triggers the frontend's Continue gate.
-            # Incremental edits (add/remove/connect/configure/edit_field)
-            # apply live and must not be gated.
+            # Only a destructive set_flow triggers the frontend Continue gate; incremental edits apply live.
             saw_set_flow = False
             # Deterministic build+run state (LLM/language-agnostic): the
             # agent ran the flow this turn (`flow_ran`) → the built flow
@@ -864,6 +875,7 @@ async def execute_flow_with_validation_streaming(
                 result = None
                 cancelled = False
                 execution_error = None
+                transient_tool_call_error = False
                 has_flow_updates = False
                 saw_set_flow = False
                 saw_run = False
@@ -967,7 +979,7 @@ async def execute_flow_with_validation_streaming(
                         # network errors fall through to the existing
                         # friendly-error path unchanged.
                         if is_model_unavailable_error(e.original_error_message) and provider:
-                            candidates = get_provider_model_candidates(provider)
+                            candidates = get_provider_model_candidates(provider, user_id=user_id)
                             next_model = next((m for m in candidates if m not in tried_models), None)
                             if next_model:
                                 logger.info(
@@ -985,8 +997,8 @@ async def execute_flow_with_validation_streaming(
                             else:
                                 execution_error = format_models_exhausted_message(provider, tried_models)
                         else:
-                            # Internal retry loop reads the raw error to pick a friendly message;
-                            # the public HTTP detail stays generic (see FlowExecutionError docstring).
+                            # Raw error picks the friendly message; public HTTP detail stays generic.
+                            transient_tool_call_error = is_transient_tool_call_error(e.original_error_message)
                             execution_error = extract_friendly_error(e.original_error_message)
                     except HTTPException as e:
                         execution_error = extract_friendly_error(str(e.detail))
@@ -1000,8 +1012,16 @@ async def execute_flow_with_validation_streaming(
             if execution_error is not None:
                 logger.error(f"Flow execution failed (attempt {attempt + 1}): {execution_error}")
 
-                # Q&A has no retry semantics — emit error and exit immediately
+                # Q&A is terminal on error; tool-call parse 500s are transient, so resample.
                 if not is_component_request:
+                    if transient_tool_call_error and attempt < total_attempts - 1:
+                        yield format_progress_event(
+                            "retrying",
+                            attempt + 1,
+                            total_attempts,
+                            message="The model produced a malformed tool call — retrying...",
+                        )
+                        continue
                     yield format_error_event(execution_error)
                     return
 
@@ -1169,14 +1189,21 @@ async def execute_flow_with_validation_streaming(
             # Q&A (question) and read-only manage_files are excluded — a
             # text-only answer is legitimate there.
             if is_flow_request and not has_flow_updates:
-                if attempt >= total_attempts - 1:
+                # Re-prompting a ≤13B open-weights model is predictably futile
+                # (zero native tool calls under this prompt) — fail fast.
+                if is_probably_small_model(model_name) or attempt >= total_attempts - 1:
                     logger.warning(
                         "assistant.build.no_action: build request produced no canvas changes after %d attempt(s)",
                         total_attempts,
                     )
-                    yield format_error_event(
-                        "I couldn't apply that change to the canvas. Please rephrase the request or try again."
+                    no_action_message = (
+                        f"I couldn't apply that change to the canvas — the selected model ({model_name}) "
+                        "produced no canvas actions. Smaller models often can't drive the canvas tools; "
+                        "try a larger model or rephrase the request."
+                        if model_name
+                        else "I couldn't apply that change to the canvas. Please rephrase the request or try again."
                     )
+                    yield format_error_event(no_action_message)
                     return
                 yield format_progress_event(
                     "retrying",

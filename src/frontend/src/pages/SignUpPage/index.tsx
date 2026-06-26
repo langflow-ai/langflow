@@ -158,6 +158,7 @@ export default function SignUp(): JSX.Element {
                 id="signup-username"
                 name="username"
                 type="text"
+                allowAutofill
                 autoComplete="username"
                 onChange={({ target: { value } }) => {
                   handleInput({ target: { name: "username", value } });
@@ -205,6 +206,7 @@ export default function SignUp(): JSX.Element {
                 }}
                 value={password}
                 isForm
+                allowAutofill
                 password={true}
                 required
                 id="signup-password"
@@ -258,6 +260,7 @@ export default function SignUp(): JSX.Element {
                 onBlur={() => setConfirmPasswordTouched(true)}
                 value={cnfPassword}
                 isForm
+                allowAutofill
                 password={true}
                 required
                 id="signup-confirm-password"

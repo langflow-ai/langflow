@@ -64,6 +64,7 @@ export default function AppHeader(): JSX.Element {
           onClick={() => navigate("/")}
           className="mr-1 flex h-8 w-8 items-center"
           data-testid="icon-ChevronLeft"
+          aria-label={t("header.home")}
         >
           <LangflowLogo className="h-5 w-5" />
         </Button>
