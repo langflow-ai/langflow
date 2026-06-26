@@ -1,5 +1,6 @@
-import type { To } from "react-router-dom";
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
+import type { To } from "react-router-dom";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { Button } from "../../ui/button";
@@ -21,6 +22,7 @@ export default function PageLayout({
   betaIcon?: boolean;
   backTo?: To;
 }) {
+  const headingId = useId();
   const navigate = useCustomNavigate();
   const { t } = useTranslation();
 
@@ -29,7 +31,7 @@ export default function PageLayout({
       <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col">
         <div
           role="region"
-          aria-labelledby="page-layout-heading"
+          aria-labelledby={headingId}
           className="flex flex-col gap-4 p-6 pt-0"
         >
           <CustomBanner />
@@ -52,7 +54,7 @@ export default function PageLayout({
                   </Button>
                 )}
                 <h2
-                  id="page-layout-heading"
+                  id={headingId}
                   className="text-2xl font-bold tracking-tight"
                   data-testid="mainpage_title"
                 >

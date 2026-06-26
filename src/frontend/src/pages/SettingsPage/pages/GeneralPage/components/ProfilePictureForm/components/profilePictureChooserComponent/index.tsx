@@ -61,7 +61,10 @@ export default function ProfilePictureChooserComponent({
                       key={idx}
                       src={customPreLoadImageUrl(`${folder}/${path}`)}
                       alt={t("settings.avatarAlt", {
-                        folder,
+                        folder: t(
+                          `settings.profilePictureCategory.${folder}`,
+                          folder,
+                        ),
                         index: idx + 1,
                       })}
                       style={{
