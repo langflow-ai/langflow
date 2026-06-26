@@ -693,26 +693,16 @@ async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_use
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-@pytest.mark.xfail(
-    reason=(
-        "Confirmed hang: tasks/resubscribe to a non-terminal (input-required) task with no live "
-        "stream blocks. The task isn't terminal, so the SDK skips its short-circuit and taps the "
-        "in-memory queue left over from the sync send, then consume_and_emit waits for a terminal "
-        "event that never arrives. Needs an SDK-aware fix (reject re-attach when there's no active "
-        "producer); a blanket stream timeout would break legitimate message/stream re-attach."
-    ),
-    raises=TimeoutError,
-    strict=True,
-)
 async def test_resubscribe_to_input_required_task_does_not_hang(
     client: AsyncClient, active_user, human_input_flow_data
 ):
-    """tasks/resubscribe to a paused (non-terminal) task whose live queue is gone should end, not hang.
+    """tasks/resubscribe to a paused (non-terminal) task with no live producer ends with an error, not a hang.
 
     After a sync pause the task is input-required in the durable store but has no live streaming
-    producer (the cross-worker/restart shape). The terminal-task resubscribe test passes via the
-    SDK's terminal short-circuit; this non-terminal path must return a spec error frame rather than
-    block. It currently hangs (see xfail), so wait_for converts the hang into a bounded failure.
+    producer. The SDK's default handler would tap the stale in-memory queue and block waiting for a
+    terminal event that never arrives; the handler's resubscribe guard rejects re-attach when the
+    producer task has finished, so this returns a spec error frame instead. wait_for bounds it so a
+    regression that reintroduces the hang fails fast rather than stalling the suite.
     """
     flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
     paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
@@ -728,8 +718,7 @@ async def test_resubscribe_to_input_required_task_does_not_hang(
             assert resp.status_code == 200
             return [orjson.loads(line[len("data:") :]) async for line in resp.aiter_lines() if line.startswith("data:")]
 
-    # wait_for bounds the confirmed hang: it raises TimeoutError (the xfail), not stalling the suite.
-    frames = await asyncio.wait_for(_drain(), timeout=5)
+    frames = await asyncio.wait_for(_drain(), timeout=10)
     assert any("error" in f for f in frames)
 
 

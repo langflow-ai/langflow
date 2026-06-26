@@ -32,7 +32,7 @@ from a2a.server.routes.common import DefaultServerCallContextBuilder
 from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
 from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, TaskStore
 from a2a.types import a2a_pb2 as pb
-from a2a.utils.errors import InvalidParamsError
+from a2a.utils.errors import InvalidParamsError, UnsupportedOperationError
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
 from lfx.graph.checkpoint.schema import GraphCheckpoint
@@ -368,6 +368,30 @@ _PUSH_HTTP_CLIENT = httpx.AsyncClient(timeout=10.0)
 _PUSH_CONFIG_STORE = _SafePushConfigStore()
 _PUSH_SENDER = BasePushNotificationSender(_PUSH_HTTP_CLIENT, _PUSH_CONFIG_STORE)
 
+
+class _FlowRequestHandler(DefaultRequestHandler):
+    """DefaultRequestHandler with a resubscribe guard for the synchronous run model.
+
+    Our flow runs are synchronous: the producer task only exists while a message/stream
+    (or message/send) request is actively running the flow. The SDK's on_subscribe_to_task
+    assumes a long-lived background producer and, for a non-terminal task, taps the event
+    queue and blocks waiting for events. A task that paused at input-required from a sync
+    send has no live producer, so re-attaching would block forever on a queue that will
+    never receive another event. ``producer.done()`` is the race-free signal: still running
+    means there's a live stream to re-attach to; finished (or absent) means there isn't, so
+    return a spec error instead of hanging. tasks/get still covers reading a paused/terminal
+    task back.
+    """
+
+    async def on_subscribe_to_task(self, params, context):
+        producer = self._running_agents.get(params.id)
+        if producer is None or producer.done():
+            msg = f"Task {params.id} has no active stream to resubscribe to"
+            raise UnsupportedOperationError(message=msg)
+        async for event in super().on_subscribe_to_task(params, context):
+            yield event
+
+
 # One shared handler/store/dispatcher serve every flow; the per-request flow_id
 # selects the flow. The handler card carries only capabilities the SDK reads to gate
 # methods: streaming=True admits message/stream + tasks/resubscribe; push_notifications=True
@@ -375,11 +399,11 @@ _PUSH_SENDER = BasePushNotificationSender(_PUSH_HTTP_CLIENT, _PUSH_CONFIG_STORE)
 # GET route. The stores do no DB work at construction, so the import-time singletons are safe.
 # ponytail: streaming emits the run's lifecycle events (submitted -> working ->
 # artifact -> completed) as SSE; per-token deltas would inject a stream_flow callable
-# into the executor. tasks/resubscribe is best-effort same-worker live re-attach (the
-# default in-memory QueueManager); a terminal or cross-worker task returns a spec error
-# and tasks/get covers terminal reads. Push configs are in-memory per-worker; durable
-# cross-worker re-attach and push delivery are a later slice.
-_HANDLER = DefaultRequestHandler(
+# into the executor. tasks/resubscribe re-attaches only to a live message/stream producer
+# (the default in-memory QueueManager); a terminal, paused, or cross-worker task returns a
+# spec error and tasks/get covers terminal reads. Push configs are in-memory per-worker;
+# durable cross-worker re-attach and push delivery are a later slice.
+_HANDLER = _FlowRequestHandler(
     agent_executor=FlowAgentExecutor(_run_flow, _resume_flow),
     task_store=DurableTaskStore(),
     agent_card=pb.AgentCard(capabilities=pb.AgentCapabilities(streaming=True, push_notifications=True)),
