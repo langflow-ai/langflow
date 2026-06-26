@@ -63,6 +63,7 @@ export interface SpanNodeProps {
   setSize?: number;
   onToggle: () => void;
   onSelect: () => void;
+  registerNodeRef?: (id: string, el: HTMLElement | null) => void;
 }
 
 export interface SpanDetailProps {

@@ -13,6 +13,7 @@ export function SpanNode({
   setSize,
   onToggle,
   onSelect,
+  registerNodeRef,
 }: SpanNodeProps) {
   const {
     indentStyle,
@@ -31,6 +32,7 @@ export function SpanNode({
 
   return (
     <div
+      ref={registerNodeRef ? (el) => registerNodeRef(span.id, el) : undefined}
       className={cn(
         "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
         "hover:bg-muted/50",

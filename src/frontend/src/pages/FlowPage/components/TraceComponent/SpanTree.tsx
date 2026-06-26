@@ -22,6 +22,7 @@ export function SpanTree({
     setFocusedId,
     toggleExpand,
     handleTreeKeyDown,
+    registerNodeRef,
   } = useSpanTree({ spans, selectedSpanId });
 
   const renderSpan = useCallback(
@@ -44,6 +45,7 @@ export function SpanTree({
               setFocusedId(span.id);
               onSelectSpan(span);
             }}
+            registerNodeRef={registerNodeRef}
           />
           {isExpanded && span.children.length > 0 && (
             <div role="group">

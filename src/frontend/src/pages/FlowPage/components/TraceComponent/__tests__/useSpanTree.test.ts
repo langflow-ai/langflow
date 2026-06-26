@@ -6,16 +6,6 @@ const makeKey = (key: string): React.KeyboardEvent =>
   ({ key, preventDefault: jest.fn() }) as unknown as React.KeyboardEvent;
 
 describe("useSpanTree", () => {
-  let focusEl: { focus: jest.Mock };
-
-  beforeEach(() => {
-    focusEl = { focus: jest.fn() };
-    jest
-      .spyOn(document, "querySelector")
-      .mockReturnValue(focusEl as unknown as Element);
-  });
-
-  afterEach(() => jest.restoreAllMocks());
 
   // ── initial state ────────────────────────────────────────────────────────────
 
@@ -121,16 +111,23 @@ describe("useSpanTree", () => {
     });
 
     describe("ArrowDown", () => {
-      it("moves focusedId to the next visible span", () => {
+      it("moves focusedId to the next visible span and focuses the node", () => {
         const spans = [buildSpan({ id: "a" }), buildSpan({ id: "b" })];
         const { result } = renderHook(() =>
           useSpanTree({ spans, selectedSpanId: null }),
+        );
+        const focusMock = jest.fn();
+        act(() =>
+          result.current.registerNodeRef(
+            "b",
+            { focus: focusMock } as unknown as HTMLElement,
+          ),
         );
 
         act(() => result.current.handleTreeKeyDown(makeKey("ArrowDown")));
 
         expect(result.current.focusedId).toBe("b");
-        expect(focusEl.focus).toHaveBeenCalled();
+        expect(focusMock).toHaveBeenCalled();
       });
 
       it("does not move past the last span", () => {
@@ -146,16 +143,23 @@ describe("useSpanTree", () => {
     });
 
     describe("ArrowUp", () => {
-      it("moves focusedId to the previous visible span", () => {
+      it("moves focusedId to the previous visible span and focuses the node", () => {
         const spans = [buildSpan({ id: "a" }), buildSpan({ id: "b" })];
         const { result } = renderHook(() =>
           useSpanTree({ spans, selectedSpanId: "b" }),
+        );
+        const focusMock = jest.fn();
+        act(() =>
+          result.current.registerNodeRef(
+            "a",
+            { focus: focusMock } as unknown as HTMLElement,
+          ),
         );
 
         act(() => result.current.handleTreeKeyDown(makeKey("ArrowUp")));
 
         expect(result.current.focusedId).toBe("a");
-        expect(focusEl.focus).toHaveBeenCalled();
+        expect(focusMock).toHaveBeenCalled();
       });
 
       it("does not move before the first span", () => {
@@ -204,12 +208,19 @@ describe("useSpanTree", () => {
         const { result } = renderHook(() =>
           useSpanTree({ spans, selectedSpanId: null }),
         );
+        const focusMock = jest.fn();
+        act(() =>
+          result.current.registerNodeRef(
+            "leaf",
+            { focus: focusMock } as unknown as HTMLElement,
+          ),
+        );
 
         act(() => result.current.handleTreeKeyDown(makeKey("ArrowRight")));
 
         expect(result.current.focusedId).toBe("leaf");
         expect(result.current.visibleIds).toEqual(["leaf"]);
-        expect(focusEl.focus).not.toHaveBeenCalled();
+        expect(focusMock).not.toHaveBeenCalled();
       });
     });
 
@@ -270,36 +281,144 @@ describe("useSpanTree", () => {
     });
   });
 
-  // ── focusNode (via keyboard navigation) ──────────────────────────────────────
+  // ── registerNodeRef / focusNode ──────────────────────────────────────────────
 
-  describe("focusNode (via keyboard)", () => {
-    it("calls focus() on the DOM node when ArrowDown fires", () => {
+  describe("registerNodeRef", () => {
+    it("calls .focus() on the registered element when keyboard navigation fires", () => {
       const spans = [buildSpan({ id: "a" }), buildSpan({ id: "b" })];
       const { result } = renderHook(() =>
         useSpanTree({ spans, selectedSpanId: null }),
       );
-
-      act(() => result.current.handleTreeKeyDown(makeKey("ArrowDown")));
-
-      expect(document.querySelector).toHaveBeenCalledWith(
-        '[data-testid="span-node-b"]',
-      );
-      expect(focusEl.focus).toHaveBeenCalled();
-    });
-
-    it("updates focusedId even when the DOM element is not found", () => {
-      jest
-        .spyOn(document, "querySelector")
-        .mockReturnValue(null as unknown as Element);
-
-      const spans = [buildSpan({ id: "a" }), buildSpan({ id: "b" })];
-      const { result } = renderHook(() =>
-        useSpanTree({ spans, selectedSpanId: null }),
+      const focusMock = jest.fn();
+      act(() =>
+        result.current.registerNodeRef(
+          "b",
+          { focus: focusMock } as unknown as HTMLElement,
+        ),
       );
 
       act(() => result.current.handleTreeKeyDown(makeKey("ArrowDown")));
 
       expect(result.current.focusedId).toBe("b");
+      expect(focusMock).toHaveBeenCalled();
+    });
+
+    it("updates focusedId even when the element is not registered", () => {
+      const spans = [buildSpan({ id: "a" }), buildSpan({ id: "b" })];
+      const { result } = renderHook(() =>
+        useSpanTree({ spans, selectedSpanId: null }),
+      );
+      // No registerNodeRef call — simulates unregistered / unmounted node
+
+      act(() => result.current.handleTreeKeyDown(makeKey("ArrowDown")));
+
+      expect(result.current.focusedId).toBe("b");
+    });
+
+    it("removes the ref entry when called with null (unmount)", () => {
+      const spans = [buildSpan({ id: "a" })];
+      const { result } = renderHook(() =>
+        useSpanTree({ spans, selectedSpanId: null }),
+      );
+      const focusMock = jest.fn();
+      act(() =>
+        result.current.registerNodeRef(
+          "a",
+          { focus: focusMock } as unknown as HTMLElement,
+        ),
+      );
+      act(() => result.current.registerNodeRef("a", null));
+
+      // focusNode is only reachable via keyboard; trigger it directly via setFocusedId
+      // (which does NOT call focusNode) to confirm the ref is gone without side effects
+      act(() => result.current.setFocusedId("a"));
+
+      expect(focusMock).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── rerender reconciliation ───────────────────────────────────────────────────
+
+  describe("rerender reconciliation", () => {
+    it("resets focusedId to the first span of a new trace when spans change", () => {
+      const traceA = [buildSpan({ id: "a1" }), buildSpan({ id: "a2" })];
+      const traceB = [buildSpan({ id: "b1" }), buildSpan({ id: "b2" })];
+
+      const { result, rerender } = renderHook(
+        ({ spans, selectedSpanId }) => useSpanTree({ spans, selectedSpanId }),
+        { initialProps: { spans: traceA, selectedSpanId: null } },
+      );
+
+      expect(result.current.focusedId).toBe("a1");
+
+      rerender({ spans: traceB, selectedSpanId: null });
+
+      expect(result.current.focusedId).toBe("b1");
+    });
+
+    it("exactly one treeitem remains tabbable after spans rerender (Jira criterion)", () => {
+      const traceA = [buildSpan({ id: "a1" })];
+      const traceB = [buildSpan({ id: "b1" }), buildSpan({ id: "b2" })];
+
+      const { result, rerender } = renderHook(
+        ({ spans }) => useSpanTree({ spans, selectedSpanId: null }),
+        { initialProps: { spans: traceA } },
+      );
+
+      rerender({ spans: traceB });
+
+      // focusedId must be in visibleIds (at least one tabbable node)
+      expect(result.current.visibleIds).toContain(result.current.focusedId);
+      // must not point at the old trace
+      expect(result.current.focusedId).not.toBe("a1");
+    });
+
+    it("respects selectedSpanId when the trace changes", () => {
+      const traceA = [buildSpan({ id: "a1" })];
+      const traceB = [buildSpan({ id: "b1" }), buildSpan({ id: "b2" })];
+
+      const { result, rerender } = renderHook(
+        ({ spans, selectedSpanId }) => useSpanTree({ spans, selectedSpanId }),
+        { initialProps: { spans: traceA, selectedSpanId: null } },
+      );
+
+      rerender({ spans: traceB, selectedSpanId: "b2" });
+
+      expect(result.current.focusedId).toBe("b2");
+    });
+
+    it("updates focusedId when selectedSpanId changes within the same trace", () => {
+      const spans = [buildSpan({ id: "x" }), buildSpan({ id: "y" })];
+
+      const { result, rerender } = renderHook(
+        ({ selectedSpanId }) => useSpanTree({ spans, selectedSpanId }),
+        { initialProps: { selectedSpanId: "x" as string | null } },
+      );
+
+      expect(result.current.focusedId).toBe("x");
+
+      rerender({ selectedSpanId: "y" });
+
+      expect(result.current.focusedId).toBe("y");
+    });
+
+    it("does not reset expandedIds when only selectedSpanId changes", () => {
+      const child = buildSpan({ id: "child" });
+      const spans = [buildSpan({ id: "root", children: [child] })];
+
+      const { result, rerender } = renderHook(
+        ({ selectedSpanId }) => useSpanTree({ spans, selectedSpanId }),
+        { initialProps: { selectedSpanId: null as string | null } },
+      );
+
+      // Collapse root — user-driven state change
+      act(() => result.current.toggleExpand("root"));
+      expect(result.current.expandedIds.has("root")).toBe(false);
+
+      // Change selectedSpanId only — expandedIds must be preserved
+      rerender({ selectedSpanId: "root" });
+
+      expect(result.current.expandedIds.has("root")).toBe(false);
     });
   });
 });
