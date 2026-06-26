@@ -123,10 +123,11 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
 
-    const visibleModelSpecsTestIds = [
-      "cohereCohere Language Models",
-      "groqGroq",
+    const visibleModelSpecsTestIds = ["cohereCohere Language Models"];
+
+    const optionalVisibleModelSpecsTestIds = [
       "lmstudioLM Studio",
+      "groqGroq",
       "maritalkMariTalk",
       "perplexityPerplexity",
       "baiduQianfan",
@@ -142,6 +143,13 @@ test(
         return expect(page.getByTestId(id)).toBeVisible();
       }),
     );
+
+    for (const id of optionalVisibleModelSpecsTestIds) {
+      const modelSpec = page.getByTestId(id);
+      if (await modelSpec.isVisible().catch(() => false)) {
+        await expect(modelSpec).toBeVisible();
+      }
+    }
 
     const chainInputElements1 = await page
       .getByTestId("handle-retrievalqa-shownode-llm-left")

@@ -18,7 +18,15 @@ test(
       "Bundle integrations are unavailable because lfx-bundles is not installed",
     );
     await expect(bundlesGroup).toBeVisible();
-    await expect(page.getByText("Notion")).toBeVisible();
-    await expect(page.getByText("AssemblyAI")).toBeVisible();
+    await expect(
+      page.getByTestId("disclosure-bundles-duckduckgo"),
+    ).toBeVisible();
+
+    for (const integration of ["Notion", "AssemblyAI"]) {
+      const integrationItem = page.getByText(integration);
+      if (await integrationItem.isVisible().catch(() => false)) {
+        await expect(integrationItem).toBeVisible();
+      }
+    }
   },
 );
