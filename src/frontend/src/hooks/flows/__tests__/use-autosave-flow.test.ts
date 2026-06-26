@@ -219,6 +219,36 @@ describe("useAutoSaveFlow", () => {
     expect(mockSaveFlow).not.toHaveBeenCalled();
   });
 
+  it("should flush a pending autosave after permissions finish loading", () => {
+    let isLoading = true;
+    const can = jest.fn(() => true);
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) => {
+        const state = {
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        };
+        return selector(state);
+      },
+    );
+    mockUsePermissions.mockImplementation(() => ({
+      can,
+      isLoading,
+    }));
+
+    const { result, rerender } = renderHook(() => useAutoSaveFlow());
+    const mockFlow = makeMockFlow();
+    result.current(mockFlow);
+    expect(mockSaveFlow).not.toHaveBeenCalled();
+
+    isLoading = false;
+    rerender();
+
+    expect(can).toHaveBeenCalledWith("flow-1", "write");
+    expect(mockSaveFlow).toHaveBeenCalledWith(mockFlow);
+  });
+
   it("should not call saveFlow when write permission is denied", () => {
     const can = jest.fn(() => false);
     (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(

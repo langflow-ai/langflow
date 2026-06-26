@@ -82,21 +82,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    conn = op.get_bind()
-    if not migration.table_exists("authz_role", conn):
-        return
-
-    authz_role = _authz_role_table()
-    for role_name in _ROLE_NAMES:
-        row = conn.execute(
-            sa.select(authz_role.c.permissions)
-            .where(authz_role.c.name == role_name)
-            .where(authz_role.c.is_system.is_(True))
-        ).first()
-        if row is None:
-            continue
-
-        permissions = [
-            permission for permission in _permission_list(row.permissions) if permission != _FLOW_CREATE_PERMISSION
-        ]
-        _set_permissions(conn, role_name, permissions)
+    # This data backfill is intentionally irreversible: after upgrade runs,
+    # there is no durable way to distinguish permissions that predated this
+    # migration from permissions appended by it.
+    return
