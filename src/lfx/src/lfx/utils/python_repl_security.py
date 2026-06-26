@@ -19,7 +19,8 @@ This module restricts that environment:
 * :func:`validate_code_safety` rejects code that bypasses the allow-list with an inline
   ``import`` or reaches the classic builtin-free escape gadgets: dunder attribute access
   (``().__class__.__subclasses__()``) and frame/traceback introspection
-  (``gen.gi_frame.f_back.f_globals``).
+  (``gen.gi_frame.f_back.f_globals``). It also rejects string formatter methods whose
+  replacement-field traversal happens inside CPython after validation.
 
 This is defense-in-depth, NOT a guaranteed sandbox — Python sandboxing is notoriously
 hard and determined attackers may still find gadgets. The primary control for untrusted
@@ -31,7 +32,6 @@ from __future__ import annotations
 
 import ast
 import builtins
-import re
 
 # Builtins considered safe to expose to interpreter code. Deliberately excludes anything
 # that can import modules, execute/compile code, touch the filesystem, or reach
@@ -116,9 +116,12 @@ _SAFE_BUILTIN_NAMES = frozenset(
 # Attribute names that expose interpreter internals or sandbox-escape gadgets even
 # without any dangerous builtin. Dunder attributes (``__class__``, ``__subclasses__``,
 # ``__globals__``, ``__mro__``, ``__builtins__``, ...) are handled generically; this set
-# covers the non-dunder frame / coroutine / traceback introspection attributes.
+# covers the non-dunder frame / coroutine / traceback introspection attributes and
+# formatter methods that perform attribute/item traversal internally.
 _BLOCKED_ATTRIBUTES = frozenset(
     {
+        "format",
+        "format_map",
         "gi_frame",
         "gi_code",
         "cr_frame",
@@ -139,11 +142,6 @@ _BLOCKED_ATTRIBUTES = frozenset(
         "mro",  # int.mro() reaches the object hierarchy without a dunder attribute
     }
 )
-
-# Matches a str.format()/format_map() replacement field that reaches into a dunder
-# attribute or item (e.g. "{0.__globals__}", "{0[__builtins__]}"). Such traversals live
-# inside the template string and are invisible to the AST attribute check below.
-_FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 
 
 class CodeExecutionDisabledError(ValueError):
@@ -223,7 +221,8 @@ def validate_code_safety(code: str) -> None:
 
     This complements :func:`safe_builtins`: restricted builtins stop ``__import__`` /
     ``open`` / ``eval`` etc., while this AST check stops the builtin-free escapes
-    (dunder attribute traversal and frame introspection) and inline imports.
+    (dunder attribute traversal and frame introspection), inline imports, and
+    ``str.format``/``format_map`` replacement-field traversal.
 
     Args:
         code: The Python source to be executed.
@@ -239,13 +238,4 @@ def validate_code_safety(code: str) -> None:
             raise ValueError(msg)  # noqa: TRY004 -- forbidden construct, not an argument type error
         if isinstance(node, ast.Attribute) and _is_blocked_attribute(node.attr):
             msg = f"Access to attribute '{node.attr}' is not allowed."
-            raise ValueError(msg)
-        if (
-            isinstance(node, ast.Constant)
-            and isinstance(node.value, str)
-            and _FORMAT_FIELD_DUNDER_RE.search(node.value)
-        ):
-            # Blocks str.format("{0.__globals__}") style traversal that the AST attribute
-            # check cannot see because the attribute chain is inside a literal string.
-            msg = "Access to dunder attributes via format strings is not allowed."
             raise ValueError(msg)
