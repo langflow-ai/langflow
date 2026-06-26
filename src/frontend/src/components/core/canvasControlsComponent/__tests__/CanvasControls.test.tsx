@@ -200,4 +200,35 @@ describe("CanvasControls", () => {
       jest.useRealTimers();
     }
   });
+
+  it("should_allow_tab_to_leave_onboarding_tooltip", () => {
+    localStorage.clear();
+    jest.useFakeTimers();
+    const nextButton = document.createElement("button");
+    nextButton.textContent = "Next focus target";
+
+    try {
+      render(<CanvasControls selectedNode={null} />);
+
+      act(() => {
+        jest.advanceTimersByTime(ONBOARDING_TOOLTIP_DELAY_MS);
+      });
+
+      document.body.appendChild(nextButton);
+
+      const openButton = screen.getByTestId("assistant-onboarding-open");
+      openButton.focus();
+      fireEvent.keyDown(screen.getByTestId("assistant-onboarding-tooltip"), {
+        key: "Tab",
+      });
+
+      expect(nextButton).toHaveFocus();
+      expect(
+        screen.queryByTestId("assistant-onboarding-tooltip"),
+      ).not.toBeInTheDocument();
+    } finally {
+      nextButton.remove();
+      jest.useRealTimers();
+    }
+  });
 });
