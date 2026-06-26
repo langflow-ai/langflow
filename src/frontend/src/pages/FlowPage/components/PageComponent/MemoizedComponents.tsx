@@ -40,6 +40,8 @@ export const MemoizedSidebarTrigger = memo(() => {
   const { t } = useTranslation();
   const { open, toggleSidebar, setActiveSection } = useSidebar();
   if (ENABLE_NEW_SIDEBAR) {
+    if (open) return null;
+
     return (
       <Panel
         className={cn(
