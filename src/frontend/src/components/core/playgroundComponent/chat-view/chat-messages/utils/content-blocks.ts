@@ -1,4 +1,8 @@
-import type { ChatMessageType, ContentBlockItem } from "@/types/chat";
+import type {
+  ChatMessageType,
+  ContentBlockItem,
+  ContentType,
+} from "@/types/chat";
 import { isGroupedBlock } from "@/types/chat";
 
 /**
@@ -59,6 +63,33 @@ export function resolveContentBlockLayout(
         (block) => block.type !== "text" || block.text !== messageText,
       );
   return { displayedContentBlocks, showBubbleBody, useContentBlockOrdering };
+}
+
+/**
+ * Collects a group's leaves that should render in the loose content stream:
+ * displayable non-tool content (reasoning, citation, media, image, error, …).
+ *
+ * tool_use leaves render in the tools accordion, so they are excluded here.
+ * text and usage are legacy v1-projection scaffolding (the "Agent Steps" group
+ * folds the answer in as Input/Output TextContent and token counts) that the
+ * bubble body already paints, so surfacing them would double-render the answer.
+ *
+ * Without this, a group whose only leaves are non-tool content rendered nothing
+ * at all, because the renderer gated entirely on the group's tool leaves.
+ */
+export function collectGroupLooseLeaves(
+  contentBlocks: ContentBlockItem[],
+): ContentType[] {
+  return contentBlocks
+    .filter(isGroupedBlock)
+    .flatMap((group) => group.contents ?? [])
+    .filter(
+      (leaf): leaf is ContentType =>
+        !isGroupedBlock(leaf) &&
+        leaf.type !== "tool_use" &&
+        leaf.type !== "text" &&
+        leaf.type !== "usage",
+    );
 }
 
 /**

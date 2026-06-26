@@ -4,7 +4,10 @@ import type {
   TextContent,
   ToolContent,
 } from "@/types/chat";
-import { resolveContentBlockLayout } from "../content-blocks";
+import {
+  collectGroupLooseLeaves,
+  resolveContentBlockLayout,
+} from "../content-blocks";
 
 function makeText(text: string): TextContent {
   return { type: "text", text };
@@ -90,5 +93,53 @@ describe("resolveContentBlockLayout", () => {
     ];
     const layout = resolveContentBlockLayout(blocks, "the answer", true);
     expect(layout.showBubbleBody).toBe(true);
+  });
+});
+
+describe("collectGroupLooseLeaves", () => {
+  const citation = {
+    type: "citation",
+    url: "https://example.com",
+    title: "src",
+  } as unknown as ContentBlockItem;
+  const reasoning = {
+    type: "reasoning",
+    text: "thinking",
+  } as unknown as ContentBlockItem;
+  const media = {
+    type: "media",
+    urls: ["https://example.com/x.png"],
+  } as unknown as ContentBlockItem;
+
+  it("returns a group's displayable non-tool leaves, dropping tool/text/usage", () => {
+    const blocks: ContentBlockItem[] = [
+      makeGroup([
+        makeText("Input"), // legacy scaffolding -> dropped
+        makeTool("search"), // tool -> accordion -> dropped here
+        citation,
+        reasoning,
+        makeText("Output"), // legacy scaffolding -> dropped
+      ]),
+    ];
+    expect(collectGroupLooseLeaves(blocks)).toEqual([citation, reasoning]);
+  });
+
+  it("untyped legacy group: still collects its non-tool leaves", () => {
+    const blocks: ContentBlockItem[] = [
+      makeUntypedGroup([makeTool("search"), media]),
+    ];
+    expect(collectGroupLooseLeaves(blocks)).toEqual([media]);
+  });
+
+  it("ignores top-level flat leaves (only looks inside groups)", () => {
+    const blocks: ContentBlockItem[] = [makeTool("search"), citation];
+    expect(collectGroupLooseLeaves(blocks)).toEqual([]);
+  });
+
+  it("text-only group yields nothing so legacy Input/Output stays hidden", () => {
+    const blocks: ContentBlockItem[] = [
+      makeGroup([makeText("Input"), makeText("Output")]),
+    ];
+    expect(collectGroupLooseLeaves(blocks)).toEqual([]);
   });
 });

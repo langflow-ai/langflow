@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BorderTrail } from "@/components/core/border-trail";
 import { useToolDurations } from "@/components/core/playgroundComponent/chat-view/chat-messages/hooks/use-tool-durations";
+import { collectGroupLooseLeaves } from "@/components/core/playgroundComponent/chat-view/chat-messages/utils/content-blocks";
 import {
   formatTime,
   formatToolTitle,
@@ -64,6 +65,13 @@ export function ContentBlockDisplay({
       ),
     [contentBlocks],
   );
+  // Top-level flat leaves plus a group's displayable non-tool leaves
+  // (reasoning / citation / media, …) render in the same loose stream. tool_use
+  // leaves go to the accordion below; text/usage scaffolding stays hidden.
+  const looseItems = useMemo(
+    () => [...flatItems, ...collectGroupLooseLeaves(contentBlocks)],
+    [flatItems, contentBlocks],
+  );
 
   // Use shared hook for tool duration tracking (only grouped blocks)
   const { toolElapsedTimes, toolItems } = useToolDurations(
@@ -102,18 +110,7 @@ export function ContentBlockDisplay({
     prevRunningKeysRef.current = runningToolKeys;
   }, [runningToolKeys]);
 
-  // ponytail: both this early return and the grouped section below key off
-  // toolItems (useToolDurations filters to tool_use), and the accordion only
-  // iterates tool leaves. So a group with no tool_use renders nothing here.
-  // Tool-less groups DO occur: a no-tool agent answer projects (v1
-  // legacy_render) to an untyped "Agent Steps" group whose only leaves are
-  // Input/Output text. That drop is benign though, those text leaves were
-  // never shown by the tool accordion and the answer still paints via the
-  // bubble body. The unhandled case is a group carrying DISPLAYABLE non-tool
-  // content (reasoning / citation / media); no producer emits that today.
-  // Upgrade path when one does: render the group's non-tool leaves and gate on
-  // groupedBlocks.length, not toolItems.
-  if (!toolItems.length && !flatItems.length) {
+  if (!toolItems.length && !looseItems.length) {
     return null;
   }
 
@@ -136,9 +133,9 @@ export function ContentBlockDisplay({
       {/* The agent emits tool_use items flat (not inside a group), so they
           get their own ToolCallCard wrapper to carry the bordered-header
           chrome a group would otherwise provide. */}
-      {flatItems.length > 0 && (
+      {looseItems.length > 0 && (
         <div className="flex flex-col gap-2">
-          {groupConsecutiveCitations(flatItems).map((run) => {
+          {groupConsecutiveCitations(looseItems).map((run) => {
             if (run.kind === "sources") {
               return (
                 <div key={`sources-${run.index}`} className="px-4 py-2">
