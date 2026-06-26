@@ -1,18 +1,20 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
-async function addChromaNode(page: Page) {
+async function addTextInputNode(page: Page) {
   await openBlankFlow(page);
+  await addLegacyComponents(page);
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("Chroma");
+  await page.getByTestId("sidebar-search-input").fill("text input");
 
-  await page.waitForSelector('[data-testid="chromaChroma DB"]', {
+  await page.waitForSelector('[data-testid="input_outputText Input"]', {
     timeout: 3000,
   });
   await page
-    .getByTestId("chromaChroma DB")
+    .getByTestId("input_outputText Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -63,29 +65,27 @@ test(
   "node input preserves IME composition",
   { tag: ["@release", "@workspace", "@regression"] },
   async ({ page }) => {
-    await addChromaNode(page);
+    await addTextInputNode(page);
 
-    const collectionNameInput = page.getByTestId(
-      "popover-anchor-input-collection_name",
-    );
+    const textInput = page.getByTestId("textarea_str_input_value");
 
-    await collectionNameInput.fill("");
-    await expect(collectionNameInput).toHaveValue("");
+    await textInput.fill("");
+    await expect(textInput).toHaveValue("");
 
-    await composeAccent(page, collectionNameInput);
+    await composeAccent(page, textInput);
 
-    await expect(collectionNameInput).toHaveValue("á");
+    await expect(textInput).toHaveValue("á");
     await page.getByTestId("div-generic-node").click();
-    await expect(collectionNameInput).toHaveValue("á");
+    await expect(textInput).toHaveValue("á");
 
-    await collectionNameInput.fill("");
-    await expect(collectionNameInput).toHaveValue("");
+    await textInput.fill("");
+    await expect(textInput).toHaveValue("");
 
-    await composeKorean(page, collectionNameInput);
+    await composeKorean(page, textInput);
 
-    await expect(collectionNameInput).toHaveValue("하");
+    await expect(textInput).toHaveValue("하");
 
     await page.getByTestId("div-generic-node").click();
-    await expect(collectionNameInput).toHaveValue("하");
+    await expect(textInput).toHaveValue("하");
   },
 );

@@ -3,6 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
   "curl_api_generation",
@@ -81,6 +82,10 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   await page.getByTestId("blank-flow").click();
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("Chroma");
+  await skipIfComponentUnavailable(
+    page.getByTestId("chromaChroma DB"),
+    "Chroma",
+  );
 
   await page.waitForSelector('[data-testid="chromaChroma DB"]', {
     timeout: 1000,

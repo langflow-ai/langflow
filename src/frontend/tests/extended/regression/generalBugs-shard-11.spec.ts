@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -11,6 +12,10 @@ test(
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("composio");
+    await skipIfComponentUnavailable(
+      page.getByTestId("composioComposio Tools"),
+      "Composio",
+    );
 
     await page.waitForSelector('[data-testid="composioComposio Tools"]', {
       timeout: 3000,
@@ -44,15 +49,15 @@ test(
     //first component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("search api");
-    await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
+    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 1000,
     });
 
     await zoomOut(page, 3);
 
     await page
-      .getByTestId("searchapiSearchApi")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -74,15 +79,15 @@ test(
 
     await adjustScreenView(page);
 
-    await page.getByTestId("title-SearchApi").first().click();
+    await page.getByTestId("title-URL").first().click();
     await page.getByTestId("tool-mode-button").click();
 
     //connection
-    const searchApiOutput = await page
-      .getByTestId("handle-searchcomponent-shownode-toolset-right")
+    const urlOutput = await page
+      .getByTestId("handle-urlcomponent-shownode-toolset-right")
       .first();
 
-    await searchApiOutput.hover();
+    await urlOutput.hover();
     await page.mouse.down();
     const toolCallingAgentInput = await page
       .getByTestId("handle-toolcallingagent-shownode-tools-left")

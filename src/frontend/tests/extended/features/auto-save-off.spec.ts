@@ -24,14 +24,14 @@ test(
     await openBlankFlow(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("NVIDIA");
+    await page.getByTestId("sidebar-search-input").fill("url");
 
-    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("nvidiaNVIDIA")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -79,24 +79,24 @@ test(
     expect(nvidiaNode).toBe(0);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("NVIDIA");
+    await page.getByTestId("sidebar-search-input").fill("url");
 
     await page.keyboard.press("Escape");
     await page.locator('//*[@id="react-flow-id"]').click();
 
-    const lastNvidiaModel = page.getByTestId("nvidiaNVIDIA").last();
-    await lastNvidiaModel.scrollIntoViewIfNeeded();
+    const lastUrlComponent = page.getByTestId("data_sourceURL").last();
+    await lastUrlComponent.scrollIntoViewIfNeeded();
 
     try {
-      await lastNvidiaModel.hover({ timeout: 5000 });
+      await lastUrlComponent.hover({ timeout: 5000 });
 
       // Wait for the add component button to appear
-      await page.getByTestId("add-component-button-nvidia").waitFor({
+      await page.getByTestId("add-component-button-url").waitFor({
         state: "visible",
         timeout: 5000,
       });
 
-      await page.getByTestId("add-component-button-nvidia").click();
+      await page.getByTestId("add-component-button-url").click();
     } catch (error) {
       console.error("Failed to hover or find add component button:", error);
       throw error;
@@ -124,19 +124,19 @@ test(
       timeout: 5000,
     });
 
-    await expect(page.getByTestId("title-NVIDIA").first()).toBeVisible({
+    await expect(page.getByTestId("title-URL").first()).toBeVisible({
       timeout: 5000,
     });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("NVIDIA");
+    await page.getByTestId("sidebar-search-input").fill("url");
 
-    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("nvidiaNVIDIA")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -175,11 +175,11 @@ test(
       timeout: 5000,
     });
 
-    await expect(page.getByTestId("title-NVIDIA").first()).toBeVisible({
+    await expect(page.getByTestId("title-URL").first()).toBeVisible({
       timeout: 5000,
     });
 
-    const nvidiaNumber = await page.getByTestId("title-NVIDIA").count();
-    expect(nvidiaNumber).toBe(2);
+    const urlNumber = await page.getByTestId("title-URL").count();
+    expect(urlNumber).toBe(2);
   },
 );

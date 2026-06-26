@@ -7,6 +7,7 @@ import {
   enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
   "InputComponent",
@@ -15,6 +16,10 @@ test(
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Chroma");
+    await skipIfComponentUnavailable(
+      page.getByTestId("chromaChroma DB"),
+      "Chroma",
+    );
 
     await page.waitForSelector('[data-testid="chromaChroma DB"]', {
       timeout: 3000,
