@@ -15,7 +15,7 @@ dependencies = [
     "fastapi>=0.135.0,<1.0.0",
     # [standard] adds uvloop + httptools (fast loop + HTTP parser) for the `lfx serve` worker path.
     "uvicorn[standard]>=0.34.3,<1.0.0",
-    # gunicorn powers `lfx serve --workers N` on Unix; Windows multi-worker is refused.
+    # gunicorn powers `lfx serve --workers N` on Unix; Windows falls back to uvicorn and rejects gunicorn-only flags.
     "gunicorn>=22.0; sys_platform != 'win32'",
     # a2wsgi bridges the ASGI app onto gunicorn's sync worker for `lfx serve --use-sync-workers` (Unix).
     "a2wsgi>=1.10.0; sys_platform != 'win32'",

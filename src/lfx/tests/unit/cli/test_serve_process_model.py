@@ -79,6 +79,16 @@ def test_preloaded_app_module_builds_warm_app(tmp_path, monkeypatch):
     # The module does NOT freeze at import; freezing happens in the gunicorn
     # pre_fork hook (see test_gunicorn_pre_fork_freezes_heap).
 
+    # Reset the module's import-time state so the warm app/registry built here don't
+    # leak into later tests that import lfx.cli.serve_preloaded_app without reloading.
+    for key in (
+        serve_app._SERVE_FLOW_DIR_ENV,
+        serve_app._SERVE_NO_ENV_FALLBACK_ENV,
+        serve_app._SERVE_STARTUP_PATHS_ENV,
+    ):
+        monkeypatch.delenv(key, raising=False)
+    importlib.reload(mod)
+
 
 @pytest.mark.skipif(sys.platform == "win32", reason="gunicorn is Unix-only")
 def test_gunicorn_pre_fork_freezes_heap_and_runs_clean(monkeypatch):
@@ -153,10 +163,11 @@ def _assert_worker_env_cleaned():
     from lfx.cli.serve_app import (
         _SERVE_FLOW_DIR_ENV,
         _SERVE_NO_ENV_FALLBACK_ENV,
+        _SERVE_RESET_ENVIRON_ENV,
         _SERVE_STARTUP_PATHS_ENV,
     )
 
-    for key in (_SERVE_FLOW_DIR_ENV, _SERVE_NO_ENV_FALLBACK_ENV, _SERVE_STARTUP_PATHS_ENV):
+    for key in (_SERVE_FLOW_DIR_ENV, _SERVE_NO_ENV_FALLBACK_ENV, _SERVE_RESET_ENVIRON_ENV, _SERVE_STARTUP_PATHS_ENV):
         assert key not in _os.environ
 
 

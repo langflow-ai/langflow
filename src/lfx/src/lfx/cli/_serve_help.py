@@ -19,8 +19,9 @@ FLOW_DIR = (
 MAX_REQUESTS = (
     "Recycle each worker after N requests to bound memory (gunicorn, Unix, --workers > 1). "
     "Default: recycle every ~1000 (10% jitter); 0 disables; 1 = every request. Not applied "
-    "on Windows. Worker hygiene, NOT per-request isolation — for that use --use-sync-workers "
-    "or --reset-environ."
+    "on Windows. Worker hygiene, NOT per-request isolation — for that use --reset-environ, "
+    "or --use-sync-workers together with --max-requests 1 (a sync worker alone only prevents "
+    "in-worker overlap; a warm process still carries os.environ mutations to later requests)."
 )
 
 TIMEOUT = (

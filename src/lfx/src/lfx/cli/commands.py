@@ -359,13 +359,18 @@ def serve_command(
         typer.echo("Error: --workers must be at least 1.", err=True)
         raise typer.Exit(1)
 
-    # When serve_command is invoked directly (not via the typer CLI), an omitted --max-requests
-    # or --timeout arrives as a typer OptionInfo sentinel rather than None. Normalize up front so
-    # the gunicorn recycling math and the single-worker warning see None or a real int.
+    # When serve_command is invoked directly (not via the typer CLI), an omitted option arrives
+    # as a typer OptionInfo sentinel rather than its real default. Normalize up front so the
+    # gunicorn math, the single-worker warning, and the worker env see clean values — an
+    # un-normalized OptionInfo is truthy, which would silently flip the bool flags on.
     if not isinstance(max_requests, int):
         max_requests = None
     if not isinstance(timeout, int):
         timeout = None
+    if not isinstance(reset_environ, bool):
+        reset_environ = False
+    if not isinstance(sync_workers, bool):
+        sync_workers = False
 
     from lfx.cli.serve_identity import IdentityConfig, IdentityConfigError
 
@@ -544,18 +549,24 @@ def serve_command(
 
 @contextlib.contextmanager
 def _exported_env(env: dict[str, str]):
-    """Export ``env`` into ``os.environ`` for the body, then remove exactly those keys.
+    """Export ``env`` into ``os.environ`` for the body, then restore the prior state.
 
-    Only the keys we set are removed (not a prefix sweep), so a ``LFX_SERVE_*`` var the
-    operator exported before launch survives.
+    Keys we added are removed; keys we overwrote are restored to their original value (not a
+    prefix sweep), so a ``LFX_SERVE_*`` var the operator exported before launch survives with
+    its own value rather than being deleted.
     """
+    sentinel = object()
+    previous = {key: os.environ.get(key, sentinel) for key in env}
     for key, value in env.items():
         os.environ[key] = value
     try:
         yield
     finally:
-        for key in env:
-            os.environ.pop(key, None)
+        for key, prev in previous.items():
+            if prev is sentinel:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = prev
 
 
 def _launch_workers(

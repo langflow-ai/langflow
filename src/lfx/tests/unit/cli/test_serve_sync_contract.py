@@ -80,3 +80,23 @@ def test_run_endpoint_returns_completed_result(warmed_client):
     assert "success" in body
     assert "task_id" not in body
     assert "job_id" not in body
+
+
+def test_run_endpoint_error_is_synchronous_not_a_job(warmed_client):
+    """A failing run still returns a synchronous error body, not a job/task handle to poll."""
+    headers = {"x-api-key": "test-api-key"}
+
+    with (
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+        # Raise inside execution so run_flow takes its except-Exception path.
+        patch("lfx.cli.serve_app.guarded_execute", side_effect=RuntimeError("boom")),
+    ):
+        resp = warmed_client.post(f"/flows/{FLOW_ID}/run", json={"input_value": "hi"}, headers=headers)
+
+    assert resp.status_code == 500
+    body = resp.json()
+    # Failure is reported in-band (success=False/type=error), never deferred to a poll handle.
+    assert body["success"] is False
+    assert body["type"] == "error"
+    assert "task_id" not in body
+    assert "job_id" not in body
