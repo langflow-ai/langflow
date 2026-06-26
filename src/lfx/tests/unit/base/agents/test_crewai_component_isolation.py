@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 sys.modules.setdefault("litellm", SimpleNamespace(exceptions=SimpleNamespace(BadRequestError=Exception)))
 
-import lfx.services.deps as deps
+from lfx.services import deps
 
 deps.get_settings_service = lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True))
 
