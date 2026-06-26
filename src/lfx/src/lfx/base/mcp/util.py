@@ -43,8 +43,70 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 
+DANGEROUS_MCP_ENV_VARS = frozenset(
+    {
+        # Shared-object / dylib injection
+        "ld_preload",
+        "ld_library_path",
+        "ld_audit",
+        "dyld_insert_libraries",
+        "dyld_library_path",
+        # glibc iconv module injection
+        "gconv_path",
+        # Command resolution override
+        "path",
+        # Shell startup, option, and tracing injection
+        "bash_env",
+        "env",
+        "bash_func_",
+        "shellopts",
+        "bashopts",
+        "ps4",
+        # Shell word-splitting / globbing manipulation
+        "ifs",
+        "cdpath",
+        # Node.js code injection
+        "node_options",
+        "node_extra_ca_certs",
+        # Python code injection
+        "pythonstartup",
+        "pythonpath",
+        # Home / config directory redirection
+        "home",
+        "xdg_config_home",
+        "xdg_data_home",
+        # Temp directory redirection
+        "tmpdir",
+        "tmp",
+        "temp",
+        # DNS / network manipulation
+        "hostaliases",
+        "localdomain",
+        "res_options",
+        # Locale / getconf injection
+        "getconf_dir",
+    }
+)
+
 # MCP Session Manager constants - lazy loaded
 _mcp_settings_cache: dict[str, Any] = {}
+
+
+def is_dangerous_mcp_env_var(key: str) -> bool:
+    lower_key = key.lower()
+    return lower_key in DANGEROUS_MCP_ENV_VARS or lower_key.startswith("bash_func_")
+
+
+def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
+    if env is None:
+        return {}
+
+    for key in env:
+        if is_dangerous_mcp_env_var(key):
+            msg = f"Environment variable '{key}' is not allowed for MCP stdio servers"
+            raise ValueError(msg)
+
+    return env
 
 
 def _get_mcp_setting(key: str, default: Any = None) -> Any:
@@ -1586,7 +1648,7 @@ class MCPStdioClient:
            ``shell=False`` semantics).  This would eliminate an entire class of
            injection vectors (shell metacharacters, IFS manipulation,
            BASH_ENV/BASH_FUNC_* startup injection) and allow removing several
-           entries from ``DANGEROUS_ENV_VARS`` in ``schemas.py``.  Requires:
+           entries from ``DANGEROUS_MCP_ENV_VARS``.  Requires:
            1. Changing the signature to accept ``(command, args)`` separately.
            2. Updating ``update_tools()`` to stop joining into a shell string.
            3. Handling multi-word ``command`` config values (e.g.
@@ -1599,7 +1661,8 @@ class MCPStdioClient:
         from mcp import StdioServerParameters
 
         command = shlex.split(command_str)
-        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
+        safe_env = _validate_mcp_stdio_env(env)
+        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **safe_env}
 
         if platform.system() == "Windows":
             server_params = StdioServerParameters(
