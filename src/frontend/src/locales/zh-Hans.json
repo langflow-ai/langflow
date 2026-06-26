@@ -827,6 +827,7 @@
   "flow.unsavedChangesLost": "未保存的更改将永久丢失。",
   "flow.unsavedChangesTitle": "{{name}} 有未保存的更改",
   "flow.untitledFlow": "无题之流",
+  "flow.editDetailsAndSettings": "编辑 {{flowName}} 的详细信息和设置",
   "flowBuild.buildFailed": "构建流程失败",
   "flowBuild.builtSuccessfully": "流程已成功建立",
   "flowBuild.dismiss": "退出",

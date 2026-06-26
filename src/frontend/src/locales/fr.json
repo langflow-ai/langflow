@@ -827,6 +827,7 @@
   "flow.unsavedChangesLost": "Les modifications non enregistrées seront définitivement perdues.",
   "flow.unsavedChangesTitle": "{{name}} contient des modifications non enregistrées",
   "flow.untitledFlow": "Flux sans titre",
+  "flow.editDetailsAndSettings": "Modifier les détails et les paramètres de {{flowName}}",
   "flowBuild.buildFailed": "Échec de la création du flux",
   "flowBuild.builtSuccessfully": "Le flux a été créé avec succès",
   "flowBuild.dismiss": "Ignorer",

@@ -827,6 +827,7 @@
   "flow.unsavedChangesLost": "Nicht gespeicherte Änderungen gehen unwiderruflich verloren.",
   "flow.unsavedChangesTitle": "{{name}} enthält nicht gespeicherte Änderungen",
   "flow.untitledFlow": "Untitled Flow",
+  "flow.editDetailsAndSettings": "Details und Einstellungen für {{flowName}} bearbeiten",
   "flowBuild.buildFailed": "Der Build-Vorgang ist fehlgeschlagen",
   "flowBuild.builtSuccessfully": "Der Ablauf wurde erfolgreich erstellt",
   "flowBuild.dismiss": "Schließen",

@@ -827,6 +827,7 @@
   "flow.unsavedChangesLost": "保存されていない変更は、永久に失われます。",
   "flow.unsavedChangesTitle": "{{name}} 保存されていない変更があります",
   "flow.untitledFlow": "無題のフロー",
+  "flow.editDetailsAndSettings": "{{flowName}} の詳細と設定を編集",
   "flowBuild.buildFailed": "ビルドに失敗しました",
   "flowBuild.builtSuccessfully": "フローが正常に構築されました",
   "flowBuild.dismiss": "消去",

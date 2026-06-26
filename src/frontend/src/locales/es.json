@@ -827,6 +827,7 @@
   "flow.unsavedChangesLost": "Los cambios no guardados se perderán definitivamente.",
   "flow.unsavedChangesTitle": "{{name}} tiene cambios sin guardar",
   "flow.untitledFlow": "Flujo sin título",
+  "flow.editDetailsAndSettings": "Editar detalles y configuración de {{flowName}}",
   "flowBuild.buildFailed": "Error en la compilación de Flow",
   "flowBuild.builtSuccessfully": "El flujo se ha creado correctamente",
   "flowBuild.dismiss": "Descartar",

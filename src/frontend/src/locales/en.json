@@ -1983,6 +1983,7 @@
   "assistant.progress.validating.6": "Ensuring component is valid...",
   "assistant.progress.validating.7": "Performing validation...",
   "flow.untitledFlow": "Untitled Flow",
+  "flow.editDetailsAndSettings": "Edit flow details and settings for {{flowName}}",
   "flow.saving": "Saving...",
   "flow.saveChanges": "Save Changes",
   "flow.never": "Never",
