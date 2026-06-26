@@ -1,4 +1,5 @@
 import type { ChatMessageType, ContentBlockItem } from "@/types/chat";
+import { isGroupedBlock } from "@/types/chat";
 
 /**
  * Content block utilities for determining state and loading status.
@@ -31,9 +32,14 @@ export function resolveContentBlockLayout(
   messageText: string | undefined,
   editMessage: boolean,
 ): ContentBlockLayout {
-  const hasGroup = contentBlocks.some((block) => block.type === "group");
+  // Use isGroupedBlock, not `type === "group"`: legacy / v1-projected payloads
+  // persist the "Agent Steps" group without a `type` discriminator (just
+  // title + contents). The narrow check missed those, so an untyped group both
+  // failed hasGroup and got counted as a flat non-text item, wrongly flipping
+  // ordering mode on (duplicate text above tools, suppressed bubble body).
+  const hasGroup = contentBlocks.some(isGroupedBlock);
   const hasFlatNonText = contentBlocks.some(
-    (block) => block.type !== "group" && block.type !== "text",
+    (block) => !isGroupedBlock(block) && block.type !== "text",
   );
   const hasTextBlock = contentBlocks.some((block) => block.type === "text");
   const useContentBlockOrdering = !hasGroup && hasFlatNonText;

@@ -102,6 +102,17 @@ export function ContentBlockDisplay({
     prevRunningKeysRef.current = runningToolKeys;
   }, [runningToolKeys]);
 
+  // ponytail: both this early return and the grouped section below key off
+  // toolItems (useToolDurations filters to tool_use), and the accordion only
+  // iterates tool leaves. So a group with no tool_use renders nothing here.
+  // Tool-less groups DO occur: a no-tool agent answer projects (v1
+  // legacy_render) to an untyped "Agent Steps" group whose only leaves are
+  // Input/Output text. That drop is benign though, those text leaves were
+  // never shown by the tool accordion and the answer still paints via the
+  // bubble body. The unhandled case is a group carrying DISPLAYABLE non-tool
+  // content (reasoning / citation / media); no producer emits that today.
+  // Upgrade path when one does: render the group's non-tool leaves and gate on
+  // groupedBlocks.length, not toolItems.
   if (!toolItems.length && !flatItems.length) {
     return null;
   }

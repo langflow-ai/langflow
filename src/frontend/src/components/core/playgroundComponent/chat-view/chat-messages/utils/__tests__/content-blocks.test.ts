@@ -18,6 +18,13 @@ function makeGroup(contents: ContentBlockItem[]): ContentBlock {
   return { type: "group", title: "Agent Steps", contents };
 }
 
+// Legacy / v1-projected shape: a group persisted without the `type`
+// discriminator (just title + contents). isGroupedBlock still treats it as a
+// group, so the layout resolver must too.
+function makeUntypedGroup(contents: ContentBlockItem[]): ContentBlockItem {
+  return { title: "Agent Steps", contents } as unknown as ContentBlockItem;
+}
+
 describe("resolveContentBlockLayout", () => {
   it("legacy group: keeps the bubble body and strips the duplicate text block", () => {
     const blocks: ContentBlockItem[] = [
@@ -30,6 +37,22 @@ describe("resolveContentBlockLayout", () => {
     // The top-level text duplicating Message.text is dropped; the group stays.
     expect(layout.displayedContentBlocks).toEqual([
       makeGroup([makeTool("search")]),
+    ]);
+  });
+
+  it("legacy untyped group: detected as a group, not flat ordering", () => {
+    // Without isGroupedBlock the untyped group fails `type === "group"` and is
+    // miscounted as a flat non-text item, wrongly enabling ordering mode.
+    const blocks: ContentBlockItem[] = [
+      makeText("the answer"),
+      makeUntypedGroup([makeTool("search")]),
+    ];
+    const layout = resolveContentBlockLayout(blocks, "the answer", false);
+    expect(layout.useContentBlockOrdering).toBe(false);
+    expect(layout.showBubbleBody).toBe(true);
+    // The duplicate top-level text is stripped; the untyped group stays.
+    expect(layout.displayedContentBlocks).toEqual([
+      makeUntypedGroup([makeTool("search")]),
     ]);
   });
 
