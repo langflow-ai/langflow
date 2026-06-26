@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
@@ -7,6 +8,7 @@ import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 
 export const ModelProviderCount = () => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const { data: enabledModelsData } = useGetEnabledModels();
 
@@ -27,6 +29,7 @@ export const ModelProviderCount = () => {
         className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
         onClick={() => setOpen((cur) => !cur)}
         data-testid="model-provider-count-button"
+        aria-label={t("modelProviders.title")}
       >
         <ForwardedIconComponent name="BrainCog" className="w-5 h-5" />
         <div className="text-sm">Models</div>
