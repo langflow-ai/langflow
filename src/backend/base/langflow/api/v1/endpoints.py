@@ -78,6 +78,7 @@ from langflow.services.deps import (
 )
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
+from langflow.api.v1.login import check_rate_limit
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
@@ -92,7 +93,7 @@ def _requires_component_hash_lookups(settings: object, user: CurrentActiveUser) 
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
 
-router = APIRouter(tags=["Base"])
+router = APIRouter(tags=["Base"], dependencies=[Depends(check_rate_limit)])
 
 # SSE Constants
 SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
