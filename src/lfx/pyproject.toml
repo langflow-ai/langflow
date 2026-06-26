@@ -51,6 +51,7 @@ dependencies = [
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
+    "psutil>=5.9.0,<8.0.0",  # pre-fork TCP connection check (lfx.fork.find_ghost_connections)
 ]
 
 [project.optional-dependencies]

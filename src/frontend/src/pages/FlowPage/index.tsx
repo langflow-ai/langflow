@@ -9,6 +9,7 @@ import {
   SimpleSidebar,
   SimpleSidebarProvider,
 } from "@/components/ui/simple-sidebar";
+import { PermissionsProvider } from "@/contexts/permissionsContext";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
@@ -341,10 +342,20 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     )}
                   >
                     <div className="h-full w-full">
-                      <FlowPageMainContent
-                        flowId={id}
-                        setIsLoading={setIsLoading}
-                      />
+                      <PermissionsProvider
+                        resourceType="flow"
+                        resourceIds={currentFlow?.id ? [currentFlow.id] : []}
+                        domain={
+                          currentFlow?.folder_id
+                            ? `project:${currentFlow.folder_id}`
+                            : undefined
+                        }
+                      >
+                        <FlowPageMainContent
+                          flowId={id}
+                          setIsLoading={setIsLoading}
+                        />
+                      </PermissionsProvider>
                     </div>
                   </main>
                 </FlowSearchProvider>

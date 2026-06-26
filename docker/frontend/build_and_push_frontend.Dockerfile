@@ -9,7 +9,10 @@
 FROM --platform=$BUILDPLATFORM node:lts-bookworm-slim AS builder-base
 COPY src/frontend /frontend
 
-RUN cd /frontend && npm install && npm run build
+# PUPPETEER_SKIP_DOWNLOAD: puppeteer (via accessibility-checker, test-only)
+# must not download Chrome here - the build env can't fetch it and the
+# production image never runs it.
+RUN cd /frontend && PUPPETEER_SKIP_DOWNLOAD=true npm install && npm run build
 
 ################################
 # RUNTIME

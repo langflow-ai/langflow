@@ -7,12 +7,14 @@ from tests.api_keys import get_astradb_api_endpoint, get_astradb_application_tok
 from tests.integration.components.mock_components import TextToData
 from tests.integration.utils import ComponentInputHandle, run_single_component
 
-pytest.importorskip("langchain_astradb")
-pytest.importorskip("lfx_datastax")
-pytest.importorskip("lfx_openai")
-from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
-from lfx_datastax import AstraDBVectorStoreComponent
-from lfx_openai.components.openai.openai import OpenAIEmbeddingsComponent
+langchain_astradb = pytest.importorskip("langchain_astradb")
+lfx_datastax = pytest.importorskip("lfx_datastax")
+lfx_openai_embeddings = pytest.importorskip("lfx_openai.components.openai.openai")
+
+AstraDBVectorStore = langchain_astradb.AstraDBVectorStore
+VectorServiceOptions = langchain_astradb.VectorServiceOptions
+AstraDBVectorStoreComponent = lfx_datastax.AstraDBVectorStoreComponent
+OpenAIEmbeddingsComponent = lfx_openai_embeddings.OpenAIEmbeddingsComponent
 
 BASIC_COLLECTION = "test_basic"
 SEARCH_COLLECTION = "test_search"

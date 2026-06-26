@@ -1,14 +1,14 @@
 from lfx.components.crewai.sequential_crew import SequentialCrewComponent
 from lfx.components.crewai.sequential_task_agent import SequentialTaskAgentComponent
 from lfx.components.input_output import ChatOutput, TextInputComponent
+from lfx.components.models import LanguageModelComponent
 from lfx.components.models_and_agents import PromptComponent
 from lfx.components.tools import SearchAPIComponent
 from lfx.graph import Graph
-from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 
 def sequential_tasks_agent_graph():
-    llm = OpenAIModelComponent()
+    llm = LanguageModelComponent()
     search_api_tool = SearchAPIComponent()
 
     text_input = TextInputComponent(_display_name="Topic")
