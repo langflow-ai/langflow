@@ -4,9 +4,16 @@ import userEvent from "@testing-library/user-event";
 jest.mock("react-i18next", () => ({
   __esModule: true,
   useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) => {
-      if (key === "settings.avatarAlt" && opts) {
-        return `${opts.folder} avatar ${opts.index}`;
+    t: (key: string, optsOrFallback?: Record<string, unknown> | string) => {
+      if (
+        key === "settings.avatarAlt" &&
+        optsOrFallback &&
+        typeof optsOrFallback === "object"
+      ) {
+        return `${optsOrFallback.folder} avatar ${optsOrFallback.index}`;
+      }
+      if (key.startsWith("settings.profilePictureCategory.")) {
+        return key.split(".").at(-1) ?? key;
       }
       return key;
     },
@@ -91,12 +98,15 @@ describe("ProfilePictureChooserComponent", () => {
         onChange={jest.fn()}
       />,
     );
-    await screen.findAllByRole("button");
-    expect(screen.getByAltText("People avatar 1")).toHaveAttribute(
+    const peopleBtn = await screen.findByRole("button", {
+      name: "People avatar 1",
+    });
+    expect(peopleBtn.querySelector("img")).toHaveAttribute(
       "src",
       "/api/v1/files/profile_pictures/People/avatar-01.svg",
     );
-    expect(screen.getByAltText("Space avatar 1")).toHaveAttribute(
+    const spaceBtn = screen.getByRole("button", { name: "Space avatar 1" });
+    expect(spaceBtn.querySelector("img")).toHaveAttribute(
       "src",
       "/api/v1/files/profile_pictures/Space/space-01.svg",
     );
@@ -111,10 +121,8 @@ describe("ProfilePictureChooserComponent", () => {
         onChange={jest.fn()}
       />,
     );
-    await screen.findByText("settings.profilePictureCategory.People");
-    expect(
-      screen.getByText("settings.profilePictureCategory.Space"),
-    ).toBeInTheDocument();
+    await screen.findByText("People");
+    expect(screen.getByText("Space")).toBeInTheDocument();
   });
 
   it("renders one button per avatar path", async () => {
@@ -131,7 +139,7 @@ describe("ProfilePictureChooserComponent", () => {
     expect(buttons).toHaveLength(3);
   });
 
-  it("each image has a descriptive alt attribute", async () => {
+  it("buttons expose accessible names derived from the category and position", async () => {
     render(
       <ProfilePictureChooserComponent
         loading={false}
@@ -140,10 +148,15 @@ describe("ProfilePictureChooserComponent", () => {
         onChange={jest.fn()}
       />,
     );
-    await screen.findAllByRole("button");
-    expect(screen.getByAltText("People avatar 1")).toBeInTheDocument();
-    expect(screen.getByAltText("People avatar 2")).toBeInTheDocument();
-    expect(screen.getByAltText("Space avatar 1")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "People avatar 1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "People avatar 2" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Space avatar 1" }),
+    ).toBeInTheDocument();
   });
 
   it("selected button has aria-pressed=true, others have aria-pressed=false", async () => {
