@@ -23,15 +23,15 @@ dependencies = [
     # curated lfx-* package, never exact pins -- exact pins in reusable library
     # metadata create resolver conflicts for downstreams that depend on a
     # different version. Exact pins for reproducibility live in uv.lock and the
-    # release-build manifests. Bundles follow their own 0.1.x cadence (bound
-    # <1.0.0); lfx-bundles versions with the metapackage contract (bound <2.0).
+    # release-build manifests. Partner bundles follow their own 0.1.x cadence
+    # (bound <1.0.0). The lfx-bundles metapackage stays opt-in and is not a
+    # default langflow dependency.
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
     "lfx-duckduckgo>=0.1.0,<1.0.0",
     "lfx-arxiv>=0.1.0,<1.0.0",
     "lfx-ibm>=0.1.0,<1.0.0",
     "lfx-docling>=0.1.0,<1.0.0",
-    "lfx-bundles[all]>=1.0,<2.0",
     "lfx-datastax>=0.1.0,<1.0.0",
     "lfx-openai>=0.1.0,<1.0.0",
     "lfx-anthropic>=0.1.0,<1.0.0",

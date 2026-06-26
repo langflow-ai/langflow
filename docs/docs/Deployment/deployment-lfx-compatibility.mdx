@@ -115,4 +115,4 @@ uv pip install "lfx[bundles]"
 
 This is equivalent to installing `lfx` plus `lfx-bundles[all]`.
 For a slimmer image, install only the provider packages a deployment actually executes, for example `uv pip install lfx lfx-openai "lfx-bundles[qdrant]"`.
-There is intentionally no `lfx[all]` extra; `pip install langflow` remains the everything-included install.
+There is intentionally no `lfx[all]` extra; use `langflow` for the server plus default curated bundles, and install `lfx-bundles` explicitly for the long-tail providers.

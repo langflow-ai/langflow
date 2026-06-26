@@ -14,9 +14,9 @@ keywords = ["langflow", "lfx", "extension", "bundle", "providers"]
 # is an optional extra (see [project.optional-dependencies]); installing
 # lfx-bundles bare gives the provider *code* but defers each provider's SDK to
 # its extra, so a user opts into exactly the providers they need.  The
-# generated ``all`` extra pulls every provider's deps and is what ``langflow``
-# depends on (``lfx-bundles[all]``) so ``pip install langflow`` stays
-# functionally identical to today.
+# generated ``all`` extra pulls every provider's deps for explicit opt-in
+# installs such as ``pip install "lfx[bundles]"`` or
+# ``pip install "lfx-bundles[all]"``.
 dependencies = [
     "lfx>=1.11.0.dev0,<2.0.0",
 ]
