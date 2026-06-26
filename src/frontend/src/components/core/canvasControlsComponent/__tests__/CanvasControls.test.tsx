@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import CanvasControls from "../CanvasControls";
 
 // The modal/dialog/dropdown overlay layer in the app all sits at `z-50`
@@ -201,9 +202,10 @@ describe("CanvasControls", () => {
     }
   });
 
-  it("should_allow_tab_to_leave_onboarding_tooltip", () => {
+  it("should_allow_tab_to_leave_onboarding_tooltip", async () => {
     localStorage.clear();
     jest.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     const nextButton = document.createElement("button");
     nextButton.textContent = "Next focus target";
 
@@ -216,11 +218,10 @@ describe("CanvasControls", () => {
 
       document.body.appendChild(nextButton);
 
-      const openButton = screen.getByTestId("assistant-onboarding-open");
-      openButton.focus();
-      fireEvent.keyDown(screen.getByTestId("assistant-onboarding-tooltip"), {
-        key: "Tab",
-      });
+      screen.getByTestId("assistant-onboarding-dismiss").focus();
+      await user.tab();
+      expect(screen.getByTestId("assistant-onboarding-open")).toHaveFocus();
+      await user.tab();
 
       expect(nextButton).toHaveFocus();
       expect(

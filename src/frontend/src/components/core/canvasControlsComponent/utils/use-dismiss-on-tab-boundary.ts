@@ -1,20 +1,14 @@
 import { type KeyboardEvent, useCallback, useRef } from "react";
+import { tabbable } from "tabbable";
 
-const TABBABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
-].join(",");
-
-const getTabbableElements = (root: ParentNode) =>
-  Array.from(root.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
+const getTabbableElements = (root: HTMLElement) =>
+  tabbable(root, {
+    displayCheck: process.env.NODE_ENV === "test" ? "none" : "full",
+  }).filter(
     (element) =>
-      element.tabIndex >= 0 &&
-      element.getAttribute("aria-hidden") !== "true" &&
-      !element.hasAttribute("data-radix-focus-guard"),
+      !element.hasAttribute("data-radix-focus-guard") &&
+      !element.closest("[inert]") &&
+      !element.closest('[aria-hidden="true"]'),
   );
 
 export function useDismissOnTabBoundary<TElement extends HTMLElement>(
@@ -35,14 +29,14 @@ export function useDismissOnTabBoundary<TElement extends HTMLElement>(
       const containerTabbables = getTabbableElements(container);
       const firstContainerTabbable = containerTabbables[0];
       const lastContainerTabbable = containerTabbables.at(-1);
-      const leavingBackward =
+      const isLeavingBackward =
         event.shiftKey && activeElement === firstContainerTabbable;
-      const leavingForward =
+      const isLeavingForward =
         !event.shiftKey && activeElement === lastContainerTabbable;
 
-      if (!leavingBackward && !leavingForward) return;
+      if (!isLeavingBackward && !isLeavingForward) return;
 
-      const documentTabbables = getTabbableElements(document);
+      const documentTabbables = getTabbableElements(document.body);
       const activeIndex = documentTabbables.indexOf(activeElement);
       const candidates = event.shiftKey
         ? documentTabbables.slice(0, activeIndex).reverse()

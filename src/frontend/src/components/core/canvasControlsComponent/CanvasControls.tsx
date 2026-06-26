@@ -225,6 +225,8 @@ const CanvasControls = ({
               // break their flow.
               onOpenAutoFocus={(e) => e.preventDefault()}
               onCloseAutoFocus={(e) => e.preventDefault()}
+              onFocusOutside={markDiscovered}
+              onEscapeKeyDown={markDiscovered}
               data-testid="assistant-onboarding-tooltip"
               onKeyDown={handleOnboardingTooltipTabBoundary}
               // Canvas-level stacking: kept BELOW the z-50 modal/dialog/dropdown
