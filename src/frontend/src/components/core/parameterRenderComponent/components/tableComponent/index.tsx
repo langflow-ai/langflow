@@ -13,6 +13,7 @@ import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
 import cloneDeep from "lodash";
 import { type ElementRef, forwardRef, useRef, useState } from "react";
 import TableOptions from "./components/TableOptions";
+import { applyRowTabIndices } from "./utils/applyRowTabIndices";
 import resetGrid from "./utils/reset-grid-columns";
 
 export interface TableComponentProps extends AgGridReactProps {
@@ -264,6 +265,7 @@ const TableComponent = forwardRef<
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
       useRef<AgGridReact | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
@@ -382,6 +384,7 @@ const TableComponent = forwardRef<
 
     return (
       <div
+        ref={containerRef}
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
           "ag-theme-shadcn flex h-full flex-col",
@@ -493,6 +496,14 @@ const TableComponent = forwardRef<
               );
               setColumnStateChange(true);
             }
+          }}
+          onFirstDataRendered={(e) => {
+            applyRowTabIndices(containerRef.current);
+            props.onFirstDataRendered?.(e);
+          }}
+          onRowDataUpdated={(e) => {
+            applyRowTabIndices(containerRef.current);
+            props.onRowDataUpdated?.(e);
           }}
         />
         {!props.tableOptions?.hide_options && props.pagination && (

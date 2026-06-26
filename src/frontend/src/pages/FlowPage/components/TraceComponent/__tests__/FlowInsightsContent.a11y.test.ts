@@ -1,17 +1,4 @@
-// Unit tests for the applyRowTabIndices logic used in FlowInsightsContent.
-// The fix: after AG Grid renders rows, we set tabindex="0" on the first row
-// and tabindex="-1" on all others so that the IBM accessibility checker finds
-// a tabbable descendant inside role="rowgroup".
-
-function applyRowTabIndices(containerEl: HTMLElement | null): void {
-  if (!containerEl) return;
-  const bodyRows = containerEl.querySelectorAll<HTMLElement>(
-    ".ag-center-cols-container [role='row']",
-  );
-  bodyRows.forEach((row, idx) => {
-    row.setAttribute("tabindex", idx === 0 ? "0" : "-1");
-  });
-}
+import { applyRowTabIndices } from "@/components/core/parameterRenderComponent/components/tableComponent/utils/applyRowTabIndices";
 
 function makeGrid(rowCount: number): HTMLElement {
   const container = document.createElement("div");
