@@ -160,13 +160,20 @@ class BaseCrewComponent(Component):
         if not agents_list:
             agents_list = self.agents or []
 
-        # Set all the agents llm attribute to the crewai llm
+        # Deduplicate by identity and convert each agent exactly once.
+        # An agent wired into N tasks appears N times in agents_list; converting
+        # in-place on the same object repeatedly would double-wrap the LLM and
+        # tools on each call (convert_tools is not idempotent).
+        seen_ids: set[int] = set()
+        converted: list = []
         for agent in agents_list:
-            # Convert Agent LLM and Tools to proper format
-            agent.llm = convert_llm(agent.llm)
-            agent.tools = convert_tools(agent.tools)
+            if id(agent) not in seen_ids:
+                seen_ids.add(id(agent))
+                agent.llm = convert_llm(agent.llm)
+                agent.tools = convert_tools(agent.tools)
+                converted.append(agent)
 
-        return self.tasks, agents_list
+        return self.tasks, converted
 
     def get_manager_llm(self):
         if not self.manager_llm:
