@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.log.logger import logger
-from sqlalchemy import column, values
+from sqlalchemy import Select, column, values
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select, update
 
@@ -24,6 +24,11 @@ if TYPE_CHECKING:
     from lfx.services.adapters.deployment.schema import DeploymentType
     from sqlalchemy.sql.selectable import CTE
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+# Preserves the concrete statement type (scalar count select vs. multi-column
+# page select) through the authz scoping helper below.
+StmtT = TypeVar("StmtT", bound=Select[Any])
 
 
 @dataclass(frozen=True, slots=True)
@@ -317,6 +322,35 @@ async def update_deployment_metadata_batch(
     (await db.exec(stmt)).all()
 
 
+def _scope_to_owner_or_allowed(stmt: StmtT, *, user_id: UUID, allowed_ids: list[UUID] | None) -> StmtT:
+    """Scope a deployment query to owner rows, optionally widened by ``allowed_ids``.
+
+    ``allowed_ids is None`` (OSS default) → owner-only (``user_id == user_id``),
+    byte-for-byte the prior behavior. A list → the union of owner rows and
+    ``allowed_ids`` (deployment ids a registered authorization plugin reports
+    the caller may read). Centralized so the page query and its count apply the
+    identical predicate — a drift would make pagination totals disagree with the
+    rows returned.
+
+    The list branch delegates to
+    :func:`langflow.services.authorization.restrict_to_owned_or_visible` so the
+    ``(owner ⊕ visible-ids)`` union lives in one place; the import is lazy to
+    match the rest of this module's authorization access and keep import order
+    cycle-free. The ``None`` branch stays here so the OSS default never emits a
+    degenerate ``IN ()`` term.
+    """
+    if allowed_ids is None:
+        return stmt.where(Deployment.user_id == user_id)
+    from langflow.services.authorization.listing import restrict_to_owned_or_visible
+
+    return restrict_to_owned_or_visible(
+        stmt,
+        id_column=Deployment.id,
+        owner_clause=Deployment.user_id == user_id,
+        visible_ids=allowed_ids,
+    )
+
+
 async def list_deployments_page(
     db: AsyncSession,
     *,
@@ -326,12 +360,19 @@ async def list_deployments_page(
     limit: int,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
+    allowed_ids: list[UUID] | None = None,
 ) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
     """Return a page of deployments with attachment counts and matched attachments.
 
     The third tuple element contains ``(flow_version_id, provider_snapshot_id)``
     pairs for attachments that matched the ``flow_version_ids`` filter (empty
     list when no filter is active).
+
+    ``allowed_ids`` is the DB-layer authorization prefilter. When ``None`` (OSS
+    default) the page is owner-scoped exactly as before. When a list, the page
+    is widened to the union of owner rows and ``allowed_ids`` (rows a registered
+    authorization plugin reports the caller may read) — see
+    ``langflow.services.authorization.restrict_to_owned_or_visible``.
     """
     if offset < 0:
         msg = "offset must be greater than or equal to 0"
@@ -360,11 +401,9 @@ async def list_deployments_page(
             func.coalesce(attachment_counts_subquery.c.attached_count, 0).label("attached_count"),
         )
         .outerjoin(attachment_counts_subquery, attachment_counts_subquery.c.deployment_id == Deployment.id)
-        .where(
-            Deployment.user_id == user_id,
-            Deployment.deployment_provider_account_id == deployment_provider_account_id,
-        )
+        .where(Deployment.deployment_provider_account_id == deployment_provider_account_id)
     )
+    stmt = _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
     if flow_version_ids:
@@ -503,11 +542,18 @@ async def count_deployments_by_provider(
     deployment_provider_account_id: UUID,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
+    allowed_ids: list[UUID] | None = None,
 ) -> int:
+    """Count deployments for a provider account.
+
+    ``allowed_ids`` mirrors ``list_deployments_page``: ``None`` counts owner rows
+    only (OSS default); a list counts the owner ⊕ ``allowed_ids`` union so the
+    pagination total reflects the same authorization prefilter as the page.
+    """
     stmt = select(func.count(Deployment.id)).where(
-        Deployment.user_id == user_id,
         Deployment.deployment_provider_account_id == deployment_provider_account_id,
     )
+    stmt = _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
     if flow_version_ids:

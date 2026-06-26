@@ -1,11 +1,6 @@
-name: A11y / Playwright Scans
+name: A11y / IBM Equal Access Scans
 
 on:
-  # TEMP: remove before merging — allows testing the workflow from this
-  # branch, since workflow_dispatch only registers once the file is on main.
-  push:
-    branches: [feat/a11y]
-  # TEMP: remove before merging — run on PRs while validating the workflow.
   pull_request:
   schedule:
     # Run nightly at 02:00 UTC, after the nightly build window
@@ -28,11 +23,11 @@ env:
   # Define the directory where Playwright browsers will be installed.
   # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
-  PLAYWRIGHT_VERSION: "1.59.1"
+  PLAYWRIGHT_VERSION: "1.60.0"
 
 jobs:
   a11y-scan:
-    name: IBM Equal Access
+    name: Playwright scan runner
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -118,7 +113,7 @@ jobs:
       - name: Install Python Dependencies
         run: uv sync
 
-      - name: Run Playwright Specs With IBM Scans
+      - name: Run IBM Equal Access Scans
         shell: bash
         env:
           RUN_A11Y: "true"
@@ -134,17 +129,19 @@ jobs:
           test -n "$SCAN_SPECS"
           npx playwright test $SCAN_SPECS --project=chromium --workers=1 --retries=2
 
-      - name: Build Aggregated A11y Summary
+      - name: Build IBM Scan Summary
         if: always()
         shell: bash
         run: |
           cd src/frontend
           if ls coverage/accessibility-reports/*.json > /dev/null 2>&1; then
-            npm run a11y:report --silent
+            npm run a11y:html-report --silent
             {
-              echo '```text'
-              npm run a11y:report --silent
-              echo '```'
+              echo '## Accessibility Report'
+              echo ''
+              echo 'Full route-by-route HTML report: download the `ibm-a11y-reports-${{ github.run_attempt }}` artifact from this run and open `index.html`.'
+              echo ''
+              npm run a11y:job-summary --silent
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No accessibility reports were generated." | tee -a "$GITHUB_STEP_SUMMARY"
@@ -154,7 +151,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: accessibility-reports-${{ github.run_attempt }}
+          name: ibm-a11y-reports-${{ github.run_attempt }}
           path: src/frontend/coverage/accessibility-reports
           retention-days: 30
           overwrite: true

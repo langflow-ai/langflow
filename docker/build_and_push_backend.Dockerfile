@@ -39,7 +39,7 @@ ENV VIRTUAL_ENV="/app/.venv"
 
 # Install langflow-base with all extras except dev (which includes Playwright).
 # This image ships the langflow-base core only.  Extension bundles
-# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling, lfx-firecrawl) are intentionally NOT
+# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling, lfx-oracle, lfx-firecrawl) are intentionally NOT
 # installed here -- they belong to the full ``langflow`` distribution, not
 # the lean core.  Use the ``langflow`` image, or ``pip install`` the bundle
 # alongside this image, to add those components.

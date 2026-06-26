@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import base64
-import random
+import hashlib
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSoc
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
-from lfx.services.deps import injectable_session_scope
+from lfx.services.deps import injectable_session_scope, session_scope
 
 from langflow.services.auth.exceptions import (
     AuthenticationError,
@@ -263,6 +263,36 @@ async def get_current_user_for_sse(
         ) from e
 
 
+async def get_current_user_for_workflow(
+    token: Annotated[str | None, Security(oauth2_login)],
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+) -> UserRead:
+    """Combined session-or-API-key auth that does not hold a DB session.
+
+    Resolves the user from a session cookie/token *or* an API key inside a
+    short-lived session that is committed and closed before the path operation
+    runs. Unlike `get_current_active_user` (a generator dependency whose session
+    stays open for the whole request), this is required by endpoints that
+    execute a graph inline: a held auth connection contends with the run's own
+    writes (on SQLite it blocks the run's INSERTs with "database is locked").
+    """
+    from langflow.services.database.models.user.model import UserRead
+
+    async with session_scope() as db:
+        try:
+            user = await _auth_service().get_current_user(token, query_param, header_param, db)
+        except AuthenticationError as e:
+            raise _auth_error_to_http(e) from e
+        active_user = await _auth_service().get_current_active_user(user)
+        if active_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive",
+            )
+        return UserRead.model_validate(active_user, from_attributes=True)
+
+
 async def get_optional_user(
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
@@ -369,14 +399,25 @@ def add_base64_padding(value: str) -> str:
 def ensure_fernet_key(secret_key: str) -> bytes:
     """Derive a valid Fernet key from a secret key string.
 
-    For short keys (< 32 chars), uses the key as a random seed to generate
-    a deterministic 32-byte key. For longer keys, adds base64 padding.
+    For short keys (< 32 chars), the 32-byte key is derived with SHA-256, a
+    cryptographic hash. For longer keys, base64 padding is added.
+
+    Security note: short keys previously seeded Python's ``random`` module
+    (``random.seed(secret_key)``) to generate the key bytes. ``random`` is a
+    non-cryptographic Mersenne-Twister PRNG, so the resulting Fernet key was
+    fully predictable from the secret, and seeding it also mutated global PRNG
+    state. SHA-256 is deterministic (so the key stays stable for a given
+    secret) but is not predictable/reversible the way the PRNG output was.
+
+    Deployments that set a ``SECRET_KEY`` shorter than 32 characters will derive
+    a different key than before this fix and must re-enter encrypted secrets
+    (API keys, global variables) after upgrading. The default ``SECRET_KEY`` is
+    a 43-char ``secrets.token_urlsafe(32)`` value and is unaffected.
     """
     MINIMUM_KEY_LENGTH = 32  # noqa: N806
     if len(secret_key) < MINIMUM_KEY_LENGTH:
-        random.seed(secret_key)
-        key = bytes(random.getrandbits(8) for _ in range(32))
-        key = base64.urlsafe_b64encode(key)
+        digest = hashlib.sha256(secret_key.encode()).digest()  # 32 bytes
+        key = base64.urlsafe_b64encode(digest)
     else:
         key = add_base64_padding(secret_key).encode()
     return key

@@ -8,6 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select-custom";
+import { usePermissions } from "@/contexts/permissionsContext";
 import type { FolderType } from "@/pages/MainPage/entities";
 import { cn } from "@/utils/utils";
 import { handleSelectChange } from "../helpers/handle-select-change";
@@ -27,6 +28,10 @@ export const SelectOptions = ({
   checkPathName: (folderId: string) => boolean;
 }) => {
   const { t } = useTranslation();
+  const { can } = usePermissions();
+  const canRename = can(item.id, "write");
+  const canDownload = can(item.id, "read");
+  const canDelete = can(item.id, "delete");
   return (
     <div>
       <Select
@@ -69,6 +74,7 @@ export const SelectOptions = ({
             value="rename"
             data-testid="btn-rename-project"
             className="text-xs"
+            disabled={!canRename}
           >
             <FolderSelectItem name={t("folder.rename")} iconName="SquarePen" />
           </SelectItem>
@@ -76,6 +82,7 @@ export const SelectOptions = ({
             value="download"
             data-testid="btn-download-project"
             className="text-xs"
+            disabled={!canDownload}
           >
             <FolderSelectItem name={t("folder.download")} iconName="Download" />
           </SelectItem>
@@ -83,6 +90,7 @@ export const SelectOptions = ({
             value="delete"
             data-testid="btn-delete-project"
             className="text-xs"
+            disabled={!canDelete}
           >
             <FolderSelectItem name={t("folder.delete")} iconName="Trash2" />
           </SelectItem>

@@ -71,8 +71,24 @@ def get_llm(
     provider = model.get("provider")
     metadata = model.get("metadata", {})
 
+    # Stored selections sourced from ``get_unified_models_detailed`` (e.g. the
+    # ``GET /api/v1/models`` catalog the frontend uses to augment its dropdown
+    # right after a provider is configured, before the backend repopulates
+    # ``template[model]["options"]``) carry only the raw ``create_model_metadata``
+    # fields — none of the enriched ``*_param`` keys. Derive those param names
+    # from the provider mapping (the same source ``get_language_model_options``
+    # uses) so provider-specific names are honored instead of the generic
+    # ``model`` / ``api_key`` defaults. This matters for IBM WatsonX: passing a
+    # foundation-model id under the generic ``model`` kwarg routes ChatWatsonx to
+    # the Model Gateway (a different, OpenAI-style catalog), surfacing as
+    # "model <id> not found" / IAM "Provided user not found or active" even
+    # though the dropdown, connection test, and standalone component all work.
+    from lfx.base.models.model_metadata import get_provider_param_mapping
+
+    provider_param_mapping = get_provider_param_mapping(provider) if provider else {}
+
     # Get model class and parameter names from metadata
-    api_key_param = metadata.get("api_key_param", "api_key")
+    api_key_param = metadata.get("api_key_param") or provider_param_mapping.get("api_key_param", "api_key")
 
     # Capture the user-supplied api_key BEFORE resolution so we can name
     # it back in the error message if it was a Global Variable reference
@@ -136,16 +152,16 @@ def get_llm(
     # carries the raw ``create_model_metadata`` fields, so we have to derive
     # ``model_class`` from the provider mapping that
     # ``get_language_model_options`` would have used.
-    model_class_name = metadata.get("model_class")
-    if not model_class_name and provider:
-        from lfx.base.models.model_metadata import get_provider_param_mapping
-
-        model_class_name = get_provider_param_mapping(provider).get("model_class")
+    model_class_name = metadata.get("model_class") or provider_param_mapping.get("model_class")
     if not model_class_name:
         msg = f"No model class defined for {model_name}"
         raise ValueError(msg)
     model_class = unified_models_module.get_model_class(model_class_name)
-    model_name_param = metadata.get("model_name_param", "model")
+    # The provider mapping stores the model-name param under ``model_param``
+    # (``get_language_model_options`` re-keys it to ``model_name_param``); fall
+    # back to it so e.g. IBM WatsonX resolves to ``model_id`` rather than the
+    # generic ``model``.
+    model_name_param = metadata.get("model_name_param") or provider_param_mapping.get("model_param", "model")
 
     # Check if this is a reasoning model that doesn't support temperature
     reasoning_models = metadata.get("reasoning_models", [])
@@ -185,8 +201,10 @@ def get_llm(
     if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
         # For watsonx, url and project_id are required parameters
         # Try database first, then component values, then environment variables
-        url_param = metadata.get("url_param", "url")
-        project_id_param = metadata.get("project_id_param", "project_id")
+        url_param = metadata.get("url_param") or provider_param_mapping.get("url_param", "url")
+        project_id_param = metadata.get("project_id_param") or provider_param_mapping.get(
+            "project_id_param", "project_id"
+        )
 
         # Get all provider variables from database
         provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
@@ -234,6 +252,13 @@ def get_llm(
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
+    elif provider == "OpenAI":
+        from lfx.utils.util import transform_localhost_url
+
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        openai_base_url_value = provider_vars.get("OPENAI_BASE_URL") or _env_if_allowed("OPENAI_BASE_URL")
+        if openai_base_url_value:
+            kwargs["base_url"] = transform_localhost_url(openai_base_url_value)
     elif provider == "OpenRouter":
         # OpenRouter speaks the OpenAI wire format. Point ChatOpenAI at the
         # OpenRouter base URL (declared in MODEL_PROVIDER_METADATA) and forward

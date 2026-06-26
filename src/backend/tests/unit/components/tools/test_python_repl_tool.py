@@ -114,6 +114,24 @@ class TestPythonREPLComponentSecurity:
         template = PythonREPLComponent().to_frontend_node()["data"]["node"]["template"]
         assert template["global_imports"]["value"] == "math"
 
+    def test_execution_refused_when_custom_components_disabled(self, monkeypatch):
+        """GHSA-8qpj-27x8-pwpq: run_python_repl must consult the gate, not just exec.
+
+        Locks in the wiring: a refactor dropping ensure_code_execution_enabled() from
+        run_python_repl would make this fail, independent of the gate's own unit tests.
+        """
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
+        )
+        data = PythonREPLComponent(global_imports="math", python_code="print('SHOULD_NOT_RUN')").run_python_repl().data
+        assert "error" in data
+        assert "allow_custom_components" in data["error"]
+        # The code must never have executed.
+        assert "SHOULD_NOT_RUN" not in str(data)
+
 
 class TestPythonREPLToolComponentSecurity:
     """The same hardening applies to the legacy Python REPL *tool* component."""
@@ -150,3 +168,18 @@ class TestPythonREPLToolComponentSecurity:
         func("leaked = 12345")
         result = func("print(leaked)")
         assert "NameError" in result
+
+    def test_execution_refused_when_custom_components_disabled(self, monkeypatch):
+        """GHSA-8qpj-27x8-pwpq: run_python_code must consult the gate, not just exec.
+
+        Locks in the wiring: a refactor dropping ensure_code_execution_enabled() from
+        run_python_code would make this fail, independent of the gate's own unit tests.
+        """
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
+        )
+        with pytest.raises(ToolException, match="allow_custom_components"):
+            self._func()("print('SHOULD_NOT_RUN')")

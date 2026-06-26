@@ -427,7 +427,13 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("OPENAI_API_KEY")
             if not api_key:
                 return
-            llm = ChatOpenAI(api_key=api_key, model_name=validation_model, max_tokens=1)
+            llm_kwargs = {"api_key": api_key, "model_name": validation_model, "max_tokens": 1}
+            base_url = variables.get("OPENAI_BASE_URL")
+            if base_url:
+                from lfx.utils.util import transform_localhost_url
+
+                llm_kwargs["base_url"] = transform_localhost_url(base_url)
+            llm = ChatOpenAI(**llm_kwargs)
             llm.invoke("test")
 
         elif provider == "Anthropic":

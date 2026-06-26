@@ -166,6 +166,6 @@ test.describe("auth page accessibility", () => {
     await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
     await expect(page.locator("body")).toHaveClass(/dark/);
 
-    await page.runA11yScan("auth-login-dark-empty");
+    await page.runA11yScan("auth-login-dark-empty", { colorScheme: "dark" });
   });
 });

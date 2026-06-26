@@ -58,6 +58,12 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `DataFrame` | `lfx.schema.dataframe` |
 | `Message` | `lfx.schema.message` |
 
+### Lazy-import helper (consumed by bundle ``__init__.py`` files)
+
+| Symbol | Source |
+| --- | --- |
+| `import_mod(attr_name, module_name, package)` | `lfx.utils.lazy_import` (canonical; `lfx.components._importing` re-exports it for backward compatibility) |
+
 ### Manifest contract (consumed by the loader)
 
 | Symbol | Source |
@@ -182,6 +188,10 @@ the deserialize half is covered by
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- Inline bundle discovery now skips Langflow-owned component compatibility
+  shims marked with `# lfx-bundles-shim` or `# lfx-compat-shim`.  These
+  packages remain importable, but are not treated as user inline bundles
+  and no longer emit `bundle-empty`.
 - `BundleRegistry.write_locked()` exposed as a public context manager so the
   reload pipeline can hold the registry write lock across both the
   `sys.modules` swap and the `BundleRecord` install.  Concurrent readers
@@ -402,3 +412,67 @@ the deserialize half is covered by
   added to ``ERROR_CODES`` (additive; codes-as-contract semantics
   preserved).  In-tree polling clients that never sent the parameter
   are unaffected.
+- **Manifest-less `lfx.bundles` discovery (metapackage split, 1.11).**  A
+  distribution may declare `[project.entry-points."lfx.bundles"]` whose
+  value is an importable package; each immediate subdirectory is loaded as
+  one bundle at the `@official` slot with **no `extension.json`** (the
+  langchain-community model; these directories are not inputs to
+  `lfx extension validate` -- the validator requires an `extension.json` or
+  `[tool.langflow.extension]` manifest and reports `manifest-not-found`
+  without one).
+  `load_lfx_bundles_extensions` is exported from `lfx.extension` (additive).
+  Discovery precedence for cross-source bundle-name collisions becomes
+  `installed > seed > lfx_bundles > dev > inline` -- **manifest always
+  wins**, so a manifest-shipping `lfx-<provider>` shadows the same-named
+  provider in a metapackage with the existing `bundle-shadowed` warning
+  (graduation requires no lockstep release).  A metapackage provider whose
+  name is already claimed by an installed or seed source is **never
+  imported** -- all `@official` sources share the
+  `_lfx_ext.official.<bundle>.*` sys.modules namespace, so importing the
+  losing copy would overwrite the winner's live modules; the skipped copy
+  carries the same typed `bundle-shadowed` diagnostic (on `errors`, matching
+  the resolver) so filtering by code never mixes severities.  Namespace
+  packages are walked across **all portions**, and resolved roots are
+  deduplicated by path so duplicate declarations never self-shadow.  This
+  precedence is a **startup-time** property: `load_lfx_bundles_extensions`
+  runs in the component-loading path, not in `discover_all_extensions`, so
+  `lfx extension list` -- which walks only the installed and seed
+  (manifest-bearing) sources -- does **not** enumerate manifest-less
+  metapackage providers.  A live `lfx.bundles` provider is therefore
+  invisible at list-time, and its shadowing against a manifest-shipping
+  package is resolved only when the server assembles the
+  `_lfx_ext.official.<bundle>.*` namespace at startup.  New
+  warning-only codes added to `ERROR_CODES` (additive), one per discovery
+  failure mode and none of which abort startup: `bundle-discovery-malformed`
+  (declaration does not resolve to an importable package directory --
+  including a parent package whose `__init__` raises during `find_spec`),
+  `bundles-provider-name-invalid` (provider folder is not a valid bundle
+  name), `bundles-root-unreadable` (root cannot be enumerated), and
+  `duplicate-lfx-bundles-provider` (same provider name in more than one
+  root; first wins).  Manifest-less bundles bypass the
+  `version-constraint-unsatisfied` API-version gate by construction (no
+  manifest to carry `lfx.compat`); install-time compatibility rides on the
+  metapackage's PEP 508 `lfx>=X,<Y` pin instead.  Manifest-less records
+  register with `manifestless=True` (additive field on `LoadResult` /
+  `BundleRecord`) and are **not hot-reloadable**: the reload pipeline
+  refuses them with the new typed code `reload-manifestless-unsupported`
+  (additive in `ERROR_CODES`) instead of failing `manifest-not-found`;
+  pick up metapackage changes by upgrading the distribution and
+  restarting the process.
+- **`import_mod` promoted to a stable public home.**  The lazy-import helper
+  that bundle packages call from their `__getattr__`-based `__init__.py`
+  files moved from the internal `lfx.components._importing` to
+  `lfx.utils.lazy_import` and is now part of the BUNDLE_API surface (name,
+  signature, and semantics contract-stable).  `lfx.components._importing`
+  re-exports it unchanged, so existing in-tree and third-party callers are
+  unaffected (additive).
+- **Validator accepts inherited entry-points.**  `validate_extension` no
+  longer emits `build-method-missing` for a Component subclass whose base
+  is a *derived* Component base (name ends with `Component`, e.g.
+  `LCVectorStoreComponent` / `LCToolComponent`): such classes inherit the
+  class-level `outputs` declaration and only override the output method,
+  which the AST-only check cannot resolve across modules.  Direct
+  subclasses of the root `Component` keep the strict inline
+  `build`-or-`outputs` requirement.  Surfaced by the partner graduations
+  (`lfx-datastax` et al.); previously-passing bundles are unaffected
+  (strictly fewer false positives).
