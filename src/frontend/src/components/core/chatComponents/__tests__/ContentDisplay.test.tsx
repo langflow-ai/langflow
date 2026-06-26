@@ -135,6 +135,33 @@ describe("ContentDisplay", () => {
     });
   });
 
+  describe("media", () => {
+    it("renders an img for an http(s) URL", () => {
+      const media = {
+        type: "media",
+        urls: ["https://example.com/a.png"],
+        caption: "ok",
+      } as unknown as ContentBlockItem;
+      render(<ContentDisplay content={media} chatId="t-m1" />);
+      expect(screen.getByRole("img")).toHaveAttribute(
+        "src",
+        "https://example.com/a.png",
+      );
+    });
+
+    it("does not render an img for non-http URLs (sanitization)", () => {
+      // urls come from untrusted tool/model output; a javascript:/data: scheme
+      // must not reach the <img src>.
+      const media = {
+        type: "media",
+        urls: ["javascript:alert(document.cookie)"],
+        caption: "evil",
+      } as unknown as ContentBlockItem;
+      render(<ContentDisplay content={media} chatId="t-m2" />);
+      expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    });
+  });
+
   describe("reasoning", () => {
     it("shows a 'Thinking…' shimmer while the duration is absent", () => {
       // No duration on the content means the producer is still emitting

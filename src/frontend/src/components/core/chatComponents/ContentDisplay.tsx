@@ -17,6 +17,7 @@ import {
 } from "./MediaContentDisplay";
 import { SourcesStrip } from "./SourcesStrip";
 import { looksPreformatted, unwrapToolMessage } from "./toolOutput";
+import { safeUrl } from "./url";
 
 export default function ContentDisplay({
   content,
@@ -250,13 +251,17 @@ export default function ContentDisplay({
     case "media":
       contentData = (
         <div>
-          {content.urls.map((url, index) => (
-            <img
-              key={index}
-              src={url}
-              alt={content.caption || `Media ${index}`}
-            />
-          ))}
+          {content.urls.map((url, index) => {
+            const src = safeUrl(url);
+            if (!src) return null;
+            return (
+              <img
+                key={index}
+                src={src}
+                alt={content.caption || `Media ${index}`}
+              />
+            );
+          })}
           {content.caption && <div>{content.caption}</div>}
         </div>
       );
