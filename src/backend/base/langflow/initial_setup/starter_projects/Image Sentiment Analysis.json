@@ -875,19 +875,6 @@
                       "context_length": 128000,
                       "max_tokens_field_name": "max_tokens",
                       "model_class": "ChatOpenAI",
-                      "model_name_param": "model"
-                    },
-                    "name": "gpt-image-2",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_tokens",
-                      "model_class": "ChatOpenAI",
                       "model_name_param": "model",
                       "reasoning_models": [
                         "gpt-5.4-nano"
@@ -963,19 +950,6 @@
                     },
                     "name": "gemma-4-26b-a4b-it",
                     "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_output_tokens",
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-3.1-flash-lite-preview",
-                    "provider": "Google Generative AI"
                   }
                 ],
                 "override_skip": false,
@@ -992,14 +966,12 @@
                 "value": ""
               },
               "ollama_base_url": {
-                "_input_type": "MessageInput",
+                "_input_type": "StrInput",
                 "advanced": false,
                 "display_name": "Ollama API URL",
                 "dynamic": false,
                 "info": "Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1015,7 +987,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "http://localhost:11434"
               },
               "project_id": {
                 "_input_type": "StrInput",
@@ -1140,7 +1112,7 @@
         "data": {
           "id": "note-isa",
           "node": {
-            "description": "# 🖼️ Image Sentiment Analysis\n\nUpload an image and a **Language Model** (vision) classifies its sentiment (**positive / negative / neutral**) and describes it - returned as a JSON object.\n\n## Setup\n1. **Language Model** - pick a **vision-capable** model (e.g. a GPT-4o / multimodal model) and add your API key. The classification instruction lives in its **System Message** (edit there).\n2. **Chat Input** - attach the image (paperclip 📎) you want analyzed.\n\n## How it works\n1. **Chat Input -> Language Model** - the image is sent straight to the vision model as content (unlike an Agent, the Language Model passes images natively, so the model truly sees them).\n2. **Language Model -> Chat Output** - the model returns the sentiment + description as JSON.\n\n## Run\nOpen **Playground**, attach an image, and run. You can send the image on its own - no extra text needed.",
+            "description": "# 🖼️ Image Sentiment Analysis\n\nUpload an image and a **Language Model** (vision) classifies its sentiment (**positive / negative / neutral**) and describes it in a single `Sentiment: ..., Description: ...` line.\n\n## Setup\n1. **Language Model** - pick a **vision-capable** model (e.g. a GPT-4o / multimodal model) and add your API key. The classification instruction lives in its **System Message** (edit there).\n2. **Chat Input** - attach the image (paperclip 📎) you want analyzed.\n\n## How it works\n1. **Chat Input -> Language Model** - the image is sent straight to the vision model as content (unlike an Agent, the Language Model passes images natively, so the model truly sees them).\n2. **Language Model -> Chat Output** - the model returns the sentiment + description in that single-line format.\n\n## Run\nOpen **Playground**, attach an image, and run. You can send the image on its own - no extra text needed.",
             "display_name": "",
             "documentation": "",
             "template": {

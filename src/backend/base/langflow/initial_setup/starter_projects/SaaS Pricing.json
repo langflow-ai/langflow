@@ -961,7 +961,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "## Data source\nYou have a SQL Database tool. When the user refers to data in their database:\n1. First inspect the schema — list tables (e.g. `SELECT name FROM sqlite_master WHERE type='table'`) and the columns of the relevant table — so you use exact names.\n2. Then run ONE query to fetch the rows you need. Never guess table/column names or re-run failed queries in a loop; if a query errors, read the error, fix it once, and move on.\n3. Use the retrieved values (or the values given directly in the message) to calculate the price with your built-in calculator.\nIf no database is connected, just use the values provided in the message."
+                "value": "## Data source\nYou have a SQL Database tool. When the user refers to data in their database:\n1. First inspect the schema — list tables (e.g. `SELECT name FROM sqlite_master WHERE type='table'`) and the columns of the relevant table — so you use exact names.\n2. Only run read-only schema/metadata queries and SELECT statements. Never run INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, or other mutating SQL. Then run ONE SELECT query to fetch the rows you need. Never guess table/column names or re-run failed queries in a loop; if a query errors, read the error, fix it once, and move on.\n3. Use the retrieved values (or the values given directly in the message) to calculate the price with your built-in calculator.\nUse read-only database credentials for this tool whenever possible.\nIf no database is connected, just use the values provided in the message."
               },
               "tools": {
                 "_input_type": "HandleInput",

@@ -975,19 +975,6 @@
                     },
                     "name": "gemma-4-26b-a4b-it",
                     "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_output_tokens",
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-3.1-flash-lite-preview",
-                    "provider": "Google Generative AI"
                   }
                 ],
                 "override_skip": false,
@@ -1976,7 +1963,6 @@
             "description": "# 📺 YouTube Analysis\n\nAnalyze a YouTube video using its comments and transcript — the sentiment of\nthe comments plus the transcript content, combined into one analysis.\n\n## Setup\n1. Agent — add your LLM key (any provider in the Model dropdown).\n2. YouTube components — add your YouTube Data API v3 key (free, Google Cloud Console).\n3. Chat Input — paste a valid YouTube video URL (a sample is already provided).\n\n## How it works\n1. Chat Input → YouTube Comments — fetches the video's comments.\n2. Batch Run → Parser — runs the comments through the model in batches and formats the result.\n3. Prompt → Agent — the Agent (with YouTube Transcripts tool) combines comment analysis + transcript.\n4. Agent → Chat Output — the comprehensive video analysis.\n\n## Run\nPaste a YouTube URL in the chat and run.",
             "display_name": "",
             "documentation": "",
-            "i18n_key": "template_notes.youtube_analysis.8d068d5f",
             "template": {
               "backgroundColor": "blue"
             }
@@ -2742,19 +2728,6 @@
                       "context_length": 128000,
                       "max_tokens_field_name": "max_tokens",
                       "model_class": "ChatOpenAI",
-                      "model_name_param": "model"
-                    },
-                    "name": "gpt-image-2",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_tokens",
-                      "model_class": "ChatOpenAI",
                       "model_name_param": "model",
                       "reasoning_models": [
                         "gpt-5.4-nano"
@@ -2829,19 +2802,6 @@
                       "model_name_param": "model"
                     },
                     "name": "gemma-4-26b-a4b-it",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_output_tokens",
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-3.1-flash-lite-preview",
                     "provider": "Google Generative AI"
                   }
                 ],

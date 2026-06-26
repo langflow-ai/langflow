@@ -897,7 +897,7 @@
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.3.10"
+                    "version": "1.3.11"
                   },
                   {
                     "name": "lfx",
@@ -1373,19 +1373,6 @@
                       "model_name_param": "model"
                     },
                     "name": "gemma-4-26b-a4b-it",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_output_tokens",
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-3.1-flash-lite-preview",
                     "provider": "Google Generative AI"
                   },
                   {

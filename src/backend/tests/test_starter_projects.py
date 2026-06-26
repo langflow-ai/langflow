@@ -16,10 +16,24 @@ import pytest
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 STARTER_PROJECTS_DIR = Path(__file__).parent.parent / "base" / "langflow" / "initial_setup" / "starter_projects"
+LOCALES_EN_FILE = Path(__file__).parent.parent / "base" / "langflow" / "locales" / "en.json"
 
 # QA observed this exact legacy text in starter project Agents on the cz/default-sys-prompt branch.
 LEGACY_AGENT_SYSTEM_PROMPT = "You are a helpful assistant that can use tools to answer questions and perform tasks."
 AGENT_NODE_TYPES = ("Agent", "ToolCallingAgent")
+REMOVED_STARTER_PROJECTS = {
+    "Invoice Summarizer.json",
+    "Nvidia Remix.json",
+    "Pokédex Agent.json",
+    "Search agent.json",
+}
+RENAMED_STARTER_PROJECTS = {
+    "Basic Prompt Chaining.json": "Multi Agent Flow.json",
+    "News Aggregator.json": "Content Aggregator.json",
+    "Research Agent.json": "Deep Research Agent.json",
+}
+BLOCKED_MODEL_OPTION_NAMES = {"gpt-image-2", "gemini-3.1-flash-lite-preview"}
+BLOCKED_MODEL_OPTION_PREFIXES = ("ibm/mock-",)
 
 # Templates whose Agents must keep purpose-specific Agent Instructions (not the
 # generic DEFAULT_SYSTEM_PROMPT_TEMPLATE). Regression guard for #12855: that PR
@@ -64,6 +78,39 @@ def load_json_file(json_file: Path) -> dict:
     except Exception as e:
         msg = f"Error reading {json_file.name}: {e}"
         raise OSError(msg) from e
+
+
+def iter_dicts(value):
+    """Yield every dict nested inside a parsed starter JSON structure."""
+    if isinstance(value, dict):
+        yield value
+        for nested in value.values():
+            yield from iter_dicts(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            yield from iter_dicts(nested)
+
+
+def model_option_name(option) -> str | None:
+    if isinstance(option, str):
+        return option
+    if isinstance(option, dict) and isinstance(option.get("name"), str):
+        return option["name"]
+    return None
+
+
+def is_blocked_model_option(name: str) -> bool:
+    return name in BLOCKED_MODEL_OPTION_NAMES or name.startswith(BLOCKED_MODEL_OPTION_PREFIXES)
+
+
+def test_removed_and_renamed_starter_inventory():
+    """Starter inventory should not keep loading removed or renamed templates from disk."""
+    shipped = {path.name for path in get_starter_project_files()}
+
+    assert not REMOVED_STARTER_PROJECTS & shipped
+    for old_name, new_name in RENAMED_STARTER_PROJECTS.items():
+        assert old_name not in shipped
+        assert new_name in shipped
 
 
 @pytest.mark.parametrize("json_file", get_starter_project_files(), ids=lambda f: f.name)
@@ -152,6 +199,61 @@ class TestStarterProjects:
             f"{json_file.name}: Agent nodes still use the legacy one-line system prompt: "
             f"{legacy_offenders}. Use DEFAULT_SYSTEM_PROMPT_TEMPLATE or a template-specific prompt."
         )
+
+    def test_model_options_do_not_ship_removed_or_internal_models(self, json_file: Path):
+        """Starter model pickers should not expose non-text or internal mock models."""
+        data = load_json_file(json_file)
+        offenders: list[str] = []
+
+        for node_dict in iter_dicts(data):
+            options = node_dict.get("options")
+            if not isinstance(options, list):
+                continue
+
+            for option in options:
+                name = model_option_name(option)
+                if name and is_blocked_model_option(name):
+                    offenders.append(name)
+
+        assert not offenders, f"{json_file.name}: blocked model options found: {sorted(set(offenders))}"
+
+    def test_ollama_base_url_uses_current_default_metadata(self, json_file: Path):
+        """Serialized Language Model fields should match the current Ollama URL input shape."""
+        data = load_json_file(json_file)
+        fields = [field for field in iter_dicts(data) if field.get("name") == "ollama_base_url"]
+
+        for field in fields:
+            assert field.get("_input_type") == "StrInput"
+            assert field.get("input_types") == []
+            assert field.get("type") == "str"
+            assert field.get("value") == "http://localhost:11434"
+
+    def test_knowledge_base_selectors_do_not_ship_fixture_defaults(self, json_file: Path):
+        """Knowledge selectors should start empty instead of pointing at local test fixture names."""
+        data = load_json_file(json_file)
+        offenders = [
+            field.get("value")
+            for field in iter_dicts(data)
+            if field.get("name") == "knowledge_base" and field.get("value")
+        ]
+
+        assert not offenders, f"{json_file.name}: knowledge_base defaults should be empty, got {offenders}"
+
+    def test_note_i18n_keys_match_embedded_english_text(self, json_file: Path):
+        """English note translations must not overwrite refreshed README text with stale copy."""
+        data = load_json_file(json_file)
+        en_locale = load_json_file(LOCALES_EN_FILE)
+        mismatches: list[str] = []
+
+        for node_dict in iter_dicts(data):
+            i18n_key = node_dict.get("i18n_key")
+            description = node_dict.get("description")
+            if not isinstance(i18n_key, str) or not isinstance(description, str) or i18n_key not in en_locale:
+                continue
+            if en_locale[i18n_key] != description:
+                mismatches.append(i18n_key)
+
+        assert not mismatches, f"{json_file.name}: stale English note i18n keys found: {mismatches}"
 
 
 @pytest.mark.parametrize(
