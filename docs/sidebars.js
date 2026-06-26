@@ -92,6 +92,7 @@ module.exports = {
       items: [
         "Agents/agents",
         "Agents/agents-tools",
+        "Agents/a2a-server",
       ],
     },
     {
