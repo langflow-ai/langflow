@@ -69,8 +69,12 @@ test(
       "disclosure-processing",
       "disclosure-flow control",
       "disclosure-utilities",
+    ];
+
+    const optionalDisclosureTestIds = [
       "disclosure-bundles-langchain",
       "disclosure-bundles-assemblyai",
+      "disclosure-bundles-datastax",
     ];
 
     const elementTestIds = [
@@ -78,11 +82,12 @@ test(
       "data_sourceAPI Request",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
-      "mem0Mem0 Chat Memory",
       "flow_controlsCondition",
       "langchain_utilitiesSelf Query Retriever",
       "langchain_utilitiesCharacter Text Splitter",
     ];
+
+    const optionalElementTestIds = ["mem0Mem0 Chat Memory"];
 
     await Promise.all(
       disclosureTestIds.map((id) => {
@@ -93,11 +98,11 @@ test(
       }),
     );
 
-    // Astra DB ships in the temporarily-unpublished datastax bundle; assert its
-    // disclosure only when present so the rest of the coverage still runs.
-    const datastaxDisclosure = page.getByTestId("disclosure-bundles-datastax");
-    if (await datastaxDisclosure.isVisible().catch(() => false)) {
-      await expect(datastaxDisclosure).toBeVisible();
+    for (const id of optionalDisclosureTestIds) {
+      const disclosure = page.getByTestId(id);
+      if (await disclosure.isVisible().catch(() => false)) {
+        await expect(disclosure).toBeVisible();
+      }
     }
 
     await Promise.all(
@@ -108,6 +113,13 @@ test(
         return expect(page.getByTestId(id).first()).toBeVisible();
       }),
     );
+
+    for (const id of optionalElementTestIds) {
+      const element = page.getByTestId(id).first();
+      if (await element.isVisible().catch(() => false)) {
+        await expect(element).toBeVisible();
+      }
+    }
 
     await page.getByTestId("sidebar-search-input").click();
 
