@@ -1,4 +1,5 @@
 from copy import deepcopy
+from hashlib import sha256
 from typing import TYPE_CHECKING
 
 from langchain_chroma import Chroma
@@ -12,6 +13,30 @@ from lfx.schema.data import Data
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
+
+
+def _scoped_chroma_collection_name(collection_name: str, user_id: object | None) -> str:
+    """Return a stable, non-identifying per-user collection name for local Chroma."""
+    if not collection_name or user_id is None:
+        return collection_name
+
+    user_id_str = str(user_id).strip()
+    if not user_id_str or user_id_str == "None":
+        return collection_name
+
+    digest = sha256(f"{user_id_str}:{collection_name}".encode()).hexdigest()[:16]
+    return f"lf_{digest}"
+
+
+def _runtime_user_id(component: "ChromaVectorStoreComponent") -> object | None:
+    """Return the runtime user id when the component is executing inside a user-owned graph."""
+    user_id = getattr(component, "_user_id", None)
+    if user_id:
+        return user_id
+
+    vertex = getattr(component, "_vertex", None)
+    graph = getattr(vertex, "graph", None) if vertex is not None else None
+    return getattr(graph, "user_id", None)
 
 
 class ChromaVectorStoreComponent(LCVectorStoreComponent):
@@ -111,6 +136,9 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
         # Check persist_directory and expand it if it is a relative path
         persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None
+        collection_name = self.collection_name
+        if client is None:
+            collection_name = _scoped_chroma_collection_name(collection_name, _runtime_user_id(self))
 
         from chromadb.errors import ChromaError
 
@@ -119,7 +147,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 persist_directory=persist_directory,
                 client=client,
                 embedding_function=self.embedding,
-                collection_name=self.collection_name,
+                collection_name=collection_name,
                 **chroma_langchain_collection_kwargs(),
             )
         except Exception as e:
