@@ -2,6 +2,7 @@
 
 import pytest
 
+pytest.importorskip("lfx_bundles")
 pytest.importorskip("langchain_community")
 
 from lfx.io import BoolInput
