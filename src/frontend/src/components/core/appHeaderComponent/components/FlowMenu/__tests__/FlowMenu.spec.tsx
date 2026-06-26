@@ -1,12 +1,23 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import MenuBar from "../index";
 
-jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, ...rest }) => <button {...rest}>{children}</button>,
-}));
+jest.mock("@/components/ui/button", () => {
+  const React = require("react");
+  return {
+    Button: React.forwardRef(({ children, unstyled, ...rest }, ref) => (
+      <button ref={ref} {...rest}>
+        {children}
+      </button>
+    )),
+  };
+});
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name }) => <span data-testid="icon">{name}</span>,
+  default: ({ name, className }) => (
+    <span data-testid={`icon-${name}`} className={className}>
+      {name}
+    </span>
+  ),
 }));
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
@@ -115,9 +126,29 @@ describe("FlowMenu MenuBar", () => {
     expect(screen.getByTestId("menu_bar_wrapper")).toBeInTheDocument();
     expect(screen.getByText("Folder")).toBeInTheDocument();
     expect(screen.getByTestId("flow_name").textContent).toBe("Flow");
+    expect(screen.getByRole("button", { name: "Folder" })).toHaveClass(
+      "focus-visible:ring-1",
+    );
 
     const saveBtn = screen.getByTestId("save-flow-button");
     expect(saveBtn).not.toBeDisabled();
+  });
+
+  it("renders flow settings trigger as a named keyboard button", () => {
+    render(<MenuBar />);
+
+    const trigger = screen.getByRole("button", {
+      name: "Edit flow details and settings for Flow",
+    });
+
+    trigger.focus();
+
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute("data-testid", "menu_bar_display");
+    expect(trigger).toHaveClass("focus-visible:ring-1");
+    expect(screen.getByTestId("icon-pencil")).toHaveClass(
+      "sm:group-focus-visible:opacity-100",
+    );
   });
 
   it("clicking save calls save flow", () => {
@@ -157,7 +188,10 @@ describe("FlowMenu MenuBar", () => {
     it("menu_bar_display button has aria-label matching the flow name", () => {
       render(<MenuBar />);
       const trigger = screen.getByTestId("menu_bar_display");
-      expect(trigger).toHaveAttribute("aria-label", "Flow");
+      expect(trigger).toHaveAttribute(
+        "aria-label",
+        "Edit flow details and settings for Flow",
+      );
     });
 
     it("menu_bar_display aria-label falls back to untitled flow when name is absent", () => {
@@ -177,7 +211,10 @@ describe("FlowMenu MenuBar", () => {
       );
       render(<MenuBar />);
       const trigger = screen.getByTestId("menu_bar_display");
-      expect(trigger).toHaveAttribute("aria-label", "Untitled Flow");
+      expect(trigger).toHaveAttribute(
+        "aria-label",
+        "Edit flow details and settings for Untitled Flow",
+      );
     });
 
     it("popover content has an aria-label of 'Flow settings' for screen readers", () => {

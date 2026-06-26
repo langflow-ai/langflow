@@ -1,5 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
@@ -164,6 +165,7 @@ export default function InputComponent({
 }: InputComponentType & {
   disabledOptions?: Record<string, string>;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
@@ -292,6 +294,7 @@ export default function InputComponent({
                   : "text-placeholder-foreground",
                 !disabled && "hover:text-foreground",
               )}
+              aria-label={t("input.selectOption")}
             >
               <ForwardedIconComponent
                 name={
