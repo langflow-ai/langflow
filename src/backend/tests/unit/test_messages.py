@@ -118,6 +118,27 @@ async def test_aadd_messagetables(async_session):
     assert added_messages[0].text == "New Test message"
 
 
+async def test_aadd_messagetables_cancelled_error(async_session):
+    import asyncio
+    from unittest.mock import AsyncMock
+
+    messages = [MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")]
+
+    # Mock commit to raise CancelledError and rollback to track calls
+    original_commit = async_session.commit
+    original_rollback = async_session.rollback
+    async_session.commit = AsyncMock(side_effect=asyncio.CancelledError)
+    async_session.rollback = AsyncMock()
+
+    try:
+        with pytest.raises(asyncio.CancelledError):
+            await aadd_messagetables(messages, async_session)
+        async_session.rollback.assert_awaited_once()
+    finally:
+        async_session.commit = original_commit
+        async_session.rollback = original_rollback
+
+
 @pytest.mark.usefixtures("client")
 def test_delete_messages():
     session_id = "new_session_id"
