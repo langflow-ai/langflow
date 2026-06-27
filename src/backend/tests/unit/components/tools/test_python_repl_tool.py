@@ -11,6 +11,27 @@ field = "{0." + parts[0] + "." + parts[1] + "." + parts[2] + "[sys].modules[os].
 print("canary_present=" + str("PVR0800453_CANARY" in field.format(math)))
 """
 
+# Sibling formatter sinks: the same __globals__ traversal lives in a *string* argument
+# (invisible to the AST attribute check) when fed through string.Formatter primitives or
+# operator.attrgetter. Each leaks os.environ unless the validator rejects the call.
+FORMATTER_VFORMAT_TRAVERSAL_CODE = """
+f = lambda: 0
+leaked = string.Formatter().vformat("{0.__globals__[os].environ[PVR0800453_CANARY]}", (f,), {})
+print("leaked=" + str(leaked))
+"""
+
+FORMATTER_GET_FIELD_TRAVERSAL_CODE = """
+f = lambda: 0
+obj, _ = string.Formatter().get_field("0.__globals__[os].environ[PVR0800453_CANARY]", (f,), {})
+print("leaked=" + str(obj))
+"""
+
+ATTRGETTER_TRAVERSAL_CODE = """
+f = lambda: 0
+leaked = operator.attrgetter("__globals__")(f)["os"].environ["PVR0800453_CANARY"]
+print("leaked=" + str(leaked))
+"""
+
 
 class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
@@ -119,6 +140,30 @@ class TestPythonREPLComponentSecurity:
         """Dynamically-built str.format() fields cannot bypass the AST validator."""
         monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
         data = self._run(DYNAMIC_FORMAT_TRAVERSAL_CODE)
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
+    def test_formatter_vformat_traversal_is_blocked(self, monkeypatch):
+        """string.Formatter().vformat carries the dunder chain in a string arg; blocked."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(FORMATTER_VFORMAT_TRAVERSAL_CODE, global_imports="math,string")
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
+    def test_formatter_get_field_traversal_is_blocked(self, monkeypatch):
+        """string.Formatter().get_field traverses a dotted string path; blocked."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(FORMATTER_GET_FIELD_TRAVERSAL_CODE, global_imports="math,string")
+        assert "error" in data
+        assert "not allowed" in data["error"]
+        assert "SHOULD_NOT_LEAK" not in str(data)
+
+    def test_attrgetter_traversal_is_blocked(self, monkeypatch):
+        """operator.attrgetter('__globals__') reaches os.environ via a string arg; blocked."""
+        monkeypatch.setenv("PVR0800453_CANARY", "SHOULD_NOT_LEAK")
+        data = self._run(ATTRGETTER_TRAVERSAL_CODE, global_imports="math,operator")
         assert "error" in data
         assert "not allowed" in data["error"]
         assert "SHOULD_NOT_LEAK" not in str(data)

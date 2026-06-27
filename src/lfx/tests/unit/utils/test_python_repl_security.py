@@ -84,6 +84,15 @@ class TestValidateCodeSafety:
             "'{0}'.format(1)",
             "'{name}'.format_map({'name': 'x'})",
             "template = '{0.' + 'value' + '}'\ntemplate.format(obj)",
+            # Sibling formatter sinks that carry the dunder chain in a *string* argument
+            # (invisible to the AST attribute check) — blocked via the method name.
+            'string.Formatter().vformat("{0.__globals__[os].environ[SECRET]}", (f,), {})',
+            'string.Formatter().get_field("0.__loader__.find_spec.__globals__[sys]", (f,), {})',
+            "string.Formatter().get_value(0, (f,), {})",
+            'operator.attrgetter("__globals__")(f)',
+            # A literal dunder-bearing template reaches a non-blocked formatter via a var;
+            # the literal-field scan rejects the template regardless of the consumer.
+            't = "{0.__globals__}"\nstring.Formatter().vformat(t, (f,), {})',
         ],
     )
     def test_blocks_escape_and_import(self, code):
@@ -112,6 +121,69 @@ class TestValidateCodeSafety:
         """Unparseable code surfaces a SyntaxError to the caller."""
         with pytest.raises(SyntaxError):
             validate_code_safety("print('unterminated")
+
+
+class TestFormatterSinkBypassesAreBlocked:
+    """Env-canary regression for the sibling-formatter sandbox bypass.
+
+    ``str.format``/``format_map`` are not the only formatter sinks: the same
+    ``__globals__`` traversal lives in a *string* argument (invisible to the AST
+    attribute check) when fed through ``string.Formatter`` traversal primitives or
+    ``operator.attrgetter``. Each test first proves the gadget *does* leak an env var
+    canary when run unguarded, then asserts ``validate_code_safety`` rejects the exact
+    input before it could execute.
+    """
+
+    @staticmethod
+    def _func_with_os():
+        """A function whose ``__globals__`` deterministically contains ``os``.
+
+        The gadget escapes via ``func.__globals__[os]``, so the precondition only leaks
+        when ``os`` is bound in the function's module globals. Building the function with
+        an explicit globals dict makes the leak reproducible regardless of which modules
+        this test file happens to import.
+        """
+        import os
+
+        namespace = {"os": os}
+        exec("def _f():\n    return 0", namespace)  # noqa: S102 - test-only controlled exec
+        return namespace["_f"]
+
+    def test_formatter_vformat_bypass(self, monkeypatch):
+        """``string.Formatter().vformat`` reaches os.environ; the call is blocked."""
+        import string
+
+        monkeypatch.setenv("LFX_REPL_CANARY", "SHOULD_NOT_LEAK")
+        leaked = string.Formatter().vformat("{0.__globals__[os].environ[LFX_REPL_CANARY]}", (self._func_with_os(),), {})
+        assert leaked == "SHOULD_NOT_LEAK"  # gadget is real when unguarded
+
+        code = 'string.Formatter().vformat("{0.__globals__[os].environ[LFX_REPL_CANARY]}", (f,), {})'
+        with pytest.raises(ValueError, match="not allowed"):
+            validate_code_safety(code)
+
+    def test_formatter_get_field_bypass(self, monkeypatch):
+        """``string.Formatter().get_field`` traverses a dotted path; the call is blocked."""
+        import string
+
+        monkeypatch.setenv("LFX_REPL_CANARY", "SHOULD_NOT_LEAK")
+        obj, _ = string.Formatter().get_field("0.__globals__[os].environ[LFX_REPL_CANARY]", (self._func_with_os(),), {})
+        assert obj == "SHOULD_NOT_LEAK"  # gadget is real when unguarded
+
+        code = 'string.Formatter().get_field("0.__globals__[os].environ[LFX_REPL_CANARY]", (f,), {})'
+        with pytest.raises(ValueError, match="not allowed"):
+            validate_code_safety(code)
+
+    def test_operator_attrgetter_bypass(self, monkeypatch):
+        """``operator.attrgetter('__globals__')`` reaches os.environ; the call is blocked."""
+        import operator
+
+        monkeypatch.setenv("LFX_REPL_CANARY", "SHOULD_NOT_LEAK")
+        leaked = operator.attrgetter("__globals__")(self._func_with_os())["os"].environ["LFX_REPL_CANARY"]
+        assert leaked == "SHOULD_NOT_LEAK"  # gadget is real when unguarded
+
+        code = 'operator.attrgetter("__globals__")(f)'
+        with pytest.raises(ValueError, match="not allowed"):
+            validate_code_safety(code)
 
 
 class TestEnsureCodeExecutionEnabled:
