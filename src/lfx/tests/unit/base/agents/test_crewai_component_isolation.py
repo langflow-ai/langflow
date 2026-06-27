@@ -5,6 +5,7 @@ import sys
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from unittest.mock import patch
+
 from lfx.services import deps
 
 sys.modules.setdefault("litellm", SimpleNamespace(exceptions=SimpleNamespace(BadRequestError=Exception)))
