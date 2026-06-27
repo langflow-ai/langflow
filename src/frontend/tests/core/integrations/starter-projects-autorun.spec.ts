@@ -33,12 +33,6 @@ type AutorunTemplate = {
 };
 
 const TEMPLATES: AutorunTemplate[] = [
-  {
-    name: "Prompt Chaining",
-    build: "run-button",
-    modal: "with-input",
-    minLength: 100,
-  },
   { name: "SEO Keyword Generator", minLength: 200, contains: ["work"] },
   {
     name: "Twitter Thread Generator",
