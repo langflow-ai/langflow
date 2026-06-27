@@ -27,11 +27,13 @@ canvas — UI rebuilds are the suite's main CI cost.
 
 ## Tags
 
-Specs are tagged (`{ tag: [...] }`) so CI can filter which suites run. Use a tag
-that already exists — don't invent variants or introduce typos (e.g.
-`@starter-projects`, never `@starter-projectss`). The tags currently in use:
+Specs are tagged (`{ tag: [...] }`) so CI can filter which suites run. Do not
+invent new tags or introduce typos (e.g. `@starter-projects`, never
+`@starter-projectss`). The only allowed tags are:
 
 `@release` · `@workspace` · `@api` · `@components` · `@starter-projects` ·
-`@database` · `@deployment` · `@a11y` · `@mainpage` · `@features` · `@agents` ·
-`@folder` · `@regression` · `@notes` · `@workflow` · `@routes` · `@right-click` ·
-`@dropdown`
+`@database`
+
+**Every spec must carry `@release`** — it is the tag the release run greps for,
+so an untagged or wrongly-tagged spec silently drops out of release coverage.
+Add the domain tag(s) on top of `@release` (a spec can have more than one).

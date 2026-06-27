@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
@@ -11,9 +12,7 @@ test.skip(
   "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
 );
 
-async function navigateToDeploymentsTab(
-  page: Parameters<typeof test>[2]["page"],
-) {
+async function navigateToDeploymentsTab(page: Page) {
   await awaitBootstrapTest(page, { skipModal: true });
   await page.getByTestId("deployments-btn").click();
   await page.waitForSelector('[data-testid="subtab-deployments"]');
@@ -22,9 +21,7 @@ async function navigateToDeploymentsTab(
 // Empty providers + empty deployments — the catch-all the empty-state tests
 // share. Kept local (the shared setupDeploymentMocks returns a populated
 // providers list, which would break these empty-state assertions).
-async function mockEmptyDeploymentsAndProviders(
-  page: Parameters<typeof test>[2]["page"],
-) {
+async function mockEmptyDeploymentsAndProviders(page: Page) {
   await page.route("**/api/v1/deployments/providers*", (route) => {
     route.fulfill({
       status: 200,

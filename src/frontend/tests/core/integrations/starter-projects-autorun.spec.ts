@@ -95,10 +95,6 @@ for (const template of TEMPLATES) {
       await page
         .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
-      await page
-        .getByText(TEXTS.labelNoInputMessage, { exact: true })
-        .last()
-        .isVisible();
 
       if ((template.modal ?? "without-input") === "with-input") {
         await waitForOpenModalWithChatInput(page);

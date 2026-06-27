@@ -118,7 +118,7 @@ async function goToStepReview(page: Page) {
 test(
   "deployment-create: opens stepper on New Deployment click",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await awaitBootstrapTest(page, { skipModal: true });
@@ -138,7 +138,7 @@ test(
 test(
   "deployment-create: step 1 provider - Next disabled without selection, enabled after selecting",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -160,7 +160,7 @@ test(
 test(
   "deployment-create: step 2 type - fill name and select type to enable Next",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -196,7 +196,7 @@ test(
 test(
   "deployment-create: step 3 attach flows - select flow and version enables Next",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -240,7 +240,7 @@ test(
 test(
   "deployment-create: step 4 review - shows review content and Deploy button text",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -267,7 +267,7 @@ test(
 test(
   "deployment-create: clicking Deploy triggers POST and shows deploy status",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -317,7 +317,7 @@ test(
 test(
   "deployment-create: user can change tool name on review step",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -351,7 +351,7 @@ test(
 test(
   "deployment-create: review step does not block deploy when provider has matching tool names",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
@@ -371,7 +371,7 @@ test(
 test(
   "deployment-create: review step shows no error when tool name is unique",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page, SNAPSHOTS_EMPTY_MOCK);
@@ -393,7 +393,7 @@ test(
 test(
   "deployment-create: editing tool display name on review with provider duplicates",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
@@ -422,7 +422,7 @@ test(
 test(
   "deployment-create: review step allows numeric flow names as tool display names",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page, SNAPSHOTS_EMPTY_MOCK, [
