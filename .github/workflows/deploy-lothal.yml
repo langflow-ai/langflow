@@ -264,7 +264,13 @@ jobs:
               exit 1
             fi
 
-            docker image prune -f
+            # Reclaim disk: remove ALL images not used by a running container
+            # (-a), not just dangling ones. Runs only after `up -d` + a passing
+            # health check, so the new backend/frontend/db images are live and
+            # protected; this clears prior deploys' SHA-tagged images. A plain
+            # `prune -f` left those tagged images behind, and they accumulated
+            # until the box hit 100% disk and Postgres could no longer start.
+            docker image prune -af
             docker logout ghcr.io || true
 
       - name: Public health & /lothal route check
