@@ -15,27 +15,6 @@ import type { A11yScanOptions, LangflowPage } from "./utils/types";
 
 export type { A11yScanOptions, LangflowPage } from "./utils/types";
 
-/**
- * Options for the `seedFlowViaApi` fixture. `data` is the flow graph
- * (`{ nodes, edges, viewport }`); omit it to seed an empty flow.
- */
-export type SeedFlowOptions = {
-  name?: string;
-  description?: string;
-  data?: Record<string, unknown>;
-  folderId?: string;
-};
-
-/** Subset of the FlowRead payload returned by `POST /api/v1/flows/`. */
-export type SeededFlow = {
-  id: string;
-  name: string;
-  [key: string]: unknown;
-};
-
-/** Seeds a flow through the API and resolves to the created flow. */
-export type SeedFlowViaApi = (options?: SeedFlowOptions) => Promise<SeededFlow>;
-
 const RUN_A11Y = process.env.RUN_A11Y === "true";
 const RUN_A11Y_ASSERT = process.env.RUN_A11Y_ASSERT === "true";
 
@@ -53,10 +32,7 @@ const CPU_THROTTLE_RATE = (() => {
 })();
 
 // Extend test to log backend errors
-export const test = base.extend<
-  { page: LangflowPage; seedFlowViaApi: SeedFlowViaApi },
-  A11yFixtures
->({
+export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
   _a11ySession: [
     async ({ browserName }, use) => {
       void browserName;
@@ -362,44 +338,6 @@ export const test = base.extend<
         );
       }
     }
-  },
-
-  /**
-   * Seed a flow straight through the API instead of rebuilding it on the
-   * canvas. Uses the page's authenticated same-origin session, so call it
-   * after the test has bootstrapped/logged in. Returns the created flow —
-   * navigate with `page.goto(`/flow/${flow.id}`)`.
-   */
-  seedFlowViaApi: async ({ page }, use) => {
-    await use(async (options: SeedFlowOptions = {}) => {
-      const payload = {
-        name: options.name ?? `seeded-flow-${Date.now()}`,
-        description: options.description ?? "Seeded via API for e2e",
-        data: options.data ?? {
-          nodes: [],
-          edges: [],
-          viewport: { x: 0, y: 0, zoom: 1 },
-        },
-        ...(options.folderId ? { folder_id: options.folderId } : {}),
-      };
-
-      const created = await page.evaluate(async (body) => {
-        const response = await fetch("/api/v1/flows/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-          const detail = await response.text();
-          throw new Error(
-            `seedFlowViaApi: POST /api/v1/flows/ failed (${response.status}): ${detail}`,
-          );
-        }
-        return response.json();
-      }, payload);
-
-      return created as SeededFlow;
-    });
   },
 });
 
