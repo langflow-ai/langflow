@@ -41,11 +41,6 @@ const TEMPLATES: AutorunTemplate[] = [
   },
   { name: "SEO Keyword Generator", minLength: 200, contains: ["work"] },
   {
-    name: "SaaS Pricing",
-    minLength: 100,
-    contains: ["costs", "subscription"],
-  },
-  {
     name: "Twitter Thread Generator",
     open: "heading",
     expandChatOutput: true,
