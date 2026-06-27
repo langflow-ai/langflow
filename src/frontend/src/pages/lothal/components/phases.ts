@@ -3,13 +3,13 @@
 // and StatusDot atoms, the Dashboard card status, and the Workspace pane
 // switch.
 
-// The five lothal phases, in order. Keep in sync with the backend contract:
+// The lothal phases, in order. Keep in sync with the backend contract:
 // src/backend/base/langflow/lothal/schemas.py (`Phase` Literal) — the two
-// sides can't share code across languages.
+// sides can't share code across languages. Epic E.2 merged the two diagram
+// phases (DIAGRAM_GENERATION + DIAGRAM_REFINEMENT) into one ARCHITECTURE stage.
 export const PHASE_IDS = [
   "CLARIFICATION",
-  "DIAGRAM_GENERATION",
-  "DIAGRAM_REFINEMENT",
+  "ARCHITECTURE",
   "CODE_GENERATION",
   "DONE",
 ] as const;
@@ -38,27 +38,21 @@ export const PHASES: PhaseMeta[] = [
     status: { text: "needs your input", action: true },
   },
   {
-    id: "DIAGRAM_GENERATION",
-    label: "Sketch",
+    id: "ARCHITECTURE",
+    label: "Design",
     short: "02",
-    status: { text: "drafting the diagram", action: false },
-  },
-  {
-    id: "DIAGRAM_REFINEMENT",
-    label: "Refine",
-    short: "03",
     status: { text: "needs your review", action: true },
   },
   {
     id: "CODE_GENERATION",
     label: "Generate",
-    short: "04",
+    short: "03",
     status: { text: "writing the code", action: false },
   },
   {
     id: "DONE",
     label: "Deliver",
-    short: "05",
+    short: "04",
     status: { text: "ready to deliver", action: false },
   },
 ];
@@ -82,7 +76,7 @@ export function phaseStatus(phase: string): PhaseStatus {
   );
 }
 
-/** From generation onward the code surface takes over the canvas pane. */
+/** From code generation onward the code surface takes over the canvas pane. */
 export function isCodePhase(phase: string): boolean {
   return phase === "CODE_GENERATION" || phase === "DONE";
 }

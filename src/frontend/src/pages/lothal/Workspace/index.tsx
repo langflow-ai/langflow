@@ -22,6 +22,7 @@ import {
   type Project,
   useApproveDiagram,
   useCode,
+  useDiagram,
   useMessages,
   useProject,
   useSendMessage,
@@ -52,12 +53,11 @@ import { LothalSurface } from "../theme/LothalSurface";
 // The line shown when the conversation crosses a phase boundary.
 function transitionNote(toPhase: string): string {
   switch (toPhase) {
-    case "DIAGRAM_GENERATION":
-      return "Requirements clear — sketching the diagram";
-    case "DIAGRAM_REFINEMENT":
-      return "Refining the diagram";
+    // Epic E.2 merged the two diagram phases into ARCHITECTURE.
+    case "ARCHITECTURE":
+      return "Requirements clear — designing the architecture";
     case "CODE_GENERATION":
-      return "Diagram approved — generating the code";
+      return "Architecture approved — generating the code";
     case "DONE":
       return "Delivered";
     default:
@@ -350,12 +350,13 @@ function CodePanel({ project }: { project: Project }) {
 
 // --- Diagram pane (canvas + approve) -----------------------------------------
 
-// The right pane while shaping the diagram: the live <CanvasSurface>, plus — only
-// in DIAGRAM_REFINEMENT — an Approve action (Epic D.11). Approving advances the
-// project to CODE_GENERATION on the server; the project query then invalidates,
-// the phase flips, and the parent swaps this pane for <CodePanel>. The button is
-// deliberately absent in DIAGRAM_GENERATION (no diagram to approve yet) — the
-// backend also rejects an approve outside refinement with a 409.
+// The right pane while shaping the diagram: the live <CanvasSurface>, plus — in
+// the ARCHITECTURE stage, once a diagram exists — an Approve action (Epic D.11;
+// phase merged in E.2). Approving advances the project to CODE_GENERATION on the
+// server; the project query then invalidates, the phase flips, and the parent
+// swaps this pane for <CodePanel>. The button is gated on both the phase and a
+// loaded diagram so it isn't offered before generation has produced one — the
+// backend rejects an approve outside ARCHITECTURE (or with no diagram) with a 409.
 function DiagramPane({
   project,
   composerRef,
@@ -370,7 +371,13 @@ function DiagramPane({
   // otherwise a quick second click hits the server (now CODE_GENERATION) and
   // 409s, flashing a spurious failure after a success.
   const [approved, setApproved] = useState(false);
-  const canApprove = project.phase === "DIAGRAM_REFINEMENT";
+  // Only fetch the diagram once the architecture stage is live (it's phase-gated
+  // before then); the query key is shared with <CanvasSurface> so this dedupes.
+  const isArchitecture = project.phase === "ARCHITECTURE";
+  const { data: diagram } = useDiagram(project.id, isArchitecture);
+  // Approve only when there's actually a diagram to approve — offering it before
+  // generation has produced one would just earn a 409 from the backend.
+  const canApprove = isArchitecture && Boolean(diagram?.d2);
 
   // Clear the latched approve state when the workspace switches projects, so a
   // new project's button isn't left disabled by the previous one's success.

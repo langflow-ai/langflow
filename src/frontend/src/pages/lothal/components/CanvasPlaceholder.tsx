@@ -6,11 +6,12 @@
 const COPY: Record<string, { title: string; sub: string }> = {
   CLARIFICATION: {
     title: "The diagram takes shape here",
-    sub: "Once we've clarified what you're building, Lothal sketches the sequence diagram on this canvas.",
+    sub: "Once we've clarified what you're building, Lothal designs the architecture on this canvas.",
   },
-  DIAGRAM_GENERATION: {
-    title: "Sketching the diagram",
-    sub: "Lothal is drafting the sequence diagram from your brief.",
+  // Epic E.2 merged generation + refinement into the single ARCHITECTURE stage.
+  ARCHITECTURE: {
+    title: "Designing the architecture",
+    sub: "Lothal is drafting the architecture from your brief.",
   },
 };
 

@@ -47,7 +47,7 @@ export type Diagram = {
   svg: string | null;
 };
 
-// `POST /diagram/approve` (Epic D.11) advances DIAGRAM_REFINEMENT →
+// `POST /diagram/approve` (Epic D.11) advances ARCHITECTURE →
 // CODE_GENERATION and returns the project's phase afterwards.
 export type DiagramApprove = {
   phase: Phase;
@@ -195,7 +195,7 @@ export function useDiagram(projectId: string, enabled = true) {
   });
 }
 
-// Approve the current diagram (Epic D.11): advances DIAGRAM_REFINEMENT →
+// Approve the current diagram (Epic D.11): advances ARCHITECTURE →
 // CODE_GENERATION on the server and retains the D2. Invalidates the project
 // queries so the phase badge, stepper, and right-pane (canvas → code) update,
 // and the diagram so the approved D2 is re-read under the new phase.

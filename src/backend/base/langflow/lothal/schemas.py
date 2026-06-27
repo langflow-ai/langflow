@@ -16,8 +16,7 @@ from pydantic import BaseModel, Field, field_validator
 
 Phase = Literal[
     "CLARIFICATION",
-    "DIAGRAM_GENERATION",
-    "DIAGRAM_REFINEMENT",
+    "ARCHITECTURE",
     "CODE_GENERATION",
     "DONE",
 ]

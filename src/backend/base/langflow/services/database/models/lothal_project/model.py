@@ -10,8 +10,12 @@ from langflow.schema.serialize import UUIDstr
 
 class ProjectPhase(str, Enum):
     CLARIFICATION = "CLARIFICATION"
-    DIAGRAM_GENERATION = "DIAGRAM_GENERATION"
-    DIAGRAM_REFINEMENT = "DIAGRAM_REFINEMENT"
+    # Epic E merged the two diagram phases (DIAGRAM_GENERATION + DIAGRAM_REFINEMENT)
+    # into one ARCHITECTURE stage: the same engine generates on entry and refines
+    # thereafter (E.2), and its output grows from one diagram to an ADR + diagram
+    # set (E.3). Existing rows were remapped onto ARCHITECTURE by migration
+    # e1f0a2b3c4d5.
+    ARCHITECTURE = "ARCHITECTURE"
     CODE_GENERATION = "CODE_GENERATION"
     DONE = "DONE"
 
@@ -44,6 +48,11 @@ class Project(SQLModel, table=True):  # type: ignore[call-arg]
     # D2 source text — the diagram artifact going forward (Epic D). Null until
     # generated; D2 owns layout, so no positions are stored. The LLM reads/writes it.
     diagram_d2: str | None = Field(default=None, sa_column=Column(Text))
+    # Generic artifact file-map ``{path: content}`` shared by every stage (Epic E).
+    # The Architecture stage writes ``adr.md`` + ``diagrams/*.d2`` here; it is the
+    # future git commit tree verbatim. Null until a stage produces artifacts; old
+    # projects keep rendering via ``diagram_d2`` and are not backfilled.
+    artifacts: dict[str, str] | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

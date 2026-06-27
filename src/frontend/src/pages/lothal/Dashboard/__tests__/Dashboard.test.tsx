@@ -28,7 +28,7 @@ const project = {
   id: "p1",
   user_id: "u1",
   name: "Demo",
-  phase: "DIAGRAM_REFINEMENT",
+  phase: "ARCHITECTURE",
   prd_content: null,
   diagram_json: null,
   created_at: "2026-01-01T00:00:00Z",
@@ -57,8 +57,8 @@ describe("Lothal Dashboard", () => {
     mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
     render(<Dashboard />);
     expect(screen.getByText("Demo")).toBeInTheDocument();
-    // StatusDot verb for the phase (DIAGRAM_REFINEMENT → "refining").
-    expect(screen.getByText("refining")).toBeInTheDocument();
+    // StatusDot verb for the phase (ARCHITECTURE → "designing").
+    expect(screen.getByText("designing")).toBeInTheDocument();
   });
 
   it("shows the project counts beside the Projects heading", () => {

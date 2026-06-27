@@ -1,4 +1,4 @@
-"""The DIAGRAM_GENERATION phase engine (Story 2.1; D2 in D.2; compile-validation in D.3).
+"""Diagram generation logic of the ARCHITECTURE stage (Story 2.1; D2 in D.2; compile-validation in D.3).
 
 Following the backlog's testing philosophy, these tests inject a fake `call_llm`
 (and a controllable `compile_d2`) and assert *our* behaviour: the engine asks the
@@ -6,7 +6,8 @@ model for D2 source and carries the returned D2 verbatim on
 `LLMResponse.diagram_d2` with `next_phase` None and a grounded assistant message;
 a markdown fence is stripped; an empty reply fails as a bad model round-trip. No
 real LLM, no DB — the engine is pure generation logic and never persists (that is
-the chat endpoint's job).
+the chat endpoint's job). Epic E.2 merged it under the `ArchitectureEngine`; the
+phase-level wiring is covered in `test_architecture.py`.
 
 D.3's validation gate is exercised here: D2 that fails to compile triggers one
 corrective retry carrying the compiler's error; a second failure raises
@@ -25,8 +26,7 @@ from langflow.lothal.engines.diagram_generation import (
     DiagramGenerationEngine,
 )
 from langflow.lothal.llm import LLMConnectionError
-from langflow.lothal.router import LLMResponse, get_engine
-from langflow.services.database.models.lothal_project.model import ProjectPhase
+from langflow.lothal.router import LLMResponse
 
 D2_SOURCE = """\
 shape: sequence_diagram
@@ -77,26 +77,18 @@ def fake_compile(monkeypatch):
     return captured
 
 
-# --- registration ------------------------------------------------------------
-
-
-def test_engine_is_registered_under_diagram_generation():
-    engine = get_engine(ProjectPhase.DIAGRAM_GENERATION)
-    assert isinstance(engine, DiagramGenerationEngine)
-    assert engine.phase == "DIAGRAM_GENERATION"
-
-
 # --- happy path --------------------------------------------------------------
 
 
-async def test_valid_reply_yields_d2_and_hands_off_to_refinement(fake_llm, fake_compile):
+async def test_valid_reply_yields_d2_and_stays_in_architecture(fake_llm, fake_compile):
     fake_llm["replies"] = [D2_SOURCE]
 
     response = await DiagramGenerationEngine().process([], "build it")
 
     assert isinstance(response, LLMResponse)
-    # Having drafted the first diagram, generation hands off to refinement (D.8).
-    assert response.next_phase == ProjectPhase.DIAGRAM_REFINEMENT
+    # Epic E.2 dropped the generation→refinement auto-advance: the project stays in
+    # ARCHITECTURE and the next turn refines this diagram.
+    assert response.next_phase is None
     assert response.suggestions == []
     # The D2 rides on `.diagram_d2`, stored verbatim.
     assert response.diagram_d2 == D2_SOURCE

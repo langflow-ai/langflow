@@ -120,14 +120,14 @@ def test_registering_a_second_engine_does_not_disturb_the_first():
 
     @register_engine
     class EngineB(PhaseEngine):
-        phase = "DIAGRAM_GENERATION"
+        phase = "ARCHITECTURE"
 
         async def process(self, _history, _user_message, **_kwargs):
             return LLMResponse(text="b")
 
-    assert available_phases() == ["CLARIFICATION", "DIAGRAM_GENERATION"]
+    assert available_phases() == ["ARCHITECTURE", "CLARIFICATION"]
     assert isinstance(get_engine("CLARIFICATION"), EngineA)
-    assert isinstance(get_engine("DIAGRAM_GENERATION"), EngineB)
+    assert isinstance(get_engine("ARCHITECTURE"), EngineB)
 
 
 def test_get_engine_caches_the_instance():

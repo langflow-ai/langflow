@@ -239,8 +239,7 @@ function ChatShowcase() {
 
 function Gallery() {
   const { theme, setTheme, density, setDensity } = useLothalTheme();
-  const [stepperPhase, setStepperPhase] =
-    useState<string>("DIAGRAM_REFINEMENT");
+  const [stepperPhase, setStepperPhase] = useState<string>("ARCHITECTURE");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>

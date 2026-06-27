@@ -184,8 +184,8 @@ describe("Lothal Workspace", () => {
         msg({
           id: "m3",
           role: "ASSISTANT",
-          content: "Sketching now",
-          phase: "DIAGRAM_GENERATION",
+          content: "Designing now",
+          phase: "ARCHITECTURE",
         }),
       ],
     });
@@ -193,7 +193,7 @@ describe("Lothal Workspace", () => {
     expect(screen.getByText("Build a tide app")).toBeInTheDocument();
     expect(screen.getByText("Who is it for?")).toBeInTheDocument();
     expect(
-      screen.getByText("Requirements clear — sketching the diagram"),
+      screen.getByText("Requirements clear — designing the architecture"),
     ).toBeInTheDocument();
   });
 
@@ -232,7 +232,7 @@ describe("Lothal Workspace", () => {
   it("drops a composer chip when a canvas element is anchored, and serializes it on send (D.7)", async () => {
     // Diagram phase so the right pane renders the (stubbed) D2 canvas.
     mockUseProject.mockReturnValue({
-      data: { ...project, phase: "DIAGRAM_REFINEMENT" },
+      data: { ...project, phase: "ARCHITECTURE" },
       isLoading: false,
     });
     mockUseDiagram.mockReturnValue({
@@ -260,9 +260,9 @@ describe("Lothal Workspace", () => {
 
   // --- Approve diagram (Epic D.11) ---
 
-  it("offers Approve only in DIAGRAM_REFINEMENT and approving calls the mutation", async () => {
+  it("offers Approve only in ARCHITECTURE and approving calls the mutation", async () => {
     mockUseProject.mockReturnValue({
-      data: { ...project, phase: "DIAGRAM_REFINEMENT" },
+      data: { ...project, phase: "ARCHITECTURE" },
       isLoading: false,
     });
     mockUseDiagram.mockReturnValue({
@@ -279,9 +279,27 @@ describe("Lothal Workspace", () => {
     await waitFor(() => expect(mockApproveMutate).toHaveBeenCalledTimes(1));
   });
 
-  it("does not offer Approve before refinement (DIAGRAM_GENERATION)", () => {
+  it("does not offer Approve before the architecture stage (CLARIFICATION)", () => {
     mockUseProject.mockReturnValue({
-      data: { ...project, phase: "DIAGRAM_GENERATION" },
+      data: { ...project, phase: "CLARIFICATION" },
+      isLoading: false,
+    });
+    mockUseDiagram.mockReturnValue({
+      data: { d2: null, svg: null },
+      isLoading: false,
+      isError: false,
+    });
+    render(<Workspace />);
+    expect(
+      screen.queryByRole("button", { name: "Approve & generate code" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not offer Approve in ARCHITECTURE until a diagram exists", () => {
+    // First ARCHITECTURE turn: generation hasn't produced a diagram yet, so the
+    // Approve CTA stays hidden (offering it would just earn a 409).
+    mockUseProject.mockReturnValue({
+      data: { ...project, phase: "ARCHITECTURE" },
       isLoading: false,
     });
     mockUseDiagram.mockReturnValue({

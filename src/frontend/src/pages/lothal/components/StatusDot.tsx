@@ -3,8 +3,8 @@
 
 const MAP: Record<string, { color: string; label: string }> = {
   CLARIFICATION: { color: "var(--accent)", label: "clarifying" },
-  DIAGRAM_GENERATION: { color: "#8a5fbf", label: "sketching" },
-  DIAGRAM_REFINEMENT: { color: "#3e7ab8", label: "refining" },
+  // Epic E.2 merged the sketch + refine phases into one ARCHITECTURE stage.
+  ARCHITECTURE: { color: "#3e7ab8", label: "designing" },
   CODE_GENERATION: { color: "#c08a2e", label: "generating" },
   DONE: { color: "var(--success)", label: "delivered" },
 };

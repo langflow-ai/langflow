@@ -3,10 +3,10 @@
 //
 //   CLARIFICATION              → phase-aware placeholder, no fetch (the diagram
 //                                doesn't exist yet and the endpoint is phase-gated)
-//   DIAGRAM_GENERATION onward  → fetch /diagram, then:
+//   ARCHITECTURE onward        → fetch /diagram, then:
 //       501 (stub)             → NotReady (the canvas backend isn't live yet)
 //       other error            → NotReady ("couldn't load")
-//       no D2 source yet        → placeholder ("sketching…")
+//       no D2 source yet        → placeholder ("designing…")
 //       D2 but no SVG           → NotReady ("couldn't render")
 //       SVG present             → the live <D2Canvas>
 //
@@ -47,7 +47,7 @@ export function CanvasSurface({
    *  composer (Epic D.7). */
   onAnchor?: (anchor: Anchor) => void;
 }) {
-  // The diagram only exists from DIAGRAM_GENERATION onward; before that the
+  // The diagram only exists from ARCHITECTURE onward; before that the
   // endpoint is phase-gated, so we don't even fetch it.
   const hasDiagramPhase = phaseIndex(project.phase) >= 1;
   const {
