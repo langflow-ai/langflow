@@ -8,8 +8,26 @@ from unittest.mock import patch
 
 from lfx.services import deps
 
-sys.modules.setdefault("litellm", SimpleNamespace(exceptions=SimpleNamespace(BadRequestError=Exception)))
-deps.get_settings_service = lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True))
+
+class FakeSettings:
+    fallback_to_env_var = False
+    lazy_load_components = False
+    use_noop_database = True
+    storage_type = "local"
+    ssrf_allowed_hosts = []
+    allow_custom_components = True
+
+    def update_settings(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
+class FakeSettingsService:
+    def __init__(self):
+        self.settings = FakeSettings()
+
+
+deps.get_settings_service = lambda: FakeSettingsService()
 
 
 @dataclass
