@@ -2100,7 +2100,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.financial_report_parser.5972260b"
           },
           "type": "note"
         },

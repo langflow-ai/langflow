@@ -1866,7 +1866,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.meeting_summary.6e9c866c"
           },
           "type": "note"
         },
@@ -2198,5 +2199,8 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Meeting Summary",
-  "tags": ["chatbots", "content-generation"]
+  "tags": [
+    "chatbots",
+    "content-generation"
+  ]
 }

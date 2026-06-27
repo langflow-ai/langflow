@@ -1601,7 +1601,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.vector_store_rag.cdd6e091"
           },
           "type": "note"
         },

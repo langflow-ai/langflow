@@ -1712,7 +1712,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.blog_writer.23fde7d9"
           },
           "type": "note"
         },

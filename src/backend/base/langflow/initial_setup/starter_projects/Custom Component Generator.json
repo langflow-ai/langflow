@@ -1785,7 +1785,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.custom_component_generator.b1d3ed28"
           },
           "type": "note"
         },
@@ -2122,5 +2123,8 @@
   "last_tested_version": "1.10.1",
   "locked": false,
   "name": "Custom Component Generator",
-  "tags": ["coding", "web-scraping"]
+  "tags": [
+    "coding",
+    "web-scraping"
+  ]
 }

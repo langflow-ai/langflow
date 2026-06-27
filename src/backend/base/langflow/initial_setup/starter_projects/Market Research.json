@@ -2480,7 +2480,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.market_research.ce13af36"
           },
           "type": "note"
         },

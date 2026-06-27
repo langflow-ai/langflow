@@ -1117,7 +1117,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.image_sentiment_analysis.7126745f"
           },
           "type": "note"
         },
@@ -1155,5 +1156,7 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Image Sentiment Analysis",
-  "tags": ["classification"]
+  "tags": [
+    "classification"
+  ]
 }

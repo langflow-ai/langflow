@@ -3781,7 +3781,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.deep_research_agent.195c6a9d"
           },
           "type": "note"
         },

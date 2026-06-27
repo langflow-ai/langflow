@@ -3611,7 +3611,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.travel_planning_agents.fcc662a4"
           },
           "type": "note"
         },

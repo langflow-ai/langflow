@@ -1780,7 +1780,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.instagram_copywriter.b9b90e6b"
           },
           "type": "note"
         },

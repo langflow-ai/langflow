@@ -3879,7 +3879,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.text_sentiment_analysis.87f5729f"
           },
           "type": "note"
         },
@@ -3917,5 +3918,7 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Text Sentiment Analysis",
-  "tags": ["classification"]
+  "tags": [
+    "classification"
+  ]
 }

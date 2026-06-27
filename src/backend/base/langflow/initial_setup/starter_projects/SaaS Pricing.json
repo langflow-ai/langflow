@@ -1276,7 +1276,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.saas_pricing.d9213061"
           },
           "type": "note"
         },
@@ -1608,5 +1609,8 @@
   "last_tested_version": "1.10.1",
   "locked": false,
   "name": "SaaS Pricing",
-  "tags": ["agents", "assistants"]
+  "tags": [
+    "agents",
+    "assistants"
+  ]
 }

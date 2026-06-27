@@ -2126,7 +2126,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.simple_agent.bf18216d"
           },
           "type": "note"
         },
