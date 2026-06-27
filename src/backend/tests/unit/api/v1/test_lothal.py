@@ -668,7 +668,7 @@ async def test_chat_three_no_signal_turns_then_clarity_transition(
     """Backlog acceptance for the clarification turn lifecycle.
 
     Three no-signal turns yield 6 messages with the phase unchanged; one
-    `[CLARITY_REACHED]` turn advances to DIAGRAM_GENERATION, stores the PRD, and
+    `[CLARITY_REACHED]` turn advances to ARCHITECTURE, stores the PRD, and
     strips the control token.
     """
     project_id = await _create_chat_project(client, logged_in_headers)
@@ -713,7 +713,7 @@ async def test_chat_three_no_signal_turns_then_clarity_transition(
     assert "Overview" in reply["content"]
 
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "DIAGRAM_GENERATION"  # phase persists on transition
+    assert project["phase"] == "ARCHITECTURE"  # phase persists on transition
     assert project["prd_content"] is not None
     assert "[CLARITY_REACHED]" not in project["prd_content"]
     assert "Overview" in project["prd_content"]
@@ -727,24 +727,25 @@ def _diagram_reply() -> str:
     return "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok\nuser -> api: poll"
 
 
-async def test_diagram_generation_turn_persists_graph_and_hands_off_to_refinement(
+async def test_diagram_generation_turn_persists_d2_and_stays_in_architecture(
     client: AsyncClient, logged_in_headers: dict, monkeypatch
 ):
-    """Backlog acceptance for Epic D.2 + the D.8 hand-off (fake LLM).
+    """Backlog acceptance for Epic D.2 generation + the E.2 merge (fake LLM).
 
-    A chat turn while the project is in DIAGRAM_GENERATION runs the generator
-    engine for real (only the model call is faked): the injected D2 source is
-    persisted verbatim to `lothal_project.diagram_d2`, the legacy `diagram_json`
-    stays null, and — having drafted the first diagram — the project advances to
-    DIAGRAM_REFINEMENT (D.8) so the next turn refines it. Both messages are still
-    stamped with the phase the turn ran under (DIAGRAM_GENERATION).
+    The first ARCHITECTURE turn (no diagram yet) runs the generator engine for
+    real (only the model call is faked): the injected D2 source is persisted
+    verbatim to `lothal_project.diagram_d2`, the legacy `diagram_json` stays null,
+    and — Epic E.2 having dropped the generation→refinement auto-advance — the
+    project stays in ARCHITECTURE, so the next turn refines this diagram (the
+    `ArchitectureEngine` dispatches on whether a diagram exists). Both messages are
+    stamped with the phase the turn ran under (ARCHITECTURE).
     """
     project_id = await _create_chat_project(client, logged_in_headers)
 
     # Precondition: the project has left CLARIFICATION (PRD written, phase moved).
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
-        project.phase = "DIAGRAM_GENERATION"
+        project.phase = "ARCHITECTURE"
         session.add(project)
 
     async def fake_call_llm(_messages, **_kwargs):
@@ -760,14 +761,15 @@ async def test_diagram_generation_turn_persists_graph_and_hands_off_to_refinemen
     assert response.status_code == status.HTTP_200_OK
     reply = response.json()
     assert reply["role"] == "ASSISTANT"
-    assert reply["phase"] == "DIAGRAM_GENERATION"  # the turn ran under this phase
+    assert reply["phase"] == "ARCHITECTURE"  # the turn ran under this phase
     assert reply["suggestions"] == []
     assert "3 interactions" in reply["content"]  # text grounded in the generated D2
 
     # The diagram lands in `diagram_d2` verbatim (the legacy `diagram_json` stays
-    # null) and the project advances to DIAGRAM_REFINEMENT for the next turn (D.8).
+    # null) and the project stays in ARCHITECTURE (no auto-advance) so the next
+    # turn refines it.
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "DIAGRAM_REFINEMENT"
+    assert project["phase"] == "ARCHITECTURE"
     assert project["diagram_json"] is None
     async with session_scope() as session:
         stored = await session.get(Project, UUID(project_id))
@@ -786,7 +788,7 @@ async def test_diagram_generation_empty_reply_is_502_and_rolls_back(
     project_id = await _create_chat_project(client, logged_in_headers)
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
-        project.phase = "DIAGRAM_GENERATION"
+        project.phase = "ARCHITECTURE"
         session.add(project)
 
     async def fake_call_llm(_messages, **_kwargs):
@@ -821,17 +823,17 @@ def _refined_d2() -> str:
 async def test_refinement_turn_updates_d2_and_holds_phase(client: AsyncClient, logged_in_headers: dict, monkeypatch):
     """Backlog acceptance for Epic D.8 (fake LLM).
 
-    A chat turn while the project is in DIAGRAM_REFINEMENT runs the refinement
+    A chat turn while the project is in ARCHITECTURE runs the refinement
     engine for real (only the model call is faked): the turn the model receives
     carries the project's current D2, its PRD, and the anchored element id; the
     model's updated D2 is persisted verbatim to `diagram_d2`, `GET /diagram`
-    reflects it, and the project stays in DIAGRAM_REFINEMENT (approval is D.11).
+    reflects it, and the project stays in ARCHITECTURE (approval is D.11).
     """
     project_id = await _create_chat_project(client, logged_in_headers)
     seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
-        project.phase = "DIAGRAM_REFINEMENT"
+        project.phase = "ARCHITECTURE"
         project.prd_content = "## Overview\nA todo app for individuals."
         project.diagram_d2 = seed_d2
         session.add(project)
@@ -855,7 +857,7 @@ async def test_refinement_turn_updates_d2_and_holds_phase(client: AsyncClient, l
     assert response.status_code == status.HTTP_200_OK
     reply = response.json()
     assert reply["role"] == "ASSISTANT"
-    assert reply["phase"] == "DIAGRAM_REFINEMENT"
+    assert reply["phase"] == "ARCHITECTURE"
     assert reply["suggestions"] == []
 
     # The refinement turn the model saw carried the current D2, the PRD, and the
@@ -867,7 +869,7 @@ async def test_refinement_turn_updates_d2_and_holds_phase(client: AsyncClient, l
 
     # The updated D2 is persisted and reflected by GET /diagram; the phase holds.
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "DIAGRAM_REFINEMENT"
+    assert project["phase"] == "ARCHITECTURE"
     async with session_scope() as session:
         stored = await session.get(Project, UUID(project_id))
         assert stored.diagram_d2 == _refined_d2()
@@ -903,7 +905,7 @@ async def test_refinement_contradiction_surfaces_as_warning_message(
     seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
-        project.phase = "DIAGRAM_REFINEMENT"
+        project.phase = "ARCHITECTURE"
         project.prd_content = "## Overview\nA todo app that must persist tasks in a database."
         project.diagram_d2 = seed_d2
         session.add(project)
@@ -925,7 +927,7 @@ async def test_refinement_contradiction_surfaces_as_warning_message(
     assert [m["role"] for m in messages] == ["USER", "ASSISTANT", "ASSISTANT"]
     warning = messages[-1]
     assert "no longer writes to the database" in warning["content"]
-    assert warning["phase"] == "DIAGRAM_REFINEMENT"
+    assert warning["phase"] == "ARCHITECTURE"
     # The edit still landed despite the warning (advisory, not a gate).
     async with session_scope() as session:
         stored = await session.get(Project, UUID(project_id))
@@ -946,21 +948,19 @@ async def test_diagram_save_route_is_gone(client: AsyncClient, logged_in_headers
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_approve_in_refinement_advances_to_code_generation_and_keeps_d2(
+async def test_approve_in_architecture_advances_to_code_generation_and_keeps_d2(
     client: AsyncClient, logged_in_headers: dict
 ):
-    """Backlog acceptance for Epic D.11: approve transitions REFINEMENT → CODE_GENERATION, D2 retained."""
+    """Backlog acceptance for Epic D.11 (phase merged in E.2): approve ARCHITECTURE → CODE_GENERATION, D2 retained."""
     project_id = await _create_chat_project(client, logged_in_headers)
     seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
-        project.phase = "DIAGRAM_REFINEMENT"
+        project.phase = "ARCHITECTURE"
         project.diagram_d2 = seed_d2
         session.add(project)
 
-    response = await client.post(
-        f"api/v1/lothal/projects/{project_id}/diagram/approve", headers=logged_in_headers
-    )
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/diagram/approve", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"phase": "CODE_GENERATION"}
 
@@ -971,20 +971,16 @@ async def test_approve_in_refinement_advances_to_code_generation_and_keeps_d2(
     assert diagram["d2"] == seed_d2
 
 
-@pytest.mark.parametrize("phase", ["CLARIFICATION", "DIAGRAM_GENERATION", "CODE_GENERATION", "DONE"])
-async def test_approve_rejected_outside_refinement(
-    client: AsyncClient, logged_in_headers: dict, phase: str
-):
-    """Approve is only valid in DIAGRAM_REFINEMENT; any other phase is a 409 and a no-op."""
+@pytest.mark.parametrize("phase", ["CLARIFICATION", "CODE_GENERATION", "DONE"])
+async def test_approve_rejected_outside_architecture(client: AsyncClient, logged_in_headers: dict, phase: str):
+    """Approve is only valid in ARCHITECTURE; any other phase is a 409 and a no-op."""
     project_id = await _create_chat_project(client, logged_in_headers)
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
         project.phase = phase
         session.add(project)
 
-    response = await client.post(
-        f"api/v1/lothal/projects/{project_id}/diagram/approve", headers=logged_in_headers
-    )
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/diagram/approve", headers=logged_in_headers)
     assert response.status_code == status.HTTP_409_CONFLICT
 
     # The phase is unchanged — a rejected approve never advances the project.
@@ -995,15 +991,13 @@ async def test_approve_rejected_outside_refinement(
 async def test_approve_unowned_project_is_404(client: AsyncClient, logged_in_headers: dict, user_two):
     """Ownership is checked first: approving another user's project 404s, never 409/200."""
     async with session_scope() as session:
-        foreign = Project(name="Theirs", user_id=user_two.id, phase="DIAGRAM_REFINEMENT")
+        foreign = Project(name="Theirs", user_id=user_two.id, phase="ARCHITECTURE")
         session.add(foreign)
         await session.flush()
         foreign_pk = foreign.id
 
     try:
-        response = await client.post(
-            f"api/v1/lothal/projects/{foreign_pk}/diagram/approve", headers=logged_in_headers
-        )
+        response = await client.post(f"api/v1/lothal/projects/{foreign_pk}/diagram/approve", headers=logged_in_headers)
         assert response.status_code == status.HTTP_404_NOT_FOUND
     finally:
         async with session_scope() as session:
@@ -1022,7 +1016,7 @@ async def test_approve_with_no_diagram_is_409(client: AsyncClient, logged_in_hea
     project_id = await _create_chat_project(client, logged_in_headers)
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
-        project.phase = "DIAGRAM_REFINEMENT"
+        project.phase = "ARCHITECTURE"
         project.diagram_d2 = diagram_d2
         session.add(project)
 
@@ -1030,7 +1024,7 @@ async def test_approve_with_no_diagram_is_409(client: AsyncClient, logged_in_hea
     assert response.status_code == status.HTTP_409_CONFLICT
 
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "DIAGRAM_REFINEMENT"  # not advanced
+    assert project["phase"] == "ARCHITECTURE"  # not advanced
 
 
 @pytest.mark.parametrize("phase", ["CODE_GENERATION", "DONE"])
@@ -1175,7 +1169,7 @@ async def test_diagram_403_in_clarification(client: AsyncClient, logged_in_heade
 async def test_diagram_empty_before_generation_completes(client: AsyncClient, logged_in_headers: dict):
     """Past CLARIFICATION but before the generator emits → empty payload (`d2: null`), not 500."""
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
-    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=None)
+    await _set_phase_and_d2(UUID(project_id), phase="ARCHITECTURE", diagram_d2=None)
 
     response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
@@ -1185,7 +1179,7 @@ async def test_diagram_empty_before_generation_completes(client: AsyncClient, lo
 async def test_diagram_returns_seeded_d2(client: AsyncClient, logged_in_headers: dict, stub_diagram_render):
     """A seeded `diagram_d2` comes back as the D2 source verbatim plus the rendered SVG."""
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
-    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=_SEED_D2)
+    await _set_phase_and_d2(UUID(project_id), phase="ARCHITECTURE", diagram_d2=_SEED_D2)
 
     response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
@@ -1201,7 +1195,7 @@ async def test_diagram_returns_seeded_d2(client: AsyncClient, logged_in_headers:
 async def test_diagram_readable_in_later_phases(client: AsyncClient, logged_in_headers: dict):
     """The D2 source stays readable through refinement, code generation, and done."""
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
-    for phase in ("DIAGRAM_REFINEMENT", "CODE_GENERATION", "DONE"):
+    for phase in ("ARCHITECTURE", "CODE_GENERATION", "DONE"):
         await _set_phase_and_d2(UUID(project_id), phase=phase, diagram_d2=_SEED_D2)
         response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK, phase
@@ -1228,7 +1222,7 @@ async def test_diagram_source_returned_verbatim_never_500(
         ("   ", None),  # whitespace-only → no diagram
         (" \n\t ", None),
     ):
-        await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=raw)
+        await _set_phase_and_d2(UUID(project_id), phase="ARCHITECTURE", diagram_d2=raw)
         response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK, raw
         body = response.json()
@@ -1247,14 +1241,14 @@ async def test_diagram_server_renders_svg_real(client: AsyncClient, logged_in_he
     """
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
 
-    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=_SEED_D2)
+    await _set_phase_and_d2(UUID(project_id), phase="ARCHITECTURE", diagram_d2=_SEED_D2)
     body = (await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)).json()
     assert body["d2"] == _SEED_D2
     assert body["svg"] is not None
     assert "<svg" in body["svg"]
 
     # Non-compilable source still 200s; the render fails closed to svg: null.
-    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2="not valid d2 {{{")
+    await _set_phase_and_d2(UUID(project_id), phase="ARCHITECTURE", diagram_d2="not valid d2 {{{")
     response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"d2": "not valid d2 {{{", "svg": None}
@@ -1274,7 +1268,7 @@ async def test_diagram_render_failure_degrades_to_null_svg(client: AsyncClient, 
     monkeypatch.setattr(lothal_api, "render_d2", _failing_render)
 
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
-    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=_SEED_D2)
+    await _set_phase_and_d2(UUID(project_id), phase="ARCHITECTURE", diagram_d2=_SEED_D2)
 
     response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
@@ -1296,7 +1290,7 @@ async def test_diagram_compiler_unavailable_degrades_to_null_svg(
     monkeypatch.setattr(lothal_api, "render_d2", _unavailable_render)
 
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
-    await _set_phase_and_d2(UUID(project_id), phase="DIAGRAM_GENERATION", diagram_d2=_SEED_D2)
+    await _set_phase_and_d2(UUID(project_id), phase="ARCHITECTURE", diagram_d2=_SEED_D2)
 
     response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
@@ -1308,7 +1302,7 @@ async def test_diagram_legacy_xyflow_only_reads_empty(client: AsyncClient, logge
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
-        project.phase = "DIAGRAM_GENERATION"
+        project.phase = "ARCHITECTURE"
         project.diagram_json = json.dumps({"nodes": [{"id": "x"}], "edges": []})
         project.diagram_d2 = None
 
@@ -1321,7 +1315,7 @@ async def test_diagram_404_for_unowned_project(client: AsyncClient, logged_in_he
     """Ownership is resolved before the phase gate — another user's project 404s, never 403."""
     async with session_scope() as session:
         # Phase set past CLARIFICATION so a 403 can't mask the 404 we're asserting.
-        foreign = Project(name="Theirs", user_id=user_two.id, phase="DIAGRAM_GENERATION")
+        foreign = Project(name="Theirs", user_id=user_two.id, phase="ARCHITECTURE")
         session.add(foreign)
         await session.flush()
         foreign_pk = foreign.id
@@ -1447,7 +1441,7 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
     Drives the live `POST /chat` endpoint with a realistic app description and
     progressively detailed answers. Asserts the model asks focused questions with
     tappable suggestions while gathering requirements, then within a few turns
-    emits `[CLARITY_REACHED]`: the project advances to DIAGRAM_GENERATION, the
+    emits `[CLARITY_REACHED]`: the project advances to ARCHITECTURE, the
     control token is stripped, and `GET /prd` returns the stored summary.
     """
     if find_spec("claude_agent_sdk") is None:
@@ -1494,7 +1488,7 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
 
     # Clarity must be reached within the bounded number of turns.
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "DIAGRAM_GENERATION", f"never reached clarity in {turns} turns"
+    assert project["phase"] == "ARCHITECTURE", f"never reached clarity in {turns} turns"
 
     # At least one clarification turn offered tappable suggestions (focused questions).
     assert saw_suggestions, "no clarification turn returned suggestions"

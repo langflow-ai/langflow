@@ -1,7 +1,7 @@
 """The D2 compile-validation helper (Epic D.3).
 
 `compile_d2` shells out to the `d2` binary to answer "does this D2 compile?" for
-the DIAGRAM_GENERATION gate. Two layers are tested here:
+the ARCHITECTURE diagram gate. Two layers are tested here:
 
 - The pure error-cleaning and the missing-binary contract, which need no binary
   and run everywhere.

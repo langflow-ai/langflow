@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import type { Diagram, Project } from "@/controllers/API/queries/lothal";
 
 // Capture the diagram-query call so we can assert the phase gate (no fetch
-// before DIAGRAM_GENERATION).
+// before ARCHITECTURE).
 const mockUseDiagram = jest.fn();
 jest.mock("@/controllers/API/queries/lothal", () => ({
   useDiagram: (...args: unknown[]) => mockUseDiagram(...args),
@@ -81,10 +81,8 @@ describe("CanvasSurface", () => {
     expect(mockUseDiagram).toHaveBeenCalledWith("p1", false);
   });
 
-  it("enables the fetch from DIAGRAM_GENERATION onward", () => {
-    render(
-      <CanvasSurface project={project({ phase: "DIAGRAM_GENERATION" })} />,
-    );
+  it("enables the fetch from ARCHITECTURE onward", () => {
+    render(<CanvasSurface project={project({ phase: "ARCHITECTURE" })} />);
     expect(mockUseDiagram).toHaveBeenCalledWith("p1", true);
   });
 
@@ -94,9 +92,7 @@ describe("CanvasSurface", () => {
       isLoading: true,
       isError: false,
     });
-    render(
-      <CanvasSurface project={project({ phase: "DIAGRAM_GENERATION" })} />,
-    );
+    render(<CanvasSurface project={project({ phase: "ARCHITECTURE" })} />);
     expect(screen.getByText("Opening the canvas…")).toBeInTheDocument();
   });
 
@@ -107,9 +103,7 @@ describe("CanvasSurface", () => {
       isError: true,
       error: error501,
     });
-    render(
-      <CanvasSurface project={project({ phase: "DIAGRAM_GENERATION" })} />,
-    );
+    render(<CanvasSurface project={project({ phase: "ARCHITECTURE" })} />);
     expect(screen.getByText("The canvas isn't live yet")).toBeInTheDocument();
     expect(
       screen.getByText("The diagram endpoint isn't built yet."),
@@ -124,9 +118,7 @@ describe("CanvasSurface", () => {
       isError: true,
       error: { response: { status: 500 } },
     });
-    render(
-      <CanvasSurface project={project({ phase: "DIAGRAM_GENERATION" })} />,
-    );
+    render(<CanvasSurface project={project({ phase: "ARCHITECTURE" })} />);
     expect(screen.getByText("Couldn't load the diagram")).toBeInTheDocument();
   });
 
@@ -136,10 +128,8 @@ describe("CanvasSurface", () => {
       isLoading: false,
       isError: false,
     });
-    render(
-      <CanvasSurface project={project({ phase: "DIAGRAM_GENERATION" })} />,
-    );
-    expect(screen.getByText("Sketching the diagram")).toBeInTheDocument();
+    render(<CanvasSurface project={project({ phase: "ARCHITECTURE" })} />);
+    expect(screen.getByText("Designing the architecture")).toBeInTheDocument();
     expect(screen.queryByTestId("d2-canvas")).not.toBeInTheDocument();
   });
 
@@ -149,9 +139,7 @@ describe("CanvasSurface", () => {
       isLoading: false,
       isError: false,
     });
-    render(
-      <CanvasSurface project={project({ phase: "DIAGRAM_REFINEMENT" })} />,
-    );
+    render(<CanvasSurface project={project({ phase: "ARCHITECTURE" })} />);
     expect(screen.getByText("Couldn't render the diagram")).toBeInTheDocument();
     expect(screen.queryByTestId("d2-canvas")).not.toBeInTheDocument();
   });
@@ -162,9 +150,7 @@ describe("CanvasSurface", () => {
       isLoading: false,
       isError: false,
     });
-    render(
-      <CanvasSurface project={project({ phase: "DIAGRAM_REFINEMENT" })} />,
-    );
+    render(<CanvasSurface project={project({ phase: "ARCHITECTURE" })} />);
     expect(screen.getByTestId("d2-canvas")).toHaveAttribute(
       "data-svg",
       "<svg>hi</svg>",
@@ -180,7 +166,7 @@ describe("CanvasSurface", () => {
     });
     render(
       <CanvasSurface
-        project={project({ phase: "DIAGRAM_REFINEMENT" })}
+        project={project({ phase: "ARCHITECTURE" })}
         onAnchor={onAnchor}
       />,
     );

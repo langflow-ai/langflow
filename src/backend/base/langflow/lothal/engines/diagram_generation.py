@@ -1,15 +1,22 @@
-"""The `DIAGRAM_GENERATION` phase engine (Story 2.1, re-pointed to D2 in Epic D.2).
+"""Diagram *generation* logic for the ARCHITECTURE stage (Story 2.1, D2 in D.2; merged in Epic E.2).
 
-Once clarification produces a PRD, this engine turns that spec into the first
-diagram. As of Epic D the diagram artifact is **D2 source** (https://d2lang.com):
-the model is asked for a single D2 sequence diagram — participants and the
-messages between them — and emits raw D2 text, no positions (D2 owns layout).
+Once clarification produces a PRD, this turns that spec into the first diagram. As
+of Epic D the diagram artifact is **D2 source** (https://d2lang.com): the model is
+asked for a single D2 sequence diagram — participants and the messages between
+them — and emits raw D2 text, no positions (D2 owns layout).
 
 The engine returns that text on `LLMResponse.diagram_d2` and the chat endpoint
-persists it to `lothal_project.diagram_d2`. Having drafted the first diagram the
-engine hands off — `next_phase` is `DIAGRAM_REFINEMENT` (Epic D.8), so the next
-turn refines the diagram the user is now looking at rather than regenerating it
-from scratch. The engine never touches the DB.
+persists it to `lothal_project.diagram_d2`. `next_phase` is `None`: Epic E.2
+merged generation and refinement into the single `ARCHITECTURE` stage, so after
+the first draft the project stays put and the next turn refines the diagram the
+user is now looking at (the `ArchitectureEngine` dispatches generate-vs-refine on
+whether a diagram exists yet) rather than auto-advancing to a separate phase. The
+engine never touches the DB.
+
+This class is no longer registered directly; the `ArchitectureEngine`
+(`architecture.py`) owns the `ARCHITECTURE` phase and delegates the
+no-diagram-yet turn here. Epic E.3 grows generation from one diagram into the full
+ADR + diagram-set artifact map.
 
 Validation (D.3): the gate is "does the D2 compile?" — the reply is run through
 the `d2` compiler with one corrective retry (the shared `d2_gate` the refinement
@@ -23,8 +30,7 @@ from typing import TYPE_CHECKING
 
 from langflow.lothal.context import build_messages
 from langflow.lothal.engines.d2_gate import compile_validated_d2, count_messages
-from langflow.lothal.router import LLMResponse, PhaseEngine, register_engine
-from langflow.services.database.models.lothal_project.model import ProjectPhase
+from langflow.lothal.router import LLMResponse, PhaseEngine
 
 if TYPE_CHECKING:
     from langflow.services.database.models.lothal_project.model import Message
@@ -87,11 +93,12 @@ def _assistant_text(d2: str) -> str:
     return "I've drafted a diagram from your spec. Review it on the canvas and tell me what to add, remove, or change."
 
 
-@register_engine
 class DiagramGenerationEngine(PhaseEngine):
-    """Generates the first D2 diagram from the clarified spec, then hands off to refinement."""
+    """Generates the first D2 diagram from the clarified spec; the project stays in ARCHITECTURE.
 
-    phase = ProjectPhase.DIAGRAM_GENERATION
+    Not registered for a phase of its own (Epic E.2 merged the diagram phases) —
+    the `ArchitectureEngine` delegates the first, no-diagram-yet turn here.
+    """
 
     async def process(self, history: list[Message], user_message: str, **_kwargs) -> LLMResponse:
         # `**_kwargs` absorbs the refinement inputs (`prd`/`current_d2`, see
@@ -99,9 +106,11 @@ class DiagramGenerationEngine(PhaseEngine):
         # starts the diagram fresh, so it ignores them.
         messages = build_messages(SYSTEM_PROMPT, history, user_message)
         d2 = await compile_validated_d2(messages)
+        # next_phase=None: Epic E.2 dropped the generation→refinement auto-advance;
+        # the project stays in ARCHITECTURE and the next turn refines this diagram.
         return LLMResponse(
             text=_assistant_text(d2),
             suggestions=[],
-            next_phase=ProjectPhase.DIAGRAM_REFINEMENT,
+            next_phase=None,
             diagram_d2=d2,
         )

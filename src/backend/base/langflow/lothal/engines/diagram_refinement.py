@@ -1,7 +1,8 @@
-"""The `DIAGRAM_REFINEMENT` phase engine (Epic D.8, supersedes Story 3.1).
+"""Diagram *refinement* logic for the ARCHITECTURE stage (Epic D.8; merged in Epic E.2).
 
-Once the first diagram is drafted (`DIAGRAM_GENERATION` hands off here), the user
-iterates on it in conversation. Each turn the engine receives the **current D2**,
+Once the first diagram is drafted (the `ArchitectureEngine` delegates here once a
+diagram exists), the user iterates on it in conversation. Each turn the engine
+receives the **current D2**,
 the **PRD**, and the user's instruction — which may reference specific diagram
 elements by their exact D2 id (the click-to-anchor composer, Epic D.7, serialises
 a referenced element as a backtick-wrapped id inline in the message, e.g.
@@ -11,11 +12,15 @@ compile-validated (the shared D.3 gate, with one corrective retry) and carried o
 `LLMResponse.diagram_d2` for the chat endpoint to persist to
 `lothal_project.diagram_d2`. `GET /diagram` then reflects the edit.
 
-`next_phase` stays `None` — refining keeps the project in `DIAGRAM_REFINEMENT`;
-approving the diagram (→ `CODE_GENERATION`) is Epic D.11. Like every engine this
-one is pure turn logic and never touches the DB (the endpoint owns persistence);
-it reads the current D2 and PRD from the keyword arguments the chat endpoint
-threads through from the project row.
+`next_phase` stays `None` — refining keeps the project in `ARCHITECTURE`;
+approving the diagram (→ `CODE_GENERATION`) is the `/diagram/approve` endpoint.
+Like every engine this one is pure turn logic and never touches the DB (the
+endpoint owns persistence); it reads the current D2 and PRD from the keyword
+arguments the chat endpoint threads through from the project row.
+
+This class is no longer registered directly; the `ArchitectureEngine`
+(`architecture.py`) owns the `ARCHITECTURE` phase and delegates the refine turn
+here once a diagram exists.
 """
 
 from __future__ import annotations
@@ -26,8 +31,7 @@ from typing import TYPE_CHECKING
 from langflow.lothal.context import build_messages
 from langflow.lothal.engines.d2_gate import compile_validated_d2, count_messages
 from langflow.lothal.engines.d2_validator import validate_d2_against_prd
-from langflow.lothal.router import LLMResponse, PhaseEngine, register_engine
-from langflow.services.database.models.lothal_project.model import ProjectPhase
+from langflow.lothal.router import LLMResponse, PhaseEngine
 
 if TYPE_CHECKING:
     from langflow.services.database.models.lothal_project.model import Message
@@ -103,11 +107,12 @@ def _assistant_text(d2: str) -> str:
     return "I've updated the diagram. Tell me what else to change, or approve it to generate the code."
 
 
-@register_engine
 class DiagramRefinementEngine(PhaseEngine):
-    """Applies an anchored (or free-text) instruction to the current D2 and returns the updated source."""
+    """Applies an anchored (or free-text) instruction to the current D2 and returns the updated source.
 
-    phase = ProjectPhase.DIAGRAM_REFINEMENT
+    Not registered for a phase of its own (Epic E.2 merged the diagram phases) —
+    the `ArchitectureEngine` delegates here once the project has a diagram.
+    """
 
     async def process(
         self,
@@ -127,5 +132,5 @@ class DiagramRefinementEngine(PhaseEngine):
         # `None`, so it never raises here — the verdict can't block the compiled
         # edit from being returned (and then persisted by the endpoint).
         warning = await validate_d2_against_prd(prd, d2)
-        # Refining keeps the project in DIAGRAM_REFINEMENT; approval (→ CODE_GENERATION) is D.11.
+        # Refining keeps the project in ARCHITECTURE; approval (→ CODE_GENERATION) is the approve endpoint.
         return LLMResponse(text=_assistant_text(d2), suggestions=[], next_phase=None, diagram_d2=d2, warning=warning)

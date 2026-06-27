@@ -23,15 +23,14 @@ import {
 } from "../index";
 
 describe("phases", () => {
-  it("orders the five phases and resolves indices", () => {
+  it("orders the four phases and resolves indices", () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       "CLARIFICATION",
-      "DIAGRAM_GENERATION",
-      "DIAGRAM_REFINEMENT",
+      "ARCHITECTURE",
       "CODE_GENERATION",
       "DONE",
     ]);
-    expect(phaseIndex("DIAGRAM_REFINEMENT")).toBe(2);
+    expect(phaseIndex("ARCHITECTURE")).toBe(1);
     expect(phaseIndex("UNKNOWN")).toBe(-1);
   });
 });
@@ -74,28 +73,22 @@ describe("StatusDot", () => {
 
 describe("PhaseStepper", () => {
   it("renders all phase labels in breadcrumb form", () => {
-    render(<PhaseStepper phase="DIAGRAM_REFINEMENT" variant="breadcrumb" />);
-    for (const label of [
-      "Clarify",
-      "Sketch",
-      "Refine",
-      "Generate",
-      "Deliver",
-    ]) {
+    render(<PhaseStepper phase="ARCHITECTURE" variant="breadcrumb" />);
+    for (const label of ["Clarify", "Design", "Generate", "Deliver"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });
 
-  it("renders the NN / 05 counter in pill form", () => {
-    render(<PhaseStepper phase="DIAGRAM_REFINEMENT" variant="pill" />);
-    expect(screen.getByText("03 / 05")).toBeInTheDocument();
+  it("renders the NN / 04 counter in pill form", () => {
+    render(<PhaseStepper phase="ARCHITECTURE" variant="pill" />);
+    expect(screen.getByText("02 / 04")).toBeInTheDocument();
   });
 
   it("marks completed phases with a check in the default stepper variant", () => {
-    // Active phase is index 2 (Refine), so Clarify + Sketch are done.
-    render(<PhaseStepper phase="DIAGRAM_REFINEMENT" />);
-    expect(screen.getAllByText("✓")).toHaveLength(2);
-    expect(screen.getByText("Refine")).toBeInTheDocument();
+    // Active phase is index 1 (Design), so only Clarify is done.
+    render(<PhaseStepper phase="ARCHITECTURE" />);
+    expect(screen.getAllByText("✓")).toHaveLength(1);
+    expect(screen.getByText("Design")).toBeInTheDocument();
     expect(screen.getByText("Deliver")).toBeInTheDocument();
   });
 });

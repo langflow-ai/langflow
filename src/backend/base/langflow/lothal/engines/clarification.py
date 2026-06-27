@@ -7,8 +7,8 @@ to clarification `suggestions` for the chat UI (the user can always free-text an
 "Other" answer instead). When the model has heard enough to write the spec it
 emits a `[CLARITY_REACHED]` token followed by a PRD summary; the engine strips
 the token, clears the suggestions, and transitions the project to
-`DIAGRAM_GENERATION`. The returned `text` on that turn is the PRD summary the
-chat endpoint stores (Story 1.2).
+`ARCHITECTURE` (the merged Epic E stage). The returned `text` on that turn is the
+PRD summary the chat endpoint stores (Story 1.2).
 
 The engine is pure conversation logic: it builds the message array (Story 0.2),
 calls the LLM (Story 0.1), parses the reply, and returns an `LLMResponse`. It
@@ -75,7 +75,7 @@ def _coerce_suggestions(value: object) -> list[str]:
 def _parse_reply(raw: str) -> LLMResponse:
     """Turn one raw LLM reply into the engine's `LLMResponse`.
 
-    Two shapes: a `[CLARITY_REACHED]` reply transitions to DIAGRAM_GENERATION
+    Two shapes: a `[CLARITY_REACHED]` reply transitions to ARCHITECTURE
     (token stripped, no suggestions, the remaining text is the PRD summary); any
     other reply is a clarification turn (JSON question + suggestions, phase
     unchanged).
@@ -102,8 +102,8 @@ def _parse_reply(raw: str) -> LLMResponse:
         if not summary:
             # The token was the entire reply; keep a non-empty PRD placeholder so
             # the transition still carries a storable assistant message.
-            summary = "Specification confirmed. Generating the diagram next."
-        return LLMResponse(text=summary, suggestions=[], next_phase=ProjectPhase.DIAGRAM_GENERATION)
+            summary = "Specification confirmed. Designing the architecture next."
+        return LLMResponse(text=summary, suggestions=[], next_phase=ProjectPhase.ARCHITECTURE)
 
     data = extract_json_object(raw)
     if data is not None and isinstance(data.get("message"), str) and data["message"].strip():

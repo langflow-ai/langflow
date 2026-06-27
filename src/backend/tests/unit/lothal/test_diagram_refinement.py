@@ -1,4 +1,4 @@
-"""The DIAGRAM_REFINEMENT phase engine (Epic D.8).
+"""Diagram refinement logic of the ARCHITECTURE stage (Epic D.8; merged in E.2).
 
 Following the backlog's testing philosophy, these tests inject a fake `call_llm`
 (and a controllable `compile_d2`, both on the shared `d2_gate`) and assert *our*
@@ -6,19 +6,20 @@ behaviour: the refinement turn the model receives carries the current D2, the
 PRD, and the referenced element ids (the backtick-wrapped anchors the D.7
 composer serialises into the message), plus the instruction; the model's reply is
 carried verbatim on `LLMResponse.diagram_d2` with `next_phase` None (refining
-keeps the project in DIAGRAM_REFINEMENT — approval is D.11) and a grounded
-assistant message. A markdown fence is stripped; an empty reply fails as a bad
-round-trip. The compile-validation gate (D.3) is reused from `d2_gate`, so its
-retry/failure behaviour is covered there; here we confirm the engine routes
-through it. No real LLM, no DB — the engine never persists.
+keeps the project in ARCHITECTURE — approval → CODE_GENERATION is the approve
+endpoint) and a grounded assistant message. A markdown fence is stripped; an empty
+reply fails as a bad round-trip. The compile-validation gate (D.3) is reused from
+`d2_gate`, so its retry/failure behaviour is covered there; here we confirm the
+engine routes through it. No real LLM, no DB — the engine never persists. Epic E.2
+merged it under the `ArchitectureEngine`; the phase-level wiring is covered in
+`test_architecture.py`.
 """
 
 import pytest
 from langflow.lothal.engines import d2_gate, d2_validator, diagram_refinement
 from langflow.lothal.engines.diagram_refinement import DiagramRefinementEngine
 from langflow.lothal.llm import LLMConnectionError
-from langflow.lothal.router import LLMResponse, get_engine
-from langflow.services.database.models.lothal_project.model import ProjectPhase
+from langflow.lothal.router import LLMResponse
 
 # A current diagram with two parallel `api -> db` edges, so an anchor with a
 # `#2` suffix has something distinct to point at.
@@ -114,15 +115,6 @@ def _composed(fake_llm) -> str:
     return fake_llm["calls"][0]["messages"][-1]["content"]
 
 
-# --- registration ------------------------------------------------------------
-
-
-def test_engine_is_registered_under_diagram_refinement():
-    engine = get_engine(ProjectPhase.DIAGRAM_REFINEMENT)
-    assert isinstance(engine, DiagramRefinementEngine)
-    assert engine.phase == "DIAGRAM_REFINEMENT"
-
-
 # --- happy path: anchored edit ------------------------------------------------
 
 
@@ -133,7 +125,7 @@ async def test_anchored_edit_carries_updated_d2_without_transition(fake_llm, fak
 
     assert isinstance(response, LLMResponse)
     # The model's updated D2 rides on `.diagram_d2`, verbatim; refining keeps the
-    # project in DIAGRAM_REFINEMENT (approval → CODE_GENERATION is D.11).
+    # project in ARCHITECTURE (approval → CODE_GENERATION is the approve endpoint).
     assert response.diagram_d2 == UPDATED_D2
     assert response.next_phase is None
     assert response.suggestions == []

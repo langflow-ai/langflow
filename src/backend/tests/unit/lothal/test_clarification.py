@@ -3,7 +3,7 @@
 Per the backlog's testing philosophy these tests inject a fake `call_llm` and
 assert *our* behaviour: that a structured reply becomes `text` + `suggestions`
 with the phase unchanged, and that a `[CLARITY_REACHED]` reply strips the token,
-clears the suggestions, and transitions to DIAGRAM_GENERATION. No real LLM, no
+clears the suggestions, and transitions to ARCHITECTURE. No real LLM, no
 DB — the engine is pure conversation logic.
 """
 
@@ -78,7 +78,7 @@ async def test_clarity_reached_strips_token_clears_suggestions_and_transitions(f
     fake_llm["_reply"] = f"{CLARITY_TOKEN}\n# PRD\n\n## Overview\nA personal todo app."
     response = await ClarificationEngine().process([], "that's everything")
 
-    assert response.next_phase == ProjectPhase.DIAGRAM_GENERATION
+    assert response.next_phase == ProjectPhase.ARCHITECTURE
     assert response.suggestions == []
     assert CLARITY_TOKEN not in response.text
     assert response.text.startswith("# PRD")
@@ -89,7 +89,7 @@ async def test_clarity_token_alone_yields_non_empty_summary(fake_llm):
     fake_llm["_reply"] = CLARITY_TOKEN
     response = await ClarificationEngine().process([], "done")
 
-    assert response.next_phase == ProjectPhase.DIAGRAM_GENERATION
+    assert response.next_phase == ProjectPhase.ARCHITECTURE
     assert response.text.strip()  # LLMResponse forbids empty text
 
 
@@ -129,7 +129,7 @@ def test_parse_reply_handles_whitespace_only_reply():
 def test_parse_reply_handles_clarity_token_wrapped_in_json():
     raw = f'{CLARITY_TOKEN} {{"message": "Spec: a todo app for teams."}}'
     response = _parse_reply(raw)
-    assert response.next_phase == ProjectPhase.DIAGRAM_GENERATION
+    assert response.next_phase == ProjectPhase.ARCHITECTURE
     assert response.text == "Spec: a todo app for teams."
     assert response.suggestions == []
 
@@ -143,7 +143,7 @@ def test_parse_reply_keeps_full_prd_when_it_contains_an_embedded_json_object():
         'Clients send messages as JSON like {"message": "hello team"} over the socket.'
     )
     response = _parse_reply(f"{CLARITY_TOKEN}\n{prd}")
-    assert response.next_phase == ProjectPhase.DIAGRAM_GENERATION
+    assert response.next_phase == ProjectPhase.ARCHITECTURE
     assert response.text == prd  # whole spec preserved, not "hello team"
     assert "## Overview" in response.text
 
@@ -153,7 +153,7 @@ def test_parse_reply_strips_only_the_leading_clarity_token():
     # preserved rather than silently rewritten by a blanket replace.
     body = "# PRD\n\n## Overview\nThe app shows a [CLARITY_REACHED] banner when a spec is locked."
     response = _parse_reply(f"{CLARITY_TOKEN}\n{body}")
-    assert response.next_phase == ProjectPhase.DIAGRAM_GENERATION
+    assert response.next_phase == ProjectPhase.ARCHITECTURE
     assert response.text == body
     assert response.text.count(CLARITY_TOKEN) == 1  # the body mention survived
 

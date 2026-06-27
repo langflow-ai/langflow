@@ -42,19 +42,13 @@ describe("Lothal Landing", () => {
     expect(diagrams).toHaveLength(2);
   });
 
-  it("lists all five steps from the shared phase metadata", () => {
+  it("lists all four steps from the shared phase metadata", () => {
     render(<Landing />);
-    for (const label of [
-      "Clarify",
-      "Sketch",
-      "Refine",
-      "Generate",
-      "Deliver",
-    ]) {
+    for (const label of ["Clarify", "Design", "Generate", "Deliver"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     expect(
-      screen.getByText("Five steps from a sentence to a codebase."),
+      screen.getByText("Four steps from a sentence to a codebase."),
     ).toBeInTheDocument();
   });
 

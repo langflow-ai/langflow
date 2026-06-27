@@ -2,7 +2,7 @@
 // port of the landing design (Lothal/src/landing.jsx in the design bundle):
 // sticky blur nav, centered hero with an early-access pill and a live product
 // preview of the sample bakery project ("larder" — clarification chat beside
-// a real diagram canvas), a principles grid, the five steps, a canvas
+// a real diagram canvas), a principles grid, the four steps, a canvas
 // showcase band, delivery cards, a glowing closing CTA, and the footer.
 // The page's only actions are Log in and Sign up — it never opens the projects
 // app directly; /lothal lives behind auth (ProtectedRoute) for a later epic.
@@ -26,12 +26,10 @@ import { LothalSurface } from "../theme/LothalSurface";
 const STEP_COPY: Record<LothalPhaseId, string> = {
   CLARIFICATION:
     "Describe what you want in plain words. Lothal responds with focused questions — multiple choice or free text — until there are no assumptions left.",
-  DIAGRAM_GENERATION:
-    "Once it understands, Lothal drafts a sequence diagram of your solution: the actors, the calls between them, and the order things happen.",
-  DIAGRAM_REFINEMENT:
-    "Drag nodes and rewire edges on the canvas, or just say what's wrong. Each change is checked against the agreed spec before it sticks.",
+  ARCHITECTURE:
+    "Once it understands, Lothal designs your architecture — the actors, the calls between them, and the order things happen — then refines it as you say what's wrong. Each change is checked against the agreed spec before it sticks.",
   CODE_GENERATION:
-    "With the diagram locked, Lothal writes the full codebase, committing to an internal Git repository as it goes.",
+    "With the architecture locked, Lothal writes the full codebase, committing to an internal Git repository as it goes.",
   DONE: "Pull the repo, push to your own GitHub, or download a ZIP. The code traces back to a design you verified, step by step.",
 };
 
@@ -734,8 +732,8 @@ function LandingView() {
         >
           <SectionHead
             eyebrow="How it works"
-            title="Five steps from a sentence to a codebase."
-            sub="A forward-only flow. You can't skip ahead to code before the diagram is approved — that's the point."
+            title="Four steps from a sentence to a codebase."
+            sub="A forward-only flow. You can't skip ahead to code before the architecture is approved — that's the point."
           />
           <div
             style={{

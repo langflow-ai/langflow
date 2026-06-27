@@ -49,12 +49,12 @@ from langflow.services.auth.utils import get_current_active_superuser, get_curre
 from langflow.services.database.models.lothal_project.model import Message, MessageRole, Project, ProjectPhase
 
 # Phases in which the diagram exists and is readable — the `GET /diagram` phase
-# gate from `api-endpoints.md`. CLARIFICATION precedes generation, so the diagram
-# read 403s there (no graph can exist yet); every later phase may read it.
+# gate from `api-endpoints.md`. CLARIFICATION precedes the architecture stage, so
+# the diagram read 403s there (no diagram can exist yet); every later phase may
+# read it. Epic E.2 merged the two diagram phases into ARCHITECTURE.
 _DIAGRAM_VISIBLE_PHASES = frozenset(
     {
-        ProjectPhase.DIAGRAM_GENERATION.value,
-        ProjectPhase.DIAGRAM_REFINEMENT.value,
+        ProjectPhase.ARCHITECTURE.value,
         ProjectPhase.CODE_GENERATION.value,
         ProjectPhase.DONE.value,
     }
@@ -426,10 +426,10 @@ async def get_diagram(project: OwnedProject) -> DiagramResponse:
     SVG and ships no D2 compiler of its own. The SVG is rendered on read (the
     source is the single stored truth — there is no SVG to keep in sync).
 
-    Phase-gated to `DIAGRAM_GENERATION` and later: the diagram doesn't exist
+    Phase-gated to `ARCHITECTURE` and later: the diagram doesn't exist
     during CLARIFICATION, so a read there is a `403` (ownership is checked first
     by `OwnedProject`, so an unowned project still 404s regardless of phase).
-    Once the project enters generation but before the generator has emitted
+    Once the project enters the architecture stage but before the generator has emitted
     anything, `diagram_d2` is `null` and an empty payload (`d2: null, svg: null`)
     is returned — never an error. A blank or whitespace-only store is treated the
     same way (normalised to `null`): it is no diagram, not a renderable one.
@@ -443,7 +443,7 @@ async def get_diagram(project: OwnedProject) -> DiagramResponse:
     if project.phase not in _DIAGRAM_VISIBLE_PHASES:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="The diagram is not available until diagram generation begins.",
+            detail="The diagram is not available until the architecture stage begins.",
         )
 
     # Blank/whitespace-only is "no diagram" → empty payload; real source is
@@ -460,12 +460,12 @@ async def get_diagram(project: OwnedProject) -> DiagramResponse:
     summary="Approve the diagram and advance to code generation",
 )
 async def approve_diagram(*, session: DbSession, project: OwnedProject) -> DiagramApproveResponse:
-    """Approve the current diagram and advance to CODE_GENERATION (Epic D.11).
+    """Approve the architecture and advance to CODE_GENERATION (Epic D.11; phase merged in E.2).
 
     The diagram surface has no canvas-save path (Epic D.9 retired it): the user
-    shapes the D2 by conversation (the refinement engine, D.8), and *approving*
-    is the single forward action that ends refinement. Approval is therefore only
-    valid in DIAGRAM_REFINEMENT — calling it in any other phase is a `409`
+    shapes the D2 by conversation (the architecture engine, E.2), and *approving*
+    is the single forward action that ends the architecture stage. Approval is
+    therefore only valid in ARCHITECTURE — calling it in any other phase is a `409`
     (a no-op transition the UI shouldn't have offered) rather than silently
     re-approving. The approved D2 is retained verbatim in `lothal_project.diagram_d2`
     (code generation reads it, D.12), so `GET /diagram` keeps returning it
@@ -477,10 +477,10 @@ async def approve_diagram(*, session: DbSession, project: OwnedProject) -> Diagr
     """
     await session.refresh(project, with_for_update=True)
 
-    if project.phase != ProjectPhase.DIAGRAM_REFINEMENT.value:
+    if project.phase != ProjectPhase.ARCHITECTURE.value:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="The diagram can only be approved while it is being refined.",
+            detail="The architecture can only be approved during the architecture stage.",
         )
 
     # There must be a diagram to approve. On the happy path generation always
