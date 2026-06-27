@@ -37,6 +37,14 @@ if (typeof global.URL === "undefined") {
   global.URL = require("url").URL;
 }
 
+// Polyfill TextEncoder/TextDecoder (jsdom omits them, but they're standard
+// browser globals our code relies on, e.g. UTF-8 base64 decoding).
+if (typeof global.TextDecoder === "undefined") {
+  const { TextDecoder, TextEncoder } = require("util");
+  global.TextDecoder = TextDecoder;
+  global.TextEncoder = TextEncoder;
+}
+
 // Mock localStorage
 const localStorageMock = {
   getItem: jest.fn(),

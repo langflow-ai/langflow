@@ -23,6 +23,22 @@ describe("decodeElementId", () => {
     // "shape" is not valid base64 (length not a multiple of 4) → null.
     expect(decodeElementId("shape")).toBeNull();
   });
+
+  it("decodes multi-byte UTF-8 ids", () => {
+    // D2 bakes ids in as base64 of their UTF-8 bytes; "café" has a two-byte char,
+    // which exercises the TextDecoder path (the old escape() idiom this replaced).
+    const b64Utf8 = window.btoa(
+      String.fromCharCode(...Array.from(new TextEncoder().encode("café"))),
+    );
+    expect(decodeElementId(b64Utf8)).toBe("café");
+  });
+
+  it("rejects base64 that decodes to invalid UTF-8 (fatal mode) → null", () => {
+    // 0xFF is never a valid UTF-8 lead byte; `fatal: true` must throw → null,
+    // so an arbitrary base64-shaped class is never mistaken for a real D2 id.
+    const invalidUtf8 = window.btoa(String.fromCharCode(0xff, 0xfe));
+    expect(decodeElementId(invalidUtf8)).toBeNull();
+  });
 });
 
 describe("resolveAnchor", () => {

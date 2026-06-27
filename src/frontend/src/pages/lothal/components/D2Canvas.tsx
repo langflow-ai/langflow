@@ -91,9 +91,9 @@ export function D2Canvas({
     }
   }, [svg]);
 
-  // Fit the freshly-measured diagram into the viewport (scaled down if it's
-  // bigger), centred. Guarded for jsdom, where layout boxes are all zero.
-  useLayoutEffect(() => {
+  // Fit the diagram into the viewport (scaled down if it's bigger), centred.
+  // Guarded for jsdom, where layout boxes are all zero.
+  const fitToViewport = useCallback(() => {
     const view = viewport.current;
     if (!view || !natural) return;
     const vw = view.clientWidth;
@@ -108,6 +108,23 @@ export function D2Canvas({
       y: (vh - natural.h * scale) / 2,
     });
   }, [natural]);
+
+  // Fit when the diagram is freshly measured.
+  useLayoutEffect(() => {
+    fitToViewport();
+  }, [fitToViewport]);
+
+  // Re-fit when the viewport itself resizes (a side panel opening, a window
+  // resize) — the old xyflow canvas got this from fitView; without it the
+  // diagram would sit off-centre or clipped after a layout change. Guarded for
+  // jsdom, which has no ResizeObserver.
+  useEffect(() => {
+    const view = viewport.current;
+    if (!view || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => fitToViewport());
+    ro.observe(view);
+    return () => ro.disconnect();
+  }, [fitToViewport]);
 
   const zoomBy = useCallback((factor: number, cx?: number, cy?: number) => {
     const view = viewport.current;
