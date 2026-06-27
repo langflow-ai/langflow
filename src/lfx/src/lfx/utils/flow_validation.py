@@ -42,6 +42,7 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
     {
         "CSVAgent",  # LangChain CSV agent can execute Python when allow_dangerous_code is enabled
         "CodeActAgentSmolagents",  # smolagents CodeAgent executes model-generated code
+        "Cuga",  # CUGA agent executes model-generated Python via its built-in executor
         "OpenDsStarAgent",  # OpenDsStar data-science agent executes model-generated Python
         "PythonCodeStructuredTool",  # legacy raw exec() (component removed; type retained to block stored code)
         "PythonREPLComponent",  # "Python Interpreter"

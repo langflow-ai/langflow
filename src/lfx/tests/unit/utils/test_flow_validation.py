@@ -292,6 +292,7 @@ async def test_prepare_public_flow_build_noop_on_empty(monkeypatch, empty):
 REPORTED_CODE_EXECUTION_AGENT_TYPES = (
     "CSVAgent",
     "CodeActAgentSmolagents",
+    "Cuga",
     "OpenDsStarAgent",
 )
 

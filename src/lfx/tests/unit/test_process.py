@@ -155,6 +155,7 @@ _EXPECTED_CODE_FIELDS_BY_TYPE: dict[str, set[str]] = {
 # blocked on unauthenticated public builds by CODE_EXECUTION_COMPONENT_TYPES.
 _CODE_EXECUTION_TYPES_WITHOUT_TWEAK_CODE_FIELDS = {
     "CodeActAgentSmolagents",
+    "Cuga",
     "OpenDsStarAgent",
 }
 
