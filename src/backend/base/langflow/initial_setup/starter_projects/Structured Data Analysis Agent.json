@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileDescriptionGeneratorComponent",
-            "id": "FileDescriptionGeneratorComponent-KlX5t",
+            "id": "FileDescriptionGeneratorComponent-oTrJn",
             "name": "descriptions",
             "output_types": [
               "JSON"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "Chroma-eSDtr",
+            "id": "Chroma-eMTbF",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileDescriptionGeneratorComponent-KlX5t{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-KlX5tœ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}-Chroma-eSDtr{œfieldNameœ:œingest_dataœ,œidœ:œChroma-eSDtrœ,œinputTypesœ:[œDataœ,œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileDescriptionGeneratorComponent-oTrJn{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-oTrJnœ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}-Chroma-eMTbF{œfieldNameœ:œingest_dataœ,œidœ:œChroma-eMTbFœ,œinputTypesœ:[œDataœ,œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileDescriptionGeneratorComponent-KlX5t",
-        "sourceHandle": "{œdataTypeœ: œFileDescriptionGeneratorComponentœ, œidœ: œFileDescriptionGeneratorComponent-KlX5tœ, œnameœ: œdescriptionsœ, œoutput_typesœ: [œJSONœ]}",
-        "target": "Chroma-eSDtr",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œChroma-eSDtrœ, œinputTypesœ: [œDataœ, œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "FileDescriptionGeneratorComponent-oTrJn",
+        "sourceHandle": "{œdataTypeœ: œFileDescriptionGeneratorComponentœ, œidœ: œFileDescriptionGeneratorComponent-oTrJnœ, œnameœ: œdescriptionsœ, œoutput_typesœ: [œJSONœ]}",
+        "target": "Chroma-eMTbF",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œChroma-eMTbFœ, œinputTypesœ: [œDataœ, œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Chroma",
-            "id": "Chroma-e3Qmg",
+            "id": "Chroma-IkIQx",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -45,19 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "OpenDsStarAgent-diy3H",
+            "id": "OpenDsStarAgent-CYVYX",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Chroma-e3Qmg{œdataTypeœ:œChromaœ,œidœ:œChroma-e3Qmgœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-diy3H{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-diy3Hœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Chroma-IkIQx{œdataTypeœ:œChromaœ,œidœ:œChroma-IkIQxœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-CYVYX{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-CYVYXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Chroma-e3Qmg",
-        "sourceHandle": "{œdataTypeœ: œChromaœ, œidœ: œChroma-e3Qmgœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "OpenDsStarAgent-diy3H",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-diy3Hœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "Chroma-IkIQx",
+        "sourceHandle": "{œdataTypeœ: œChromaœ, œidœ: œChroma-IkIQxœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "OpenDsStarAgent-CYVYX",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-CYVYXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-AVUXl",
+            "id": "ChatInput-zSTGd",
             "name": "message",
             "output_types": [
               "Message"
@@ -73,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenDsStarAgent-diy3H",
+            "id": "OpenDsStarAgent-CYVYX",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-AVUXl{œdataTypeœ:œChatInputœ,œidœ:œChatInput-AVUXlœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenDsStarAgent-diy3H{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-diy3Hœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-zSTGd{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zSTGdœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenDsStarAgent-CYVYX{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-CYVYXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-AVUXl",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-AVUXlœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenDsStarAgent-diy3H",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenDsStarAgent-diy3Hœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-zSTGd",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-zSTGdœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenDsStarAgent-CYVYX",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenDsStarAgent-CYVYXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenDsStarAgent",
-            "id": "OpenDsStarAgent-diy3H",
+            "id": "OpenDsStarAgent-CYVYX",
             "name": "response",
             "output_types": [
               "Message"
@@ -101,7 +101,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-JKfIb",
+            "id": "ChatOutput-JmTk1",
             "inputTypes": [
               "Data",
               "JSON",
@@ -112,12 +112,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenDsStarAgent-diy3H{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-diy3Hœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JKfIb{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JKfIbœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenDsStarAgent-CYVYX{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-CYVYXœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JmTk1{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JmTk1œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenDsStarAgent-diy3H",
-        "sourceHandle": "{œdataTypeœ: œOpenDsStarAgentœ, œidœ: œOpenDsStarAgent-diy3Hœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-JKfIb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JKfIbœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "OpenDsStarAgent-CYVYX",
+        "sourceHandle": "{œdataTypeœ: œOpenDsStarAgentœ, œidœ: œOpenDsStarAgent-CYVYXœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-JmTk1",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JmTk1œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -125,7 +125,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileContentRetriever",
-            "id": "FileContentRetriever-xvvaL",
+            "id": "FileContentRetriever-Yhfgz",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -133,19 +133,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "OpenDsStarAgent-diy3H",
+            "id": "OpenDsStarAgent-CYVYX",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileContentRetriever-xvvaL{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-xvvaLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-diy3H{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-diy3Hœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileContentRetriever-Yhfgz{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-Yhfgzœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-CYVYX{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-CYVYXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileContentRetriever-xvvaL",
-        "sourceHandle": "{œdataTypeœ: œFileContentRetrieverœ, œidœ: œFileContentRetriever-xvvaLœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "OpenDsStarAgent-diy3H",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-diy3Hœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "FileContentRetriever-Yhfgz",
+        "sourceHandle": "{œdataTypeœ: œFileContentRetrieverœ, œidœ: œFileContentRetriever-Yhfgzœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "OpenDsStarAgent-CYVYX",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-CYVYXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -153,7 +153,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Chroma",
-            "id": "Chroma-eSDtr",
+            "id": "Chroma-eMTbF",
             "name": "search_results",
             "output_types": [
               "JSON"
@@ -161,7 +161,7 @@
           },
           "targetHandle": {
             "fieldName": "inputs",
-            "id": "MergeFlows-FmEAa",
+            "id": "MergeFlows-TfkV5",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -173,12 +173,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Chroma-eSDtr{œdataTypeœ:œChromaœ,œidœ:œChroma-eSDtrœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}-MergeFlows-FmEAa{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-FmEAaœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Chroma-eMTbF{œdataTypeœ:œChromaœ,œidœ:œChroma-eMTbFœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}-MergeFlows-TfkV5{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-TfkV5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Chroma-eSDtr",
-        "sourceHandle": "{œdataTypeœ: œChromaœ, œidœ: œChroma-eSDtrœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œJSONœ]}",
-        "target": "MergeFlows-FmEAa",
-        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œMergeFlows-FmEAaœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ, œToolœ, œJSONœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "Chroma-eMTbF",
+        "sourceHandle": "{œdataTypeœ: œChromaœ, œidœ: œChroma-eMTbFœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œJSONœ]}",
+        "target": "MergeFlows-TfkV5",
+        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œMergeFlows-TfkV5œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ, œToolœ, œJSONœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -186,7 +186,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileContentRetriever",
-            "id": "FileContentRetriever-8adbK",
+            "id": "FileContentRetriever-353E9",
             "name": "content",
             "output_types": [
               "Message"
@@ -194,7 +194,7 @@
           },
           "targetHandle": {
             "fieldName": "inputs",
-            "id": "MergeFlows-FmEAa",
+            "id": "MergeFlows-TfkV5",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -206,12 +206,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileContentRetriever-8adbK{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-8adbKœ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}-MergeFlows-FmEAa{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-FmEAaœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileContentRetriever-353E9{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-353E9œ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}-MergeFlows-TfkV5{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-TfkV5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileContentRetriever-8adbK",
-        "sourceHandle": "{œdataTypeœ: œFileContentRetrieverœ, œidœ: œFileContentRetriever-8adbKœ, œnameœ: œcontentœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "MergeFlows-FmEAa",
-        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œMergeFlows-FmEAaœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ, œToolœ, œJSONœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "FileContentRetriever-353E9",
+        "sourceHandle": "{œdataTypeœ: œFileContentRetrieverœ, œidœ: œFileContentRetriever-353E9œ, œnameœ: œcontentœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "MergeFlows-TfkV5",
+        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œMergeFlows-TfkV5œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ, œToolœ, œJSONœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -219,7 +219,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaModel",
-            "id": "OllamaModel-ufg6D",
+            "id": "OllamaModel-7LbmX",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -227,19 +227,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "FileDescriptionGeneratorComponent-KlX5t",
+            "id": "FileDescriptionGeneratorComponent-oTrJn",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaModel-ufg6D{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-ufg6Dœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-FileDescriptionGeneratorComponent-KlX5t{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-KlX5tœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaModel-7LbmX{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-7LbmXœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-FileDescriptionGeneratorComponent-oTrJn{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-oTrJnœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaModel-ufg6D",
-        "sourceHandle": "{œdataTypeœ: œOllamaModelœ, œidœ: œOllamaModel-ufg6Dœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "FileDescriptionGeneratorComponent-KlX5t",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œFileDescriptionGeneratorComponent-KlX5tœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OllamaModel-7LbmX",
+        "sourceHandle": "{œdataTypeœ: œOllamaModelœ, œidœ: œOllamaModel-7LbmXœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "FileDescriptionGeneratorComponent-oTrJn",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œFileDescriptionGeneratorComponent-oTrJnœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -247,7 +247,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaModel",
-            "id": "OllamaModel-ufg6D",
+            "id": "OllamaModel-7LbmX",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -255,19 +255,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "OpenDsStarAgent-diy3H",
+            "id": "OpenDsStarAgent-CYVYX",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaModel-ufg6D{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-ufg6Dœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-OpenDsStarAgent-diy3H{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-diy3Hœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaModel-7LbmX{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-7LbmXœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-OpenDsStarAgent-CYVYX{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-CYVYXœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaModel-ufg6D",
-        "sourceHandle": "{œdataTypeœ: œOllamaModelœ, œidœ: œOllamaModel-ufg6Dœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "OpenDsStarAgent-diy3H",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œOpenDsStarAgent-diy3Hœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OllamaModel-7LbmX",
+        "sourceHandle": "{œdataTypeœ: œOllamaModelœ, œidœ: œOllamaModel-7LbmXœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "OpenDsStarAgent-CYVYX",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œOpenDsStarAgent-CYVYXœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -275,7 +275,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaEmbeddings",
-            "id": "OllamaEmbeddings-IWEAn",
+            "id": "OllamaEmbeddings-zAbkk",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -283,19 +283,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "Chroma-eSDtr",
+            "id": "Chroma-eMTbF",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaEmbeddings-IWEAn{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-IWEAnœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-eSDtr{œfieldNameœ:œembeddingœ,œidœ:œChroma-eSDtrœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaEmbeddings-zAbkk{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-zAbkkœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-eMTbF{œfieldNameœ:œembeddingœ,œidœ:œChroma-eMTbFœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaEmbeddings-IWEAn",
-        "sourceHandle": "{œdataTypeœ: œOllamaEmbeddingsœ, œidœ: œOllamaEmbeddings-IWEAnœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "Chroma-eSDtr",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œChroma-eSDtrœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OllamaEmbeddings-zAbkk",
+        "sourceHandle": "{œdataTypeœ: œOllamaEmbeddingsœ, œidœ: œOllamaEmbeddings-zAbkkœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "Chroma-eMTbF",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œChroma-eMTbFœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -303,7 +303,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaEmbeddings",
-            "id": "OllamaEmbeddings-IWEAn",
+            "id": "OllamaEmbeddings-zAbkk",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -311,19 +311,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "Chroma-e3Qmg",
+            "id": "Chroma-IkIQx",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaEmbeddings-IWEAn{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-IWEAnœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-e3Qmg{œfieldNameœ:œembeddingœ,œidœ:œChroma-e3Qmgœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaEmbeddings-zAbkk{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-zAbkkœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-IkIQx{œfieldNameœ:œembeddingœ,œidœ:œChroma-IkIQxœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaEmbeddings-IWEAn",
-        "sourceHandle": "{œdataTypeœ: œOllamaEmbeddingsœ, œidœ: œOllamaEmbeddings-IWEAnœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "Chroma-e3Qmg",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œChroma-e3Qmgœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OllamaEmbeddings-zAbkk",
+        "sourceHandle": "{œdataTypeœ: œOllamaEmbeddingsœ, œidœ: œOllamaEmbeddings-zAbkkœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "Chroma-IkIQx",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œChroma-IkIQxœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -331,7 +331,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-YFbyd",
+            "id": "File-jKAIS",
             "name": "message",
             "output_types": [
               "Message"
@@ -339,7 +339,7 @@
           },
           "targetHandle": {
             "fieldName": "file_data",
-            "id": "FileDescriptionGeneratorComponent-KlX5t",
+            "id": "FileDescriptionGeneratorComponent-oTrJn",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -348,12 +348,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-YFbyd{œdataTypeœ:œFileœ,œidœ:œFile-YFbydœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileDescriptionGeneratorComponent-KlX5t{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-KlX5tœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-jKAIS{œdataTypeœ:œFileœ,œidœ:œFile-jKAISœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileDescriptionGeneratorComponent-oTrJn{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-oTrJnœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-YFbyd",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-YFbydœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "FileDescriptionGeneratorComponent-KlX5t",
-        "targetHandle": "{œfieldNameœ: œfile_dataœ, œidœ: œFileDescriptionGeneratorComponent-KlX5tœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "File-jKAIS",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-jKAISœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "FileDescriptionGeneratorComponent-oTrJn",
+        "targetHandle": "{œfieldNameœ: œfile_dataœ, œidœ: œFileDescriptionGeneratorComponent-oTrJnœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -361,7 +361,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-YFbyd",
+            "id": "File-jKAIS",
             "name": "message",
             "output_types": [
               "Message"
@@ -369,7 +369,7 @@
           },
           "targetHandle": {
             "fieldName": "file_data",
-            "id": "FileContentRetriever-8adbK",
+            "id": "FileContentRetriever-353E9",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -378,19 +378,20 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-YFbyd{œdataTypeœ:œFileœ,œidœ:œFile-YFbydœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileContentRetriever-8adbK{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-8adbKœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-jKAIS{œdataTypeœ:œFileœ,œidœ:œFile-jKAISœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileContentRetriever-353E9{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-353E9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-YFbyd",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-YFbydœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "FileContentRetriever-8adbK",
-        "targetHandle": "{œfieldNameœ: œfile_dataœ, œidœ: œFileContentRetriever-8adbKœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "File-jKAIS",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-jKAISœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "FileContentRetriever-353E9",
+        "targetHandle": "{œfieldNameœ: œfile_dataœ, œidœ: œFileContentRetriever-353E9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "SaveToFile",
-            "id": "SaveToFile-bKzdF",
+            "id": "SaveToFile-9FQfI",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -398,25 +399,25 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "OpenDsStarAgent-diy3H",
+            "id": "OpenDsStarAgent-CYVYX",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__SaveToFile-bKzdF{œdataTypeœ:œSaveToFileœ,œidœ:œSaveToFile-bKzdFœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-diy3H{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-diy3Hœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-SaveToFile-9FQfI{œdataTypeœ:œSaveToFileœ,œidœ:œSaveToFile-9FQfIœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-CYVYX{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-CYVYXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "SaveToFile-bKzdF",
-        "sourceHandle": "{œdataTypeœ: œSaveToFileœ, œidœ: œSaveToFile-bKzdFœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "OpenDsStarAgent-diy3H",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-diy3Hœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "SaveToFile-9FQfI",
+        "sourceHandle": "{œdataTypeœ: œSaveToFileœ, œidœ: œSaveToFile-9FQfIœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "OpenDsStarAgent-CYVYX",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-CYVYXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "OpenDsStarAgent-diy3H",
+          "id": "OpenDsStarAgent-CYVYX",
           "node": {
             "base_classes": [
               "Message",
@@ -800,7 +801,7 @@
           "type": "OpenDsStarAgent"
         },
         "dragging": false,
-        "id": "OpenDsStarAgent-diy3H",
+        "id": "OpenDsStarAgent-CYVYX",
         "measured": {
           "height": 311,
           "width": 320
@@ -814,7 +815,7 @@
       },
       {
         "data": {
-          "id": "FileDescriptionGeneratorComponent-KlX5t",
+          "id": "FileDescriptionGeneratorComponent-oTrJn",
           "node": {
             "base_classes": [
               "JSON"
@@ -950,7 +951,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "ibm-granite/granite-embedding-english-r2"
+                "value": ""
               },
               "file_data": {
                 "_input_type": "HandleInput",
@@ -1025,7 +1026,7 @@
           "type": "FileDescriptionGeneratorComponent"
         },
         "dragging": false,
-        "id": "FileDescriptionGeneratorComponent-KlX5t",
+        "id": "FileDescriptionGeneratorComponent-oTrJn",
         "measured": {
           "height": 245,
           "width": 320
@@ -1039,7 +1040,7 @@
       },
       {
         "data": {
-          "id": "File-YFbyd",
+          "id": "File-jKAIS",
           "node": {
             "base_classes": [
               "Message"
@@ -1080,7 +1081,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-04-20T07:47:59.723Z",
+            "last_updated": "2026-06-26T12:13:07.091Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -1756,7 +1757,7 @@
           "type": "File"
         },
         "dragging": false,
-        "id": "File-YFbyd",
+        "id": "File-jKAIS",
         "measured": {
           "height": 276,
           "width": 320
@@ -1770,7 +1771,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-AVUXl",
+          "id": "ChatInput-zSTGd",
           "node": {
             "base_classes": [
               "Message"
@@ -2051,7 +2052,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-AVUXl",
+        "id": "ChatInput-zSTGd",
         "measured": {
           "height": 52,
           "width": 192
@@ -2065,7 +2066,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-JKfIb",
+          "id": "ChatOutput-JmTk1",
           "node": {
             "base_classes": [
               "Message"
@@ -2352,7 +2353,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-JKfIb",
+        "id": "ChatOutput-JmTk1",
         "measured": {
           "height": 52,
           "width": 192
@@ -2366,21 +2367,21 @@
       },
       {
         "data": {
-          "id": "note-DsHst",
+          "id": "note-qnCin",
           "node": {
             "description": "# Ingestion Pipeline",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.3446a14b",
             "template": {
-              "backgroundColor": "lime"
+              "backgroundColor": "neutral"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 949,
-        "id": "note-DsHst",
+        "id": "note-qnCin",
         "measured": {
           "height": 949,
           "width": 1357
@@ -2396,28 +2397,28 @@
       },
       {
         "data": {
-          "id": "note-5faev",
+          "id": "note-9ftWr",
           "node": {
             "description": "# Agent Inference",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.7b7d9bd3",
             "template": {
-              "backgroundColor": "blue"
+              "backgroundColor": "neutral"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 1152,
-        "id": "note-5faev",
+        "id": "note-9ftWr",
         "measured": {
           "height": 1152,
           "width": 1362
         },
         "position": {
-          "x": -1095.5537981537923,
-          "y": -1708.5035516553303
+          "x": -1103.3619301614613,
+          "y": -1696.7913536438268
         },
         "resizing": false,
         "selected": false,
@@ -2426,21 +2427,21 @@
       },
       {
         "data": {
-          "id": "note-Qe7Hw",
+          "id": "note-FkADH",
           "node": {
             "description": "## About OpenDsStar and structured data analysis\n\n**OpenDsStar — Structured Data Agent 📚**\n\n[OpenDsStar](https://github.com/IBM/OpenDsStar) is an open-source implementation of the [DS-Star](https://arxiv.org/abs/2509.21825) agent. It keeps the core DS-Star workflow of planning, code generation, execution, debugging, and verification, while using a more practical tool-centric architecture that improves modularity, extensibility, and execution efficiency.\n\nThis Langflow template applies OpenDsStar to **structured data analysis** over tabular datasets such as **CSV, Excel, Parquet, JSON, and TSV**. It enables natural-language exploration, retrieval, and reasoning over uploaded structured data.\n",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.92198b6b",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 340,
-        "id": "note-Qe7Hw",
+        "id": "note-FkADH",
         "measured": {
           "height": 340,
           "width": 898
@@ -2456,21 +2457,21 @@
       },
       {
         "data": {
-          "id": "note-mVdEY",
+          "id": "note-c9x8h",
           "node": {
             "description": "# Models",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.a04f95c8",
             "template": {
-              "backgroundColor": "rose"
+              "backgroundColor": "neutral"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 1018,
-        "id": "note-mVdEY",
+        "id": "note-c9x8h",
         "measured": {
           "height": 1018,
           "width": 421
@@ -2486,28 +2487,28 @@
       },
       {
         "data": {
-          "id": "note-udjse",
+          "id": "note-t6CBQ",
           "node": {
             "description": "# Data",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.9dae882d",
             "template": {
-              "backgroundColor": "amber"
+              "backgroundColor": "neutral"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 479,
-        "id": "note-udjse",
+        "id": "note-t6CBQ",
         "measured": {
           "height": 479,
           "width": 410
         },
         "position": {
-          "x": -1657.8978983511809,
-          "y": -2699.247589674194
+          "x": -1685.8095137354312,
+          "y": -2730.39698285083
         },
         "resizing": false,
         "selected": false,
@@ -2516,7 +2517,7 @@
       },
       {
         "data": {
-          "id": "Chroma-eSDtr",
+          "id": "Chroma-eMTbF",
           "node": {
             "base_classes": [
               "JSON",
@@ -2734,7 +2735,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "bool",
-                "value": false
+                "value": "False"
               },
               "code": {
                 "advanced": true,
@@ -2962,7 +2963,7 @@
           "type": "Chroma"
         },
         "dragging": false,
-        "id": "Chroma-eSDtr",
+        "id": "Chroma-eMTbF",
         "measured": {
           "height": 459,
           "width": 320
@@ -2976,7 +2977,7 @@
       },
       {
         "data": {
-          "id": "Chroma-e3Qmg",
+          "id": "Chroma-IkIQx",
           "node": {
             "base_classes": [
               "JSON",
@@ -3008,7 +3009,7 @@
             ],
             "frozen": false,
             "icon": "Chroma",
-            "last_updated": "2026-04-20T07:47:59.724Z",
+            "last_updated": "2026-06-26T12:13:06.969Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -3185,7 +3186,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "bool",
-                "value": false
+                "value": "False"
               },
               "code": {
                 "advanced": true,
@@ -3453,8 +3454,8 @@
                         "type": "string"
                       }
                     },
-                    "description": "Performs semantic similarity search in the vector store to find relevant documents/files and returns results as a pandas DataFrame. Input: A natural language search query (str). Returns: A DataFrame with columns from the matched documents' metadata and content. The 'text' column always contains document content. Other columns depend on indexed metadata. IMPORTANT: Check available columns with df.columns before accessing specific fields. Common metadata columns include: 'file_path', 'source', 'page', etc. Use standard pandas operations (.shape, .columns, .head(), etc.) on the result.",
-                    "display_description": "Performs semantic similarity search in the vector store to find relevant documents/files and returns results as a pandas DataFrame. Input: A natural language search query (str). Returns: A DataFrame with columns from the matched documents' metadata and content. The 'text' column always contains document content. Other columns depend on indexed metadata. IMPORTANT: Check available columns with df.columns before accessing specific fields. Common metadata columns include: 'file_path', 'source', 'page', etc. Use standard pandas operations (.shape, .columns, .head(), etc.) on the result.",
+                    "description": "Chroma Vector Store with search capabilities",
+                    "display_description": "Chroma Vector Store with search capabilities",
                     "display_name": "as_dataframe",
                     "name": "as_dataframe",
                     "readonly": false,
@@ -3473,9 +3474,9 @@
           "type": "Chroma"
         },
         "dragging": false,
-        "id": "Chroma-e3Qmg",
+        "id": "Chroma-IkIQx",
         "measured": {
-          "height": 457,
+          "height": 463,
           "width": 320
         },
         "position": {
@@ -3487,7 +3488,7 @@
       },
       {
         "data": {
-          "id": "FileContentRetriever-8adbK",
+          "id": "FileContentRetriever-353E9",
           "node": {
             "base_classes": [
               "Message",
@@ -3657,7 +3658,7 @@
           "type": "FileContentRetriever"
         },
         "dragging": false,
-        "id": "FileContentRetriever-8adbK",
+        "id": "FileContentRetriever-353E9",
         "measured": {
           "height": 365,
           "width": 320
@@ -3671,7 +3672,7 @@
       },
       {
         "data": {
-          "id": "FileContentRetriever-xvvaL",
+          "id": "FileContentRetriever-Yhfgz",
           "node": {
             "base_classes": [
               "Message",
@@ -3691,7 +3692,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-04-20T07:47:59.725Z",
+            "last_updated": "2026-06-26T12:13:06.970Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -3892,9 +3893,9 @@
           "type": "FileContentRetriever"
         },
         "dragging": false,
-        "id": "FileContentRetriever-xvvaL",
+        "id": "FileContentRetriever-Yhfgz",
         "measured": {
-          "height": 391,
+          "height": 397,
           "width": 320
         },
         "position": {
@@ -3906,7 +3907,7 @@
       },
       {
         "data": {
-          "id": "MergeFlows-FmEAa",
+          "id": "MergeFlows-TfkV5",
           "node": {
             "base_classes": [
               "Message"
@@ -4011,7 +4012,7 @@
           "type": "MergeFlows"
         },
         "dragging": false,
-        "id": "MergeFlows-FmEAa",
+        "id": "MergeFlows-TfkV5",
         "measured": {
           "height": 185,
           "width": 320
@@ -4025,7 +4026,7 @@
       },
       {
         "data": {
-          "id": "OllamaModel-ufg6D",
+          "id": "OllamaModel-7LbmX",
           "node": {
             "base_classes": [
               "JSON",
@@ -4072,9 +4073,7 @@
             ],
             "frozen": false,
             "icon": "Ollama",
-            "last_updated": "2026-04-20T07:47:59.727Z",
             "legacy": false,
-            "lf_version": "1.8.1",
             "metadata": {
               "code_hash": "6659bea0701d",
               "dependencies": {
@@ -4873,7 +4872,7 @@
           "type": "OllamaModel"
         },
         "dragging": false,
-        "id": "OllamaModel-ufg6D",
+        "id": "OllamaModel-7LbmX",
         "measured": {
           "height": 538,
           "width": 320
@@ -4887,7 +4886,7 @@
       },
       {
         "data": {
-          "id": "OllamaEmbeddings-IWEAn",
+          "id": "OllamaEmbeddings-zAbkk",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -4906,9 +4905,7 @@
             ],
             "frozen": false,
             "icon": "Ollama",
-            "last_updated": "2026-04-20T07:47:59.728Z",
             "legacy": false,
-            "lf_version": "1.8.1",
             "metadata": {
               "code_hash": "9ba9e798bf19",
               "dependencies": {
@@ -5026,6 +5023,7 @@
                 "dynamic": false,
                 "external_options": {},
                 "info": "",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [],
                 "options_metadata": [],
@@ -5041,7 +5039,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": "granite-embedding:latest"
+                "value": ""
               }
             },
             "tool_mode": false
@@ -5050,7 +5048,7 @@
           "type": "OllamaEmbeddings"
         },
         "dragging": false,
-        "id": "OllamaEmbeddings-IWEAn",
+        "id": "OllamaEmbeddings-zAbkk",
         "measured": {
           "height": 289,
           "width": 320
@@ -5064,21 +5062,21 @@
       },
       {
         "data": {
-          "id": "note-G4CUO",
+          "id": "note-xPy9b",
           "node": {
             "description": "## How the flow works\n\nThis flow is organized into four color-coded sections:\n\n**Data (Yellow)**  \nUpload one or more structured data files that you want the agent to analyze.\n\n**Models (Pink)**  \nConfigure a language model for reasoning and description generation, and an embedding model for indexing and retrieval.\n\n**Ingestion Pipeline (Green)**  \nThe ingestion flow reads uploaded files, generates semantic descriptions for them, stores those descriptions in a vector database, and prepares file retrieval data for later use.\n\n**Agent Inference (Blue)**  \nDuring chat, the OpenDsStar agent reuses the ingested vector data and file retrieval data through tools. It searches for relevant files, retrieves their contents when needed, reasons over the data, and returns an answer.\n\nIn short: **upload files → ingest and index them → reuse the ingested data at query time → analyze and answer**\n",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.19ed76ef",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 652,
-        "id": "note-G4CUO",
+        "id": "note-xPy9b",
         "measured": {
           "height": 652,
           "width": 901
@@ -5094,21 +5092,21 @@
       },
       {
         "data": {
-          "id": "note-xrAfT",
+          "id": "note-v8fAB",
           "node": {
             "description": "## Setup\n\n**Configure the models**  \nSet a language model and an embedding model in the **Models** section.\n\n**Configure persistent storage correctly**  \nThis flow uses both the **Vector Store** and the **File Content Retriever** twice:\n- once in the **Ingestion Pipeline**\n- again in **Agent Inference**, where they are used as tools over the ingested data\n\nSet the directories as follows:\n- both **Vector Store** components should use the **same Persistent Directory**\n- both **File Content Retriever** components should use the **same Persistent Directory**\n- the **Vector Store** directory and the **File Content Retriever** directory should be **different**\n\nThis allows the ingestion and inference stages to share the same stored vector data and file retrieval data, while keeping those two storage layers separate.",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.15d8f11d",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 633,
-        "id": "note-xrAfT",
+        "id": "note-v8fAB",
         "measured": {
           "height": 633,
           "width": 896
@@ -5124,21 +5122,21 @@
       },
       {
         "data": {
-          "id": "note-l9vuw",
+          "id": "note-JgV9B",
           "node": {
             "description": "## How to run it\n\n**Upload your files**  \nAdd one or more structured data files in the **Data** section.\n\n**Run the ingestion pipeline**  \nExecute the ingestion flow so each file is processed, described, and indexed.\n\n**Open the chat / playground**  \nStart the agent flow and ask questions in plain English.\n\n**Analyze your data**  \nThe agent will use the ingested vector store and file retrieval tools to find relevant files, access their contents, and answer based on the uploaded data.\n",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.0eba650b",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 429,
-        "id": "note-l9vuw",
+        "id": "note-JgV9B",
         "measured": {
           "height": 429,
           "width": 895
@@ -5154,21 +5152,21 @@
       },
       {
         "data": {
-          "id": "note-2Di5A",
+          "id": "note-QqpFM",
           "node": {
             "description": "## Notes\n\n- The **Write File** tool is also included, allowing the agent to create structured output files such as **CSV, Excel, or JSON** with analysis results.  \n  (e.g. *Create a CSV with all Airbnb listings in NYC that cost less than 300 USD per night.*)\n- Using the **Write File** tool, code agents can also save plots as **HTML** files when requested.  \n  (e.g. *Create a plot of house price vs. review score for all Airbnb listings in the Upper East Side, and save it as an HTML file.*)",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.338d3972",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 251,
-        "id": "note-2Di5A",
+        "id": "note-QqpFM",
         "measured": {
           "height": 251,
           "width": 895
@@ -5184,7 +5182,7 @@
       },
       {
         "data": {
-          "id": "SaveToFile-bKzdF",
+          "id": "SaveToFile-9FQfI",
           "node": {
             "base_classes": [
               "Message"
@@ -5215,7 +5213,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-04-20T07:48:20.704Z",
+            "last_updated": "2026-06-26T12:13:06.974Z",
             "legacy": false,
             "metadata": {
               "code_hash": "2897652b1a16",
@@ -5730,9 +5728,9 @@
           "type": "SaveToFile"
         },
         "dragging": false,
-        "id": "SaveToFile-bKzdF",
+        "id": "SaveToFile-9FQfI",
         "measured": {
-          "height": 360,
+          "height": 366,
           "width": 320
         },
         "position": {
@@ -5744,16 +5742,16 @@
       }
     ],
     "viewport": {
-      "x": 2446.8013029446956,
-      "y": 1039.768883065371,
-      "zoom": 0.8299651427607107
+      "x": 869.4771349310664,
+      "y": 991.3086766369322,
+      "zoom": 0.37308739340651753
     }
   },
   "description": "A complete workflow for structured data analysis using the OpenDsStar agent. OpenDsStar is an open-source implementation of the DS-Star agent, with several deliberate design enhancements, and can be used effectively for structured data analysis tasks",
   "endpoint_name": null,
-  "id": "fa740253-a012-4c25-8e8e-cf9985d8a785",
+  "id": "d7d2d5cd-e195-4328-ac1a-b8e7dbf03c9d",
   "is_component": false,
-  "last_tested_version": "1.9.0",
+  "last_tested_version": "1.10.1",
   "locked": false,
   "name": "Structured Data Analysis Agent",
   "tags": [
