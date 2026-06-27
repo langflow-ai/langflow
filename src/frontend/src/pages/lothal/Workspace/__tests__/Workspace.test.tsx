@@ -295,6 +295,24 @@ describe("Lothal Workspace", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("does not offer Approve in ARCHITECTURE until a diagram exists", () => {
+    // First ARCHITECTURE turn: generation hasn't produced a diagram yet, so the
+    // Approve CTA stays hidden (offering it would just earn a 409).
+    mockUseProject.mockReturnValue({
+      data: { ...project, phase: "ARCHITECTURE" },
+      isLoading: false,
+    });
+    mockUseDiagram.mockReturnValue({
+      data: { d2: null, svg: null },
+      isLoading: false,
+      isError: false,
+    });
+    render(<Workspace />);
+    expect(
+      screen.queryByRole("button", { name: "Approve & generate code" }),
+    ).not.toBeInTheDocument();
+  });
+
   // --- Code surface (right pane in code phases) ---
 
   it("shows the canvas (not code) while still in a diagram phase", () => {

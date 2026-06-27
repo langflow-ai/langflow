@@ -11,7 +11,6 @@ Alembic's ``Operations`` context so the migration's ``op.get_bind()`` /
 from __future__ import annotations
 
 import importlib.util
-import json
 from pathlib import Path
 
 import sqlalchemy as sa
@@ -99,19 +98,25 @@ def test_artifacts_map_round_trips():
         with Operations.context(MigrationContext.configure(conn)):
             migration.upgrade()
 
+        # Go through a typed `sa.JSON()` column so the round-trip exercises the
+        # same bind/result conversion the ORM's `Column(JSON)` field relies on —
+        # a native dict in, a native dict out — not just raw string storage.
+        artifacts = sa.table(
+            "lothal_project",
+            sa.column("id", sa.Text()),
+            sa.column("artifacts", sa.JSON()),
+        )
         artifact_map = {
             "adr.md": "# Architecture Decision Record\n...",
             "diagrams/context.d2": "direction: right\nuser: User {shape: person}",
             "diagrams/sequence.d2": "shape: sequence_diagram\nuser: User",
         }
-        conn.execute(
-            sa.text("UPDATE lothal_project SET artifacts = :a WHERE id = 'p_gen'"),
-            {"a": json.dumps(artifact_map)},
-        )
-        stored = conn.execute(sa.text("SELECT artifacts FROM lothal_project WHERE id = 'p_gen'")).scalar()
-        assert json.loads(stored) == artifact_map
+        conn.execute(sa.update(artifacts).where(artifacts.c.id == "p_gen").values(artifacts=artifact_map))
+        stored = conn.execute(sa.select(artifacts.c.artifacts).where(artifacts.c.id == "p_gen")).scalar()
+        # The JSON column deserialises back to the original dict, not a string.
+        assert stored == artifact_map
         # Rows with no artifacts stay NULL (no backfill).
-        assert conn.execute(sa.text("SELECT artifacts FROM lothal_project WHERE id = 'p_ref'")).scalar() is None
+        assert conn.execute(sa.select(artifacts.c.artifacts).where(artifacts.c.id == "p_ref")).scalar() is None
 
 
 def test_upgrade_is_idempotent():

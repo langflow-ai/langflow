@@ -22,6 +22,7 @@ import {
   type Project,
   useApproveDiagram,
   useCode,
+  useDiagram,
   useMessages,
   useProject,
   useSendMessage,
@@ -350,11 +351,12 @@ function CodePanel({ project }: { project: Project }) {
 // --- Diagram pane (canvas + approve) -----------------------------------------
 
 // The right pane while shaping the diagram: the live <CanvasSurface>, plus — in
-// the ARCHITECTURE stage — an Approve action (Epic D.11; phase merged in E.2).
-// Approving advances the project to CODE_GENERATION on the server; the project
-// query then invalidates, the phase flips, and the parent swaps this pane for
-// <CodePanel>. The backend rejects an approve outside ARCHITECTURE with a 409
-// (and one with no diagram yet), so the button is only offered there.
+// the ARCHITECTURE stage, once a diagram exists — an Approve action (Epic D.11;
+// phase merged in E.2). Approving advances the project to CODE_GENERATION on the
+// server; the project query then invalidates, the phase flips, and the parent
+// swaps this pane for <CodePanel>. The button is gated on both the phase and a
+// loaded diagram so it isn't offered before generation has produced one — the
+// backend rejects an approve outside ARCHITECTURE (or with no diagram) with a 409.
 function DiagramPane({
   project,
   composerRef,
@@ -369,7 +371,13 @@ function DiagramPane({
   // otherwise a quick second click hits the server (now CODE_GENERATION) and
   // 409s, flashing a spurious failure after a success.
   const [approved, setApproved] = useState(false);
-  const canApprove = project.phase === "ARCHITECTURE";
+  // Only fetch the diagram once the architecture stage is live (it's phase-gated
+  // before then); the query key is shared with <CanvasSurface> so this dedupes.
+  const isArchitecture = project.phase === "ARCHITECTURE";
+  const { data: diagram } = useDiagram(project.id, isArchitecture);
+  // Approve only when there's actually a diagram to approve — offering it before
+  // generation has produced one would just earn a 409 from the backend.
+  const canApprove = isArchitecture && Boolean(diagram?.d2);
 
   // Clear the latched approve state when the workspace switches projects, so a
   // new project's button isn't left disabled by the previous one's success.
