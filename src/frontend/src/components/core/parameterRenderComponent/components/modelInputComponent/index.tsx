@@ -8,7 +8,6 @@ import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-m
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
-import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
@@ -51,7 +50,6 @@ export default function ModelInputComponent({
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t("model.setupProvider");
-  const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [openManageProvidersDialog, setOpenManageProvidersDialog] =
@@ -60,6 +58,9 @@ export default function ModelInputComponent({
   const [refreshOptions, setRefreshOptions] = useState(false);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const buildInfo = useFlowStore((state) => state.buildInfo);
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
+  );
   const showingBuildPanel =
     isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
@@ -661,7 +662,7 @@ export default function ModelInputComponent({
 
   const renderPopoverContent = () => {
     const PopoverContentInput =
-      editNode || inspectionPanel
+      editNode || inspectionPanel || inspectionPanelVisible
         ? PopoverContent
         : PopoverContentWithoutPortal;
     return (
