@@ -91,8 +91,11 @@ class DirectoryComponent(Component):
 
     def _resolve_directory_path(self, path: str) -> str:
         path = str(path or ".").strip()
-        windows_path = PureWindowsPath(path)
-        if "\x00" in path or windows_path.drive or self._has_parent_reference(path):
+        # Reject null bytes and parent references outright. A drive-absolute or UNC
+        # path (e.g. ``D:\\shared\\docs``) is NOT blanket-rejected here: canonicalization
+        # plus the ``_allowed_roots()`` containment check below decides whether it is
+        # allowed, so operator-configured roots on another drive remain reachable.
+        if "\x00" in path or self._has_parent_reference(path):
             msg = "Directory path escapes the allowed root."
             raise ValueError(msg)
 
