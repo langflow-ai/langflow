@@ -3,6 +3,7 @@ from pathlib import Path
 from langchain_community.vectorstores import FAISS
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from lfx.base.vectorstores.user_scoping import runtime_user_id, scoped_collection_name
 from lfx.helpers.data import docs_to_data
 from lfx.io import BoolInput, HandleInput, IntInput, StrInput
 from lfx.schema.data import Data
@@ -63,6 +64,17 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             return Path(self.resolve_path(self.persist_directory))
         return Path()
 
+    def get_scoped_index_name(self) -> str:
+        """Return the on-disk index name scoped to the runtime user.
+
+        FAISS persists to ``{persist_directory}/{index_name}.faiss`` with no user
+        component, so two users sharing a persist_directory and index_name would
+        read/write the same files. Scoping the index name by runtime user isolates
+        their on-disk artifacts. Falls back to the raw index name when there is no
+        runtime user.
+        """
+        return scoped_collection_name(self.index_name, runtime_user_id(self))
+
     @check_cached_vector_store
     def build_vector_store(self) -> FAISS:
         """Builds the FAISS object."""
@@ -80,13 +92,14 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         faiss = FAISS.from_documents(documents=documents, embedding=self.embedding)
-        faiss.save_local(str(path), self.index_name)
+        faiss.save_local(str(path), self.get_scoped_index_name())
         return faiss
 
     def search_documents(self) -> list[Data]:
         """Search for documents in the FAISS vector store."""
         path = self.get_persist_directory()
-        index_path = path / f"{self.index_name}.faiss"
+        index_name = self.get_scoped_index_name()
+        index_path = path / f"{index_name}.faiss"
 
         if not index_path.exists():
             vector_store = self.build_vector_store()
@@ -94,7 +107,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             vector_store = FAISS.load_local(
                 folder_path=str(path),
                 embeddings=self.embedding,
-                index_name=self.index_name,
+                index_name=index_name,
                 allow_dangerous_deserialization=self.allow_dangerous_deserialization,
             )
 
