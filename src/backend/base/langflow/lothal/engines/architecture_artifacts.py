@@ -98,7 +98,8 @@ Diagram-specific rules:
 - One labelled connection per relationship (`source -> target: what it does`), in the direction \
 the interaction flows.
 - Do NOT show internal components (services, databases) here — that is the container diagram.
-- At least two external participants (people and/or systems) around the application."""
+- Include every distinct human role and external/third-party system the PRD implies — no more, \
+no fewer. If the PRD only implies one external participant, show one; do not invent extras."""
 
 _CONTAINER_BODY = """\
 You are Lothal's solution architect. From the clarification conversation so far and the product \
@@ -131,7 +132,9 @@ nested box; give datastores `shape: cylinder`. Users and external systems stay o
 (`shape: person` / `shape: cloud`).
 - One labelled connection per significant interaction; note the protocol/intent in the label \
 (`REST/JSON`, `enqueue job`, `SQL`). Reference nested ids with the dotted path (`system.api`).
-- At least three internal containers; keep it to runtime building blocks, not code modules."""
+- Include the major runtime building blocks the PRD implies, even when that is fewer than three; \
+keep it to runtime building blocks, not code modules, and do not invent containers the spec does \
+not imply."""
 
 _DATA_MODEL_BODY = """\
 You are Lothal's data modeller. From the clarification conversation so far and the product spec \
@@ -161,7 +164,8 @@ key with `{constraint: primary_key}` and each foreign key with `{constraint: for
 (`orders.user_id -> users.id`); label it with the relationship if useful.
 - Model the data the PRD implies, not a fully normalised schema; keep columns to the ones that \
 matter.
-- At least two entities and at least one relationship between them."""
+- Include each persistent entity and relationship the PRD implies; if the design only needs one \
+entity or has no relationship, do not invent extra schema to fill the diagram."""
 
 _SEQUENCE_BODY = """\
 You are Lothal's diagram architect. From the clarification conversation so far and the product \

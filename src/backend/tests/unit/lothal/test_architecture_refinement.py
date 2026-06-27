@@ -185,16 +185,14 @@ async def test_explicit_diagram_target_is_edited(fake_diagram_llm):
     assert "user -> app: uses" in composed  # the current context source, not the sequence
 
 
-@pytest.mark.usefixtures("fake_diagram_llm")
-async def test_unknown_target_falls_back_to_sequence():
+async def test_unknown_explicit_target_raises():
+    """A stale/mistyped explicit target raises rather than silently editing the sequence diagram."""
     artifacts = _artifacts()
 
-    response = await refine_architecture(
-        [], "change it", prd=PRD, artifacts=artifacts, target_artifact="diagrams/does-not-exist.d2"
-    )
-
-    assert response.artifacts[SEQUENCE_PATH] == UPDATED_D2
-    assert response.diagram_d2 == UPDATED_D2
+    with pytest.raises(ValueError, match="Unknown architecture artifact"):
+        await refine_architecture(
+            [], "change it", prd=PRD, artifacts=artifacts, target_artifact="diagrams/does-not-exist.d2"
+        )
 
 
 # --- ADR target --------------------------------------------------------------

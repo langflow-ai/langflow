@@ -47,15 +47,19 @@ _ANCHOR_RE = re.compile(r"`([^`]+)`")
 
 
 def _resolve_target(target_artifact: str | None, artifacts: dict[str, str]) -> str:
-    """Pick the artifact to edit: the requested one if present, else the sequence diagram.
+    """Pick the artifact to edit: the requested one (which must exist), else the sequence diagram.
 
-    The sequence diagram is the default because it is what the single-diagram
-    canvas/read still shows (it mirrors `diagram_d2`), so a refine turn that
-    doesn't name a target (e.g. before the multi-diagram frontend lands, E.5)
-    edits the artifact the user is actually looking at. A requested target that
-    isn't in the map falls back the same way rather than erroring.
+    An *explicit* target must be a real key in the map — a stale or mistyped one
+    raises rather than silently editing a different artifact than the client
+    asked for (the chat endpoint rejects this up front with a 422; this is the
+    engine's own guard for direct callers). When no target is named (e.g. before
+    the multi-diagram frontend lands, E.5) it defaults to the sequence diagram —
+    what the single-diagram canvas/read still shows (it mirrors `diagram_d2`).
     """
-    if target_artifact and target_artifact in artifacts:
+    if target_artifact:
+        if target_artifact not in artifacts:
+            msg = f"Unknown architecture artifact: {target_artifact!r}"
+            raise ValueError(msg)
         return target_artifact
     if SEQUENCE_PATH in artifacts:
         return SEQUENCE_PATH

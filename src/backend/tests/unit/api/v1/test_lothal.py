@@ -971,6 +971,33 @@ async def test_refinement_contradiction_surfaces_as_warning_message(
         assert stored.diagram_d2 == _refined_d2()
 
 
+async def test_refine_unknown_artifact_target_is_422_and_no_op(client: AsyncClient, logged_in_headers: dict):
+    """An explicit `artifact` not in the map is rejected up front (422) and records no turn.
+
+    Epic E.3: a refine turn names the artifact it edits. A stale/mistyped target
+    must never silently retarget a different artifact — the endpoint 422s before
+    any work, so the conversation and artifact map are untouched.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+    seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "ARCHITECTURE"
+        project.artifacts = _seed_artifacts(seed_d2)
+        session.add(project)
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat",
+        json={"content": "edit it", "artifact": "diagrams/does-not-exist.d2"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    # No turn recorded — the guard runs before any message is stored.
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert messages == []
+
+
 # --- Diagram approve (Epic D.11) ----------------------------------------------
 
 

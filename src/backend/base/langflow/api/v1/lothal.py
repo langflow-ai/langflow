@@ -283,6 +283,16 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
             detail="This project's current phase has no conversation step.",
         )
 
+    # A refine turn may name which artifact it edits (Epic E.3). Reject an unknown
+    # explicit target up front (422) — never silently edit a different artifact
+    # than the client asked for. Skipped when no target is named or no artifact
+    # map exists yet (the generation turn), where the engine defaults sensibly.
+    if body.artifact and project.artifacts and body.artifact not in project.artifacts:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unknown artifact: {body.artifact!r}.",
+        )
+
     # Prior turns only — loaded before the new user message is added so the engine
     # sees the history that preceded this turn (it appends `content` itself).
     history = await _project_messages(session, project.id)
