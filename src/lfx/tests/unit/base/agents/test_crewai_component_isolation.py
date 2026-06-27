@@ -6,28 +6,7 @@ from dataclasses import dataclass, field
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from lfx.services import deps
-
-
-class FakeSettings:
-    fallback_to_env_var = False
-    lazy_load_components = False
-    use_noop_database = True
-    storage_type = "local"
-    ssrf_allowed_hosts = []
-    allow_custom_components = True
-
-    def update_settings(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-
-class FakeSettingsService:
-    def __init__(self):
-        self.settings = FakeSettings()
-
-
-deps.get_settings_service = lambda: FakeSettingsService()
+import pytest
 
 
 @dataclass
@@ -98,7 +77,12 @@ def _load_crewai_components():
     return hierarchical_module.HierarchicalCrewComponent, sequential_module.SequentialCrewComponent
 
 
-def test_sequential_build_crew_returns_fresh_agents_and_tasks():
+@pytest.fixture
+def crewai_settings(monkeypatch):
+    monkeypatch.setitem(sys.modules, "litellm", SimpleNamespace(exceptions=SimpleNamespace(BadRequestError=Exception)))
+
+
+def test_sequential_build_crew_returns_fresh_agents_and_tasks(crewai_settings):  # noqa: ARG001
     _, sequential_crew_component = _load_crewai_components()
     task_agent = FakeAgent(role="researcher", llm=None, tools=["tool-a"])
     task = FakeTask(description="answer", agent=task_agent)
@@ -128,7 +112,7 @@ def test_sequential_build_crew_returns_fresh_agents_and_tasks():
     assert crew_two.tasks[0].description == "answer"
 
 
-def test_hierarchical_build_crew_returns_fresh_manager_agent():
+def test_hierarchical_build_crew_returns_fresh_manager_agent(crewai_settings):  # noqa: ARG001
     hierarchical_crew_component, _ = _load_crewai_components()
     worker = FakeAgent(role="worker", llm=None, tools=["tool-a"])
     manager = FakeAgent(role="manager", llm=None, tools=["tool-b"])
