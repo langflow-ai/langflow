@@ -1,18 +1,14 @@
 from __future__ import annotations
 
+import importlib
 import sys
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from unittest.mock import patch
-
-sys.modules.setdefault("litellm", SimpleNamespace(exceptions=SimpleNamespace(BadRequestError=Exception)))
-
 from lfx.services import deps
 
+sys.modules.setdefault("litellm", SimpleNamespace(exceptions=SimpleNamespace(BadRequestError=Exception)))
 deps.get_settings_service = lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True))
-
-from lfx.components.crewai.hierarchical_crew import HierarchicalCrewComponent
-from lfx.components.crewai.sequential_crew import SequentialCrewComponent
 
 
 @dataclass
@@ -75,10 +71,19 @@ def _fake_crewai_module():
     )
 
 
+def _load_crewai_components():
+    sys.modules.setdefault("litellm", SimpleNamespace(exceptions=SimpleNamespace(BadRequestError=Exception)))
+
+    hierarchical_module = importlib.import_module("lfx.components.crewai.hierarchical_crew")
+    sequential_module = importlib.import_module("lfx.components.crewai.sequential_crew")
+    return hierarchical_module.HierarchicalCrewComponent, sequential_module.SequentialCrewComponent
+
+
 def test_sequential_build_crew_returns_fresh_agents_and_tasks():
+    _, sequential_crew_component = _load_crewai_components()
     task_agent = FakeAgent(role="researcher", llm=None, tools=["tool-a"])
     task = FakeTask(description="answer", agent=task_agent)
-    component = SequentialCrewComponent()
+    component = sequential_crew_component()
     component.tasks = [task]
     component.memory = True
     component.use_cache = True
@@ -105,10 +110,11 @@ def test_sequential_build_crew_returns_fresh_agents_and_tasks():
 
 
 def test_hierarchical_build_crew_returns_fresh_manager_agent():
+    hierarchical_crew_component, _ = _load_crewai_components()
     worker = FakeAgent(role="worker", llm=None, tools=["tool-a"])
     manager = FakeAgent(role="manager", llm=None, tools=["tool-b"])
     task = FakeTask(description="plan", agent=worker)
-    component = HierarchicalCrewComponent()
+    component = hierarchical_crew_component()
     component.agents = [worker]
     component.tasks = [task]
     component.manager_agent = manager

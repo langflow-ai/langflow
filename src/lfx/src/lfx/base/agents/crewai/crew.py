@@ -124,6 +124,22 @@ def convert_tools(tools):
     return [Tool.from_langchain(tool) for tool in tools]
 
 
+def _build_runtime_copy_memo(*objects: Any) -> dict[int, Any]:
+    """Preserve non-copyable runtime-bound attributes during deepcopy."""
+    memo: dict[int, Any] = {}
+    for obj in objects:
+        if obj is None:
+            continue
+        items = obj if isinstance(obj, list | tuple | set) else [obj]
+        for item in items:
+            for attr in ("llm", "tools"):
+                if hasattr(item, attr):
+                    value = getattr(item, attr)
+                    if value is not None:
+                        memo[id(value)] = value
+    return memo
+
+
 class BaseCrewComponent(Component):
     description: str = (
         "Represents a group of agents, defining how they should collaborate and the tasks they should perform."
@@ -161,7 +177,10 @@ class BaseCrewComponent(Component):
         if not agents_list:
             agents_list = self.agents or []
 
-        copied_state = deepcopy({"tasks": self.tasks, "agents": agents_list})
+        copied_state = deepcopy(
+            {"tasks": self.tasks, "agents": agents_list},
+            _build_runtime_copy_memo(self.tasks, agents_list),
+        )
         tasks = copied_state["tasks"]
         agents_copy = copied_state["agents"]
 
@@ -177,14 +196,13 @@ class BaseCrewComponent(Component):
         if not self.manager_llm:
             return None
 
-        manager_llm = deepcopy(self.manager_llm)
-        return convert_llm(manager_llm)
+        return convert_llm(self.manager_llm)
 
     def get_manager_agent(self):
         if not getattr(self, "manager_agent", None):
             return None
 
-        manager_agent = deepcopy(self.manager_agent)
+        manager_agent = deepcopy(self.manager_agent, _build_runtime_copy_memo(self.manager_agent))
         manager_agent.llm = convert_llm(manager_agent.llm)
         manager_agent.tools = convert_tools(manager_agent.tools)
         return manager_agent
