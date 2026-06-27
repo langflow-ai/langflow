@@ -86,6 +86,31 @@ def test_faiss_index_name_cannot_escape_user_scope(tmp_path: Path) -> None:
         component.get_index_name()
 
 
+@pytest.mark.parametrize(
+    "index_name",
+    [
+        "D:shared",  # Windows drive-relative prefix escapes the per-user directory
+        "C:",  # bare drive letter
+        ":",  # bare colon
+        "a:b",  # embedded colon
+        ".",  # current directory reference
+        "..",  # parent directory reference
+        "...",  # all-dot name
+    ],
+)
+def test_faiss_index_name_rejects_drive_qualified_names(tmp_path: Path, index_name: str) -> None:
+    component = _component("owner-user", tmp_path, "owner document", "owner").set(index_name=index_name)
+
+    with pytest.raises(ValueError, match="FAISS index name must be a file name"):
+        component.get_index_name()
+
+
+def test_faiss_index_name_accepts_portable_file_name(tmp_path: Path) -> None:
+    component = _component("owner-user", tmp_path, "owner document", "owner").set(index_name="my_index")
+
+    assert component.get_index_name() == "my_index"
+
+
 def test_faiss_persist_directory_is_unscoped_without_runtime_user(tmp_path: Path) -> None:
     component = FaissVectorStoreComponent().set(persist_directory=str(tmp_path))
 

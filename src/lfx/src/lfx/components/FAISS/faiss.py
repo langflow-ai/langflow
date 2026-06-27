@@ -1,3 +1,4 @@
+import re
 from hashlib import sha256
 from pathlib import Path
 
@@ -16,6 +17,13 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
     description: str = "FAISS Vector Store with search capabilities"
     name = "FAISS"
     icon = "FAISS"
+
+    # Strict portable allow-list for the index file prefix: letters, digits, dot,
+    # underscore and hyphen only, and the name must contain at least one
+    # non-dot character. This rejects empty, ".", "..", path separators
+    # ("/", "\\") and drive-relative prefixes (e.g. "D:shared") that could escape
+    # the per-user persist directory.
+    _INDEX_NAME_PATTERN = re.compile(r"^[A-Za-z0-9._-]*[A-Za-z0-9_-][A-Za-z0-9._-]*$")
 
     inputs = [
         StrInput(
@@ -72,7 +80,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
     def get_index_name(self) -> str:
         """Returns the validated FAISS index file prefix."""
         index_name = str(self.index_name or "").strip()
-        if not index_name or index_name in {".", ".."} or "/" in index_name or "\\" in index_name:
+        if not self._INDEX_NAME_PATTERN.match(index_name):
             msg = "FAISS index name must be a file name, not a path."
             raise ValueError(msg)
         return index_name
