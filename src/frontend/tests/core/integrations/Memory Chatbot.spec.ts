@@ -37,7 +37,12 @@ async function createMemoryBase(page: Page, flowId: string, name: string) {
 }
 
 async function selectMemoryBase(page: Page, memoryBaseName: string) {
-  await page.getByTestId("rf__node-MemoryBase-xePih").click();
+  const memoryBaseNode = page
+    .locator(".react-flow__node")
+    .filter({ hasText: "Memory Base" })
+    .first();
+  await expect(memoryBaseNode).toBeVisible({ timeout: 30000 });
+  await memoryBaseNode.click();
   const memoryDropdown = page.getByTestId("dropdown_str_memory_base");
 
   await memoryDropdown.click();

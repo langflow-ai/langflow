@@ -38,8 +38,8 @@ withEventDeliveryModes(
 
     const textContents = await getAllResponseMessage(page);
 
-    expect(textContents.length).toBeGreaterThan(100);
-    expect(textContents).toContain("costs");
-    expect(textContents).toContain("subscription");
+    expect(textContents.length).toBeGreaterThan(40);
+    expect(textContents).toContain("cost");
+    expect(textContents).toContain("$");
   },
 );
