@@ -39,6 +39,12 @@ http {
 
         location /api {
             proxy_pass ${BACKEND_URL};
+            # Lothal chat/refinement makes a synchronous LLM call that routinely
+            # runs past nginx's default 60s proxy_read_timeout, so this inner
+            # proxy returned 504 (the host nginx already allows 3600s). Allow
+            # long-running upstream responses here too.
+            proxy_read_timeout 3600s;
+            proxy_send_timeout 3600s;
         }
         location /health_check {
             proxy_pass ${BACKEND_URL};
