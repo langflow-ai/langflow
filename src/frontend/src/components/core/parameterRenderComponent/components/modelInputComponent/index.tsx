@@ -671,7 +671,7 @@ export default function ModelInputComponent({
         collisionPadding={{
           bottom: showingBuildPanel ? BUILD_PANEL_COLLISION_PADDING_PX : 0,
         }}
-        className="noflow nowheel nopan nodelete nodrag p-0"
+        className="noflow nowheel nopan nodelete nodrag z-[70] p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
         <Command className="flex flex-col">
