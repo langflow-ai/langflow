@@ -27,7 +27,7 @@ def get_file_path_value(file_path):
     if not path.is_relative_to(cache_dir):
         return ""
 
-    if not path.exists():
+    if not path.is_file():
         return ""
     return str(path)
 

@@ -43,6 +43,26 @@ def test_get_file_path_value_rejects_sibling_prefix_match(tmp_path: Path, monkey
     assert template_utils.get_file_path_value(str(sibling_file)) == ""
 
 
+def test_get_file_path_value_rejects_directory_inside_cache(tmp_path: Path, monkeypatch) -> None:
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    inner_dir = cache_dir / "subdir"
+    inner_dir.mkdir()
+    _set_cache_dir(monkeypatch, cache_dir)
+
+    # A directory inside the cache is contained but is not a real file.
+    assert template_utils.get_file_path_value(str(inner_dir)) == ""
+
+
+def test_get_file_path_value_rejects_empty_string(tmp_path: Path, monkeypatch) -> None:
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    _set_cache_dir(monkeypatch, cache_dir)
+
+    # An empty string resolves to the CWD (a directory), which must not yield a path.
+    assert template_utils.get_file_path_value("") == ""
+
+
 def test_update_template_field_clears_traversal_file_path(tmp_path: Path, monkeypatch) -> None:
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir()
