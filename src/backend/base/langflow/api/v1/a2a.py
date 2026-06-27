@@ -15,6 +15,10 @@ async def get_agent_card(flow_id: str, component_id: str, a2a_service=Depends(ge
 
 @router.post("/{flow_id}/{component_id}/rpc")
 async def rpc_endpoint(flow_id: str, component_id: str, payload: dict, a2a_service=Depends(get_a2a_service)):
+    card = a2a_service.get_agent_card(flow_id, component_id)
+    if not card:
+        raise HTTPException(status_code=404, detail="Agent card not found")
+
     # Mock JSON-RPC 2.0 execution
     method = payload.get("method")
     if method == "message/send":
