@@ -2070,7 +2070,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.document_q_a.0e21c05f"
           },
           "type": "note"
         },
@@ -2408,5 +2409,8 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Document Q&A",
-  "tags": ["rag", "q-a"]
+  "tags": [
+    "rag",
+    "q-a"
+  ]
 }

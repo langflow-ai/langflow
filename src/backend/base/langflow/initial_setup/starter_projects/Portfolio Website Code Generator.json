@@ -1801,7 +1801,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.portfolio_website_code_generator.c217664c"
           },
           "type": "note"
         },
@@ -1839,5 +1840,8 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Portfolio Website Code Generator",
-  "tags": ["chatbots", "coding"]
+  "tags": [
+    "chatbots",
+    "coding"
+  ]
 }

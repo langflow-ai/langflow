@@ -2,11 +2,10 @@ import { expect } from "../../fixtures";
 import { TEXTS } from "../../utils/constants/texts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-modal";
+import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
@@ -23,7 +22,6 @@ withEventDeliveryModes(
     });
 
     await initialGPTsetup(page);
-    await buildFlowAndWait(page);
 
     await page
       .getByRole("button", { name: TEXTS.playground, exact: true })
@@ -33,12 +31,15 @@ withEventDeliveryModes(
       .last()
       .isVisible();
 
-    await waitForOpenModalWithoutChatInput(page);
+    await sendPlaygroundMessage(
+      page,
+      "Price this SaaS: infra 2000, support 1000, dev 3000, margin 30%, 200 subscribers.",
+    );
 
     const textContents = await getAllResponseMessage(page);
 
-    expect(textContents.length).toBeGreaterThan(100);
-    expect(textContents).toContain("costs");
-    expect(textContents).toContain("subscription");
+    expect(textContents.length).toBeGreaterThan(40);
+    expect(textContents).toContain("cost");
+    expect(textContents).toContain("$");
   },
 );

@@ -1764,7 +1764,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.twitter_thread_generator.7e45a5a9"
           },
           "type": "note"
         },

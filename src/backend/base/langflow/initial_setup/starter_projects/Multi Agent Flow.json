@@ -2924,7 +2924,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.multi_agent_flow.5a71f2d1"
           },
           "type": "note"
         },
@@ -2962,5 +2963,8 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Multi Agent Flow",
-  "tags": ["agents", "chatbots"]
+  "tags": [
+    "agents",
+    "chatbots"
+  ]
 }

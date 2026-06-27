@@ -1403,7 +1403,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.seo_keyword_generator.11d10888"
           },
           "type": "note"
         },

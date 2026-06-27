@@ -1965,7 +1965,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.youtube_analysis.c8787173"
           },
           "type": "note"
         },

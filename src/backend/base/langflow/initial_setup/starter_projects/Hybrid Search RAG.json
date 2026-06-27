@@ -4372,7 +4372,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.hybrid_search_rag.f8268601"
           },
           "type": "note"
         },
@@ -4405,7 +4406,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.hybrid_search_rag.bc1f15c7"
           },
           "type": "note"
         },
@@ -4438,7 +4440,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.hybrid_search_rag.9e93986f"
           },
           "type": "note"
         },
@@ -4775,5 +4778,9 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Hybrid Search RAG",
-  "tags": ["rag", "q-a", "hybrid"]
+  "tags": [
+    "rag",
+    "q-a",
+    "hybrid"
+  ]
 }

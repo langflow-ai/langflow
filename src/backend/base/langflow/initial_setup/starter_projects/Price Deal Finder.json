@@ -2469,7 +2469,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.price_deal_finder.6de222f2"
           },
           "type": "note"
         },

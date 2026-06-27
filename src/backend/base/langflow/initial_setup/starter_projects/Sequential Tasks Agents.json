@@ -3269,7 +3269,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.sequential_tasks_agents.4b51b574"
           },
           "type": "note"
         },
