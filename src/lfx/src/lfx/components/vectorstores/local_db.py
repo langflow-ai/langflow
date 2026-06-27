@@ -1,4 +1,5 @@
 from copy import deepcopy
+from hashlib import sha256
 from pathlib import Path
 
 from langchain_chroma import Chroma
@@ -20,6 +21,30 @@ disable_component_in_astra_cloud_msg = (
     "Local vector stores require local file system access for persistence. "
     "Please use cloud-based vector stores (Pinecone, Weaviate, etc.) or local storage mode."
 )
+
+
+def _scoped_chroma_collection_name(collection_name: str, user_id: object | None) -> str:
+    """Return a stable, non-identifying per-user collection name for local Chroma."""
+    if not collection_name or user_id is None:
+        return collection_name
+
+    user_id_str = str(user_id).strip()
+    if not user_id_str or user_id_str == "None":
+        return collection_name
+
+    digest = sha256(f"{user_id_str}:{collection_name}".encode()).hexdigest()[:16]
+    return f"lf_{digest}"
+
+
+def _runtime_user_id(component: "LocalDBComponent") -> object | None:
+    """Return the runtime user id when the component is executing inside a user-owned graph."""
+    user_id = getattr(component, "_user_id", None)
+    if user_id:
+        return user_id
+
+    vertex = getattr(component, "_vertex", None)
+    graph = getattr(vertex, "graph", None) if vertex is not None else None
+    return getattr(graph, "user_id", None)
 
 
 class LocalDBComponent(LCVectorStoreComponent):
@@ -222,11 +247,18 @@ class LocalDBComponent(LCVectorStoreComponent):
             persist_directory = self.get_default_persist_dir()
             logger.debug(f"Using default persist directory: {persist_directory}")
 
+        # Local Chroma persists collections in a shared cache directory by default, so two users
+        # reusing the same collection name would otherwise read each other's documents. Scope the
+        # collection name to the runtime user so writes and reads stay isolated per tenant. The same
+        # scoped name is applied on both the ingest and search paths because search_documents builds
+        # the store through this method.
+        collection_name = _scoped_chroma_collection_name(self.collection_name, _runtime_user_id(self))
+
         chroma = Chroma(
             persist_directory=persist_directory,
             client=None,
             embedding_function=self.embedding,
-            collection_name=self.collection_name,
+            collection_name=collection_name,
             **chroma_langchain_collection_kwargs(),
         )
 
