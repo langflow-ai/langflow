@@ -20,9 +20,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   type Message,
   type Project,
-  useApproveDiagram,
   useCode,
-  useDiagram,
   useMessages,
   useProject,
   useSendMessage,
@@ -31,7 +29,6 @@ import useAuthStore from "@/stores/authStore";
 import {
   AssistantQuestion,
   Button,
-  CanvasSurface,
   ChatBubble,
   ChatComposer,
   type ChatComposerHandle,
@@ -48,6 +45,7 @@ import {
   SystemBlock,
   TopBar,
 } from "../components";
+import { ArtifactsPane } from "../components/ArtifactsPane";
 import { LothalSurface } from "../theme/LothalSurface";
 
 // The line shown when the conversation crosses a phase boundary.
@@ -128,11 +126,15 @@ function ThinkingBubble() {
 function ChatPanel({
   project,
   composerRef,
+  activeArtifact,
 }: {
   project: Project;
   // Held by the Workspace so a double-clicked canvas element can drop a chip in
   // the composer (Epic D.7).
   composerRef: RefObject<ChatComposerHandle | null>;
+  // The artifact the right pane is showing (Epic E.5) — a refine turn in the
+  // ARCHITECTURE stage targets it so the edit lands on the right diagram/ADR.
+  activeArtifact: string | null;
 }) {
   const { data: messages, isLoading, isError, error } = useMessages(project.id);
   const send = useSendMessage(project.id);
@@ -158,7 +160,11 @@ function ChatPanel({
     setSendFailed(false);
     setPending(trimmed);
     try {
-      await send.mutateAsync(trimmed);
+      // Route a refine turn to the artifact the user is looking at; only in the
+      // ARCHITECTURE stage (other phases ignore it, and the first/generation turn
+      // has no map yet — the engine defaults a missing target).
+      const artifact = project.phase === "ARCHITECTURE" ? activeArtifact : null;
+      await send.mutateAsync({ content: trimmed, artifact });
       // Clear on success so the bubble doesn't stick if the /messages refetch
       // errors. The useEffect below is the backstop when the refetch succeeds.
       setPending(null);
@@ -348,105 +354,6 @@ function CodePanel({ project }: { project: Project }) {
   return <CodeView files={files} />;
 }
 
-// --- Diagram pane (canvas + approve) -----------------------------------------
-
-// The right pane while shaping the diagram: the live <CanvasSurface>, plus — in
-// the ARCHITECTURE stage, once a diagram exists — an Approve action (Epic D.11;
-// phase merged in E.2). Approving advances the project to CODE_GENERATION on the
-// server; the project query then invalidates, the phase flips, and the parent
-// swaps this pane for <CodePanel>. The button is gated on both the phase and a
-// loaded diagram so it isn't offered before generation has produced one — the
-// backend rejects an approve outside ARCHITECTURE (or with no diagram) with a 409.
-function DiagramPane({
-  project,
-  composerRef,
-}: {
-  project: Project;
-  composerRef: RefObject<ChatComposerHandle | null>;
-}) {
-  const approve = useApproveDiagram(project.id);
-  const [failed, setFailed] = useState(false);
-  // Latches on a successful approve so the button stays disabled in the brief
-  // window before the project refetch flips the phase and unmounts this pane —
-  // otherwise a quick second click hits the server (now CODE_GENERATION) and
-  // 409s, flashing a spurious failure after a success.
-  const [approved, setApproved] = useState(false);
-  // Only fetch the diagram once the architecture stage is live (it's phase-gated
-  // before then); the query key is shared with <CanvasSurface> so this dedupes.
-  const isArchitecture = project.phase === "ARCHITECTURE";
-  const { data: diagram } = useDiagram(project.id, isArchitecture);
-  // Approve only when there's actually a diagram to approve — offering it before
-  // generation has produced one would just earn a 409 from the backend.
-  const canApprove = isArchitecture && Boolean(diagram?.d2);
-
-  // Clear the latched approve state when the workspace switches projects, so a
-  // new project's button isn't left disabled by the previous one's success.
-  useEffect(() => {
-    setApproved(false);
-    setFailed(false);
-  }, [project.id]);
-
-  const onApprove = async () => {
-    if (approve.isPending || approved) return;
-    setFailed(false);
-    try {
-      await approve.mutateAsync();
-      setApproved(true);
-    } catch {
-      setFailed(true);
-    }
-  };
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        minHeight: 0,
-      }}
-    >
-      <div style={{ flex: 1, minHeight: 0 }}>
-        <CanvasSurface
-          project={project}
-          onAnchor={(a) => composerRef.current?.insertAnchor(a)}
-        />
-      </div>
-      {canApprove && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: 12,
-            padding: "10px var(--pad)",
-            borderTop: "1px solid var(--border)",
-            background: "var(--paper)",
-          }}
-        >
-          {failed && (
-            <span style={{ fontSize: 12, color: "var(--warn)" }}>
-              Couldn’t approve just now — try again.
-            </span>
-          )}
-          <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
-            Happy with the diagram?
-          </span>
-          <Button
-            variant="accent"
-            onClick={onApprove}
-            disabled={approve.isPending || approved}
-          >
-            {approve.isPending || approved
-              ? "Approving…"
-              : "Approve & generate code"}
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // --- Page --------------------------------------------------------------------
 
 function WorkspaceView() {
@@ -468,6 +375,9 @@ function WorkspaceView() {
   // diagram element resolves to an anchor and drops an inline chip at the caret
   // (Epic D.7).
   const composerRef = useRef<ChatComposerHandle>(null);
+  // The artifact the right pane is showing (Epic E.5). Lifted here so a refine
+  // turn in the chat (left pane) targets the diagram/ADR the user is viewing.
+  const [activeArtifact, setActiveArtifact] = useState<string | null>(null);
 
   // Tab title carries the open project ("Tide Tracker — Lothal"); restored on
   // the way out.
@@ -658,19 +568,29 @@ function WorkspaceView() {
             minHeight: 0,
           }}
         >
-          <ChatPanel project={project} composerRef={composerRef} />
+          <ChatPanel
+            project={project}
+            composerRef={composerRef}
+            activeArtifact={activeArtifact}
+          />
         </div>
 
         {/* Right pane — the code surface once generation begins (Story B.5),
-            otherwise the live D2 canvas (Epic D.6): double-clicking a box or
-            arrow drops an inline reference chip in the composer (Epic D.7). It
-            falls back to a phase-aware placeholder before a diagram exists and
-            to NotReady while /diagram can't render. */}
+            otherwise the architecture doc-and-diagrams view (Epic E.5): the ADR
+            as Markdown plus the diagram set as tabs. Double-clicking a box or
+            arrow on a diagram drops an inline reference chip in the composer
+            (Epic D.7); the active tab is the artifact a refine turn targets. It
+            falls back to a phase-aware placeholder before generation and to
+            NotReady while /artifacts can't load or render. */}
         <div style={{ flex: 1, minWidth: 0, background: "var(--paper-deep)" }}>
           {isCodePhase(project.phase) ? (
             <CodePanel project={project} />
           ) : (
-            <DiagramPane project={project} composerRef={composerRef} />
+            <ArtifactsPane
+              project={project}
+              onAnchor={(a) => composerRef.current?.insertAnchor(a)}
+              onActiveArtifactChange={setActiveArtifact}
+            />
           )}
         </div>
       </div>
