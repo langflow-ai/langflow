@@ -34,17 +34,24 @@ class LLMResponse:
 
     `diagram_d2` is the turn's diagram artifact when it touches the diagram: **D2
     source text** (the Epic D artifact, persisted to `lothal_project.diagram_d2`),
-    and `None` otherwise. `warning` is an optional coherence warning the
-    refinement engine raises when the edited D2 contradicts the PRD (Epic D.10);
-    the chat endpoint stores it as a second ASSISTANT message, and it is `None`
-    when the edit is coherent (or for phases that don't validate). The engine
-    itself never writes the DB.
+    and `None` otherwise. `artifacts` is the turn's full artifact file-map —
+    `{path: content}`, e.g. `{"adr.md": ..., "diagrams/context.d2": ...}` — when a
+    stage rewrites it (the ARCHITECTURE engine, Epic E.3, persisted to
+    `lothal_project.artifacts`), and `None` for turns that don't touch it. The
+    architecture engine sets both: `artifacts` is the whole map and `diagram_d2`
+    mirrors `diagrams/sequence.d2` so the single-diagram read/approve flow keeps
+    working until the multi-diagram read endpoints land (E.4). `warning` is an
+    optional coherence warning raised when an edited/generated D2 contradicts the
+    PRD (Epic D.10); the chat endpoint stores it as a second ASSISTANT message,
+    and it is `None` when everything is coherent (or for phases that don't
+    validate). The engine itself never writes the DB.
     """
 
     text: str
     suggestions: list[str] = field(default_factory=list)
     next_phase: str | None = None
     diagram_d2: str | None = None
+    artifacts: dict[str, str] | None = None
     warning: str | None = None
 
     def __post_init__(self) -> None:
@@ -59,6 +66,12 @@ class LLMResponse:
             raise ValueError(msg)
         if self.diagram_d2 is not None and not isinstance(self.diagram_d2, str):
             msg = "LLMResponse.diagram_d2 must be a string or None."
+            raise ValueError(msg)
+        if self.artifacts is not None and (
+            not isinstance(self.artifacts, dict)
+            or not all(isinstance(k, str) and isinstance(v, str) for k, v in self.artifacts.items())
+        ):
+            msg = "LLMResponse.artifacts must be a dict mapping str paths to str contents, or None."
             raise ValueError(msg)
         if self.warning is not None and (not isinstance(self.warning, str) or not self.warning.strip()):
             msg = "LLMResponse.warning must be a non-empty string or None."
@@ -83,6 +96,8 @@ class PhaseEngine(ABC):
         *,
         prd: str | None = None,
         current_d2: str | None = None,
+        artifacts: dict[str, str] | None = None,
+        target_artifact: str | None = None,
     ) -> LLMResponse:
         """Handle one turn and return the assistant reply for it.
 
@@ -90,11 +105,15 @@ class PhaseEngine(ABC):
         rows); `user_message` is the turn the user just sent. Engines typically
         call `build_messages` (Story 0.2) then `call_llm` (Story 0.1).
 
-        `prd` and `current_d2` are the project's synthesised PRD and current D2
-        diagram source, threaded through by the chat endpoint for engines that
-        edit existing state (the refinement engine, Epic D.8); conversation-only
-        engines ignore them. Both are keyword-only with `None` defaults so an
-        engine declares only the inputs it uses.
+        `prd`, `current_d2`, `artifacts`, and `target_artifact` are the project
+        state the chat endpoint threads through for engines that edit existing
+        state: the synthesised PRD, the current single-diagram D2 source, the
+        current artifact file-map (`{path: content}`, Epic E.3), and the active
+        artifact key the user is refining. The ARCHITECTURE engine keys
+        generate-vs-refine off `artifacts` and routes a refine edit to
+        `target_artifact`; conversation-only engines ignore them. All are
+        keyword-only with `None` defaults so an engine declares only the inputs
+        it uses.
         """
 
 
@@ -151,19 +170,30 @@ async def process_turn(
     *,
     prd: str | None = None,
     current_d2: str | None = None,
+    artifacts: dict[str, str] | None = None,
+    target_artifact: str | None = None,
 ) -> LLMResponse:
     """Route one turn to its phase engine and return the engine's `LLMResponse`.
 
     `phase` is the project's current phase; `history` is its prior turns (oldest
-    first) and `user_message` is the new turn. `prd` and `current_d2` are the
-    project's current PRD and D2 source, passed straight through to the engine
-    for the phases that edit existing state (refinement, D.8). An unknown phase
-    raises `ValueError`. The router stays unchanged as engines are added
-    (open/closed): each engine decides whether to return `suggestions` and/or a
-    `next_phase`, and which of these inputs it reads.
+    first) and `user_message` is the new turn. `prd`, `current_d2`, `artifacts`,
+    and `target_artifact` are the project's current PRD, single-diagram D2
+    source, artifact file-map, and the active artifact key — passed straight
+    through to the engine for the phases that edit existing state (refinement,
+    D.8; the architecture artifact map, E.3). An unknown phase raises
+    `ValueError`. The router stays unchanged as engines are added (open/closed):
+    each engine decides whether to return `suggestions`, a `next_phase`, or
+    `artifacts`, and which of these inputs it reads.
     """
     engine = get_engine(phase)
-    response = await engine.process(history, user_message, prd=prd, current_d2=current_d2)
+    response = await engine.process(
+        history,
+        user_message,
+        prd=prd,
+        current_d2=current_d2,
+        artifacts=artifacts,
+        target_artifact=target_artifact,
+    )
     if not isinstance(response, LLMResponse):
         msg = f"Engine for phase {phase!r} returned {type(response).__name__}, expected LLMResponse."
         raise TypeError(msg)

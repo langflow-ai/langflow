@@ -283,6 +283,16 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
             detail="This project's current phase has no conversation step.",
         )
 
+    # A refine turn may name which artifact it edits (Epic E.3). Reject an unknown
+    # explicit target up front (422) — never silently edit a different artifact
+    # than the client asked for. Skipped when no target is named or no artifact
+    # map exists yet (the generation turn), where the engine defaults sensibly.
+    if body.artifact and project.artifacts and body.artifact not in project.artifacts:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unknown artifact: {body.artifact!r}.",
+        )
+
     # Prior turns only — loaded before the new user message is added so the engine
     # sees the history that preceded this turn (it appends `content` itself).
     history = await _project_messages(session, project.id)
@@ -290,11 +300,18 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
     session.add(Message(project_id=project.id, role=MessageRole.USER, content=content, phase=turn_phase))
 
     try:
-        # `prd`/`current_d2` give the refinement engine (D.8) the state it edits:
-        # the synthesised spec and the diagram the user is looking at. Other phases
-        # ignore them.
+        # `prd`/`current_d2`/`artifacts`/`target_artifact` give the architecture
+        # engine the state it edits: the synthesised spec, the legacy single
+        # diagram, the artifact map (`adr.md` + `diagrams/*`, Epic E.3), and the
+        # active artifact key the user is refining. Other phases ignore them.
         response = await process_turn(
-            turn_phase, history, content, prd=project.prd_content, current_d2=project.diagram_d2
+            turn_phase,
+            history,
+            content,
+            prd=project.prd_content,
+            current_d2=project.diagram_d2,
+            artifacts=project.artifacts,
+            target_artifact=body.artifact,
         )
     except (LLMConfigError, LLMConnectionError) as exc:
         raise _llm_error_to_http(exc) from exc
@@ -328,9 +345,18 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
             )
         )
 
+    if response.artifacts is not None:
+        # Epic E.3: the architecture engine emits the full artifact file-map
+        # (`adr.md` + `diagrams/*.d2`) for us to persist verbatim — the future git
+        # commit tree. A fresh dict is assigned (not mutated in place) so the JSON
+        # column tracks the change. `diagram_d2` below mirrors the sequence diagram
+        # so the single-diagram read/approve flow keeps working until E.4.
+        project.artifacts = response.artifacts
+        session.add(project)
+
     if response.diagram_d2 is not None:
         # Epic D.2: the diagram generator emits D2 source for us to persist;
-        # `diagram_d2` is the canonical store going forward (D.4 re-points
+        # `diagram_d2` is the canonical single-diagram store (D.4 points
         # `GET /diagram` at it). Stored verbatim — D2 owns its own layout.
         project.diagram_d2 = response.diagram_d2
         session.add(project)

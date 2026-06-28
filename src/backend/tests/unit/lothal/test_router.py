@@ -73,21 +73,36 @@ async def test_process_turn_passes_history_and_message_to_engine():
     class CapturingEngine(PhaseEngine):
         phase = "CLARIFICATION"
 
-        async def process(self, history, user_message, *, prd=None, current_d2=None):
+        async def process(
+            self, history, user_message, *, prd=None, current_d2=None, artifacts=None, target_artifact=None
+        ):
             captured["history"] = history
             captured["user_message"] = user_message
             captured["prd"] = prd
             captured["current_d2"] = current_d2
+            captured["artifacts"] = artifacts
+            captured["target_artifact"] = target_artifact
             return LLMResponse(text="ok")
 
     history = ["turn-1", "turn-2"]  # opaque to the router; engines interpret them
-    await process_turn("CLARIFICATION", history, "go", prd="the spec", current_d2="a -> b")
+    await process_turn(
+        "CLARIFICATION",
+        history,
+        "go",
+        prd="the spec",
+        current_d2="a -> b",
+        artifacts={"adr.md": "x"},
+        target_artifact="diagrams/sequence.d2",
+    )
 
     assert captured["history"] is history
     assert captured["user_message"] == "go"
-    # The router threads the project's PRD and current D2 straight through to the engine.
+    # The router threads the project's PRD, current D2, artifact map, and active
+    # artifact key straight through to the engine.
     assert captured["prd"] == "the spec"
     assert captured["current_d2"] == "a -> b"
+    assert captured["artifacts"] == {"adr.md": "x"}
+    assert captured["target_artifact"] == "diagrams/sequence.d2"
 
 
 async def test_unknown_phase_raises_value_error():

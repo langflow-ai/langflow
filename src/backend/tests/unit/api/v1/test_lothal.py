@@ -19,8 +19,8 @@ from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1 import lothal as lothal_api
 from langflow.lothal.d2_compile import D2CompilerUnavailableError
+from langflow.lothal.engines import architecture_generation, d2_gate, d2_validator
 from langflow.lothal.engines import clarification as clarification_engine
-from langflow.lothal.engines import d2_gate, d2_validator
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError
 from langflow.services.database.models.lothal_project.model import CodeFile, Message, Project
 from langflow.services.deps import session_scope
@@ -727,18 +727,18 @@ def _diagram_reply() -> str:
     return "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok\nuser -> api: poll"
 
 
-async def test_diagram_generation_turn_persists_d2_and_stays_in_architecture(
+async def test_architecture_generation_turn_persists_artifact_map_and_stays_in_architecture(
     client: AsyncClient, logged_in_headers: dict, monkeypatch
 ):
-    """Backlog acceptance for Epic D.2 generation + the E.2 merge (fake LLM).
+    """Backlog acceptance for Epic E.3 generation (fake LLM).
 
-    The first ARCHITECTURE turn (no diagram yet) runs the generator engine for
-    real (only the model call is faked): the injected D2 source is persisted
-    verbatim to `lothal_project.diagram_d2`, the legacy `diagram_json` stays null,
-    and — Epic E.2 having dropped the generation→refinement auto-advance — the
-    project stays in ARCHITECTURE, so the next turn refines this diagram (the
-    `ArchitectureEngine` dispatches on whether a diagram exists). Both messages are
-    stamped with the phase the turn ran under (ARCHITECTURE).
+    The first ARCHITECTURE turn (no artifact map yet) runs the architecture engine
+    for real (only the model calls are faked): it persists the full artifact map
+    (`adr.md` + four `diagrams/*.d2`) to `lothal_project.artifacts`, mirrors the
+    sequence diagram onto `diagram_d2` so the single-diagram read/approve flow
+    keeps working, leaves the legacy `diagram_json` null, and — no auto-advance —
+    stays in ARCHITECTURE so the next turn refines the set. The reply is stamped
+    with the phase the turn ran under (ARCHITECTURE).
     """
     project_id = await _create_chat_project(client, logged_in_headers)
 
@@ -748,14 +748,19 @@ async def test_diagram_generation_turn_persists_d2_and_stays_in_architecture(
         project.phase = "ARCHITECTURE"
         session.add(project)
 
-    async def fake_call_llm(_messages, **_kwargs):
+    async def fake_diagram_llm(_messages, **_kwargs):
         return _diagram_reply()
 
-    monkeypatch.setattr(d2_gate, "call_llm", fake_call_llm)
+    async def fake_adr_llm(_messages, **_kwargs):
+        return "# Architecture Decision Record\n\n## Context\nA todo app."
+
+    monkeypatch.setattr(d2_gate, "call_llm", fake_diagram_llm)
+    monkeypatch.setattr(architecture_generation, "call_llm", fake_adr_llm)
+    monkeypatch.setattr(d2_validator, "call_llm", _stub_validator_reply("VALID"))
 
     response = await client.post(
         f"api/v1/lothal/projects/{project_id}/chat",
-        json={"content": "generate the diagram"},
+        json={"content": "design the architecture"},
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_200_OK
@@ -763,27 +768,36 @@ async def test_diagram_generation_turn_persists_d2_and_stays_in_architecture(
     assert reply["role"] == "ASSISTANT"
     assert reply["phase"] == "ARCHITECTURE"  # the turn ran under this phase
     assert reply["suggestions"] == []
-    assert "3 interactions" in reply["content"]  # text grounded in the generated D2
+    assert "4 diagrams" in reply["content"]  # text grounded in the generated set
 
-    # The diagram lands in `diagram_d2` verbatim (the legacy `diagram_json` stays
-    # null) and the project stays in ARCHITECTURE (no auto-advance) so the next
-    # turn refines it.
+    # The full artifact map lands in `artifacts`; the sequence diagram mirrors onto
+    # `diagram_d2`; the legacy `diagram_json` stays null; the project stays in
+    # ARCHITECTURE (no auto-advance) so the next turn refines the set.
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
     assert project["phase"] == "ARCHITECTURE"
     assert project["diagram_json"] is None
     async with session_scope() as session:
         stored = await session.get(Project, UUID(project_id))
+        assert set(stored.artifacts) == {
+            "adr.md",
+            "diagrams/context.d2",
+            "diagrams/container.d2",
+            "diagrams/data-model.d2",
+            "diagrams/sequence.d2",
+        }
+        assert stored.artifacts["diagrams/sequence.d2"] == _diagram_reply()
         assert stored.diagram_d2 == _diagram_reply()
 
 
-async def test_diagram_generation_empty_reply_is_502_and_rolls_back(
+async def test_architecture_generation_empty_reply_is_502_and_rolls_back(
     client: AsyncClient, logged_in_headers: dict, monkeypatch
 ):
-    """An empty D2 reply fails the turn as a bad model round-trip and persists nothing.
+    """An empty D2 reply fails the generation turn as a bad model round-trip and persists nothing.
 
     The whole turn is one transaction, so the user message is rolled back too and
-    `diagram_d2` stays null — the user can resend cleanly. (Compile-validation
-    with a corrective retry is Epic D.3.)
+    `artifacts`/`diagram_d2` stay null — the user can resend cleanly. (The ADR
+    round-trip is faked valid here so the failure is unambiguously the empty
+    diagram; compile-validation with a corrective retry is Epic D.3.)
     """
     project_id = await _create_chat_project(client, logged_in_headers)
     async with session_scope() as session:
@@ -791,21 +805,27 @@ async def test_diagram_generation_empty_reply_is_502_and_rolls_back(
         project.phase = "ARCHITECTURE"
         session.add(project)
 
-    async def fake_call_llm(_messages, **_kwargs):
+    async def fake_diagram_llm(_messages, **_kwargs):
         return "   \n  "  # empty after fences/whitespace are stripped
 
-    monkeypatch.setattr(d2_gate, "call_llm", fake_call_llm)
+    async def fake_adr_llm(_messages, **_kwargs):
+        return "# ADR\n\n## Context\nA todo app."
+
+    monkeypatch.setattr(d2_gate, "call_llm", fake_diagram_llm)
+    monkeypatch.setattr(architecture_generation, "call_llm", fake_adr_llm)
+    monkeypatch.setattr(d2_validator, "call_llm", _stub_validator_reply("VALID"))
 
     response = await client.post(
         f"api/v1/lothal/projects/{project_id}/chat",
-        json={"content": "generate the diagram"},
+        json={"content": "design the architecture"},
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_502_BAD_GATEWAY
 
-    # Nothing persisted: no diagram, and the user turn rolled back with it.
+    # Nothing persisted: no artifacts, no diagram, and the user turn rolled back with it.
     async with session_scope() as session:
         stored = await session.get(Project, UUID(project_id))
+        assert stored.artifacts is None
         assert stored.diagram_d2 is None
         assert stored.diagram_json is None
     messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
@@ -820,14 +840,27 @@ def _refined_d2() -> str:
     return "shape: sequence_diagram\nbrowser: Browser\napi: API\n\nbrowser -> api: submit\napi -> browser: ok"
 
 
-async def test_refinement_turn_updates_d2_and_holds_phase(client: AsyncClient, logged_in_headers: dict, monkeypatch):
-    """Backlog acceptance for Epic D.8 (fake LLM).
+def _seed_artifacts(sequence_d2: str) -> dict[str, str]:
+    """A full architecture artifact map; `diagrams/sequence.d2` is the refine default target."""
+    return {
+        "adr.md": "# Architecture Decision Record\n\n## Context\nA todo app.",
+        "diagrams/context.d2": "direction: right\nuser: End User {shape: person}\napp: App\nuser -> app: uses",
+        "diagrams/container.d2": "direction: right\nsystem: App {\n  api: API\n}",
+        "diagrams/data-model.d2": "users: {\n  shape: sql_table\n  id: int\n}",
+        "diagrams/sequence.d2": sequence_d2,
+    }
 
-    A chat turn while the project is in ARCHITECTURE runs the refinement
-    engine for real (only the model call is faked): the turn the model receives
-    carries the project's current D2, its PRD, and the anchored element id; the
-    model's updated D2 is persisted verbatim to `diagram_d2`, `GET /diagram`
-    reflects it, and the project stays in ARCHITECTURE (approval is D.11).
+
+async def test_refinement_turn_updates_d2_and_holds_phase(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Backlog acceptance for Epic D.8 refinement carried into the E.3 artifact map (fake LLM).
+
+    A chat turn while the project already has an artifact map runs the refinement
+    engine for real (only the model call is faked): with no explicit target it
+    edits the sequence diagram (what the single-diagram canvas shows). The turn the
+    model receives carries that diagram's current D2, the PRD, and the anchored
+    element id; the updated D2 is written back into `artifacts["diagrams/sequence.d2"]`
+    and mirrored onto `diagram_d2`, `GET /diagram` reflects it, and the project
+    stays in ARCHITECTURE (approval is D.11).
     """
     project_id = await _create_chat_project(client, logged_in_headers)
     seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
@@ -835,6 +868,7 @@ async def test_refinement_turn_updates_d2_and_holds_phase(client: AsyncClient, l
         project = await session.get(Project, UUID(project_id))
         project.phase = "ARCHITECTURE"
         project.prd_content = "## Overview\nA todo app for individuals."
+        project.artifacts = _seed_artifacts(seed_d2)
         project.diagram_d2 = seed_d2
         session.add(project)
 
@@ -860,18 +894,20 @@ async def test_refinement_turn_updates_d2_and_holds_phase(client: AsyncClient, l
     assert reply["phase"] == "ARCHITECTURE"
     assert reply["suggestions"] == []
 
-    # The refinement turn the model saw carried the current D2, the PRD, and the
-    # anchored element id (the D.7 composer serialises it backtick-wrapped).
+    # The refinement turn the model saw carried the current sequence D2, the PRD,
+    # and the anchored element id (the D.7 composer serialises it backtick-wrapped).
     composed = captured["messages"][-1]["content"]
     assert "user -> api: submit" in composed  # the current diagram to edit
     assert "A todo app for individuals." in composed  # the PRD
     assert "`user`" in composed  # the referenced element id
 
-    # The updated D2 is persisted and reflected by GET /diagram; the phase holds.
+    # The updated D2 is written back into the map and mirrored onto `diagram_d2`;
+    # GET /diagram reflects it; the phase holds.
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
     assert project["phase"] == "ARCHITECTURE"
     async with session_scope() as session:
         stored = await session.get(Project, UUID(project_id))
+        assert stored.artifacts["diagrams/sequence.d2"] == _refined_d2()
         assert stored.diagram_d2 == _refined_d2()
 
     diagram = (await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)).json()
@@ -907,6 +943,7 @@ async def test_refinement_contradiction_surfaces_as_warning_message(
         project = await session.get(Project, UUID(project_id))
         project.phase = "ARCHITECTURE"
         project.prd_content = "## Overview\nA todo app that must persist tasks in a database."
+        project.artifacts = _seed_artifacts(seed_d2)
         project.diagram_d2 = seed_d2
         session.add(project)
 
@@ -932,6 +969,33 @@ async def test_refinement_contradiction_surfaces_as_warning_message(
     async with session_scope() as session:
         stored = await session.get(Project, UUID(project_id))
         assert stored.diagram_d2 == _refined_d2()
+
+
+async def test_refine_unknown_artifact_target_is_422_and_no_op(client: AsyncClient, logged_in_headers: dict):
+    """An explicit `artifact` not in the map is rejected up front (422) and records no turn.
+
+    Epic E.3: a refine turn names the artifact it edits. A stale/mistyped target
+    must never silently retarget a different artifact — the endpoint 422s before
+    any work, so the conversation and artifact map are untouched.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers)
+    seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "ARCHITECTURE"
+        project.artifacts = _seed_artifacts(seed_d2)
+        session.add(project)
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/chat",
+        json={"content": "edit it", "artifact": "diagrams/does-not-exist.d2"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    # No turn recorded — the guard runs before any message is stored.
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert messages == []
 
 
 # --- Diagram approve (Epic D.11) ----------------------------------------------

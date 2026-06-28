@@ -104,9 +104,18 @@ class ProjectCreate(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    """`POST /projects/{id}/chat` body."""
+    """`POST /projects/{id}/chat` body.
+
+    `artifact` is the active artifact key the user is refining in the ARCHITECTURE
+    stage (e.g. `diagrams/context.d2` or `adr.md`, Epic E.3) — it routes a refine
+    turn to the right artifact in the map. `null`/omitted for non-architecture
+    turns and for the first (generation) turn; the architecture engine defaults a
+    refine with no target to the sequence diagram (what the single-diagram canvas
+    shows today).
+    """
 
     content: str
+    artifact: str | None = None
 
 
 class DebugLLMRequest(BaseModel):
