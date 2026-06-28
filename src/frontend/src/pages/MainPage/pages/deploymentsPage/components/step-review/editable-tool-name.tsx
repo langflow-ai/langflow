@@ -47,7 +47,8 @@ export function EditableToolName({
           onBlur={confirm}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter") confirm();
+            if (event.key === "Enter" && !event.nativeEvent.isComposing)
+              confirm();
             if (event.key === "Escape") cancel();
           }}
         />

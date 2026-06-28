@@ -43,7 +43,7 @@ export const SessionRename: React.FC<SessionRenameProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       e.preventDefault();
       e.stopPropagation();
       commit();
