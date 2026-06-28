@@ -8,7 +8,7 @@ from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .jobs import Job
-from .lothal_project import CodeFile, Message, Project
+from .lothal_project import CodeFile, Message, Project, PrototypeArtifact
 from .message import MessageTable
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
@@ -29,6 +29,7 @@ __all__ = [
     "Message",
     "MessageTable",
     "Project",
+    "PrototypeArtifact",
     "SSOConfig",
     "SSOUserProfile",
     "SpanTable",
