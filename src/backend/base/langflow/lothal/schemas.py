@@ -17,10 +17,14 @@ from pydantic import BaseModel, Field, field_validator
 Phase = Literal[
     "CLARIFICATION",
     "ARCHITECTURE",
+    "PROTOTYPE",
     "CODE_GENERATION",
     "DONE",
 ]
 Role = Literal["USER", "ASSISTANT"]
+# The Open Design prototype-run lifecycle (Story U.1's ``PrototypeStatus`` ORM
+# enum), surfaced on the wire by the prototype endpoints (Story U.0).
+PrototypeStatusLiteral = Literal["IDLE", "GENERATING", "READY", "APPROVED"]
 
 
 class NotImplementedResponse(BaseModel):
@@ -179,6 +183,58 @@ class CodeResponse(BaseModel):
     """`GET /projects/{id}/code` — all generated files (`[]` while in progress)."""
 
     files: list[CodeFile]
+
+
+# --- Prototype stage (Epic UI, Story U.0) ------------------------------------
+# The prototype stage drives Open Design (OD) as a headless prototyping engine.
+# These shapes are the Lothal-side contract the frontend builds against; the
+# endpoints ship as 501 stubs in U.0 and fill in over U.4-U.7. Field names stay
+# snake_case to match the rest of the Lothal API (the frontend maps them).
+
+
+class PrototypeArtifactRead(BaseModel):
+    """One retained OD prototype artifact, as the UI lists it. Backed by `lothal_prototype_artifact`."""
+
+    path: str
+    kind: str
+    title: str
+    # A ready-to-load preview URL for the artifact (served by OD); `null` until
+    # the backend can resolve one.
+    preview_url: str | None = None
+
+
+class PrototypeStateResponse(BaseModel):
+    """`GET /projects/{id}/prototype` — prototype run state + OD linkage + embed URL + artifacts.
+
+    Drives the Prototype pane: the UI polls this while `status` is `GENERATING`
+    and embeds `embed_url` once `READY`. `od_project_id`/`od_conversation_id` are
+    `null` until the stage seeds an OD project (Story U.4); `embed_url` is the
+    ready-to-iframe OD URL, resolved by the backend so the client never builds
+    OD's routing itself. `artifacts` is empty until the run produces any.
+    """
+
+    status: PrototypeStatusLiteral
+    od_project_id: str | None = None
+    od_conversation_id: str | None = None
+    embed_url: str | None = None
+    artifacts: list[PrototypeArtifactRead] = Field(default_factory=list)
+
+
+class PrototypeRefineRequest(BaseModel):
+    """`POST /projects/{id}/prototype/refine` body — a Lothal-side refine instruction.
+
+    The primary refine path is inside OD itself; this optional secondary path
+    lets a refine instruction come from the Langflow chat (a new OD run in the
+    same conversation, Story U.6).
+    """
+
+    content: str
+
+
+class PrototypeApproveResponse(BaseModel):
+    """`POST /projects/{id}/prototype/approve` — the phase after advancing (→ CODE_GENERATION)."""
+
+    phase: Phase
 
 
 class DebugLLMResponse(BaseModel):

@@ -38,6 +38,11 @@ PROJECT_ID = "00000000-0000-0000-0000-000000000000"
 STUB_TEMPLATES = [
     ("GET", "api/v1/lothal/projects/{project_id}/code", None),
     ("GET", "api/v1/lothal/projects/{project_id}/download", None),
+    # Prototype stage (Epic UI, Story U.0) — declared as 501 stubs.
+    ("GET", "api/v1/lothal/projects/{project_id}/prototype", None),
+    ("POST", "api/v1/lothal/projects/{project_id}/prototype/generate", None),
+    ("POST", "api/v1/lothal/projects/{project_id}/prototype/refine", {"content": "make it blue"}),
+    ("POST", "api/v1/lothal/projects/{project_id}/prototype/approve", None),
 ]
 
 # Every remaining stub is project-scoped, so each resolves ownership before
@@ -144,6 +149,10 @@ async def test_openapi_lists_full_lothal_surface(client: AsyncClient):
         "/api/v1/lothal/projects/{project_id}/prd",
         "/api/v1/lothal/projects/{project_id}/diagram",
         "/api/v1/lothal/projects/{project_id}/diagram/approve",
+        "/api/v1/lothal/projects/{project_id}/prototype",
+        "/api/v1/lothal/projects/{project_id}/prototype/generate",
+        "/api/v1/lothal/projects/{project_id}/prototype/refine",
+        "/api/v1/lothal/projects/{project_id}/prototype/approve",
         "/api/v1/lothal/projects/{project_id}/code",
         "/api/v1/lothal/projects/{project_id}/download",
         "/api/v1/lothal/debug/llm",
@@ -157,6 +166,11 @@ async def test_openapi_lists_full_lothal_surface(client: AsyncClient):
     # routes that have gone live (chat, debug, prd, diagram, approve) no longer
     # advertise it.
     assert "501" in paths["/api/v1/lothal/projects/{project_id}/code"]["get"]["responses"]
+    # The prototype surface (Story U.0) is stubbed: every route advertises the 501.
+    assert "501" in paths["/api/v1/lothal/projects/{project_id}/prototype"]["get"]["responses"]
+    assert "501" in paths["/api/v1/lothal/projects/{project_id}/prototype/generate"]["post"]["responses"]
+    assert "501" in paths["/api/v1/lothal/projects/{project_id}/prototype/refine"]["post"]["responses"]
+    assert "501" in paths["/api/v1/lothal/projects/{project_id}/prototype/approve"]["post"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/diagram"]["get"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/diagram/approve"]["post"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/chat"]["post"]["responses"]
@@ -1012,10 +1026,10 @@ async def test_diagram_save_route_is_gone(client: AsyncClient, logged_in_headers
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_approve_in_architecture_advances_to_code_generation_and_keeps_d2(
+async def test_approve_in_architecture_advances_to_prototype_and_keeps_d2(
     client: AsyncClient, logged_in_headers: dict
 ):
-    """Backlog acceptance for Epic D.11 (phase merged in E.2): approve ARCHITECTURE → CODE_GENERATION, D2 retained."""
+    """Acceptance for Epic UI U.0: approve ARCHITECTURE → PROTOTYPE (was CODE_GENERATION), D2 retained."""
     project_id = await _create_chat_project(client, logged_in_headers)
     seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
     async with session_scope() as session:
@@ -1026,18 +1040,18 @@ async def test_approve_in_architecture_advances_to_code_generation_and_keeps_d2(
 
     response = await client.post(f"api/v1/lothal/projects/{project_id}/diagram/approve", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"phase": "CODE_GENERATION"}
+    assert response.json() == {"phase": "PROTOTYPE"}
 
-    # The phase advanced and the approved D2 is retained verbatim; /diagram still serves it.
+    # The phase advanced and the approved D2 is retained verbatim; /diagram still serves it in PROTOTYPE.
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "CODE_GENERATION"
+    assert project["phase"] == "PROTOTYPE"
     diagram = (await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)).json()
     assert diagram["d2"] == seed_d2
 
 
-@pytest.mark.parametrize("phase", ["CLARIFICATION", "CODE_GENERATION", "DONE"])
+@pytest.mark.parametrize("phase", ["CLARIFICATION", "PROTOTYPE", "CODE_GENERATION", "DONE"])
 async def test_approve_rejected_outside_architecture(client: AsyncClient, logged_in_headers: dict, phase: str):
-    """Approve is only valid in ARCHITECTURE; any other phase is a 409 and a no-op."""
+    """Approve is only valid in ARCHITECTURE; any other phase (incl. the new PROTOTYPE) is a 409 and a no-op."""
     project_id = await _create_chat_project(client, logged_in_headers)
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
@@ -1091,9 +1105,9 @@ async def test_approve_with_no_diagram_is_409(client: AsyncClient, logged_in_hea
     assert project["phase"] == "ARCHITECTURE"  # not advanced
 
 
-@pytest.mark.parametrize("phase", ["CODE_GENERATION", "DONE"])
+@pytest.mark.parametrize("phase", ["PROTOTYPE", "CODE_GENERATION", "DONE"])
 async def test_chat_in_engineless_phase_is_clean_409_not_500(client: AsyncClient, logged_in_headers: dict, phase: str):
-    """Chatting in a phase with no engine (reachable since D.11's approve) is a clean 409, not a 500.
+    """Chatting in an engineless phase (PROTOTYPE/CODE_GENERATION/DONE, reachable via approve) is a 409, not a 500.
 
     Regression: `process_turn` raises a plain ValueError for an unregistered phase;
     without the guard the chat endpoint's `except (LLMConfigError, LLMConnectionError)`
@@ -1257,9 +1271,9 @@ async def test_diagram_returns_seeded_d2(client: AsyncClient, logged_in_headers:
 
 
 async def test_diagram_readable_in_later_phases(client: AsyncClient, logged_in_headers: dict):
-    """The D2 source stays readable through refinement, code generation, and done."""
+    """The D2 source stays readable through the prototype stage, code generation, and done."""
     project_id = await _create_chat_project(client, logged_in_headers, name="Diagram")
-    for phase in ("ARCHITECTURE", "CODE_GENERATION", "DONE"):
+    for phase in ("ARCHITECTURE", "PROTOTYPE", "CODE_GENERATION", "DONE"):
         await _set_phase_and_d2(UUID(project_id), phase=phase, diagram_d2=_SEED_D2)
         response = await client.get(f"api/v1/lothal/projects/{project_id}/diagram", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK, phase
@@ -1457,10 +1471,10 @@ async def test_artifacts_returns_map_and_svg_per_diagram(
 
 
 async def test_artifacts_readable_in_later_phases(client: AsyncClient, logged_in_headers: dict, stub_diagram_render):
-    """The artifact map stays readable through refinement, code generation, and done."""
+    """The artifact map stays readable through the prototype stage, code generation, and done."""
     project_id = await _create_chat_project(client, logged_in_headers, name="Artifacts")
     seeded = _seed_artifacts(_SEED_D2)
-    for phase in ("ARCHITECTURE", "CODE_GENERATION", "DONE"):
+    for phase in ("ARCHITECTURE", "PROTOTYPE", "CODE_GENERATION", "DONE"):
         await _set_phase_and_artifacts(UUID(project_id), phase=phase, artifacts=seeded)
         response = await client.get(f"api/v1/lothal/projects/{project_id}/artifacts", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK, phase
