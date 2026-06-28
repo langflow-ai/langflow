@@ -287,12 +287,15 @@ docker compose -f docker-compose.prod.yml exec backend \
 docker compose -f docker-compose.prod.yml exec backend \
   curl -fsS http://open-design:7456/api/projects && echo "  -> OD /api/projects OK"
 
-# 3. Data survives recreation (the /app/.od volume persists):
+# 3. Data survives recreation — write a sentinel into the volume, recreate, read it back:
+docker compose -f docker-compose.prod.yml exec open-design \
+  sh -c 'echo "survived $(date -u +%FT%TZ)" > /app/.od/persistence-check.txt'
 docker compose -f docker-compose.prod.yml up -d --force-recreate open-design
-docker compose -f docker-compose.prod.yml exec open-design ls -la /app/.od
+docker compose -f docker-compose.prod.yml exec open-design cat /app/.od/persistence-check.txt   # -> survived …
+docker compose -f docker-compose.prod.yml exec open-design rm -f /app/.od/persistence-check.txt  # cleanup
 ```
 
-(If you enable `OD_API_TOKEN` for defense-in-depth, step 2 becomes
+(If you enable `OD_API_TOKEN` + `OD_DISABLE_API_AUTH=0` for defense-in-depth, step 2 becomes
 `curl -H "Authorization: Bearer $OD_API_TOKEN" …` and an unauthed call should `401`.)
 </content>
 </invoke>

@@ -103,12 +103,18 @@ services:
       # Access control is the network boundary, not a token: OD has no `ports:`, so
       # it is reachable only by other services on the internal compose network (the
       # backend at http://open-design:7456) — the same model as backend:7860, which
-      # is likewise unpublished and unauthenticated on this network. The OD daemon
-      # mints no token of its own (auth is env-driven: api-token-auth.ts), so we
-      # disable its API middleware explicitly rather than leave it ambiguously open.
-      # To add defense-in-depth instead, drop this line and set OD_API_TOKEN in
-      # /opt/lothal/.env (the backend must then send it as a bearer on every call).
-      OD_DISABLE_API_AUTH: "1"
+      # is likewise unpublished and unauthenticated on this network.
+      #
+      # The image binds 0.0.0.0, and the daemon refuses to start on a public bind
+      # unless EITHER a token is set OR auth is explicitly disabled (server.ts
+      # bound-API-token guard). So by default we disable auth and stay open on the
+      # private network. For defense-in-depth, set BOTH of these in /opt/lothal/.env:
+      #   OD_API_TOKEN=<openssl rand -hex 32>   and   OD_DISABLE_API_AUTH=0
+      # — the token is then enforced (api-token-auth.ts) and the backend must send it
+      # as a bearer. The token is passed through here so that path works via .env
+      # alone, with no edit to this committed file.
+      OD_API_TOKEN: ${OD_API_TOKEN:-}
+      OD_DISABLE_API_AUTH: ${OD_DISABLE_API_AUTH:-1}
     volumes:
       - lothal-od-data:/app/.od          # projects + daemon state — must persist across recreation
     healthcheck:
