@@ -16,7 +16,6 @@ export {
 export type { ButtonProps, ButtonSize, ButtonVariant } from "./Button";
 export { Button } from "./Button";
 export { CanvasPlaceholder } from "./CanvasPlaceholder";
-export { CanvasSurface } from "./CanvasSurface";
 export { ChatBubble } from "./ChatBubble";
 export type { ChatComposerHandle } from "./ChatComposer";
 export { ChatComposer } from "./ChatComposer";

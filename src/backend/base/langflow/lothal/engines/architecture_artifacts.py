@@ -15,8 +15,8 @@ generation engine iterates and the refinement engine routes edits against, so th
 set lives in one place and a future diagram (e.g. deployment, deferred to stage 7)
 is one entry. Each diagram prompt is a diagram-specific preamble + skeleton +
 rules, with the **shared D2 output contract** appended once so the four prompts
-can't drift (the same factoring `diagram_generation.py` used for its single
-prompt). The ADR is Markdown, so it has its own prompt and skips the D2 contract.
+can't drift (the same body + shared-contract factoring the old single-diagram
+prompt used). The ADR is Markdown, so it has its own prompt and skips the D2 contract.
 
 Pure data/prompt module: no LLM, no DB, no engine imports. The engines
 (`architecture_generation.py` / `architecture_refinement.py`) consume it.
@@ -221,9 +221,9 @@ and its major components, the key technology choices with a one-line rationale e
 alternatives considered and why they were rejected, and the notable risks/trade-offs. Keep it \
 tight and decision-focused — an ADR, not a manual. Reply with Markdown only."""
 
-# Refinement editor prompts. The D2 editor mirrors `diagram_refinement.py`'s
-# generic-editor prompt but is artifact-aware (it edits whichever diagram the
-# turn targets); the ADR editor is its Markdown counterpart.
+# Refinement editor prompts. The D2 editor is the artifact-aware diagram editor
+# (it edits whichever diagram the turn targets); the ADR editor is its Markdown
+# counterpart.
 D2_EDITOR_SYSTEM_PROMPT = """\
 You are Lothal's diagram editor. You maintain one D2 diagram (D2 is the text diagramming \
 language at d2lang.com) from the application's architecture set. Each turn you are given the \

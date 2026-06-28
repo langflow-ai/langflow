@@ -17,9 +17,9 @@ is left untouched (no data loss); dropping it is a later, separate migration.
 
 Output format
 -------------
-The produced D2 matches the shape the generation engine (``diagram_generation.py``)
-emits and that the rest of the system (D.3 gate, D.6 render, D.7 anchors, D.8
-refinement) already understands::
+The produced D2 matches the shape the Architecture stage's sequence-diagram
+prompt (``architecture_artifacts``) emits and that the rest of the system (D.3
+gate, D.6 render, D.7 anchors, D.8 refinement) already understands::
 
     shape: sequence_diagram
     user: User
@@ -28,7 +28,7 @@ refinement) already understands::
     user -> api: submit form
     api -> user: 200 OK
 
-Rules applied (mirrors ``diagram_generation.SYSTEM_PROMPT``):
+Rules applied (mirrors the sequence-diagram prompt in ``architecture_artifacts``):
 
 - ``shape: sequence_diagram`` header.
 - Participant block: one ``id: Label`` line per node, in their original list order.

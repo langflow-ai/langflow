@@ -10,7 +10,7 @@
 // routes the edit to that key). Double-clicking an element on a diagram tab drops
 // an inline anchor chip in the composer, exactly as the old canvas did (D.7).
 //
-// Phase/loading/empty states mirror the old CanvasSurface:
+// Phase/loading/empty states:
 //   before ARCHITECTURE     → phase-aware placeholder, no fetch (phase-gated)
 //   loading                 → "opening" line
 //   501 (stub)              → NotReady ("not live yet")
