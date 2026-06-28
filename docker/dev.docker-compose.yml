@@ -40,3 +40,23 @@ services:
     networks:
       -  dev-langflow
 
+  # Open Design (OD) sidecar — reachable from the langflow container at
+  # http://open-design:7456. Pulls the published image (override OD_IMAGE to test
+  # a specific build). Auth is disabled for local dev; port is published so the OD
+  # web UI / API can be poked directly at http://localhost:7456.
+  open-design:
+    image: ${OD_IMAGE:-ghcr.io/realbytecode/open-design:latest}
+    container_name: open-design
+    restart: always
+    environment:
+      OD_DISABLE_API_AUTH: "1"
+    ports:
+      - "7456:7456"
+    volumes:
+      - od-data:/app/.od
+    networks:
+      -  dev-langflow
+
+volumes:
+  od-data:
+

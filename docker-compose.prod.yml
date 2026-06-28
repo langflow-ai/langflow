@@ -90,6 +90,46 @@ services:
     ports:
       - "127.0.0.1:8080:8080"            # host nginx (TLS) reverse-proxies to this
 
+  # Open Design (OD) — internal design daemon consumed by the backend over the
+  # compose network at http://open-design:7456. The image is built + published
+  # from the separate realbytecode/open-design repo (Epic U.2), NOT by the Lothal
+  # deploy workflow (which builds backend/frontend only). Its version is therefore
+  # pinned via OD_IMAGE in /opt/lothal/.env and rolled by editing that value, not
+  # by a code deploy.
+  open-design:
+    image: ${OD_IMAGE:-ghcr.io/realbytecode/open-design:latest}
+    restart: unless-stopped
+    environment:
+      # Access control is the network boundary, not a token: OD has no `ports:`, so
+      # it is reachable only by other services on the internal compose network (the
+      # backend at http://open-design:7456) — the same model as backend:7860, which
+      # is likewise unpublished and unauthenticated on this network. The OD daemon
+      # mints no token of its own (auth is env-driven: api-token-auth.ts), so we
+      # disable its API middleware explicitly rather than leave it ambiguously open.
+      # To add defense-in-depth instead, drop this line and set OD_API_TOKEN in
+      # /opt/lothal/.env (the backend must then send it as a bearer on every call).
+      OD_DISABLE_API_AUTH: "1"
+    volumes:
+      - lothal-od-data:/app/.od          # projects + daemon state — must persist across recreation
+    healthcheck:
+      # Mirrors OD's own prod healthcheck: node 24 ships a global fetch().
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7456/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # Hardening carried over from OD's own prod compose: the daemon only ever
+    # writes to /app/.od (the mounted volume) and /tmp.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${OD_MEM_LIMIT:-384m}
+    pids_limit: 256
+    # intentionally no `ports:` — only reachable inside the compose network
+
 volumes:
   lothal-db-data:
   lothal-langflow-data:
+  lothal-od-data:

@@ -17,9 +17,11 @@ Internet ──HTTPS──▶ host nginx (:443, Let's Encrypt TLS)
                         │  proxies /api, /health
                         ▼
                  backend container (:7860, langflow --backend-only)
-                        │
-                        ▼
-                 db container (postgres:16-trixie, internal only)
+                        │           │
+                        ▼           ▼ (internal /api, no auth — network-isolated)
+                 db container    open-design container (OD daemon, :7456,
+                 (postgres:16-     internal only — never published)
+                  trixie)
 ```
 
 Only the host nginx is public (`:80`/`:443`, opened by ufw "Nginx Full"). The frontend
@@ -118,8 +120,15 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # LANGFLOW_SECRE
 #   - LANGFLOW_SECRET_KEY          (generate once — see warning below)
 #   - CLAUDE_CODE_OAUTH_TOKEN      (Claude Code subscription token — `claude setup-token`; the Epic 0+ LLM interface)
 #   - LOTHAL_LLM_PROVIDER / LOTHAL_MODEL_NAME   (optional; default claude / claude-opus-4-8)
+#   - OD_IMAGE                     (optional; pin the OD image SHA, e.g. ghcr.io/realbytecode/open-design:70ca9d3dbf3a — defaults to :latest)
 chmod 600 .env
 ```
+
+> **Open Design needs no secret.** OD runs internal-only with API auth disabled
+> (`OD_DISABLE_API_AUTH=1` in the compose), protected by the private compose network —
+> the same posture as `backend:7860`. The only OD key worth setting is `OD_IMAGE`, to
+> pin an immutable SHA tag instead of `:latest`. For defense-in-depth, see the
+> `OD_API_TOKEN` note in `.env.prod.example`.
 
 > ⚠️ **`LANGFLOW_SECRET_KEY` must stay stable.** It encrypts stored credentials; rotating it
 > orphans every encrypted value. Generate it once and never re-render it from CI.
@@ -157,6 +166,15 @@ To intentionally open the site later (e.g. enable self-serve signup), flip the r
   ```bash
   echo "$GHCR_TOKEN" | docker login ghcr.io -u realbytecode --password-stdin
   ```
+- **Open Design image (cross-repo) — important.** Unlike `lothal-backend`/`lothal-frontend`,
+  the OD image (`ghcr.io/realbytecode/open-design`) is published from a **different** repo, so
+  it is a separate GHCR package. The C.3 deploy logs in with that run's `GITHUB_TOKEN` (scoped to
+  `realbytecode/langflow`) and then runs a blanket `docker compose pull` — which now includes OD.
+  For that pull to succeed, grant the langflow repo read access to the OD package **once**:
+  GitHub → the `open-design` package → **Package settings → Manage Actions access → add repository
+  `realbytecode/langflow` (role: Read)**. (Equivalently, make the package internal/public.) Note the
+  deploy ends with `docker logout ghcr.io`, so a standing PAT login on the box does **not** survive a
+  CI deploy — granting package access to the workflow token is the durable fix, not a box-side login.
 
 ## Deploy / redeploy (manual)
 
@@ -242,10 +260,39 @@ docker compose -f docker-compose.prod.yml down                # stop the stack (
 # Postgres backup:
 docker compose -f docker-compose.prod.yml exec db \
   pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > backup-$(date +%F).sql
+
+# Open Design data backup (projects + daemon state in /app/.od):
+docker run --rm -v lothal_lothal-od-data:/data -v "$PWD":/backup alpine \
+  tar czf /backup/od-data-$(date +%F).tgz -C /data .
 ```
 
-Data lives in named volumes `lothal-db-data` (Postgres) and `lothal-langflow-data`
-(`/app/langflow`: secret_key, etc.). Don't `docker compose down -v` in production — that
-deletes them.
+Data lives in named volumes `lothal-db-data` (Postgres), `lothal-langflow-data`
+(`/app/langflow`: secret_key, etc.), and `lothal-od-data` (`/app/.od`: OD projects +
+daemon state). Don't `docker compose down -v` in production — that deletes them.
+(Compose prefixes volume names with the project name `lothal`, so the host volume is
+`lothal_lothal-od-data` — see `docker volume ls`.)
+
+## Verify Open Design (U.2 acceptance)
+
+Run from the box after `up -d`. OD is internal-only, so reach it **from the backend
+container** over the compose network (proves backend → OD connectivity):
+
+```bash
+cd /opt/lothal
+# 1. Health endpoint is reachable from the backend over the internal network:
+docker compose -f docker-compose.prod.yml exec backend \
+  curl -fsS http://open-design:7456/api/health && echo "  -> OD health OK"
+
+# 2. The API answers (auth disabled — no bearer needed on the internal network):
+docker compose -f docker-compose.prod.yml exec backend \
+  curl -fsS http://open-design:7456/api/projects && echo "  -> OD /api/projects OK"
+
+# 3. Data survives recreation (the /app/.od volume persists):
+docker compose -f docker-compose.prod.yml up -d --force-recreate open-design
+docker compose -f docker-compose.prod.yml exec open-design ls -la /app/.od
+```
+
+(If you enable `OD_API_TOKEN` for defense-in-depth, step 2 becomes
+`curl -H "Authorization: Bearer $OD_API_TOKEN" …` and an unauthed call should `401`.)
 </content>
 </invoke>
