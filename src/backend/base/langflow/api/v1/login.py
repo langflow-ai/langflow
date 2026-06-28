@@ -143,6 +143,19 @@ async def auto_login(response: Response, db: DbSession):
     if auth_settings.AUTO_LOGIN:
         auth = get_auth_service()
         user_id, tokens = await auth.create_user_longterm_token(db)
+        # The auto-login token is now short-lived, so set the refresh
+        # cookie too — the client refreshes it transparently via /refresh instead
+        # of relying on a year-long token.
+        if tokens.get("refresh_token"):
+            response.set_cookie(
+                "refresh_token_lf",
+                tokens["refresh_token"],
+                httponly=auth_settings.REFRESH_HTTPONLY,
+                samesite=auth_settings.REFRESH_SAME_SITE,
+                secure=auth_settings.REFRESH_SECURE,
+                expires=auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS,
+                domain=auth_settings.COOKIE_DOMAIN,
+            )
         response.set_cookie(
             "access_token_lf",
             tokens["access_token"],

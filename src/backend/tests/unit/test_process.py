@@ -489,8 +489,8 @@ def test_apply_tweaks_code_override_prevention():
     with patch("langflow.processing.process.logger") as mock_logger:
         apply_tweaks(node, node_tweaks)
 
-        # Verify warning was logged for code override attempt
-        mock_logger.warning.assert_called_once_with("Security: Code field cannot be overridden via tweaks.")
+        # Verify warning was logged for code override attempt (and names the field)
+        mock_logger.warning.assert_called_once_with("Security: refusing to override code field 'code' via tweaks.")
 
     # Verify code field was NOT modified
     assert node["data"]["node"]["template"]["code"]["value"] == "original_code"
@@ -524,11 +524,139 @@ def test_apply_tweaks_code_only_prevention():
     with patch("langflow.processing.process.logger") as mock_logger:
         apply_tweaks(node, node_tweaks)
 
-        # Verify warning was logged
-        mock_logger.warning.assert_called_once_with("Security: Code field cannot be overridden via tweaks.")
+        # Verify warning was logged and names the offending field (not a generic "Code field").
+        mock_logger.warning.assert_called_once_with("Security: refusing to override code field 'code' via tweaks.")
 
     # Verify code field was NOT modified
     assert node["data"]["node"]["template"]["code"]["value"] == "original_code"
+
+
+def test_apply_tweaks_blocks_code_type_field_with_other_name():
+    """A code-injection bypass: a field of type 'code' but named something other than 'code'.
+
+    The old guard only blocked the literal field name 'code'. Block by field *type*.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "node": {
+                "template": {
+                    "custom_source": {"value": "original", "type": "code"},
+                    "param1": {"value": "ok", "type": "str"},
+                }
+            }
+        },
+    }
+    apply_tweaks(node, {"custom_source": "import os; os.system('id')", "param1": "new"})
+
+    # The code-type field must NOT be overridden; the ordinary field is fine.
+    assert node["data"]["node"]["template"]["custom_source"]["value"] == "original"
+    assert node["data"]["node"]["template"]["param1"]["value"] == "new"
+
+
+def test_apply_tweaks_blocks_code_execution_component_fields():
+    """Tweaks must not override the executable/sandbox inputs of a code-execution component.
+
+    The executable input lives under names like 'python_code' (MultilineInput → type
+    'str'), not 'code', so the block keys off the component *type*
+    (CODE_EXECUTION_COMPONENT_TYPES) plus the code/sandbox field names
+    (CODE_EXECUTION_FIELD_NAMES). 'global_imports' is the import allow-list that
+    populates the exec() namespace and must stay blocked too.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "PythonREPLComponent",
+            "node": {
+                "template": {
+                    "python_code": {"value": "print('safe')", "type": "str"},
+                    "global_imports": {"value": "math", "type": "str"},
+                }
+            },
+        },
+    }
+    apply_tweaks(node, {"python_code": "__import__('os').system('id')", "global_imports": "os,subprocess"})
+
+    assert node["data"]["node"]["template"]["python_code"]["value"] == "print('safe')"
+    assert node["data"]["node"]["template"]["global_imports"]["value"] == "math"
+
+
+def test_apply_tweaks_allows_benign_fields_on_code_execution_component():
+    """Scoped block: benign fields on a code-execution component remain tweakable.
+
+    Regression for the over-block where every field on a code-execution node was
+    dropped — renaming a Python REPL tool (name/description) must still work.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "PythonREPLTool",
+            "node": {
+                "template": {
+                    "name": {"value": "old_name", "type": "str"},
+                    "description": {"value": "old desc", "type": "str"},
+                    "code": {"value": "print('safe')", "type": "str"},
+                }
+            },
+        },
+    }
+    apply_tweaks(node, {"name": "new_name", "description": "new desc", "code": "__import__('os').system('id')"})
+
+    # Benign metadata is applied; the executable 'code' field is still blocked.
+    assert node["data"]["node"]["template"]["name"]["value"] == "new_name"
+    assert node["data"]["node"]["template"]["description"]["value"] == "new desc"
+    assert node["data"]["node"]["template"]["code"]["value"] == "print('safe')"
+
+
+def test_apply_tweaks_blocks_removed_python_code_structured_tool_code():
+    """The removed PythonCodeStructuredTool's exec input is 'tool_code' (type 'str').
+
+    Its type is retained in CODE_EXECUTION_COMPONENT_TYPES to keep stored code in
+    existing flows un-overridable; the tweak guard must cover 'tool_code' too.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "PythonCodeStructuredTool",
+            "node": {"template": {"tool_code": {"value": "stored_code", "type": "str"}}},
+        },
+    }
+    apply_tweaks(node, {"tool_code": "__import__('os').system('id')"})
+
+    assert node["data"]["node"]["template"]["tool_code"]["value"] == "stored_code"
+
+
+def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
+    """Smart Transform's 'filter_instruction' drives an eval()'d lambda → blocked.
+
+    Other inputs (data, sample_size, ...) carry no code and stay tweakable.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "Smart Transform",
+            "node": {
+                "template": {
+                    "filter_instruction": {"value": "uppercase the text", "type": "str"},
+                    "sample_size": {"value": 10, "type": "int"},
+                }
+            },
+        },
+    }
+    apply_tweaks(node, {"filter_instruction": "lambda x: __import__('os').system('id')", "sample_size": 25})
+
+    assert node["data"]["node"]["template"]["filter_instruction"]["value"] == "uppercase the text"
+    assert node["data"]["node"]["template"]["sample_size"]["value"] == 25
 
 
 def test_apply_tweaks_mcp_field_type():

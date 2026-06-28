@@ -1,3 +1,4 @@
+import os
 import re
 from collections.abc import Callable, Sequence
 from typing import Any
@@ -239,3 +240,34 @@ def get_chat_output_sender_name(self) -> str | None:
             return vertex.raw_params.get("sender_name")
 
     return None
+
+
+def resolve_agent_verbose() -> bool:
+    """Resolve whether LangChain's ``AgentExecutor`` should emit stdout chain markers.
+
+    When ``verbose`` is truthy, ``AgentExecutor`` attaches a ``StdOutCallbackHandler``
+    that writes ``> Entering new ... chain`` / ``> Finished chain.`` lines straight to
+    **stdout** via ``print()`` -- bypassing Langflow's logging system entirely (no log
+    level, no formatting). That output is pure noise in container/Kubernetes/OpenShift
+    deployments where stdout is harvested as logs, and the same agent steps are already
+    surfaced through Langflow's own event stream (the "Agent Steps" content blocks).
+
+    The markers are therefore **off by default** and gated behind LangChain's own
+    ``LANGCHAIN_VERBOSE`` environment variable -- the conventional switch for this
+    behavior. Setting ``LANGCHAIN_VERBOSE`` to a truthy value (``true``/``1``/``yes``/
+    ``on``) re-enables them; any other value, or leaving it unset, keeps them
+    suppressed -- including for saved flows that baked in ``verbose=True`` before this
+    change. The component's legacy ``verbose`` input no longer attaches the stdout
+    handler on its own.
+
+    The environment variable is read directly (rather than via
+    ``langchain_core.globals.get_verbose()``) so the behavior is deterministic and
+    test-mockable with ``patch.dict(os.environ, ...)``.
+
+    Returns:
+        bool: True only when ``LANGCHAIN_VERBOSE`` is explicitly set to a truthy value.
+    """
+    env_value = os.getenv("LANGCHAIN_VERBOSE")
+    if env_value is not None:
+        return env_value.strip().lower() in ("true", "1", "yes", "on")
+    return False
