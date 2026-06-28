@@ -150,6 +150,25 @@ class DiagramResponse(BaseModel):
     svg: str | None = None
 
 
+class ArtifactsResponse(BaseModel):
+    """`GET /projects/{id}/artifacts` — the architecture artifact map + rendered diagrams (Epic E.4).
+
+    The ARCHITECTURE stage emits a flat `{path: content}` artifact map into
+    `lothal_project.artifacts` (`adr.md` + `diagrams/*.d2`, Epic E.3) — the future
+    git commit tree verbatim. `artifacts` returns that map: `{}` while the project
+    is past CLARIFICATION but before the generator has emitted anything (an empty
+    map, not an error). Each diagram entry (`diagrams/*.d2`) is also server-rendered
+    to SVG via the `d2` compiler and returned in `svgs`, keyed by the same path —
+    so the frontend displays the SVG and ships no D2 compiler of its own (the same
+    backend-render contract `GET /diagram` honours). The ADR is Markdown and has no
+    SVG. An `svgs` value is `null` when its diagram could not be rendered (compiler
+    unavailable / render failure), which is logged but never fails the read.
+    """
+
+    artifacts: dict[str, str] = Field(default_factory=dict)
+    svgs: dict[str, str | None] = Field(default_factory=dict)
+
+
 class DiagramApproveResponse(BaseModel):
     """`POST /projects/{id}/diagram/approve` — the phase after advancing."""
 

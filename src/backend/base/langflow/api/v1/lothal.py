@@ -19,6 +19,7 @@ owned by the caller or 404s, so an endpoint going live can never forget the
 check.
 """
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from uuid import UUID
@@ -33,6 +34,7 @@ from langflow.lothal.d2_compile import D2CompilerUnavailableError, render_d2
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError, call_llm
 from langflow.lothal.router import available_phases, process_turn
 from langflow.lothal.schemas import (
+    ArtifactsResponse,
     ChatRequest,
     CodeResponse,
     DebugLLMRequest,
@@ -479,6 +481,62 @@ async def get_diagram(project: OwnedProject) -> DiagramResponse:
     if not (d2 and d2.strip()):
         return DiagramResponse(d2=None)
     return DiagramResponse(d2=d2, svg=await _render_diagram_svg(d2, project.id))
+
+
+def _is_diagram_artifact(path: str) -> bool:
+    """Whether an artifact path is a renderable D2 diagram (`diagrams/*.d2`).
+
+    The Architecture stage's map holds the Markdown ADR alongside the diagrams
+    (Epic E.3); only the `diagrams/*.d2` entries are D2 source the backend renders
+    to SVG. Keying off the path (not a hardcoded list) keeps a future diagram —
+    e.g. a deployment diagram, one entry in `DIAGRAM_SPECS` — rendering with no
+    change here.
+    """
+    return path.startswith("diagrams/") and path.endswith(".d2")
+
+
+@router.get(
+    "/projects/{project_id}/artifacts",
+    summary="Get the architecture artifact map (+ server-rendered diagram SVGs)",
+)
+async def get_artifacts(project: OwnedProject) -> ArtifactsResponse:
+    """Return the Architecture stage's artifact map and a rendered SVG per diagram (Epic E.4).
+
+    The ARCHITECTURE stage writes a flat `{path: content}` artifact map to
+    `lothal_project.artifacts` (`adr.md` + `diagrams/*.d2`, Epic E.3) — the future
+    git commit tree verbatim. This read hands that map back as `artifacts` and,
+    alongside it, renders every `diagrams/*.d2` entry to SVG via the backend `d2`
+    compiler (the same render path `GET /diagram` uses), keyed by the diagram's
+    path in `svgs`. The frontend (E.5) renders the ADR Markdown itself and just
+    displays the SVGs — it ships no D2 compiler of its own.
+
+    Phase-gated to `ARCHITECTURE` and later, exactly like `GET /diagram`: no
+    artifacts exist during CLARIFICATION, so a read there is a `403` (ownership is
+    checked first by `OwnedProject`, so an unowned project still 404s regardless of
+    phase). Once in the architecture stage but before the generator has emitted
+    anything, `artifacts` is `null` and an empty map (`artifacts: {}, svgs: {}`) is
+    returned — never an error.
+
+    Rendering never 500s: each diagram was compile-validated at generation (E.3),
+    but a missing compiler or a render failure yields `svg: null` for that entry
+    (logged via `_render_diagram_svg`), rather than failing the whole read.
+    Diagrams render concurrently so the read stays snappy across the full set.
+    """
+    if project.phase not in _DIAGRAM_VISIBLE_PHASES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Artifacts are not available until the architecture stage begins.",
+        )
+
+    artifacts = project.artifacts or {}
+
+    # Render every diagram entry to SVG concurrently (gather preserves order), then
+    # pair each SVG back with its artifact path. The ADR (`adr.md`) is Markdown and
+    # gets no SVG. `_render_diagram_svg` fail-closes to `None` for a blank or
+    # non-compiling entry, so the map shape is always {diagram_path: svg|null}.
+    diagram_paths = [path for path in artifacts if _is_diagram_artifact(path)]
+    svgs = await asyncio.gather(*(_render_diagram_svg(artifacts[path], project.id) for path in diagram_paths))
+    return ArtifactsResponse(artifacts=artifacts, svgs=dict(zip(diagram_paths, svgs, strict=True)))
 
 
 @router.post(
