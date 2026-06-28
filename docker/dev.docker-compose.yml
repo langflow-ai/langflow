@@ -18,6 +18,9 @@ services:
       - LANGFLOW_SUPERUSER=langflow
       - LANGFLOW_SUPERUSER_PASSWORD=langflow
       - LANGFLOW_CONFIG_DIR=/var/lib/langflow
+    # The chat provider (LOTHAL_LLM_PROVIDER/CLAUDE_CODE_OAUTH_TOKEN) and the U.3
+    # LLM gateway pass-through (LOTHAL_GATEWAY_UPSTREAM_BASE_URL/_API_KEY, optional
+    # LOTHAL_GATEWAY_TOKEN) are both read from ../.env below.
     env_file:
       - ../.env
     volumes:

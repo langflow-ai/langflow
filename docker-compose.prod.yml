@@ -69,6 +69,16 @@ services:
       LOTHAL_MODEL_NAME: ${LOTHAL_MODEL_NAME:-}
       # Required: fail compose at parse time rather than booting into runtime 503s.
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:?CLAUDE_CODE_OAUTH_TOKEN is required in production}
+      # Lothal LLM gateway (Epic U.3) — the OpenAI-compatible endpoint Open Design's
+      # agent calls (/api/v1/lothal/gateway/v1/chat/completions). By DEFAULT it runs
+      # OD's calls on the subscription above (CLAUDE_CODE_OAUTH_TOKEN) by translating
+      # OpenAI ⇄ Anthropic — no extra key, tools + streaming intact. Setting BOTH of
+      # the upstream vars below switches it to a verbatim pass-through on a metered
+      # key (takes precedence). The inbound token, when set, must match OD's
+      # agentCliEnv.codex OPENAI_API_KEY (wired in U.4; see deploy/RUNBOOK.md).
+      LOTHAL_GATEWAY_UPSTREAM_BASE_URL: ${LOTHAL_GATEWAY_UPSTREAM_BASE_URL:-}
+      LOTHAL_GATEWAY_UPSTREAM_API_KEY: ${LOTHAL_GATEWAY_UPSTREAM_API_KEY:-}
+      LOTHAL_GATEWAY_TOKEN: ${LOTHAL_GATEWAY_TOKEN:-}
     volumes:
       - lothal-langflow-data:/app/langflow  # secret_key, profile pics, etc. — must persist
     healthcheck:
