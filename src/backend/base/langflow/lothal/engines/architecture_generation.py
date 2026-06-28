@@ -55,7 +55,8 @@ def _compose_generation_turn(prd: str | None, instruction: str) -> str:
     The full clarification conversation (and the PRD, which is its last assistant
     turn) already rides in `history`, but the PRD is restated here as the
     distilled, confirmed anchor so generation stays robust if history is ever
-    truncated for a long conversation (mirrors `diagram_refinement._compose_turn`).
+    truncated for a long conversation (mirrors `architecture_refinement`'s
+    `_compose_diagram_turn`).
     """
     sections: list[str] = []
     if prd and prd.strip():
