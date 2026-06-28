@@ -46,6 +46,9 @@ from langflow.lothal.schemas import (
     PRDResponse,
     ProjectCreate,
     ProjectRead,
+    PrototypeApproveResponse,
+    PrototypeRefineRequest,
+    PrototypeStateResponse,
 )
 from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.database.models.lothal_project.model import Message, MessageRole, Project, ProjectPhase
@@ -53,10 +56,12 @@ from langflow.services.database.models.lothal_project.model import Message, Mess
 # Phases in which the diagram exists and is readable — the `GET /diagram` phase
 # gate from `api-endpoints.md`. CLARIFICATION precedes the architecture stage, so
 # the diagram read 403s there (no diagram can exist yet); every later phase may
-# read it. Epic E.2 merged the two diagram phases into ARCHITECTURE.
+# read it. Epic E.2 merged the two diagram phases into ARCHITECTURE; Epic UI
+# (U.0) inserts PROTOTYPE after it, where the approved diagram stays readable.
 _DIAGRAM_VISIBLE_PHASES = frozenset(
     {
         ProjectPhase.ARCHITECTURE.value,
+        ProjectPhase.PROTOTYPE.value,
         ProjectPhase.CODE_GENERATION.value,
         ProjectPhase.DONE.value,
     }
@@ -274,9 +279,9 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
 
     turn_phase = project.phase
 
-    # Not every phase has a conversation step: CODE_GENERATION and DONE have no
-    # registered engine. Approving a diagram (D.11) is the first in-app path into
-    # CODE_GENERATION, so this is now reachable — reject it as a clean 409 rather
+    # Not every phase has a conversation step: PROTOTYPE, CODE_GENERATION and
+    # DONE have no registered chat engine. Approving a diagram (D.11) is the first
+    # in-app path into PROTOTYPE, so this is now reachable — reject it as a clean 409 rather
     # than letting `process_turn` raise an uncaught `ValueError` (a 500 that also
     # leaks the engine registry, and 500s again on every retry — a stuck state).
     if turn_phase not in available_phases():
@@ -541,10 +546,10 @@ async def get_artifacts(project: OwnedProject) -> ArtifactsResponse:
 
 @router.post(
     "/projects/{project_id}/diagram/approve",
-    summary="Approve the diagram and advance to code generation",
+    summary="Approve the architecture and advance to the prototype stage",
 )
 async def approve_diagram(*, session: DbSession, project: OwnedProject) -> DiagramApproveResponse:
-    """Approve the architecture and advance to CODE_GENERATION (Epic D.11; phase merged in E.2).
+    """Approve the architecture and advance to PROTOTYPE (Epic D.11; retargeted by Epic UI U.0).
 
     The diagram surface has no canvas-save path (Epic D.9 retired it): the user
     shapes the D2 by conversation (the architecture engine, E.2), and *approving*
@@ -552,8 +557,12 @@ async def approve_diagram(*, session: DbSession, project: OwnedProject) -> Diagr
     therefore only valid in ARCHITECTURE — calling it in any other phase is a `409`
     (a no-op transition the UI shouldn't have offered) rather than silently
     re-approving. The approved D2 is retained verbatim in `lothal_project.diagram_d2`
-    (code generation reads it, D.12), so `GET /diagram` keeps returning it
-    unchanged across the transition.
+    (the prototype stage and code generation both read it), so `GET /diagram`
+    keeps returning it unchanged across the transition.
+
+    The transition target is PROTOTYPE, not CODE_GENERATION: Epic UI inserts the
+    prototype stage between architecture and code generation (the prototype is
+    then approved separately to reach CODE_GENERATION, Story U.7).
 
     Serialized against concurrent turns the same way `chat` is: re-read the row
     under a `FOR UPDATE` lock before deciding, so a refine turn and an approve
@@ -568,21 +577,82 @@ async def approve_diagram(*, session: DbSession, project: OwnedProject) -> Diagr
         )
 
     # There must be a diagram to approve. On the happy path generation always
-    # populates `diagram_d2` before refinement, but guard against advancing into
-    # CODE_GENERATION with nothing for code generation to read (e.g. a legacy
-    # project whose only diagram was the dropped xyflow graph).
+    # populates `diagram_d2` before refinement, but guard against advancing past
+    # the architecture stage with nothing downstream (the prototype stage and code
+    # generation) can read (e.g. a legacy project whose only diagram was the
+    # dropped xyflow graph).
     if not (project.diagram_d2 and project.diagram_d2.strip()):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="There is no diagram to approve yet.",
         )
 
-    project.phase = ProjectPhase.CODE_GENERATION.value
+    project.phase = ProjectPhase.PROTOTYPE.value
     project.updated_at = datetime.now(timezone.utc)
     session.add(project)
     await session.flush()
     await session.refresh(project)
     return DiagramApproveResponse(phase=project.phase)
+
+
+# --- Prototype (Epic UI) -----------------------------------------------------
+# The prototype stage drives Open Design (OD) as a headless prototyping engine.
+# Story U.0 ships the contract as typed 501 stubs (project-scoped + auth, like
+# every other surface); the backends fill in risk-ordered over U.4-U.7. Each
+# handler keeps the `OwnedProject` dependency so going live can never drop the
+# ownership check, and the response models document the live shape in OpenAPI.
+
+
+@router.get(
+    "/projects/{project_id}/prototype",
+    response_model=PrototypeStateResponse,
+    responses=_NOT_IMPLEMENTED,
+    summary="Get the prototype stage state (OD linkage + embed URL + artifacts)",
+)
+async def get_prototype(project: OwnedProject) -> JSONResponse:
+    # Story U.5 lights this up: it returns the project's `prototype_status`, OD
+    # linkage (`od_project_id`/`od_conversation_id`), a ready-to-iframe `embed_url`,
+    # and the retained `lothal_prototype_artifact` rows. 501 until then.
+    return stub("The prototype endpoint is not implemented yet.")
+
+
+@router.post(
+    "/projects/{project_id}/prototype/generate",
+    response_model=PrototypeStateResponse,
+    responses=_NOT_IMPLEMENTED,
+    summary="Start (or restart) prototype generation",
+)
+async def generate_prototype(project: OwnedProject) -> JSONResponse:
+    # Story U.4 lights this up: it seeds an OD project from `prd_content` +
+    # `diagram_d2` and starts a generation run, moving `prototype_status` to
+    # GENERATING. Only valid in the PROTOTYPE phase once live. 501 until then.
+    return stub("Prototype generation is not implemented yet.")
+
+
+@router.post(
+    "/projects/{project_id}/prototype/refine",
+    response_model=PrototypeStateResponse,
+    responses=_NOT_IMPLEMENTED,
+    summary="Refine the prototype with a Lothal-side instruction",
+)
+async def refine_prototype(project: OwnedProject, body: PrototypeRefineRequest) -> JSONResponse:
+    # Story U.6 lights this up: it starts a new OD run in the same conversation
+    # carrying the refine instruction. The optional Lothal-side refine path; the
+    # primary one is inside OD. Only valid in the PROTOTYPE phase. 501 until then.
+    return stub("Prototype refinement is not implemented yet.")
+
+
+@router.post(
+    "/projects/{project_id}/prototype/approve",
+    response_model=PrototypeApproveResponse,
+    responses=_NOT_IMPLEMENTED,
+    summary="Approve the prototype and advance to code generation",
+)
+async def approve_prototype(project: OwnedProject) -> JSONResponse:
+    # Story U.7 lights this up: it copies the finalised OD artifacts into
+    # `lothal_prototype_artifact`, stamps `prototype_approved_at`, and advances
+    # the phase PROTOTYPE → CODE_GENERATION. Only valid in PROTOTYPE. 501 until then.
+    return stub("Approving the prototype is not implemented yet.")
 
 
 # --- Code --------------------------------------------------------------------

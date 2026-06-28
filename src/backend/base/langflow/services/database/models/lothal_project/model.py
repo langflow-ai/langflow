@@ -17,6 +17,12 @@ class ProjectPhase(str, Enum):
     # set (E.3). Existing rows were remapped onto ARCHITECTURE by migration
     # e1f0a2b3c4d5.
     ARCHITECTURE = "ARCHITECTURE"
+    # Epic UI (Story U.0) inserts the prototype stage between architecture and
+    # code generation: approving the architecture (`POST /diagram/approve`) now
+    # lands here, and approving the prototype advances to CODE_GENERATION. The
+    # per-project Open Design run lifecycle lives in ``PrototypeStatus``; this
+    # phase only marks that the project is *in* the prototype stage.
+    PROTOTYPE = "PROTOTYPE"
     CODE_GENERATION = "CODE_GENERATION"
     DONE = "DONE"
 
