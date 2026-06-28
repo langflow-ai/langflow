@@ -207,10 +207,12 @@ async def _proxy_verbatim(body: bytes, accept: str, upstream_cfg: tuple[str, str
         upstream = await client.send(upstream_req, stream=True)
     except httpx.HTTPError as exc:
         await client.aclose()
+        # Log the detail (operator-visible) but don't leak the exception string —
+        # which can carry the upstream URL/host — into the client-facing response.
         logger.warning(f"lothal gateway upstream request failed: {exc}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Gateway upstream request failed: {exc}",
+            detail="Gateway upstream request failed.",
         ) from exc
 
     async def _stream() -> AsyncIterator[bytes]:

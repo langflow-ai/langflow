@@ -339,10 +339,12 @@ async def proxy_subscription(openai_body: dict[str, Any], token: str) -> Respons
         upstream = await client.send(request, stream=True)
     except httpx.HTTPError as exc:
         await client.aclose()
+        # Log the detail (operator-visible) but don't leak the exception string —
+        # which can carry the upstream URL/host — into the client-facing body.
         logger.warning(f"lothal subscription gateway request failed: {exc}")
         return JSONResponse(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            content={"error": {"message": f"Gateway upstream request failed: {exc}", "type": "upstream_error"}},
+            content={"error": {"message": "Gateway upstream request failed.", "type": "upstream_error"}},
         )
 
     if upstream.status_code != status.HTTP_200_OK:
