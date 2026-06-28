@@ -47,6 +47,22 @@ export type Diagram = {
   svg: string | null;
 };
 
+// --- Artifacts (architecture file-map + rendered diagrams, Epic E) ----------
+// The ARCHITECTURE stage emits a flat `{path: content}` artifact map (Epic E.3)
+// — `adr.md` plus `diagrams/*.d2` — into `lothal_project.artifacts`. `GET
+// /artifacts` (Epic E.4) hands that map back as `artifacts`, and server-renders
+// every `diagrams/*.d2` entry to SVG in `svgs`, keyed by the same path. The ADR
+// is Markdown and has no SVG entry. `artifacts` is `{}` once a project is past
+// CLARIFICATION but before the generator has emitted anything; an `svgs` value
+// is `null` when its diagram couldn't be rendered (compiler unavailable / render
+// failure). The frontend renders the ADR markdown itself and just displays the
+// SVGs — it ships no D2 compiler of its own.
+
+export type Artifacts = {
+  artifacts: Record<string, string>;
+  svgs: Record<string, string | null>;
+};
+
 // `POST /diagram/approve` (Epic D.11) advances ARCHITECTURE →
 // CODE_GENERATION and returns the project's phase afterwards.
 export type DiagramApprove = {
@@ -70,6 +86,8 @@ const messagesKey = (projectId: string) =>
   ["lothal", "messages", projectId] as const;
 const diagramKey = (projectId: string) =>
   ["lothal", "diagram", projectId] as const;
+const artifactsKey = (projectId: string) =>
+  ["lothal", "artifacts", projectId] as const;
 const codeKey = (projectId: string) => ["lothal", "code", projectId] as const;
 
 // Deterministic failures must not be retried — retrying only delays the state
@@ -158,21 +176,35 @@ export function useMessages(projectId: string) {
   });
 }
 
+// A chat turn. `content` is the message; `artifact` is the active artifact key
+// the user is refining in the ARCHITECTURE stage (e.g. `diagrams/context.d2`),
+// which routes a refine turn to the right artifact in the map (Epic E.3/E.5).
+// Omitted for clarification turns and the first (generation) turn.
+export type SendMessageVars = {
+  content: string;
+  artifact?: string | null;
+};
+
 export function useSendMessage(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async (vars: SendMessageVars) => {
       const res = await api.post<Message>(`${BASE}${projectId}/chat`, {
-        content,
+        content: vars.content,
+        // Only send a target when one is set — the backend defaults a refine
+        // with no target to the sequence diagram, and rejects an unknown key.
+        ...(vars.artifact ? { artifact: vars.artifact } : {}),
       });
       return res.data;
     },
     onSuccess: () => {
       // The reply may advance the phase or (re)generate the diagram — refresh the
-      // conversation, the project list (phase badge), and the diagram (canvas).
+      // conversation, the project list (phase badge), the legacy diagram canvas,
+      // and the architecture artifact map (ADR + diagram set).
       qc.invalidateQueries({ queryKey: messagesKey(projectId) });
       qc.invalidateQueries({ queryKey: PROJECTS_KEY });
       qc.invalidateQueries({ queryKey: diagramKey(projectId) });
+      qc.invalidateQueries({ queryKey: artifactsKey(projectId) });
     },
   });
 }
@@ -195,10 +227,30 @@ export function useDiagram(projectId: string, enabled = true) {
   });
 }
 
+// The architecture artifact map + rendered diagram SVGs (Epic E.4). Phase-gated
+// exactly like `useDiagram`: the ARCHITECTURE-stage pane only enables this past
+// CLARIFICATION (no artifacts exist before then). The 403 phase gate is
+// deterministic — the UI keys its placeholder/NotReady state off it — and the
+// endpoint is live (Epic E.4), but skip a stray 501 too for parity with the
+// other stub-era reads.
+export function useArtifacts(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: artifactsKey(projectId),
+    queryFn: async () => {
+      const res = await api.get<Artifacts>(`${BASE}${projectId}/artifacts`);
+      return res.data;
+    },
+    enabled,
+    retry: retrySkipping(501, 403),
+    staleTime: STUB_STALE_MS,
+  });
+}
+
 // Approve the current diagram (Epic D.11): advances ARCHITECTURE →
 // CODE_GENERATION on the server and retains the D2. Invalidates the project
 // queries so the phase badge, stepper, and right-pane (canvas → code) update,
-// and the diagram so the approved D2 is re-read under the new phase.
+// and the diagram + artifact map so the approved output is re-read under the
+// new phase.
 export function useApproveDiagram(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -211,6 +263,7 @@ export function useApproveDiagram(projectId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: PROJECTS_KEY });
       qc.invalidateQueries({ queryKey: diagramKey(projectId) });
+      qc.invalidateQueries({ queryKey: artifactsKey(projectId) });
     },
   });
 }

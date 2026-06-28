@@ -3,6 +3,16 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 // jsdom has no scrollIntoView; the chat panel calls it on every message change.
 Element.prototype.scrollIntoView = jest.fn();
 
+// react-markdown / remark-gfm are ESM (the ArtifactsPane renders the ADR with
+// them); Jest doesn't transform node_modules, so mock them — the repo convention.
+jest.mock("react-markdown", () => ({
+  __esModule: true,
+  default: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="adr-markdown">{children}</div>
+  ),
+}));
+jest.mock("remark-gfm", () => ({ __esModule: true, default: () => {} }));
+
 const mockNavigate = jest.fn();
 let mockParams: { projectId?: string } = { projectId: "p1" };
 jest.mock("react-router-dom", () => ({
@@ -12,14 +22,16 @@ jest.mock("react-router-dom", () => ({
 
 const mockUseProject = jest.fn();
 const mockUseMessages = jest.fn();
-const mockUseDiagram = jest.fn();
+const mockUseArtifacts = jest.fn();
 const mockUseCode = jest.fn();
 const mockSendMutate = jest.fn();
 const mockApproveMutate = jest.fn();
 jest.mock("@/controllers/API/queries/lothal", () => ({
   useProject: () => mockUseProject(),
   useMessages: () => mockUseMessages(),
-  useDiagram: () => mockUseDiagram(),
+  // The right pane is the architecture doc-and-diagrams view (Epic E.5), which
+  // reads GET /artifacts; the old single-diagram useDiagram is gone from here.
+  useArtifacts: () => mockUseArtifacts(),
   useCode: () => mockUseCode(),
   useSendMessage: () => ({ mutateAsync: mockSendMutate, isPending: false }),
   useApproveDiagram: () => ({
@@ -102,9 +114,9 @@ describe("Lothal Workspace", () => {
       isLoading: false,
       isError: false,
     });
-    // Default: the diagram query is idle (most tests use a CLARIFICATION
-    // project, so the canvas shows its placeholder and never reads this).
-    mockUseDiagram.mockReturnValue({
+    // Default: the artifacts query is idle (most tests use a CLARIFICATION
+    // project, so the pane shows its placeholder and never reads this).
+    mockUseArtifacts.mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: false,
@@ -213,7 +225,11 @@ describe("Lothal Workspace", () => {
     });
     render(<Workspace />);
     fireEvent.click(screen.getByRole("button", { name: "Casual" }));
-    expect(mockSendMutate).toHaveBeenCalledWith("Casual");
+    // CLARIFICATION turn carries no refine target.
+    expect(mockSendMutate).toHaveBeenCalledWith({
+      content: "Casual",
+      artifact: null,
+    });
   });
 
   it("sends a typed message and clears the input", async () => {
@@ -224,23 +240,35 @@ describe("Lothal Workspace", () => {
     input.appendChild(document.createTextNode("A tide app"));
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await waitFor(() =>
-      expect(mockSendMutate).toHaveBeenCalledWith("A tide app"),
+      expect(mockSendMutate).toHaveBeenCalledWith({
+        content: "A tide app",
+        artifact: null,
+      }),
     );
     expect(input.textContent).toBe("");
   });
 
   it("drops a composer chip when a canvas element is anchored, and serializes it on send (D.7)", async () => {
-    // Diagram phase so the right pane renders the (stubbed) D2 canvas.
+    // Architecture stage so the right pane renders the artifact tabs.
     mockUseProject.mockReturnValue({
       data: { ...project, phase: "ARCHITECTURE" },
       isLoading: false,
     });
-    mockUseDiagram.mockReturnValue({
-      data: { d2: "user -> api", svg: "<svg>x</svg>" },
+    mockUseArtifacts.mockReturnValue({
+      data: {
+        artifacts: {
+          "adr.md": "# Decision Record",
+          "diagrams/sequence.d2": "user -> api",
+        },
+        svgs: { "diagrams/sequence.d2": "<svg>x</svg>" },
+      },
       isLoading: false,
       isError: false,
     });
     render(<Workspace />);
+
+    // The ADR tab leads; switch to a diagram tab so the (stubbed) D2 canvas shows.
+    fireEvent.click(screen.getByRole("tab", { name: "Sequence" }));
 
     // Double-clicking a canvas element resolves an anchor → the workspace routes
     // it to the composer, which drops an inline chip.
@@ -251,10 +279,14 @@ describe("Lothal Workspace", () => {
     expect(chip.dataset.id).toBe("checkout");
     expect(chip.textContent).toContain("Checkout");
 
-    // On send the chip serializes to its exact anchor id, backtick-wrapped.
+    // On send the chip serializes to its exact anchor id, backtick-wrapped, and
+    // the turn targets the active artifact (the sequence diagram tab) for refine.
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await waitFor(() =>
-      expect(mockSendMutate).toHaveBeenCalledWith("`checkout`"),
+      expect(mockSendMutate).toHaveBeenCalledWith({
+        content: "`checkout`",
+        artifact: "diagrams/sequence.d2",
+      }),
     );
   });
 
@@ -265,8 +297,11 @@ describe("Lothal Workspace", () => {
       data: { ...project, phase: "ARCHITECTURE" },
       isLoading: false,
     });
-    mockUseDiagram.mockReturnValue({
-      data: { d2: "user -> api", svg: "<svg>x</svg>" },
+    mockUseArtifacts.mockReturnValue({
+      data: {
+        artifacts: { "adr.md": "# ADR", "diagrams/sequence.d2": "user -> api" },
+        svgs: { "diagrams/sequence.d2": "<svg>x</svg>" },
+      },
       isLoading: false,
       isError: false,
     });
@@ -284,26 +319,21 @@ describe("Lothal Workspace", () => {
       data: { ...project, phase: "CLARIFICATION" },
       isLoading: false,
     });
-    mockUseDiagram.mockReturnValue({
-      data: { d2: null, svg: null },
-      isLoading: false,
-      isError: false,
-    });
     render(<Workspace />);
     expect(
       screen.queryByRole("button", { name: "Approve & generate code" }),
     ).not.toBeInTheDocument();
   });
 
-  it("does not offer Approve in ARCHITECTURE until a diagram exists", () => {
-    // First ARCHITECTURE turn: generation hasn't produced a diagram yet, so the
-    // Approve CTA stays hidden (offering it would just earn a 409).
+  it("does not offer Approve in ARCHITECTURE until artifacts exist", () => {
+    // First ARCHITECTURE turn: generation hasn't produced the artifact map yet,
+    // so the Approve CTA stays hidden (offering it would just earn a 409).
     mockUseProject.mockReturnValue({
       data: { ...project, phase: "ARCHITECTURE" },
       isLoading: false,
     });
-    mockUseDiagram.mockReturnValue({
-      data: { d2: null, svg: null },
+    mockUseArtifacts.mockReturnValue({
+      data: { artifacts: {}, svgs: {} },
       isLoading: false,
       isError: false,
     });

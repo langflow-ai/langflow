@@ -1,6 +1,18 @@
 // Shared lothal design-system atoms. Import from "@/pages/lothal/components".
 
+// NB: <ArtifactsPane> is intentionally NOT re-exported here. It pulls in
+// react-markdown (ESM), which Jest doesn't transform; routing it through this
+// barrel would force every component-barrel consumer's test to mock markdown.
+// Import it directly from "./ArtifactsPane" (the Workspace does).
 export { AssistantQuestion } from "./AssistantQuestion";
+export {
+  ADR_PATH,
+  type ArtifactKind,
+  type ArtifactTab,
+  artifactKind,
+  artifactLabel,
+  orderArtifacts,
+} from "./artifacts";
 export type { ButtonProps, ButtonSize, ButtonVariant } from "./Button";
 export { Button } from "./Button";
 export { CanvasPlaceholder } from "./CanvasPlaceholder";

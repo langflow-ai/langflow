@@ -16,10 +16,12 @@ jest.mock("@/controllers/API/api", () => ({
 }));
 
 import {
+  type Artifacts,
   type CodeFile,
   type Message,
   type Project,
   useApproveDiagram,
+  useArtifacts,
   useCode,
   useCreateProject,
   useDeleteProject,
@@ -64,6 +66,14 @@ const MESSAGE: Message = {
 };
 
 const CODE_FILE: CodeFile = { path: "src/main.py", content: "print('hi')\n" };
+
+const ARTIFACTS: Artifacts = {
+  artifacts: {
+    "adr.md": "# Decision Record",
+    "diagrams/sequence.d2": "user -> api",
+  },
+  svgs: { "diagrams/sequence.d2": "<svg>x</svg>" },
+};
 
 describe("lothal queries", () => {
   beforeEach(() => {
@@ -206,8 +216,38 @@ describe("lothal queries", () => {
     });
   });
 
+  describe("useArtifacts", () => {
+    it("GETs the architecture artifact map (+ rendered SVGs)", async () => {
+      mockApiGet.mockResolvedValue({ data: ARTIFACTS });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => useArtifacts("p1"), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockApiGet).toHaveBeenCalledWith(
+        "/api/v1/lothal/projects/p1/artifacts",
+      );
+      expect(result.current.data).toEqual(ARTIFACTS);
+    });
+
+    it("does not fire while disabled (phase-gated before ARCHITECTURE)", () => {
+      const { wrapper } = setup();
+      renderHook(() => useArtifacts("p1", false), { wrapper });
+      expect(mockApiGet).not.toHaveBeenCalled();
+    });
+
+    it("surfaces the 403 phase gate as a terminal error (no retry)", async () => {
+      mockApiGet.mockRejectedValue({ response: { status: 403 } });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => useArtifacts("p1"), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(mockApiGet).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("useSendMessage", () => {
-    it("POSTs chat content and invalidates both messages and projects", async () => {
+    it("POSTs chat content and invalidates messages, projects, diagram + artifacts", async () => {
       const reply: Message = { ...MESSAGE, id: "m2", content: "reply" };
       mockApiPost.mockResolvedValue({ data: reply });
       const { wrapper, invalidateSpy } = setup();
@@ -215,45 +255,54 @@ describe("lothal queries", () => {
 
       let returned: Message | undefined;
       await act(async () => {
-        returned = await result.current.mutateAsync("hello");
+        returned = await result.current.mutateAsync({ content: "hello" });
       });
 
+      // No target set → only `content` is sent (the engine defaults a refine).
       expect(mockApiPost).toHaveBeenCalledWith(
         "/api/v1/lothal/projects/p1/chat",
         { content: "hello" },
       );
       expect(returned).toEqual(reply);
-      // The reply may advance the phase, so both caches are refreshed.
+      // The reply may advance the phase or (re)generate the diagram/artifacts —
+      // all four caches are refreshed.
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["lothal", "messages", "p1"],
       });
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["lothal", "projects"],
       });
-    });
-
-    // Regression guard (from the code review): the diagram cache must be
-    // invalidated too, since a chat reply can (re)generate the diagram.
-    it("also invalidates the diagram cache (a chat reply can change the diagram)", async () => {
-      // Input: a chat turn succeeds while the project is in a diagram phase.
-      const reply: Message = { ...MESSAGE, id: "m2", content: "reply" };
-      mockApiPost.mockResolvedValue({ data: reply });
-      const { wrapper, invalidateSpy } = setup();
-      const { result } = renderHook(() => useSendMessage("p1"), { wrapper });
-
-      await act(async () => {
-        await result.current.mutateAsync("hello");
-      });
-
-      // Expected: messages, projects, AND diagram are all refreshed.
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["lothal", "diagram", "p1"],
       });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "artifacts", "p1"],
+      });
+    });
+
+    // The active artifact (Epic E.5) routes a refine turn to the right artifact.
+    it("includes the artifact refine target in the POST body when set", async () => {
+      const reply: Message = { ...MESSAGE, id: "m2", content: "reply" };
+      mockApiPost.mockResolvedValue({ data: reply });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => useSendMessage("p1"), { wrapper });
+
+      await act(async () => {
+        await result.current.mutateAsync({
+          content: "make it async",
+          artifact: "diagrams/sequence.d2",
+        });
+      });
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/api/v1/lothal/projects/p1/chat",
+        { content: "make it async", artifact: "diagrams/sequence.d2" },
+      );
     });
   });
 
   describe("useApproveDiagram", () => {
-    it("POSTs approve and invalidates the projects + diagram caches (D.11)", async () => {
+    it("POSTs approve and invalidates the projects + diagram + artifacts caches (D.11)", async () => {
       mockApiPost.mockResolvedValue({ data: { phase: "CODE_GENERATION" } });
       const { wrapper, invalidateSpy } = setup();
       const { result } = renderHook(() => useApproveDiagram("p1"), { wrapper });
@@ -267,12 +316,15 @@ describe("lothal queries", () => {
         "/api/v1/lothal/projects/p1/diagram/approve",
       );
       expect(returned).toEqual({ phase: "CODE_GENERATION" });
-      // Approving flips the phase (canvas → code) and re-reads the retained D2.
+      // Approving flips the phase (pane → code) and re-reads the retained output.
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["lothal", "projects"],
       });
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["lothal", "diagram", "p1"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "artifacts", "p1"],
       });
     });
   });

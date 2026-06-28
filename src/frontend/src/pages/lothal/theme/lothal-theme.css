@@ -274,6 +274,132 @@
   color: var(--ink);
 }
 
+/* --- Architecture artifacts: tabs + ADR prose (Epic E.5) ------------------
+ * The ARCHITECTURE-stage right pane: a tab strip selecting the ADR (Markdown)
+ * or one of the diagram SVGs, over the shared diagram canvas. */
+.lothal-artifact-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px var(--pad);
+  border-bottom: 1px solid var(--border);
+  background: var(--paper);
+}
+.lothal-artifact-tab {
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.lothal-artifact-tab:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.lothal-artifact-tab.is-active {
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* The ADR is rendered Markdown — a readable document column on paper. */
+.lothal-adr-scroll {
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  background: var(--paper);
+}
+.lothal-adr {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px var(--pad) 48px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+.lothal-adr > :first-child {
+  margin-top: 0;
+}
+.lothal-adr h1,
+.lothal-adr h2,
+.lothal-adr h3 {
+  font-family: var(--font-serif, serif);
+  color: var(--ink);
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+.lothal-adr h1 {
+  font-size: 1.7em;
+}
+.lothal-adr h2 {
+  font-size: 1.32em;
+}
+.lothal-adr h3 {
+  font-size: 1.12em;
+}
+.lothal-adr p,
+.lothal-adr ul,
+.lothal-adr ol,
+.lothal-adr blockquote,
+.lothal-adr table {
+  margin: 0 0 0.9em;
+}
+.lothal-adr ul,
+.lothal-adr ol {
+  padding-left: 1.4em;
+}
+.lothal-adr li {
+  margin: 0.25em 0;
+}
+.lothal-adr a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.lothal-adr code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.88em;
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+.lothal-adr pre {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  overflow-x: auto;
+  margin: 0 0 0.9em;
+}
+.lothal-adr pre code {
+  background: none;
+  padding: 0;
+}
+.lothal-adr blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 14px;
+  color: var(--ink-soft);
+}
+.lothal-adr table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.lothal-adr th,
+.lothal-adr td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+.lothal-adr th {
+  background: var(--surface-2);
+}
+
 /* --- Chat composer + anchor chips (Epic D.7) ------------------------------
  * A rich (contentEditable) composer: double-clicking a diagram element drops an
  * inline reference chip at the caret, serialized to the LLM as an exact D2
