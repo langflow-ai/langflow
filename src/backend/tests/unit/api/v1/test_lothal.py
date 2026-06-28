@@ -1395,6 +1395,162 @@ async def test_diagram_404_for_unowned_project(client: AsyncClient, logged_in_he
                 await session.delete(leftover)
 
 
+# --- Artifacts read (Epic E.4) ------------------------------------------------
+
+
+_DIAGRAM_PATHS = (
+    "diagrams/context.d2",
+    "diagrams/container.d2",
+    "diagrams/data-model.d2",
+    "diagrams/sequence.d2",
+)
+
+
+async def _set_phase_and_artifacts(project_pk: UUID, *, phase: str, artifacts: dict[str, str] | None) -> None:
+    """Seed a project's phase and raw `artifacts` map directly (mirrors `_set_phase_and_d2`)."""
+    async with session_scope() as session:
+        project = await session.get(Project, project_pk)
+        project.phase = phase
+        project.artifacts = artifacts
+
+
+async def test_artifacts_403_in_clarification(client: AsyncClient, logged_in_headers: dict):
+    """A fresh project sits in CLARIFICATION, before any artifact exists → 403 (mirrors /diagram)."""
+    project_id = await _create_chat_project(client, logged_in_headers, name="Artifacts")
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/artifacts", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_artifacts_empty_before_generation_completes(client: AsyncClient, logged_in_headers: dict):
+    """Past CLARIFICATION but before the generator emits → empty map, not 500."""
+    project_id = await _create_chat_project(client, logged_in_headers, name="Artifacts")
+    await _set_phase_and_artifacts(UUID(project_id), phase="ARCHITECTURE", artifacts=None)
+
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/artifacts", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"artifacts": {}, "svgs": {}}
+
+
+async def test_artifacts_returns_map_and_svg_per_diagram(
+    client: AsyncClient, logged_in_headers: dict, stub_diagram_render
+):
+    """A seeded artifact map comes back verbatim, with an SVG rendered per `diagrams/*.d2` entry.
+
+    The ADR (`adr.md`) is Markdown and gets no SVG; every diagram entry is keyed
+    into `svgs` by its artifact path with the (stubbed) server render.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers, name="Artifacts")
+    seeded = _seed_artifacts(_SEED_D2)
+    await _set_phase_and_artifacts(UUID(project_id), phase="ARCHITECTURE", artifacts=seeded)
+
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/artifacts", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+
+    assert set(body) == {"artifacts", "svgs"}
+    # The full file-map is returned verbatim — ADR plus the four diagrams.
+    assert body["artifacts"] == seeded
+    # One SVG per diagram, keyed by path; the ADR is not rendered.
+    assert set(body["svgs"]) == set(_DIAGRAM_PATHS)
+    assert "adr.md" not in body["svgs"]
+    assert all(svg == stub_diagram_render for svg in body["svgs"].values())
+
+
+async def test_artifacts_readable_in_later_phases(client: AsyncClient, logged_in_headers: dict, stub_diagram_render):
+    """The artifact map stays readable through refinement, code generation, and done."""
+    project_id = await _create_chat_project(client, logged_in_headers, name="Artifacts")
+    seeded = _seed_artifacts(_SEED_D2)
+    for phase in ("ARCHITECTURE", "CODE_GENERATION", "DONE"):
+        await _set_phase_and_artifacts(UUID(project_id), phase=phase, artifacts=seeded)
+        response = await client.get(f"api/v1/lothal/projects/{project_id}/artifacts", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_200_OK, phase
+        body = response.json()
+        assert body["artifacts"] == seeded, phase
+        assert body["svgs"] == dict.fromkeys(_DIAGRAM_PATHS, stub_diagram_render), phase
+
+
+async def test_artifacts_render_failure_degrades_to_null_svg(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """A render failure returns the map with `svg: null` per diagram and a 200 — never a 500.
+
+    The artifact content is still returned in full; only the SVGs fail closed. The
+    `adr.md` entry stays out of `svgs` regardless.
+    """
+    from langflow.lothal.d2_compile import D2RenderResult
+
+    async def _failing_render(_src):
+        return D2RenderResult(error="1:1: connection missing destination")
+
+    monkeypatch.setattr(lothal_api, "render_d2", _failing_render)
+
+    project_id = await _create_chat_project(client, logged_in_headers, name="Artifacts")
+    seeded = _seed_artifacts(_SEED_D2)
+    await _set_phase_and_artifacts(UUID(project_id), phase="ARCHITECTURE", artifacts=seeded)
+
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/artifacts", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["artifacts"] == seeded
+    assert body["svgs"] == dict.fromkeys(_DIAGRAM_PATHS, None)
+
+
+async def test_artifacts_compiler_unavailable_degrades_to_null_svg(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """If the `d2` compiler is unavailable, the read still 200s with the map and `svg: null` per diagram."""
+
+    async def _unavailable_render(_src):
+        raise D2CompilerUnavailableError
+
+    monkeypatch.setattr(lothal_api, "render_d2", _unavailable_render)
+
+    project_id = await _create_chat_project(client, logged_in_headers, name="Artifacts")
+    seeded = _seed_artifacts(_SEED_D2)
+    await _set_phase_and_artifacts(UUID(project_id), phase="ARCHITECTURE", artifacts=seeded)
+
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/artifacts", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["artifacts"] == seeded
+    assert body["svgs"] == dict.fromkeys(_DIAGRAM_PATHS, None)
+
+
+@pytest.mark.skipif(shutil.which("d2") is None, reason="the `d2` binary is not installed")
+async def test_artifacts_server_renders_svg_real(client: AsyncClient, logged_in_headers: dict):
+    """With the real `d2` compiler present, GET /artifacts renders real SVG per diagram (E.4).
+
+    Every seeded `diagrams/*.d2` entry compiles, so each `svgs` value is real SVG
+    markup; the ADR stays out of `svgs`. Not stubbed — the end-to-end backend
+    render across the full set.
+    """
+    project_id = await _create_chat_project(client, logged_in_headers, name="Artifacts")
+    seeded = _seed_artifacts(_SEED_D2)
+    await _set_phase_and_artifacts(UUID(project_id), phase="ARCHITECTURE", artifacts=seeded)
+
+    body = (await client.get(f"api/v1/lothal/projects/{project_id}/artifacts", headers=logged_in_headers)).json()
+    assert body["artifacts"] == seeded
+    assert set(body["svgs"]) == set(_DIAGRAM_PATHS)
+    assert all("<svg" in svg for svg in body["svgs"].values())
+
+
+async def test_artifacts_404_for_unowned_project(client: AsyncClient, logged_in_headers: dict, user_two):
+    """Ownership is resolved before the phase gate — another user's project 404s, never 403."""
+    async with session_scope() as session:
+        foreign = Project(name="Theirs", user_id=user_two.id, phase="ARCHITECTURE")
+        session.add(foreign)
+        await session.flush()
+        foreign_pk = foreign.id
+
+    try:
+        for project_id in (PROJECT_ID, str(foreign_pk)):
+            response = await client.get(f"api/v1/lothal/projects/{project_id}/artifacts", headers=logged_in_headers)
+            assert response.status_code == status.HTTP_404_NOT_FOUND, project_id
+    finally:
+        async with session_scope() as session:
+            leftover = await session.get(Project, foreign_pk)
+            if leftover:
+                await session.delete(leftover)
+
+
 async def test_chat_rejects_blank_content(client: AsyncClient, logged_in_headers: dict):
     project_id = await _create_chat_project(client, logged_in_headers)
     response = await client.post(
