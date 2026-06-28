@@ -4,6 +4,8 @@ from .model import (
     MessageRole,
     Project,
     ProjectPhase,
+    PrototypeArtifact,
+    PrototypeStatus,
 )
 
 __all__ = [
@@ -12,4 +14,6 @@ __all__ = [
     "MessageRole",
     "Project",
     "ProjectPhase",
+    "PrototypeArtifact",
+    "PrototypeStatus",
 ]

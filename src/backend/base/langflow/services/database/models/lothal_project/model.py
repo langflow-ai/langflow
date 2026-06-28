@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Text, Uuid
@@ -23,6 +24,20 @@ class ProjectPhase(str, Enum):
 class MessageRole(str, Enum):
     USER = "USER"
     ASSISTANT = "ASSISTANT"
+
+
+class PrototypeStatus(str, Enum):
+    """Lifecycle of the project's Open Design prototype run (Epic UI, Story U.1).
+
+    Independent of ``ProjectPhase``: a project sits in the (future) ``PROTOTYPE``
+    phase while this status walks ``IDLE → GENERATING → READY → APPROVED``. The
+    phase enum itself is added separately by Story U.0.
+    """
+
+    IDLE = "IDLE"
+    GENERATING = "GENERATING"
+    READY = "READY"
+    APPROVED = "APPROVED"
 
 
 class Project(SQLModel, table=True):  # type: ignore[call-arg]
@@ -53,6 +68,20 @@ class Project(SQLModel, table=True):  # type: ignore[call-arg]
     # future git commit tree verbatim. Null until a stage produces artifacts; old
     # projects keep rendering via ``diagram_d2`` and are not backfilled.
     artifacts: dict[str, str] | None = Field(default=None, sa_column=Column(JSON, nullable=True))
+    # --- Open Design prototype linkage (Epic UI, Story U.1) -------------------
+    # Identifiers of the OD project/conversation Lothal drives as a headless
+    # prototyping engine; null until the PROTOTYPE stage seeds an OD project.
+    od_project_id: str | None = Field(default=None, sa_column=Column(Text))
+    od_conversation_id: str | None = Field(default=None, sa_column=Column(Text))
+    # Prototype run lifecycle (see ``PrototypeStatus``). NOT NULL, defaults to
+    # IDLE — every project (incl. pre-prototype rows) has a well-defined status.
+    prototype_status: str = Field(
+        default=PrototypeStatus.IDLE,
+        sa_column=Column(Text, nullable=False, server_default=PrototypeStatus.IDLE.value),
+    )
+    # When the user approved the prototype (the boundary at which finalised
+    # artifacts are copied into ``lothal_prototype_artifact``); null until then.
+    prototype_approved_at: datetime | None = Field(default=None, sa_column=Column(DateTime))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -69,6 +98,10 @@ class Project(SQLModel, table=True):  # type: ignore[call-arg]
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
     code_files: list["CodeFile"] = Relationship(
+        back_populates="project",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+    prototype_artifacts: list["PrototypeArtifact"] = Relationship(
         back_populates="project",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
@@ -120,3 +153,30 @@ class CodeFile(SQLModel, table=True):  # type: ignore[call-arg]
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     project: Project | None = Relationship(back_populates="code_files")
+
+
+class PrototypeArtifact(SQLModel, table=True):  # type: ignore[call-arg]
+    """One finalised Open Design prototype artifact Lothal retains (Epic UI, Story U.1).
+
+    DB-as-source-of-truth MVP rule: on prototype approval the chosen OD artifacts
+    are copied here (one row each) so the project's prototype survives independent
+    of OD's own storage. ``od_path`` is the artifact's path inside the OD project;
+    ``manifest`` is OD's ``ArtifactManifest`` (kind/renderer/exports/provenance);
+    ``content`` holds the copied file text (or a URL for media served by OD).
+    """
+
+    __tablename__ = "lothal_prototype_artifact"
+
+    id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
+    # DB-level CASCADE backs the ORM cascade for deletes that bypass the ORM.
+    project_id: UUIDstr = Field(
+        sa_column=Column(Uuid(), ForeignKey("lothal_project.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
+    od_path: str = Field()
+    kind: str = Field()
+    title: str = Field()
+    manifest: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON, nullable=True))
+    content: str | None = Field(default=None, sa_column=Column(Text))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    project: Project | None = Relationship(back_populates="prototype_artifacts")
