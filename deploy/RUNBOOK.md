@@ -297,5 +297,86 @@ docker compose -f docker-compose.prod.yml exec open-design rm -f /app/.od/persis
 
 (If you enable `OD_API_TOKEN` + `OD_DISABLE_API_AUTH=0` for defense-in-depth, step 2 becomes
 `curl -H "Authorization: Bearer $OD_API_TOKEN" …` and an unauthed call should `401`.)
-</content>
-</invoke>
+
+## LLM gateway: route OD's calls through Lothal (U.3)
+
+Open Design's coding agent makes its own LLM calls. To keep them observable and
+centrally controlled, OD's OpenAI-compatible **`codex`** agent is pointed at
+Lothal's gateway instead of a provider directly:
+
+```
+OD codex agent ──OpenAI /v1/chat/completions──► backend:7860
+  /api/v1/lothal/gateway/v1/chat/completions ──► backend chooses one of:
+     (default)  SUBSCRIPTION  → translate OpenAI⇄Anthropic, auth via CLAUDE_CODE_OAUTH_TOKEN
+     (optional) METERED       → forward verbatim to LOTHAL_GATEWAY_UPSTREAM_* (OpenAI/Anthropic)
+```
+
+Tool-calls and streaming work on **both** backends. Pick one:
+
+- **Subscription (default, recommended, no extra cost):** set nothing extra — the
+  gateway runs OD's calls on the same `CLAUDE_CODE_OAUTH_TOKEN` the chat provider
+  uses, translating OpenAI ⇄ Anthropic Messages under the hood. Point codex's
+  model at a **Claude model id**.
+- **Metered (override):** set BOTH `LOTHAL_GATEWAY_UPSTREAM_BASE_URL` and
+  `LOTHAL_GATEWAY_UPSTREAM_API_KEY` to forward verbatim to an OpenAI-compatible
+  upstream on a metered key (takes precedence). Point codex's model at one that
+  upstream serves.
+
+> Why not just use OD's native Claude agent? It would talk to Anthropic with its
+> own credentials and bypass Lothal entirely. Routing the OpenAI-compatible codex
+> agent through this gateway is what makes every call transit (and be logged by)
+> Lothal.
+
+### 1. Configure the backend `.env`
+
+In `/opt/lothal/.env` (see `.env.prod.example`). Subscription is automatic once
+`CLAUDE_CODE_OAUTH_TOKEN` is set (it already is, for the chat provider). For the
+metered override instead:
+
+```bash
+LOTHAL_GATEWAY_UPSTREAM_BASE_URL=https://api.openai.com/v1
+LOTHAL_GATEWAY_UPSTREAM_API_KEY=<metered-key>
+LOTHAL_GATEWAY_TOKEN=$(openssl rand -hex 32)   # optional inbound bearer (recommended)
+```
+
+Then `docker compose -f docker-compose.prod.yml up -d backend`. With neither a
+subscription token nor a metered upstream, the gateway returns `503`.
+
+### 2. Point OD's codex agent at the gateway (`PATCH /api/app-config`)
+
+OD's `agentCliEnv.codex` carries the agent's OpenAI base URL + key. The **live
+application of this PATCH lands with the Prototype Engine (U.4)**, which owns the
+OD client; the body it sends is:
+
+```jsonc
+// PATCH http://open-design:7456/api/app-config
+{
+  "agentCliEnv": {
+    "codex": {
+      "OPENAI_BASE_URL": "http://backend:7860/api/v1/lothal/gateway/v1",
+      "OPENAI_API_KEY": "<the same value as LOTHAL_GATEWAY_TOKEN, or any non-empty string if unset>"
+    }
+  }
+}
+```
+
+The codex agent's model is then set to one the active backend serves (a **Claude
+model id** for the subscription backend). `OPENAI_BASE_URL` ends in `/v1` because
+OpenAI clients append `/chat/completions` to it.
+
+### 3. Verify the gateway (from the backend container)
+
+```bash
+cd /opt/lothal
+# 503 until a backend is configured; once set, a real completion round-trips and is
+# logged on the backend ("lothal gateway (subscription|metered) → model=…"):
+docker compose -f docker-compose.prod.yml exec backend sh -c '
+  curl -sS -X POST http://localhost:7860/api/v1/lothal/gateway/v1/chat/completions \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $LOTHAL_GATEWAY_TOKEN" \
+    -d "{\"model\":\"claude-haiku-4-5\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}]}"'
+docker compose -f docker-compose.prod.yml logs --since=1m backend | grep "lothal gateway"
+```
+
+The U.3 acceptance is a full OD prototype run (U.4+) where **every** LLM call shows
+up in these gateway logs and the agent's tool loop stays intact (artifacts produced).
