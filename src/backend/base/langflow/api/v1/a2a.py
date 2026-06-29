@@ -454,7 +454,6 @@ async def close_push_client() -> None:
     await _PUSH_HTTP_CLIENT.aclose()
 
 
-
 class _FlowRequestHandler(DefaultRequestHandler):
     """DefaultRequestHandler that disables tasks/resubscribe for the synchronous run model.
 
