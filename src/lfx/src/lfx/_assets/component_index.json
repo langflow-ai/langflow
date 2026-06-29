@@ -6901,7 +6901,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": "2.197.0"
+                  "version": null
                 }
               ],
               "total_dependencies": 4
@@ -9511,7 +9511,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": "2.197.0"
+                  "version": null
                 }
               ],
               "total_dependencies": 7
@@ -27847,7 +27847,7 @@
                 },
                 {
                   "name": "langchain_google_community",
-                  "version": "3.0.5"
+                  "version": null
                 }
               ],
               "total_dependencies": 3
@@ -29400,7 +29400,7 @@
                 },
                 {
                   "name": "yfinance",
-                  "version": "0.2.50"
+                  "version": null
                 }
               ],
               "total_dependencies": 4
@@ -29996,6 +29996,6 @@
     "num_components": 128,
     "num_modules": 17
   },
-  "sha256": "5354cd4b49cf622834c87725710d62b33f2d941eb420adbe2f09eb36f950b896",
+  "sha256": "781b038a3ed9a352926643e42f870de239a0a5c7ff4f805931ef8d01c1580355",
   "version": "1.11.0"
 }
