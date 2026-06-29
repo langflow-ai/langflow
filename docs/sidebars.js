@@ -529,7 +529,6 @@ module.exports = {
           label: "Developer API (Beta)",
           items: [
             "API-Reference/workflows-api",
-            "API-Reference/agui-stream-protocol",
             {
               type: "link",
               label: "Workflow API specification (Beta)",
