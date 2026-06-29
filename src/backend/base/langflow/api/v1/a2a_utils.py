@@ -7,13 +7,13 @@ to a non-spec shape (no top-level ``url``, oneof-wrapped ``securitySchemes``,
 """
 
 import asyncio
-import ipaddress
-import socket
 from urllib.parse import urlparse
 
+import httpx
 from a2a.compat.v0_3 import types as a2a_types
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
+from lfx.utils.ssrf_protection import SSRFProtectionError, is_ip_blocked, resolve_hostname, validate_and_resolve_url
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -31,59 +31,97 @@ A2A_APIKEY_HEADER = "x-api-key"  # pragma: allowlist secret
 # contract is just empty rather than 500ing the public discovery endpoint.
 _EMPTY_INPUT_SCHEMA = {"type": "object", "properties": {}, "required": []}
 
+# Bound free-form a2a_card_overrides so they can't bloat the public,
+# unauthenticated card (a single over-long string or an unbounded examples/tags
+# list). Legitimate overrides are well under these.
+_MAX_OVERRIDE_STR_LEN = 1000
+_MAX_OVERRIDE_LIST_ITEMS = 50
+
 
 def _override_str(overrides: dict, key: str) -> str | None:
-    """Return a non-empty string override, or None.
+    """Return a non-empty, length-bounded string override, or None.
 
     a2a_card_overrides is a free-form dict, so a non-string value must not reach
-    the typed card model (it would raise pydantic ValidationError).
+    the typed card model (it would raise pydantic ValidationError). Over-long
+    values are dropped so the card falls back to the flow default.
     """
     value = overrides.get(key)
-    return value if isinstance(value, str) and value else None
-
-
-def _override_str_list(overrides: dict, key: str) -> list[str] | None:
-    """Return a non-empty list-of-strings override, or None."""
-    value = overrides.get(key)
-    if isinstance(value, list) and value and all(isinstance(item, str) for item in value):
+    if isinstance(value, str) and value and len(value) <= _MAX_OVERRIDE_STR_LEN:
         return value
     return None
 
 
-async def validate_webhook_url(url: str) -> None:
-    """Raise ``ValueError`` when a push-notification webhook URL is unsafe (SSRF guard).
+def _override_str_list(overrides: dict, key: str) -> list[str] | None:
+    """Return a non-empty list-of-strings override (count- and length-bounded), or None."""
+    value = overrides.get(key)
+    if (
+        isinstance(value, list)
+        and value
+        and all(isinstance(item, str) and len(item) <= _MAX_OVERRIDE_STR_LEN for item in value)
+    ):
+        return value[:_MAX_OVERRIDE_LIST_ITEMS]
+    return None
+
+
+def webhook_pin_host(url: str) -> str:
+    """Return the host httpx/httpcore actually connects to (the IDNA/punycode ``raw_host``).
+
+    httpx connects using ``raw_host`` (e.g. ``xn--exmple-cua.com``), not the unicode
+    ``urlparse().hostname`` (``exämple.com``). The DNS-pin key and the host we resolve must
+    both be this exact representation, or for an internationalized webhook the pin key won't
+    match the connected host and the pin is silently bypassed (TOCTOU rebind for IDN hosts).
+    Single source of truth for both the resolve/validate step and the dispatch pin.
+    """
+    return httpx.URL(url).raw_host.decode("ascii")
+
+
+async def validate_webhook_url(url: str) -> list[str]:
+    """Validate a push-notification webhook URL (SSRF guard) and return IPs for DNS pinning.
 
     The A2A endpoint is public, so the webhook target is caller-controlled. Require
-    http/https and a host whose every resolved address is public; reject loopback,
-    private, link-local (incl. the cloud metadata IP 169.254.169.254), reserved,
-    multicast, and unspecified. ``LANGFLOW_A2A_ALLOW_PRIVATE_WEBHOOKS`` skips the IP
-    check for a trusted internal network.
+    http/https, then enforce a hard IP floor that does NOT depend on the global
+    ``LANGFLOW_SSRF_PROTECTION_ENABLED`` toggle (ops disable it for the API Request
+    component, which would otherwise reopen private/metadata webhooks): resolve the
+    host and reject if any IP is blocked. On top of the floor, run the shared SSRF
+    framework (``validate_and_resolve_url``) for the allowlist / CGNAT / ``is_global``
+    extras and pinned IPs. The returned IPs let the dispatch client pin DNS (closing
+    the rebind window). ``LANGFLOW_A2A_ALLOW_PRIVATE_WEBHOOKS`` skips the IP check for
+    a trusted internal network (returns ``[]``: nothing to pin).
 
-    Validated at registration; a host that later re-resolves to a private address
-    (DNS rebinding) is a residual a dispatch-time check would close.
+    Raises ``ValueError`` when the URL is unsafe. Returns the validated IPs (framework
+    IPs, falling back to the floor-resolved IPs when the global toggle is off), or
+    ``[]`` when private webhooks are allowed. Used at registration (set_info) and
+    re-run at dispatch.
     """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
         msg = "webhook url must be http or https"
         raise ValueError(msg)
-    host = parsed.hostname
-    if not host:
+    if not parsed.hostname:
         msg = "webhook url has no host"
         raise ValueError(msg)
     if get_settings_service().settings.a2a_allow_private_webhooks:
-        return
+        return []
+    # Resolve/validate the SAME host httpx connects to (IDNA/punycode raw_host), not the
+    # unicode urlparse hostname, so an IDN webhook is pinned/resolved by the exact ASCII
+    # host the connection uses (else the pin silently misses: TOCTOU rebind for IDN hosts).
+    host = webhook_pin_host(url)
     try:
-        # getaddrinfo is blocking; resolve off the event loop. An IP-literal host
-        # returns that IP without a DNS lookup.
-        infos = await asyncio.to_thread(socket.getaddrinfo, host, parsed.port, type=socket.SOCK_STREAM)
-    except OSError as exc:
-        msg = f"webhook host does not resolve: {host}"
-        raise ValueError(msg) from exc
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if any((ip.is_loopback, ip.is_private, ip.is_link_local, ip.is_reserved, ip.is_multicast, ip.is_unspecified)):
-            msg = f"webhook url resolves to a non-public address: {ip}"
+        # Hard floor: reject private/metadata IPs even when global SSRF protection is off
+        # (validate_and_resolve_url returns [] with NO enforcement in that case).
+        # resolve_hostname handles IP-literal hosts too; the blocking resolve runs off-loop.
+        floor_ips = await asyncio.to_thread(resolve_hostname, host)
+        blocked = [ip for ip in floor_ips if is_ip_blocked(ip)]
+        if blocked:
+            msg = f"webhook url resolves to a blocked address: {', '.join(blocked)}"
             raise ValueError(msg)
+        # Then the framework check for allowlist / CGNAT / is_global extras + pinned IPs.
+        _url, validated_ips = await asyncio.to_thread(validate_and_resolve_url, url)
+    except SSRFProtectionError as exc:
+        msg = f"webhook url is not allowed: {exc}"
+        raise ValueError(msg) from exc
+    # Fall back to the floor IPs so dispatch can still DNS-pin with the global toggle off.
+    return validated_ips or floor_ips
 
 
 async def folder_auth_type(flow: Flow, session: AsyncSession) -> str:
@@ -141,7 +179,9 @@ async def build_agent_card(flow: Flow, *, rpc_url: str, session: AsyncSession) -
     # can be flagged for A2A with empty/unbuildable data, so degrade to an empty
     # input contract rather than 500ing the public discovery endpoint.
     try:
-        input_schema = json_schema_from_flow(flow)
+        # json_schema_from_flow does a full, synchronous graph build; offload it
+        # so this public endpoint never blocks the event loop.
+        input_schema = await asyncio.to_thread(json_schema_from_flow, flow)
     except Exception:  # noqa: BLE001 - any graph build failure degrades, not crashes
         logger.warning("Could not build A2A input schema for flow %s; serving empty input contract", flow.id)
         input_schema = dict(_EMPTY_INPUT_SCHEMA)
