@@ -24,10 +24,28 @@ from lfx.base.mcp.util import (
     _is_transient_streamable_http_error,
     _process_headers,
     _should_attempt_sse_after_streamable_failure,
+    _validate_mcp_stdio_env,
     update_tools,
     validate_headers,
 )
 from lfx.schema.data import Data
+
+
+def test_validate_mcp_stdio_env_rejects_shellopts_ps4_combo():
+    with pytest.raises(ValueError, match="SHELLOPTS"):
+        _validate_mcp_stdio_env({"SHELLOPTS": "xtrace", "PS4": "$(id)"})
+
+
+@pytest.mark.parametrize("env_var", ["SHELLOPTS", "shellopts", "BASHOPTS", "PS4"])
+def test_validate_mcp_stdio_env_rejects_bash_trace_controls(env_var):
+    with pytest.raises(ValueError, match="Environment variable"):
+        _validate_mcp_stdio_env({env_var: "malicious_value"})
+
+
+def test_validate_mcp_stdio_env_allows_regular_env():
+    env = {"DEBUG": "true", "PORT": "8080"}
+
+    assert _validate_mcp_stdio_env(env) is env
 
 
 class TestMCPSessionManager:
