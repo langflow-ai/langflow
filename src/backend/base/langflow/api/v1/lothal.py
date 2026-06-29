@@ -30,8 +30,10 @@ from lfx.log.logger import logger
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.lothal import prototype as prototype_engine
 from langflow.lothal.d2_compile import D2CompilerUnavailableError, render_d2
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError, call_llm
+from langflow.lothal.od_client import ODConfigError, ODError
 from langflow.lothal.router import available_phases, process_turn
 from langflow.lothal.schemas import (
     ArtifactsResponse,
@@ -47,11 +49,19 @@ from langflow.lothal.schemas import (
     ProjectCreate,
     ProjectRead,
     PrototypeApproveResponse,
+    PrototypeArtifactRead,
     PrototypeRefineRequest,
     PrototypeStateResponse,
 )
 from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
-from langflow.services.database.models.lothal_project.model import Message, MessageRole, Project, ProjectPhase
+from langflow.services.database.models.lothal_project.model import (
+    Message,
+    MessageRole,
+    Project,
+    ProjectPhase,
+    PrototypeArtifact,
+    PrototypeStatus,
+)
 
 # Phases in which the diagram exists and is readable — the `GET /diagram` phase
 # gate from `api-endpoints.md`. CLARIFICATION precedes the architecture stage, so
@@ -61,6 +71,18 @@ from langflow.services.database.models.lothal_project.model import Message, Mess
 _DIAGRAM_VISIBLE_PHASES = frozenset(
     {
         ProjectPhase.ARCHITECTURE.value,
+        ProjectPhase.PROTOTYPE.value,
+        ProjectPhase.CODE_GENERATION.value,
+        ProjectPhase.DONE.value,
+    }
+)
+
+# Phases in which the prototype stage is readable — the `GET /prototype` phase
+# gate. The prototype doesn't exist until the architecture is approved, so a read
+# before PROTOTYPE 403s; it stays readable through code generation and done so the
+# approved prototype keeps surfacing.
+_PROTOTYPE_VISIBLE_PHASES = frozenset(
+    {
         ProjectPhase.PROTOTYPE.value,
         ProjectPhase.CODE_GENERATION.value,
         ProjectPhase.DONE.value,
@@ -137,6 +159,21 @@ def _llm_error_to_http(exc: LLMConfigError | LLMConnectionError) -> HTTPExceptio
     if isinstance(exc, LLMConfigError):
         return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"LLM is not configured: {exc}")
     return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"LLM call failed: {exc}")
+
+
+def _od_error_to_http(exc: ODError) -> HTTPException:
+    """Map the Open Design client errors to HTTP, mirroring the LLM bridge split.
+
+    A misconfigured prototyping engine (e.g. a blank base URL) is a 503; a failed
+    call to a reachable-but-unhappy OD daemon is a 502 — the same setup-gap vs
+    runtime-fault distinction `_llm_error_to_http` makes.
+    """
+    if isinstance(exc, ODConfigError):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"The prototype engine is not configured: {exc}",
+        )
+    return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"The prototype engine call failed: {exc}")
 
 
 async def _get_owned_project(session: DbSession, current_user: CurrentActiveUser, project_id: UUID) -> Project:
@@ -596,63 +633,315 @@ async def approve_diagram(*, session: DbSession, project: OwnedProject) -> Diagr
 
 
 # --- Prototype (Epic UI) -----------------------------------------------------
-# The prototype stage drives Open Design (OD) as a headless prototyping engine.
-# Story U.0 ships the contract as typed 501 stubs (project-scoped + auth, like
-# every other surface); the backends fill in risk-ordered over U.4-U.7. Each
-# handler keeps the `OwnedProject` dependency so going live can never drop the
-# ownership check, and the response models document the live shape in OpenAPI.
+# The prototype stage drives Open Design (OD) as a headless prototyping engine
+# (Stories U.4-U.7). The contract shipped as 501 stubs in U.0; these are the live
+# backends. Each keeps the `OwnedProject` dependency (ownership 404 before any
+# work), and the orchestration lives in `langflow.lothal.prototype` — the
+# handlers only gate the phase, persist what it returns, and map OD errors.
+
+
+def _prototype_state_response(project: Project, state: prototype_engine.StateResult) -> PrototypeStateResponse:
+    """Assemble the wire response from the project linkage + a read-back state."""
+    return PrototypeStateResponse(
+        status=state.status,
+        od_project_id=project.od_project_id,
+        od_conversation_id=project.od_conversation_id,
+        embed_url=state.embed_url,
+        preview_html=state.preview_html,
+        artifacts=[
+            PrototypeArtifactRead(path=a.path, kind=a.kind, title=a.title, preview_url=a.preview_url)
+            for a in state.artifacts
+        ],
+    )
+
+
+def _is_html_artifact(path: str, kind: str) -> bool:
+    return kind == "html" or path.endswith(".html")
+
+
+def _approval_summary(artifacts: list[prototype_engine.ApprovedArtifact]) -> str:
+    """The single-chat-bridge summary posted on approval (Story U.10)."""
+    if not artifacts:
+        return (
+            "Prototype approved. Generating the code from your approved architecture next."
+        )
+    listed = "\n".join(f"- {a.title}" for a in artifacts)
+    plural = "artifact" if len(artifacts) == 1 else "artifacts"
+    return f"Prototype approved with {len(artifacts)} {plural}:\n{listed}\n\nGenerating the code next."
 
 
 @router.get(
     "/projects/{project_id}/prototype",
-    response_model=PrototypeStateResponse,
-    responses=_NOT_IMPLEMENTED,
     summary="Get the prototype stage state (OD linkage + embed URL + artifacts)",
 )
-async def get_prototype(project: OwnedProject) -> JSONResponse:
-    # Story U.5 lights this up: it returns the project's `prototype_status`, OD
-    # linkage (`od_project_id`/`od_conversation_id`), a ready-to-iframe `embed_url`,
-    # and the retained `lothal_prototype_artifact` rows. 501 until then.
-    return stub("The prototype endpoint is not implemented yet.")
+async def get_prototype(*, session: DbSession, project: OwnedProject) -> PrototypeStateResponse:
+    """Return the prototype run state: status, OD linkage, embed URL, and artifacts (Story U.5).
+
+    Phase-gated to `PROTOTYPE` and later (a read before then is a `403` — there is
+    no prototype yet); ownership is checked first by `OwnedProject`, so an unowned
+    project still 404s regardless of phase.
+
+    Once the prototype is `APPROVED` the finalised artifacts live in Lothal's own
+    store (`lothal_prototype_artifact`), so they are read from the DB rather than
+    from OD (whose copy may be gone). Otherwise the live state is read from OD and
+    a forward status change (`GENERATING → READY`) is persisted so the dashboard
+    badge and a reopened workspace reflect it. The read never 502s the polling UI:
+    if OD is unreachable it degrades to the stored status with no artifacts (the
+    same "never fail the read" posture `GET /diagram` takes for a failed render).
+    """
+    if project.phase not in _PROTOTYPE_VISIBLE_PHASES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The prototype is not available until the prototype stage begins.",
+        )
+
+    if project.prototype_status == PrototypeStatus.APPROVED.value:
+        rows = (
+            await session.exec(
+                select(PrototypeArtifact)
+                .where(PrototypeArtifact.project_id == project.id)
+                .order_by(PrototypeArtifact.created_at, PrototypeArtifact.id)  # type: ignore[arg-type]
+            )
+        ).all()
+        # The rendered design comes from the retained copy of the primary HTML row.
+        preview_html = next((r.content for r in rows if _is_html_artifact(r.od_path, r.kind) and r.content), None)
+        return PrototypeStateResponse(
+            status=project.prototype_status,
+            od_project_id=project.od_project_id,
+            od_conversation_id=project.od_conversation_id,
+            embed_url=prototype_engine.embed_url(project.od_project_id),
+            preview_html=preview_html,
+            artifacts=[
+                PrototypeArtifactRead(
+                    path=r.od_path,
+                    kind=r.kind,
+                    title=r.title,
+                    preview_url=prototype_engine.preview_url(project.od_project_id, r.od_path),
+                )
+                for r in rows
+            ],
+        )
+
+    try:
+        state = await prototype_engine.collect_state(project)
+    except ODError as exc:
+        logger.warning(f"prototype state read for project {project.id} degraded (OD unreachable): {exc}")
+        return PrototypeStateResponse(
+            status=project.prototype_status,
+            od_project_id=project.od_project_id,
+            od_conversation_id=project.od_conversation_id,
+            embed_url=prototype_engine.embed_url(project.od_project_id),
+            artifacts=[],
+        )
+
+    # Sync the lifecycle status OD reports: READY once a run succeeded, and back to
+    # GENERATING when a fresh run is in flight (e.g. a refine started inside OD), so
+    # a reopened workspace / the dashboard badge reflect it. APPROVED is terminal
+    # (handled above) and never overwritten; IDLE is never re-derived here
+    # (collect_state only yields it pre-seed, where there is nothing to persist).
+    if state.status != project.prototype_status and state.status in {
+        PrototypeStatus.GENERATING.value,
+        PrototypeStatus.READY.value,
+    }:
+        project.prototype_status = state.status
+        session.add(project)
+        await session.flush()
+
+    return _prototype_state_response(project, state)
 
 
 @router.post(
     "/projects/{project_id}/prototype/generate",
-    response_model=PrototypeStateResponse,
-    responses=_NOT_IMPLEMENTED,
     summary="Start (or restart) prototype generation",
 )
-async def generate_prototype(project: OwnedProject) -> JSONResponse:
-    # Story U.4 lights this up: it seeds an OD project from `prd_content` +
-    # `diagram_d2` and starts a generation run, moving `prototype_status` to
-    # GENERATING. Only valid in the PROTOTYPE phase once live. 501 until then.
-    return stub("Prototype generation is not implemented yet.")
+async def generate_prototype(*, session: DbSession, project: OwnedProject) -> PrototypeStateResponse:
+    """Seed an OD project from the brief and start a generation run (Story U.4).
+
+    Only valid in the `PROTOTYPE` phase (a `409` otherwise — a no-op the UI
+    shouldn't have offered). Idempotent: if the project is already linked to an OD
+    project the existing run is reused and nothing is recreated or reset — so a
+    re-entry or double-submit never duplicates work or clobbers a `READY` status.
+    The first seed sets `prototype_status=GENERATING` and announces the stage in
+    the single chat thread (Story U.10).
+
+    Serialized against concurrent submits the same way `chat`/`approve` are: a
+    `FOR UPDATE` re-read before deciding.
+    """
+    await session.refresh(project, with_for_update=True)
+    if project.phase != ProjectPhase.PROTOTYPE.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Prototype generation is only available during the prototype stage.",
+        )
+
+    try:
+        result = await prototype_engine.seed_and_generate(project)
+    except ODError as exc:
+        raise _od_error_to_http(exc) from exc
+
+    if result.created:
+        project.od_project_id = result.od_project_id
+        project.od_conversation_id = result.od_conversation_id
+        project.prototype_status = PrototypeStatus.GENERATING.value
+        project.updated_at = datetime.now(timezone.utc)
+        session.add(project)
+        # U.10 seed-in: one ASSISTANT marker so the single chat thread shows the
+        # stage was entered (the brief itself carries the PRD/architecture context,
+        # so OD is never re-asking what Lothal already knows).
+        session.add(
+            Message(
+                project_id=project.id,
+                role=MessageRole.ASSISTANT,
+                content=(
+                    "Building an interactive prototype from your approved architecture. "
+                    "You can refine it from here, then approve it to generate the code."
+                ),
+                suggestions=[],
+                phase=ProjectPhase.PROTOTYPE.value,
+            )
+        )
+        await session.flush()
+
+    return _prototype_state_response(
+        project,
+        prototype_engine.StateResult(
+            status=project.prototype_status,
+            embed_url=prototype_engine.embed_url(project.od_project_id),
+        ),
+    )
 
 
 @router.post(
     "/projects/{project_id}/prototype/refine",
-    response_model=PrototypeStateResponse,
-    responses=_NOT_IMPLEMENTED,
     summary="Refine the prototype with a Lothal-side instruction",
 )
-async def refine_prototype(project: OwnedProject, body: PrototypeRefineRequest) -> JSONResponse:
-    # Story U.6 lights this up: it starts a new OD run in the same conversation
-    # carrying the refine instruction. The optional Lothal-side refine path; the
-    # primary one is inside OD. Only valid in the PROTOTYPE phase. 501 until then.
-    return stub("Prototype refinement is not implemented yet.")
+async def refine_prototype(
+    *, session: DbSession, project: OwnedProject, body: PrototypeRefineRequest
+) -> PrototypeStateResponse:
+    """Start a new OD run in the project's conversation carrying a refine instruction (Story U.6).
+
+    The optional Lothal-side refine path (the primary one is inside OD). Only valid
+    in `PROTOTYPE` (else `409`), and only once the prototype has been generated
+    (else `409` — there is nothing to refine). Resumes the stored OD conversation
+    and moves the status back to `GENERATING` while the new run produces.
+    """
+    content = body.content.strip()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Refine instruction cannot be empty.",
+        )
+
+    await session.refresh(project, with_for_update=True)
+    if project.phase != ProjectPhase.PROTOTYPE.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Prototype refinement is only available during the prototype stage.",
+        )
+    if not project.od_project_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Generate a prototype before refining it.",
+        )
+
+    try:
+        result = await prototype_engine.refine(project, content)
+    except ODError as exc:
+        raise _od_error_to_http(exc) from exc
+
+    project.od_conversation_id = result.od_conversation_id
+    project.prototype_status = PrototypeStatus.GENERATING.value
+    project.updated_at = datetime.now(timezone.utc)
+    session.add(project)
+    # Record the refine turn in the single chat thread so the conversation carries
+    # the prototype-stage history (the chat is the refine surface in PROTOTYPE).
+    session.add(
+        Message(
+            project_id=project.id,
+            role=MessageRole.USER,
+            content=content,
+            suggestions=[],
+            phase=ProjectPhase.PROTOTYPE.value,
+        )
+    )
+    session.add(
+        Message(
+            project_id=project.id,
+            role=MessageRole.ASSISTANT,
+            content="Updating the prototype with your change — it'll refresh on the right when it's ready.",
+            suggestions=[],
+            phase=ProjectPhase.PROTOTYPE.value,
+        )
+    )
+    await session.flush()
+
+    return _prototype_state_response(
+        project,
+        prototype_engine.StateResult(
+            status=project.prototype_status,
+            embed_url=prototype_engine.embed_url(project.od_project_id),
+        ),
+    )
 
 
 @router.post(
     "/projects/{project_id}/prototype/approve",
-    response_model=PrototypeApproveResponse,
-    responses=_NOT_IMPLEMENTED,
     summary="Approve the prototype and advance to code generation",
 )
-async def approve_prototype(project: OwnedProject) -> JSONResponse:
-    # Story U.7 lights this up: it copies the finalised OD artifacts into
-    # `lothal_prototype_artifact`, stamps `prototype_approved_at`, and advances
-    # the phase PROTOTYPE → CODE_GENERATION. Only valid in PROTOTYPE. 501 until then.
-    return stub("Approving the prototype is not implemented yet.")
+async def approve_prototype(*, session: DbSession, project: OwnedProject) -> PrototypeApproveResponse:
+    """Finalise the prototype: copy artifacts, stamp approval, advance to CODE_GENERATION (Story U.7).
+
+    Only valid in `PROTOTYPE` (else `409`). Pulls the finalised OD artifacts and
+    copies them into `lothal_prototype_artifact` (DB-as-source-of-truth, so the
+    prototype survives independent of OD), sets `prototype_status=APPROVED` +
+    `prototype_approved_at`, posts a summary into the single chat thread (Story
+    U.10), and transitions the phase to `CODE_GENERATION`.
+
+    Serialized against concurrent submits with a `FOR UPDATE` re-read, like
+    `generate`/`approve_diagram`.
+    """
+    await session.refresh(project, with_for_update=True)
+    if project.phase != ProjectPhase.PROTOTYPE.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The prototype can only be approved during the prototype stage.",
+        )
+
+    try:
+        artifacts = await prototype_engine.collect_for_approval(project)
+    except ODError as exc:
+        raise _od_error_to_http(exc) from exc
+
+    for artifact in artifacts:
+        session.add(
+            PrototypeArtifact(
+                project_id=project.id,
+                od_path=artifact.od_path,
+                kind=artifact.kind,
+                title=artifact.title,
+                manifest=artifact.manifest,
+                content=artifact.content,
+            )
+        )
+
+    session.add(
+        Message(
+            project_id=project.id,
+            role=MessageRole.ASSISTANT,
+            content=_approval_summary(artifacts),
+            suggestions=[],
+            phase=ProjectPhase.PROTOTYPE.value,
+        )
+    )
+
+    project.prototype_status = PrototypeStatus.APPROVED.value
+    project.prototype_approved_at = datetime.now(timezone.utc)
+    project.phase = ProjectPhase.CODE_GENERATION.value
+    project.updated_at = datetime.now(timezone.utc)
+    session.add(project)
+    await session.flush()
+    await session.refresh(project)
+    return PrototypeApproveResponse(phase=project.phase)
 
 
 # --- Code --------------------------------------------------------------------

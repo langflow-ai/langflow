@@ -368,3 +368,67 @@ async def proxy_subscription(openai_body: dict[str, Any], token: str) -> Respons
             await client.aclose()
 
     return StreamingResponse(_gen(), media_type="text/event-stream")
+
+
+async def proxy_anthropic_passthrough(
+    body: bytes,
+    token: str,
+    *,
+    anthropic_beta: str | None = None,
+    accept: str = "application/json",
+) -> Response:
+    """Forward a native Anthropic Messages request, injecting the subscription auth.
+
+    Open Design's `claude` agent (the Claude Code CLI) speaks the Anthropic Messages
+    API directly, so — unlike `proxy_subscription` — there is nothing to translate.
+    This is a thin reverse proxy: it strips the caller's placeholder credential and
+    injects the real OAuth subscription token (+ the `oauth-2025-04-20` beta), then
+    forwards the body **verbatim** to the Messages API and relays the reply (SSE or
+    JSON) unchanged — `stream` is whatever the caller put in the body. The caller's
+    own `anthropic-beta` values are preserved and the oauth beta is added.
+    """
+    betas = ["oauth-2025-04-20"]
+    if anthropic_beta:
+        for raw in anthropic_beta.split(","):
+            beta = raw.strip()
+            if beta and beta not in betas:
+                betas.append(beta)
+    headers = {
+        "authorization": f"Bearer {token}",
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": ",".join(betas),
+        "content-type": "application/json",
+        "accept": accept,
+    }
+
+    client = httpx.AsyncClient(timeout=_TIMEOUT)
+    try:
+        request = client.build_request("POST", ANTHROPIC_MESSAGES_URL, headers=headers, content=body)
+        upstream = await client.send(request, stream=True)
+    except httpx.HTTPError as exc:
+        await client.aclose()
+        logger.warning(f"lothal anthropic passthrough request failed: {exc}")
+        return JSONResponse(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            content={"error": {"message": "Gateway upstream request failed.", "type": "upstream_error"}},
+        )
+
+    async def _gen() -> AsyncIterator[bytes]:
+        try:
+            # `aiter_bytes` yields the decompressed body (Anthropic gzips JSON
+            # replies); relaying raw bytes without the `content-encoding` header
+            # would hand the client undecodable gzip.
+            async for chunk in upstream.aiter_bytes():
+                yield chunk
+        finally:
+            await upstream.aclose()
+            await client.aclose()
+
+    # Relay the upstream Content-Type (text/event-stream for a streamed reply,
+    # application/json otherwise) and status; Starlette sets framing headers, and
+    # the body is already decompressed so no content-encoding is relayed.
+    return StreamingResponse(
+        _gen(),
+        status_code=upstream.status_code,
+        media_type=upstream.headers.get("content-type", "application/json"),
+    )

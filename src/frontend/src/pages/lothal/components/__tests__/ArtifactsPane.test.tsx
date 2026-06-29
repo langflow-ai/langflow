@@ -193,7 +193,7 @@ describe("ArtifactsPane", () => {
     mockUseArtifacts.mockReturnValue({ ...idle, data: ARTIFACTS });
     render(<ArtifactsPane project={project()} />);
     fireEvent.click(
-      screen.getByRole("button", { name: "Approve & generate code" }),
+      screen.getByRole("button", { name: "Approve & build prototype" }),
     );
     await waitFor(() => expect(mockApproveMutate).toHaveBeenCalledTimes(1));
   });
@@ -202,7 +202,7 @@ describe("ArtifactsPane", () => {
     mockUseArtifacts.mockReturnValue({ ...idle, data: ARTIFACTS });
     render(<ArtifactsPane project={project({ phase: "CODE_GENERATION" })} />);
     expect(
-      screen.queryByRole("button", { name: "Approve & generate code" }),
+      screen.queryByRole("button", { name: "Approve & build prototype" }),
     ).not.toBeInTheDocument();
   });
 

@@ -217,6 +217,10 @@ class PrototypeStateResponse(BaseModel):
     od_project_id: str | None = None
     od_conversation_id: str | None = None
     embed_url: str | None = None
+    # The primary design artifact's HTML, ready to render inline in a sandboxed
+    # iframe — the prototype pane shows the design itself, not OD's web UI. `null`
+    # until a design exists.
+    preview_html: str | None = None
     artifacts: list[PrototypeArtifactRead] = Field(default_factory=list)
 
 

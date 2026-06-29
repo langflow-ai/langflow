@@ -46,6 +46,7 @@ import {
   TopBar,
 } from "../components";
 import { ArtifactsPane } from "../components/ArtifactsPane";
+import { PrototypePane } from "../components/PrototypePane";
 import { LothalSurface } from "../theme/LothalSurface";
 
 // The line shown when the conversation crosses a phase boundary.
@@ -54,8 +55,12 @@ function transitionNote(toPhase: string): string {
     // Epic E.2 merged the two diagram phases into ARCHITECTURE.
     case "ARCHITECTURE":
       return "Requirements clear — designing the architecture";
+    // Epic UI (U.10): the prototype stage sits between architecture approval and
+    // code generation.
+    case "PROTOTYPE":
+      return "Architecture approved — building the prototype";
     case "CODE_GENERATION":
-      return "Architecture approved — generating the code";
+      return "Prototype approved — generating the code";
     case "DONE":
       return "Delivered";
     default:
@@ -575,16 +580,21 @@ function WorkspaceView() {
           />
         </div>
 
-        {/* Right pane — the code surface once generation begins (Story B.5),
-            otherwise the architecture doc-and-diagrams view (Epic E.5): the ADR
-            as Markdown plus the diagram set as tabs. Double-clicking a box or
-            arrow on a diagram drops an inline reference chip in the composer
-            (Epic D.7); the active tab is the artifact a refine turn targets. It
-            falls back to a phase-aware placeholder before generation and to
-            NotReady while /artifacts can't load or render. */}
+        {/* Right pane — switches by phase:
+            • CODE_GENERATION/DONE → the generated-code surface (Story B.5);
+            • PROTOTYPE → the embedded Open Design prototype pane (Epic UI U.8/U.9);
+            • otherwise (CLARIFICATION/ARCHITECTURE) → the architecture
+              doc-and-diagrams view (Epic E.5): the ADR as Markdown plus the
+              diagram set as tabs. Double-clicking a box or arrow on a diagram
+              drops an inline reference chip in the composer (Epic D.7); the
+              active tab is the artifact a refine turn targets. It falls back to a
+              phase-aware placeholder before generation and to NotReady while
+              /artifacts can't load or render. */}
         <div style={{ flex: 1, minWidth: 0, background: "var(--paper-deep)" }}>
           {isCodePhase(project.phase) ? (
             <CodePanel project={project} />
+          ) : project.phase === "PROTOTYPE" ? (
+            <PrototypePane project={project} />
           ) : (
             <ArtifactsPane
               project={project}

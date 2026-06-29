@@ -54,7 +54,11 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import Response, StreamingResponse
 from lfx.log.logger import logger
 
-from langflow.lothal.subscription_gateway import proxy_subscription, resolve_subscription_token
+from langflow.lothal.subscription_gateway import (
+    proxy_anthropic_passthrough,
+    proxy_subscription,
+    resolve_subscription_token,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -180,6 +184,42 @@ async def chat_completions(request: Request) -> Response:
         detail=(
             "The LLM gateway is not configured: set CLAUDE_CODE_OAUTH_TOKEN (subscription) "
             "or LOTHAL_GATEWAY_UPSTREAM_BASE_URL + LOTHAL_GATEWAY_UPSTREAM_API_KEY (metered)."
+        ),
+    )
+
+
+@router.post("/messages", summary="Anthropic-native Messages passthrough for Open Design's claude agent")
+async def messages(request: Request) -> Response:
+    """Serve a native Anthropic Messages call on the subscription backend.
+
+    Open Design's `claude` agent (the Claude Code CLI) speaks Anthropic's Messages
+    API directly, so this is a thin passthrough — no OpenAI⇄Anthropic translation
+    (that is `/chat/completions`, for OpenAI-format agents like `codex`). It injects
+    the subscription OAuth token and forwards to the Messages API, streaming the
+    reply back. Point the agent's `ANTHROPIC_BASE_URL` at `…/lothal/gateway` (the
+    Anthropic SDK appends `/v1/messages`).
+
+    Subscription-only: returns `503` when `CLAUDE_CODE_OAUTH_TOKEN` is unset. (The
+    metered upstream path stays on `/chat/completions` for OpenAI-format agents.)
+    """
+    _check_inbound_auth(request)
+    body = await request.body()
+
+    token = resolve_subscription_token()
+    if token is not None:
+        logger.info(f"lothal gateway (subscription, anthropic passthrough) → {len(body)} bytes")
+        return await proxy_anthropic_passthrough(
+            body,
+            token,
+            anthropic_beta=request.headers.get("anthropic-beta"),
+            accept=request.headers.get("accept", "application/json"),
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=(
+            "The Anthropic passthrough is not configured: set CLAUDE_CODE_OAUTH_TOKEN (subscription). "
+            "For a metered/OpenAI-format agent, use /chat/completions instead."
         ),
     )
 

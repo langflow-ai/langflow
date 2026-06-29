@@ -79,6 +79,21 @@ services:
       LOTHAL_GATEWAY_UPSTREAM_BASE_URL: ${LOTHAL_GATEWAY_UPSTREAM_BASE_URL:-}
       LOTHAL_GATEWAY_UPSTREAM_API_KEY: ${LOTHAL_GATEWAY_UPSTREAM_API_KEY:-}
       LOTHAL_GATEWAY_TOKEN: ${LOTHAL_GATEWAY_TOKEN:-}
+      # Prototype stage ↔ Open Design (Epic U.4–U.9). The backend reaches OD over
+      # the compose network at http://open-design:7456 (the default; no token —
+      # OD_DISABLE_API_AUTH below). LOTHAL_OD_PUBLIC_BASE_URL is the *browser-facing*
+      # OD origin used to build the embed iframe URL (U.9) — the od.<domain>
+      # subdomain fronted by host nginx; leave blank to disable the embed (the pane
+      # then lists artifacts instead of embedding OD). LOTHAL_OD_AGENT_ID must name
+      # an agent that is installed AND available in the OD image (verify via
+      # GET <od>/api/agents — e.g. "claude"; the bare image's default "codex" is not).
+      LOTHAL_OD_PUBLIC_BASE_URL: ${LOTHAL_OD_PUBLIC_BASE_URL:-}
+      LOTHAL_OD_AGENT_ID: ${LOTHAL_OD_AGENT_ID:-claude}
+      # Scope the auth cookie to the registrable domain so it is also sent to the
+      # od.<domain> subdomain — that is what lets host nginx auth_request-gate the
+      # embedded OD by the logged-in Lothal session (see deploy/nginx/lothal.conf).
+      # Must be ".<domain>" (leading dot), e.g. ".lothal.app".
+      LANGFLOW_COOKIE_DOMAIN: ${LANGFLOW_COOKIE_DOMAIN:-}
     volumes:
       - lothal-langflow-data:/app/langflow  # secret_key, profile pics, etc. — must persist
     healthcheck:
@@ -101,13 +116,14 @@ services:
       - "127.0.0.1:8080:8080"            # host nginx (TLS) reverse-proxies to this
 
   # Open Design (OD) — internal design daemon consumed by the backend over the
-  # compose network at http://open-design:7456. The image is built + published
-  # from the separate realbytecode/open-design repo (Epic U.2), NOT by the Lothal
-  # deploy workflow (which builds backend/frontend only). Its version is therefore
-  # pinned via OD_IMAGE in /opt/lothal/.env and rolled by editing that value, not
-  # by a code deploy.
+  # compose network at http://open-design:7456. The image is built + published by
+  # the separate realbytecode/open-design repo's own workflow (Epic U.2) as
+  # `ghcr.io/realbytecode/od`, NOT by the Lothal deploy workflow (which builds
+  # backend/frontend only). That image bakes in the Claude Code agent so the
+  # daemon has an available agent on boot. Its version is pinned via OD_IMAGE in
+  # /opt/lothal/.env and rolled by editing that value, not by a code deploy.
   open-design:
-    image: ${OD_IMAGE:-ghcr.io/realbytecode/open-design:latest}
+    image: ${OD_IMAGE:-ghcr.io/realbytecode/od:latest}
     restart: unless-stopped
     environment:
       # Access control is the network boundary, not a token: OD has no `ports:`, so
@@ -125,6 +141,20 @@ services:
       # alone, with no edit to this committed file.
       OD_API_TOKEN: ${OD_API_TOKEN:-}
       OD_DISABLE_API_AUTH: ${OD_DISABLE_API_AUTH:-1}
+      # OD's origin-guard (origin-validation.ts) rejects /api writes whose Host is a
+      # DNS name that isn't loopback/private-IP, UNLESS the request's Origin is in
+      # this allow-list. Two origins must be listed (U.9): the backend's internal
+      # base "http://open-design:7456" (ODClient sends it as Origin so config writes
+      # — agent gateway + onboarding bypass — succeed) and the browser-facing
+      # "https://od.<domain>" the embedded web UI calls /api from. Comma-separated.
+      OD_ALLOWED_ORIGINS: ${OD_ALLOWED_ORIGINS:-http://open-design:7456}
+    ports:
+      # Published on loopback ONLY so the *host* nginx can reverse-proxy the
+      # od.<domain> vhost to it for the U.9 embed. It is NOT publicly exposed: host
+      # nginx gates that vhost with auth_request → the logged-in Lothal session
+      # (deploy/nginx/lothal.conf). The backend still reaches OD over the compose
+      # network (open-design:7456), not via this published port.
+      - "127.0.0.1:7456:7456"
     volumes:
       - lothal-od-data:/app/.od          # projects + daemon state — must persist across recreation
     healthcheck:

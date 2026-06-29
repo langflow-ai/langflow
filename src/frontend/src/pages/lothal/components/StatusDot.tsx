@@ -5,6 +5,8 @@ const MAP: Record<string, { color: string; label: string }> = {
   CLARIFICATION: { color: "var(--accent)", label: "clarifying" },
   // Epic E.2 merged the sketch + refine phases into one ARCHITECTURE stage.
   ARCHITECTURE: { color: "#3e7ab8", label: "designing" },
+  // Epic UI (U.8): the Open Design prototype stage.
+  PROTOTYPE: { color: "#6f5bd0", label: "prototyping" },
   CODE_GENERATION: { color: "#c08a2e", label: "generating" },
   DONE: { color: "var(--success)", label: "delivered" },
 };

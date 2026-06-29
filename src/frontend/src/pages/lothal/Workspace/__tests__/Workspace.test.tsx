@@ -24,8 +24,10 @@ const mockUseProject = jest.fn();
 const mockUseMessages = jest.fn();
 const mockUseArtifacts = jest.fn();
 const mockUseCode = jest.fn();
+const mockUsePrototype = jest.fn();
 const mockSendMutate = jest.fn();
 const mockApproveMutate = jest.fn();
+const mockGeneratePrototype = jest.fn();
 jest.mock("@/controllers/API/queries/lothal", () => ({
   useProject: () => mockUseProject(),
   useMessages: () => mockUseMessages(),
@@ -33,6 +35,15 @@ jest.mock("@/controllers/API/queries/lothal", () => ({
   // reads GET /artifacts; the old single-diagram useDiagram is gone from here.
   useArtifacts: () => mockUseArtifacts(),
   useCode: () => mockUseCode(),
+  // The PROTOTYPE-stage pane (Epic UI U.8/U.9) reads GET /prototype and drives
+  // generate/refine/approve.
+  usePrototype: () => mockUsePrototype(),
+  useGeneratePrototype: () => ({
+    mutate: mockGeneratePrototype,
+    isPending: false,
+  }),
+  useRefinePrototype: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useApprovePrototype: () => ({ mutateAsync: jest.fn(), isPending: false }),
   useSendMessage: () => ({ mutateAsync: mockSendMutate, isPending: false }),
   useApproveDiagram: () => ({
     mutateAsync: mockApproveMutate,
@@ -124,6 +135,14 @@ describe("Lothal Workspace", () => {
     });
     // Default: no code yet (the right pane only consults this in a code phase).
     mockUseCode.mockReturnValue({ data: [], isLoading: false, isError: false });
+    // Default: the prototype query is idle (most tests are not in PROTOTYPE, so
+    // the prototype pane never mounts and never reads this).
+    mockUsePrototype.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: undefined,
+    });
   });
 
   it("shows a themed loading state while projects load", () => {
@@ -308,7 +327,7 @@ describe("Lothal Workspace", () => {
     render(<Workspace />);
 
     const approve = screen.getByRole("button", {
-      name: "Approve & generate code",
+      name: "Approve & build prototype",
     });
     fireEvent.click(approve);
     await waitFor(() => expect(mockApproveMutate).toHaveBeenCalledTimes(1));
@@ -321,7 +340,7 @@ describe("Lothal Workspace", () => {
     });
     render(<Workspace />);
     expect(
-      screen.queryByRole("button", { name: "Approve & generate code" }),
+      screen.queryByRole("button", { name: "Approve & build prototype" }),
     ).not.toBeInTheDocument();
   });
 
@@ -339,8 +358,95 @@ describe("Lothal Workspace", () => {
     });
     render(<Workspace />);
     expect(
-      screen.queryByRole("button", { name: "Approve & generate code" }),
+      screen.queryByRole("button", { name: "Approve & build prototype" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders the prototype-stage transition blocks in the chat thread (U.10)", () => {
+    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
+    mockUseMessages.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [
+        msg({
+          id: "m1",
+          role: "ASSISTANT",
+          content: "Designed",
+          phase: "ARCHITECTURE",
+        }),
+        msg({
+          id: "m2",
+          role: "ASSISTANT",
+          content: "Prototyping",
+          phase: "PROTOTYPE",
+        }),
+        msg({
+          id: "m3",
+          role: "ASSISTANT",
+          content: "Coding",
+          phase: "CODE_GENERATION",
+        }),
+      ],
+    });
+    render(<Workspace />);
+    expect(
+      screen.getByText("Architecture approved — building the prototype"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Prototype approved — generating the code"),
+    ).toBeInTheDocument();
+  });
+
+  // --- Prototype pane (right pane in the PROTOTYPE phase, Epic UI U.8/U.9) ---
+
+  it("renders the embedded prototype pane in the PROTOTYPE phase", () => {
+    mockUseProject.mockReturnValue({
+      data: { ...project, phase: "PROTOTYPE" },
+      isLoading: false,
+    });
+    mockUsePrototype.mockReturnValue({
+      data: {
+        status: "READY",
+        od_project_id: "od-1",
+        od_conversation_id: "conv-1",
+        embed_url: "http://od.test/projects/od-1",
+        preview_html: null,
+        artifacts: [],
+      },
+      isLoading: false,
+      isError: false,
+      error: undefined,
+    });
+    render(<Workspace />);
+    // The prototype pane (not the architecture artifact view) is mounted: OD's
+    // own project page is embedded, and the stepper shows the Prototype step.
+    expect(screen.getByTitle("Open Design prototype")).toBeInTheDocument();
+    expect(screen.getByText("Prototype")).toBeInTheDocument();
+    // The architecture approve CTA is not shown in the prototype stage.
+    expect(
+      screen.queryByRole("button", { name: "Approve & build prototype" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("auto-triggers generation when entering the PROTOTYPE phase IDLE", async () => {
+    mockUseProject.mockReturnValue({
+      data: { ...project, phase: "PROTOTYPE" },
+      isLoading: false,
+    });
+    mockUsePrototype.mockReturnValue({
+      data: {
+        status: "IDLE",
+        od_project_id: null,
+        od_conversation_id: null,
+        embed_url: null,
+        artifacts: [],
+      },
+      isLoading: false,
+      isError: false,
+      error: undefined,
+    });
+    render(<Workspace />);
+    await waitFor(() => expect(mockGeneratePrototype).toHaveBeenCalledTimes(1));
   });
 
   // --- Code surface (right pane in code phases) ---
