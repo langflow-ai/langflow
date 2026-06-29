@@ -58,6 +58,7 @@ from langflow.services.database.models.flow.model import (
     FlowCreate,
     FlowHeader,
     FlowRead,
+    FlowType,
     FlowUpdate,
 )
 
@@ -122,6 +123,7 @@ async def read_flows(
     components_only: bool = False,
     get_all: bool = True,
     folder_id: UUID | None = None,
+    flow_type: FlowType | None = None,
     params: Annotated[Params, Depends()],
     header_flows: bool = False,
 ):
@@ -156,6 +158,9 @@ async def read_flows(
 
         if components_only:
             stmt = stmt.where(Flow.is_component == True)  # noqa: E712
+
+        if flow_type is not None:
+            stmt = stmt.where(Flow.flow_type == flow_type)
 
         if get_all:
             flows = (await session.exec(stmt)).all()
