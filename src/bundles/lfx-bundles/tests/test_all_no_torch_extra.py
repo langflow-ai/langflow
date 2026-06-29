@@ -115,7 +115,28 @@ def test_all_no_torch_resolves_without_torch() -> None:
         check=False,
     )
     if proc.returncode != 0:
-        pytest.skip(f"could not resolve all-no-torch (offline / registry unavailable?):\n{proc.stderr[-800:]}")
+        # Only a transient environment failure (offline / registry / TLS) should skip.
+        # A real resolver error -- an invalid extra or a torch-introducing dependency
+        # conflict -- must fail loudly; masking it would defeat the purpose of this guard.
+        stderr = proc.stderr.lower()
+        transient_markers = (
+            "offline",
+            "registry unavailable",
+            "temporary failure",
+            "timed out",
+            "timeout",
+            "connection",
+            "network",
+            "dns",
+            "tls",
+            "certificate",
+            "failed to fetch",
+            "error sending request",
+            "could not connect",
+        )
+        if any(marker in stderr for marker in transient_markers):
+            pytest.skip(f"all-no-torch resolve hit a transient network/registry error:\n{proc.stderr[-800:]}")
+        pytest.fail(f"uv failed to resolve lfx-bundles[all-no-torch]:\n{proc.stderr[-800:]}")
 
     offenders = sorted(
         {
