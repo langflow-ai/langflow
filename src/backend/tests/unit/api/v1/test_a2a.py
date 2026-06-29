@@ -237,7 +237,8 @@ async def test_card_with_overrides_and_apikey_is_spec_valid(client: AsyncClient,
 
     body = (await client.get(_card_url(flow_id))).json()
 
-    # Drop the non-model inputSchema key, then the whole card round-trips through the spec model.
+    # The served card carries inputSchema; drop the non-model key, then the card round-trips through the spec model.
+    assert "inputSchema" in body["skills"][0]
     skill = {k: v for k, v in body["skills"][0].items() if k != "inputSchema"}
     a2a_types.AgentCard.model_validate({**body, "skills": [skill]})
 
