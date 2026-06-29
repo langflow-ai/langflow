@@ -178,7 +178,7 @@ _OPTIONAL_DEPS_HEADER = (
 )
 
 # Providers whose SDKs pull torch (directly or transitively). Excluded from the
-# generated ``all-torch`` aggregate so it resolves torch-free. Keep in sync with
+# generated ``all-no-torch`` aggregate so it resolves torch-free. Keep in sync with
 # the per-provider extras above: cuga -> cuga, codeagents -> smolagents.
 TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 
