@@ -906,6 +906,13 @@ async def approve_prototype(*, session: DbSession, project: OwnedProject) -> Pro
             status_code=status.HTTP_409_CONFLICT,
             detail="The prototype can only be approved during the prototype stage.",
         )
+    # Only a generated, READY prototype can be approved — otherwise a click during
+    # IDLE/GENERATING would advance to CODE_GENERATION with no prototype captured.
+    if not project.od_project_id or project.prototype_status != PrototypeStatus.READY.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Approve the prototype after generation has completed.",
+        )
 
     try:
         artifacts = await prototype_engine.collect_for_approval(project)

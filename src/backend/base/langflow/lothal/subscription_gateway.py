@@ -425,10 +425,23 @@ async def proxy_anthropic_passthrough(
             await client.aclose()
 
     # Relay the upstream Content-Type (text/event-stream for a streamed reply,
-    # application/json otherwise) and status; Starlette sets framing headers, and
-    # the body is already decompressed so no content-encoding is relayed.
+    # application/json otherwise) and status. Also relay backoff/debug headers on
+    # 429/5xx (retry-after, anthropic rate-limit, request-id) so callers keep the
+    # same retry signal as the native Messages endpoint. Drop hop-by-hop / framing
+    # headers and content-encoding/length (the body is decompressed; Starlette
+    # re-frames). Content-Type is passed via media_type, so skip it here.
+    drop_headers = {
+        "content-encoding",
+        "content-length",
+        "content-type",
+        "transfer-encoding",
+        "connection",
+        "keep-alive",
+    }
+    passthrough = {k: v for k, v in upstream.headers.items() if k.lower() not in drop_headers}
     return StreamingResponse(
         _gen(),
         status_code=upstream.status_code,
         media_type=upstream.headers.get("content-type", "application/json"),
+        headers=passthrough,
     )

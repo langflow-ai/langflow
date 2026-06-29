@@ -257,11 +257,16 @@ async def seed_and_generate(project: Project) -> GenerateResult:
             )
             od_project_id = str(od_project["id"])
 
-        # Ensure a run exists. A freshly created project has none; a reused one may
-        # already (a prior attempt that got past the run enqueue) — don't double-run it.
+        # Ensure a usable run exists. A freshly created project has none; a reused
+        # one may already (a prior attempt that got past the run enqueue) — don't
+        # double-run it. But only reuse a run that is still in flight or already
+        # succeeded: relinking a failed/canceled terminal run would persist
+        # GENERATING and then poll forever (no run ever lands), so fall through to
+        # start a fresh run in that case.
         runs = await od.list_runs(od_project_id)
         latest = _latest_run(runs)
-        if latest is not None:
+        latest_status = str(latest.get("status") or "").lower() if latest is not None else ""
+        if latest is not None and (latest_status in _OD_STATUS_IN_FLIGHT or latest_status == _OD_STATUS_READY):
             conversation_id = latest.get("conversationId")
         else:
             run = await od.start_run(
@@ -398,7 +403,10 @@ def _parse_artifact(file: dict[str, Any]) -> _ParsedArtifact | None:
     the state read (the list the user reviews) and approval (the set copied into the
     DB) go through this, so the two can never drift apart.
     """
-    manifest = file.get("artifactManifest") or {}
+    raw_manifest = file.get("artifactManifest") or {}
+    # OD should send an object, but a non-dict would AttributeError on .get() below
+    # and bypass the ODError→HTTP mapping; coerce defensively.
+    manifest = raw_manifest if isinstance(raw_manifest, dict) else {}
     kind = file.get("artifactKind") or manifest.get("kind")
     path = file.get("path") or file.get("name")
     if not kind or not path:

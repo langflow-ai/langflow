@@ -44,7 +44,9 @@ async def test_create_project_tolerates_bare_shape():
 
 async def test_create_project_without_id_is_connection_error():
     with respx.mock:
-        respx.post(f"{OD_BASE}/api/projects").mock(return_value=httpx.Response(200, json={"project": {"name": "no id"}}))
+        respx.post(f"{OD_BASE}/api/projects").mock(
+            return_value=httpx.Response(200, json={"project": {"name": "no id"}})
+        )
         async with ODClient(OD_BASE) as od:
             with pytest.raises(ODConnectionError):
                 await od.create_project("App", project_id="lothal-z")

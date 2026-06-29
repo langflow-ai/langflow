@@ -2208,6 +2208,25 @@ async def test_approve_with_no_artifacts_still_advances(client: AsyncClient, log
     assert any("approved" in s.lower() and "artifact" not in s.lower() for s in summaries)
 
 
+async def test_approve_rejected_before_prototype_ready(client: AsyncClient, logged_in_headers: dict):
+    """Approve is a 409 until generation has produced a READY prototype — no premature advance."""
+    # Never generated (no OD link, status IDLE): approving must not advance the phase.
+    not_generated = await _make_prototype_project(client, logged_in_headers)
+    r1 = await client.post(f"api/v1/lothal/projects/{not_generated}/prototype/approve", headers=logged_in_headers)
+    assert r1.status_code == status.HTTP_409_CONFLICT
+
+    # Linked but still GENERATING: also rejected (no OD call needed — respx unmocked
+    # would error if it tried, so a clean 409 proves it short-circuits).
+    generating = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", prototype_status="GENERATING"
+    )
+    r2 = await client.post(f"api/v1/lothal/projects/{generating}/prototype/approve", headers=logged_in_headers)
+    assert r2.status_code == status.HTTP_409_CONFLICT
+
+    async with session_scope() as session:
+        assert (await session.get(Project, UUID(generating))).phase == "PROTOTYPE"
+
+
 @pytest.mark.usefixtures("_od_env")
 async def test_approve_summary_pluralises_artifact_count(client: AsyncClient, logged_in_headers: dict):
     """Two artifacts → both persisted and the summary reads 'with 2 artifacts:'."""
