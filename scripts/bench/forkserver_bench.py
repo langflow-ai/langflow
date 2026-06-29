@@ -172,7 +172,8 @@ def _child_cold(flow_path: str, utterance: str, _global_vars: dict, q) -> None:
 
 def _child_concurrent(flow_path: str, utterance: str, global_vars: dict, ready_q, release_evt) -> None:
     """Warm in-process call that REPORTS then HOLDS, so the parent can sample the
-    whole tree's memory while every sibling is still resident."""
+    whole tree's memory while every sibling is still resident.
+    """
     t0 = time.perf_counter()
     ok, err = True, ""
     try:
@@ -199,7 +200,8 @@ def _noop(q) -> None:
 
 def _warm_boot(ctx) -> None:
     """Register the prewarm preload and force the control proc to start NOW, so
-    timed loops measure steady state, not the one-time forkserver boot."""
+    timed loops measure steady state, not the one-time forkserver boot.
+    """
     ctx.set_forkserver_preload(["_lfx_prewarm_shim"])
     q = ctx.Queue()
     t0 = time.perf_counter()
@@ -292,7 +294,9 @@ def run_sustained(ctx, flow: str, utt: str, gv: dict, n: int) -> None:
         if r["self"].get("Private_Dirty"):
             priv.append(r["self"]["Private_Dirty"])
         if i % step == 0:
-            print(f"[sustained] {i}/{n}  call={r['compute_s']:.3f}s  ctrl_rss={_mb(r['ctrl'].get('Rss', 0))}", flush=True)
+            print(
+                f"[sustained] {i}/{n}  call={r['compute_s']:.3f}s  ctrl_rss={_mb(r['ctrl'].get('Rss', 0))}", flush=True
+            )
     if comp:
         print(
             f"\n[sustained] latency n={len(comp)}  "
@@ -305,7 +309,9 @@ def run_sustained(ctx, flow: str, utt: str, gv: dict, n: int) -> None:
             f"delta={delta / 1024:+.1f}MB  <- should be ~flat; steady growth == leak in the warm parent"
         )
     if priv:
-        print(f"[sustained] per-child Private_Dirty: first={_mb(priv[0])} last={_mb(priv[-1])} mean={_mb(int(statistics.fmean(priv)))}")
+        print(
+            f"[sustained] per-child Private_Dirty: first={_mb(priv[0])} last={_mb(priv[-1])} mean={_mb(int(statistics.fmean(priv)))}"
+        )
 
 
 def run_ramp(ctx, flow: str, utt: str, gv: dict, max_c: int) -> None:
