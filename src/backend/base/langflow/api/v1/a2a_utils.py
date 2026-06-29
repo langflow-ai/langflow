@@ -6,6 +6,8 @@ to a non-spec shape (no top-level ``url``, oneof-wrapped ``securitySchemes``,
 ``location`` instead of ``in``).
 """
 
+import asyncio
+
 from a2a.compat.v0_3 import types as a2a_types
 from lfx.log.logger import logger
 from sqlmodel import select
@@ -25,22 +27,35 @@ A2A_APIKEY_HEADER = "x-api-key"  # pragma: allowlist secret
 # contract is just empty rather than 500ing the public discovery endpoint.
 _EMPTY_INPUT_SCHEMA = {"type": "object", "properties": {}, "required": []}
 
+# Bound free-form a2a_card_overrides so they can't bloat the public,
+# unauthenticated card (a single over-long string or an unbounded examples/tags
+# list). Legitimate overrides are well under these.
+_MAX_OVERRIDE_STR_LEN = 1000
+_MAX_OVERRIDE_LIST_ITEMS = 50
+
 
 def _override_str(overrides: dict, key: str) -> str | None:
-    """Return a non-empty string override, or None.
+    """Return a non-empty, length-bounded string override, or None.
 
     a2a_card_overrides is a free-form dict, so a non-string value must not reach
-    the typed card model (it would raise pydantic ValidationError).
+    the typed card model (it would raise pydantic ValidationError). Over-long
+    values are dropped so the card falls back to the flow default.
     """
     value = overrides.get(key)
-    return value if isinstance(value, str) and value else None
+    if isinstance(value, str) and value and len(value) <= _MAX_OVERRIDE_STR_LEN:
+        return value
+    return None
 
 
 def _override_str_list(overrides: dict, key: str) -> list[str] | None:
-    """Return a non-empty list-of-strings override, or None."""
+    """Return a non-empty list-of-strings override (count- and length-bounded), or None."""
     value = overrides.get(key)
-    if isinstance(value, list) and value and all(isinstance(item, str) for item in value):
-        return value
+    if (
+        isinstance(value, list)
+        and value
+        and all(isinstance(item, str) and len(item) <= _MAX_OVERRIDE_STR_LEN for item in value)
+    ):
+        return value[:_MAX_OVERRIDE_LIST_ITEMS]
     return None
 
 
@@ -99,7 +114,9 @@ async def build_agent_card(flow: Flow, *, rpc_url: str, session: AsyncSession) -
     # can be flagged for A2A with empty/unbuildable data, so degrade to an empty
     # input contract rather than 500ing the public discovery endpoint.
     try:
-        input_schema = json_schema_from_flow(flow)
+        # json_schema_from_flow does a full, synchronous graph build; offload it
+        # so this public endpoint never blocks the event loop.
+        input_schema = await asyncio.to_thread(json_schema_from_flow, flow)
     except Exception:  # noqa: BLE001 - any graph build failure degrades, not crashes
         logger.warning("Could not build A2A input schema for flow %s; serving empty input contract", flow.id)
         input_schema = dict(_EMPTY_INPUT_SCHEMA)
