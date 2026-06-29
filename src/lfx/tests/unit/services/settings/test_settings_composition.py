@@ -86,6 +86,7 @@ EXPECTED_FIELDS = {
     "mcp_composer_enabled",
     "mcp_composer_version",
     "a2a_enabled",
+    "a2a_allow_private_webhooks",
     # TelemetrySettings
     "sentry_dsn",
     "sentry_traces_sample_rate",
