@@ -149,6 +149,7 @@ const ListComponent = ({
               className={cn(
                 "z-20 flex w-0 items-center transition-all duration-300",
                 selected && "w-10",
+                "group-focus-within/checkbox:w-10",
               )}
             >
               <Checkbox
@@ -156,8 +157,9 @@ const ListComponent = ({
                 onCheckedChange={(checked) => setSelected(checked as boolean)}
                 onClick={(e) => e.stopPropagation()}
                 className={cn(
-                  "ml-2 transition-opacity focus-visible:ring-0",
-                  !selected && "opacity-0 group-hover/checkbox:opacity-100",
+                  "ml-2 transition-opacity",
+                  !selected &&
+                    "opacity-0 group-hover/checkbox:opacity-100 group-focus-within/checkbox:opacity-100",
                 )}
                 data-testid={`checkbox-${flowData.id}`}
                 aria-label={t("flows.selectFlow", { name: flowData.name })}

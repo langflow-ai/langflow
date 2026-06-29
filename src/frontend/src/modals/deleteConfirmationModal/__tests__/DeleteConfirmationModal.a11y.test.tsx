@@ -59,6 +59,7 @@ describe("DeleteConfirmationModal accessibility", () => {
     });
 
     expect(trigger).not.toHaveAttribute("tabindex", "-1");
+    expect(trigger).not.toHaveAttribute("aria-controls");
 
     await user.tab();
 

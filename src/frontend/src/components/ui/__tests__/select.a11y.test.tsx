@@ -36,12 +36,11 @@ describe("Select accessibility", () => {
     expect(screen.getByRole("combobox", { name: "Model" })).toBeInTheDocument();
   });
 
-  it("should_expose_expanded_state", () => {
+  it("should_expose_collapsed_state_without_stale_controls", () => {
     renderSelect({ "aria-label": "Model" });
 
-    expect(screen.getByRole("combobox")).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
+    const trigger = screen.getByRole("combobox");
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).not.toHaveAttribute("aria-controls");
   });
 });

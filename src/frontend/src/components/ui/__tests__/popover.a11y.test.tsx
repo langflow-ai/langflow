@@ -31,6 +31,7 @@ describe("Popover accessibility", () => {
 
     const trigger = screen.getByRole("button", { name: "Filter flows" });
     expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).not.toHaveAttribute("aria-controls");
 
     await user.click(trigger);
     expect(trigger).toHaveAttribute("aria-expanded", "true");

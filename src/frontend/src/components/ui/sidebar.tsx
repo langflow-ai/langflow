@@ -286,7 +286,7 @@ const Sidebar = React.forwardRef<
 
     if (collapsible === "none") {
       return (
-        <div
+        <aside
           className={cn("group flex h-full flex-col")}
           data-side={side}
           ref={ref}
@@ -301,12 +301,12 @@ const Sidebar = React.forwardRef<
           >
             {children}
           </div>
-        </div>
+        </aside>
       );
     }
 
     return (
-      <div
+      <aside
         ref={ref}
         className="group peer relative block h-full flex-col"
         data-state={state}
@@ -360,7 +360,7 @@ const Sidebar = React.forwardRef<
             {children}
           </div>
         </div>
-      </div>
+      </aside>
     );
   },
 );
