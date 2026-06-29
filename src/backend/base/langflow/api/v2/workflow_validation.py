@@ -75,27 +75,3 @@ def _validate_flow_data_for_execution(parsed: ParsedWorkflowRun, flow: FlowRead)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
-
-
-def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[str]) -> None:
-    """Reject ``output_ids`` that aren't outputs of this flow, BEFORE it runs.
-
-    Checks against the terminal node ids known after graph build but before
-    execution, so a typo or wrong id costs no compute. ``available`` lists the
-    flow's real output ids so callers can self-correct. None/empty means "no
-    selection" and never raises.
-    """
-    if not output_ids:
-        return
-    known = set(terminal_node_ids)
-    unknown = [output_id for output_id in output_ids if output_id not in known]
-    if unknown:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={
-                "error": "Unknown output_ids",
-                "code": "UNKNOWN_OUTPUT_IDS",
-                "message": f"output_ids not produced by this flow: {unknown}.",
-                "available": terminal_node_ids,
-            },
-        )

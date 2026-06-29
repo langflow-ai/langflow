@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
+from lfx.graph.vertex.base import Vertex
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from sqlmodel import select
@@ -365,6 +366,7 @@ async def generate_flow_events(
     source_flow_id: uuid.UUID | None = None,
     run_id: str | None = None,
     track_job_status: bool = True,
+    tweaks: dict | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -392,6 +394,22 @@ async def generate_flow_events(
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
+
+            # Apply request tweaks to the built graph. The sync path applies
+            # tweaks before Graph construction; the streaming/background path
+            # builds from the DB (or request data), so tweaks must be applied
+            # to the built graph here or they are silently dropped. We use
+            # ``update_raw_params`` rather than the lfx ``process_tweaks_on_graph``
+            # helper because that helper only sets ``vertex.params`` and does not
+            # persist the override to runtime (mirrors the workaround in
+            # ``lfx.base.tools.run_flow._process_tweaks_on_graph``).
+            if tweaks:
+                for vertex in graph.vertices:
+                    if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):
+                        continue
+                    if node_tweaks := tweaks.get(vertex.id):
+                        node_tweaks = {k: v for k, v in node_tweaks.items() if k != "code"}
+                        vertex.update_raw_params(node_tweaks, overwrite=True)
 
             graph.set_run_id(build_run_id)
             first_layer = sort_vertices(graph)
@@ -757,16 +775,21 @@ async def generate_flow_events(
     # generate_flow_events runs as an asyncio task; by the time the flow
     # finishes, FastAPI has already drained the background_tasks queue and any
     # tasks added after that point are silently dropped.
-    try:
-        _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
-        await get_task_service().fire_and_forget_task(
-            get_memory_base_service().on_flow_output,
-            flow_id=flow_id,
-            session_id=graph.session_id or str(flow_id),
-            job_id=_run_id_uuid,
-        )
-    except (RuntimeError, ValueError, OSError):
-        await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
+    # Gated on ``track_job_status`` for the same reason as the job row above:
+    # when a caller owns the run's lifecycle (the v2 durable background path
+    # passes ``track_job_status=False`` and fires this hook itself with the
+    # durable job_id), firing here too would double-capture the flow output.
+    if track_job_status:
+        try:
+            _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow_id,
+                session_id=graph.session_id or str(flow_id),
+                job_id=_run_id_uuid,
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
 
     await event_manager.queue.put((None, None, time.time()))
 

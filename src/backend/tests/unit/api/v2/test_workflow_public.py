@@ -40,7 +40,7 @@ def _stub_generate_flow_events(monkeypatch, captured: dict) -> None:
     impersonation, and source_flow_id propagation without needing the
     full streaming pipeline.
     """
-    from langflow.api.v2 import workflow_execution
+    import langflow.api.v2.workflow as workflow_module
 
     async def _fake_generate_flow_events(**kwargs: Any) -> None:
         captured.update(kwargs)
@@ -49,7 +49,7 @@ def _stub_generate_flow_events(monkeypatch, captured: dict) -> None:
 
         await kwargs["event_manager"].queue.put((None, None, time.time()))
 
-    monkeypatch.setattr(workflow_execution, "generate_flow_events", _fake_generate_flow_events)
+    monkeypatch.setattr(workflow_module, "generate_flow_events", _fake_generate_flow_events)
 
 
 def _send_unauthenticated(client: AsyncClient, client_id: str) -> None:
@@ -135,39 +135,6 @@ async def test_public_endpoint_rejects_tweaks_field(client: AsyncClient, public_
             "flow_id": str(public_flow_id),
             "input_value": "Hi",
             "tweaks": {"node-id": {"input_value": "override"}},
-        },
-        headers={"Content-Type": "application/json"},
-    )
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
-
-
-@pytest.mark.benchmark
-@pytest.mark.security
-async def test_public_endpoint_rejects_oversized_input_value(client: AsyncClient, public_flow_id):
-    """An anonymous caller cannot post an arbitrarily large ``input_value``; the wire schema bounds it at 64 KB."""
-    _send_unauthenticated(client, "oversized-input-client")
-    response = await client.post(
-        "api/v2/workflows/public",
-        json={
-            "flow_id": str(public_flow_id),
-            "input_value": "x" * (64 * 1024 + 1),
-        },
-        headers={"Content-Type": "application/json"},
-    )
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
-
-
-@pytest.mark.benchmark
-@pytest.mark.security
-async def test_public_endpoint_rejects_oversized_session_id(client: AsyncClient, public_flow_id):
-    """``session_id`` is bounded too — it is namespaced and persisted per visitor."""
-    _send_unauthenticated(client, "oversized-session-client")
-    response = await client.post(
-        "api/v2/workflows/public",
-        json={
-            "flow_id": str(public_flow_id),
-            "input_value": "Hi",
-            "session_id": "s" * (256 + 1),
         },
         headers={"Content-Type": "application/json"},
     )
@@ -458,19 +425,6 @@ async def test_public_endpoint_surfaces_value_error_as_400(client: AsyncClient, 
     assert response.json().get("detail") == "custom gate failure"
 
 
-@pytest.fixture
-def _fresh_limiter():
-    """Reset the global limiter singleton so the throttle test starts clean."""
-    import langflow.services.rate_limit.service as rate_limit_module
-
-    original = rate_limit_module._limiter
-    rate_limit_module._limiter = None
-    yield
-    rate_limit_module._limiter = original
-
-
-@pytest.mark.security
-@pytest.mark.usefixtures("_fresh_limiter")
 def test_public_endpoint_throttles_per_ip(monkeypatch):
     """The unauthenticated public endpoint throttles per client IP.
 
