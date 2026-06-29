@@ -179,6 +179,20 @@ class HumanInput(Component):
             "paused_at": datetime.now(timezone.utc).isoformat(),
         }
 
+    def _has_downstream_consumer(self) -> bool:
+        """True if any branch output feeds a downstream node.
+
+        A node with no outgoing edges runs as an isolated start vertex; pausing it would
+        suspend the whole run for a decision that routes nowhere (and, alongside an Agent's
+        own tool-approval pause, leave that pause unresolved on resume). The successor_map is
+        absent only outside a prepared graph (standalone/tests), where the old behavior holds.
+        """
+        graph = getattr(self, "graph", None)
+        successor_map = getattr(graph, "successor_map", None)
+        if not isinstance(successor_map, dict):
+            return True
+        return bool(successor_map.get(self._id))
+
     def _suspend(self) -> None:
         self.graph.request_pause(reason=HUMAN_INPUT_REQUIRED, data=self._pause_request())
         self.status = "Awaiting human input"
@@ -186,6 +200,9 @@ class HumanInput(Component):
     def route_branch(self) -> Message:
         decision = self._injected_decision()
         if decision is None:
+            if not self._has_downstream_consumer():
+                self.status = "Skipped: no connected outputs"
+                return Message(text=self._rendered_prompt())
             self._suspend()
             return Message(text="")
         chosen = decision.get("action_id")

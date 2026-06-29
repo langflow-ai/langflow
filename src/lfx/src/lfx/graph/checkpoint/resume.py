@@ -43,15 +43,13 @@ def _restore_run_manager(graph: Graph, checkpoint: GraphCheckpoint) -> None:
             "run_map": run_map,
             "run_predecessors": run_predecessors,
             "vertices_to_run": set(checkpoint.vertices_to_run),
-            # Vertices interrupted mid-build must re-run on resume, so they go
-            # back to the runnable pool instead of staying marked in-flight.
+            # Vertices interrupted mid-build re-run on resume: back to the runnable pool, not in-flight.
             "vertices_being_run": set(),
             "ran_at_least_once": set(checkpoint.ran_at_least_once),
         }
     )
     manager.vertices_to_run.update(checkpoint.vertices_being_run)
-    # Why: to_dict/from_dict omit cycle_vertices, so without this a resumed flow with a Loop never
-    # schedules its loop vertex and hangs; prepare() already computed graph.cycle_vertices.
+    # from_dict omits cycle_vertices; without this a resumed Loop flow never schedules its loop vertex and hangs.
     manager.cycle_vertices = set(graph.cycle_vertices)
     graph.run_manager = manager
 
@@ -92,20 +90,20 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
     graph.vertices_layers = [list(layer) for layer in checkpoint.vertices_layers]
     graph._first_layer = list(checkpoint.first_layer)  # noqa: SLF001
     graph._call_order = list(checkpoint.call_order)  # noqa: SLF001
-    # Why: without restoring these, every vertex resumes ACTIVE and compute_resume_layer would
-    # revive a branch a ConditionalRouter had stopped before the pause.
+    # Without these, every vertex resumes ACTIVE and compute_resume_layer revives a ConditionalRouter-stopped branch.
     graph.inactivated_vertices = {str(v) for v in checkpoint.inactivated_vertices}
     graph.activated_vertices = list(checkpoint.activated_vertices)
-    # Vertices already built at checkpoint time must not have their async generators re-consumed on
-    # resume (the original run exhausted them); the output-collection loop reads this set to skip them.
+    # Built-at-checkpoint vertices must not have their async generators re-consumed; the output loop skips this set.
     graph.checkpoint_restored_built_ids = {vid for vid, vd in checkpoint.vertex_results.items() if vd.built}
-    # Built vertices whose live output was opaque-dropped to None re-run on resume; others reuse the
-    # restored result instead of re-executing (avoids re-billing an Agent whose Message round-tripped).
+    # Opaque output (Tool/client) dropped to None re-runs anywhere; the restored None would crash a consumer.
     graph.checkpoint_opaque_dropped_ids = {
         vid for vid, vd in checkpoint.vertex_results.items() if vd.built and vd.built_object is None
     }
     _restore_run_manager(graph, checkpoint)
     _restore_vertices(graph, checkpoint)
+    for vertex in graph.vertices:
+        if vertex.id in graph.checkpoint_opaque_dropped_ids and not vertex.is_input:
+            vertex.built = False
     graph._run_queue.clear()  # noqa: SLF001
     graph._run_queue.extend(compute_resume_layer(graph))  # noqa: SLF001
     return graph

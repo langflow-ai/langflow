@@ -24,7 +24,13 @@ def _wired(component, *, decision=None, run_id="job-1"):
     """
     component._id = "human"
     decisions = {f"human:{run_id}": decision} if decision is not None else {}
-    graph = SimpleNamespace(run_id=run_id, human_input_decisions=decisions, request_pause=MagicMock())
+    graph = SimpleNamespace(
+        run_id=run_id,
+        human_input_decisions=decisions,
+        request_pause=MagicMock(),
+        # Connected by default: the node feeds a downstream consumer, so it pauses.
+        successor_map={"human": ["downstream"]},
+    )
     component._vertex = SimpleNamespace(graph=graph)  # self.graph resolves to self._vertex.graph
     component.stop = MagicMock()
     return component
@@ -191,3 +197,16 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
         _args, kwargs = component.graph.request_pause.call_args
         assert kwargs["reason"] == "human_input_required"
         assert kwargs["data"]["kind"] == "node_input"
+
+    def test_route_branch_disconnected_node_does_not_pause(self, component_class):
+        """A Human Input whose branches route nowhere must not pause the whole flow.
+
+        A node with no outgoing edges runs as an isolated start vertex; pausing it would
+        suspend the entire run for a decision that goes nowhere — and, when an Agent in the
+        same run has its own tool-approval pause, leave that pause unresolved on resume.
+        """
+        component = _wired(component_class(prompt="ok?", decisions=["Approve"]))
+        component.graph.successor_map = {}  # node feeds nothing downstream
+        result = component.route_branch()
+        component.graph.request_pause.assert_not_called()
+        assert isinstance(result, Message)
