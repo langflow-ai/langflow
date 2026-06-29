@@ -89,6 +89,20 @@ class InProcessExecutor:
         task.cancel()
         return True
 
+    @staticmethod
+    async def _await_task(task: asyncio.Task) -> None:
+        # A bare ``await task`` relies on the task's own wakeup of its awaiter. On
+        # Python 3.10, when stop() cancels this worker while the job task is also
+        # finishing, that wakeup is lost: the job task completes but the worker is
+        # never rescheduled, so the event loop idles forever in select(None) — a
+        # hard deadlock in stop(). A done-callback + Event is immune (it is the
+        # same mechanism stop()'s own asyncio.gather uses, which never hangs), and
+        # task.result() re-raises CancelledError/exception exactly like await task.
+        done = asyncio.Event()
+        task.add_done_callback(lambda _t: done.set())
+        await done.wait()
+        task.result()
+
     async def _worker(self, worker_id: int) -> None:
         while True:
             try:
@@ -98,7 +112,7 @@ class InProcessExecutor:
             task = asyncio.create_task(coro_factory())
             self._in_flight[key] = task
             try:
-                await task
+                await self._await_task(task)
             except asyncio.CancelledError:
                 # A cancelled job must not take the worker down with it — but a
                 # cancel aimed at the WORKER (stop()) must. ``Task.cancelling()``
