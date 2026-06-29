@@ -12,22 +12,26 @@ export const awaitBootstrapTest = async (
     skipModal?: boolean;
   },
 ) => {
-  if (!options?.skipGoto) {
-    await page.goto("/");
-  }
+  const prepareMainPage = async (shouldGoto: boolean) => {
+    if (shouldGoto) {
+      await page.goto("/");
+    }
 
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
 
-  const countEmptyButton = await page
-    .getByTestId("new_project_btn_empty_page")
-    .count();
-  if (countEmptyButton > 0) {
-    await addFlowToTestOnEmptyLangflow(page);
-  }
+    const countEmptyButton = await page
+      .getByTestId("new_project_btn_empty_page")
+      .count();
+    if (countEmptyButton > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
 
-  await waitForNewProjectButton(page);
+    await waitForNewProjectButton(page);
+  };
+
+  await prepareMainPage(!options?.skipGoto);
 
   if (!options?.skipModal) {
     let modalCount = 0;
@@ -56,6 +60,9 @@ export const awaitBootstrapTest = async (
         }
         // Wait a bit before retrying
         await page.waitForTimeout(1000);
+        if (!options?.skipGoto) {
+          await prepareMainPage(true);
+        }
       }
     }
 

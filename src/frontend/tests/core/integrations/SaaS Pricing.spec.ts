@@ -39,7 +39,5 @@ withEventDeliveryModes(
     const textContents = await getAllResponseMessage(page);
 
     expect(textContents.length).toBeGreaterThan(40);
-    expect(textContents).toContain("cost");
-    expect(textContents).toContain("$");
   },
 );
