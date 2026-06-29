@@ -22,6 +22,7 @@ table so they survive restart and are visible across workers.
 """
 
 import asyncio
+import hashlib
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -40,6 +41,7 @@ from lfx.graph.checkpoint.schema import GraphCheckpoint
 from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
+from lfx.log.logger import logger
 from lfx.schema.workflow import (
     GLOBAL_KEY_MAX_LEN,
     JobStatus,
@@ -47,12 +49,20 @@ from lfx.schema.workflow import (
     WorkflowRunRequest,
 )
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
+from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
 from sqlmodel import select
 
 from langflow.api.utils import DbSession
+from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.v1.a2a_executor import FlowAgentExecutor
-from langflow.api.v1.a2a_utils import A2A_APIKEY_HEADER, build_agent_card, folder_auth_type, validate_webhook_url
+from langflow.api.v1.a2a_utils import (
+    A2A_APIKEY_HEADER,
+    build_agent_card,
+    folder_auth_type,
+    validate_webhook_url,
+    webhook_pin_host,
+)
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.database.models import A2ACheckpoint, A2ATask, Flow
@@ -123,9 +133,11 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | No
     job_id when it is a UUID (so run_id == taskId on the sync path); a non-UUID
     client task id falls back to a fresh job_id.
 
-    The A2A ``context_id`` becomes the flow ``session_id`` so multi-turn calls
-    sharing a contextId share chat memory. The SDK mints a contextId when the
-    client omits one, so each conversation gets its own isolated session.
+    The A2A ``context_id`` is namespaced under a per-(owner, flow) virtual id and
+    that becomes the flow ``session_id``, so multi-turn calls sharing a contextId
+    share chat memory while a contextId can never address another flow's session.
+    The SDK mints a contextId when the client omits one, so each conversation gets
+    its own isolated session.
     """
     # Lazy import: langflow.api.v2.workflow pulls in the execution stack and this
     # module is imported during router assembly.
@@ -133,12 +145,25 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | No
 
     user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id)
-    # context_id is client-controlled on a public flow and lands in the indexed
-    # MessageTable.session_id, so bound it like the public run schema does (Postgres
-    # btree entries are size-capped, so an over-long value could fail the insert). An
-    # over-bound id falls back to the per-flow default session; truncating instead
-    # would collide two long ids into one conversation.
-    session_id = context_id if context_id and len(context_id) <= GLOBAL_KEY_MAX_LEN else None
+    # context_id is client-controlled on a public endpoint, so namespace it under a
+    # per-(owner, flow) virtual id before it becomes the chat session_id: a contextId
+    # can never address another flow's session, and since the run always executes as the
+    # flow owner (apikey-gated flows admit only the owner's key) the owner id folds the
+    # principal into the key. The namespaced value lands in the indexed
+    # MessageTable.session_id (Postgres btree entries are size-capped), so when the
+    # composed key would exceed the bound, hash the contextId rather than truncating
+    # (which would collide two long ids) or falling back to the shared per-flow default
+    # (which would re-open the cross-caller leak). Only an absent contextId uses the default.
+    namespace = str(compute_virtual_flow_id(user.id, flow_id))
+    if context_id:
+        scoped = scope_session_to_namespace(context_id, namespace)
+        session_id = (
+            scoped
+            if scoped and len(scoped) <= GLOBAL_KEY_MAX_LEN
+            else f"{namespace}:{hashlib.sha256(context_id.encode()).hexdigest()}"
+        )
+    else:
+        session_id = None
     parsed = parse_workflow_run_request(
         WorkflowRunRequest(flow_id=str(flow_id), input_value=text, mode="sync", session_id=session_id)
     )
@@ -263,6 +288,18 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
     )
 
 
+def _push_config_scope(context: ServerCallContext) -> str:
+    """Key push configs by (owner, flow) so flow B can't read/overwrite/delete flow A's.
+
+    The endpoint is anonymous, so ``resolve_user_scope`` is the same '' for every flow;
+    the per-request flow_id (carried in call-context state by ``_FlowContextBuilder``) is
+    the real discriminator. Mirrors the flow-ownership defense in ``_resume_flow``. Only
+    the user-callable set/get/list/delete paths are scoped; dispatch fans out by task_id
+    via ``get_info_for_dispatch`` and is unaffected.
+    """
+    return f"{resolve_user_scope(context)}:{context.state.get('flow_id', '')}"
+
+
 class _SafePushConfigStore(InMemoryPushNotificationConfigStore):
     """Push-notification config store that SSRF-guards the webhook URL at registration.
 
@@ -278,6 +315,39 @@ class _SafePushConfigStore(InMemoryPushNotificationConfigStore):
         except ValueError as exc:
             raise InvalidParamsError(message=str(exc)) from exc
         await super().set_info(task_id, notification_config, context)
+
+
+class _SafePushNotificationSender(BasePushNotificationSender):
+    """Re-validate + DNS-pin the webhook at dispatch, closing the registration-time rebind gap.
+
+    ``_SafePushConfigStore`` validates at registration, but a host can re-resolve to a
+    private/metadata IP afterwards (DNS rebinding). Re-resolve here and pin the connection
+    to the just-validated IPs (via the shared SSRF transport) so a rebind can't land on an
+    internal address. A webhook that now resolves to a blocked address is dropped (logged),
+    matching the SDK's swallow-and-return-False on a failed send.
+    """
+
+    async def _dispatch_notification(self, event, push_info, task_id) -> bool:
+        url = push_info.url
+        try:
+            validated_ips = await validate_webhook_url(url)
+        except ValueError:
+            logger.warning("A2A push webhook for task %s blocked by SSRF check: %s", task_id, url)
+            return False
+        # Pin by the exact host httpx connects to (IDNA/punycode raw_host) -- the same
+        # derivation validate_webhook_url resolved -- so the pin key can't diverge from the
+        # connected host for an IDN webhook (which would silently bypass the pin).
+        hostname = webhook_pin_host(url)
+        if not (validated_ips and hostname):
+            # Private webhooks allowed / allowlisted host / protection off: nothing to pin.
+            return await super()._dispatch_notification(event, push_info, task_id)
+        # ponytail: per-dispatch client so DNS is pinned to the IPs just validated for this
+        # host; reuse the SDK's exact POST (token header, error swallow) via a bound sender.
+        async with create_ssrf_protected_client(
+            hostname=hostname, validated_ips=validated_ips, timeout=_PUSH_TIMEOUT
+        ) as client:
+            pinned = BasePushNotificationSender(client, self._config_store)
+            return await pinned._dispatch_notification(event, push_info, task_id)  # noqa: SLF001
 
 
 class A2ACheckpointStore(CheckpointStore):
@@ -369,10 +439,20 @@ class DurableTaskStore(TaskStore):
 
 
 # One shared httpx client sends webhooks; a short timeout so a slow/hostile webhook
-# can't tie up the run. Created at import (no I/O) and reused across requests.
-_PUSH_HTTP_CLIENT = httpx.AsyncClient(timeout=10.0)
-_PUSH_CONFIG_STORE = _SafePushConfigStore()
-_PUSH_SENDER = BasePushNotificationSender(_PUSH_HTTP_CLIENT, _PUSH_CONFIG_STORE)
+# can't tie up the run. Created at import (no I/O) and reused across requests; closed
+# from the app lifespan via close_push_client(). The sender re-validates and DNS-pins
+# each webhook at dispatch (per-dispatch client), so this shared client only carries
+# the no-pin path (private webhooks allowed / allowlisted host / SSRF protection off).
+_PUSH_TIMEOUT = 10.0
+_PUSH_HTTP_CLIENT = httpx.AsyncClient(timeout=_PUSH_TIMEOUT)
+_PUSH_CONFIG_STORE = _SafePushConfigStore(owner_resolver=_push_config_scope)
+_PUSH_SENDER = _SafePushNotificationSender(_PUSH_HTTP_CLIENT, _PUSH_CONFIG_STORE)
+
+
+async def close_push_client() -> None:
+    """Close the shared push-notification webhook client. Wired into the app lifespan."""
+    await _PUSH_HTTP_CLIENT.aclose()
+
 
 
 class _FlowRequestHandler(DefaultRequestHandler):

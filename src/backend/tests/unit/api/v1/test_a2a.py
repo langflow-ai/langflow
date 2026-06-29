@@ -238,7 +238,8 @@ async def test_card_with_overrides_and_apikey_is_spec_valid(client: AsyncClient,
 
     body = (await client.get(_card_url(flow_id))).json()
 
-    # Drop the non-model inputSchema key, then the whole card round-trips through the spec model.
+    # The served card carries inputSchema; drop the non-model key, then the card round-trips through the spec model.
+    assert "inputSchema" in body["skills"][0]
     skill = {k: v for k, v in body["skills"][0].items() if k != "inputSchema"}
     a2a_types.AgentCard.model_validate({**body, "skills": [skill]})
 
@@ -281,6 +282,34 @@ async def test_unbuildable_flow_serves_empty_input_schema(client: AsyncClient, a
     assert response.status_code == 200
     body = response.json()
     assert body["skills"][0]["inputSchema"] == {"type": "object", "properties": {}, "required": []}
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_override_lists_are_bounded(client: AsyncClient, active_user, flow_data):
+    """Free-form override lists are capped so the public card can't be bloated."""
+    overrides = {"tags": [f"t{i}" for i in range(200)], "examples": [f"e{i}" for i in range(200)]}
+    flow_id = await _create_flow(active_user.id, data=flow_data, overrides=overrides)
+
+    response = await client.get(_card_url(flow_id))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["skills"][0]["tags"]) == 50
+    assert len(body["skills"][0]["examples"]) == 50
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_overlong_string_override_falls_back(client: AsyncClient, active_user, flow_data):
+    """An over-long string override is dropped and falls back to the flow default."""
+    flow_id = await _create_flow(active_user.id, data=flow_data, overrides={"name": "x" * 5000})
+
+    response = await client.get(_card_url(flow_id))
+
+    assert response.status_code == 200
+    body = response.json()
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        assert body["name"] == flow.name
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -522,14 +551,37 @@ async def _session_texts(session_id) -> set[str]:
     return {row.text for row in rows}
 
 
+def _derive_session(owner_id, flow_id, context_id) -> str | None:
+    """The internal chat session_id the A2A run derives from a client contextId.
+
+    Mirrors ``_run_flow`` exactly: the contextId is namespaced under a per-(owner, flow)
+    virtual id, and an over-bound composed key is hashed (never collapsed to the shared
+    per-flow default), so stored messages never sit under the bare, client-controlled
+    contextId.
+    """
+    import hashlib
+
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
+    from lfx.schema.workflow import GLOBAL_KEY_MAX_LEN
+
+    if not context_id:
+        return None
+    namespace = str(compute_virtual_flow_id(owner_id, flow_id))
+    scoped = scope_session_to_namespace(context_id, namespace)
+    if scoped and len(scoped) <= GLOBAL_KEY_MAX_LEN:
+        return scoped
+    return f"{namespace}:{hashlib.sha256(context_id.encode()).hexdigest()}"
+
+
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_context_id_threads_into_flow_session(client: AsyncClient, active_user, echo_flow_data):
-    """The A2A contextId becomes the flow session_id, so one conversation maps to one chat session.
+    """The A2A contextId threads into the flow session, so one conversation maps to one chat session.
 
     The echo flow's ChatInput/ChatOutput persist messages under the run's session_id. After a
-    message/send carrying a contextId, the stored messages sit under that contextId, proving it
-    threaded through to the v2 run rather than the default str(flow.id) fallback. The returned
-    Task also echoes the same contextId.
+    message/send carrying a contextId, the stored messages sit under the namespaced session
+    derived from that contextId, proving it threaded through to the v2 run rather than the default
+    str(flow.id) fallback. Nothing lands under the bare, client-controlled contextId. The returned
+    Task still echoes the original contextId.
     """
     flow_id = await _create_flow(active_user.id, data=echo_flow_data)
     context_id = f"conv-{uuid.uuid4().hex}"
@@ -539,10 +591,11 @@ async def test_context_id_threads_into_flow_session(client: AsyncClient, active_
 
     assert result["contextId"] == context_id
 
-    # The run persists its output under the run's session_id. Finding the echoed answer
-    # under context_id proves graph.session_id == context_id (the default fallback would
-    # have been str(flow.id)).
-    assert "hello a2a" in await _session_texts(context_id), "the run's messages were not stored under the A2A contextId"
+    # The run persists its output under the namespaced session, not the bare contextId
+    # (and not the default str(flow.id) fallback).
+    scoped_texts = await _session_texts(_derive_session(active_user.id, flow_id, context_id))
+    assert "hello a2a" in scoped_texts, "the run's messages were not stored under the namespaced session"
+    assert await _session_texts(context_id) == set(), "messages must not be addressable by the bare client contextId"
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -555,8 +608,8 @@ async def test_distinct_context_ids_get_distinct_sessions(client: AsyncClient, a
     await _jsonrpc(client, flow_id, "message/send", _text_message("from a", context_id=ctx_a))
     await _jsonrpc(client, flow_id, "message/send", _text_message("from b", context_id=ctx_b))
 
-    a_texts = await _session_texts(ctx_a)
-    b_texts = await _session_texts(ctx_b)
+    a_texts = await _session_texts(_derive_session(active_user.id, flow_id, ctx_a))
+    b_texts = await _session_texts(_derive_session(active_user.id, flow_id, ctx_b))
 
     assert "from a" in a_texts
     assert "from b" in b_texts
@@ -564,23 +617,74 @@ async def test_distinct_context_ids_get_distinct_sessions(client: AsyncClient, a
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_oversized_context_id_falls_back_to_default_session(client: AsyncClient, active_user, echo_flow_data):
-    """An over-long client contextId doesn't reach the indexed session_id column.
+async def test_same_context_id_across_flows_does_not_share_session(client: AsyncClient, active_user, echo_flow_data):
+    """The same contextId on two different flows does NOT share chat memory (cross-flow hijack fix).
 
-    contextId is client-controlled on a public flow, so an absurdly long value is bounded:
-    the run still succeeds, the Task still echoes the contextId, but nothing is stored under
-    it (it falls back to the per-flow default session rather than the unbounded value).
+    The contextId is namespaced under a per-(owner, flow) virtual id, so an identical client
+    contextId resolves to a different session per flow. Multi-turn on the same flow with the same
+    contextId still shares one session.
+    """
+    flow_a = await _create_flow(active_user.id, data=echo_flow_data)
+    flow_b = await _create_flow(active_user.id, data=echo_flow_data)
+    shared_ctx = f"conv-{uuid.uuid4().hex}"  # same client-supplied contextId on both flows
+
+    # Two turns on flow_a (same contextId) prove same-flow memory sharing.
+    await _jsonrpc(client, flow_a, "message/send", _text_message("a turn 1", context_id=shared_ctx))
+    await _jsonrpc(client, flow_a, "message/send", _text_message("a turn 2", context_id=shared_ctx))
+    # One turn on flow_b reusing the same contextId must not bleed into flow_a's session.
+    await _jsonrpc(client, flow_b, "message/send", _text_message("b turn 1", context_id=shared_ctx))
+
+    session_a = _derive_session(active_user.id, flow_a, shared_ctx)
+    session_b = _derive_session(active_user.id, flow_b, shared_ctx)
+    assert session_a != session_b
+
+    a_texts = await _session_texts(session_a)
+    b_texts = await _session_texts(session_b)
+
+    # Same flow + same contextId shares memory across turns.
+    assert {"a turn 1", "a turn 2"} <= a_texts
+    # Cross-flow isolation: flow_b's reuse of the contextId stays out of flow_a's session.
+    assert "b turn 1" in b_texts
+    assert "b turn 1" not in a_texts
+    assert not (a_texts & b_texts)
+    # And nothing is addressable by the bare, shared contextId.
+    assert await _session_texts(shared_ctx) == set()
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_oversized_context_ids_get_distinct_hashed_sessions(client: AsyncClient, active_user, echo_flow_data):
+    """An over-bound contextId is hashed per-conversation, NOT collapsed to the shared default.
+
+    contextId is client-controlled on a public endpoint, so a value whose namespaced key would
+    exceed the btree-capped session_id column is hashed (still flow-scoped). The run succeeds and
+    the Task echoes the raw contextId, but two different long contextIds land in two DIFFERENT
+    sessions, and neither lands in the shared str(flow.id) default (which would re-open the
+    cross-caller leak) nor under the bare contextId.
     """
     from lfx.schema.workflow import GLOBAL_KEY_MAX_LEN
 
     flow_id = await _create_flow(active_user.id, data=echo_flow_data)
-    huge_id = "x" * (GLOBAL_KEY_MAX_LEN + 1)
+    huge_a = "a" * (GLOBAL_KEY_MAX_LEN + 64)
+    huge_b = "b" * (GLOBAL_KEY_MAX_LEN + 64)
 
-    result = (await _jsonrpc(client, flow_id, "message/send", _text_message("hi", context_id=huge_id))).json()["result"]
+    result_a = (await _jsonrpc(client, flow_id, "message/send", _text_message("long a", context_id=huge_a))).json()
+    await _jsonrpc(client, flow_id, "message/send", _text_message("long b", context_id=huge_b))
 
-    assert result["status"]["state"] == "completed"
-    assert result["contextId"] == huge_id  # the protocol value is preserved, just not used as session_id
-    assert await _session_texts(huge_id) == set()
+    assert result_a["result"]["status"]["state"] == "completed"
+    assert result_a["result"]["contextId"] == huge_a  # protocol value preserved, just not used verbatim as session_id
+
+    session_a = _derive_session(active_user.id, flow_id, huge_a)
+    session_b = _derive_session(active_user.id, flow_id, huge_b)
+
+    # Two different long contextIds get two different (bounded, hashed) sessions.
+    assert session_a != session_b
+    assert len(session_a) <= GLOBAL_KEY_MAX_LEN
+    assert "long a" in await _session_texts(session_a)
+    assert "long b" in await _session_texts(session_b)
+    # Never the shared per-flow default, and never the unbounded bare contextId.
+    assert await _session_texts(str(flow_id)) == set()
+    assert await _session_texts(huge_a) == set()
+    assert "long b" not in await _session_texts(session_a)
 
 
 # --- input-required (HITL) -------------------------------------------------
@@ -878,6 +982,27 @@ async def test_validate_webhook_url_blocks_internal_targets():
     await validate_webhook_url("https://8.8.8.8/hook")
 
 
+@pytest.mark.usefixtures("client")
+async def test_validate_webhook_url_floor_holds_with_global_ssrf_off(monkeypatch):
+    """A2A webhook safety must not depend on the global SSRF toggle.
+
+    LANGFLOW_SSRF_PROTECTION_ENABLED is an API-Request-component setting ops can disable;
+    validate_and_resolve_url returns [] with no enforcement when it's off. The A2A guard
+    keeps a hard IP floor regardless, so a webhook resolving to a private/metadata IP is
+    still rejected, while a public host still validates and returns IPs for DNS pinning.
+    """
+    from langflow.api.v1.a2a_utils import validate_webhook_url
+
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
+
+    for bad in ("http://169.254.169.254/latest/meta-data", "http://127.0.0.1/h", "http://10.0.0.1/h"):
+        with pytest.raises(ValueError, match="webhook"):
+            await validate_webhook_url(bad)
+
+    # Public IP still passes the floor and is returned for DNS pinning even with the toggle off.
+    assert await validate_webhook_url("https://8.8.8.8/hook") == ["8.8.8.8"]
+
+
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_push_config_internal_url_rejected(client: AsyncClient, active_user, echo_flow_data):
     """Registering a webhook that targets an internal address is rejected by the SSRF guard."""
@@ -978,6 +1103,72 @@ async def test_a2a_agent_component_calls_remote_agent(client: AsyncClient, activ
     answer = await call_a2a_agent(agent_url, "hello a2a", httpx_client=client)
 
     assert answer == "hello a2a"
+
+
+@pytest.mark.usefixtures("client")
+async def test_push_dispatch_rejects_rebound_private_ip():
+    """Dispatch re-validates the webhook, so a config now pointing at a private/metadata IP is dropped.
+
+    Registration validation can't stop a host that re-resolves to an internal IP after it
+    was registered (DNS rebinding). Calling the live sender's dispatch path directly with a
+    config whose URL targets the cloud metadata IP (bypassing registration, as a rebind
+    would) must return False (not sent) rather than POST to the internal address.
+    """
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import _PUSH_SENDER
+
+    push_info = pb.TaskPushNotificationConfig(url="http://169.254.169.254/hook")
+
+    # event is irrelevant: the SSRF check fires before any payload is built or sent.
+    sent = await _PUSH_SENDER._dispatch_notification(None, push_info, "task-rebind")
+
+    assert sent is False
+
+
+def test_webhook_pin_host_matches_httpx_connect_host_for_idn():
+    """The DNS-pin key must be the host httpx actually connects to, not the unicode hostname.
+
+    httpx/httpcore connect using the IDNA/punycode ``raw_host``; ``urlparse().hostname`` keeps
+    the unicode form. Pinning by the unicode host means the pin key never matches the connected
+    host for an internationalized webhook, so the pin is silently bypassed (TOCTOU rebind). The
+    pin host and the connect host must be the identical punycode string.
+    """
+    from urllib.parse import urlparse
+
+    import httpx
+    from langflow.api.v1.a2a_utils import webhook_pin_host
+
+    url = "http://exämple.com/hook"
+    pin = webhook_pin_host(url)
+
+    # Pin == exactly what httpcore connects to (raw_host, IDNA-encoded), and NOT the old key.
+    assert pin == httpx.URL(url).raw_host.decode("ascii") == "xn--exmple-cua.com"
+    assert pin != urlparse(url).hostname  # the unicode host that would have bypassed the pin
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_push_config_is_flow_scoped(client: AsyncClient, active_user, echo_flow_data):
+    """A push config registered under flow A is invisible to flow B, even with the same task id.
+
+    The store is scoped by flow (not by task id alone), so flow B can't read flow A's webhook.
+    """
+    flow_a = await _create_flow(active_user.id, data=echo_flow_data)
+    flow_b = await _create_flow(active_user.id, data=echo_flow_data)
+
+    sent = (await _jsonrpc(client, flow_a, "message/send", _text_message("hi"))).json()["result"]
+    task_id = sent["id"]
+
+    webhook = f"https://8.8.8.8/hook-{uuid.uuid4().hex}"
+    set_params = {"taskId": task_id, "pushNotificationConfig": {"url": webhook}}
+    assert "result" in (await _jsonrpc(client, flow_a, "tasks/pushNotificationConfig/set", set_params)).json()
+
+    # Flow A (the registering flow) sees its own webhook back.
+    list_a = await _jsonrpc(client, flow_a, "tasks/pushNotificationConfig/list", {"id": task_id})
+    assert webhook in list_a.text
+
+    # Flow B, asking for the same task id, does not see flow A's webhook.
+    list_b = await _jsonrpc(client, flow_b, "tasks/pushNotificationConfig/list", {"id": task_id})
+    assert webhook not in list_b.text
 
 
 def _response(*, output, outputs=None):
