@@ -2017,23 +2017,24 @@ wheels = [
 
 [[package]]
 name = "composio"
-version = "0.9.2"
+version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "composio-client" },
+    { name = "json-schema-to-pydantic" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "pysher" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/07/1a/49395ad89ac93adf83038989e46801f9c56fc529146047f92406342b758f/composio-0.9.2.tar.gz", hash = "sha256:a8584e2321123a8b4536b1564ebd6a0519220d6cadea849ccbf8fc6f1afff190", size = 78508, upload-time = "2025-11-10T12:40:49.116Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/fc/842a49ee8804f0c203c3ee97d9a64b44fa93db7d4d63b05ee7f01ff448eb/composio-0.16.0.tar.gz", hash = "sha256:e794c834204cea9a6044a338aea64855db8aa5bf641d6e0af1667612f6164853", size = 226925, upload-time = "2026-06-25T00:20:05.976Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/20/07/b3a95802b01ade7cd4b5568cbc61a8227bd351ec922907a62cbfd200d964/composio-0.9.2-py3-none-any.whl", hash = "sha256:022762c0c69d072aead35f0a979843e408015fc99bcba51ef80deb9339870602", size = 73584, upload-time = "2025-11-10T12:40:34.663Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/0d/fa76009158da0f490d281b6d89bfd04fe031586785b045b4f63e0c117d0b/composio-0.16.0-py3-none-any.whl", hash = "sha256:3da72dd9d20e98565aeb79fb6b20d733bfa71f5a2aa3ad0161bede6b3af62701", size = 148493, upload-time = "2026-06-25T00:19:51.879Z" },
 ]
 
 [[package]]
 name = "composio-client"
-version = "1.40.0"
+version = "1.41.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -2043,22 +2044,22 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/5a/f715690c950b40b5a2b5a801d27abed6dde3f1e9925e5a486813b677b7ec/composio_client-1.40.0.tar.gz", hash = "sha256:ccfb46c5909e3411fe63fa6275df1f3f7af180ae4bcd82d509e14470c615b0d3", size = 248822, upload-time = "2026-05-19T16:01:17.905Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/b1/3eaeb0bf6f45a5a4114c0464479aab3181b4676644cf84ff08ab7ef389e2/composio_client-1.41.0.tar.gz", hash = "sha256:5b37205123b38a4568d6a75c4227d38929b8f9526adc8d0810281733e547d8a6", size = 244988, upload-time = "2026-06-19T12:15:31.258Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/5d/aa520ecaaf143f69b8d3e1dab5945aeecd25b1b068a9093b9164408fabbd/composio_client-1.40.0-py3-none-any.whl", hash = "sha256:1785bd210f948496d034059b3d5133c5f480a07f55fb4c2f8bfe5a1612f249e5", size = 284567, upload-time = "2026-05-19T16:01:16.597Z" },
+    { url = "https://files.pythonhosted.org/packages/78/34/8841fcc4da6e4ccb74daac47c4714607f9314240c5bf43a0ef653f758e50/composio_client-1.41.0-py3-none-any.whl", hash = "sha256:18344f1b9209c56c25258c87c9a2f0423553690c94a4e62fb933072f76b37cd1", size = 276180, upload-time = "2026-06-19T12:15:29.949Z" },
 ]
 
 [[package]]
 name = "composio-langchain"
-version = "0.9.2"
+version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "composio" },
     { name = "langchain" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/cc/669386924108b555eddbe6d8b5a34695620dac9377efb3dde073868c56d0/composio_langchain-0.9.2.tar.gz", hash = "sha256:1b31dae214937b220faa87ffef783638d4ab4a09622f7bc46331612f3ccb93d4", size = 3057, upload-time = "2025-11-10T12:40:53.593Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/82/70c4f029de2f46340f6723431eebd9a81c01a9d09d0f1db959e80dd34ba7/composio_langchain-0.16.0.tar.gz", hash = "sha256:dff4ffc705cdf4028d514ed2af8aa59d9c42b5de8abbf7b20ae06f6aa4057d58", size = 2748, upload-time = "2026-06-25T00:20:11.005Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/35/9405ae02b26c91c46e251fe20158e7305b1175c8ee52ed613ddfe4dde8d1/composio_langchain-0.9.2-py3-none-any.whl", hash = "sha256:a3126625d69102fb73e902883c60769c3548df3fa3b902ebcb436bca8bac0980", size = 3363, upload-time = "2025-11-10T12:40:44.04Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/48/5f097d81df3a48b1d0308d0a5066abb0b1d6f5d0d712547f683f2a0ad4c9/composio_langchain-0.16.0-py3-none-any.whl", hash = "sha256:df8e191c1c4a9694b2b0cd55119267634136cf6bc3faec2ad3ccdc918f9af4cd", size = 3038, upload-time = "2026-06-25T00:20:00.773Z" },
 ]
 
 [[package]]
@@ -6840,6 +6841,18 @@ wheels = [
 ]
 
 [[package]]
+name = "json-schema-to-pydantic"
+version = "0.4.11"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/60/d8/423895b918706c80db1cee679c13fbe810200b9a9d9a9442c7a58d35c3f2/json_schema_to_pydantic-0.4.11.tar.gz", hash = "sha256:35448ed711a28dd33396b095c8492939b4925aa30eb31942e9b8e08d04279465", size = 56597, upload-time = "2026-03-09T20:53:55.692Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f3/64/7cfeb8c6d2a5e73e0f8d732032aa62be9a7724c04beb461d677de0b4beb3/json_schema_to_pydantic-0.4.11-py3-none-any.whl", hash = "sha256:da2ccc39d070ee03dbcf0517d16720e3e33f7aa8d61257ace09af8c51bd46348", size = 17842, upload-time = "2026-03-09T20:53:54.576Z" },
+]
+
+[[package]]
 name = "jsonlines"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -8690,8 +8703,8 @@ requires-dist = [
     { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
-    { name = "composio", marker = "extra == 'composio'", specifier = "==0.9.2" },
-    { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.9.2" },
+    { name = "composio", marker = "extra == 'composio'", specifier = "==0.16.0" },
+    { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.16.0" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=48.0.1" },
     { name = "cryptography", marker = "extra == 'litellm'" },
