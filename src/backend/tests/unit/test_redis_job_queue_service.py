@@ -924,7 +924,11 @@ async def test_redis_service_cancel_marker_closes_signal_before_subscribe_race()
                 raise
 
         producer.start_job(job_id, _long_running())
-        await asyncio.wait_for(cancelled.wait(), timeout=2)
+        # Generous hang-guard, not a latency assertion: the marker path runs an
+        # extra spawned task (exists + delete + handle_cancel) so it needs more
+        # event-loop hops than the direct-cancel tests, and a 2s bound flaked
+        # under CI load on py3.14. The cancel still fires in ms when healthy.
+        await asyncio.wait_for(cancelled.wait(), timeout=5)
         assert cancelled.is_set()
         assert producer._cancel_stats["marker_hit"] == 1
     finally:
