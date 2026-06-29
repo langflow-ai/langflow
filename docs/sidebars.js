@@ -103,6 +103,7 @@ module.exports = {
         "Agents/mcp-server",
         "Agents/langflow-mcp-client",
         "Agents/mcp-component-astra",
+        "Agents/mcp-component-browserless",
       ],
     },
     {
