@@ -30,7 +30,7 @@ ENV RUSTFLAGS='--cfg reqwest_unstable'
 RUN microdnf update -y \
     && microdnf install -y tar xz \
     # deps for building python deps
-    gcc gcc-c++ make \
+    gcc gcc-c++ make python3.14-devel \
     git \
     # npm
     npm \

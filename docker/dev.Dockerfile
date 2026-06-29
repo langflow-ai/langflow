@@ -9,7 +9,7 @@ WORKDIR /app
 
 RUN microdnf update -y \
     && microdnf install -y tar xz \
-    gcc gcc-c++ make \
+    gcc gcc-c++ make python3.14-devel \
     curl \
     npm \
     git \

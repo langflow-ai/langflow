@@ -14,7 +14,7 @@ COPY --from=uv_installer /uv /usr/local/bin/uv
 COPY --from=uv_installer /uvx /usr/local/bin/uvx
 
 # Install build dependencies needed for some Python packages on Alpine
-RUN microdnf install -y python3.14-devel tar xz gcc gcc-c++ make libaio-dev kernel-headers
+RUN microdnf install -y python3.14-devel tar xz gcc gcc-c++ make libaio-devel kernel-headers
 
 WORKDIR /app
 
