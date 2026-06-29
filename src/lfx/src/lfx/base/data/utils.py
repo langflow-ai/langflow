@@ -110,7 +110,7 @@ def retrieve_file_paths(
     types: list[str] = TEXT_FILE_TYPES,
 ) -> list[str]:
     path = format_directory_path(path)
-    path_obj = Path(path)
+    path_obj = Path(path).resolve()
     if not path_obj.exists() or not path_obj.is_dir():
         msg = f"Path {path} must exist and be a directory."
         raise ValueError(msg)
@@ -121,8 +121,10 @@ def retrieve_file_paths(
     def is_not_hidden(p: Path) -> bool:
         return not is_hidden(p) or load_hidden
 
+    def is_within_directory(p: Path) -> bool:
+        return p.resolve().is_relative_to(path_obj)
+
     def walk_level(directory: Path, max_depth: int):
-        directory = directory.resolve()
         prefix_length = len(directory.parts)
         for p in directory.rglob("*" if recursive else "[!.]*"):
             if len(p.parts) - prefix_length <= max_depth:
@@ -130,7 +132,7 @@ def retrieve_file_paths(
 
     glob = "**/*" if recursive else "*"
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-    return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
+    return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p) and is_within_directory(p)]
 
 
 def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
