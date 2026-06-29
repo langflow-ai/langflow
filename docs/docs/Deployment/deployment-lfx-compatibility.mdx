@@ -113,6 +113,6 @@ For headless or serverless deployments that execute flows using provider compone
 uv pip install "lfx[bundles]"
 ```
 
-This is equivalent to installing `lfx` plus `lfx-bundles[all]`.
+This is equivalent to installing `lfx` plus `lfx-bundles[all-no-torch]` (the full provider set minus the torch-pulling `cuga` and `codeagents` providers, so the default install is torch-free).
 For a slimmer image, install only the provider packages a deployment actually executes, for example `uv pip install lfx lfx-openai "lfx-bundles[qdrant]"`.
-There is intentionally no `lfx[all]` extra; `pip install langflow` remains the everything-included install.
+There is intentionally no `lfx[all]` extra. `pip install langflow` is the batteries-included install except for torch-gated extras, which are opt-in: `pip install "lfx-bundles[all]"` for the `cuga`/`codeagents` components, and `pip install "langflow[docling]"` for the File component's docling conversion path.

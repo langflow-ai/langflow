@@ -31,7 +31,10 @@ dependencies = [
     "lfx-arxiv>=0.1.0,<1.0.0",
     "lfx-ibm>=0.1.0,<1.0.0",
     "lfx-docling>=0.1.0,<1.0.0",
-    "lfx-bundles[all]>=1.0,<2.0",
+    # all-no-torch == all minus the torch-pulling providers (cuga, codeagents),
+    # so the default install is torch-free. Users who want those two components
+    # opt in with: pip install "lfx-bundles[all]" (or the per-provider extra).
+    "lfx-bundles[all-no-torch]>=1.1,<2.0",
     "lfx-datastax>=0.1.0,<1.0.0",
     "lfx-openai>=0.1.0,<1.0.0",
     "lfx-anthropic>=0.1.0,<1.0.0",
