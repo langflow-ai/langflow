@@ -39,6 +39,7 @@ from lfx.graph.checkpoint.schema import GraphCheckpoint
 from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
+from lfx.log.logger import logger
 from lfx.schema.workflow import (
     GLOBAL_KEY_MAX_LEN,
     JobStatus,
@@ -46,12 +47,19 @@ from lfx.schema.workflow import (
     WorkflowRunRequest,
 )
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
+from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
 from sqlmodel import select
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.a2a_executor import FlowAgentExecutor
-from langflow.api.v1.a2a_utils import A2A_APIKEY_HEADER, build_agent_card, folder_auth_type, validate_webhook_url
+from langflow.api.v1.a2a_utils import (
+    A2A_APIKEY_HEADER,
+    build_agent_card,
+    folder_auth_type,
+    validate_webhook_url,
+    webhook_pin_host,
+)
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.database.models import A2ACheckpoint, A2ATask, Flow
@@ -257,6 +265,18 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
     )
 
 
+def _push_config_scope(context: ServerCallContext) -> str:
+    """Key push configs by (owner, flow) so flow B can't read/overwrite/delete flow A's.
+
+    The endpoint is anonymous, so ``resolve_user_scope`` is the same '' for every flow;
+    the per-request flow_id (carried in call-context state by ``_FlowContextBuilder``) is
+    the real discriminator. Mirrors the flow-ownership defense in ``_resume_flow``. Only
+    the user-callable set/get/list/delete paths are scoped; dispatch fans out by task_id
+    via ``get_info_for_dispatch`` and is unaffected.
+    """
+    return f"{resolve_user_scope(context)}:{context.state.get('flow_id', '')}"
+
+
 class _SafePushConfigStore(InMemoryPushNotificationConfigStore):
     """Push-notification config store that SSRF-guards the webhook URL at registration.
 
@@ -272,6 +292,39 @@ class _SafePushConfigStore(InMemoryPushNotificationConfigStore):
         except ValueError as exc:
             raise InvalidParamsError(message=str(exc)) from exc
         await super().set_info(task_id, notification_config, context)
+
+
+class _SafePushNotificationSender(BasePushNotificationSender):
+    """Re-validate + DNS-pin the webhook at dispatch, closing the registration-time rebind gap.
+
+    ``_SafePushConfigStore`` validates at registration, but a host can re-resolve to a
+    private/metadata IP afterwards (DNS rebinding). Re-resolve here and pin the connection
+    to the just-validated IPs (via the shared SSRF transport) so a rebind can't land on an
+    internal address. A webhook that now resolves to a blocked address is dropped (logged),
+    matching the SDK's swallow-and-return-False on a failed send.
+    """
+
+    async def _dispatch_notification(self, event, push_info, task_id) -> bool:
+        url = push_info.url
+        try:
+            validated_ips = await validate_webhook_url(url)
+        except ValueError:
+            logger.warning("A2A push webhook for task %s blocked by SSRF check: %s", task_id, url)
+            return False
+        # Pin by the exact host httpx connects to (IDNA/punycode raw_host) -- the same
+        # derivation validate_webhook_url resolved -- so the pin key can't diverge from the
+        # connected host for an IDN webhook (which would silently bypass the pin).
+        hostname = webhook_pin_host(url)
+        if not (validated_ips and hostname):
+            # Private webhooks allowed / allowlisted host / protection off: nothing to pin.
+            return await super()._dispatch_notification(event, push_info, task_id)
+        # ponytail: per-dispatch client so DNS is pinned to the IPs just validated for this
+        # host; reuse the SDK's exact POST (token header, error swallow) via a bound sender.
+        async with create_ssrf_protected_client(
+            hostname=hostname, validated_ips=validated_ips, timeout=_PUSH_TIMEOUT
+        ) as client:
+            pinned = BasePushNotificationSender(client, self._config_store)
+            return await pinned._dispatch_notification(event, push_info, task_id)  # noqa: SLF001
 
 
 class A2ACheckpointStore(CheckpointStore):
@@ -357,10 +410,20 @@ class DurableTaskStore(TaskStore):
 
 
 # One shared httpx client sends webhooks; a short timeout so a slow/hostile webhook
-# can't tie up the run. Created at import (no I/O) and reused across requests.
-_PUSH_HTTP_CLIENT = httpx.AsyncClient(timeout=10.0)
-_PUSH_CONFIG_STORE = _SafePushConfigStore()
-_PUSH_SENDER = BasePushNotificationSender(_PUSH_HTTP_CLIENT, _PUSH_CONFIG_STORE)
+# can't tie up the run. Created at import (no I/O) and reused across requests; closed
+# from the app lifespan via close_push_client(). The sender re-validates and DNS-pins
+# each webhook at dispatch (per-dispatch client), so this shared client only carries
+# the no-pin path (private webhooks allowed / allowlisted host / SSRF protection off).
+_PUSH_TIMEOUT = 10.0
+_PUSH_HTTP_CLIENT = httpx.AsyncClient(timeout=_PUSH_TIMEOUT)
+_PUSH_CONFIG_STORE = _SafePushConfigStore(owner_resolver=_push_config_scope)
+_PUSH_SENDER = _SafePushNotificationSender(_PUSH_HTTP_CLIENT, _PUSH_CONFIG_STORE)
+
+
+async def close_push_client() -> None:
+    """Close the shared push-notification webhook client. Wired into the app lifespan."""
+    await _PUSH_HTTP_CLIENT.aclose()
+
 
 # One shared handler/store/dispatcher serve every flow; the per-request flow_id
 # selects the flow. The handler card carries only capabilities the SDK reads to gate
