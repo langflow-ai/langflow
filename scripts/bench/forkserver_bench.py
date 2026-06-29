@@ -171,8 +171,10 @@ def _child_cold(flow_path: str, utterance: str, _global_vars: dict, q) -> None:
 
 
 def _child_concurrent(flow_path: str, utterance: str, global_vars: dict, ready_q, release_evt) -> None:
-    """Warm in-process call that REPORTS then HOLDS, so the parent can sample the
-    whole tree's memory while every sibling is still resident.
+    """Warm in-process call that REPORTS then HOLDS.
+
+    Reports then holds so the parent can sample the whole tree's memory while
+    every sibling is still resident.
     """
     t0 = time.perf_counter()
     ok, err = True, ""
@@ -199,8 +201,10 @@ def _noop(q) -> None:
 
 
 def _warm_boot(ctx) -> None:
-    """Register the prewarm preload and force the control proc to start NOW, so
-    timed loops measure steady state, not the one-time forkserver boot.
+    """Register the prewarm preload and start the control proc now.
+
+    Forcing the control proc to start now means timed loops measure steady
+    state, not the one-time forkserver boot.
     """
     ctx.set_forkserver_preload(["_lfx_prewarm_shim"])
     q = ctx.Queue()
@@ -310,7 +314,8 @@ def run_sustained(ctx, flow: str, utt: str, gv: dict, n: int) -> None:
         )
     if priv:
         print(
-            f"[sustained] per-child Private_Dirty: first={_mb(priv[0])} last={_mb(priv[-1])} mean={_mb(int(statistics.fmean(priv)))}"
+            f"[sustained] per-child Private_Dirty: first={_mb(priv[0])} last={_mb(priv[-1])} "
+            f"mean={_mb(int(statistics.fmean(priv)))}"
         )
 
 
