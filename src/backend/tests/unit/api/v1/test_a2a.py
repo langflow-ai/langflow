@@ -252,6 +252,34 @@ async def test_unbuildable_flow_serves_empty_input_schema(client: AsyncClient, a
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
+async def test_override_lists_are_bounded(client: AsyncClient, active_user, flow_data):
+    """Free-form override lists are capped so the public card can't be bloated."""
+    overrides = {"tags": [f"t{i}" for i in range(200)], "examples": [f"e{i}" for i in range(200)]}
+    flow_id = await _create_flow(active_user.id, data=flow_data, overrides=overrides)
+
+    response = await client.get(_card_url(flow_id))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["skills"][0]["tags"]) == 50
+    assert len(body["skills"][0]["examples"]) == 50
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_overlong_string_override_falls_back(client: AsyncClient, active_user, flow_data):
+    """An over-long string override is dropped and falls back to the flow default."""
+    flow_id = await _create_flow(active_user.id, data=flow_data, overrides={"name": "x" * 5000})
+
+    response = await client.get(_card_url(flow_id))
+
+    assert response.status_code == 200
+    body = response.json()
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        assert body["name"] == flow.name
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
 async def test_malformed_overrides_fall_back_to_defaults(client: AsyncClient, active_user, flow_data):
     """Wrong-typed override values are ignored (no 500); the card falls back to defaults."""
     from langflow.utils.version import get_version_info
