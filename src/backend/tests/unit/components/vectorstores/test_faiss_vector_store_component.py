@@ -1,99 +1,117 @@
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from typing import Any
 
-from langchain_community.vectorstores import FAISS
-from langchain_core.embeddings import Embeddings
+import pytest
+from langchain_core.documents import Document
 from lfx.components.FAISS.faiss import FaissVectorStoreComponent
 from lfx.schema.data import Data
 
 
-class _DeterministicEmbeddings(Embeddings):
-    """Tiny deterministic embeddings for local FAISS tests without API keys."""
+class _FakeFAISS:
+    def __init__(self, documents: list[Document]) -> None:
+        self._documents = documents
 
-    def _embed(self, text: str) -> list[float]:
-        bucket = sum(ord(char) for char in text) % 997
-        return [bucket / 997.0, len(text) / 1000.0, 0.5]
+    @classmethod
+    def from_documents(cls, documents: list[Document], embedding: Any) -> "_FakeFAISS":  # noqa: ARG003
+        return cls(documents)
 
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return [self._embed(text) for text in texts]
+    @classmethod
+    def load_local(
+        cls,
+        folder_path: str,
+        embeddings: Any,  # noqa: ARG003
+        index_name: str,
+        allow_dangerous_deserialization: bool,  # noqa: FBT001
+    ) -> "_FakeFAISS":
+        if not allow_dangerous_deserialization:
+            msg = "Dangerous deserialization is disabled."
+            raise ValueError(msg)
+        index_path = Path(folder_path) / f"{index_name}.faiss"
+        return cls([Document(page_content=index_path.read_text())])
 
-    def embed_query(self, text: str) -> list[float]:
-        return self._embed(text)
+    def save_local(self, folder_path: str, index_name: str) -> None:
+        index_path = Path(folder_path) / f"{index_name}.faiss"
+        index_path.write_text(self._documents[0].page_content)
 
-
-def test_faiss_index_name_is_scoped_by_user(tmp_path: Path) -> None:
-    mock_instance = MagicMock()
-
-    with patch("lfx.components.FAISS.faiss.FAISS") as mock_faiss_class:
-        mock_faiss_class.from_documents.return_value = mock_instance
-        for user_id in ("owner-user", "attacker-user"):
-            component = FaissVectorStoreComponent(_user_id=user_id).set(
-                index_name="shared_index",
-                persist_directory=str(tmp_path / "shared"),
-                embedding=None,
-                ingest_data=[],
-            )
-            component.build_vector_store()
-
-    # save_local(folder_path, index_name) — index_name is the second positional arg.
-    index_names = [call.args[1] for call in mock_instance.save_local.call_args_list]
-    assert len(index_names) == 2
-    assert index_names[0] != "shared_index"
-    assert index_names[1] != "shared_index"
-    assert index_names[0] != index_names[1]
+    def similarity_search(self, query: str, k: int) -> list[Document]:  # noqa: ARG002
+        return self._documents[:k]
 
 
-def _persisted_texts(folder: Path, index_name: str, embeddings: Embeddings) -> list[str]:
-    """Load a persisted FAISS index and return its stored document texts.
-
-    Reading the docstore avoids ``similarity_search`` (a faiss/OpenMP knn path that
-    can hard-abort under a dual-libomp environment) while still verifying exactly
-    which documents a user's on-disk index contains.
-    """
-    store = FAISS.load_local(
-        folder_path=str(folder),
-        embeddings=embeddings,
-        index_name=index_name,
+def _component(user_id: str, persist_directory: Path, document: str, search_query: str) -> FaissVectorStoreComponent:
+    return FaissVectorStoreComponent(_user_id=user_id).set(
+        index_name="shared_index",
+        persist_directory=str(persist_directory),
+        ingest_data=[Data(text=document)],
+        embedding=object(),
+        search_query=search_query,
+        number_of_results=1,
         allow_dangerous_deserialization=True,
     )
-    return [doc.page_content for doc in store.docstore._dict.values()]
 
 
-def test_faiss_same_apparent_namespace_isolated_by_user(tmp_path: Path) -> None:
-    shared_dir = tmp_path / "shared_faiss"
-    embeddings = _DeterministicEmbeddings()
+def test_faiss_persist_directory_is_scoped_by_user(tmp_path: Path) -> None:
+    owner_component = _component("owner-user", tmp_path, "owner document", "owner")
+    attacker_component = _component("attacker-user", tmp_path, "attacker document", "attacker")
 
-    owner_component = FaissVectorStoreComponent(_user_id="owner-user").set(
-        index_name="shared_index",
-        persist_directory=str(shared_dir),
-        embedding=embeddings,
-        ingest_data=[Data(text="owner-only-vector-private-content")],
-    )
-    owner_component.build_vector_store()
+    owner_path = owner_component.get_persist_directory()
+    attacker_path = attacker_component.get_persist_directory()
 
-    # The attacker writes to the same directory + index name. Without per-user
-    # scoping this would overwrite the owner's on-disk index files.
-    attacker_component = FaissVectorStoreComponent(_user_id="attacker-user").set(
-        index_name="shared_index",
-        persist_directory=str(shared_dir),
-        embedding=embeddings,
-        ingest_data=[Data(text="attacker-vector-content")],
-    )
-    attacker_component.build_vector_store()
+    assert owner_path != attacker_path
+    assert owner_path.parent == attacker_path.parent
+    assert tmp_path in owner_path.parents
+    assert tmp_path in attacker_path.parents
 
-    owner_index = owner_component.get_scoped_index_name()
-    attacker_index = attacker_component.get_scoped_index_name()
 
-    # Each user gets a distinct, non-raw on-disk index name (no overwrite/collision).
-    assert owner_index != "shared_index"
-    assert attacker_index != "shared_index"
-    assert owner_index != attacker_index
-    faiss_files = sorted(p.name for p in shared_dir.glob("*.faiss"))
-    assert faiss_files == sorted([f"{owner_index}.faiss", f"{attacker_index}.faiss"])
+def test_faiss_same_namespace_cannot_load_another_users_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    attacker_document = "ATTACKER_PRESEEDED_FAISS_DOCUMENT"
+    owner_document = "OWNER_EXPECTED_FAISS_DOCUMENT"
 
-    # After the attacker's write, each user's persisted index holds only their data.
-    owner_texts = _persisted_texts(shared_dir, owner_index, embeddings)
-    assert owner_texts == ["owner-only-vector-private-content"]
+    monkeypatch.setattr("lfx.components.FAISS.faiss.FAISS", _FakeFAISS)
 
-    attacker_texts = _persisted_texts(shared_dir, attacker_index, embeddings)
-    assert attacker_texts == ["attacker-vector-content"]
+    attacker_component = _component("attacker-user", tmp_path, attacker_document, "attacker")
+    attacker_results = attacker_component.search_documents()
+    assert attacker_results[0].text == attacker_document
+
+    owner_component = _component("owner-user", tmp_path, owner_document, "owner")
+    owner_results = owner_component.search_documents()
+
+    assert owner_results[0].text == owner_document
+    assert owner_results[0].text != attacker_document
+
+
+def test_faiss_index_name_cannot_escape_user_scope(tmp_path: Path) -> None:
+    component = _component("owner-user", tmp_path, "owner document", "owner").set(index_name="../attacker")
+
+    with pytest.raises(ValueError, match="FAISS index name must be a file name"):
+        component.get_index_name()
+
+
+@pytest.mark.parametrize(
+    "index_name",
+    [
+        "D:shared",  # Windows drive-relative prefix escapes the per-user directory
+        "C:",  # bare drive letter
+        ":",  # bare colon
+        "a:b",  # embedded colon
+        ".",  # current directory reference
+        "..",  # parent directory reference
+        "...",  # all-dot name
+    ],
+)
+def test_faiss_index_name_rejects_drive_qualified_names(tmp_path: Path, index_name: str) -> None:
+    component = _component("owner-user", tmp_path, "owner document", "owner").set(index_name=index_name)
+
+    with pytest.raises(ValueError, match="FAISS index name must be a file name"):
+        component.get_index_name()
+
+
+def test_faiss_index_name_accepts_portable_file_name(tmp_path: Path) -> None:
+    component = _component("owner-user", tmp_path, "owner document", "owner").set(index_name="my_index")
+
+    assert component.get_index_name() == "my_index"
+
+
+def test_faiss_persist_directory_is_unscoped_without_runtime_user(tmp_path: Path) -> None:
+    component = FaissVectorStoreComponent().set(persist_directory=str(tmp_path))
+
+    assert component.get_persist_directory() == tmp_path.resolve()
