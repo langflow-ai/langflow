@@ -1,0 +1,1 @@
+langchain-openai==1.1.12
