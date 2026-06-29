@@ -21,10 +21,11 @@ from typing import Any
 def scoped_collection_name(collection_name: str, user_id: object | None) -> str:
     """Return a stable, non-identifying per-user name for a local vector store.
 
-    The returned value is derived from ``sha256(user_id:collection_name)`` and is
-    safe to use as a Chroma collection name or an on-disk index/file name. Falls
-    back to the original ``collection_name`` when there is no usable user id, so
-    callers can apply this unconditionally on the local/on-disk path.
+    The returned value is derived from a length-prefixed
+    ``sha256(user_id, collection_name)`` payload and is safe to use as a Chroma
+    collection name or an on-disk index/file name. Falls back to the original
+    ``collection_name`` when there is no usable user id, so callers can apply this
+    unconditionally on the local/on-disk path.
     """
     if not collection_name or user_id is None:
         return collection_name
@@ -33,7 +34,11 @@ def scoped_collection_name(collection_name: str, user_id: object | None) -> str:
     if not user_id_str or user_id_str == "None":
         return collection_name
 
-    digest = sha256(f"{user_id_str}:{collection_name}".encode()).hexdigest()[:16]
+    # Length-prefix each field so the hash payload is unambiguous: a bare
+    # "{user_id}:{collection_name}" join collides for pairs like ("a:b", "c") and
+    # ("a", "b:c"), which would map distinct users/collections to the same store.
+    payload = f"{len(user_id_str)}:{user_id_str}{len(collection_name)}:{collection_name}"
+    digest = sha256(payload.encode()).hexdigest()[:16]
     return f"lf_{digest}"
 
 

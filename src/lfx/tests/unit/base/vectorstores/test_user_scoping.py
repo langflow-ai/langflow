@@ -26,6 +26,12 @@ class TestScopedCollectionName:
         second = scoped_collection_name("collection-b", "owner-user")
         assert first != second
 
+    def test_separator_boundary_is_unambiguous(self) -> None:
+        # A bare "{user_id}:{collection_name}" join collides for these two pairs
+        # ("a:b" + ":" + "c"  ==  "a" + ":" + "b:c"); length-prefixing must keep
+        # them distinct so different users/collections never share a local store.
+        assert scoped_collection_name("c", "a:b") != scoped_collection_name("b:c", "a")
+
     def test_falls_back_when_user_id_is_none(self) -> None:
         assert scoped_collection_name("shared", None) == "shared"
 
