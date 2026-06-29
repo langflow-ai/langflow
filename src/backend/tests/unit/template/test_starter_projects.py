@@ -76,7 +76,7 @@ def get_template_files():
 def get_basic_template_files():
     """Get basic template files for parameterization."""
     path = get_starter_projects_path()
-    basic_templates = ["Basic Prompting.json", "Basic Prompt Chaining.json"]
+    basic_templates = ["Basic Prompting.json"]
     return [path / name for name in basic_templates if (path / name).exists()]
 
 
