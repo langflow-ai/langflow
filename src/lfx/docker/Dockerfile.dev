@@ -54,6 +54,9 @@ WORKDIR /app/src/lfx
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+ENV BASH_ENV="" \
+    ENV="" \
+    PROMPT_COMMAND=""
 
 # Expose any ports that might be needed for development
 EXPOSE 8000

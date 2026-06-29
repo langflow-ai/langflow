@@ -36,6 +36,9 @@ COPY ./src/sdk ./src/sdk
 # Using uv pip instead of uv sync to avoid workspace complexities
 RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV BASH_ENV="" \
+    ENV="" \
+    PROMPT_COMMAND=""
 ENV VIRTUAL_ENV="/app/.venv"
 
 # Install langflow-base with all extras except dev (which includes Playwright).
@@ -84,6 +87,9 @@ RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
 # Copy only the virtual environment
 COPY --from=builder --chown=1000:0 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV BASH_ENV="" \
+    ENV="" \
+    PROMPT_COMMAND=""
 
 # Create home directory and ensure proper ownership
 # The user needs write access to /app/data (home) and /app (workdir).
