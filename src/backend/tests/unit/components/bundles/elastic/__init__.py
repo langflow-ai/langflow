@@ -1,0 +1,1 @@
+"""Elastic components test package."""

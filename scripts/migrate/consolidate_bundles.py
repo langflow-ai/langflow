@@ -132,7 +132,15 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "olivya": [],  # httpx REST only (lfx core)
     "agentql": [],  # httpx REST only (lfx core)
     # --- tranche 7: google family + agent SDKs (markers preserved from base) ---
-    "google": ["langchain-google-genai~=4.1.2", "langchain-google-community~=3.0.2", "google-api-python-client~=2.161"],
+    # google-auth-oauthlib: imported directly by the google_oauth_token component
+    # (from google_auth_oauthlib.flow import InstalledAppFlow). langchain-google-community
+    # only pulls it behind its [gmail,drive,calendar] extras, so declare it explicitly.
+    "google": [
+        "langchain-google-genai~=4.1.2",
+        "langchain-google-community~=3.0.2",
+        "google-api-python-client~=2.161",
+        "google-auth-oauthlib>=1.2.0,<2.0.0",
+    ],
     "vertexai": ["langchain-google-vertexai>=3.2.0"],
     "altk": ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"],
     "codeagents": [
