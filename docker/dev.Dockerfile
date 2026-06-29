@@ -7,8 +7,7 @@ ENV TZ=UTC
 
 WORKDIR /app
 
-RUN microdnf update -y \
-    && microdnf install -y tar xz \
+RUN microdnf install -y tar xz \
     gcc gcc-c++ make python3.14-devel \
     curl \
     npm \

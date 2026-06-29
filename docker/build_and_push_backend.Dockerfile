@@ -20,8 +20,7 @@ WORKDIR /app
 ENV RUSTFLAGS='--cfg reqwest_unstable'
 
 # Install build dependencies
-RUN microdnf update -y \
-    && microdnf install -y tar xz \
+RUN microdnf install -y tar xz \
         gcc gcc-c++ make python3.14-devel \
         gcc \
         git \

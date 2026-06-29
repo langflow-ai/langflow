@@ -17,8 +17,7 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
-RUN microdnf update -y \
-    && microdnf install -y tar xz \
+RUN microdnf install -y tar xz \
     gcc gcc-c++ make python3.14-devel \
     curl \
     git \

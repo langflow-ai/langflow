@@ -3,8 +3,7 @@ USER root
 WORKDIR /app
 
 # Install Poetry
-RUN microdnf update -y \
-    && microdnf install -y python3.14-devel tar xz gcc gcc-c++ make curl postgresql-devel \
+RUN microdnf install -y python3.14-devel tar xz gcc gcc-c++ make curl postgresql-devel \
     && microdnf clean all
 RUN curl -sSL https://install.python-poetry.org | python3 -
 # # Add Poetry to PATH

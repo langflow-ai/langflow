@@ -28,8 +28,7 @@ ENV UV_LINK_MODE=copy
 # Set RUSTFLAGS for reqwest unstable features needed by apify-client v2.0.0
 ENV RUSTFLAGS='--cfg reqwest_unstable'
 
-RUN microdnf update -y \
-    && microdnf install -y tar xz \
+RUN microdnf install -y tar xz \
     # deps for building python deps
     gcc gcc-c++ make python3.14-devel \
     git \
