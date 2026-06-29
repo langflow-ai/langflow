@@ -90,6 +90,12 @@ class TestValidateCodeSafety:
             'string.Formatter().get_field("0.__loader__.find_spec.__globals__[sys]", (f,), {})',
             "string.Formatter().get_value(0, (f,), {})",
             'operator.attrgetter("__globals__")(f)',
+            # ``operator.methodcaller`` defers a method name to call time, so a
+            # runtime-assembled template (no literal "{...__" for the regex to catch)
+            # reaches str.format/format_map invisibly. Blocked via the factory name.
+            'operator.methodcaller("format", f)(tmpl)',
+            'operator.methodcaller("format_map", d)(tmpl)',
+            'operator.methodcaller("__getattribute__", "__globals__")(f)',
             # A literal dunder-bearing template reaches a non-blocked formatter via a var;
             # the literal-field scan rejects the template regardless of the consumer.
             't = "{0.__globals__}"\nstring.Formatter().vformat(t, (f,), {})',
@@ -128,10 +134,10 @@ class TestFormatterSinkBypassesAreBlocked:
 
     ``str.format``/``format_map`` are not the only formatter sinks: the same
     ``__globals__`` traversal lives in a *string* argument (invisible to the AST
-    attribute check) when fed through ``string.Formatter`` traversal primitives or
-    ``operator.attrgetter``. Each test first proves the gadget *does* leak an env var
-    canary when run unguarded, then asserts ``validate_code_safety`` rejects the exact
-    input before it could execute.
+    attribute check) when fed through ``string.Formatter`` traversal primitives,
+    ``operator.attrgetter`` or ``operator.methodcaller``. Each test first proves the
+    gadget *does* leak an env var canary when run unguarded, then asserts
+    ``validate_code_safety`` rejects the exact input before it could execute.
     """
 
     @staticmethod
@@ -182,6 +188,46 @@ class TestFormatterSinkBypassesAreBlocked:
         assert leaked == "SHOULD_NOT_LEAK"  # gadget is real when unguarded
 
         code = 'operator.attrgetter("__globals__")(f)'
+        with pytest.raises(ValueError, match="not allowed"):
+            validate_code_safety(code)
+
+    def test_operator_methodcaller_format_bypass(self, monkeypatch):
+        """``operator.methodcaller('format', f)`` invokes str.format on a runtime template.
+
+        Unlike a literal ``"{0.__globals__}".format(f)``, the template is assembled at
+        runtime so the ``_FORMAT_FIELD_DUNDER_RE`` literal scan never sees ``{...__``,
+        and ``methodcaller`` keeps the method name ``"format"`` in a *string* argument so
+        there is no ``ast.Attribute`` named ``format`` either. Blocking the ``methodcaller``
+        factory name is what rejects it.
+        """
+        import operator
+
+        monkeypatch.setenv("LFX_REPL_CANARY", "SHOULD_NOT_LEAK")
+        # Template built from fragments at runtime — invisible to the literal-field scan.
+        tmpl = "{0." + "__globals__" + "[os].environ[LFX_REPL_CANARY]}"
+        leaked = operator.methodcaller("format", self._func_with_os())(tmpl)
+        assert leaked == "SHOULD_NOT_LEAK"  # gadget is real when unguarded
+
+        code = 'operator.methodcaller("format", f)(tmpl)'
+        with pytest.raises(ValueError, match="not allowed"):
+            validate_code_safety(code)
+
+    def test_operator_methodcaller_getattribute_bypass(self, monkeypatch):
+        """``methodcaller('__getattribute__', '__globals__')`` reaches an attr by string name.
+
+        ``methodcaller`` can invoke *any* method — including ``__getattribute__`` — with the
+        attribute name supplied as a runtime string, bypassing the dunder-attribute AST
+        check. Blocked via the ``methodcaller`` factory name.
+        """
+        import operator
+
+        monkeypatch.setenv("LFX_REPL_CANARY", "SHOULD_NOT_LEAK")
+        leaked = operator.methodcaller("__getattribute__", "__globals__")(self._func_with_os())["os"].environ[
+            "LFX_REPL_CANARY"
+        ]
+        assert leaked == "SHOULD_NOT_LEAK"  # gadget is real when unguarded
+
+        code = 'operator.methodcaller("__getattribute__", "__globals__")(f)'
         with pytest.raises(ValueError, match="not allowed"):
             validate_code_safety(code)
 

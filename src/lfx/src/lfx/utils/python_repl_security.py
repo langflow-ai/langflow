@@ -21,10 +21,11 @@ This module restricts that environment:
   (``().__class__.__subclasses__()``) and frame/traceback introspection
   (``gen.gi_frame.f_back.f_globals``). It also rejects ``str.format`` /
   ``str.format_map`` and the lower-level formatter sinks (``string.Formatter`` traversal
-  primitives and ``operator.attrgetter``) because replacement fields / dotted paths are
-  evaluated at runtime and can traverse attributes that are invisible to the AST, and it
-  rejects literal replacement-field templates that reach into a dunder regardless of
-  which formatter ultimately consumes them.
+  primitives, ``operator.attrgetter`` and ``operator.methodcaller``) because replacement
+  fields / dotted paths / deferred method names are evaluated at runtime and can traverse
+  attributes that are invisible to the AST, and it rejects literal replacement-field
+  templates that reach into a dunder regardless of which formatter ultimately consumes
+  them.
 
 This is defense-in-depth, NOT a guaranteed sandbox — Python sandboxing is notoriously
 hard and determined attackers may still find gadgets. The primary control for untrusted
@@ -156,6 +157,17 @@ _BLOCKED_ATTRIBUTES = frozenset(
         "format_field",
         "convert_field",
         "attrgetter",
+        # ``operator.methodcaller`` defers a method *name* (a runtime string) to call
+        # time, so it reaches the same sinks invisibly to the AST: a runtime-assembled
+        # template defeats the ``_FORMAT_FIELD_DUNDER_RE`` literal scan, and
+        # ``methodcaller("format", f)(tmpl)`` (== ``tmpl.format(f)``) /
+        # ``methodcaller("format_map", d)(tmpl)`` carry the dunder chain in ``tmpl``.
+        # More generally ``methodcaller("__getattribute__", "__globals__")(f)`` would
+        # bypass the dunder-attribute check entirely, so block the factory by name.
+        # (``operator.itemgetter`` is intentionally NOT blocked: it only performs
+        # subscription, cannot do the attribute traversal needed to bootstrap an escape,
+        # and is common in legitimate data code.)
+        "methodcaller",
         "mro",  # int.mro() reaches the object hierarchy without a dunder attribute
     }
 )
