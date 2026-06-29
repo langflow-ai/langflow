@@ -24,6 +24,9 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 
+const headerTriggerFocusClass =
+  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
 export const MenuBar = memo((): JSX.Element => {
   const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -87,6 +90,9 @@ export const MenuBar = memo((): JSX.Element => {
       ? parseInt(currentFlowGradient)
       : getNumberFromString(currentFlowGradient ?? currentFlowId ?? "")) %
     swatchColors.length;
+  const flowDetailsLabel = t("flow.editDetailsAndSettings", {
+    flowName: currentFlowName || t("flow.untitledFlow"),
+  });
 
   return onFlowPage ? (
     <Popover open={openSettings} onOpenChange={setOpenSettings}>
@@ -96,14 +102,18 @@ export const MenuBar = memo((): JSX.Element => {
           data-testid="menu_bar_wrapper"
         >
           <div
-            className="header-menu-bar hidden max-w-40 justify-end truncate md:flex xl:max-w-full"
+            className="header-menu-bar hidden max-w-40 justify-end md:flex xl:max-w-full"
             data-testid="menu_flow_bar"
             id="menu_flow_bar_navigation"
           >
             {currentFolder?.name && (
-              <div className="hidden truncate md:flex">
-                <div
-                  className="cursor-pointer truncate text-sm text-muted-foreground hover:text-primary"
+              <div className="hidden min-w-0 max-w-full md:flex">
+                <Button
+                  unstyled
+                  className={cn(
+                    "flex min-w-0 max-w-full cursor-pointer items-center rounded-md px-1 py-0.5 text-sm text-muted-foreground hover:text-primary",
+                    headerTriggerFocusClass,
+                  )}
                   onClick={() => {
                     navigate(
                       currentFolder?.id
@@ -112,8 +122,8 @@ export const MenuBar = memo((): JSX.Element => {
                     );
                   }}
                 >
-                  {currentFolder?.name}
-                </div>
+                  <span className="truncate">{currentFolder?.name}</span>
+                </Button>
               </div>
             )}
           </div>
@@ -130,9 +140,15 @@ export const MenuBar = memo((): JSX.Element => {
             />
           </div>
           <PopoverTrigger asChild>
-            <div
-              className="group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 text-sm sm:whitespace-normal"
+            <Button
+              unstyled
+              aria-label={flowDetailsLabel}
+              className={cn(
+                "group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 rounded-md text-sm sm:whitespace-normal",
+                headerTriggerFocusClass,
+              )}
               data-testid="menu_bar_display"
+              title={flowDetailsLabel}
             >
               <span
                 ref={measureRef}
@@ -144,13 +160,14 @@ export const MenuBar = memo((): JSX.Element => {
               </span>
               <IconComponent
                 name="pencil"
+                ariaHidden
                 className={cn(
                   "h-5 w-3.5 -translate-x-2 opacity-0 transition-all",
                   !openSettings &&
-                    "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
+                    "sm:group-hover:translate-x-0 sm:group-hover:opacity-100 sm:group-focus-visible:translate-x-0 sm:group-focus-visible:opacity-100",
                 )}
               />
-            </div>
+            </Button>
           </PopoverTrigger>
           <div className={"ml-5 hidden shrink-0 items-center sm:flex"}>
             {!autoSaving && (
@@ -195,6 +212,7 @@ export const MenuBar = memo((): JSX.Element => {
         className="flex w-96 flex-col gap-4 p-4"
         align="center"
         sideOffset={15}
+        aria-label={t("flow.flowSettings")}
       >
         <FlowSettingsComponent
           close={() => setOpenSettings(false)}

@@ -182,5 +182,8 @@ class BaseAuthorizationService(Service, abc.ABC):
     async def invalidate_all(self) -> None:
         """Drop all cached policy. Plugin override; OSS no-op."""
 
+    async def sync_shares(self) -> None:
+        """Refresh policy derived from authz_share rows. Plugin override; OSS no-op."""
+
     async def teardown(self) -> None:
         """No resources to release in the base implementation."""

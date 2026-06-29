@@ -188,6 +188,10 @@ the deserialize half is covered by
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- Inline bundle discovery now skips Langflow-owned component compatibility
+  shims marked with `# lfx-bundles-shim` or `# lfx-compat-shim`.  These
+  packages remain importable, but are not treated as user inline bundles
+  and no longer emit `bundle-empty`.
 - `BundleRegistry.write_locked()` exposed as a public context manager so the
   reload pipeline can hold the registry write lock across both the
   `sys.modules` swap and the `BundleRecord` install.  Concurrent readers
