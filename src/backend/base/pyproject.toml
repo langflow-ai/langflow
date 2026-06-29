@@ -453,7 +453,6 @@ complete = [
     "langflow-base[pytube]",
     # "langflow-base[crewai]",  # commented out due to httpx version conflict
     "langflow-base[smolagents]",
-    "langflow-base[opendsstar]",
     "langflow-base[beautifulsoup]",
     "langflow-base[serpapi]",
     "langflow-base[google-api]",
@@ -509,9 +508,11 @@ complete = [
     "langflow-base[opik]",
     "langflow-base[traceloop]",
     "langflow-base[openlayer]",
-    # Document processing / OCR
-    "langflow-base[docling]",
-    "langflow-base[easyocr]",
+    # Document processing / OCR: docling and easyocr are now OPT-IN -- both pull
+    # torch, which is no longer shipped by default. The File component's docling
+    # path degrades gracefully and is enabled with: pip install "langflow[docling]".
+    # Both extra definitions remain, so langflow-base[docling] / [easyocr] still
+    # install on demand.
     # Additional tools
     "langflow-base[cleanlab]",
     "langflow-base[twelvelabs]",
@@ -522,7 +523,6 @@ complete = [
     "langflow-base[fastparquet]",
     # Vision / ML
     "langflow-base[vlmrun]",
-    "langflow-base[cuga]",
     "langflow-base[mlx]",
     # MCP
     "langflow-base[fastmcp]",
