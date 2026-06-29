@@ -1102,7 +1102,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
@@ -5245,7 +5245,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 7

@@ -634,7 +634,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
@@ -2098,10 +2098,10 @@
             "description": "# 📊 Financial Report Parser (Agent)\n\nUpload a financial report and an **Agent** extracts the key metrics (Gross Profit, EBITDA, Net Income, ...) into a structured table. Rebuilt on the **Agent** core component using its built-in **structured output** - replaces the standalone Structured Output component.\n\n## Setup\n1. **File** - upload your financial report (PDF, DOCX, XLSX, TXT).\n2. **Agent** - pick your **Model Provider** + API key. Edit the **Output Schema** to change which metrics are extracted.\n\n## How it works\n1. **File → Agent** - the Agent reads the report and extracts the schema fields.\n2. **Agent (Structured Response) → Parser** - turns the extracted JSON into readable text.\n3. **Parser → Chat Output** - shows the structured metrics.\n\n## Run\nOpen **Playground**, upload the report, and run. The Agent returns only values found in the document (a field stays blank when the metric isn't present).",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.financial_report_parser.5972260b",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.financial_report_parser.5972260b"
+            }
           },
           "type": "note"
         },

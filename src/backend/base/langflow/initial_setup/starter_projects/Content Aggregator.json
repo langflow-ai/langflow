@@ -2510,7 +2510,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 7
@@ -2932,10 +2932,10 @@
             "description": "# 📰 Content Aggregator\n\nSearch the news on a topic, summarize each article, and compose a clean aggregated digest - then save it to a file.\n\n## Setup\n1. **Agent** and **Batch Run** - add your LLM key on each (any provider in the Model dropdown).\n2. **Web Search** - needs no key. Set its **Search Mode** to *News* (already selected); optionally set a **Topic** (Business, Technology, ...).\n3. **Save to File** - choose where to write the digest.\n\n## How it works\n1. **Chat Input -> Web Search (News)** - finds recent articles on your topic (returns title, link, date, summary).\n2. **Batch Run** - summarizes every article in one line.\n3. **Parser -> Agent** - the summaries are formatted and the Agent curates them into a clean digest.\n4. **Chat Output -> Save to File** - the digest is shown and saved.\n\n## Run\nType a topic (e.g. \"artificial intelligence\") and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.content_aggregator.cbed07a7",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.content_aggregator.cbed07a7"
+            }
           },
           "type": "note"
         },

@@ -415,7 +415,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
@@ -1799,10 +1799,10 @@
             "description": "# 💻 Portfolio Website Code Generator\n\nUpload your resume and an **Agent** generates a single-page portfolio website (HTML + CSS).\n\n## Setup\n1. **File** - upload your resume (PDF or TXT).\n2. **Agent** - add your LLM key (any provider in the Model dropdown).\n\n## How it works\n1. **File → Agent** - the Agent reads your resume.\n2. **Agent** - extracts your details and writes the portfolio site (header, about, experience, projects, skills, contact) as HTML/CSS.\n3. **Agent → Chat Output** - copy the generated code.\n\n## Run\nUpload your resume, open **Playground**, and run. Tip: a clearly formatted resume (headings, bullet points) produces the best result.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.portfolio_website_code_generator.c217664c",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.portfolio_website_code_generator.c217664c"
+            }
           },
           "type": "note"
         },
