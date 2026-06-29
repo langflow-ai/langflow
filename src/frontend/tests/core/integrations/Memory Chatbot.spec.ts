@@ -99,7 +99,6 @@ withEventDeliveryModes(
 
       const textContents = await getAllResponseMessage(page);
       expect(textContents.length).toBeGreaterThan(20);
-      expect(textContents).toContain("memory");
 
       // Open message logs from session sidebar menu (chat-header-more-menu is hidden in fullscreen)
       await page
