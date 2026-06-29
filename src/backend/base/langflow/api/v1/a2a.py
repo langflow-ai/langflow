@@ -6,7 +6,8 @@ Two public per-flow endpoints, both behind ``LANGFLOW_A2A_ENABLED`` (default off
 - ``POST /api/v1/a2a/{flow_id}/jsonrpc`` serves the A2A JSON-RPC surface
   (``message/send`` runs the flow and returns a terminal Task; ``message/stream``
   streams the same run's lifecycle as SSE; ``tasks/get`` reads a task back from
-  the durable, DB-backed store; ``tasks/resubscribe`` re-attaches to a live run).
+  the durable, DB-backed store; ``tasks/resubscribe`` is advertised but always
+  returns a spec error, since synchronous runs leave no live producer to re-attach to).
 
 The router is mounted unconditionally and a per-request guard returns 404 when
 the flag is off, so the routes are indistinguishable from "not mounted". This
@@ -382,10 +383,11 @@ class _FlowRequestHandler(DefaultRequestHandler):
     has returned, so there is no live producer to tail. The SDK's on_subscribe_to_task taps
     the task's event queue and waits for events; for a task parked at input-required (or any
     task whose ActiveTask lingers idle in the registry) that queue never receives another
-    event, so the tap blocks forever. Re-attaching to a still-running producer is the only
-    case that would not hang, and that case no longer exists once the synchronous request
-    returns, so always return a spec error here and let tasks/get cover reading a
-    paused/terminal task back.
+    event, so the tap blocks forever. Re-attaching to a still-running producer would be the
+    only case that does not hang, but that case no longer exists once the synchronous request
+    returns. So this method does not inspect task state or producer liveness: it
+    unconditionally raises a spec error and lets tasks/get cover reading a paused/terminal
+    task back.
     """
 
     async def on_subscribe_to_task(self, params, _context):
