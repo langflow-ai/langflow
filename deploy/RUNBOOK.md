@@ -85,21 +85,27 @@ user; the deploy user is named `lothal` below.
 
 ## nginx + TLS (host)
 
-DNS for `lothal.app` already points at `107.172.168.104` (apex + `www`). For a new domain,
-point its A/AAAA records at the box first, then:
+DNS for `lothal.app` already points at `107.172.168.104` (apex + `www`). **For the
+embedded Open Design surface (U.9) you also need an `od.<domain>` A/AAAA record**
+pointing at the same box. Point all records at the box first, then:
 
 ```bash
 DOMAIN=lothal.app                   # the real domain
 sudo cp /opt/lothal/lothal.conf /etc/nginx/sites-available/lothal.conf
 sudo sed -i "s/__DOMAIN__/$DOMAIN/g" /etc/nginx/sites-available/lothal.conf
-# Obtain the cert (cert only; does not rewrite our config):
-sudo certbot certonly --nginx -d "$DOMAIN" -d "www.$DOMAIN" \
+# Obtain the cert (cert only; does not rewrite our config). Include od.<domain> so
+# the embedded Open Design vhost (U.9) is covered by the same certificate:
+sudo certbot certonly --nginx -d "$DOMAIN" -d "www.$DOMAIN" -d "od.$DOMAIN" \
     --non-interactive --agree-tos -m admin@$DOMAIN
 # Enable our site, drop the stock default:
 sudo ln -sf /etc/nginx/sites-available/lothal.conf /etc/nginx/sites-enabled/lothal.conf
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
+
+> If you don't want the embed yet, omit `-d "od.$DOMAIN"`, leave
+> `LOTHAL_OD_PUBLIC_BASE_URL` blank in `.env`, and the prototype pane falls back to
+> listing artifacts (no iframe). The `od.<domain>` vhost block stays inert without DNS.
 
 The committed `lothal.conf` uses `listen 443 ssl http2;` (not the newer `http2 on;`) because
 Ubuntu 24.04 ships nginx 1.24 — `http2 on;` is 1.25.1+. Renewal is automatic via `certbot.timer`;
@@ -120,7 +126,7 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # LANGFLOW_SECRE
 #   - LANGFLOW_SECRET_KEY          (generate once — see warning below)
 #   - CLAUDE_CODE_OAUTH_TOKEN      (Claude Code subscription token — `claude setup-token`; the Epic 0+ LLM interface)
 #   - LOTHAL_LLM_PROVIDER / LOTHAL_MODEL_NAME   (optional; default claude / claude-opus-4-8)
-#   - OD_IMAGE                     (optional; pin the OD image SHA, e.g. ghcr.io/realbytecode/open-design:70ca9d3dbf3a — defaults to :latest)
+#   - OD_IMAGE                     (optional; pin the OD image, e.g. ghcr.io/realbytecode/od:0.11.2 — defaults to :latest)
 chmod 600 .env
 ```
 
@@ -167,12 +173,13 @@ To intentionally open the site later (e.g. enable self-serve signup), flip the r
   echo "$GHCR_TOKEN" | docker login ghcr.io -u realbytecode --password-stdin
   ```
 - **Open Design image (cross-repo) — important.** Unlike `lothal-backend`/`lothal-frontend`,
-  the OD image (`ghcr.io/realbytecode/open-design`) is published from a **different** repo, so
-  it is a separate GHCR package. The C.3 deploy logs in with that run's `GITHUB_TOKEN` (scoped to
-  `realbytecode/langflow`) and then runs a blanket `docker compose pull` — which now includes OD.
-  For that pull to succeed, grant the langflow repo read access to the OD package **once**:
-  GitHub → the `open-design` package → **Package settings → Manage Actions access → add repository
-  `realbytecode/langflow` (role: Read)**. (Equivalently, make the package internal/public.) Note the
+  the OD image (`ghcr.io/realbytecode/od`, built by the `open-design` repo's `docker-image.yml`
+  on a `v*.*.*` tag) is published from a **different** repo, so it is a separate GHCR package. The
+  C.3 deploy logs in with that run's `GITHUB_TOKEN` (scoped to `realbytecode/langflow`) and then
+  runs a blanket `docker compose pull` — which now includes OD. For that pull to succeed, grant the
+  langflow repo read access to the OD package **once**: GitHub → the `od` package →
+  **Package settings → Manage Actions access → add repository `realbytecode/langflow` (role: Read)**.
+  (Equivalently, make the package internal/public.) Note the
   deploy ends with `docker logout ghcr.io`, so a standing PAT login on the box does **not** survive a
   CI deploy — granting package access to the workflow token is the durable fix, not a box-side login.
 
@@ -298,6 +305,57 @@ docker compose -f docker-compose.prod.yml exec open-design rm -f /app/.od/persis
 (If you enable `OD_API_TOKEN` + `OD_DISABLE_API_AUTH=0` for defense-in-depth, step 2 becomes
 `curl -H "Authorization: Bearer $OD_API_TOKEN" …` and an unauthed call should `401`.)
 
+## Embed Open Design in the Workspace (U.9)
+
+The prototype pane embeds OD's own project page (its chat, live preview, refine
+tools) in an iframe. OD's web app serves everything at the **root** of its origin
+(`/api`, `/_next`), so it can't live under a path on `lothal.app` — it gets its own
+subdomain, `od.<domain>`, reverse-proxied by host nginx to the OD container and
+**gated by the logged-in Lothal session** (nginx `auth_request` → the backend's
+`/api/v1/users/whoami`). OD keeps `OD_DISABLE_API_AUTH=1`; the network boundary +
+this gate are the access control. Without the gate OD's API would be public and
+could spend the LLM subscription, so do not skip it.
+
+**Prerequisites (one-time):**
+1. DNS: an `od.<domain>` A/AAAA record at the box, and the cert covering it
+   (`-d "od.$DOMAIN"`, see *nginx + TLS* above). The `od.<domain>` vhost is already
+   in `lothal.conf`.
+2. `.env` on the box:
+   ```
+   LOTHAL_OD_PUBLIC_BASE_URL=https://od.lothal.app          # browser-facing OD origin → builds the iframe URL
+   OD_ALLOWED_ORIGINS=http://open-design:7456,https://od.lothal.app   # OD origin-guard allow-list (backend + browser)
+   LANGFLOW_COOKIE_DOMAIN=.lothal.app                       # so the session cookie reaches od.<domain> (rides into the iframe)
+   LOTHAL_OD_AGENT_ID=claude                                # must be installed AND available in the OD image (see below)
+   ```
+   Then `docker compose -f docker-compose.prod.yml up -d` to apply.
+
+**Pick a working agent.** The backend drives one OD agent and points it at the U.3
+gateway. It must be *available* in the OD image — list them:
+```bash
+docker compose -f docker-compose.prod.yml exec backend \
+  curl -fsS http://open-design:7456/api/agents | python3 -c \
+  'import sys,json;[print(a["id"], a.get("available")) for a in json.load(sys.stdin)["agents"]]'
+```
+Use one printing `True` (e.g. `claude`). The bare image's historical default
+`codex` is frequently **not** available — a mismatch makes runs never start.
+
+**Verify the gate + embed:**
+```bash
+# Unauthenticated → 401 (gate denies; OD is NOT public):
+curl -s -o /dev/null -w "%{http_code}\n" https://od.lothal.app/          # -> 401
+# In the browser: log in to https://lothal.app, take a project to the PROTOTYPE
+# stage; the right pane embeds https://od.lothal.app/projects/<id> directly — no
+# OD sign-in/onboarding prompt — showing the chat history + live preview. Approve
+# advances the phase to CODE_GENERATION.
+```
+
+> No sign-in prompt because the backend pre-completes OD's onboarding on the daemon
+> during seed (`onboardingCompleted` + the agent, via `PUT /api/app-config`). That
+> write only succeeds because `ODClient` sends an `Origin` header that is in
+> `OD_ALLOWED_ORIGINS` — keep the internal `http://open-design:7456` entry in the
+> list or onboarding/agent config silently fails (403) and the embed shows OD's
+> sign-in screen.
+
 ## LLM gateway: route OD's calls through Lothal (U.3)
 
 Open Design's coding agent makes its own LLM calls. To keep them observable and
@@ -344,9 +402,11 @@ subscription token nor a metered upstream, the gateway returns `503`.
 
 ### 2. Point OD's codex agent at the gateway (`PATCH /api/app-config`)
 
-OD's `agentCliEnv.codex` carries the agent's OpenAI base URL + key. The **live
-application of this PATCH lands with the Prototype Engine (U.4)**, which owns the
-OD client; the body it sends is:
+OD's `agentCliEnv.codex` carries the agent's OpenAI base URL + key. **The
+prototype engine now applies this PATCH automatically** on the first
+`POST /prototype/generate` (best-effort — a failed PATCH is logged but does not
+abort the run, since OD may already be configured or run on a metered key). The
+body it sends is:
 
 ```jsonc
 // PATCH http://open-design:7456/api/app-config
@@ -362,7 +422,8 @@ OD client; the body it sends is:
 
 The codex agent's model is then set to one the active backend serves (a **Claude
 model id** for the subscription backend). `OPENAI_BASE_URL` ends in `/v1` because
-OpenAI clients append `/chat/completions` to it.
+OpenAI clients append `/chat/completions` to it. Override the gateway URL/agent
+with `LOTHAL_GATEWAY_PUBLIC_URL` / `LOTHAL_OD_AGENT_ID` (see `.env.prod.example`).
 
 ### 3. Verify the gateway (from the backend container)
 
@@ -380,3 +441,50 @@ docker compose -f docker-compose.prod.yml logs --since=1m backend | grep "lothal
 
 The U.3 acceptance is a full OD prototype run (U.4+) where **every** LLM call shows
 up in these gateway logs and the agent's tool loop stays intact (artifacts produced).
+
+## Prototype stage: Lothal drives Open Design (U.4-U.10)
+
+With OD running (U.2) and the gateway configured (U.3), the backend drives OD as a
+headless prototyping engine. The flow:
+
+```
+ARCHITECTURE approve ─► PROTOTYPE phase (status IDLE)
+  POST /api/v1/lothal/projects/{id}/prototype/generate
+     → backend builds a brief (PRD + approved architecture), points OD's codex
+       agent at the gateway, creates an OD project + starts a run  (status GENERATING)
+  GET  …/prototype           → polls status; READY once the OD run succeeds, with artifacts
+  POST …/prototype/refine    → a new OD run in the same conversation (a chat-driven tweak)
+  POST …/prototype/approve   → copies OD artifacts into lothal_prototype_artifact,
+                               status APPROVED, phase → CODE_GENERATION
+```
+
+The OD client env (all optional, compose defaults are correct — see
+`.env.prod.example` "Prototype stage" block): `LOTHAL_OD_BASE_URL`,
+`LOTHAL_OD_API_TOKEN`, `LOTHAL_OD_AGENT_ID`, `LOTHAL_OD_SKILL_ID`,
+`LOTHAL_GATEWAY_PUBLIC_URL`, `LOTHAL_OD_PUBLIC_BASE_URL`.
+
+### Embedding the OD web surface (U.9)
+
+The Workspace prototype pane embeds OD's own web UI in an iframe when
+`LOTHAL_OD_PUBLIC_BASE_URL` is set to a **browser-reachable** OD URL (the internal
+`open-design:7456` is not browser-reachable). Without it, the pane falls back to
+listing the produced artifacts. To embed:
+
+1. Expose OD's web on a **separate origin** (a subdomain, e.g. `https://od.lothal.app`)
+   proxying `open-design:7456`, and set `LOTHAL_OD_PUBLIC_BASE_URL` to it.
+   **Security — do NOT use a same-origin `/od/` path:** the iframe carries
+   `allow-scripts allow-same-origin` (OD's app needs both), and those together let a
+   *same-origin* frame strip its own sandbox. A separate origin keeps the sandbox
+   meaningful. (Cross-origin `allow-same-origin` only grants OD its own origin's
+   storage, which it needs — not an escape.)
+2. Allow framing: OD must permit `frame-ancestors` for the Lothal origin (and
+   Lothal's CSP `frame-src` must allow the OD origin). Configure this in
+   `deploy/nginx/lothal.conf` when wiring the OD web subdomain.
+
+> **Status:** U.4-U.8 + U.10 are implemented and unit/integration-tested against a
+> mocked OD. U.9's iframe + approve action ship in the pane; the live OD-embed
+> round-trip and U.12's real end-to-end smoke require a running OD daemon + Claude
+> token and are verified on the deployed stack. U.11 (code generation consuming the
+> approved prototype) is **blocked on Epic 4** — there is no code-generation engine
+> yet (`GET /code` is still a 501 stub); the approved artifacts already persist in
+> `lothal_prototype_artifact`, ready for code-gen to read when it lands.

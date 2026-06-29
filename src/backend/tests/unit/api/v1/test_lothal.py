@@ -14,7 +14,9 @@ import shutil
 from importlib.util import find_spec
 from uuid import UUID, uuid4
 
+import httpx
 import pytest
+import respx
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1 import lothal as lothal_api
@@ -22,7 +24,13 @@ from langflow.lothal.d2_compile import D2CompilerUnavailableError
 from langflow.lothal.engines import architecture_generation, d2_gate, d2_validator
 from langflow.lothal.engines import clarification as clarification_engine
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError
-from langflow.services.database.models.lothal_project.model import CodeFile, Message, Project
+from langflow.services.database.models.lothal_project.model import (
+    CodeFile,
+    Message,
+    Project,
+    PrototypeArtifact,
+    PrototypeStatus,
+)
 from langflow.services.deps import session_scope
 from sqlalchemy import inspect as sa_inspect
 from sqlmodel import select
@@ -38,11 +46,8 @@ PROJECT_ID = "00000000-0000-0000-0000-000000000000"
 STUB_TEMPLATES = [
     ("GET", "api/v1/lothal/projects/{project_id}/code", None),
     ("GET", "api/v1/lothal/projects/{project_id}/download", None),
-    # Prototype stage (Epic UI, Story U.0) — declared as 501 stubs.
-    ("GET", "api/v1/lothal/projects/{project_id}/prototype", None),
-    ("POST", "api/v1/lothal/projects/{project_id}/prototype/generate", None),
-    ("POST", "api/v1/lothal/projects/{project_id}/prototype/refine", {"content": "make it blue"}),
-    ("POST", "api/v1/lothal/projects/{project_id}/prototype/approve", None),
+    # The prototype surface went live in U.4-U.7 (was stubbed in U.0); it now lives
+    # in LIVE_ENDPOINTS with behaviour tests further down.
 ]
 
 # Every remaining stub is project-scoped, so each resolves ownership before
@@ -66,6 +71,11 @@ LIVE_ENDPOINTS = [
     ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/prd", None),
     ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/diagram", None),
     ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/diagram/approve", None),
+    # Prototype stage (Epic UI, Stories U.4-U.7) — live backends driving Open Design.
+    ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/prototype", None),
+    ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/prototype/generate", None),
+    ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/prototype/refine", {"content": "make it blue"}),
+    ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/prototype/approve", None),
     ("POST", "api/v1/lothal/debug/llm", {"message": "ping"}),
 ]
 
@@ -163,14 +173,15 @@ async def test_openapi_lists_full_lothal_surface(client: AsyncClient):
     assert "/api/v1/lothal/projects/{project_id}/diagram/save" not in paths
 
     # A still-stubbed route documents the structured 501 in its responses; the
-    # routes that have gone live (chat, debug, prd, diagram, approve) no longer
-    # advertise it.
+    # routes that have gone live (chat, debug, prd, diagram, approve, prototype)
+    # no longer advertise it.
     assert "501" in paths["/api/v1/lothal/projects/{project_id}/code"]["get"]["responses"]
-    # The prototype surface (Story U.0) is stubbed: every route advertises the 501.
-    assert "501" in paths["/api/v1/lothal/projects/{project_id}/prototype"]["get"]["responses"]
-    assert "501" in paths["/api/v1/lothal/projects/{project_id}/prototype/generate"]["post"]["responses"]
-    assert "501" in paths["/api/v1/lothal/projects/{project_id}/prototype/refine"]["post"]["responses"]
-    assert "501" in paths["/api/v1/lothal/projects/{project_id}/prototype/approve"]["post"]["responses"]
+    assert "501" in paths["/api/v1/lothal/projects/{project_id}/download"]["get"]["responses"]
+    # The prototype surface went live in U.4-U.7 — no route advertises the 501 now.
+    assert "501" not in paths["/api/v1/lothal/projects/{project_id}/prototype"]["get"]["responses"]
+    assert "501" not in paths["/api/v1/lothal/projects/{project_id}/prototype/generate"]["post"]["responses"]
+    assert "501" not in paths["/api/v1/lothal/projects/{project_id}/prototype/refine"]["post"]["responses"]
+    assert "501" not in paths["/api/v1/lothal/projects/{project_id}/prototype/approve"]["post"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/diagram"]["get"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/diagram/approve"]["post"]["responses"]
     assert "501" not in paths["/api/v1/lothal/projects/{project_id}/chat"]["post"]["responses"]
@@ -1742,3 +1753,586 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
     assert len(messages) == turns * 2  # each turn = user + assistant
     assert messages[0]["role"] == "USER"
     assert all("[CLARITY_REACHED]" not in m["content"] for m in messages)
+
+
+# --- Prototype stage (Epic UI, Stories U.4-U.7) ------------------------------
+# The prototype stage drives Open Design (OD) as a headless prototyping engine.
+# Lothal is OD's HTTP client; these tests mock OD's daemon with respx (the same
+# way the gateway tests mock their upstream) so the engine + endpoints are
+# verified end-to-end against a stubbed OD, never a live one.
+
+OD_BASE = "http://open-design:7456"
+
+# A representative OD project file carrying an artifact manifest, plus a plain
+# file with none (which must be filtered out — only artifacts surface).
+OD_ARTIFACT_FILE = {
+    "name": "home.html",
+    "path": "home.html",
+    "kind": "file",
+    "artifactKind": "prototype",
+    "artifactManifest": {"kind": "prototype", "title": "Home screen"},
+}
+OD_ARTIFACT_FILE_2 = {
+    "name": "about.html",
+    "path": "about.html",
+    "kind": "file",
+    "artifactKind": "prototype",
+    "artifactManifest": {"kind": "prototype", "title": "About screen"},
+}
+OD_PLAIN_FILE = {"name": "notes.txt", "path": "notes.txt", "kind": "file"}
+
+
+def _mock_od_discovery(*, projects=None, runs=None):
+    """Register the GET probes `generate` runs before create (OD-level idempotency).
+
+    seed_and_generate first lists OD projects (to reuse a previously-tagged one) and
+    the chosen project's runs (to avoid double-running). The happy path returns none
+    of each, so generate proceeds to create + start_run.
+    """
+    respx.get(f"{OD_BASE}/api/projects").mock(return_value=httpx.Response(200, json=projects or []))
+    respx.get(f"{OD_BASE}/api/runs").mock(return_value=httpx.Response(200, json=runs or []))
+
+
+@pytest.fixture
+def _od_env(monkeypatch):
+    """Pin the OD client env to a known host with no token and no agent PATCH.
+
+    Blanking `LOTHAL_OD_AGENT_ID` skips the best-effort `PATCH /api/app-config`
+    (its own dedicated test re-enables it), so the common-path tests only need to
+    mock create/run/files/runs.
+    """
+    monkeypatch.setenv("LOTHAL_OD_BASE_URL", OD_BASE)
+    monkeypatch.delenv("LOTHAL_OD_API_TOKEN", raising=False)
+    monkeypatch.delenv("OD_API_TOKEN", raising=False)
+    monkeypatch.delenv("LOTHAL_OD_PUBLIC_BASE_URL", raising=False)
+    monkeypatch.setenv("LOTHAL_OD_AGENT_ID", "")
+    monkeypatch.setenv("LOTHAL_OD_SKILL_ID", "")
+
+
+async def _make_prototype_project(
+    client: AsyncClient,
+    headers: dict,
+    *,
+    phase: str = "PROTOTYPE",
+    od_project_id: str | None = None,
+    od_conversation_id: str | None = None,
+    prototype_status: str = "IDLE",
+    prd: str | None = "A todo app for individuals.",
+    diagram_d2: str | None = "user -> api: submit",
+) -> str:
+    """Create a project and force it into the given prototype-stage state."""
+    project_id = await _create_chat_project(client, headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = phase
+        project.prd_content = prd
+        project.diagram_d2 = diagram_d2
+        project.od_project_id = od_project_id
+        project.od_conversation_id = od_conversation_id
+        project.prototype_status = prototype_status
+        session.add(project)
+    return project_id
+
+
+@pytest.mark.parametrize("phase", ["CLARIFICATION", "ARCHITECTURE"])
+async def test_get_prototype_403_before_prototype_phase(client: AsyncClient, logged_in_headers: dict, phase: str):
+    """`GET /prototype` is phase-gated: a read before the prototype stage is a 403."""
+    project_id = await _make_prototype_project(client, logged_in_headers, phase=phase)
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/prototype", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_get_prototype_idle_before_generation(client: AsyncClient, logged_in_headers: dict):
+    """In PROTOTYPE but not yet seeded, `GET /prototype` reports IDLE with no OD call."""
+    project_id = await _make_prototype_project(client, logged_in_headers)
+    # No respx mock: an unlinked project never calls OD (collect_state short-circuits).
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/prototype", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["status"] == "IDLE"
+    assert body["od_project_id"] is None
+    assert body["artifacts"] == []
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_generate_seeds_od_and_reports_generating(client: AsyncClient, logged_in_headers: dict):
+    """U.4 acceptance: entering PROTOTYPE generation creates one OD project + run, persists the linkage."""
+    project_id = await _make_prototype_project(client, logged_in_headers)
+
+    with respx.mock:
+        _mock_od_discovery()
+        create = respx.post(f"{OD_BASE}/api/projects").mock(
+            return_value=httpx.Response(200, json={"id": "od-proj-1", "name": "Chat"})
+        )
+        run = respx.post(f"{OD_BASE}/api/runs").mock(
+            return_value=httpx.Response(200, json={"runId": "run-1", "conversationId": "conv-1"})
+        )
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["status"] == "GENERATING"
+    assert body["od_project_id"] == "od-proj-1"
+    assert body["od_conversation_id"] == "conv-1"
+    assert create.call_count == 1
+    assert run.call_count == 1
+
+    # The run carries the brief built from the PRD + diagram (the single-chat
+    # bridge: OD is seeded from context the user already produced, U.10).
+    run_body = json.loads(run.calls.last.request.content)
+    assert run_body["projectId"] == "od-proj-1"
+    assert "todo app" in run_body["message"]
+
+    # The linkage is persisted, and one ASSISTANT stage-entry marker lands in the
+    # single chat thread (U.10).
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "PROTOTYPE"
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert len(messages) == 1
+    assert messages[0]["role"] == "ASSISTANT"
+    assert messages[0]["phase"] == "PROTOTYPE"
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_generate_is_idempotent_on_reentry(client: AsyncClient, logged_in_headers: dict):
+    """U.4 acceptance: re-entering generation reuses the OD project — no duplicate project/run."""
+    project_id = await _make_prototype_project(client, logged_in_headers)
+
+    with respx.mock:
+        _mock_od_discovery()
+        create = respx.post(f"{OD_BASE}/api/projects").mock(
+            return_value=httpx.Response(200, json={"id": "od-proj-1"})
+        )
+        respx.post(f"{OD_BASE}/api/runs").mock(
+            return_value=httpx.Response(200, json={"runId": "run-1", "conversationId": "conv-1"})
+        )
+        first = await client.post(f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers)
+        second = await client.post(f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers)
+
+    assert first.status_code == second.status_code == status.HTTP_200_OK
+    # The second call reused the existing OD project: create was called exactly once.
+    assert create.call_count == 1
+    assert second.json()["od_project_id"] == "od-proj-1"
+    # Only one stage-entry marker, despite two generate calls.
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert len([m for m in messages if m["role"] == "ASSISTANT"]) == 1
+
+
+@pytest.mark.parametrize("phase", ["ARCHITECTURE", "CODE_GENERATION", "DONE"])
+async def test_generate_rejected_outside_prototype(client: AsyncClient, logged_in_headers: dict, phase: str):
+    """Generation is only valid in PROTOTYPE; any other phase is a 409 and never calls OD."""
+    project_id = await _make_prototype_project(client, logged_in_headers, phase=phase)
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_generate_points_od_agent_at_gateway(client: AsyncClient, logged_in_headers, monkeypatch):
+    """U.4: generation points OD's codex agent at Lothal's gateway via PATCH /api/app-config."""
+    monkeypatch.setenv("LOTHAL_OD_AGENT_ID", "codex")
+    monkeypatch.setenv("LOTHAL_GATEWAY_PUBLIC_URL", "http://backend:7860/api/v1/lothal/gateway/v1")
+    monkeypatch.setenv("LOTHAL_GATEWAY_TOKEN", "gw-token")
+    project_id = await _make_prototype_project(client, logged_in_headers)
+
+    with respx.mock:
+        _mock_od_discovery()
+        cfg = respx.put(f"{OD_BASE}/api/app-config").mock(return_value=httpx.Response(200, json={}))
+        respx.post(f"{OD_BASE}/api/projects").mock(return_value=httpx.Response(200, json={"id": "od-proj-1"}))
+        respx.post(f"{OD_BASE}/api/runs").mock(return_value=httpx.Response(200, json={"runId": "run-1"}))
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert cfg.call_count == 1
+    patched = json.loads(cfg.calls.last.request.content)
+    assert patched["agentCliEnv"]["codex"]["OPENAI_BASE_URL"] == "http://backend:7860/api/v1/lothal/gateway/v1"
+    assert patched["agentCliEnv"]["codex"]["OPENAI_API_KEY"] == "gw-token"
+    # Same write pre-completes OD's onboarding and pins the agent, so the embedded
+    # project page renders directly instead of bouncing to the sign-in chooser.
+    assert patched["onboardingCompleted"] is True
+    assert patched["agentId"] == "codex"
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_generate_succeeds_even_if_agent_config_fails(client: AsyncClient, logged_in_headers, monkeypatch):
+    """Pointing OD at the gateway is best-effort: a failed PATCH must not sink generation."""
+    monkeypatch.setenv("LOTHAL_OD_AGENT_ID", "codex")
+    project_id = await _make_prototype_project(client, logged_in_headers)
+
+    with respx.mock:
+        _mock_od_discovery()
+        respx.put(f"{OD_BASE}/api/app-config").mock(side_effect=httpx.ConnectError("nope"))
+        respx.post(f"{OD_BASE}/api/projects").mock(return_value=httpx.Response(200, json={"id": "od-proj-1"}))
+        respx.post(f"{OD_BASE}/api/runs").mock(return_value=httpx.Response(200, json={"runId": "run-1"}))
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["status"] == "GENERATING"
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_generate_maps_od_failure_to_502(client: AsyncClient, logged_in_headers: dict):
+    """A reachable-but-unhappy OD (or unreachable daemon) surfaces as a 502, never a 500."""
+    project_id = await _make_prototype_project(client, logged_in_headers)
+    with respx.mock:
+        # The OD-reuse probe finds none, then the create call fails → 502.
+        respx.get(f"{OD_BASE}/api/projects").mock(return_value=httpx.Response(200, json=[]))
+        respx.post(f"{OD_BASE}/api/projects").mock(side_effect=httpx.ConnectError("boom"))
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers
+        )
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+
+
+async def test_generate_503_when_od_base_url_blank(client: AsyncClient, logged_in_headers, monkeypatch):
+    """An explicitly blank OD base URL is a configuration error (503), not a 502."""
+    monkeypatch.setenv("LOTHAL_OD_BASE_URL", "")
+    monkeypatch.setenv("LOTHAL_OD_AGENT_ID", "")
+    project_id = await _make_prototype_project(client, logged_in_headers)
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_get_prototype_reports_ready_and_lists_artifacts(client: AsyncClient, logged_in_headers: dict):
+    """U.5 acceptance: a seeded project with a succeeded run reports READY + the artifact set."""
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", od_conversation_id="conv-1", prototype_status="GENERATING"
+    )
+
+    with respx.mock:
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/files").mock(
+            return_value=httpx.Response(200, json=[OD_ARTIFACT_FILE, OD_PLAIN_FILE])
+        )
+        respx.get(f"{OD_BASE}/api/runs").mock(
+            return_value=httpx.Response(200, json=[{"id": "run-1", "status": "succeeded", "createdAt": "2026-01-01"}])
+        )
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/raw/home.html").mock(
+            return_value=httpx.Response(200, text="<html>home design</html>")
+        )
+        response = await client.get(f"api/v1/lothal/projects/{project_id}/prototype", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["status"] == "READY"
+    # Only the manifest-bearing file surfaces; the plain file is filtered out.
+    assert [a["path"] for a in body["artifacts"]] == ["home.html"]
+    assert body["artifacts"][0]["title"] == "Home screen"
+    # The primary HTML design is rendered inline.
+    assert body["preview_html"] == "<html>home design</html>"
+
+    # The forward READY transition is persisted (next read is fast / badge reflects it).
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        assert project.prototype_status == PrototypeStatus.READY.value
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_get_prototype_degrades_when_od_unreachable(client: AsyncClient, logged_in_headers: dict):
+    """A read must not 502 the polling UI: an unreachable OD degrades to the stored status, no artifacts."""
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", prototype_status="GENERATING"
+    )
+    with respx.mock:
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/files").mock(side_effect=httpx.ConnectError("down"))
+        respx.get(f"{OD_BASE}/api/runs").mock(side_effect=httpx.ConnectError("down"))
+        response = await client.get(f"api/v1/lothal/projects/{project_id}/prototype", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["status"] == "GENERATING"
+    assert body["artifacts"] == []
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_get_prototype_embed_url_uses_public_base(client: AsyncClient, logged_in_headers, monkeypatch):
+    """`embed_url` is resolved from the public OD base when configured (the iframe surface, U.9)."""
+    monkeypatch.setenv("LOTHAL_OD_PUBLIC_BASE_URL", "https://od.lothal.app")
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", prototype_status="GENERATING"
+    )
+    with respx.mock:
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/files").mock(return_value=httpx.Response(200, json=[]))
+        respx.get(f"{OD_BASE}/api/runs").mock(return_value=httpx.Response(200, json=[]))
+        response = await client.get(f"api/v1/lothal/projects/{project_id}/prototype", headers=logged_in_headers)
+    assert response.json()["embed_url"] == "https://od.lothal.app/projects/od-proj-1"
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_refine_starts_run_in_conversation(client: AsyncClient, logged_in_headers: dict):
+    """U.6 acceptance: refine starts a new OD run on the stored conversation and returns to GENERATING."""
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", od_conversation_id="conv-1", prototype_status="READY"
+    )
+    with respx.mock:
+        run = respx.post(f"{OD_BASE}/api/runs").mock(
+            return_value=httpx.Response(200, json={"runId": "run-2", "conversationId": "conv-1"})
+        )
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/refine",
+            json={"content": "make the header darker"},
+            headers=logged_in_headers,
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["status"] == "GENERATING"
+    run_body = json.loads(run.calls.last.request.content)
+    assert run_body["projectId"] == "od-proj-1"
+    assert run_body["conversationId"] == "conv-1"
+    assert run_body["message"] == "make the header darker"
+
+
+async def test_refine_rejected_before_generation(client: AsyncClient, logged_in_headers: dict):
+    """Refining a project with no OD prototype yet is a 409 (nothing to refine)."""
+    project_id = await _make_prototype_project(client, logged_in_headers)  # od_project_id is None
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/prototype/refine",
+        json={"content": "tweak it"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+async def test_refine_rejected_outside_prototype(client: AsyncClient, logged_in_headers: dict):
+    """Refine is only valid in PROTOTYPE."""
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, phase="CODE_GENERATION", od_project_id="od-proj-1"
+    )
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/prototype/refine",
+        json={"content": "tweak it"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+async def test_refine_rejects_blank_instruction(client: AsyncClient, logged_in_headers: dict):
+    """A blank refine instruction is a 422 before any OD call."""
+    project_id = await _make_prototype_project(client, logged_in_headers, od_project_id="od-proj-1")
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/prototype/refine",
+        json={"content": "   "},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_approve_copies_artifacts_and_advances(client: AsyncClient, logged_in_headers: dict):
+    """U.7 acceptance: approve copies artifacts, stamps approval, posts a summary, advances to CODE_GENERATION."""
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", od_conversation_id="conv-1", prototype_status="READY"
+    )
+
+    with respx.mock:
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/files").mock(
+            return_value=httpx.Response(200, json=[OD_ARTIFACT_FILE, OD_PLAIN_FILE])
+        )
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/raw/home.html").mock(
+            return_value=httpx.Response(200, text="<html>home</html>")
+        )
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/approve", headers=logged_in_headers
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"phase": "CODE_GENERATION"}
+
+    # The finalised artifact is copied into Lothal's own store (DB-as-source-of-truth),
+    # status is APPROVED with an approval timestamp, and the phase advanced.
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        assert project.phase == "CODE_GENERATION"
+        assert project.prototype_status == PrototypeStatus.APPROVED.value
+        assert project.prototype_approved_at is not None
+        rows = (
+            await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))
+        ).all()
+        assert [r.od_path for r in rows] == ["home.html"]
+        assert rows[0].content == "<html>home</html>"
+        assert rows[0].title == "Home screen"
+
+    # A summary lands in the single chat thread (U.10).
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert any(m["role"] == "ASSISTANT" and "approved" in m["content"].lower() for m in messages)
+
+    # The approved prototype stays readable post-advance, served from the DB copy.
+    state = (await client.get(f"api/v1/lothal/projects/{project_id}/prototype", headers=logged_in_headers)).json()
+    assert state["status"] == "APPROVED"
+    assert [a["path"] for a in state["artifacts"]] == ["home.html"]
+
+
+@pytest.mark.parametrize("phase", ["ARCHITECTURE", "CODE_GENERATION", "DONE"])
+async def test_approve_prototype_rejected_outside_prototype(client: AsyncClient, logged_in_headers: dict, phase: str):
+    """Approve is only valid in PROTOTYPE; any other phase is a 409 and a no-op."""
+    project_id = await _make_prototype_project(client, logged_in_headers, phase=phase, od_project_id="od-proj-1")
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/prototype/approve", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == phase
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_approve_with_no_artifacts_still_advances(client: AsyncClient, logged_in_headers: dict):
+    """Approve with an empty OD result: no rows persisted, the no-artifacts summary posted, phase still advances."""
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", prototype_status="READY"
+    )
+    with respx.mock:
+        # Only a non-artifact file → collect_for_approval yields nothing.
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/files").mock(
+            return_value=httpx.Response(200, json=[OD_PLAIN_FILE])
+        )
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/approve", headers=logged_in_headers
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"phase": "CODE_GENERATION"}
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        assert project.phase == "CODE_GENERATION"
+        assert project.prototype_status == PrototypeStatus.APPROVED.value
+        assert project.prototype_approved_at is not None
+        rows = (
+            await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))
+        ).all()
+        assert rows == []  # nothing to copy
+
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    summaries = [m["content"] for m in messages if m["role"] == "ASSISTANT"]
+    assert any("approved" in s.lower() and "artifact" not in s.lower() for s in summaries)
+
+
+async def test_approve_rejected_before_prototype_ready(client: AsyncClient, logged_in_headers: dict):
+    """Approve is a 409 until generation has produced a READY prototype — no premature advance."""
+    # Never generated (no OD link, status IDLE): approving must not advance the phase.
+    not_generated = await _make_prototype_project(client, logged_in_headers)
+    r1 = await client.post(f"api/v1/lothal/projects/{not_generated}/prototype/approve", headers=logged_in_headers)
+    assert r1.status_code == status.HTTP_409_CONFLICT
+
+    # Linked but still GENERATING: also rejected (no OD call needed — respx unmocked
+    # would error if it tried, so a clean 409 proves it short-circuits).
+    generating = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", prototype_status="GENERATING"
+    )
+    r2 = await client.post(f"api/v1/lothal/projects/{generating}/prototype/approve", headers=logged_in_headers)
+    assert r2.status_code == status.HTTP_409_CONFLICT
+
+    async with session_scope() as session:
+        assert (await session.get(Project, UUID(generating))).phase == "PROTOTYPE"
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_approve_summary_pluralises_artifact_count(client: AsyncClient, logged_in_headers: dict):
+    """Two artifacts → both persisted and the summary reads 'with 2 artifacts:'."""
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", prototype_status="READY"
+    )
+    with respx.mock:
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/files").mock(
+            return_value=httpx.Response(200, json=[OD_ARTIFACT_FILE, OD_ARTIFACT_FILE_2])
+        )
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/raw/home.html").mock(
+            return_value=httpx.Response(200, text="<html>home</html>")
+        )
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/raw/about.html").mock(
+            return_value=httpx.Response(200, text="<html>about</html>")
+        )
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/approve", headers=logged_in_headers
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        rows = (
+            await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))
+        ).all()
+        assert {r.od_path for r in rows} == {"home.html", "about.html"}
+    messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
+    assert any("with 2 artifacts" in m["content"] for m in messages if m["role"] == "ASSISTANT")
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_refine_maps_od_failure_to_502(client: AsyncClient, logged_in_headers: dict):
+    """A failed OD run on refine surfaces as 502 (not a leaked 500)."""
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", od_conversation_id="conv-1", prototype_status="READY"
+    )
+    with respx.mock:
+        respx.post(f"{OD_BASE}/api/runs").mock(side_effect=httpx.ConnectError("down"))
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/refine",
+            json={"content": "tweak"},
+            headers=logged_in_headers,
+        )
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_approve_maps_od_failure_to_502_and_does_not_advance(client: AsyncClient, logged_in_headers: dict):
+    """A failed OD pull on approve is a 502 and leaves the project in PROTOTYPE (fail-loud, unlike GET's degrade)."""
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", prototype_status="READY"
+    )
+    with respx.mock:
+        respx.get(f"{OD_BASE}/api/projects/od-proj-1/files").mock(side_effect=httpx.ConnectError("down"))
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/approve", headers=logged_in_headers
+        )
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        assert project.phase == "PROTOTYPE"  # not advanced
+        assert project.prototype_status == PrototypeStatus.READY.value
+        rows = (
+            await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))
+        ).all()
+        assert rows == []
+
+
+async def test_generate_idempotent_does_not_clobber_ready_status(client: AsyncClient, logged_in_headers: dict):
+    """Re-generating an already-linked, READY project returns READY and makes no OD call.
+
+    No respx mock is registered: if the handler erroneously hit OD it would fail on a
+    real connection, so a green result also proves the idempotent path is OD-free.
+    """
+    project_id = await _make_prototype_project(
+        client, logged_in_headers, od_project_id="od-proj-1", od_conversation_id="conv-1", prototype_status="READY"
+    )
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["status"] == "READY"
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        assert project.prototype_status == PrototypeStatus.READY.value
+
+
+async def test_prototype_routes_404_for_unowned_project(client: AsyncClient, logged_in_headers: dict, user_two):
+    """Ownership is checked first on every prototype route: another user's project 404s, never 403/409."""
+    async with session_scope() as session:
+        foreign = Project(name="Theirs", user_id=user_two.id, phase="PROTOTYPE", od_project_id="od-x")
+        session.add(foreign)
+        await session.flush()
+        foreign_pk = foreign.id
+
+    try:
+        calls = [
+            ("GET", f"api/v1/lothal/projects/{foreign_pk}/prototype", None),
+            ("POST", f"api/v1/lothal/projects/{foreign_pk}/prototype/generate", None),
+            ("POST", f"api/v1/lothal/projects/{foreign_pk}/prototype/refine", {"content": "x"}),
+            ("POST", f"api/v1/lothal/projects/{foreign_pk}/prototype/approve", None),
+        ]
+        for method, path, body in calls:
+            response = await client.request(method, path, json=body, headers=logged_in_headers)
+            assert response.status_code == status.HTTP_404_NOT_FOUND, (method, path)
+    finally:
+        async with session_scope() as session:
+            leftover = await session.get(Project, foreign_pk)
+            if leftover:
+                await session.delete(leftover)

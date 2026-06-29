@@ -132,10 +132,11 @@ export function ArtifactsPane({
     onActiveArtifactChange?.(activePath);
   }, [activePath, onActiveArtifactChange]);
 
-  // --- Approve & generate code (Epic D.11; phase merged in E.2) -------------
-  // Approving advances the project to CODE_GENERATION on the server; the project
-  // query then invalidates, the phase flips, and the parent swaps this pane for
-  // the code panel. Gated on the ARCHITECTURE phase and a non-empty artifact set
+  // --- Approve the architecture (Epic D.11; phase merged in E.2; retarget U.0) ---
+  // Approving advances the project to the PROTOTYPE stage on the server (Epic UI
+  // U.0 retargeted approve from CODE_GENERATION to PROTOTYPE); the project query
+  // then invalidates, the phase flips, and the parent swaps this pane for the
+  // prototype pane. Gated on the ARCHITECTURE phase and a non-empty artifact set
   // so it isn't offered before generation has produced anything (the backend
   // rejects an approve outside ARCHITECTURE, or with no diagram, with a 409).
   const approve = useApproveDiagram(project.id);
@@ -258,7 +259,7 @@ export function ArtifactsPane({
           >
             {approve.isPending || approved
               ? "Approving…"
-              : "Approve & generate code"}
+              : "Approve & build prototype"}
           </Button>
         </div>
       )}

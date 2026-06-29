@@ -20,14 +20,19 @@ import {
   type CodeFile,
   type Message,
   type Project,
+  type PrototypeState,
   useApproveDiagram,
+  useApprovePrototype,
   useArtifacts,
   useCode,
   useCreateProject,
   useDeleteProject,
+  useGeneratePrototype,
   useMessages,
   useProject,
   useProjects,
+  usePrototype,
+  useRefinePrototype,
   useSendMessage,
 } from "../index";
 
@@ -73,6 +78,17 @@ const ARTIFACTS: Artifacts = {
     "diagrams/sequence.d2": "user -> api",
   },
   svgs: { "diagrams/sequence.d2": "<svg>x</svg>" },
+};
+
+const PROTOTYPE_STATE: PrototypeState = {
+  status: "READY",
+  od_project_id: "od-1",
+  od_conversation_id: "conv-1",
+  embed_url: "https://od.lothal.app/projects/od-1",
+  preview_html: "<!doctype html><html><body>Dashboard</body></html>",
+  artifacts: [
+    { path: "home.html", kind: "prototype", title: "Home", preview_url: null },
+  ],
 };
 
 describe("lothal queries", () => {
@@ -325,6 +341,125 @@ describe("lothal queries", () => {
       });
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["lothal", "artifacts", "p1"],
+      });
+    });
+  });
+
+  // --- Prototype stage (Epic UI, Stories U.4-U.7) --------------------------
+
+  describe("usePrototype", () => {
+    it("GETs the prototype state", async () => {
+      mockApiGet.mockResolvedValue({ data: PROTOTYPE_STATE });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => usePrototype("p1"), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockApiGet).toHaveBeenCalledWith(
+        "/api/v1/lothal/projects/p1/prototype",
+      );
+      expect(result.current.data).toEqual(PROTOTYPE_STATE);
+    });
+
+    it("does not fire while disabled (phase-gated before PROTOTYPE)", () => {
+      const { wrapper } = setup();
+      renderHook(() => usePrototype("p1", false), { wrapper });
+      expect(mockApiGet).not.toHaveBeenCalled();
+    });
+
+    it("surfaces the 403 phase gate as a terminal error (no retry)", async () => {
+      mockApiGet.mockRejectedValue({ response: { status: 403 } });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => usePrototype("p1"), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(mockApiGet).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("useGeneratePrototype", () => {
+    it("POSTs generate and invalidates prototype, messages, and projects", async () => {
+      mockApiPost.mockResolvedValue({ data: PROTOTYPE_STATE });
+      const { wrapper, invalidateSpy } = setup();
+      const { result } = renderHook(() => useGeneratePrototype("p1"), {
+        wrapper,
+      });
+
+      await act(async () => {
+        await result.current.mutateAsync();
+      });
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/api/v1/lothal/projects/p1/prototype/generate",
+      );
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "prototype", "p1"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "messages", "p1"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "projects"],
+      });
+    });
+  });
+
+  describe("useRefinePrototype", () => {
+    it("POSTs the refine instruction and invalidates the prototype state", async () => {
+      mockApiPost.mockResolvedValue({
+        data: { ...PROTOTYPE_STATE, status: "GENERATING" },
+      });
+      const { wrapper, invalidateSpy } = setup();
+      const { result } = renderHook(() => useRefinePrototype("p1"), {
+        wrapper,
+      });
+
+      await act(async () => {
+        await result.current.mutateAsync("make the header darker");
+      });
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/api/v1/lothal/projects/p1/prototype/refine",
+        { content: "make the header darker" },
+      );
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "prototype", "p1"],
+      });
+      // A refine bumps updated_at server-side → the project list re-reads too.
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "projects"],
+      });
+    });
+  });
+
+  describe("useApprovePrototype", () => {
+    it("POSTs approve and invalidates projects, prototype, messages, and code", async () => {
+      mockApiPost.mockResolvedValue({ data: { phase: "CODE_GENERATION" } });
+      const { wrapper, invalidateSpy } = setup();
+      const { result } = renderHook(() => useApprovePrototype("p1"), {
+        wrapper,
+      });
+
+      let returned: { phase: string } | undefined;
+      await act(async () => {
+        returned = await result.current.mutateAsync();
+      });
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/api/v1/lothal/projects/p1/prototype/approve",
+      );
+      expect(returned).toEqual({ phase: "CODE_GENERATION" });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "projects"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "prototype", "p1"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "messages", "p1"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "code", "p1"],
       });
     });
   });

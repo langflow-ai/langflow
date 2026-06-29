@@ -286,3 +286,119 @@ export function useCode(projectId: string) {
     staleTime: STUB_STALE_MS,
   });
 }
+
+// --- Prototype (Open Design integration, Epic UI) --------------------------
+// The PROTOTYPE stage drives Open Design (OD) as a headless prototyping engine.
+// `GET /prototype` (Story U.5) returns the run lifecycle status, the OD linkage,
+// an embeddable OD URL, and the artifact list; `generate`/`refine`/`approve`
+// (U.4/U.6/U.7) drive it. Field names are snake_case on the wire (the rest of
+// the Lothal API), mapped to plain names here.
+
+export type PrototypeStatus = "IDLE" | "GENERATING" | "READY" | "APPROVED";
+
+export type PrototypeArtifact = {
+  path: string;
+  kind: string;
+  title: string;
+  preview_url: string | null;
+};
+
+export type PrototypeState = {
+  status: PrototypeStatus;
+  od_project_id: string | null;
+  od_conversation_id: string | null;
+  // The ready-to-iframe OD URL the backend resolves (null until OD is reachable
+  // and a public OD base is configured) — kept for an optional "open in OD" link.
+  embed_url: string | null;
+  // The primary design's HTML, rendered inline in a sandboxed iframe (the design
+  // itself, not OD's web UI). Null until a design exists.
+  preview_html: string | null;
+  artifacts: PrototypeArtifact[];
+};
+
+const prototypeKey = (projectId: string) =>
+  ["lothal", "prototype", projectId] as const;
+
+// `GET /prototype` (Story U.5). Phase-gated to PROTOTYPE onward: a read before
+// then is a deterministic 403 (the UI keys its placeholder/NotReady off it), so
+// skip retrying that, the stray 501, and the 409 a wrong-phase action returns.
+// Polls while the run is GENERATING so the pane advances to READY (and surfaces
+// new artifacts) without a manual refresh; idle otherwise.
+export function usePrototype(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: prototypeKey(projectId),
+    queryFn: async () => {
+      const res = await api.get<PrototypeState>(
+        `${BASE}${projectId}/prototype`,
+      );
+      return res.data;
+    },
+    enabled,
+    retry: retrySkipping(501, 403, 409),
+    refetchInterval: (query) =>
+      query.state.data?.status === "GENERATING" ? 4000 : false,
+  });
+}
+
+// Start (or reuse) prototype generation (Story U.4). Idempotent on the server —
+// a re-entry reuses the existing OD project. Invalidates the prototype state,
+// the chat thread (the stage-entry marker, U.10), and the project list (badge).
+export function useGeneratePrototype(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post<PrototypeState>(
+        `${BASE}${projectId}/prototype/generate`,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: prototypeKey(projectId) });
+      qc.invalidateQueries({ queryKey: messagesKey(projectId) });
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+    },
+  });
+}
+
+// A Lothal-side refine instruction → a new OD run in the same conversation
+// (Story U.6). Moves the status back to GENERATING; the polling read picks it up.
+// A refine bumps the project's updated_at, so refresh the list ordering too.
+export function useRefinePrototype(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (content: string) => {
+      const res = await api.post<PrototypeState>(
+        `${BASE}${projectId}/prototype/refine`,
+        { content },
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: prototypeKey(projectId) });
+      qc.invalidateQueries({ queryKey: messagesKey(projectId) });
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+    },
+  });
+}
+
+// Approve the prototype (Story U.7): the server copies the artifacts, posts a
+// chat summary (U.10), and advances PROTOTYPE → CODE_GENERATION. Returns the new
+// phase (the `DiagramApprove` shape). Invalidates the project (phase badge,
+// stepper, right-pane swap), prototype state, chat thread, and code.
+export function useApprovePrototype(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post<DiagramApprove>(
+        `${BASE}${projectId}/prototype/approve`,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      qc.invalidateQueries({ queryKey: prototypeKey(projectId) });
+      qc.invalidateQueries({ queryKey: messagesKey(projectId) });
+      qc.invalidateQueries({ queryKey: codeKey(projectId) });
+    },
+  });
+}

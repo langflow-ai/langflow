@@ -310,3 +310,95 @@ async def test_metered_upstream_takes_precedence_over_subscription(client: Async
     assert resp.status_code == status.HTTP_200_OK
     assert metered.called
     assert not anthropic.called
+
+
+# --- Anthropic Messages passthrough (the `claude` agent path) ----------------
+
+MESSAGES_PATH = "api/v1/lothal/gateway/v1/messages"
+ANTHROPIC_BODY = {
+    "model": "claude-haiku-4-5",
+    "max_tokens": 50,
+    "messages": [{"role": "user", "content": "hi"}],
+}
+ANTHROPIC_REPLY = {
+    "id": "msg_1",
+    "type": "message",
+    "role": "assistant",
+    "content": [{"type": "text", "text": "hi back"}],
+    "model": "claude-haiku-4-5",
+    "stop_reason": "end_turn",
+}
+
+
+@pytest.mark.usefixtures("_subscription")
+async def test_anthropic_passthrough_injects_oauth_and_forwards_verbatim(client: AsyncClient):
+    """`POST /messages` forwards the body unchanged to the Messages API with the OAuth token."""
+    raw = json.dumps(ANTHROPIC_BODY).encode()
+    with respx.mock:
+        route = respx.post(ANTHROPIC_MESSAGES_URL).mock(return_value=httpx.Response(200, json=ANTHROPIC_REPLY))
+        resp = await client.post(
+            MESSAGES_PATH,
+            content=raw,
+            headers={"content-type": "application/json", "anthropic-beta": "claude-code-20250219"},
+        )
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json() == ANTHROPIC_REPLY
+    sent = route.calls.last.request
+    # Body relayed byte-for-byte (no translation — claude speaks Anthropic natively).
+    assert sent.content == raw
+    # The caller's placeholder credential is replaced with the subscription token,
+    # and the oauth beta is added alongside the caller's own betas.
+    assert sent.headers["authorization"] == "Bearer sub-oauth-token"
+    assert "oauth-2025-04-20" in sent.headers["anthropic-beta"]
+    assert "claude-code-20250219" in sent.headers["anthropic-beta"]
+    assert sent.headers["anthropic-version"] == "2023-06-01"
+
+
+@pytest.mark.usefixtures("_subscription")
+async def test_anthropic_passthrough_streams_sse_through(client: AsyncClient):
+    """A streamed Messages reply flows back as text/event-stream, unchanged."""
+    sse = b"event: message_start\ndata: {}\n\nevent: message_stop\ndata: {}\n\n"
+    with respx.mock:
+        respx.post(ANTHROPIC_MESSAGES_URL).mock(
+            return_value=httpx.Response(200, headers={"content-type": "text/event-stream"}, content=sse)
+        )
+        resp = await client.post(
+            MESSAGES_PATH,
+            content=json.dumps({**ANTHROPIC_BODY, "stream": True}).encode(),
+            headers={"content-type": "application/json"},
+        )
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.headers["content-type"].startswith("text/event-stream")
+    assert resp.content == sse
+
+
+@pytest.mark.usefixtures("_subscription")
+async def test_anthropic_passthrough_relays_upstream_error(client: AsyncClient):
+    """A non-2xx from the Messages API is relayed with its status + body."""
+    with respx.mock:
+        respx.post(ANTHROPIC_MESSAGES_URL).mock(
+            return_value=httpx.Response(429, json={"type": "error", "error": {"type": "rate_limit_error"}})
+        )
+        resp = await client.post(
+            MESSAGES_PATH, content=json.dumps(ANTHROPIC_BODY).encode(), headers={"content-type": "application/json"}
+        )
+    assert resp.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert resp.json()["error"]["type"] == "rate_limit_error"
+
+
+async def test_anthropic_passthrough_503_without_subscription(client: AsyncClient, monkeypatch):
+    """No subscription token → 503 (the passthrough is subscription-only)."""
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    monkeypatch.delenv("LOTHAL_GATEWAY_TOKEN", raising=False)
+    resp = await client.post(
+        MESSAGES_PATH, content=json.dumps(ANTHROPIC_BODY).encode(), headers={"content-type": "application/json"}
+    )
+    assert resp.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+
+async def test_anthropic_passthrough_openapi_listed(client: AsyncClient):
+    """The Messages passthrough is advertised on the OpenAPI surface."""
+    schema = (await client.get("openapi.json")).json()
+    assert "/api/v1/lothal/gateway/v1/messages" in schema["paths"]

@@ -6,10 +6,13 @@
 // The lothal phases, in order. Keep in sync with the backend contract:
 // src/backend/base/langflow/lothal/schemas.py (`Phase` Literal) — the two
 // sides can't share code across languages. Epic E.2 merged the two diagram
-// phases (DIAGRAM_GENERATION + DIAGRAM_REFINEMENT) into one ARCHITECTURE stage.
+// phases (DIAGRAM_GENERATION + DIAGRAM_REFINEMENT) into one ARCHITECTURE stage;
+// Epic UI (U.8) inserts the PROTOTYPE stage between ARCHITECTURE and
+// CODE_GENERATION (the Open Design prototype stage).
 export const PHASE_IDS = [
   "CLARIFICATION",
   "ARCHITECTURE",
+  "PROTOTYPE",
   "CODE_GENERATION",
   "DONE",
 ] as const;
@@ -44,15 +47,21 @@ export const PHASES: PhaseMeta[] = [
     status: { text: "needs your review", action: true },
   },
   {
+    id: "PROTOTYPE",
+    label: "Prototype",
+    short: "03",
+    status: { text: "shaping the prototype", action: true },
+  },
+  {
     id: "CODE_GENERATION",
     label: "Generate",
-    short: "03",
+    short: "04",
     status: { text: "writing the code", action: false },
   },
   {
     id: "DONE",
     label: "Deliver",
-    short: "04",
+    short: "05",
     status: { text: "ready to deliver", action: false },
   },
 ];
