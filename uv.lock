@@ -44,6 +44,7 @@ members = [
     "lfx-nextplaid",
     "lfx-openai",
     "lfx-oracle",
+    "lfx-paddle",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -7888,6 +7889,7 @@ dependencies = [
     { name = "lfx-nextplaid" },
     { name = "lfx-openai" },
     { name = "lfx-oracle" },
+    { name = "lfx-paddle" },
 ]
 
 [package.optional-dependencies]
@@ -7990,6 +7992,7 @@ requires-dist = [
     { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
+    { name = "lfx-paddle", editable = "src/bundles/paddle" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
@@ -10074,6 +10077,21 @@ requires-dist = [
     { name = "langchain-oracledb", specifier = ">=1.0.1,<2.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "oracledb", specifier = ">=2.2.0,<4.0.0" },
+]
+
+[[package]]
+name = "lfx-paddle"
+version = "0.1.0"
+source = { editable = "src/bundles/paddle" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
