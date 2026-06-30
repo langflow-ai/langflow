@@ -144,7 +144,7 @@ test(
 
     await expect(page.getByTestId("flow_controlsSub Flow")).toBeVisible();
 
-    await expect(page.getByTestId("processingOperations")).toBeVisible();
+    await expect(page.getByTestId("processingJSON Operations")).toBeVisible();
 
     await page.getByTestId("sidebar-filter-reset").first().click();
 
