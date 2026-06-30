@@ -66,7 +66,13 @@ def test_faiss_same_namespace_cannot_load_another_users_index(tmp_path: Path, mo
     attacker_document = "ATTACKER_PRESEEDED_FAISS_DOCUMENT"
     owner_document = "OWNER_EXPECTED_FAISS_DOCUMENT"
 
-    monkeypatch.setattr("lfx.components.FAISS.faiss.FAISS", _FakeFAISS)
+    # Patch ``FAISS`` in the exact module namespace the component resolves it from at
+    # runtime. A string target (``"lfx.components.FAISS.faiss.FAISS"``) is resolved by
+    # monkeypatch via parent-package attribute traversal, which can land on a different
+    # module object than the one the imported class closes over once the lfx-bundles
+    # shim / component loader rebinds the submodule. Patching the class's own method
+    # globals is immune to that divergence.
+    monkeypatch.setitem(FaissVectorStoreComponent.search_documents.__globals__, "FAISS", _FakeFAISS)
 
     attacker_component = _component("attacker-user", tmp_path, attacker_document, "attacker")
     attacker_results = attacker_component.search_documents()
