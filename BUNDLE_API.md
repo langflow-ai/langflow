@@ -69,7 +69,8 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | Symbol | Source |
 | --- | --- |
 | Manifest schema (`extension.json` / `[tool.langflow.extension]`) | `lfx.extension.manifest.ExtensionManifest` |
-| `BundleRef` (one entry in `bundles[]`) | `lfx.extension.manifest.BundleRef` |
+| `BundleRef` (one entry in `bundles[]`; `bundles[]` is optional, 0-or-1) | `lfx.extension.manifest.BundleRef` |
+| `ProviderManifestEntry` (one entry in the optional `providers[]`) | `lfx.extension.manifest.ProviderManifestEntry` |
 | `LfxCompat` (declared as `manifest.lfx`) | `lfx.extension.manifest.LfxCompat` |
 | `BUNDLE_API_VERSION` (the integer this lfx ships) | `lfx.extension.manifest` |
 | `EXTENSION_SCHEMA_URL` / `SCHEMA_VERSION` | `lfx.extension.manifest` |
@@ -476,3 +477,20 @@ the deserialize half is covered by
   `build`-or-`outputs` requirement.  Surfaced by the partner graduations
   (`lfx-datastax` et al.); previously-passing bundles are unaffected
   (strictly fewer false positives).
+- **Manifest `providers[]` — bundles can register model providers (additive).**
+  `ExtensionManifest` gains an optional `providers[]` list
+  (`ProviderManifestEntry`).  Each entry declares a model provider — name,
+  metadata (icon, credential variables, `mapping.model_class`), optional lazy
+  `model_class` / `embedding` import refs, `api_key_required`, `live` /
+  `conditional_live`, and dotted-path `live_discovery` / `validator` callables —
+  which the loader merges into lfx's unified model system at load time via
+  `lfx.base.models.provider_registry`.  Built-in providers always win on a name
+  collision.  `bundles[]` is now **0-or-1** rather than exactly one, so a
+  *provider-only* extension may ship providers with no component bundle; an
+  extension must declare at least one of `bundles` or `providers`.  Existing
+  single-bundle manifests are unaffected.
+- **New typed error codes (additive): `provider-invalid`, `provider-skipped`.**
+  A malformed provider spec surfaces `provider-invalid`; a provider whose name
+  collides with a built-in or already-loaded provider surfaces
+  `provider-skipped`.  Both are warning-only — the rest of the extension still
+  loads — so adding them is backward-compatible (no `BUNDLE_API_VERSION` bump).
