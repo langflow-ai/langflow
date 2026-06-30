@@ -1,7 +1,18 @@
 import * as Form from "@radix-ui/react-form";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/utils/utils";
 import type { ModalConfigProps } from "../index";
 
 function toDateInputValue(date: Date): string {
@@ -10,6 +21,21 @@ function toDateInputValue(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function parseLocalDate(value: string): Date | undefined {
+  // Parse "YYYY-MM-DD" as local time. `new Date("YYYY-MM-DD")` would parse as
+  // UTC midnight, shifting the day for UTC+ users — mirror toDateInputValue.
+  if (!value) return undefined;
+  const [y, m, d] = value.split("-").map(Number);
+  if (!y || !m || !d) return undefined;
+  return new Date(y, m - 1, d);
+}
+
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
 const EXPIRY_PRESETS = [
@@ -46,7 +72,8 @@ export const FormKeyRender = ({
   setExpiresAt: (value: string) => void;
 }) => {
   const { t } = useTranslation();
-  const today = toDateInputValue(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const selectedDate = parseLocalDate(expiresAt);
 
   return (
     <div className="flex flex-col gap-4">
@@ -83,18 +110,40 @@ export const FormKeyRender = ({
             </span>
           </Label>
         </Form.Label>
-        <Form.Control asChild>
-          <Input
-            type="date"
-            id="expires-at-input"
-            value={expiresAt}
-            min={today}
-            onChange={({ target: { value } }) => {
-              setExpiresAt(value);
-            }}
-            className="[color-scheme:light] dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:opacity-80"
-          />
-        </Form.Control>
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <Form.Control asChild>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                id="expires-at-input"
+                data-testid="expires-at-input"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !selectedDate && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 size-4 shrink-0" />
+                {selectedDate
+                  ? format(selectedDate, "PP")
+                  : t("apiKey.expirationPlaceholder", "No expiration")}
+              </Button>
+            </PopoverTrigger>
+          </Form.Control>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              defaultMonth={selectedDate}
+              onSelect={(date) => {
+                setExpiresAt(date ? toDateInputValue(date) : "");
+                setCalendarOpen(false);
+              }}
+              disabled={{ before: startOfToday() }}
+              autoFocus
+            />
+          </PopoverContent>
+        </Popover>
         <div className="mt-2 flex items-center gap-1.5">
           {EXPIRY_PRESETS.map((preset) => {
             const value = calcPresetDate(preset);

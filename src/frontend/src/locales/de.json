@@ -51,6 +51,7 @@
   "alerts.noTemplateVariables": "Ihre Vorlage enthält keine Variablen.",
   "alerts.notificationsTitle": "Benachrichtigungen",
   "apiKey.expirationDate": "Ablaufdatum",
+  "apiKey.expirationPlaceholder": "Kein Ablaufdatum",
   "apiKey.expiry.1month": "in einem Monat",
   "apiKey.expiry.1week": "in einer Woche",
   "apiKey.expiry.1year": "in einem Jahr",

@@ -51,6 +51,7 @@
   "alerts.noTemplateVariables": "このテンプレートには変数が含まれていません。",
   "alerts.notificationsTitle": "通知",
   "apiKey.expirationDate": "有効期限",
+  "apiKey.expirationPlaceholder": "有効期限なし",
   "apiKey.expiry.1month": "今日から1ヶ月後",
   "apiKey.expiry.1week": "今日から1週間後",
   "apiKey.expiry.1year": "今日から1年後",

@@ -51,6 +51,7 @@
   "alerts.noTemplateVariables": "Tu plantilla no contiene ninguna variable.",
   "alerts.notificationsTitle": "Notificaciones",
   "apiKey.expirationDate": "Fecha de caducidad",
+  "apiKey.expirationPlaceholder": "Sin caducidad",
   "apiKey.expiry.1month": "Dentro de un mes a partir de hoy",
   "apiKey.expiry.1week": "Dentro de una semana",
   "apiKey.expiry.1year": "Dentro de un año a partir de hoy",
