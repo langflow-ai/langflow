@@ -5,7 +5,7 @@ Two public per-flow endpoints, both behind ``LANGFLOW_A2A_ENABLED`` (default off
 - ``GET  /api/v1/a2a/{flow_id}/.well-known/agent-card.json`` serves the agent card.
 - ``POST /api/v1/a2a/{flow_id}/jsonrpc`` serves the A2A JSON-RPC surface
   (``message/send`` runs the flow and returns a terminal Task; ``tasks/get``
-  reads it back from the in-memory task store).
+  reads it back from the durable, DB-backed task store).
 
 The router is mounted unconditionally and a per-request guard returns 404 when
 the flag is off, so the routes are indistinguishable from "not mounted". This
@@ -13,23 +13,27 @@ mirrors the extensions router and avoids the import-time / env-file ordering
 trap of reading a module-level flag.
 
 The a2a-sdk server stack is protobuf-based. One shared ``DefaultRequestHandler``
-+ ``InMemoryTaskStore`` + ``JsonRpcDispatcher`` serve every flow; the per-request
++ ``DurableTaskStore`` + ``JsonRpcDispatcher`` serve every flow; the per-request
 ``flow_id`` is carried via the server call-context state into the protocol-pure
-executor (``a2a_executor.FlowAgentExecutor``). Durable task storage and streaming
-are separate, later slices.
+executor (``a2a_executor.FlowAgentExecutor``). Tasks persist in the ``a2a_tasks``
+table so they survive restart and are visible across workers. Streaming is a
+separate, later slice.
 """
 
+from typing import Any
 from uuid import UUID, uuid4
 
 from a2a.server.context import ServerCallContext
+from a2a.server.owner_resolver import resolve_user_scope
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.routes.common import DefaultServerCallContextBuilder
 from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
-from a2a.server.tasks import InMemoryTaskStore
+from a2a.server.tasks import TaskStore
 from a2a.types import a2a_pb2 as pb
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
+from google.protobuf.json_format import MessageToDict, ParseDict
 from lfx.schema.workflow import WorkflowExecutionResponse, WorkflowRunRequest
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
 from lfx.workflow.converters import parse_workflow_run_request
 from sqlmodel import select
 
@@ -38,7 +42,7 @@ from langflow.api.v1.a2a_executor import FlowAgentExecutor
 from langflow.api.v1.a2a_utils import build_agent_card
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
-from langflow.services.database.models import Flow
+from langflow.services.database.models import A2ATask, Flow
 from langflow.services.database.models.flow.model import FlowType
 
 router = APIRouter(prefix="/a2a", tags=["a2a"])
@@ -94,12 +98,53 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecution
     )
 
 
+class DurableTaskStore(TaskStore):
+    """DB-backed A2A task store keyed by ``(task_id, owner)``.
+
+    One short session per op, so tasks survive a restart and are shared across workers
+    (unlike the SDK in-memory store). Owner-scoped to match the SDK contract; ``owner``
+    is '' on the anonymous public endpoint. The whole proto Task is stored as one JSON
+    blob since the mounted surface only does point lookups by id.
+    """
+
+    async def save(self, task: pb.Task, context: ServerCallContext) -> None:
+        owner = resolve_user_scope(context)
+        blob: dict[str, Any] = MessageToDict(task)
+        async with session_scope() as session:
+            row = await session.get(A2ATask, (task.id, owner))
+            if row is None:
+                session.add(A2ATask(id=task.id, owner=owner, task=blob))
+            else:
+                row.task = blob  # fresh dict reference flags the JSON column dirty
+
+    async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
+        owner = resolve_user_scope(context)
+        async with session_scope_readonly() as session:  # pure read, no commit
+            row = await session.get(A2ATask, (task_id, owner))
+            blob = row.task if row is not None else None
+        if blob is None:
+            return None
+        task = pb.Task()
+        ParseDict(blob, task)
+        return task
+
+    async def list(self, params: pb.ListTasksRequest, context: ServerCallContext) -> pb.ListTasksResponse:
+        # ponytail: tasks/list isn't routed this slice; implement it (and decompose
+        # context_id/status into columns) when F5/F7 mount a list/filter path.
+        raise NotImplementedError
+
+    async def delete(self, task_id: str, context: ServerCallContext) -> None:
+        # ponytail: no mounted path calls delete this slice.
+        raise NotImplementedError
+
+
 # One shared handler/store/dispatcher serve every flow; the per-request flow_id
 # selects the flow. agent_card is an empty proto card (only read on stream/push
 # paths, which this slice doesn't mount); the real per-flow card is the GET route.
+# DurableTaskStore does no DB work at construction, so the import-time singleton is safe.
 _HANDLER = DefaultRequestHandler(
     agent_executor=FlowAgentExecutor(_run_flow),
-    task_store=InMemoryTaskStore(),
+    task_store=DurableTaskStore(),
     agent_card=pb.AgentCard(),
 )
 _DISPATCHER = JsonRpcDispatcher(
