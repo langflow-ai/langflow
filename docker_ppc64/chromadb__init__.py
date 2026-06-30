@@ -1,62 +1,61 @@
-from typing import Dict, Optional, Union
 import logging
-from chromadb.api.client import Client as ClientCreator
+import os
+from pathlib import Path
+
+import chromadb.config
+from chromadb.api import AdminAPI, AsyncClientAPI, ClientAPI
+from chromadb.api.async_client import AsyncClient as AsyncClientCreator
 from chromadb.api.client import (
     AdminClient as AdminClientCreator,
 )
-from chromadb.api.async_client import AsyncClient as AsyncClientCreator
-from chromadb.auth.token_authn import TokenTransportHeader
-import chromadb.config
-from chromadb.config import DEFAULT_DATABASE, DEFAULT_TENANT, Settings
-from chromadb.api import AdminAPI, AsyncClientAPI, ClientAPI
+from chromadb.api.client import Client as ClientCreator
 from chromadb.api.models.Collection import Collection
 from chromadb.api.types import (
+    URI,
+    BoolInvertedIndexConfig,
     Cmek,
     CollectionMetadata,
-    UpdateMetadata,
     Documents,
     EmbeddingFunction,
     Embeddings,
-    URI,
-    URIs,
+    FloatInvertedIndexConfig,
+    FtsIndexConfig,
+    GetResult,
+    HnswIndexConfig,
     IDs,
     Include,
+    IntInvertedIndexConfig,
     Metadata,
     Metadatas,
-    ReadLevel,
-    Where,
     QueryResult,
-    GetResult,
-    WhereDocument,
-    UpdateCollectionMetadata,
-    SparseVector,
-    SparseVectors,
-    SparseEmbeddingFunction,
     Schema,
-    VectorIndexConfig,
-    HnswIndexConfig,
     SpannIndexConfig,
-    FtsIndexConfig,
+    SparseEmbeddingFunction,
+    SparseVector,
     SparseVectorIndexConfig,
+    SparseVectors,
     StringInvertedIndexConfig,
-    IntInvertedIndexConfig,
-    FloatInvertedIndexConfig,
-    BoolInvertedIndexConfig,
+    UpdateCollectionMetadata,
+    UpdateMetadata,
+    URIs,
+    VectorIndexConfig,
+    Where,
+    WhereDocument,
 )
-
-# Import Search API components
-from chromadb.execution.expression.plan import Search
+from chromadb.auth.token_authn import TokenTransportHeader
+from chromadb.config import DEFAULT_DATABASE, DEFAULT_TENANT, Settings
 from chromadb.execution.expression.operator import (
+    K,  # Alias for Key
     # Key builder for where conditions and field selection
     Key,
-    K,  # Alias for Key
     # KNN-based ranking for hybrid search
     Knn,
     # Reciprocal Rank Fusion for combining rankings
     Rrf,
 )
-from pathlib import Path
-import os
+
+# Import Search API components
+from chromadb.execution.expression.plan import Search
 
 # Re-export types from chromadb.types
 __all__ = [
@@ -138,12 +137,11 @@ if not is_client:
     if sqlite3.sqlite_version_info < (3, 35, 0):
         if IN_COLAB:
             # In Colab, hotswap to pysqlite-binary if it's too old
-            import subprocess
             import sys
 
-            #subprocess.check_call(
+            # subprocess.check_call(
             #    [sys.executable, "-m", "pip", "install", "pysqlite3-binary"]
-            #)
+            # )
             __import__("pysqlite3")
             sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
         else:
@@ -167,7 +165,7 @@ def get_settings() -> Settings:
 
 
 def EphemeralClient(
-    settings: Optional[Settings] = None,
+    settings: Settings | None = None,
     tenant: str = DEFAULT_TENANT,
     database: str = DEFAULT_DATABASE,
 ) -> ClientAPI:
@@ -196,8 +194,8 @@ def EphemeralClient(
 
 
 def PersistentClient(
-    path: Union[str, Path] = "./chroma",
-    settings: Optional[Settings] = None,
+    path: str | Path = "./chroma",
+    settings: Settings | None = None,
     tenant: str = DEFAULT_TENANT,
     database: str = DEFAULT_DATABASE,
 ) -> ClientAPI:
@@ -228,13 +226,12 @@ def PersistentClient(
 
 
 def RustClient(
-    path: Optional[str] = None,
-    settings: Optional[Settings] = None,
+    path: str | None = None,
+    settings: Settings | None = None,
     tenant: str = DEFAULT_TENANT,
     database: str = DEFAULT_DATABASE,
 ) -> ClientAPI:
-    """
-    Creates an ephemeral or persistance instance of Chroma that saves to disk.
+    """Creates an ephemeral or persistance instance of Chroma that saves to disk.
     This is useful for testing and development, but not recommended for production use.
 
     Args:
@@ -260,8 +257,8 @@ def HttpClient(
     host: str = "localhost",
     port: int = 8000,
     ssl: bool = False,
-    headers: Optional[Dict[str, str]] = None,
-    settings: Optional[Settings] = None,
+    headers: dict[str, str] | None = None,
+    settings: Settings | None = None,
     tenant: str = DEFAULT_TENANT,
     database: str = DEFAULT_DATABASE,
 ) -> ClientAPI:
@@ -282,7 +279,6 @@ def HttpClient(
     Raises:
         ValueError: If settings specify a different host or port.
     """
-
     if settings is None:
         settings = Settings()
 
@@ -314,8 +310,8 @@ async def AsyncHttpClient(
     host: str = "localhost",
     port: int = 8000,
     ssl: bool = False,
-    headers: Optional[Dict[str, str]] = None,
-    settings: Optional[Settings] = None,
+    headers: dict[str, str] | None = None,
+    settings: Settings | None = None,
     tenant: str = DEFAULT_TENANT,
     database: str = DEFAULT_DATABASE,
 ) -> AsyncClientAPI:
@@ -339,7 +335,6 @@ async def AsyncHttpClient(
     Raises:
         ValueError: If settings specify a different host or port.
     """
-
     if settings is None:
         settings = Settings()
 
@@ -364,16 +359,14 @@ async def AsyncHttpClient(
     settings.chroma_server_ssl_enabled = ssl
     settings.chroma_server_headers = headers
 
-    return await AsyncClientCreator.create(
-        tenant=tenant, database=database, settings=settings
-    )
+    return await AsyncClientCreator.create(tenant=tenant, database=database, settings=settings)
 
 
 def CloudClient(
-    tenant: Optional[str] = None,
-    database: Optional[str] = None,
-    api_key: Optional[str] = None,
-    settings: Optional[Settings] = None,
+    tenant: str | None = None,
+    database: str | None = None,
+    api_key: str | None = None,
+    settings: Settings | None = None,
     *,  # Following arguments are keyword-only, intended for testing only.
     cloud_host: str = "api.trychroma.com",
     cloud_port: int = 443,
@@ -395,7 +388,6 @@ def CloudClient(
     Raises:
         ValueError: If no API key is provided or available in the environment.
     """
-
     required_args = [
         CloudClientArg(name="api_key", env_var="CHROMA_API_KEY", value=api_key),
     ]
@@ -432,9 +424,7 @@ def CloudClient(
     settings.chroma_server_http_port = cloud_port
     settings.chroma_server_ssl_enabled = enable_ssl
 
-    settings.chroma_client_auth_provider = (
-        "chromadb.auth.token_authn.TokenAuthClientProvider"
-    )
+    settings.chroma_client_auth_provider = "chromadb.auth.token_authn.TokenAuthClientProvider"
     settings.chroma_client_auth_credentials = api_key
     settings.chroma_auth_token_transport_header = TokenTransportHeader.X_CHROMA_TOKEN
     settings.chroma_overwrite_singleton_tenant_database_access_from_auth = True
@@ -447,13 +437,11 @@ def Client(
     tenant: str = DEFAULT_TENANT,
     database: str = DEFAULT_DATABASE,
 ) -> ClientAPI:
-    """
-    Return a running chroma.API instance
+    """Return a running chroma.API instance
 
     tenant: The tenant to use for this client. Defaults to the default tenant.
     database: The database to use for this client. Defaults to the default database.
     """
-
     # Make sure paramaters are the correct types -- users can pass anything.
     tenant = str(tenant)
     database = str(database)
