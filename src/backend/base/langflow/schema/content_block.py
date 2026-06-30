@@ -3,7 +3,15 @@ from typing import Annotated
 from pydantic import BaseModel, Discriminator, Field, Tag, field_serializer, field_validator
 from typing_extensions import TypedDict
 
-from .content_types import CodeContent, ErrorContent, JSONContent, MediaContent, TextContent, ToolContent
+from .content_types import (
+    CodeContent,
+    ErrorContent,
+    HumanInputContent,
+    JSONContent,
+    MediaContent,
+    TextContent,
+    ToolContent,
+)
 
 
 def _get_type(d: dict | BaseModel) -> str | None:
@@ -12,14 +20,15 @@ def _get_type(d: dict | BaseModel) -> str | None:
     return getattr(d, "type", None)
 
 
-# Create a union type of all content types
+# Mirror of the lfx ContentType union — keep both in sync (a missing tag breaks MessageRead validation).
 ContentType = Annotated[
     Annotated[ToolContent, Tag("tool_use")]
     | Annotated[ErrorContent, Tag("error")]
     | Annotated[TextContent, Tag("text")]
     | Annotated[MediaContent, Tag("media")]
     | Annotated[CodeContent, Tag("code")]
-    | Annotated[JSONContent, Tag("json")],
+    | Annotated[JSONContent, Tag("json")]
+    | Annotated[HumanInputContent, Tag("human_input")],
     Discriminator(_get_type),
 ]
 

@@ -2133,6 +2133,7 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
     mock_graph.run_manager = MagicMock()
     mock_graph.run_manager.vertices_being_run = set()
     mock_graph.build_vertex = _blocking_build_vertex
+    mock_graph.check_and_handle_pause = AsyncMock()  # HITL pause seam awaited per-vertex
     mock_graph.end_all_traces = _fake_end_all_traces
     mock_graph.end_all_traces_in_context = _fake_end_all_traces_in_context
 

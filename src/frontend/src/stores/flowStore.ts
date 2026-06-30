@@ -11,7 +11,10 @@ import { v5 as uuidv5 } from "uuid";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
-import { runFlowAGUI } from "@/controllers/API/agui/run-flow-bridge";
+import {
+  runFlowAGUI,
+  runFlowHITL,
+} from "@/controllers/API/agui/run-flow-bridge";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
@@ -170,6 +173,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
+  awaitingInput: false,
   buildStartTime: null,
   buildDuration: null,
   buildingFlowId: null,
@@ -369,6 +373,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       buildingFlowId: !isBuilding ? null : current.buildingFlowId,
       buildingSessionId: !isBuilding ? null : current.buildingSessionId,
     });
+  },
+  setAwaitingInput: (awaitingInput) => {
+    set({ awaitingInput });
   },
   setBuildStartTime: (time) => {
     set({ buildStartTime: time });
@@ -928,9 +935,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const buildController = new AbortController();
     get().setBuildController(buildController);
 
-    // Always run through the v2 workflows endpoint. Current frontend nodes
-    // + edges are sent so unsaved tweaks (dropdowns, text inputs) run as
-    // the user sees them.
+    // Playground runs are namespaced by visitor id so unsaved tweaks run as the user sees them.
     let buildingFlowId = currentFlow!.id;
     if (get().playgroundPage) {
       const authState = useAuthStore.getState();
@@ -943,7 +948,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       buildingFlowId = uuidv5(`${visitorId}_${currentFlow!.id}`, uuidv5.DNS);
     }
     get().setBuildingSession(buildingFlowId, session ?? null);
-    await runFlowAGUI({
+
+    // Only the durable background path supports a mid-run pause/resume.
+    const runArgs = {
       flowId: currentFlow!.id,
       message: input_value,
       threadId: session,
@@ -953,7 +960,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       files,
       signal: buildController.signal,
       silent,
+    };
+    const canSuspend = get().nodes.some((node) => {
+      if (node.data?.type === "HumanInput") return true;
+      const rows = node.data?.node?.template?.tools_metadata?.value;
+      return (
+        Array.isArray(rows) &&
+        rows.some((row) => (row?.approval_actions?.length ?? 0) > 0)
+      );
     });
+    await (canSuspend ? runFlowHITL(runArgs) : runFlowAGUI(runArgs));
 
     // Invalidate KB-related caches so any KnowledgeIngestion node that ran
     // inside this build surfaces its updated stats / runs the next time the
@@ -1297,7 +1313,7 @@ export function syncNodeTranslations(): void {
           knownFields[fieldName]?.display_name ?? [];
         const isKnownTranslation =
           knownFieldDisplayNames.length === 0 ||
-          knownFieldDisplayNames.includes(currentDisplayName);
+          knownFieldDisplayNames.includes(currentDisplayName!);
         if (isKnownTranslation) {
           updatedTemplate[fieldName] = {
             ...updatedTemplate[fieldName],

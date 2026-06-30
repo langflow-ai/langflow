@@ -6,6 +6,8 @@ import IconComponent, {
 } from "@/components/common/genericIconComponent";
 import MessageMetadata from "@/components/common/messageMetadataComponent";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
+import HumanInputCard from "@/components/core/chatComponents/HumanInputCard";
+import { findHumanInputContent } from "@/controllers/API/agui/human-input-card";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
 import useAlertStore from "@/stores/alertStore";
@@ -44,6 +46,33 @@ export const BotMessage = memo(
 
     const isEmpty = decodedMessage?.trim() === "";
     const chatMessage = chat.message ? chat.message.toString() : "";
+    // ContentBlockDisplay renders only tool_use content, so the HITL card is rendered directly below.
+    const humanInputContent = findHumanInputContent(chat.content_blocks);
+    const hasContentBlocks = (chat.content_blocks?.length ?? 0) > 0;
+    // ContentBlockDisplay only renders tool_use content; a block holding just the agent's
+    // "Input" text content displays nothing, so it must not count as renderable here.
+    const hasRenderableContent = (chat.content_blocks ?? []).some((block) =>
+      (block?.contents ?? []).some(
+        (content) => (content as { type?: string })?.type === "tool_use",
+      ),
+    );
+    // A paused agent leaves a "partial" bubble with empty/"[]" text and no tool_use content yet;
+    // hide it unless it has tool content, the HITL card, files/audio, or is the building message.
+    const isContentlessText =
+      chatMessage.trim() === "" || chatMessage.trim() === "[]";
+    const isBlankPlaceholder =
+      chat.properties?.state === "partial" &&
+      isContentlessText &&
+      !hasRenderableContent &&
+      !humanInputContent &&
+      !isAudioMessage &&
+      (chat.files?.length ?? 0) === 0 &&
+      !isStreaming &&
+      (!isBuilding || !lastMessage);
+    const showThinkingDots =
+      (chatMessage === "" || (isEmpty && !isStreaming)) &&
+      isBuilding &&
+      lastMessage;
     const { mutate: updateMessageMutation } = useUpdateMessage();
 
     const handleEditMessage = (message: string) => {
@@ -128,6 +157,8 @@ export const BotMessage = memo(
         ? persistedDuration
         : liveDisplayTime;
 
+    if (isBlankPlaceholder) return null;
+
     return (
       <>
         <div className="w-full word-break-break-word mt-2">
@@ -138,7 +169,10 @@ export const BotMessage = memo(
             )}
           >
             <div className="flex w-full items-start gap-3">
-              {(thinkingActive || displayTime > 0 || chatMessage !== "") && (
+              {(thinkingActive ||
+                displayTime > 0 ||
+                chatMessage !== "" ||
+                humanInputContent) && (
                 <div
                   className="relative hidden h-6 w-6 mt-[-1px] flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex border-0"
                   style={
@@ -184,6 +218,12 @@ export const BotMessage = memo(
                   </span>
                 </div>
 
+                {humanInputContent && (
+                  <div className="mt-2">
+                    <HumanInputCard content={humanInputContent} />
+                  </div>
+                )}
+
                 {((chat.content_blocks && chat.content_blocks.length > 0) ||
                   (isBuilding && lastMessage)) && (
                   <ContentBlockDisplay
@@ -211,9 +251,7 @@ export const BotMessage = memo(
                           data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                           className="flex w-full flex-col"
                         >
-                          {(chatMessage === "" || (isEmpty && !isStreaming)) &&
-                          isBuilding &&
-                          lastMessage ? (
+                          {humanInputContent ? null : showThinkingDots ? (
                             <IconComponent
                               name="MoreHorizontal"
                               className="h-8 w-8 animate-pulse"
@@ -232,7 +270,11 @@ export const BotMessage = memo(
                                   <CustomMarkdownField
                                     isAudioMessage={isAudioMessage}
                                     chat={chat}
-                                    isEmpty={isEmpty && !isStreaming}
+                                    isEmpty={
+                                      isEmpty &&
+                                      !isStreaming &&
+                                      !hasContentBlocks
+                                    }
                                     chatMessage={decodedMessage}
                                     editedFlag={editedFlag}
                                   />

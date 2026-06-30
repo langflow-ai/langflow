@@ -1287,6 +1287,7 @@
   "trace.spanTree": "Trace spans",
   "trace.searchRuns": "Search runs...",
   "trace.allStatus": "All Status",
+  "trace.paused": "Paused",
   "trace.input": "Input",
   "trace.output": "Output",
   "trace.run": "Run",

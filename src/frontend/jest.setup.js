@@ -88,6 +88,14 @@ jest.mock("@radix-ui/react-form", () => ({
 }));
 
 jest.mock("react-markdown", () => ({ __esModule: true, default: () => null }));
+// remark/rehype are pure ESM and fail to parse under jest; stub them so any tree importing
+// react-markdown plugins (e.g. HumanInputCard via the canvas node badge) loads.
+jest.mock("remark-gfm", () => ({ __esModule: true, default: () => {} }));
+jest.mock("remark-math", () => ({ __esModule: true, default: () => {} }));
+jest.mock("rehype-mathjax/browser", () => ({
+  __esModule: true,
+  default: () => {},
+}));
 
 // Render children only — tests don't need TooltipProvider context
 jest.mock("@/components/common/shadTooltipComponent", () => ({

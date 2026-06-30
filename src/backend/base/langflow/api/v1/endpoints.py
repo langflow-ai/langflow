@@ -36,6 +36,7 @@ from sqlmodel import select
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.files import get_flow
 from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
+from langflow.api.v1.run_validation import raise_if_hitl_unsupported
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -242,6 +243,7 @@ async def simple_run_flow(
             raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+        raise_if_hitl_unsupported(graph_data)
         # Mirror the Playground's one-time fix in-memory: bind empty fields whose
         # display_name matches a user global variable's default_fields. Without
         # this, API-only workflows never trigger the frontend hook that persists
@@ -726,6 +728,8 @@ async def _run_flow_internal(
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except HTTPException:
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
@@ -993,6 +997,8 @@ async def webhook_run_flow(
         error_msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
         raise HTTPException(status_code=400, detail=error_msg)
 
+    raise_if_hitl_unsupported(flow.data or {})
+
     try:
         # get all webhook components in the flow
         webhook_components = get_all_webhook_components_in_flow(flow.data)
@@ -1150,9 +1156,12 @@ async def experimental_run_flow(
         try:
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
+            raise_if_hitl_unsupported(graph_data)
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
         except CustomComponentValidationError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        except HTTPException:
+            raise
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 

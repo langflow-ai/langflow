@@ -133,6 +133,32 @@ export interface ToolContent extends BaseContent {
   error?: JSONValue | string;
 }
 
+// A human-in-the-loop pause: a decision the user must make before the run resumes.
+export interface HumanInputOption {
+  action_id: string;
+  label?: string;
+}
+
+export interface HumanInputFormField {
+  name: string;
+  type?: string;
+  required?: boolean;
+}
+
+export interface InteractiveContent extends BaseContent {
+  type: "human_input";
+  kind: "tool_approval" | "node_input";
+  request_id: string;
+  prompt?: string;
+  options: HumanInputOption[];
+  schema?: HumanInputFormField[];
+  fields?: HumanInputFormField[];
+  allowed_decisions: string[];
+  // Correlation for the resume round-trip; stamped from the run that paused.
+  job_id?: string;
+  submitted_action?: string;
+}
+
 // Union type for all content types
 export type ContentType =
   | ErrorContent
@@ -140,7 +166,8 @@ export type ContentType =
   | MediaContent
   | JSONContent
   | CodeContent
-  | ToolContent;
+  | ToolContent
+  | InteractiveContent;
 
 // Updated ContentBlock interface
 export interface ContentBlock {

@@ -33,13 +33,18 @@ import {
   useGetTracesQuery,
 } from "@/controllers/API/queries/traces";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
+import { useGetPendingWorkflows } from "@/controllers/API/queries/workflows/use-get-pending-workflows";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import { createFlowTracesColumns } from "./config/flowTraceColumns";
 import { DateRangePopover } from "./DateRangePopover";
 import { TraceDetailView } from "./TraceDetailView";
-import { downloadJson, toUtcIsoForDate } from "./traceViewHelpers";
+import {
+  buildActivityRows,
+  downloadJson,
+  toUtcIsoForDate,
+} from "./traceViewHelpers";
 import { RenderGroupedSessionType } from "./types";
 
 export function FlowInsightsContent({
@@ -69,6 +74,9 @@ export function FlowInsightsContent({
   const [endDateValue, setEndDateValue] = useState<string>("");
   const [groupBySession, setGroupBySession] = useState<boolean>(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  // A resume leaves the SUSPENDED set immediately but the run keeps executing for several
+  // seconds; poll through that window so the run's trace transitions to its final status live.
+  const [resumePolling, setResumePolling] = useState(false);
   const flowIdFromUrl = searchParams.get("id");
   const resolvedFlowId = flowId ?? currentFlowId ?? flowIdFromUrl;
 
@@ -109,6 +117,11 @@ export function FlowInsightsContent({
     [resolvedFlowId, resolvedFlowName],
   );
 
+  const { data: pendingRequests } = useGetPendingWorkflows(
+    { flowId: resolvedFlowId ?? undefined },
+    { enabled: !!resolvedFlowId },
+  );
+
   const {
     data: tracesData,
     isLoading,
@@ -118,7 +131,12 @@ export function FlowInsightsContent({
       flowId: resolvedFlowId ?? null,
       params: {
         query: searchText.trim() ? searchText.trim() : undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
+        // "awaiting_human" is a synthetic, frontend-only status (paused runs have no
+        // TraceTable row); the backend enum would 422 on it, so never forward it.
+        status:
+          statusFilter !== "all" && statusFilter !== "awaiting_human"
+            ? statusFilter
+            : undefined,
         start_time:
           startDate && !(endDateValue && endDateValue < startDate)
             ? toUtcIsoForDate(startDate, false)
@@ -134,10 +152,29 @@ export function FlowInsightsContent({
     {
       enabled: !!resolvedFlowId,
       refetchOnMount: refreshOnMount ? "always" : true,
+      // While runs are paused (and just after a resume), poll so a resolved run's trace
+      // updates from awaiting to its final status without a manual refresh.
+      refetchInterval:
+        (pendingRequests?.length ?? 0) > 0 || resumePolling ? 3000 : false,
     },
   );
 
-  const rows = tracesData?.traces ?? [];
+  const rows = useMemo(
+    () =>
+      buildActivityRows({
+        baseRows: tracesData?.traces ?? [],
+        pendingRequests: pendingRequests ?? [],
+        statusFilter,
+        fallbackName: resolvedFlowName ?? t("trace.flowActivity"),
+      }),
+    [tracesData, pendingRequests, statusFilter, resolvedFlowName, t],
+  );
+
+  const selectedRow = useMemo(
+    () => rows.find((row) => row.id === tracePanelTraceId) ?? null,
+    [rows, tracePanelTraceId],
+  );
+  const selectedPending = selectedRow?.pendingRequest ?? null;
 
   useEffect(() => {
     if (!initialTraceId) return;
@@ -158,7 +195,7 @@ export function FlowInsightsContent({
       }
     });
     return Array.from(groups.entries());
-  }, [groupBySession, tracesData]);
+  }, [groupBySession, rows]);
 
   const expandedSessionIds = useMemo(
     () => groupedRows.map(([sessionId]) => sessionId),
@@ -182,7 +219,14 @@ export function FlowInsightsContent({
     setTracePanelOpen(true);
   }, []);
 
-  const totalRuns = tracesData?.total ?? rows.length;
+  const syntheticCount = useMemo(
+    () => rows.filter((row) => row.isPending).length,
+    [rows],
+  );
+  const totalRuns =
+    statusFilter === "awaiting_human"
+      ? rows.length
+      : (tracesData?.total ?? 0) + syntheticCount;
   const totalPages = Math.max(
     1,
     tracesData?.pages ?? Math.ceil(totalRuns / pageSize),
@@ -313,6 +357,9 @@ export function FlowInsightsContent({
                 <SelectItem value="all">{t("trace.allStatus")}</SelectItem>
                 <SelectItem value="ok">{t("trace.success")}</SelectItem>
                 <SelectItem value="error">{t("trace.error")}</SelectItem>
+                <SelectItem value="awaiting_human">
+                  {t("trace.paused")}
+                </SelectItem>
               </SelectContent>
             </Select>
 
@@ -447,6 +494,21 @@ export function FlowInsightsContent({
               <TraceDetailView
                 traceId={tracePanelTraceId}
                 flowName={resolvedFlowName}
+                pendingRequest={selectedPending}
+                hasTrace={!selectedRow?.isPending}
+                pollUpdates={resumePolling}
+                onResolved={() => {
+                  refetch();
+                  // Why: a synthetic paused row has no real trace — polling its job_id 404s, so
+                  // close it; real-trace rows stay open and poll until the run finishes in place.
+                  if (selectedRow?.isPending) {
+                    setTracePanelOpen(false);
+                    setTracePanelTraceId(null);
+                    return;
+                  }
+                  setResumePolling(true);
+                  window.setTimeout(() => setResumePolling(false), 30000);
+                }}
               />
             </div>
           </div>

@@ -161,6 +161,7 @@ async def run_flow(
     session_id: str | None = None,
     event_manager: "EventManager | None" = None,
     upgrade_flow: str | None = None,
+    human_input: bool | None = None,
 ) -> dict:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -186,6 +187,10 @@ async def run_flow(
         upgrade_flow: Component compatibility mode. ``'check'`` refuses to run if any
             component is outdated or blocked. ``'safe'`` auto-applies safe upgrades and
             aborts on breaking or blocked components.
+        human_input: Interactive human-in-the-loop. ``None`` (default) auto-enables it
+            when the flow has a pausing node (e.g. HumanInput) and stdin is a TTY;
+            ``True``/``False`` force it on/off. When active the flow runs via the
+            pause/resume driver, prompting at the terminal for each decision.
 
     Returns:
         dict: Result data containing the execution results, logs, and optionally timing info
@@ -443,34 +448,56 @@ async def run_flow(
         # fall through to os.environ on miss instead of erroring the build).
         fallback_to_env_vars = resolve_fallback_to_env_vars()
 
-        async for result in graph.async_start(
-            inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars
-        ):
-            result_count += 1
-            if verbosity > 0:
-                logger.debug(f"Processing result #{result_count}")
-                if hasattr(result, "vertex") and hasattr(result.vertex, "display_name"):
-                    logger.debug(f"Component: {result.vertex.display_name}")
-            if timing:
-                step_end_time = time.time()
-                step_duration = step_end_time - execution_step_start
+        from lfx.run.hitl import flow_has_pausing_node
 
-                # Extract component information
-                if hasattr(result, "vertex"):
-                    component_name = getattr(result.vertex, "display_name", "Unknown")
-                    component_id = getattr(result.vertex, "id", "Unknown")
-                    component_timings.append(
-                        {
-                            "component": component_name,
-                            "component_id": component_id,
-                            "duration": step_duration,
-                            "cumulative_time": step_end_time - execution_start_time,
-                        }
-                    )
+        # None auto-enables only for a known pausing node on an interactive terminal.
+        hitl_active = human_input if human_input is not None else (flow_has_pausing_node(graph) and sys.stdin.isatty())
+        if hitl_active:
+            from lfx.run.hitl import run_graph_with_human_input, terminal_decision_provider
 
-                execution_step_start = step_end_time
+            # Restore real stderr so the interactive prompt reaches the terminal.
+            sys.stderr = original_stderr
+            try:
+                results = await run_graph_with_human_input(
+                    graph,
+                    decision_provider=terminal_decision_provider,
+                    input_value=final_input_value,
+                    event_manager=event_manager,
+                    fallback_to_env_vars=fallback_to_env_vars,
+                )
+            finally:
+                if verbosity < VERBOSITY_FULL:
+                    sys.stderr = captured_stderr
+            result_count = len(results)
+        else:
+            async for result in graph.async_start(
+                inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars
+            ):
+                result_count += 1
+                if verbosity > 0:
+                    logger.debug(f"Processing result #{result_count}")
+                    if hasattr(result, "vertex") and hasattr(result.vertex, "display_name"):
+                        logger.debug(f"Component: {result.vertex.display_name}")
+                if timing:
+                    step_end_time = time.time()
+                    step_duration = step_end_time - execution_step_start
 
-            results.append(result)
+                    # Extract component information
+                    if hasattr(result, "vertex"):
+                        component_name = getattr(result.vertex, "display_name", "Unknown")
+                        component_id = getattr(result.vertex, "id", "Unknown")
+                        component_timings.append(
+                            {
+                                "component": component_name,
+                                "component_id": component_id,
+                                "duration": step_duration,
+                                "cumulative_time": step_end_time - execution_start_time,
+                            }
+                        )
+
+                    execution_step_start = step_end_time
+
+                results.append(result)
 
         logger.info(f"Graph execution completed. Processed {result_count} results")
 
