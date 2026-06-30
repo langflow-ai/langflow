@@ -78,7 +78,7 @@ def test_basic_setup():
     component = EmpirioLabsModelComponent()
     component.set_attributes(dict(DEFAULT_KWARGS))
 
-    assert component.display_name == "EmpirioLabs"
+    assert component.display_name == "EmpirioLabs AI"
     assert component.description == "Generates text using EmpirioLabs AI LLMs (OpenAI compatible)."
     assert component.icon == "EmpirioLabs"
     assert component.name == "EmpirioLabsModel"

@@ -23,7 +23,7 @@ ASPECT_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9", "9:2
 
 
 class EmpirioLabsImageGenerationComponent(Component):
-    display_name = "EmpirioLabs Image Generation"
+    display_name = "EmpirioLabs AI Image Generation"
     description = "Generate an image from a text prompt using EmpirioLabs AI image models such as Seedream, \
         Qwen-Image, FLUX, Nova Canvas, and HunyuanImage."
     documentation = "https://docs.empiriolabs.ai"

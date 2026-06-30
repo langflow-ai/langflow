@@ -1,7 +1,7 @@
 ---
-title: EmpirioLabs
+title: EmpirioLabs AI
 slug: /bundles-empiriolabs
-description: Use EmpirioLabs models in Langflow to generate text or output a Language Model for downstream Components.
+description: Use EmpirioLabs AI models in Langflow to generate text or output a Language Model for downstream Components.
 ---
 
 import Icon from "@site/src/components/icon";
@@ -12,7 +12,7 @@ This page describes the components that are available in the **EmpirioLabs** bun
 
 For more information about EmpirioLabs features and functionality used by EmpirioLabs components, see the [EmpirioLabs documentation](https://docs.empiriolabs.ai).
 
-## EmpirioLabs text generation
+## EmpirioLabs AI text generation
 
 This component generates text using EmpirioLabs' language models through the EmpirioLabs OpenAI-compatible endpoints.
 
@@ -22,7 +22,7 @@ Use the **Language Model** output when you want to use an EmpirioLabs model as t
 
 For more information, see [Language model components](/components-models).
 
-### EmpirioLabs parameters
+### EmpirioLabs AI parameters
 
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
@@ -42,13 +42,13 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 | stream | Boolean | Input parameter. Whether to stream the response. Default: false. |
 | model | LanguageModel | Output parameter. An instance of ChatOpenAI configured with EmpirioLabs parameters. |
 
-## EmpirioLabs image generation
+## EmpirioLabs AI image generation
 
 This component generates an image from a text prompt using EmpirioLabs' image models (such as Seedream, Qwen-Image, FLUX, Nova Canvas, and HunyuanImage) through the EmpirioLabs OpenAI-compatible Images endpoint.
 
 It outputs the API response as [`Data`](/data-types#data), including the generated image URL (or base64 content) when available.
 
-### EmpirioLabs image generation parameters
+### EmpirioLabs AI image generation parameters
 
 | Name | Type | Description |
 |------|------|-------------|

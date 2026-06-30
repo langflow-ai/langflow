@@ -30,7 +30,7 @@ MODEL_NAMES = EMPIRIOLABS_MODELS  # reverse compatibility
 
 
 class EmpirioLabsModelComponent(LCModelComponent):
-    display_name = "EmpirioLabs"
+    display_name = "EmpirioLabs AI"
     description = "Generates text using EmpirioLabs AI LLMs (OpenAI compatible)."
     icon = "EmpirioLabs"
     name = "EmpirioLabsModel"
