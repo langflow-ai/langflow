@@ -3,52 +3,42 @@ title: Authorization
 slug: /authorization
 ---
 
-Langflow ships with a pluggable authorization layer that provides role-based access control (RBAC) for flows, projects, deployments, files, variables, and knowledge bases.
+Langflow includes a pluggable authorization layer for role-based access control (RBAC) over flows, projects, deployments, files, variables, and knowledge bases.
 
-The authorization infrastructure — database schema, API routes, audit logging, and route guards — is present in all Langflow deployments.
-Out of the box, the OSS pass-through implementation allows every action for every authenticated user, so enabling the feature flag alone does not restrict access.
-Real allow/deny enforcement requires a registered authorization plugin.
+The authorization infrastructure is present in all Langflow deployments, but the open-source build registers a pass-through service that **always allows** every action for every authenticated user.
 
-:::note
-Contact your Langflow account team if you need an authorization plugin that enforces RBAC policies.
-:::
+Setting `LANGFLOW_AUTHZ_ENABLED=true` without an enforcement plugin **does not** restrict access. Route guards still run and audit rows can still be written, but no policy is applied.
 
-## How authorization works
+Per-resource RBAC enforcement requires a registered authorization plugin.
+Langflow OSS **does not** include a registered authorization plugin.
 
-When authorization is enabled, each API request passes through a guard that calls the registered authorization service with a tuple of:
+## Enable RBAC with an enforcement plugin
 
-- **Subject** — the acting user (`user:{uuid}`)
-- **Domain** — the scope of the resource (`project:{uuid}`, `workspace:{uuid}`, or `*`)
-- **Object** — the specific resource (`flow:{uuid}`, `deployment:{uuid}`, etc.)
-- **Action** — the operation being performed (`read`, `write`, `create`, `delete`, `execute`, `deploy`)
+The following steps apply when you have a registered enforcement plugin.
 
-The authorization service returns allow or deny. The OSS pass-through always returns allow.
-A registered plugin reads the role and share tables and applies its policy.
+1. Set `LANGFLOW_AUTHZ_AUDIT_ENABLED=true` and run Langflow in a staging environment. Review the [audit log](#audit-log-api) to understand what decisions would be made before enforcement is on.
 
-Superusers bypass authorization checks by default (see `LANGFLOW_AUTHZ_SUPERUSER_BYPASS`).
+2. Install and register the enforcement plugin following its setup guide.
+
+3. Set `LANGFLOW_AUTHZ_ENABLED=true`. The plugin reads the role and share tables and applies its policy.
+
+4. Use the [roles API](#roles-api) and [role assignments API](#role-assignments-api) to assign the built-in `viewer`, `developer`, or `admin` roles to your users, or create custom roles.
+
+5. Use the [shares API](#shares-api) to grant cross-user access where needed.
 
 ## Configure authorization environment variables
 
 | Variable | Description | Default |
 |---|---|---|
-| `LANGFLOW_AUTHZ_ENABLED` | Enable authorization enforcement. Requires a registered authorization plugin. When `false`, all requests pass regardless of roles or shares. | `false` |
+| `LANGFLOW_AUTHZ_ENABLED` | Enable authorization enforcement. Requires a registered enforcement plugin. When `false`, all requests pass regardless of roles or shares. | `false` |
 | `LANGFLOW_AUTHZ_SUPERUSER_BYPASS` | When `true`, active superusers bypass authorization checks. The plugin may still audit the decision. | `true` |
 | `LANGFLOW_AUTHZ_AUDIT_ENABLED` | Write an audit log row for every authorization decision and share-administration action. Works independently of `LANGFLOW_AUTHZ_ENABLED` — set this to `true` while enforcement is off to observe traffic before enabling enforcement. | `false` |
 | `LANGFLOW_AUTHZ_AUDIT_RETENTION_DAYS` | Number of days to retain audit log rows. Set to `0` to disable automatic pruning. | `90` |
 | `LANGFLOW_AUTHZ_AUDIT_CLEANUP_INTERVAL` | Seconds between retention sweep runs. A sweep also runs on startup. Minimum `300`. | `86400` |
 
-:::tip
-You can turn on `LANGFLOW_AUTHZ_AUDIT_ENABLED` without enabling `LANGFLOW_AUTHZ_ENABLED`. This lets you observe what decisions *would* be logged in production before you flip enforcement on.
-:::
-
-:::warning
-`LANGFLOW_AUTHZ_AUDIT_ENABLED` opens a separate database session per audit row. On SQLite this can cause `database is locked` errors under concurrent writes. Use PostgreSQL in production when audit logging is enabled.
-:::
-
 ## System roles
 
-Langflow seeds three built-in system roles that a registered authorization plugin uses as a starting point for policy sync.
-These roles cannot be deleted.
+Langflow seeds three built-in system roles that an enforcement plugin uses as a starting point for policy sync. These roles cannot be deleted.
 
 | Role | Permission slugs |
 |---|---|
@@ -56,19 +46,19 @@ These roles cannot be deleted.
 | `developer` | `viewer` permissions plus `flow:write`, `flow:execute`, `file:write`, `variable:write` |
 | `admin` | All actions on all resource types |
 
-You can create additional roles with the [roles API](#roles-api).
+You can create additional roles with the [roles API](#roles-api). Role assignments take effect only after an enforcement plugin is registered.
 
 ## Authorization API reference
 
-All authorization endpoints are under `/api/v1/authz/`.
-Most write operations require superuser privileges.
+All authorization endpoints are under `/api/v1/authz/`. Write operations require superuser privileges.
+
+These endpoints manage the RBAC data model. An enforcement plugin consumes roles, assignments, and shares when evaluating requests. Without a plugin, API responses succeed but access is not restricted.
 
 ### Effective permissions
 
 `POST /api/v1/authz/me/permissions`
 
-Returns the allowed actions for a set of resources for the current user, without making individual resource requests that would trigger 403 responses.
-The frontend uses this to enable or disable UI controls.
+Returns the allowed actions for a set of resources for the current user, without making individual resource requests that would trigger 403 responses. The frontend uses this to enable or disable UI controls when an enforcement plugin is active.
 
 **Request body:**
 
@@ -94,8 +84,7 @@ The frontend uses this to enable or disable UI controls.
 
 `/api/v1/authz/shares`
 
-Shares grant access to a resource across user boundaries.
-The resource owner or a superuser can administer shares for their own resources.
+Shares grant access to a resource across user boundaries. The resource owner or a superuser can administer shares for their own resources.
 
 | Method | Path | Description |
 |---|---|---|
@@ -164,20 +153,9 @@ Returns a paginated, filterable view of the authorization audit log.
 
 Page size is capped at 200 rows.
 
-## Enable authorization step by step
-
-1. Set `LANGFLOW_AUTHZ_AUDIT_ENABLED=true` and run Langflow in your staging environment. Review the audit log to understand what decisions would be made before enforcement is on.
-
-2. Install and register an authorization plugin following the plugin's setup guide.
-
-3. Set `LANGFLOW_AUTHZ_ENABLED=true`. The plugin reads the role and share tables and applies its policy.
-
-4. Use the [roles API](#roles-api) and [role assignments API](#role-assignments-api) to assign the built-in `viewer`, `developer`, or `admin` roles to your users, or create custom roles.
-
-5. Use the [shares API](#shares-api) to grant cross-user access where needed.
-
 ## See also
 
+- [Authentication and authorization overview](./authentication-overview)
 - [API keys and authentication](/api-keys-and-authentication)
 - [External authentication](./external-authentication)
 - [JWT authentication](/jwt-authentication)
