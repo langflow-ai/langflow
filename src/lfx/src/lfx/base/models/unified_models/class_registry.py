@@ -52,6 +52,7 @@ EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
     "OpenAI": "OpenAIEmbeddings",
     "Google Generative AI": "GoogleGenerativeAIEmbeddings",
     "Ollama": "OllamaEmbeddings",
+    "vLLM": "OpenAIEmbeddings",
     "IBM WatsonX": "WatsonxEmbeddings",
     "IBM watsonx.ai": "WatsonxEmbeddings",  # Alias used by MODEL_PROVIDERS_DICT
 }
@@ -87,6 +88,17 @@ EMBEDDING_PARAM_MAPPINGS: dict[str, dict[str, str]] = {
         "base_url": "base_url",
         "num_ctx": "num_ctx",
         "request_timeout": "request_timeout",
+        "model_kwargs": "model_kwargs",
+    },
+    "vLLM Embeddings": {
+        "model": "model",
+        "api_key": "api_key",
+        "api_base": "base_url",
+        "dimensions": "dimensions",
+        "chunk_size": "chunk_size",
+        "request_timeout": "timeout",
+        "max_retries": "max_retries",
+        "show_progress_bar": "show_progress_bar",
         "model_kwargs": "model_kwargs",
     },
     "IBM WatsonX": {

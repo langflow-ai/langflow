@@ -687,6 +687,65 @@ def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm
         return result
 
 
+def fetch_live_vllm_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
+    """Fetch live models from a vLLM server via OpenAI-compatible /v1/models API.
+
+    vLLM's API does not distinguish between LLM and embedding models, so all
+    available models are returned regardless of the requested model_type. This
+    allows users to select any vLLM-served model in both Language Model and
+    Embedding Model contexts.
+
+    Args:
+        user_id: The user ID to look up the vLLM base URL and API key
+        model_type: "llm" or "embeddings" — used for tagging only, no filtering
+
+    Returns:
+        List of model metadata dicts, or empty list if unable to fetch
+    """
+    base_url = get_provider_variable_value(user_id, "VLLM_API_BASE")
+    if not base_url:
+        return []
+
+    try:
+        api_key = get_provider_variable_value(user_id, "VLLM_API_KEY")
+    except Exception:  # noqa: BLE001
+        api_key = None  # API key is optional for vLLM
+
+    try:
+        base_url = base_url.rstrip("/")
+        models_url = f"{base_url}/models" if base_url.endswith("/v1") else f"{base_url}/v1/models"
+        headers: dict[str, str] = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        response = requests.get(models_url, headers=headers, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        # Support both OpenAI-compatible {"data": [{"id": "..."}]} and simple list
+        if isinstance(data, list):
+            model_names = sorted(str(m) for m in data if m)
+        elif isinstance(data, dict) and "data" in data:
+            model_names = sorted(m.get("id", "") for m in data["data"] if m.get("id"))
+        else:
+            model_names = []
+
+        return [
+            create_model_metadata(
+                provider="vLLM",
+                name=name,
+                icon="vLLM",
+                model_type=model_type,
+                tool_calling=model_type == "llm",
+                default=i < MIN_DEFAULT_MODELS,
+            )
+            for i, name in enumerate(model_names)
+        ]
+    except Exception:  # noqa: BLE001
+        logger.debug(f"Could not fetch live vLLM {model_type} models from {base_url}")
+        return []
+
+
 def get_live_models_for_provider(
     user_id: UUID | str | None,
     provider: str,
@@ -696,7 +755,7 @@ def get_live_models_for_provider(
 
     Args:
         user_id: The user ID to look up credentials
-        provider: The provider name (e.g., "Ollama", "IBM WatsonX")
+        provider: The provider name (e.g., "Ollama", "vLLM", "IBM WatsonX")
         model_type: "llm" or "embeddings"
 
     Returns:
@@ -704,6 +763,8 @@ def get_live_models_for_provider(
     """
     if provider == "Ollama":
         return fetch_live_ollama_models(user_id, model_type)
+    if provider == "vLLM":
+        return fetch_live_vllm_models(user_id, model_type)
     if provider == "IBM WatsonX":
         return fetch_live_watsonx_models(user_id, model_type)
     if provider == "OpenRouter":
@@ -754,7 +815,11 @@ def replace_with_live_models(
         if provider not in enabled_providers:
             continue
 
-        if model_type is None:
+        if provider == "vLLM":
+            # vLLM returns all models regardless of type (no type distinction in its API),
+            # so fetch once to avoid duplicates
+            live_models = get_live_models_for_provider(user_id, provider, model_type or "llm")
+        elif model_type is None:
             live_llm = get_live_models_for_provider(user_id, provider, "llm")
             live_emb = get_live_models_for_provider(user_id, provider, "embeddings")
             live_models = live_llm + live_emb

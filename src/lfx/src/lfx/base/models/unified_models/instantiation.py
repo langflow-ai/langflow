@@ -99,7 +99,7 @@ def get_llm(
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
 
     # Validate API key (Ollama doesn't require one)
-    if not api_key and provider != "Ollama":
+    if not api_key and provider not in {"Ollama", "vLLM", "vLLM Embeddings"}:
         # Bug 2 [P1] — Defensive guard: provider arriving as empty / None /
         # literal "Unknown" produces a nonsense error message (the worst
         # case being ``Unknown API key is required when using Unknown
@@ -354,7 +354,7 @@ def get_embeddings(
 
     # --- resolve API key -----------------------------------------------------
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
-    if not api_key and provider != "Ollama":
+    if not api_key and provider not in {"Ollama", "vLLM", "vLLM Embeddings"}:
         provider_variable_map = unified_models_module.get_model_provider_variable_mapping()
         variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
         msg = (
@@ -472,6 +472,17 @@ def get_embeddings(
             or "http://localhost:11434"
         )
         kwargs[param_mapping["base_url"]] = base_url_value
+
+    # vLLM Embeddings: resolve base_url from stored provider variable
+    if provider == "vLLM Embeddings" and "api_base" in param_mapping:
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        base_url_value = (
+            _to_str(api_base)
+            or provider_vars.get("VLLM_EMBEDDINGS_API_BASE")
+            or _env_if_allowed("VLLM_EMBEDDINGS_API_BASE")
+        )
+        if base_url_value:
+            kwargs[param_mapping["api_base"]] = base_url_value
 
     # Add optional parameters if they have values and are mapped
     for param_name, param_value in optional_params.items():
