@@ -23,6 +23,13 @@ class ProjectPhase(str, Enum):
     # per-project Open Design run lifecycle lives in ``PrototypeStatus``; this
     # phase only marks that the project is *in* the prototype stage.
     PROTOTYPE = "PROTOTYPE"
+    # Epic U-PLAN inserts the verification-driven planning stage between prototype
+    # and code generation: approving the prototype lands here. The PM tree itself
+    # (nodes, contracts, ratify gate, links, ledger) lives in the standalone Lothal
+    # PM service (repo realbytecode/lothal_project), reached by the backend via
+    # ``lothal/pm_client.py`` and re-exposed at ``/projects/{id}/plan/*``; this phase
+    # only marks that the project is *in* the planning stage.
+    PLAN = "PLAN"
     CODE_GENERATION = "CODE_GENERATION"
     DONE = "DONE"
 

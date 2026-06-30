@@ -8,11 +8,13 @@
 // sides can't share code across languages. Epic E.2 merged the two diagram
 // phases (DIAGRAM_GENERATION + DIAGRAM_REFINEMENT) into one ARCHITECTURE stage;
 // Epic UI (U.8) inserts the PROTOTYPE stage between ARCHITECTURE and
-// CODE_GENERATION (the Open Design prototype stage).
+// CODE_GENERATION (the Open Design prototype stage); Epic U-PLAN inserts the PLAN
+// stage (the verification-driven PM tree) after PROTOTYPE.
 export const PHASE_IDS = [
   "CLARIFICATION",
   "ARCHITECTURE",
   "PROTOTYPE",
+  "PLAN",
   "CODE_GENERATION",
   "DONE",
 ] as const;
@@ -53,15 +55,21 @@ export const PHASES: PhaseMeta[] = [
     status: { text: "shaping the prototype", action: true },
   },
   {
+    id: "PLAN",
+    label: "Plan",
+    short: "04",
+    status: { text: "needs your review", action: true },
+  },
+  {
     id: "CODE_GENERATION",
     label: "Generate",
-    short: "04",
+    short: "05",
     status: { text: "writing the code", action: false },
   },
   {
     id: "DONE",
     label: "Deliver",
-    short: "05",
+    short: "06",
     status: { text: "ready to deliver", action: false },
   },
 ];

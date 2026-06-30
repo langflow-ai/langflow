@@ -1060,7 +1060,7 @@ async def test_approve_in_architecture_advances_to_prototype_and_keeps_d2(
     assert diagram["d2"] == seed_d2
 
 
-@pytest.mark.parametrize("phase", ["CLARIFICATION", "PROTOTYPE", "CODE_GENERATION", "DONE"])
+@pytest.mark.parametrize("phase", ["CLARIFICATION", "PROTOTYPE", "PLAN", "CODE_GENERATION", "DONE"])
 async def test_approve_rejected_outside_architecture(client: AsyncClient, logged_in_headers: dict, phase: str):
     """Approve is only valid in ARCHITECTURE; any other phase (incl. the new PROTOTYPE) is a 409 and a no-op."""
     project_id = await _create_chat_project(client, logged_in_headers)
@@ -1116,7 +1116,7 @@ async def test_approve_with_no_diagram_is_409(client: AsyncClient, logged_in_hea
     assert project["phase"] == "ARCHITECTURE"  # not advanced
 
 
-@pytest.mark.parametrize("phase", ["PROTOTYPE", "CODE_GENERATION", "DONE"])
+@pytest.mark.parametrize("phase", ["PROTOTYPE", "PLAN", "CODE_GENERATION", "DONE"])
 async def test_chat_in_engineless_phase_is_clean_409_not_500(client: AsyncClient, logged_in_headers: dict, phase: str):
     """Chatting in an engineless phase (PROTOTYPE/CODE_GENERATION/DONE, reachable via approve) is a 409, not a 500.
 
@@ -1920,7 +1920,7 @@ async def test_generate_is_idempotent_on_reentry(client: AsyncClient, logged_in_
     assert len([m for m in messages if m["role"] == "ASSISTANT"]) == 1
 
 
-@pytest.mark.parametrize("phase", ["ARCHITECTURE", "CODE_GENERATION", "DONE"])
+@pytest.mark.parametrize("phase", ["ARCHITECTURE", "PLAN", "CODE_GENERATION", "DONE"])
 async def test_generate_rejected_outside_prototype(client: AsyncClient, logged_in_headers: dict, phase: str):
     """Generation is only valid in PROTOTYPE; any other phase is a 409 and never calls OD."""
     project_id = await _make_prototype_project(client, logged_in_headers, phase=phase)
@@ -2123,7 +2123,7 @@ async def test_refine_rejects_blank_instruction(client: AsyncClient, logged_in_h
 
 @pytest.mark.usefixtures("_od_env")
 async def test_approve_copies_artifacts_and_advances(client: AsyncClient, logged_in_headers: dict):
-    """U.7 acceptance: approve copies artifacts, stamps approval, posts a summary, advances to CODE_GENERATION."""
+    """U.7/U-PLAN acceptance: approve copies artifacts, stamps approval, posts a summary, advances to PLAN."""
     project_id = await _make_prototype_project(
         client, logged_in_headers, od_project_id="od-proj-1", od_conversation_id="conv-1", prototype_status="READY"
     )
@@ -2140,13 +2140,13 @@ async def test_approve_copies_artifacts_and_advances(client: AsyncClient, logged
         )
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"phase": "CODE_GENERATION"}
+    assert response.json() == {"phase": "PLAN"}
 
     # The finalised artifact is copied into Lothal's own store (DB-as-source-of-truth),
-    # status is APPROVED with an approval timestamp, and the phase advanced.
+    # status is APPROVED with an approval timestamp, and the phase advanced to PLAN.
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
-        assert project.phase == "CODE_GENERATION"
+        assert project.phase == "PLAN"
         assert project.prototype_status == PrototypeStatus.APPROVED.value
         assert project.prototype_approved_at is not None
         rows = (
@@ -2166,7 +2166,7 @@ async def test_approve_copies_artifacts_and_advances(client: AsyncClient, logged
     assert [a["path"] for a in state["artifacts"]] == ["home.html"]
 
 
-@pytest.mark.parametrize("phase", ["ARCHITECTURE", "CODE_GENERATION", "DONE"])
+@pytest.mark.parametrize("phase", ["ARCHITECTURE", "PLAN", "CODE_GENERATION", "DONE"])
 async def test_approve_prototype_rejected_outside_prototype(client: AsyncClient, logged_in_headers: dict, phase: str):
     """Approve is only valid in PROTOTYPE; any other phase is a 409 and a no-op."""
     project_id = await _make_prototype_project(client, logged_in_headers, phase=phase, od_project_id="od-proj-1")
@@ -2192,10 +2192,10 @@ async def test_approve_with_no_artifacts_still_advances(client: AsyncClient, log
         )
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"phase": "CODE_GENERATION"}
+    assert response.json() == {"phase": "PLAN"}
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
-        assert project.phase == "CODE_GENERATION"
+        assert project.phase == "PLAN"
         assert project.prototype_status == PrototypeStatus.APPROVED.value
         assert project.prototype_approved_at is not None
         rows = (
@@ -2327,6 +2327,194 @@ async def test_prototype_routes_404_for_unowned_project(client: AsyncClient, log
             ("POST", f"api/v1/lothal/projects/{foreign_pk}/prototype/generate", None),
             ("POST", f"api/v1/lothal/projects/{foreign_pk}/prototype/refine", {"content": "x"}),
             ("POST", f"api/v1/lothal/projects/{foreign_pk}/prototype/approve", None),
+        ]
+        for method, path, body in calls:
+            response = await client.request(method, path, json=body, headers=logged_in_headers)
+            assert response.status_code == status.HTTP_404_NOT_FOUND, (method, path)
+    finally:
+        async with session_scope() as session:
+            leftover = await session.get(Project, foreign_pk)
+            if leftover:
+                await session.delete(leftover)
+
+
+# --- Plan stage (Epic U-PLAN) ------------------------------------------------
+# The plan stage bridges to the standalone Lothal PM service (the verification-
+# driven PM tree). These tests mock the PM daemon with respx (the same way the
+# prototype tests mock OD), so the bridge + endpoints are verified end-to-end
+# against a stubbed PM, never a live one. The browser-facing API IS the canonical
+# Lothal API; the PM service is never called by the browser, only by the bridge.
+
+PM_BASE = "http://pm:8000"
+
+
+@pytest.fixture
+def _pm_env(monkeypatch):
+    """Pin the PM client to a known host with the default service credentials."""
+    monkeypatch.setenv("LOTHAL_PM_BASE_URL", PM_BASE)
+    monkeypatch.setenv("LOTHAL_PM_USER", "admin")
+    monkeypatch.setenv("LOTHAL_PM_PASSWORD", "admin")
+
+
+def _mock_pm_login():
+    """Register `POST /api/auth/login` → a bearer token (every PM call authenticates first)."""
+    respx.post(f"{PM_BASE}/api/auth/login").mock(
+        return_value=httpx.Response(200, json={"access_token": "pm-test-token", "token_type": "bearer"})
+    )
+
+
+async def _make_plan_project(client: AsyncClient, headers: dict, *, phase: str = "PLAN") -> str:
+    """Create a project and force it into the given phase for the plan-stage tests."""
+    project_id = await _create_chat_project(client, headers)
+    await _set_phase_and_d2(UUID(project_id), phase=phase, diagram_d2=None)
+    return project_id
+
+
+@pytest.mark.parametrize("phase", ["CLARIFICATION", "ARCHITECTURE", "PROTOTYPE"])
+async def test_get_plan_403_before_plan_phase(client: AsyncClient, logged_in_headers: dict, phase: str):
+    """`GET /plan` is phase-gated: a read before the planning stage is a 403 (no PM call)."""
+    project_id = await _make_plan_project(client, logged_in_headers, phase=phase)
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/plan", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.usefixtures("_pm_env")
+async def test_get_plan_creates_and_returns_tree(client: AsyncClient, logged_in_headers: dict):
+    """In PLAN, GET /plan ensures a PM tree (create-on-first-use) and returns its nodes + links."""
+    project_id = await _make_plan_project(client, logged_in_headers)
+    with respx.mock:
+        _mock_pm_login()
+        # ensure_plan: no PM tree named after the LF project id yet → create one.
+        respx.get(f"{PM_BASE}/api/projects").mock(return_value=httpx.Response(200, json=[]))
+        respx.post(f"{PM_BASE}/api/projects").mock(
+            return_value=httpx.Response(201, json={"id": "pm-1", "name": project_id})
+        )
+        respx.get(f"{PM_BASE}/api/projects/pm-1/nodes").mock(
+            return_value=httpx.Response(
+                200,
+                json=[{"id": "n1", "parent_id": None, "kind": "app", "state": "draft", "name": "Root", "depth": 0}],
+            )
+        )
+        respx.get(f"{PM_BASE}/api/projects/pm-1/links").mock(return_value=httpx.Response(200, json=[]))
+        response = await client.get(f"api/v1/lothal/projects/{project_id}/plan", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["plan_id"] == "pm-1"
+    assert [n["id"] for n in body["nodes"]] == ["n1"]
+    assert body["links"] == []
+
+
+@pytest.mark.usefixtures("_pm_env")
+async def test_get_plan_reuses_existing_tree(client: AsyncClient, logged_in_headers: dict):
+    """ensure_plan is idempotent: a PM tree already named after the LF id is reused, not recreated."""
+    project_id = await _make_plan_project(client, logged_in_headers)
+    with respx.mock:
+        _mock_pm_login()
+        create = respx.post(f"{PM_BASE}/api/projects").mock(
+            return_value=httpx.Response(201, json={"id": "should-not-be-used", "name": "x"})
+        )
+        respx.get(f"{PM_BASE}/api/projects").mock(
+            return_value=httpx.Response(200, json=[{"id": "pm-existing", "name": project_id}])
+        )
+        respx.get(f"{PM_BASE}/api/projects/pm-existing/nodes").mock(return_value=httpx.Response(200, json=[]))
+        respx.get(f"{PM_BASE}/api/projects/pm-existing/links").mock(return_value=httpx.Response(200, json=[]))
+        response = await client.get(f"api/v1/lothal/projects/{project_id}/plan", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["plan_id"] == "pm-existing"
+    assert not create.called  # the existing tree was reused
+
+
+@pytest.mark.usefixtures("_pm_env")
+async def test_create_plan_node_bridges_to_pm(client: AsyncClient, logged_in_headers: dict):
+    """POST /plan/nodes forwards the body to the PM service and returns its node."""
+    project_id = await _make_plan_project(client, logged_in_headers)
+    with respx.mock:
+        _mock_pm_login()
+        respx.get(f"{PM_BASE}/api/projects").mock(
+            return_value=httpx.Response(200, json=[{"id": "pm-1", "name": project_id}])
+        )
+        create = respx.post(f"{PM_BASE}/api/projects/pm-1/nodes").mock(
+            return_value=httpx.Response(201, json={"id": "n2", "kind": "component", "state": "draft", "name": "Auth"})
+        )
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/plan/nodes",
+            json={"kind": "component", "name": "Auth"},
+            headers=logged_in_headers,
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["id"] == "n2"
+    assert create.called
+
+
+@pytest.mark.parametrize("phase", ["ARCHITECTURE", "PROTOTYPE", "CODE_GENERATION", "DONE"])
+async def test_plan_write_rejected_outside_plan(client: AsyncClient, logged_in_headers: dict, phase: str):
+    """The tree is editable only during PLAN: a create-node in any other phase is a 409 (no PM call)."""
+    project_id = await _make_plan_project(client, logged_in_headers, phase=phase)
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/plan/nodes",
+        json={"kind": "component", "name": "Auth"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+async def test_approve_plan_advances_to_code(client: AsyncClient, logged_in_headers: dict):
+    """Approving the plan advances PLAN → CODE_GENERATION (the PM tree stays the source of truth)."""
+    project_id = await _make_plan_project(client, logged_in_headers)
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/plan/approve", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"phase": "CODE_GENERATION"}
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        assert project.phase == "CODE_GENERATION"
+
+
+@pytest.mark.parametrize("phase", ["ARCHITECTURE", "PROTOTYPE", "CODE_GENERATION", "DONE"])
+async def test_approve_plan_rejected_outside_plan(client: AsyncClient, logged_in_headers: dict, phase: str):
+    """Approve is only valid in PLAN; any other phase is a 409 and a no-op."""
+    project_id = await _make_plan_project(client, logged_in_headers, phase=phase)
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/plan/approve", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == phase
+
+
+@pytest.mark.usefixtures("_pm_env")
+async def test_plan_maps_pm_failure_to_502(client: AsyncClient, logged_in_headers: dict):
+    """A reachable-but-unhappy PM service surfaces as a 502, not a 500."""
+    project_id = await _make_plan_project(client, logged_in_headers)
+    with respx.mock:
+        _mock_pm_login()
+        respx.get(f"{PM_BASE}/api/projects").mock(return_value=httpx.Response(500, json={"detail": "boom"}))
+        response = await client.get(f"api/v1/lothal/projects/{project_id}/plan", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+
+
+async def test_plan_503_when_pm_base_url_blank(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """A misconfigured bridge (blank base URL) is a 503, mirroring `_od_error_to_http`'s config split."""
+    project_id = await _make_plan_project(client, logged_in_headers)
+    monkeypatch.setenv("LOTHAL_PM_BASE_URL", "")
+    response = await client.get(f"api/v1/lothal/projects/{project_id}/plan", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+
+async def test_plan_routes_404_for_unowned_project(client: AsyncClient, logged_in_headers: dict, user_two):
+    """Ownership is checked first on every plan route: another user's project 404s, never 403/409."""
+    async with session_scope() as session:
+        foreign = Project(name="Theirs", user_id=user_two.id, phase="PLAN")
+        session.add(foreign)
+        await session.flush()
+        foreign_pk = foreign.id
+
+    try:
+        calls = [
+            ("GET", f"api/v1/lothal/projects/{foreign_pk}/plan", None),
+            ("POST", f"api/v1/lothal/projects/{foreign_pk}/plan/nodes", {"kind": "component", "name": "x"}),
+            ("POST", f"api/v1/lothal/projects/{foreign_pk}/plan/approve", None),
+            ("GET", f"api/v1/lothal/projects/{foreign_pk}/plan/activity", None),
         ]
         for method, path, body in calls:
             response = await client.request(method, path, json=body, headers=logged_in_headers)

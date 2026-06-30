@@ -402,3 +402,392 @@ export function useApprovePrototype(projectId: string) {
     },
   });
 }
+
+// --- Plan (verification-driven PM tree, Epic U-PLAN) -----------------------
+// The PLAN stage is OUR product: its endpoints ARE the canonical Lothal API
+// (`/projects/{id}/plan/*`), bridged server-side to the standalone PM service. A
+// native pane renders the tree — no iframe. `GET /plan` returns a snapshot (the
+// PM tree id, its nodes, and links); mutations add nodes/links and `approve`
+// advances PLAN → CODE_GENERATION. Field names are snake_case on the wire.
+
+export type PlanNodeKind = "app" | "component" | "epic" | "story";
+
+export type PlanNode = {
+  id: string;
+  parent_id: string | null;
+  kind: PlanNodeKind;
+  state: string;
+  name: string;
+  depth: number;
+};
+
+export type PlanLink = {
+  id: string;
+  source_id: string;
+  target_id: string;
+  link_type: string;
+};
+
+export type PlanTree = {
+  plan_id: string;
+  nodes: PlanNode[];
+  links: PlanLink[];
+};
+
+const planKey = (projectId: string) => ["lothal", "plan", projectId] as const;
+// Defined here (ahead of the mutations) so node create/move can invalidate them.
+const planDagKey = (projectId: string) =>
+  ["lothal", "plan", projectId, "dag"] as const;
+const planEventsKey = (projectId: string, nodeId: string) =>
+  ["lothal", "plan", projectId, "events", nodeId] as const;
+
+// `GET /plan`. Phase-gated to PLAN onward: a read before then is a deterministic
+// 403 (the pane keys its NotReady state off it), so skip retrying that, the stray
+// 501, and the 409 a wrong-phase write returns.
+export function usePlan(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: planKey(projectId),
+    queryFn: async () => {
+      const res = await api.get<PlanTree>(`${BASE}${projectId}/plan`);
+      return res.data;
+    },
+    enabled,
+    retry: retrySkipping(501, 403, 409),
+  });
+}
+
+// Add a node to the tree. Invalidates the plan snapshot so the new node appears.
+export function useCreatePlanNode(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      kind: PlanNodeKind;
+      name: string;
+      parent_id?: string | null;
+    }) => {
+      const res = await api.post<PlanNode>(
+        `${BASE}${projectId}/plan/nodes`,
+        body,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: planKey(projectId) });
+      qc.invalidateQueries({ queryKey: planDagKey(projectId) }); // topology changed
+    },
+  });
+}
+
+// Approve the plan: advances PLAN → CODE_GENERATION. Returns the new phase
+// (the `DiagramApprove` shape). Invalidates the project (phase badge, stepper,
+// right-pane swap), the plan snapshot, and code.
+export function useApprovePlan(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post<DiagramApprove>(
+        `${BASE}${projectId}/plan/approve`,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      qc.invalidateQueries({ queryKey: planKey(projectId) });
+      qc.invalidateQueries({ queryKey: codeKey(projectId) });
+    },
+  });
+}
+
+// --- Plan: node detail + the validation loop (contract / criteria / ratify) ---
+
+export type PlanContract = {
+  version: number;
+  assumptions: string[];
+  guarantees: string[];
+  frozen_assumptions: string[] | null;
+  frozen_guarantees: string[] | null;
+  frozen_at: string | null;
+};
+
+export type PlanNodeDetail = {
+  id: string;
+  project_id: string;
+  kind: PlanNodeKind;
+  state: string;
+  name: string;
+  description: string | null;
+  verification_criteria: string[];
+  test_methodology: string | null;
+  acceptance_criteria: string[];
+  frozen_verification_criteria: string[] | null;
+  verified_at: string | null;
+  contract: PlanContract | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TestMethodology = "unit" | "integration" | "system" | "acceptance";
+
+const planNodeKey = (projectId: string, nodeId: string) =>
+  ["lothal", "plan", projectId, "node", nodeId] as const;
+const planActivityKey = (projectId: string) =>
+  ["lothal", "plan", projectId, "activity"] as const;
+
+// `GET /plan/nodes/{id}` — the node with its contract + criteria. Disabled until a
+// node is selected. Skips deterministic statuses (the pane keys its panel off them).
+export function usePlanNode(projectId: string, nodeId: string | null) {
+  return useQuery({
+    queryKey: planNodeKey(projectId, nodeId ?? ""),
+    queryFn: async () => {
+      const res = await api.get<PlanNodeDetail>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}`,
+      );
+      return res.data;
+    },
+    enabled: !!nodeId,
+    retry: retrySkipping(501, 403, 409, 404),
+  });
+}
+
+function invalidatePlanNode(
+  qc: ReturnType<typeof useQueryClient>,
+  projectId: string,
+  nodeId: string,
+) {
+  qc.invalidateQueries({ queryKey: planKey(projectId) }); // tree (state badges)
+  qc.invalidateQueries({ queryKey: planNodeKey(projectId, nodeId) }); // the panel
+  qc.invalidateQueries({ queryKey: planEventsKey(projectId, nodeId) }); // node history
+  qc.invalidateQueries({ queryKey: planActivityKey(projectId) }); // ledger
+}
+
+export function useUpdatePlanContract(projectId: string, nodeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { assumptions?: string[]; guarantees?: string[] }) => {
+      const res = await api.patch<PlanNodeDetail>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/contract`,
+        body,
+      );
+      return res.data;
+    },
+    onSuccess: () => invalidatePlanNode(qc, projectId, nodeId),
+  });
+}
+
+export function useUpdatePlanCriteria(projectId: string, nodeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      verification_criteria?: string[];
+      acceptance_criteria?: string[];
+      test_methodology?: TestMethodology;
+    }) => {
+      const res = await api.patch<PlanNodeDetail>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/criteria`,
+        body,
+      );
+      return res.data;
+    },
+    onSuccess: () => invalidatePlanNode(qc, projectId, nodeId),
+  });
+}
+
+// Run the roll-up ratify gate. On failure the PM service's reason flows through as
+// a 4xx, readable on the mutation's `error` (error.response.data.detail).
+export function useRatifyPlanNode(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (nodeId: string) => {
+      const res = await api.post<PlanNodeDetail>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/ratify`,
+      );
+      return res.data;
+    },
+    onSuccess: (_data, nodeId) => invalidatePlanNode(qc, projectId, nodeId),
+  });
+}
+
+// Drive the state machine — e.g. reopen a node to `draft` to edit it again.
+export function useTransitionPlanNode(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { nodeId: string; target: string; detail?: string }) => {
+      const res = await api.post<PlanNodeDetail>(
+        `${BASE}${projectId}/plan/nodes/${vars.nodeId}/transition`,
+        { target: vars.target, detail: vars.detail },
+      );
+      return res.data;
+    },
+    onSuccess: (_data, vars) => invalidatePlanNode(qc, projectId, vars.nodeId),
+  });
+}
+
+// --- Plan: tests (frozen-before-build — a node must own a test to ratify) ----
+
+export type TestScope = "unit" | "integration";
+
+export type PlanTest = {
+  id: string;
+  node_id: string;
+  scope: TestScope;
+  title: string;
+  spec: string | null;
+  frozen: boolean;
+  latest_status: string | null;
+};
+
+const planTestsKey = (projectId: string, nodeId: string) =>
+  ["lothal", "plan", projectId, "tests", nodeId] as const;
+
+export function usePlanTests(projectId: string, nodeId: string | null) {
+  return useQuery({
+    queryKey: planTestsKey(projectId, nodeId ?? ""),
+    queryFn: async () => {
+      const res = await api.get<PlanTest[]>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/tests`,
+      );
+      return res.data;
+    },
+    enabled: !!nodeId,
+    retry: retrySkipping(501, 403, 409, 404),
+  });
+}
+
+export function useCreatePlanTest(projectId: string, nodeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { scope: TestScope; title: string }) => {
+      const res = await api.post<PlanTest>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/tests`,
+        body,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: planTestsKey(projectId, nodeId) });
+      invalidatePlanNode(qc, projectId, nodeId); // ratify readiness changed
+    },
+  });
+}
+
+export type TestStatus = "passed" | "failed" | "error" | "skipped";
+
+// Record a test run (pass/fail). A passing run is what lets a leaf node verify.
+export function useRecordPlanTestRun(projectId: string, nodeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { testId: string; status: TestStatus; output?: string }) => {
+      const res = await api.post(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/tests/${vars.testId}/runs`,
+        { status: vars.status, output: vars.output },
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: planTestsKey(projectId, nodeId) });
+      invalidatePlanNode(qc, projectId, nodeId);
+    },
+  });
+}
+
+// --- Plan: links, ledger, DAG, node history, move --------------------------
+
+export type PlanLinkType =
+  | "blocks"
+  | "blocked_by"
+  | "relates_to"
+  | "derives_from"
+  | "verifies";
+
+// The ledger / audit event shape is intentionally permissive — the pane shows a
+// timestamp + a human line and tolerates the PM service's exact field names.
+export type PlanEvent = {
+  id: string;
+  created_at: string;
+  kind?: string;
+  event_type?: string;
+  summary?: string;
+  detail?: string | null;
+  actor?: string | null;
+  from_state?: string | null;
+  to_state?: string | null;
+};
+
+export function useCreatePlanLink(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      source_id: string;
+      target_id: string;
+      link_type: PlanLinkType;
+    }) => {
+      const res = await api.post(`${BASE}${projectId}/plan/links`, body);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: planKey(projectId) });
+      qc.invalidateQueries({ queryKey: planActivityKey(projectId) });
+      qc.invalidateQueries({ queryKey: planDagKey(projectId) });
+    },
+  });
+}
+
+// `GET /plan/activity` — the project's decision/provenance ledger (newest first).
+export function usePlanActivity(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: planActivityKey(projectId),
+    queryFn: async () => {
+      const res = await api.get<PlanEvent[]>(`${BASE}${projectId}/plan/activity`);
+      return res.data;
+    },
+    enabled,
+    retry: retrySkipping(501, 403, 409),
+  });
+}
+
+// `GET /plan/nodes/{id}/events` — one node's history (its ledger slice).
+export function usePlanNodeEvents(projectId: string, nodeId: string | null) {
+  return useQuery({
+    queryKey: planEventsKey(projectId, nodeId ?? ""),
+    queryFn: async () => {
+      const res = await api.get<PlanEvent[]>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/events`,
+      );
+      return res.data;
+    },
+    enabled: !!nodeId,
+    retry: retrySkipping(501, 403, 409, 404),
+  });
+}
+
+// `GET /plan/dag.svg` — the server-rendered dependency graph as raw SVG text.
+export function usePlanDag(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: planDagKey(projectId),
+    queryFn: async () => {
+      const res = await api.get<string>(`${BASE}${projectId}/plan/dag.svg`, {
+        responseType: "text",
+      });
+      return res.data;
+    },
+    enabled,
+    retry: retrySkipping(501, 403, 409),
+  });
+}
+
+// Reparent a node (and its subtree); `new_parent_id: null` moves it to the root.
+export function useMovePlanNode(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { nodeId: string; new_parent_id: string | null }) => {
+      const res = await api.post(`${BASE}${projectId}/plan/nodes/${vars.nodeId}/move`, {
+        new_parent_id: vars.new_parent_id,
+      });
+      return res.data;
+    },
+    onSuccess: (_data, vars) => {
+      invalidatePlanNode(qc, projectId, vars.nodeId);
+      qc.invalidateQueries({ queryKey: planDagKey(projectId) }); // topology changed
+    },
+  });
+}
