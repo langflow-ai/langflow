@@ -21,7 +21,7 @@ check.
 
 import asyncio
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -34,6 +34,7 @@ from langflow.lothal import prototype as prototype_engine
 from langflow.lothal.d2_compile import D2CompilerUnavailableError, render_d2
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError, call_llm
 from langflow.lothal.od_client import ODConfigError, ODError
+from langflow.lothal.pm_client import PMClient, PMConfigError, PMError
 from langflow.lothal.router import available_phases, process_turn
 from langflow.lothal.schemas import (
     ArtifactsResponse,
@@ -84,6 +85,19 @@ _DIAGRAM_VISIBLE_PHASES = frozenset(
 _PROTOTYPE_VISIBLE_PHASES = frozenset(
     {
         ProjectPhase.PROTOTYPE.value,
+        ProjectPhase.PLAN.value,
+        ProjectPhase.CODE_GENERATION.value,
+        ProjectPhase.DONE.value,
+    }
+)
+
+# Phases in which the planning tree is readable — the `GET /plan` phase gate. The
+# plan stage opens when the prototype is approved, so a read before PLAN 403s; it
+# stays readable through code generation and done so the ratified tree keeps
+# surfacing. The tree itself lives in the standalone PM service (pm_client).
+_PLAN_VISIBLE_PHASES = frozenset(
+    {
+        ProjectPhase.PLAN.value,
         ProjectPhase.CODE_GENERATION.value,
         ProjectPhase.DONE.value,
     }
@@ -174,6 +188,22 @@ def _od_error_to_http(exc: ODError) -> HTTPException:
             detail=f"The prototype engine is not configured: {exc}",
         )
     return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"The prototype engine call failed: {exc}")
+
+
+def _pm_error_to_http(exc: PMError) -> HTTPException:
+    """Map the Lothal PM client errors to HTTP, mirroring `_od_error_to_http`.
+
+    A misconfigured bridge (e.g. a blank base URL) is a 503; a failed call to a
+    reachable-but-unhappy PM service is a 502 — the same setup-gap vs runtime-fault
+    split. (Finer 4xx pass-through for PM validation errors is a follow-up; the
+    shell sends PM-shaped bodies, so a 422 from PM should not arise in practice.)
+    """
+    if isinstance(exc, PMConfigError):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"The planning service is not configured: {exc}",
+        )
+    return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"The planning service call failed: {exc}")
 
 
 async def _get_owned_project(session: DbSession, current_user: CurrentActiveUser, project_id: UUID) -> Project:
@@ -667,7 +697,7 @@ def _approval_summary(artifacts: list[prototype_engine.ApprovedArtifact]) -> str
         )
     listed = "\n".join(f"- {a.title}" for a in artifacts)
     plural = "artifact" if len(artifacts) == 1 else "artifacts"
-    return f"Prototype approved with {len(artifacts)} {plural}:\n{listed}\n\nGenerating the code next."
+    return f"Prototype approved with {len(artifacts)} {plural}:\n{listed}\n\nPlanning the build next."
 
 
 @router.get(
@@ -886,16 +916,17 @@ async def refine_prototype(
 
 @router.post(
     "/projects/{project_id}/prototype/approve",
-    summary="Approve the prototype and advance to code generation",
+    summary="Approve the prototype and advance to the planning stage",
 )
 async def approve_prototype(*, session: DbSession, project: OwnedProject) -> PrototypeApproveResponse:
-    """Finalise the prototype: copy artifacts, stamp approval, advance to CODE_GENERATION (Story U.7).
+    """Finalise the prototype: copy artifacts, stamp approval, advance to PLAN (Story U.7, U-PLAN).
 
     Only valid in `PROTOTYPE` (else `409`). Pulls the finalised OD artifacts and
     copies them into `lothal_prototype_artifact` (DB-as-source-of-truth, so the
     prototype survives independent of OD), sets `prototype_status=APPROVED` +
     `prototype_approved_at`, posts a summary into the single chat thread (Story
-    U.10), and transitions the phase to `CODE_GENERATION`.
+    U.10), and transitions the phase to `PLAN` — the verification-driven planning
+    stage now sits between prototype and code generation.
 
     Serialized against concurrent submits with a `FOR UPDATE` re-read, like
     `generate`/`approve_diagram`.
@@ -907,7 +938,7 @@ async def approve_prototype(*, session: DbSession, project: OwnedProject) -> Pro
             detail="The prototype can only be approved during the prototype stage.",
         )
     # Only a generated, READY prototype can be approved — otherwise a click during
-    # IDLE/GENERATING would advance to CODE_GENERATION with no prototype captured.
+    # IDLE/GENERATING would advance to PLAN with no prototype captured.
     if not project.od_project_id or project.prototype_status != PrototypeStatus.READY.value:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -943,12 +974,185 @@ async def approve_prototype(*, session: DbSession, project: OwnedProject) -> Pro
 
     project.prototype_status = PrototypeStatus.APPROVED.value
     project.prototype_approved_at = datetime.now(timezone.utc)
-    project.phase = ProjectPhase.CODE_GENERATION.value
+    project.phase = ProjectPhase.PLAN.value
     project.updated_at = datetime.now(timezone.utc)
     session.add(project)
     await session.flush()
     await session.refresh(project)
     return PrototypeApproveResponse(phase=project.phase)
+
+
+# --- Plan (verification-driven PM tree, bridged to the standalone PM service) ----
+#
+# These endpoints ARE the canonical Lothal API for the planning stage. The tree,
+# contracts, ratify gate, links, and ledger all live in the standalone Lothal PM
+# service (repo realbytecode/lothal_project); the backend bridges to it via
+# `pm_client` and re-exposes the routes here, scoped to the Langflow project. The
+# browser never calls the PM service directly. Responses are the PM service's own
+# JSON (the PM service owns the typed contract), passed through unchanged.
+
+
+def _require_plan_visible(project: Project) -> None:
+    """403 unless the project has reached the planning stage (the `GET /plan` gate)."""
+    if project.phase not in _PLAN_VISIBLE_PHASES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The plan is not available until the planning stage begins.",
+        )
+
+
+def _require_plan_active(project: Project) -> None:
+    """409 unless the project is *in* PLAN — the tree is editable only during the stage."""
+    if project.phase != ProjectPhase.PLAN.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The plan can only be edited during the planning stage.",
+        )
+
+
+@router.get(
+    "/projects/{project_id}/plan",
+    summary="Get the planning tree (nodes + links) for the project",
+)
+async def get_plan(*, project: OwnedProject) -> dict[str, Any]:
+    """Return a snapshot of the project's PM tree: its `plan_id`, nodes, and links.
+
+    Phase-gated to `PLAN` and later (a read before then 403s — the plan does not
+    exist yet); ownership is checked first by `OwnedProject`. The PM tree is created
+    on first access (`ensure_plan`), so opening the stage always yields an (initially
+    empty) tree rather than a 404.
+    """
+    _require_plan_visible(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            nodes = await pm.list_nodes(plan_id)
+            links = await pm.list_links(plan_id)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+    return {"plan_id": plan_id, "nodes": nodes, "links": links}
+
+
+@router.post(
+    "/projects/{project_id}/plan/nodes",
+    summary="Add a node to the planning tree",
+)
+async def create_plan_node(*, project: OwnedProject, body: dict[str, Any]) -> dict[str, Any]:
+    """Create a node in the PM tree (PM `NodeCreate` shape). Editable only in `PLAN`."""
+    _require_plan_active(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            return await pm.create_node(plan_id, body)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/plan/nodes/{node_id}",
+    summary="Get a planning-tree node with its contract",
+)
+async def get_plan_node(*, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
+    _require_plan_visible(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            return await pm.get_node(plan_id, str(node_id))
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.patch(
+    "/projects/{project_id}/plan/nodes/{node_id}/contract",
+    summary="Edit a node's assume-guarantee contract (draft only)",
+)
+async def update_plan_contract(
+    *, project: OwnedProject, node_id: UUID, body: dict[str, Any]
+) -> dict[str, Any]:
+    _require_plan_active(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            return await pm.update_contract(plan_id, str(node_id), body)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.post(
+    "/projects/{project_id}/plan/nodes/{node_id}/ratify",
+    summary="Run the roll-up ratify gate for a node",
+)
+async def ratify_plan_node(*, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
+    _require_plan_active(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            return await pm.ratify(plan_id, str(node_id))
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/plan/links",
+    summary="List the planning tree's dependency links",
+)
+async def list_plan_links(*, project: OwnedProject) -> list[dict[str, Any]]:
+    _require_plan_visible(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            return await pm.list_links(plan_id)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.post(
+    "/projects/{project_id}/plan/links",
+    summary="Add a dependency link between two nodes",
+)
+async def create_plan_link(*, project: OwnedProject, body: dict[str, Any]) -> dict[str, Any]:
+    _require_plan_active(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            return await pm.create_link(plan_id, body)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/plan/activity",
+    summary="Get the planning tree's decision/provenance ledger",
+)
+async def plan_activity(*, project: OwnedProject, limit: int = 200) -> list[dict[str, Any]]:
+    _require_plan_visible(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            return await pm.activity(plan_id, limit=limit)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.post(
+    "/projects/{project_id}/plan/approve",
+    summary="Approve the plan and advance to code generation",
+)
+async def approve_plan(*, session: DbSession, project: OwnedProject) -> dict[str, str]:
+    """Lock the plan and advance `PLAN → CODE_GENERATION`.
+
+    Only valid in `PLAN` (else `409`), serialized against concurrent submits with a
+    `FOR UPDATE` re-read like `approve_prototype`. The PM tree stays the source of
+    truth; this only moves the project phase forward.
+    """
+    await session.refresh(project, with_for_update=True)
+    _require_plan_active(project)
+    project.phase = ProjectPhase.CODE_GENERATION.value
+    project.updated_at = datetime.now(timezone.utc)
+    session.add(project)
+    await session.flush()
+    await session.refresh(project)
+    return {"phase": project.phase}
 
 
 # --- Code --------------------------------------------------------------------

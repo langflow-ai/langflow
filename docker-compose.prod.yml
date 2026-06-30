@@ -94,6 +94,13 @@ services:
       # embedded OD by the logged-in Lothal session (see deploy/nginx/lothal.conf).
       # Must be ".<domain>" (leading dot), e.g. ".lothal.app".
       LANGFLOW_COOKIE_DOMAIN: ${LANGFLOW_COOKIE_DOMAIN:-}
+      # ── Lothal PM service (the planning stage) ──
+      # Internal base URL of the standalone PM tree service (the `pm` service
+      # below). The backend bridges to it (lothal/pm_client.py) and re-exposes its
+      # routes as /api/v1/lothal/projects/{id}/plan/*. Hardcoded to the compose
+      # service name (not .env-overridable) like the OD base URL — the PM service
+      # is unpublished, reachable only on this network.
+      LOTHAL_PM_BASE_URL: http://pm:8000
     volumes:
       - lothal-langflow-data:/app/langflow  # secret_key, profile pics, etc. — must persist
     healthcheck:
@@ -193,6 +200,37 @@ services:
       - no-new-privileges:true
     mem_limit: ${OD_MEM_LIMIT:-384m}
     pids_limit: 256
+    # intentionally no `ports:` — only reachable inside the compose network
+
+  # Lothal PM tree — the verification-driven planning stage. Internal API service
+  # consumed by the backend over the compose network at http://pm:8000. Unlike OD,
+  # this IS our product: the backend re-exposes its routes as the canonical Lothal
+  # API (/api/v1/lothal/projects/{id}/plan/*), rendered by a native shell page (no
+  # iframe, no subdomain, no public port). Image built + published by the separate
+  # realbytecode/lothal_project repo's own CI as ghcr.io/realbytecode/lothal, NOT by
+  # the Lothal deploy workflow. Rolled by editing PM_IMAGE in /opt/lothal/.env.
+  #
+  # It uses a *dedicated* `lothal_pm` database on the shared `db` Postgres — NOT the
+  # langflow stack's own `lothal` database (a name collision). Create the role +
+  # database once on the box (see deploy/RUNBOOK.md): the app builds its own schema
+  # on first boot (LOTHAL_AUTO_CREATE=true, this project ships no migration tool yet).
+  pm:
+    image: ${PM_IMAGE:-ghcr.io/realbytecode/lothal:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      LOTHAL_DATABASE_URL: postgresql+asyncpg://${PM_DB_USER:-lothal_pm}:${PM_DB_PASSWORD:?PM_DB_PASSWORD required}@db:5432/${PM_DB_NAME:-lothal_pm}
+      LOTHAL_SECRET_KEY: ${PM_SECRET_KEY:?PM_SECRET_KEY required}
+      LOTHAL_AUTO_CREATE: "${PM_AUTO_CREATE:-true}"
+      # The backend bridges server-side, so no browser calls this directly → no CORS.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
     # intentionally no `ports:` — only reachable inside the compose network
 
 volumes:

@@ -18,6 +18,7 @@ Phase = Literal[
     "CLARIFICATION",
     "ARCHITECTURE",
     "PROTOTYPE",
+    "PLAN",
     "CODE_GENERATION",
     "DONE",
 ]
