@@ -109,10 +109,10 @@ def test_loaded_provider_live_discovery_dispatches(tmp_path: Path):
     assert [m["name"] for m in models] == ["fake-llm"]
 
 
-def test_invalid_provider_is_warning_not_fatal(tmp_path: Path):
+def test_metadata_without_model_class_is_manifest_error(tmp_path: Path):
     bad_entry = _provider_entry()
-    # Strip the required mapping.model_class so register_provider raises and the
-    # loader records a warning rather than aborting.
+    # Metadata without mapping.model_class is rejected by the manifest validator,
+    # so the manifest never parses -> load_extension surfaces manifest-invalid.
     bad_entry["metadata"] = {**bad_entry["metadata"], "mapping": {"model_param": "model"}}
     manifest = {
         "id": "lfx-fakeco",
@@ -121,12 +121,47 @@ def test_invalid_provider_is_warning_not_fatal(tmp_path: Path):
         "lfx": {"compat": ["1"]},
         "providers": [bad_entry],
     }
-    # A manifest-level validator rejects metadata without mapping.model_class, so
-    # this manifest never parses -> load_extension surfaces manifest-invalid.
     result = load_extension(_write_manifest(tmp_path, manifest))
     assert not result.ok
     assert any(e.code == "manifest-invalid" for e in result.errors)
     assert not provider_registry.is_registered("FakeCo")
+
+
+def test_unregisterable_provider_is_warning_not_fatal(tmp_path: Path):
+    # A provider that passes manifest validation but references an unknown model
+    # class fails registration; the loader records a warning and stays ok.
+    bad_entry = _provider_entry()
+    bad_entry["metadata"] = {
+        **bad_entry["metadata"],
+        "mapping": {"model_class": "NoSuchModelClass", "model_param": "model"},
+    }
+    manifest = {
+        "id": "lfx-fakeco",
+        "version": "0.1.0",
+        "name": "FakeCo Provider",
+        "lfx": {"compat": ["1"]},
+        "providers": [bad_entry],
+    }
+    result = load_extension(_write_manifest(tmp_path, manifest))
+    assert result.ok, (result.errors, result.warnings)
+    assert any(w.code == "provider-invalid" for w in result.warnings)
+    assert not provider_registry.is_registered("FakeCo")
+
+
+def test_core_name_collision_is_skipped_warning(tmp_path: Path):
+    # A provider whose name collides with a built-in is skipped (not registered)
+    # and surfaces a provider-skipped warning rather than silent success.
+    manifest = {
+        "id": "lfx-fakeco",
+        "version": "0.1.0",
+        "name": "FakeCo Provider",
+        "lfx": {"compat": ["1"]},
+        "providers": [_provider_entry(name="OpenAI")],
+    }
+    result = load_extension(_write_manifest(tmp_path, manifest))
+    assert result.ok, (result.errors, result.warnings)
+    assert any(w.code == "provider-skipped" for w in result.warnings)
+    assert not provider_registry.is_registered("OpenAI")
 
 
 # ---------------------------------------------------------------------------

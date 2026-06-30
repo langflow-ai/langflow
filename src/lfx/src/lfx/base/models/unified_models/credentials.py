@@ -421,7 +421,15 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     if is_registered(provider):
         bundle_validator = validator_for(provider)
         if bundle_validator is not None:
-            bundle_validator(provider, variables, validation_model)
+            try:
+                bundle_validator(provider, variables, validation_model)
+            except ValueError:
+                raise
+            except Exception as exc:
+                # Normalize bundle/transport errors to this function's ValueError contract.
+                msg = f"Could not validate credentials for {provider}: {exc}"
+                logger.warning(msg)
+                raise ValueError(msg) from exc
         return
 
     # For providers that need a model to test credentials

@@ -718,10 +718,14 @@ def get_live_models_for_provider(
     discovery = live_discovery_for(provider)
     if discovery is not None:
         try:
-            return discovery(user_id, model_type)
+            models = discovery(user_id, model_type)
         except Exception:  # noqa: BLE001
             logger.debug(f"Live discovery failed for bundle provider {provider!r}; returning no live models")
             return []
+        if isinstance(models, list):
+            return models
+        logger.warning(f"Live discovery for bundle provider {provider!r} returned a non-list result; ignoring")
+        return []
     return []
 
 

@@ -297,7 +297,19 @@ def _register_manifest_providers(
                 live_discovery=entry.live_discovery,
                 validator=entry.validator,
             )
-            register_provider(spec)
+            if not register_provider(spec):
+                result.warnings.append(
+                    ExtensionError(
+                        code="provider-skipped",
+                        message=(
+                            f"Extension {manifest.id!r} did not register model provider {entry.name!r}: "
+                            "the name collides with a built-in or already-loaded provider."
+                        ),
+                        location=str(source.path),
+                        content=entry.name,
+                        hint="Rename the provider, or remove the conflicting extension.",
+                    )
+                )
         except Exception as exc:  # noqa: BLE001
             result.warnings.append(
                 ExtensionError(

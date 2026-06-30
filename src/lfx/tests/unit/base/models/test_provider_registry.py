@@ -191,6 +191,19 @@ def test_registered_provider_without_validator_is_noop():
     validate_model_provider_key("FakeCo", {"FAKECO_API_KEY": "anything"})  # pragma: allowlist secret
 
 
+def _boom_validator(provider, variables, model_name):  # noqa: ARG001
+    msg = "transport exploded"
+    raise RuntimeError(msg)
+
+
+def test_validator_non_value_error_is_normalized():
+    # A bundle validator that raises a non-ValueError (e.g. a transport error)
+    # is normalized to ValueError so it can't escape as an unhandled 500.
+    register_provider(_fakeco_spec(validator=f"{__name__}:_boom_validator"))
+    with pytest.raises(ValueError, match="Could not validate credentials"):
+        validate_model_provider_key("FakeCo", {"FAKECO_API_BASE": "x"})
+
+
 # ---------------------------------------------------------------------------
 # Connection-variable application (get_llm / get_embeddings)
 # ---------------------------------------------------------------------------
@@ -323,6 +336,50 @@ def test_invalid_spec_missing_model_class_raises():
 def test_live_and_conditional_live_mutually_exclusive():
     with pytest.raises(ValueError, match="both live and conditional_live"):
         register_provider(_fakeco_spec(live=True, conditional_live=True))
+
+
+def test_unknown_model_class_without_import_raises():
+    meta = {**_fakeco_metadata(), "mapping": {"model_class": "NoSuchModelClass", "model_param": "model"}}
+    with pytest.raises(ValueError, match="unknown model class"):
+        register_provider(_fakeco_spec(metadata=meta))
+
+
+def test_conflicting_model_class_import_raises():
+    meta = {**_fakeco_metadata(), "mapping": {"model_class": "ChatOpenAI", "model_param": "model"}}
+    # ChatOpenAI already maps to langchain_openai; a divergent import must be rejected.
+    with pytest.raises(ValueError, match="conflicts with an existing import"):
+        register_provider(_fakeco_spec(metadata=meta, model_class=("some_other_pkg", "ChatOpenAI", None)))
+
+
+def test_embedding_param_key_conflict_raises():
+    # "OpenAI" is a core EMBEDDING_PARAM_MAPPINGS key; reusing it would let clear()
+    # later delete the core mapping, so registration must be rejected.
+    with pytest.raises(ValueError, match="conflict with an existing mapping"):
+        register_provider(
+            _fakeco_spec(
+                embedding_class_name="OpenAIEmbeddings",
+                embedding_param_key="OpenAI",
+                embedding_param_mapping={"model": "model"},
+            )
+        )
+
+
+_NOT_CALLABLE = 42
+
+
+def _non_list_discovery(user_id, model_type):  # noqa: ARG001
+    return "not-a-list"
+
+
+def test_non_callable_live_discovery_degrades_to_none():
+    register_provider(_fakeco_spec(live=True, live_discovery=f"{__name__}:_NOT_CALLABLE"))
+    assert provider_registry.live_discovery_for("FakeCo") is None
+    assert get_live_models_for_provider("user-1", "FakeCo", "llm") == []
+
+
+def test_non_list_live_discovery_return_is_normalized():
+    register_provider(_fakeco_spec(live=True, live_discovery=f"{__name__}:_non_list_discovery"))
+    assert get_live_models_for_provider("user-1", "FakeCo", "llm") == []
 
 
 def test_clear_restores_baseline():

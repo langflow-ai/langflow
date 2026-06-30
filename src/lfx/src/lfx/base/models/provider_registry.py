@@ -183,12 +183,53 @@ def register_provider(spec: ProviderSpec) -> bool:
             )
             return False
 
+        # Validate lazy-import + embedding keys before mutating any global table,
+        # so a malformed spec is rejected wholesale (never partially applied) and
+        # never clobbers a core/earlier-extension mapping that clear() would then
+        # remove.
+        class_name = spec.model_class_name()
+        if class_name not in _MODEL_CLASS_IMPORTS and spec.model_class is None:
+            msg = (
+                f"ProviderSpec {spec.name!r} references unknown model class "
+                f"{class_name!r} (no model_class import supplied)"
+            )
+            raise ValueError(msg)
+        if (
+            spec.model_class
+            and class_name in _MODEL_CLASS_IMPORTS
+            and _MODEL_CLASS_IMPORTS[class_name] != spec.model_class
+        ):
+            msg = f"ProviderSpec {spec.name!r} model class {class_name!r} conflicts with an existing import"
+            raise ValueError(msg)
+        if spec.embedding_class_name:
+            if spec.embedding_class_name not in _EMBEDDING_CLASS_IMPORTS and spec.embedding_class is None:
+                msg = (
+                    f"ProviderSpec {spec.name!r} references unknown embedding class "
+                    f"{spec.embedding_class_name!r} (no embedding_class import supplied)"
+                )
+                raise ValueError(msg)
+            if (
+                spec.embedding_class
+                and spec.embedding_class_name in _EMBEDDING_CLASS_IMPORTS
+                and _EMBEDDING_CLASS_IMPORTS[spec.embedding_class_name] != spec.embedding_class
+            ):
+                msg = (
+                    f"ProviderSpec {spec.name!r} embedding class {spec.embedding_class_name!r} "
+                    f"conflicts with an existing import"
+                )
+                raise ValueError(msg)
+            if spec.embedding_param_key and spec.embedding_param_key in EMBEDDING_PARAM_MAPPINGS:
+                msg = (
+                    f"ProviderSpec {spec.name!r} embedding params {spec.embedding_param_key!r} "
+                    f"conflict with an existing mapping"
+                )
+                raise ValueError(msg)
+
         # --- metadata (C1) -------------------------------------------------
         MODEL_PROVIDER_METADATA[spec.name] = spec.metadata
         _undo.metadata_keys.add(spec.name)
 
         # --- LLM class lazy-import (C3) ------------------------------------
-        class_name = spec.model_class_name()
         if spec.model_class and class_name and class_name not in _MODEL_CLASS_IMPORTS:
             _MODEL_CLASS_IMPORTS[class_name] = spec.model_class
             _undo.model_class_keys.add(class_name)
@@ -258,7 +299,11 @@ def _resolve_callable(dotted: str) -> Callable:
         msg = f"Callable path {dotted!r} must be of the form 'module.path:attribute'"
         raise ValueError(msg)
     module = importlib.import_module(module_path)
-    return getattr(module, attr)
+    resolved = getattr(module, attr)
+    if not callable(resolved):
+        msg = f"Callable path {dotted!r} resolved to a non-callable attribute"
+        raise ValueError(msg)  # noqa: TRY004 - callable-ref resolution surfaces uniformly as ValueError
+    return resolved
 
 
 def live_discovery_for(provider: str) -> Callable | None:
@@ -274,7 +319,7 @@ def live_discovery_for(provider: str) -> Callable | None:
     if spec is not None and spec.live_discovery:
         try:
             resolved = _resolve_callable(spec.live_discovery)
-        except (ImportError, AttributeError, ValueError) as exc:
+        except Exception as exc:  # noqa: BLE001 - extension import side effects (SyntaxError, etc.) must stay isolated
             logger.warning(f"Could not load live-discovery callable for provider {provider!r}: {exc}")
             resolved = None
     _live_discovery_cache[provider] = resolved
@@ -290,7 +335,7 @@ def validator_for(provider: str) -> Callable | None:
     if spec is not None and spec.validator:
         try:
             resolved = _resolve_callable(spec.validator)
-        except (ImportError, AttributeError, ValueError) as exc:
+        except Exception as exc:  # noqa: BLE001 - extension import side effects (SyntaxError, etc.) must stay isolated
             logger.warning(f"Could not load validator callable for provider {provider!r}: {exc}")
             resolved = None
     _validator_cache[provider] = resolved
