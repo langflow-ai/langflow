@@ -369,9 +369,7 @@ def test_validate_vllm_uses_v1_models_endpoint():
     with patch.object(requests, "get", side_effect=fake_get):
         validate_model_provider_key("vLLM", {"VLLM_API_BASE": "http://my-vllm.local"})
 
-    assert captured_url[0].endswith("/v1/models"), (
-        f"Expected /v1/models endpoint, got: {captured_url[0]}"
-    )
+    assert captured_url[0].endswith("/v1/models"), f"Expected /v1/models endpoint, got: {captured_url[0]}"
 
 
 def test_validate_vllm_forwards_api_key():
