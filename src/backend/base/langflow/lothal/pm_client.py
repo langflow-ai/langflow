@@ -47,7 +47,18 @@ class PMConfigError(PMError):
 
 
 class PMConnectionError(PMError):
-    """A request to the PM service failed (transport, non-2xx, or unparseable body)."""
+    """A request to the PM service failed (transport, non-2xx, or unparseable body).
+
+    Carries the PM status code and its ``detail`` message when the failure was an
+    HTTP error. Because the PM service is *our* product (not a foreign daemon), its
+    ``detail`` is a controlled, user-facing message — e.g. the ratify-gate reason —
+    so the bridge passes it through (``_pm_error_to_http``) rather than hiding it.
+    """
+
+    def __init__(self, message: str, *, status_code: int | None = None, detail: str | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.detail = detail
 
 
 def _resolve_base_url() -> str:
@@ -157,8 +168,16 @@ class PMClient:
                 continue
             if response.status_code >= httpx.codes.BAD_REQUEST:
                 logger.warning(f"pm {method} {path} → {response.status_code}")
+                detail = None
+                try:
+                    body = response.json()
+                    if isinstance(body, dict):
+                        raw = body.get("detail")
+                        detail = raw if isinstance(raw, str) else None
+                except ValueError:
+                    pass
                 msg = f"Lothal PM returned {response.status_code} for {method} {path}."
-                raise PMConnectionError(msg)
+                raise PMConnectionError(msg, status_code=response.status_code, detail=detail)
             return response
         # Unreachable: the loop returns or raises on both attempts.
         msg = f"Lothal PM request {method} {path} exhausted retries."
@@ -258,3 +277,58 @@ class PMClient:
             return result
         msg = "Lothal PM activity response was not a list."
         raise PMConnectionError(msg)
+
+    # --- contract / criteria / state (the validation loop) -------------------
+
+    async def update_criteria(self, plan_id: str, node_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """`PATCH /api/projects/:id/nodes/:nid/criteria` — edit the verification criteria (draft only)."""
+        return await self._request_json(
+            "PATCH", f"/api/projects/{plan_id}/nodes/{node_id}/criteria", json=body
+        )
+
+    async def transition(self, plan_id: str, node_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """`POST /api/projects/:id/nodes/:nid/transition` — drive the state machine (e.g. reopen → draft)."""
+        return await self._request_json(
+            "POST", f"/api/projects/{plan_id}/nodes/{node_id}/transition", json=body
+        )
+
+    async def node_events(self, plan_id: str, node_id: str) -> list[dict[str, Any]]:
+        """`GET /api/projects/:id/nodes/:nid/events` — the node's ledger events (its history)."""
+        result = await self._request_json("GET", f"/api/projects/{plan_id}/nodes/{node_id}/events")
+        if isinstance(result, list):
+            return result
+        msg = "Lothal PM node-events response was not a list."
+        raise PMConnectionError(msg)
+
+    async def node_dependencies(self, plan_id: str, node_id: str) -> dict[str, Any]:
+        """`GET /api/projects/:id/nodes/:nid/dependencies` — upstream/downstream derives-from sets."""
+        return await self._request_json("GET", f"/api/projects/{plan_id}/nodes/{node_id}/dependencies")
+
+    # --- tests ----------------------------------------------------------------
+
+    async def list_tests(self, plan_id: str, node_id: str) -> list[dict[str, Any]]:
+        """`GET /api/projects/:id/nodes/:nid/tests` — the node's tests."""
+        result = await self._request_json("GET", f"/api/projects/{plan_id}/nodes/{node_id}/tests")
+        if isinstance(result, list):
+            return result
+        msg = "Lothal PM list-tests response was not a list."
+        raise PMConnectionError(msg)
+
+    async def create_test(self, plan_id: str, node_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """`POST /api/projects/:id/nodes/:nid/tests` — author a test (see PM ``TestCreate``)."""
+        return await self._request_json(
+            "POST", f"/api/projects/{plan_id}/nodes/{node_id}/tests", json=body
+        )
+
+    async def record_test_run(self, plan_id: str, test_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """`POST /api/projects/:id/tests/:tid/runs` — record a test run result."""
+        return await self._request_json(
+            "POST", f"/api/projects/{plan_id}/tests/{test_id}/runs", json=body
+        )
+
+    # --- DAG render -----------------------------------------------------------
+
+    async def dag_svg(self, plan_id: str) -> str:
+        """`GET /api/projects/:id/dag.svg` — the server-rendered dependency graph as SVG text."""
+        response = await self._request("GET", f"/api/projects/{plan_id}/dag.svg")
+        return response.text

@@ -191,18 +191,23 @@ def _od_error_to_http(exc: ODError) -> HTTPException:
 
 
 def _pm_error_to_http(exc: PMError) -> HTTPException:
-    """Map the Lothal PM client errors to HTTP, mirroring `_od_error_to_http`.
+    """Map the Lothal PM client errors to HTTP.
 
-    A misconfigured bridge (e.g. a blank base URL) is a 503; a failed call to a
-    reachable-but-unhappy PM service is a 502 — the same setup-gap vs runtime-fault
-    split. (Finer 4xx pass-through for PM validation errors is a follow-up; the
-    shell sends PM-shaped bodies, so a 422 from PM should not arise in practice.)
+    A misconfigured bridge (e.g. a blank base URL) is a 503. Otherwise: because the
+    PM service is *our* product, a client error it returns (4xx — e.g. the ratify
+    gate rejecting a node, "409 not all children verified") is a real, user-facing
+    verdict, so the bridge passes the status and the PM ``detail`` straight through.
+    A 5xx / transport fault stays a 502 (the planning service is unreachable/broken).
     """
     if isinstance(exc, PMConfigError):
         return HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"The planning service is not configured: {exc}",
         )
+    code = getattr(exc, "status_code", None)
+    if code is not None and status.HTTP_400_BAD_REQUEST <= code < status.HTTP_500_INTERNAL_SERVER_ERROR:
+        detail = getattr(exc, "detail", None) or "The planning service rejected the request."
+        return HTTPException(status_code=code, detail=detail)
     return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"The planning service call failed: {exc}")
 
 
@@ -1132,6 +1137,119 @@ async def plan_activity(*, project: OwnedProject, limit: int = 200) -> list[dict
             return await pm.activity(plan_id, limit=limit)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
+
+
+@router.patch(
+    "/projects/{project_id}/plan/nodes/{node_id}/criteria",
+    summary="Edit a node's verification criteria (draft only)",
+)
+async def update_plan_criteria(*, project: OwnedProject, node_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+    _require_plan_active(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id))
+            return await pm.update_criteria(plan_id, str(node_id), body)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.post(
+    "/projects/{project_id}/plan/nodes/{node_id}/transition",
+    summary="Drive the node state machine (e.g. reopen a verified node to draft)",
+)
+async def transition_plan_node(*, project: OwnedProject, node_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+    _require_plan_active(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id))
+            return await pm.transition(plan_id, str(node_id), body)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/plan/nodes/{node_id}/events",
+    summary="A node's ledger events (its history)",
+)
+async def plan_node_events(*, project: OwnedProject, node_id: UUID) -> list[dict[str, Any]]:
+    _require_plan_visible(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id))
+            return await pm.node_events(plan_id, str(node_id))
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/plan/nodes/{node_id}/dependencies",
+    summary="A node's upstream/downstream derives-from dependency sets",
+)
+async def plan_node_dependencies(*, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
+    _require_plan_visible(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id))
+            return await pm.node_dependencies(plan_id, str(node_id))
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/plan/nodes/{node_id}/tests",
+    summary="A node's tests",
+)
+async def list_plan_tests(*, project: OwnedProject, node_id: UUID) -> list[dict[str, Any]]:
+    _require_plan_visible(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id))
+            return await pm.list_tests(plan_id, str(node_id))
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.post(
+    "/projects/{project_id}/plan/nodes/{node_id}/tests",
+    summary="Author a test on a node",
+)
+async def create_plan_test(*, project: OwnedProject, node_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+    _require_plan_active(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id))
+            return await pm.create_test(plan_id, str(node_id), body)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.post(
+    "/projects/{project_id}/plan/tests/{test_id}/runs",
+    summary="Record a test run result",
+)
+async def record_plan_test_run(*, project: OwnedProject, test_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+    _require_plan_active(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id))
+            return await pm.record_test_run(plan_id, str(test_id), body)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/plan/dag.svg",
+    summary="Server-rendered dependency-graph SVG for the planning tree",
+)
+async def plan_dag_svg(*, project: OwnedProject) -> Response:
+    _require_plan_visible(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id))
+            svg = await pm.dag_svg(plan_id)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+    return Response(content=svg, media_type="image/svg+xml")
 
 
 @router.post(

@@ -489,3 +489,174 @@ export function useApprovePlan(projectId: string) {
     },
   });
 }
+
+// --- Plan: node detail + the validation loop (contract / criteria / ratify) ---
+
+export type PlanContract = {
+  version: number;
+  assumptions: string[];
+  guarantees: string[];
+  frozen_assumptions: string[] | null;
+  frozen_guarantees: string[] | null;
+  frozen_at: string | null;
+};
+
+export type PlanNodeDetail = {
+  id: string;
+  project_id: string;
+  kind: PlanNodeKind;
+  state: string;
+  name: string;
+  description: string | null;
+  verification_criteria: string[];
+  test_methodology: string | null;
+  acceptance_criteria: string[];
+  frozen_verification_criteria: string[] | null;
+  verified_at: string | null;
+  contract: PlanContract | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TestMethodology = "unit" | "integration" | "system" | "acceptance";
+
+const planNodeKey = (projectId: string, nodeId: string) =>
+  ["lothal", "plan", projectId, "node", nodeId] as const;
+const planActivityKey = (projectId: string) =>
+  ["lothal", "plan", projectId, "activity"] as const;
+
+// `GET /plan/nodes/{id}` — the node with its contract + criteria. Disabled until a
+// node is selected. Skips deterministic statuses (the pane keys its panel off them).
+export function usePlanNode(projectId: string, nodeId: string | null) {
+  return useQuery({
+    queryKey: planNodeKey(projectId, nodeId ?? ""),
+    queryFn: async () => {
+      const res = await api.get<PlanNodeDetail>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}`,
+      );
+      return res.data;
+    },
+    enabled: !!nodeId,
+    retry: retrySkipping(501, 403, 409, 404),
+  });
+}
+
+function invalidatePlanNode(
+  qc: ReturnType<typeof useQueryClient>,
+  projectId: string,
+  nodeId: string,
+) {
+  qc.invalidateQueries({ queryKey: planKey(projectId) }); // tree (state badges)
+  qc.invalidateQueries({ queryKey: planNodeKey(projectId, nodeId) }); // the panel
+  qc.invalidateQueries({ queryKey: planActivityKey(projectId) }); // ledger
+}
+
+export function useUpdatePlanContract(projectId: string, nodeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { assumptions?: string[]; guarantees?: string[] }) => {
+      const res = await api.patch<PlanNodeDetail>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/contract`,
+        body,
+      );
+      return res.data;
+    },
+    onSuccess: () => invalidatePlanNode(qc, projectId, nodeId),
+  });
+}
+
+export function useUpdatePlanCriteria(projectId: string, nodeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      verification_criteria?: string[];
+      acceptance_criteria?: string[];
+      test_methodology?: TestMethodology;
+    }) => {
+      const res = await api.patch<PlanNodeDetail>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/criteria`,
+        body,
+      );
+      return res.data;
+    },
+    onSuccess: () => invalidatePlanNode(qc, projectId, nodeId),
+  });
+}
+
+// Run the roll-up ratify gate. On failure the PM service's reason flows through as
+// a 4xx, readable on the mutation's `error` (error.response.data.detail).
+export function useRatifyPlanNode(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (nodeId: string) => {
+      const res = await api.post<PlanNodeDetail>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/ratify`,
+      );
+      return res.data;
+    },
+    onSuccess: (_data, nodeId) => invalidatePlanNode(qc, projectId, nodeId),
+  });
+}
+
+// Drive the state machine — e.g. reopen a node to `draft` to edit it again.
+export function useTransitionPlanNode(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { nodeId: string; target: string; detail?: string }) => {
+      const res = await api.post<PlanNodeDetail>(
+        `${BASE}${projectId}/plan/nodes/${vars.nodeId}/transition`,
+        { target: vars.target, detail: vars.detail },
+      );
+      return res.data;
+    },
+    onSuccess: (_data, vars) => invalidatePlanNode(qc, projectId, vars.nodeId),
+  });
+}
+
+// --- Plan: tests (frozen-before-build — a node must own a test to ratify) ----
+
+export type TestScope = "unit" | "integration";
+
+export type PlanTest = {
+  id: string;
+  node_id: string;
+  scope: TestScope;
+  title: string;
+  spec: string | null;
+  frozen: boolean;
+  latest_status: string | null;
+};
+
+const planTestsKey = (projectId: string, nodeId: string) =>
+  ["lothal", "plan", projectId, "tests", nodeId] as const;
+
+export function usePlanTests(projectId: string, nodeId: string | null) {
+  return useQuery({
+    queryKey: planTestsKey(projectId, nodeId ?? ""),
+    queryFn: async () => {
+      const res = await api.get<PlanTest[]>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/tests`,
+      );
+      return res.data;
+    },
+    enabled: !!nodeId,
+    retry: retrySkipping(501, 403, 409, 404),
+  });
+}
+
+export function useCreatePlanTest(projectId: string, nodeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { scope: TestScope; title: string }) => {
+      const res = await api.post<PlanTest>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/tests`,
+        body,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: planTestsKey(projectId, nodeId) });
+      invalidatePlanNode(qc, projectId, nodeId); // ratify readiness changed
+    },
+  });
+}
