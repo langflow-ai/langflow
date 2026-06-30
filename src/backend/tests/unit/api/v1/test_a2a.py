@@ -111,12 +111,12 @@ async def test_get_agent_card_returns_valid_card(client: AsyncClient, active_use
 
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_capabilities_advertises_streaming(client: AsyncClient, active_user, flow_data):
-    """Streaming is advertised; pushNotifications stays present and explicitly false."""
+    """Streaming and push notifications are both advertised."""
     flow_id = await _create_flow(active_user.id, data=flow_data)
 
     body = (await client.get(_card_url(flow_id))).json()
 
-    assert body["capabilities"] == {"streaming": True, "pushNotifications": False}
+    assert body["capabilities"] == {"streaming": True, "pushNotifications": True}
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -830,6 +830,153 @@ async def test_stream_rejects_missing_key_plain_401(client: AsyncClient, active_
     ) as resp:
         assert resp.status_code == 401
         assert not resp.headers["content-type"].startswith("text/event-stream")
+
+
+# --- push notifications ----------------------------------------------------
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_card_advertises_push_notifications(client: AsyncClient, active_user, flow_data):
+    """The card advertises push notifications, matching the handler capability that gates the methods."""
+    flow_id = await _create_flow(active_user.id, data=flow_data)
+
+    body = (await client.get(_card_url(flow_id))).json()
+
+    assert body["capabilities"]["pushNotifications"] is True
+
+
+@pytest.mark.usefixtures("client")
+async def test_validate_webhook_url_blocks_internal_targets():
+    """The SSRF guard rejects private/loopback/link-local/non-http webhook targets, allows public ones."""
+    from langflow.api.v1.a2a_utils import validate_webhook_url
+
+    for bad in (
+        "http://127.0.0.1/h",
+        "http://169.254.169.254/latest/meta-data",  # cloud metadata
+        "http://10.0.0.1/h",
+        "http://[::1]/h",
+        "ftp://8.8.8.8/h",
+        "https:///nohost",
+    ):
+        with pytest.raises(ValueError, match="webhook"):
+            await validate_webhook_url(bad)
+
+    # Public IP literal: resolves without DNS, passes.
+    await validate_webhook_url("https://8.8.8.8/hook")
+
+
+@pytest.mark.usefixtures("client")
+async def test_validate_webhook_url_floor_holds_with_global_ssrf_off(monkeypatch):
+    """A2A webhook safety must not depend on the global SSRF toggle.
+
+    LANGFLOW_SSRF_PROTECTION_ENABLED is an API-Request-component setting ops can disable;
+    validate_and_resolve_url returns [] with no enforcement when it's off. The A2A guard
+    keeps a hard IP floor regardless, so a webhook resolving to a private/metadata IP is
+    still rejected, while a public host still validates and returns IPs for DNS pinning.
+    """
+    from langflow.api.v1.a2a_utils import validate_webhook_url
+
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
+
+    for bad in ("http://169.254.169.254/latest/meta-data", "http://127.0.0.1/h", "http://10.0.0.1/h"):
+        with pytest.raises(ValueError, match="webhook"):
+            await validate_webhook_url(bad)
+
+    # Public IP still passes the floor and is returned for DNS pinning even with the toggle off.
+    assert await validate_webhook_url("https://8.8.8.8/hook") == ["8.8.8.8"]
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_push_config_internal_url_rejected(client: AsyncClient, active_user, echo_flow_data):
+    """Registering a webhook that targets an internal address is rejected by the SSRF guard."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    sent = (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).json()["result"]
+    task_id = sent["id"]
+
+    params = {"taskId": task_id, "pushNotificationConfig": {"url": "http://169.254.169.254/hook"}}
+    body = (await _jsonrpc(client, flow_id, "tasks/pushNotificationConfig/set", params)).json()
+
+    assert "error" in body
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_push_config_public_url_accepted(client: AsyncClient, active_user, echo_flow_data):
+    """A public webhook URL registers cleanly (the guard only blocks internal targets)."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    sent = (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).json()["result"]
+    task_id = sent["id"]
+
+    params = {"taskId": task_id, "pushNotificationConfig": {"url": "https://8.8.8.8/hook"}}
+    body = (await _jsonrpc(client, flow_id, "tasks/pushNotificationConfig/set", params)).json()
+
+    assert "error" not in body
+    assert "result" in body
+
+
+@pytest.mark.usefixtures("client")
+async def test_push_dispatch_rejects_rebound_private_ip():
+    """Dispatch re-validates the webhook, so a config now pointing at a private/metadata IP is dropped.
+
+    Registration validation can't stop a host that re-resolves to an internal IP after it
+    was registered (DNS rebinding). Calling the live sender's dispatch path directly with a
+    config whose URL targets the cloud metadata IP (bypassing registration, as a rebind
+    would) must return False (not sent) rather than POST to the internal address.
+    """
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import _PUSH_SENDER
+
+    push_info = pb.TaskPushNotificationConfig(url="http://169.254.169.254/hook")
+
+    # event is irrelevant: the SSRF check fires before any payload is built or sent.
+    sent = await _PUSH_SENDER._dispatch_notification(None, push_info, "task-rebind")
+
+    assert sent is False
+
+
+def test_webhook_pin_host_matches_httpx_connect_host_for_idn():
+    """The DNS-pin key must be the host httpx actually connects to, not the unicode hostname.
+
+    httpx/httpcore connect using the IDNA/punycode ``raw_host``; ``urlparse().hostname`` keeps
+    the unicode form. Pinning by the unicode host means the pin key never matches the connected
+    host for an internationalized webhook, so the pin is silently bypassed (TOCTOU rebind). The
+    pin host and the connect host must be the identical punycode string.
+    """
+    from urllib.parse import urlparse
+
+    import httpx
+    from langflow.api.v1.a2a_utils import webhook_pin_host
+
+    url = "http://exämple.com/hook"
+    pin = webhook_pin_host(url)
+
+    # Pin == exactly what httpcore connects to (raw_host, IDNA-encoded), and NOT the old key.
+    assert pin == httpx.URL(url).raw_host.decode("ascii") == "xn--exmple-cua.com"
+    assert pin != urlparse(url).hostname  # the unicode host that would have bypassed the pin
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_push_config_is_flow_scoped(client: AsyncClient, active_user, echo_flow_data):
+    """A push config registered under flow A is invisible to flow B, even with the same task id.
+
+    The store is scoped by flow (not by task id alone), so flow B can't read flow A's webhook.
+    """
+    flow_a = await _create_flow(active_user.id, data=echo_flow_data)
+    flow_b = await _create_flow(active_user.id, data=echo_flow_data)
+
+    sent = (await _jsonrpc(client, flow_a, "message/send", _text_message("hi"))).json()["result"]
+    task_id = sent["id"]
+
+    webhook = f"https://8.8.8.8/hook-{uuid.uuid4().hex}"
+    set_params = {"taskId": task_id, "pushNotificationConfig": {"url": webhook}}
+    assert "result" in (await _jsonrpc(client, flow_a, "tasks/pushNotificationConfig/set", set_params)).json()
+
+    # Flow A (the registering flow) sees its own webhook back.
+    list_a = await _jsonrpc(client, flow_a, "tasks/pushNotificationConfig/list", {"id": task_id})
+    assert webhook in list_a.text
+
+    # Flow B, asking for the same task id, does not see flow A's webhook.
+    list_b = await _jsonrpc(client, flow_b, "tasks/pushNotificationConfig/list", {"id": task_id})
+    assert webhook not in list_b.text
 
 
 def _response(*, output, outputs=None):
