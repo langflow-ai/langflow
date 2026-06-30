@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json as _json
 import re
 from datetime import timedelta
@@ -100,6 +101,42 @@ def remove_api_keys(flow: dict):
                 value["value"] = None
 
     return flow
+
+
+def strip_secret_field_values(flow_data: dict | None) -> dict | None:
+    """Return a deep copy of ``flow_data`` with every secret field value removed.
+
+    Unlike :func:`remove_api_keys` (which only nulls password fields whose name
+    looks like an API key), this nulls the value of *every* template field marked
+    ``password`` regardless of its name. It is meant for exposing a flow to
+    unauthenticated callers (e.g. ``GET /flows/public_flow/{id}``), where any
+    stored secret — API key, token, password, connection string — must not leak.
+
+    ``flow_data`` is the flow's ``data`` mapping (``{"nodes": [...], ...}``). The
+    input is not mutated: a deep copy is returned so the caller never persists the
+    nulled values back onto the ORM object.
+    """
+    if not flow_data:
+        return flow_data
+
+    scrubbed = copy.deepcopy(flow_data)
+    for node in scrubbed.get("nodes", []):
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data")
+        if not isinstance(node_data, dict):
+            continue
+        node_inner = node_data.get("node")
+        if not isinstance(node_inner, dict):
+            continue
+        template = node_inner.get("template")
+        if not isinstance(template, dict):
+            continue
+        for value in template.values():
+            if isinstance(value, dict) and value.get("password"):
+                value["value"] = None
+
+    return scrubbed
 
 
 # ---------------------------------------------------------------------------
