@@ -20,17 +20,17 @@ This option provides more control over the configuration, including a persistent
 * [Create a custom Langflow image](#customize-the-langflow-docker-image): Use a Dockerfile to package a custom Langflow Docker image that includes your own code, custom dependencies, or other modifications.
 * [Upgrade the Langflow Docker image](#upgrade-the-langflow-docker-image): Upgrade to a newer image without losing your database or flows by using persistent volumes and replacing only the container.
 
-## Quickstart: Start a Langflow container with default values {#quickstart}
+## Quickstart: Start a local Langflow container {#quickstart}
 
 With Docker installed and running on your system, run the following command:
 
 ```shell
-docker run -p 7860:7860 langflowai/langflow:latest
+docker run -p 7860:7860 -e LANGFLOW_AUTO_LOGIN=true langflowai/langflow:latest
 ```
 
 Then, access Langflow at `http://localhost:7860/`.
 
-This container runs a pre-built Docker image with default settings.
+This starts a pre-built Docker image with automatic login enabled for local development.
 For more control over the configuration, see [Clone the repo and run the Langflow Docker container](#clone).
 
 ## Clone the repo and run the Langflow Docker container {#clone}
@@ -57,13 +57,21 @@ The complete Docker Compose configuration is available in `docker_example/docker
    cd langflow/docker_example
    ```
 
-3. Run the Docker Compose file:
+3. Create a `.env` file with the Langflow admin password:
+
+   ```text
+   LANGFLOW_SUPERUSER_PASSWORD=replace-with-a-strong-password
+   ```
+
+   The default admin username is `langflow`.
+
+4. Run the Docker Compose file:
 
    ```shell
    docker compose up
    ```
 
-4. Access Langflow at `http://localhost:7860/`.
+5. Access Langflow at `http://localhost:7860/`.
 
 ### Customize your deployment
 
@@ -82,6 +90,7 @@ For example, to configure the container's database credentials using a `.env` fi
     # Langflow configuration
     LANGFLOW_DATABASE_URL=postgresql://myuser:mypassword@postgres:5432/langflow
     LANGFLOW_CONFIG_DIR=/app/langflow
+    LANGFLOW_SUPERUSER_PASSWORD=replace-with-a-strong-password
     ```
 
 2. Modify the `docker-compose.yml` file to reference the `.env` file for both the `langflow` and `postgres` services:
@@ -140,7 +149,7 @@ This Dockerfile uses the official Langflow image as the base, creates a director
 
     ```bash
     docker build -t myuser/langflow-custom:1.0.0 .
-    docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    docker run -p 7860:7860 -e LANGFLOW_AUTO_LOGIN=true myuser/langflow-custom:1.0.0
     ```
 
 5. Push your image to Docker Hub (optional):
@@ -210,7 +219,7 @@ In this example, Langflow expects `memory.py` to exist in the `/helpers` directo
 
     ```bash
     docker build -t myuser/langflow-custom:1.0.0 .
-    docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    docker run -p 7860:7860 -e LANGFLOW_AUTO_LOGIN=true myuser/langflow-custom:1.0.0
     ```
 
 This approach can be adapted for any other components or custom code you want to add to Langflow by modifying the file paths and component names.
@@ -229,6 +238,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
         image: langflowai/langflow:1.8.0
         environment:
           - LANGFLOW_CONFIG_DIR=/app/langflow
+          - LANGFLOW_SUPERUSER_PASSWORD=${LANGFLOW_SUPERUSER_PASSWORD}
         volumes:
           - ./langflow-data:/app/langflow
       postgres:
@@ -270,7 +280,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
     With `docker run`, use the same volume mount and the new image tag:
 
     ```bash
-    docker run -p 7860:7860 -v langflow-data:/app/langflow langflowai/langflow:1.8.0
+    docker run -p 7860:7860 -v langflow-data:/app/langflow -e LANGFLOW_SUPERUSER_PASSWORD=replace-with-a-strong-password langflowai/langflow:1.8.0
     ```
 
 This approach keeps the persistent volumes separate from the Langflow container, so you can upgrade the Langflow application without losing data.

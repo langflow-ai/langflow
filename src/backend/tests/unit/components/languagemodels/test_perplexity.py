@@ -1,3 +1,4 @@
+import sys
 from unittest.mock import MagicMock
 
 import pytest
@@ -7,6 +8,14 @@ from lfx.custom.utils import build_custom_component_template
 from lfx.inputs.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput
 
 from tests.base import ComponentTestBaseWithoutClient
+
+# The component moved into lfx-bundles, so ``perplexity.py`` is reachable under several
+# module identities (the ``lfx.components.perplexity.perplexity`` shim, the canonical
+# ``lfx_bundles.perplexity.perplexity``, and the runtime ``_lfx_ext.*`` ext-loader copy).
+# Patch on the module the imported class actually lives in: a fixed string target like
+# "lfx.components.perplexity.perplexity.ChatPerplexity" misses (mock "called 0 times")
+# when an earlier test in the suite causes the class to resolve to a different identity.
+_PERPLEXITY_MODULE = sys.modules[PerplexityComponent.__module__]
 
 
 class TestPerplexityComponent(ComponentTestBaseWithoutClient):
@@ -62,7 +71,7 @@ class TestPerplexityComponent(ComponentTestBaseWithoutClient):
         # moved out of langchain_community.chat_models into the standalone
         # langchain_perplexity package. build_model must construct that class with the
         # inputs mapped onto its kwargs.
-        mock_chat = mocker.patch("lfx.components.perplexity.perplexity.ChatPerplexity", return_value=MagicMock())
+        mock_chat = mocker.patch.object(_PERPLEXITY_MODULE, "ChatPerplexity", return_value=MagicMock())
         component = component_class(**default_kwargs)
         component.top_p = 0.9
         component.n = 2
@@ -82,7 +91,7 @@ class TestPerplexityComponent(ComponentTestBaseWithoutClient):
     def test_build_model_applies_defaults(self, component_class, mocker):
         # top_p falls back to None and n falls back to 1 when left unset; a falsy
         # temperature falls back to 0.75.
-        mock_chat = mocker.patch("lfx.components.perplexity.perplexity.ChatPerplexity", return_value=MagicMock())
+        mock_chat = mocker.patch.object(_PERPLEXITY_MODULE, "ChatPerplexity", return_value=MagicMock())
         component = component_class(api_key="dummy-key", model_name="llama-3.1-8b-instruct", max_tokens=10)
         component.temperature = 0
         component.top_p = None

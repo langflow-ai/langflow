@@ -23,6 +23,14 @@ class PathSettings(BaseModel):
     are blocked because the path is resolved before the containment check. Leave
     empty in multi-tenant cloud deployments to refuse arbitrary-path access."""
 
+    directory_component_allowed_roots: list[str] = []
+    """Additional directories the legacy Directory component may read from.
+
+    The component always allows paths equal to or inside the process working
+    directory. Operators can set ``LANGFLOW_DIRECTORY_COMPONENT_ALLOWED_ROOTS``
+    as a comma-separated list for other trusted read-only content roots. Parent
+    traversal and symlink escapes are still blocked after canonicalization."""
+
     @field_validator("config_dir", mode="before")
     @classmethod
     def set_langflow_dir(cls, value: Any) -> str:
