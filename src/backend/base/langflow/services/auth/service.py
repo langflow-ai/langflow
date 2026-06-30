@@ -13,6 +13,7 @@ from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.auth.base import BaseAuthService
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
 
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
@@ -946,6 +947,20 @@ class AuthService(BaseAuthService):
             if not user.last_login_at:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting for approval")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+
+        auth_settings = self.settings.auth_settings
+        auto_login_superuser = auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+        legacy_superuser_usernames = {DEFAULT_SUPERUSER, auto_login_superuser}
+        if username in legacy_superuser_usernames and password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
+            if request and request.client:
+                logger.warning(
+                    "Login failed: legacy default superuser password is disabled",
+                    auth_event="login_failed",
+                    reason="legacy_default_password_disabled",
+                    auth_id=str(user.id),
+                    client_ip=request.client.host,
+                )
+            return None
 
         if not self.verify_password(password, user.password):
             if request and request.client:

@@ -4810,6 +4810,26 @@
       "legacy_slot": "ext:vlmrun:VLMRunTranscription@official-pre-a",
       "target": "ext:vlmrun:VLMRunTranscription@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "PaddleOCRComponent",
+      "target": "ext:paddle:PaddleOCRComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.paddle.paddleocr.PaddleOCRComponent",
+      "target": "ext:paddle:PaddleOCRComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.paddle.PaddleOCRComponent",
+      "target": "ext:paddle:PaddleOCRComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:paddle:PaddleOCRComponent@official-pre-a",
+      "target": "ext:paddle:PaddleOCRComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [
