@@ -22,7 +22,7 @@ _KIND_NODE_INPUT = "node_input"
 _FALLBACK_ACTION = "fallback"
 _UNIT_SECONDS = {"Minutes": 60, "Hours": 3600, "Days": 86400}
 
-# Scoped to Approve/Reject for now (no Edit/Respond); combobox still allows a custom action.
+# Default actions a freshly dragged node starts with; the author adds/renames more via the picker.
 _PREDEFINED_ACTIONS = [
     "Approve",
     "Reject",

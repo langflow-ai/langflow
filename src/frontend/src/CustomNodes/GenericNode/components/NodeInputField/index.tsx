@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { ActionPickerAddButton } from "@/components/core/parameterRenderComponent/components/actionPickerComponent/AddButton";
+import { ActionPickerAddingContext } from "@/components/core/parameterRenderComponent/components/actionPickerComponent/addingContext";
 import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import {
@@ -73,6 +74,16 @@ export default function NodeInputField({
     nodeId: data.id,
     name,
   });
+
+  const [isAddingAction, setIsAddingAction] = useState(false);
+  const addingContextValue = useMemo(
+    () => ({
+      isAdding: isAddingAction,
+      startAdding: () => setIsAddingAction(true),
+      stopAdding: () => setIsAddingAction(false),
+    }),
+    [isAddingAction],
+  );
 
   const nodeInformationMetadata: NodeInfoType = useMemo(() => {
     return {
@@ -187,50 +198,35 @@ export default function NodeInputField({
           />
           {data.node?.template[name]?.type === "actionPicker" && (
             <ActionPickerAddButton
-              selected={
-                Array.isArray(data.node?.template[name]?.value)
-                  ? data.node?.template[name]?.value
-                  : []
-              }
-              options={
-                Array.isArray(data.node?.template[name]?.options)
-                  ? data.node?.template[name]?.options
-                  : []
-              }
-              combobox={data.node?.template[name]?.combobox}
               testId={name}
-              onAdd={(action) => {
-                const current = Array.isArray(data.node?.template[name]?.value)
-                  ? data.node?.template[name]?.value
-                  : [];
-                if (current.includes(action)) return;
-                handleOnNewValue({ value: [...current, action] });
-              }}
+              onClick={() => setIsAddingAction(true)}
             />
           )}
         </div>
 
         {data.node?.template[name] !== undefined && (
-          <CustomParameterComponent
-            handleOnNewValue={handleOnNewValue}
-            name={name}
-            nodeId={data.id}
-            inputId={id}
-            templateData={data.node?.template[name]!}
-            templateValue={data.node?.template[name].value ?? ""}
-            editNode={false}
-            handleNodeClass={handleNodeClass}
-            showParameter={true}
-            nodeClass={data.node!}
-            placeholder={
-              isToolMode
-                ? t("input.toolsetPlaceholder")
-                : data.node?.template[name].placeholder
-            }
-            isToolMode={isToolMode}
-            nodeInformationMetadata={nodeInformationMetadata}
-            proxy={proxy}
-          />
+          <ActionPickerAddingContext.Provider value={addingContextValue}>
+            <CustomParameterComponent
+              handleOnNewValue={handleOnNewValue}
+              name={name}
+              nodeId={data.id}
+              inputId={id}
+              templateData={data.node?.template[name]!}
+              templateValue={data.node?.template[name].value ?? ""}
+              editNode={false}
+              handleNodeClass={handleNodeClass}
+              showParameter={true}
+              nodeClass={data.node!}
+              placeholder={
+                isToolMode
+                  ? t("input.toolsetPlaceholder")
+                  : data.node?.template[name].placeholder
+              }
+              isToolMode={isToolMode}
+              nodeInformationMetadata={nodeInformationMetadata}
+              proxy={proxy}
+            />
+          </ActionPickerAddingContext.Provider>
         )}
       </div>
     </div>
