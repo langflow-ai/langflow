@@ -28,7 +28,10 @@ import type {
 } from "@/types/api";
 import type { ChatInputType, ChatOutputType } from "@/types/chat";
 import { api } from "../api";
-import { injectHumanInputCard } from "./human-input-card";
+import {
+  injectHumanInputCard,
+  isHumanInputCardAnswered,
+} from "./human-input-card";
 import {
   buildWorkflowRunRequest,
   createWorkflowAgent,
@@ -546,9 +549,14 @@ export async function consumeBackgroundEvents(
     handleEndEvent: (data) => handleMessageEvent("end", data),
     handleLogEvent: () => {},
     onHumanInput: (payload) => {
-      // After a resume the pause is already answered; the replay re-emits it, but
-      // re-injecting would re-show the card/badge. Stream the continued run only.
-      if (skipCardInjection) return;
+      // Skip only the already-answered pause the reattach replays; a genuinely-new later pause
+      // in the same run is unanswered and must still surface its card.
+      if (
+        skipCardInjection &&
+        isHumanInputCardAnswered(payload as Record<string, unknown>, jobId)
+      ) {
+        return;
+      }
       suspended = true;
       injectHumanInputCard(payload as Record<string, unknown>, jobId, opts);
     },

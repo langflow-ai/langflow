@@ -21,7 +21,7 @@ def compute_resume_layer(graph: Graph) -> list[str]:
     are never queued (and never re-executed) on resume. Inactivated vertices (a branch a
     ConditionalRouter stopped before the pause) are excluded so resume doesn't revive a dead branch.
     """
-    inactivated = graph.inactivated_vertices
+    inactivated = graph.inactivated_vertices | graph.conditionally_excluded_vertices | graph._orphaned_tool_vertex_ids()  # noqa: SLF001
     built_ids = {vertex.id for vertex in graph.vertices if vertex.built}
     layer = [
         vertex.id
@@ -74,6 +74,29 @@ def _restore_vertices(graph: Graph, checkpoint: GraphCheckpoint) -> None:
             vertex.built_result = deserialize_value(vertex_data.built_result)
 
 
+def _unbuild_needed_dropped_producers(graph: Graph) -> None:
+    """Un-build only the opaque-dropped producers an unbuilt consumer will actually read.
+
+    A vertex whose live output was dropped to None (Tool/model client) must re-run on resume so a
+    consumer that re-runs gets a valid input. But re-running one whose consumers are all still built
+    is wasted work — and for a producer with side effects (an Agent re-bills its LLM and re-emits its
+    message), that surfaces as duplicate outputs on every later resume. So drop only those reachable
+    by an unbuilt successor, iterating to a fixpoint so a dropped producer behind another dropped one
+    (e.g. a tool feeding an agent) is freed once the agent itself is freed.
+    """
+    dropped = [
+        vertex for vertex in graph.vertices if vertex.id in graph.checkpoint_opaque_dropped_ids and not vertex.is_input
+    ]
+    changed = True
+    while changed:
+        changed = False
+        built_ids = {vertex.id for vertex in graph.vertices if vertex.built}
+        for vertex in dropped:
+            if vertex.built and any(s not in built_ids for s in graph.successor_map.get(vertex.id, [])):
+                vertex.built = False
+                changed = True
+
+
 def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: CheckpointStore | None = None) -> Graph:
     from lfx.graph.graph.base import Graph
 
@@ -92,6 +115,8 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
     graph._call_order = list(checkpoint.call_order)  # noqa: SLF001
     # Without these, every vertex resumes ACTIVE and compute_resume_layer revives a ConditionalRouter-stopped branch.
     graph.inactivated_vertices = {str(v) for v in checkpoint.inactivated_vertices}
+    graph.conditionally_excluded_vertices = {str(v) for v in checkpoint.conditionally_excluded_vertices}
+    graph.human_input_decisions = dict(checkpoint.human_input_decisions)
     graph.activated_vertices = list(checkpoint.activated_vertices)
     # Built-at-checkpoint vertices must not have their async generators re-consumed; the output loop skips this set.
     graph.checkpoint_restored_built_ids = {vid for vid, vd in checkpoint.vertex_results.items() if vd.built}
@@ -101,9 +126,7 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
     }
     _restore_run_manager(graph, checkpoint)
     _restore_vertices(graph, checkpoint)
-    for vertex in graph.vertices:
-        if vertex.id in graph.checkpoint_opaque_dropped_ids and not vertex.is_input:
-            vertex.built = False
+    _unbuild_needed_dropped_producers(graph)
     graph._run_queue.clear()  # noqa: SLF001
     graph._run_queue.extend(compute_resume_layer(graph))  # noqa: SLF001
     return graph

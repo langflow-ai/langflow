@@ -114,23 +114,55 @@ async def test_resume_flags_only_opaque_dropped_producers():
     assert "chat_output" not in resumed.checkpoint_opaque_dropped_ids
 
 
-async def test_resume_reruns_dropped_producer_off_the_paused_chain():
-    """A dropped opaque producer feeding a *downstream* consumer must re-run on resume.
+async def _three_node_checkpoint():
+    """chat_input -> mid -> sink, all three built before the pause."""
+    chat_input = ChatInput(_id="chat_input", input_value="hello")
+    chat_input.set(should_store_message=False)
+    mid = ChatOutput(_id="mid")
+    mid.set(input_value=chat_input.message_response, should_store_message=False)
+    sink = ChatOutput(_id="sink")
+    sink.set(input_value=mid.message_response, should_store_message=False)
+    graph = Graph(chat_input, sink)
+    graph.set_run_id()
+    graph.checkpointing_enabled = True
+    await graph.process(fallback_to_env_vars=False)
+    return graph, graph.build_checkpoint()
 
-    Reproduces the HITL crash: a HumanInput node pauses while a Tool producer that feeds a
-    downstream Agent was already built. The Tool can't be checkpointed (opaque → None), so the
-    producer is restored built with results None. Left built, _get_result serves that None and the
-    Agent binds None as a tool ("Unsupported function / None"). It must be un-built so it re-runs.
+
+async def test_resume_reruns_dropped_producer_an_unbuilt_consumer_needs():
+    """A dropped opaque producer feeding an *unbuilt* downstream consumer must re-run on resume.
+
+    Reproduces the HITL crash: a Tool producer feeding a downstream Agent was built before the pause.
+    The Tool can't be checkpointed (opaque → None); left built, _get_result serves that None and the
+    re-running Agent binds None as a tool ("Unsupported function / None"). When a consumer will re-run,
+    the producer must be un-built so it regenerates a valid output.
     """
-    _, checkpoint = await _paused_checkpoint()
-    # chat_output is a non-input vertex; simulate it as a producer that built before the pause whose
-    # live output (a Tool) opaque-dropped to None in the checkpoint.
-    checkpoint.vertex_results["chat_output"].built = True
-    checkpoint.vertex_results["chat_output"].built_object = None
+    _, checkpoint = await _three_node_checkpoint()
+    # mid is the dropped Tool producer; sink is the downstream consumer that still has to run.
+    checkpoint.vertex_results["mid"].built = True
+    checkpoint.vertex_results["mid"].built_object = None
+    checkpoint.vertex_results["sink"].built = False
 
     resumed = Graph.resume_from_checkpoint(checkpoint)
 
-    assert resumed.get_vertex("chat_output").built is False
+    assert resumed.get_vertex("mid").built is False
+
+
+async def test_resume_keeps_dropped_producer_no_live_consumer_reads():
+    """A dropped producer whose consumers are all still built is NOT re-run.
+
+    Re-running it would be wasted work and, for a side-effecting producer (an Agent re-bills its LLM
+    and re-emits its message), would surface as duplicate outputs on every later resume.
+    """
+    _, checkpoint = await _three_node_checkpoint()
+    # mid dropped, but its only consumer (sink) kept a valid round-tripped output → nothing reads mid.
+    checkpoint.vertex_results["mid"].built = True
+    checkpoint.vertex_results["mid"].built_object = None
+    checkpoint.vertex_results["sink"].built = True
+
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+
+    assert resumed.get_vertex("mid").built is True
 
 
 async def test_resume_keeps_dropped_input_vertex_built():

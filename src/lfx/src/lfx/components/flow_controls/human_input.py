@@ -199,7 +199,7 @@ class HumanInput(Component):
             self._suspend()
             return Message(text="")
         chosen = decision.get("action_id")
-        for action_id in self._allowed_decisions():
-            if action_id != chosen:
-                self.stop(f"branch_{action_id}")
+        non_chosen = [action_id for action_id in self._allowed_decisions() if action_id != chosen]
+        for action_id in non_chosen:
+            self.stop(f"branch_{action_id}")
         return Message(text=self._rendered_prompt())

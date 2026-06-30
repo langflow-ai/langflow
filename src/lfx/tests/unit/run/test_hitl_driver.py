@@ -223,3 +223,59 @@ async def test_ontime_decision_routes_to_chosen_branch() -> None:
     built = {r.vertex.id for r in results}
     assert "out_approve" in built
     assert "out_fallback" not in built
+
+
+def _two_hitl_graph(store, *, job_id="job-1"):
+    """Two HumanInput nodes in sequence (human1 -> human2 -> final_out), both approve-only.
+
+    Reproduces the multi-HITL resume loop: approving human2 must not re-pause human1.
+    """
+    from lfx.components.flow_controls.human_input import HumanInput
+    from lfx.io import Output
+
+    def _approve_only(_id):
+        human = HumanInput(_id=_id)
+        human.set(prompt="Approve?", decisions=["Approve"], enable_fallback=False)
+        human.outputs = [
+            Output(
+                display_name="Approve",
+                name="branch_approve",
+                method="route_branch",
+                group_outputs=True,
+                types=["Message"],
+            )
+        ]
+        human.map_outputs()
+        return human
+
+    human1 = _approve_only("human1")
+    human2 = _approve_only("human2")
+    final_out = ChatOutput(_id="final_out")
+    final_out.set(should_store_message=False)
+    graph = Graph()
+    graph.add_component(human1, "human1")
+    graph.add_component(human2, "human2")
+    graph.add_component(final_out, "final_out")
+    graph.add_component_edge("human1", ("branch_approve", "prompt"), "human2")
+    graph.add_component_edge("human2", ("branch_approve", "input_value"), "final_out")
+    graph.set_run_id(job_id)
+    graph.checkpointing_enabled = True
+    graph.checkpoint_store = store
+    return graph
+
+
+async def test_two_sequential_hitl_nodes_finish_without_relooping() -> None:
+    store = InMemoryCheckpointStore()
+    graph = _two_hitl_graph(store)
+    asked: list[str] = []
+
+    def provider(request: dict) -> dict:
+        asked.append(request["request_id"])
+        return {"action_id": "approve", "values": {}}
+
+    results = await run_graph_with_human_input(graph, decision_provider=provider, store=store)
+
+    built = {r.vertex.id for r in results}
+    assert "final_out" in built  # the run finalizes after the last HITL
+    # Each HITL is asked exactly once: approving human2 must NOT re-pause human1 (no ping-pong loop).
+    assert asked == ["human1:job-1", "human2:job-1"]

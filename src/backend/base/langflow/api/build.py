@@ -105,9 +105,15 @@ def _rerun_non_input_predecessors(graph: Graph, vertex_id: str) -> None:
             pred = graph.get_vertex(pred_id)
         except ValueError:
             continue
-        if not pred.is_input and pred_id in dropped:
+        if pred.is_input:
+            continue
+        # Stop at a built, round-tripped producer: its output is valid, so re-running its producers is
+        # wasted work and, for an Agent, re-bills the LLM and re-emits its message on every later resume.
+        will_run = pred_id in dropped or not pred.built
+        if pred_id in dropped:
             pred.built = False
-        stack.extend(graph.predecessor_map.get(pred_id, []))
+        if will_run:
+            stack.extend(graph.predecessor_map.get(pred_id, []))
 
 
 def _log_component_input_telemetry(
@@ -439,7 +445,11 @@ async def generate_flow_events(
         await graph.initialize_run()
         pending = await get_job_service().get_pending_human_request(job_id)
         decision = reroute_decision_on_timeout(pending, resume["decision"])
-        graph.human_input_decisions = {resume["request_id"]: decision}
+        # Merge with checkpoint-restored decisions so a re-run HITL keeps its answer (no multi-HITL loop).
+        graph.human_input_decisions = {
+            **(getattr(graph, "human_input_decisions", {}) or {}),
+            resume["request_id"]: decision,
+        }
         action_id = str((decision or {}).get("action_id", ""))
         gate_label = "Rejected" if "reject" in action_id.lower() else "Approved"
         if graph.tracing_service:

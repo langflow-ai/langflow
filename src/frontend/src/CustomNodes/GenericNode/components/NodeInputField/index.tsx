@@ -214,6 +214,7 @@ export default function NodeInputField({
               templateData={data.node?.template[name]!}
               templateValue={data.node?.template[name].value ?? ""}
               editNode={false}
+              inspectionPanel={false}
               handleNodeClass={handleNodeClass}
               showParameter={true}
               nodeClass={data.node!}
