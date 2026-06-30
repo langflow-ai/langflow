@@ -22,13 +22,6 @@ _KIND_NODE_INPUT = "node_input"
 _FALLBACK_ACTION = "fallback"
 _UNIT_SECONDS = {"Minutes": 60, "Hours": 3600, "Days": 86400}
 
-# Default actions a freshly dragged node starts with; the author adds/renames more via the picker.
-_PREDEFINED_ACTIONS = [
-    "Approve",
-    "Reject",
-]
-
-
 def _action_id(label: str) -> str:
     """Stable branch id for a human-facing action label (e.g. 'Request Changes' -> 'request_changes')."""
     return str(label).strip().lower().replace(" ", "_")
@@ -51,7 +44,6 @@ class HumanInput(Component):
             name="decisions",
             display_name="User Actions",
             info="Actions the human can choose; each becomes a branch output. Pick from the list or type a custom one.",
-            options=_PREDEFINED_ACTIONS,
             value=["Approve", "Reject"],
             real_time_refresh=True,
             required=True,

@@ -36,6 +36,7 @@ from sqlmodel import select
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.files import get_flow
 from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
+from langflow.api.v1.run_validation import raise_if_hitl_unsupported
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -242,6 +243,7 @@ async def simple_run_flow(
             raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+        raise_if_hitl_unsupported(graph_data)
         # Mirror the Playground's one-time fix in-memory: bind empty fields whose
         # display_name matches a user global variable's default_fields. Without
         # this, API-only workflows never trigger the frontend hook that persists
@@ -726,6 +728,8 @@ async def _run_flow_internal(
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except HTTPException:
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
