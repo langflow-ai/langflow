@@ -44,8 +44,6 @@ describe("SelectTrigger", () => {
       </Select>,
     );
 
-    expect(
-      screen.getByRole("combobox"),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 });

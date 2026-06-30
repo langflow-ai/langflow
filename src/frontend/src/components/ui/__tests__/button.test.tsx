@@ -14,18 +14,12 @@ describe("Button — loading + asChild", () => {
     expect(link).not.toBeNull();
     expect(link?.textContent).toBe("Docs");
 
-    expect(
-      container.querySelector(".animate-spin"),
-    ).toBeNull();
+    expect(container.querySelector(".animate-spin")).toBeNull();
   });
 
   it("renders the loading spinner when loading is enabled on a normal button", () => {
-    const { container } = render(
-      <Button loading>Submit</Button>,
-    );
+    const { container } = render(<Button loading>Submit</Button>);
 
-    expect(
-      container.querySelector(".animate-spin"),
-    ).not.toBeNull();
+    expect(container.querySelector(".animate-spin")).not.toBeNull();
   });
 });
