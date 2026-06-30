@@ -647,8 +647,8 @@
             "description": "# 📖 README\nThis flow is a chatbot with **long-term memory**. An **Agent** answers the user, and a **Memory Base** component lets it **store and recall facts across conversations** — so it remembers what you told it even in a brand-new chat session.\n\n## Quick start\n1. Configure your **Model Provider** with your API credentials in the **Agent**.\n2. Open the **Playground**, and then tell the agent something about yourself (e.g. your name).\n3. Start a **new chat session** in the Playground, and then ask, `what is my name`. The agent recalls it from the **Memory Base** — not just from the current session's history.\n\n## About the Memory Base component\nThe **Agent** and **Language Model** components have built-in chat memory for the **current session**, enabled by default. **Memory Base** goes further: it persists **long-term memories** to a memory store and lets the agent retrieve them **across sessions** (and even across other flows). The agent uses Memory Base as a tool — writing new memories as you chat and reading the relevant ones when it answers.\n\nIn this flow, **Memory Base** has session filtering turned **off**, so memories are shared across sessions — that's why a new chat can still recall your name.\n\nUse **Memory Base** when you need memory that outlives a single chat session — personalization, user facts, or supplying memories from other chats. For session-only context, the built-in chat memory is enough. For more information, see [Memory](https://docs.langflow.org/memory).\n",
             "display_name": "",
             "documentation": "",
-            "template": {},
-            "i18n_key": "template_notes.memory_chatbot.160f4633"
+            "i18n_key": "template_notes.memory_chatbot.160f4633",
+            "template": {}
           },
           "type": "note"
         },
