@@ -1306,6 +1306,38 @@ class TestServeAppEndpoints:
         assert data["status"] == "healthy"
         assert data["flow_count"] == 1
 
+    def test_readyz_gates_on_warm(self):
+        """/readyz fails closed (503) until background flow warm-up completes, then returns 200.
+
+        This is the warm-floor readiness gate: k8s must not route traffic to a worker until
+        its deployed flows are built/warm. /health (liveness) stays independent of warmth.
+        """
+        import threading
+        import time
+
+        gate = threading.Event()
+        registry = FlowRegistry()
+
+        def _blocking_warm():
+            gate.wait(timeout=10)  # hold the worker "warming" until the test releases it
+
+        with patch.object(registry, "warm_from_store", side_effect=_blocking_warm):
+            app = create_multi_serve_app(registry=registry)
+            with TestClient(app) as client:
+                # warm-up is blocked -> worker not ready -> 503, but liveness is healthy
+                assert client.get("/readyz").status_code == 503
+                assert client.get("/health").status_code == 200
+
+                gate.set()  # let warm-up finish
+
+                deadline = time.monotonic() + 10
+                code = client.get("/readyz").status_code
+                while code == 503 and time.monotonic() < deadline:
+                    time.sleep(0.05)
+                    code = client.get("/readyz").status_code
+                assert code == 200
+                assert client.get("/readyz").json()["status"] == "ready"
+
     def test_run_endpoint_success(self, app_client):
         """Test successful flow execution."""
         request_data = {"input_value": "Test input"}
