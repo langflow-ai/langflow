@@ -46,6 +46,7 @@ members = [
     "lfx-openai",
     "lfx-oracle",
     "lfx-paddle",
+    "lfx-vllm",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -7906,6 +7907,7 @@ dependencies = [
     { name = "lfx-openai" },
     { name = "lfx-oracle" },
     { name = "lfx-paddle" },
+    { name = "lfx-vllm" },
 ]
 
 [package.optional-dependencies]
@@ -8010,6 +8012,7 @@ requires-dist = [
     { name = "lfx-openai", editable = "src/bundles/openai" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", editable = "src/bundles/paddle" },
+    { name = "lfx-vllm", editable = "src/bundles/vllm" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
@@ -10123,6 +10126,21 @@ dependencies = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-vllm"
+version = "0.1.0"
+source = { editable = "src/bundles/vllm" }
+dependencies = [
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "lfx", editable = "src/lfx" },
+    { name = "requests", specifier = ">=2.31.0,<3.0.0" },
 ]
 
 [[package]]
