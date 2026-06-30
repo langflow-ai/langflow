@@ -159,7 +159,7 @@ export const GetStartedProgress: FC<{
                 />
               </span>
             ) : (
-              <FaGithub className="h-4 w-4 shrink-0" />
+              <FaGithub className="h-4 w-4 shrink-0" aria-hidden="true" />
             )}
             <ShadTooltip content={t("sidebar.starRepo")} side="right">
               <span
@@ -203,7 +203,10 @@ export const GetStartedProgress: FC<{
                 />
               </span>
             ) : (
-              <FaDiscord className="h-4 w-4 shrink-0 text-[#5865F2]" />
+              <FaDiscord
+                className="h-4 w-4 shrink-0 text-[#5865F2]"
+                aria-hidden="true"
+              />
             )}
             <ShadTooltip content={t("sidebar.joinCommunity")} side="right">
               <span
