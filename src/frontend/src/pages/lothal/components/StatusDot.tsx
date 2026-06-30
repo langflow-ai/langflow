@@ -7,6 +7,8 @@ const MAP: Record<string, { color: string; label: string }> = {
   ARCHITECTURE: { color: "#3e7ab8", label: "designing" },
   // Epic UI (U.8): the Open Design prototype stage.
   PROTOTYPE: { color: "#6f5bd0", label: "prototyping" },
+  // Epic U-PLAN: the verification-driven planning stage.
+  PLAN: { color: "#2f8f83", label: "planning" },
   CODE_GENERATION: { color: "#c08a2e", label: "generating" },
   DONE: { color: "var(--success)", label: "delivered" },
 };

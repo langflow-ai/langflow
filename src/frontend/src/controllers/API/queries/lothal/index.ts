@@ -402,3 +402,90 @@ export function useApprovePrototype(projectId: string) {
     },
   });
 }
+
+// --- Plan (verification-driven PM tree, Epic U-PLAN) -----------------------
+// The PLAN stage is OUR product: its endpoints ARE the canonical Lothal API
+// (`/projects/{id}/plan/*`), bridged server-side to the standalone PM service. A
+// native pane renders the tree — no iframe. `GET /plan` returns a snapshot (the
+// PM tree id, its nodes, and links); mutations add nodes/links and `approve`
+// advances PLAN → CODE_GENERATION. Field names are snake_case on the wire.
+
+export type PlanNodeKind = "app" | "component" | "epic" | "story";
+
+export type PlanNode = {
+  id: string;
+  parent_id: string | null;
+  kind: PlanNodeKind;
+  state: string;
+  name: string;
+  depth: number;
+};
+
+export type PlanLink = {
+  id: string;
+  source_id: string;
+  target_id: string;
+  link_type: string;
+};
+
+export type PlanTree = {
+  plan_id: string;
+  nodes: PlanNode[];
+  links: PlanLink[];
+};
+
+const planKey = (projectId: string) => ["lothal", "plan", projectId] as const;
+
+// `GET /plan`. Phase-gated to PLAN onward: a read before then is a deterministic
+// 403 (the pane keys its NotReady state off it), so skip retrying that, the stray
+// 501, and the 409 a wrong-phase write returns.
+export function usePlan(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: planKey(projectId),
+    queryFn: async () => {
+      const res = await api.get<PlanTree>(`${BASE}${projectId}/plan`);
+      return res.data;
+    },
+    enabled,
+    retry: retrySkipping(501, 403, 409),
+  });
+}
+
+// Add a node to the tree. Invalidates the plan snapshot so the new node appears.
+export function useCreatePlanNode(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      kind: PlanNodeKind;
+      name: string;
+      parent_id?: string | null;
+    }) => {
+      const res = await api.post<PlanNode>(
+        `${BASE}${projectId}/plan/nodes`,
+        body,
+      );
+      return res.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: planKey(projectId) }),
+  });
+}
+
+// Approve the plan: advances PLAN → CODE_GENERATION. Returns the new phase
+// (the `DiagramApprove` shape). Invalidates the project (phase badge, stepper,
+// right-pane swap), the plan snapshot, and code.
+export function useApprovePlan(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post<DiagramApprove>(
+        `${BASE}${projectId}/plan/approve`,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      qc.invalidateQueries({ queryKey: planKey(projectId) });
+      qc.invalidateQueries({ queryKey: codeKey(projectId) });
+    },
+  });
+}

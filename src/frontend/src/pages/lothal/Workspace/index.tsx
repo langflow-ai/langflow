@@ -46,6 +46,7 @@ import {
   TopBar,
 } from "../components";
 import { ArtifactsPane } from "../components/ArtifactsPane";
+import { PlanPane } from "../components/PlanPane";
 import { PrototypePane } from "../components/PrototypePane";
 import { LothalSurface } from "../theme/LothalSurface";
 
@@ -59,8 +60,11 @@ function transitionNote(toPhase: string): string {
     // code generation.
     case "PROTOTYPE":
       return "Architecture approved — building the prototype";
+    // Epic U-PLAN: the planning stage sits between prototype approval and code gen.
+    case "PLAN":
+      return "Prototype approved — planning the build";
     case "CODE_GENERATION":
-      return "Prototype approved — generating the code";
+      return "Plan approved — generating the code";
     case "DONE":
       return "Delivered";
     default:
@@ -595,6 +599,8 @@ function WorkspaceView() {
             <CodePanel project={project} />
           ) : project.phase === "PROTOTYPE" ? (
             <PrototypePane project={project} />
+          ) : project.phase === "PLAN" ? (
+            <PlanPane project={project} />
           ) : (
             <ArtifactsPane
               project={project}
