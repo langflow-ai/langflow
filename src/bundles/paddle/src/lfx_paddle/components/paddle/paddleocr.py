@@ -8,6 +8,8 @@ import httpx
 from lfx.base.data.base_file import BaseFileComponent
 from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import is_ssrf_protection_enabled, validate_and_resolve_url
+from lfx.utils.ssrf_transport import create_ssrf_protected_sync_client
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -283,7 +285,18 @@ class PaddleOCRComponent(BaseFileComponent):
             interval = min(interval * self.POLL_MULTIPLIER, self.MAX_POLL_INTERVAL)
 
     def _fetch_result(self, result_url: str) -> list[dict[str, Any]]:
-        response = httpx.get(result_url, timeout=self.REQUEST_TIMEOUT)
+        # ``result_url`` comes from the remote job-status response, not from
+        # operator input, so it is validated for SSRF before being fetched: a
+        # compromised/rogue endpoint could otherwise point it at internal or
+        # cloud-metadata addresses and have the worker fetch them server-side.
+        # ``validate_and_resolve_url`` is a no-op (returns no pinned IPs) when
+        # SSRF protection is disabled -- the default -- so behavior is unchanged
+        # unless an operator opts in; when enabled it blocks internal targets
+        # and pins DNS to the validated IPs.  This mirrors the shared pattern in
+        # ``lfx.components.data_source.api_request``.
+        _validated_url, validated_ips = validate_and_resolve_url(result_url)
+        with self._build_result_client(result_url, validated_ips) as client:
+            response = client.get(result_url)
         response.raise_for_status()
         text = response.text.strip()
         if not text:
@@ -299,6 +312,22 @@ class PaddleOCRComponent(BaseFileComponent):
         if isinstance(payload, dict):
             return [payload]
         return []
+
+    def _build_result_client(self, url: str, validated_ips: list[str]) -> httpx.Client:
+        """Create the HTTP client used to fetch the result, pinning DNS when SSRF protection applies.
+
+        Returns a client that pins DNS to ``validated_ips`` (preventing rebinding)
+        when SSRF protection is enabled and the host resolved to validated IPs;
+        otherwise a standard client (protection disabled, allowlisted host, or
+        hostname extraction failure).
+        """
+        if is_ssrf_protection_enabled() and validated_ips:
+            hostname = httpx.URL(url).host
+            if hostname:
+                return create_ssrf_protected_sync_client(
+                    hostname=hostname, validated_ips=validated_ips, timeout=self.REQUEST_TIMEOUT
+                )
+        return httpx.Client(timeout=self.REQUEST_TIMEOUT)
 
     def _build_ocr_options(self) -> dict[str, Any]:
         return self._collect_options(

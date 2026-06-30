@@ -214,6 +214,43 @@ def test_paddleocr_formats_auth_error():
     )
 
 
+def test_build_result_client_is_plain_when_ssrf_disabled():
+    # SSRF protection is off by default, so the result fetch uses a standard client
+    # (no DNS pinning) and behavior matches the pre-hardening port.
+    component = PaddleOCRComponent()
+    client = component._build_result_client("https://example.com/result.json", [])
+    try:
+        assert isinstance(client, httpx.Client)
+    finally:
+        client.close()
+
+
+def test_fetch_result_parses_json_list(monkeypatch):
+    component = PaddleOCRComponent()
+
+    def handler(_request):
+        return httpx.Response(200, json=[{"x": 1}])
+
+    def fake_build_client(_self, _url, _ips):
+        return httpx.Client(transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(PaddleOCRComponent, "_build_result_client", fake_build_client)
+    assert component._fetch_result("https://example.com/result.json") == [{"x": 1}]
+
+
+def test_fetch_result_parses_jsonl_fallback(monkeypatch):
+    component = PaddleOCRComponent()
+
+    def handler(_request):
+        return httpx.Response(200, text='{"a": 1}\n{"b": 2}\n')
+
+    def fake_build_client(_self, _url, _ips):
+        return httpx.Client(transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(PaddleOCRComponent, "_build_result_client", fake_build_client)
+    assert component._fetch_result("https://example.com/result.jsonl") == [{"a": 1}, {"b": 2}]
+
+
 def test_task_type_updates_model_options():
     component = PaddleOCRComponent()
     build_config = {
