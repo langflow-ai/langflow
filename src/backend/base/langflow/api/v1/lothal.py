@@ -1025,7 +1025,7 @@ async def get_plan(*, project: OwnedProject) -> dict[str, Any]:
     _require_plan_visible(project)
     try:
         async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            plan_id = await pm.ensure_plan(str(project.id))
             nodes = await pm.list_nodes(plan_id)
             links = await pm.list_links(plan_id)
     except PMError as exc:
@@ -1042,7 +1042,7 @@ async def create_plan_node(*, project: OwnedProject, body: dict[str, Any]) -> di
     _require_plan_active(project)
     try:
         async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            plan_id = await pm.ensure_plan(str(project.id))
             return await pm.create_node(plan_id, body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
@@ -1056,7 +1056,7 @@ async def get_plan_node(*, project: OwnedProject, node_id: UUID) -> dict[str, An
     _require_plan_visible(project)
     try:
         async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            plan_id = await pm.ensure_plan(str(project.id))
             return await pm.get_node(plan_id, str(node_id))
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
@@ -1072,7 +1072,7 @@ async def update_plan_contract(
     _require_plan_active(project)
     try:
         async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            plan_id = await pm.ensure_plan(str(project.id))
             return await pm.update_contract(plan_id, str(node_id), body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
@@ -1086,7 +1086,7 @@ async def ratify_plan_node(*, project: OwnedProject, node_id: UUID) -> dict[str,
     _require_plan_active(project)
     try:
         async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            plan_id = await pm.ensure_plan(str(project.id))
             return await pm.ratify(plan_id, str(node_id))
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
@@ -1100,7 +1100,7 @@ async def list_plan_links(*, project: OwnedProject) -> list[dict[str, Any]]:
     _require_plan_visible(project)
     try:
         async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            plan_id = await pm.ensure_plan(str(project.id))
             return await pm.list_links(plan_id)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
@@ -1114,7 +1114,7 @@ async def create_plan_link(*, project: OwnedProject, body: dict[str, Any]) -> di
     _require_plan_active(project)
     try:
         async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            plan_id = await pm.ensure_plan(str(project.id))
             return await pm.create_link(plan_id, body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
@@ -1128,7 +1128,7 @@ async def plan_activity(*, project: OwnedProject, limit: int = 200) -> list[dict
     _require_plan_visible(project)
     try:
         async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id), name=project.name)
+            plan_id = await pm.ensure_plan(str(project.id))
             return await pm.activity(plan_id, limit=limit)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc

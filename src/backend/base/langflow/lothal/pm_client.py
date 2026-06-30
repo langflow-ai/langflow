@@ -191,19 +191,20 @@ class PMClient:
             raise PMConnectionError(msg)
         return result
 
-    async def ensure_plan(self, langflow_project_id: str, name: str | None = None) -> str:
+    async def ensure_plan(self, langflow_project_id: str) -> str:
         """Map a Langflow project to its PM tree, creating it on first use.
 
         The PM service assigns its own ids, so we can't reuse the Langflow id
         directly; instead the PM tree is *named* after the Langflow project id and
         looked up by that name (idempotent — mirrors ``od_client`` list-then-create).
-        Returns the PM project id to use in every other call.
+        The name MUST be the marker (not a human title) or the lookup can't find it
+        and every call would create a new tree. Returns the PM project id.
         """
         marker = str(langflow_project_id)
         for project in await self.list_projects():
             if project.get("name") == marker:
                 return str(project["id"])
-        created = await self.create_project(name or marker)
+        created = await self.create_project(marker)
         return str(created["id"])
 
     # --- nodes (the verification tree) ---------------------------------------
