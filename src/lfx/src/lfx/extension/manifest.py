@@ -327,6 +327,14 @@ class ProviderManifestEntry(BaseModel):
         min_length=1,
         description="Dotted-path callable 'module:attr' validating credentials: (provider, variables, model) -> None.",
     )
+    models: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Optional static seed model catalog injected into _STATIC_MODELS_DETAILED. "
+            "Each entry is a ModelMetadata dict (same shape as create_model_metadata produces). "
+            "Use for providers whose model list is fixed (e.g. deployment-specific clouds)."
+        ),
+    )
 
     @field_validator("metadata")
     @classmethod

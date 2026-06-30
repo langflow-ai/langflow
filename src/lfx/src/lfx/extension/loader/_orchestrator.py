@@ -296,6 +296,7 @@ def _register_manifest_providers(
                 conditional_live=entry.conditional_live,
                 live_discovery=entry.live_discovery,
                 validator=entry.validator,
+                models=list(entry.models),
             )
             if not register_provider(spec):
                 result.warnings.append(
