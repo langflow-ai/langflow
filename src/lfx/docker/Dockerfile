@@ -7,10 +7,14 @@
 ################################
 
 # Use an Alpine-based Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.14-alpine AS builder
+FROM ghcr.io/astral-sh/uv:latest AS uv_installer
+FROM registry.access.redhat.com/ubi10/python-314-minimal AS builder
+USER root
+COPY --from=uv_installer /uv /usr/local/bin/uv
+COPY --from=uv_installer /uvx /usr/local/bin/uvx
 
 # Install build dependencies needed for some Python packages on Alpine
-RUN apk add --no-cache build-base libaio-dev linux-headers
+RUN microdnf install -y python3.14-devel tar xz gcc gcc-c++ make libaio-devel kernel-headers
 
 WORKDIR /app
 
@@ -47,21 +51,24 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.14-alpine AS runtime
-
+FROM registry.access.redhat.com/ubi10/python-314-minimal AS runtime
+USER root
 # Create a non-root user
 # -D: Don't assign a password
 # -u: Set user ID
 # -G: Add to group (root)
 # -h: Set home directory
 # -s: Set shell
-RUN adduser -D -u 1000 -G root -h /app/data -s /sbin/nologin lfx
+RUN microdnf install -y tar xz shadow-utils && useradd -u 1000 -g 0 --no-create-home -d /app/data -s /sbin/nologin lfx
 
 # Copy the virtual environment from the builder stage
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+ENV BASH_ENV="" \
+    ENV="" \
+    PROMPT_COMMAND=""
 
 LABEL org.opencontainers.image.title=lfx
 LABEL org.opencontainers.image.authors=['Langflow']

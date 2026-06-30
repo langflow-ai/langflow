@@ -40,6 +40,7 @@ dependencies = [
     "lfx-oracle>=0.1.0,<1.0.0",
     "lfx-firecrawl>=0.1.0,<1.0.0",
     "lfx-nextplaid>=0.1.0,<1.0.0",
+    "lfx-paddle>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -110,6 +111,7 @@ lfx-cohere = { workspace = true }
 lfx-oracle = { workspace = true }
 lfx-firecrawl = { workspace = true }
 lfx-nextplaid = { workspace = true }
+lfx-paddle = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -135,6 +137,7 @@ members = [
     "src/bundles/oracle",
     "src/bundles/firecrawl",
     "src/bundles/nextplaid",
+    "src/bundles/paddle",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -202,6 +205,9 @@ override-dependencies = [
     "dynaconf>=3.2.13",
     "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
+    # Keep uv workspace resolution on the supported LiteLLM floor without forcing
+    # an upstream package that declares Requires-Python <3.14 onto Python 3.14.
+    "litellm>=1.85.1,<2.0.0; python_version < '3.14'",
     # Transitive dependency CVE fixes
     "lxml>=6.1.0,<7.0.0",  # CVE-2026-41066
     "mako>=1.3.12,<2.0.0",  # CVE-2026-44307

@@ -445,9 +445,6 @@ class TestDirectModuleImports:
                         "redis",
                         "elasticsearch",
                         "langchain_community",
-                        "lfx-datastax",
-                        "lfx-openai",
-                        "lfx-oracle",
                         # Gated to python_version<'3.14' in pyproject.toml until
                         # upstream caps lift.
                         "altk",
@@ -458,6 +455,12 @@ class TestDirectModuleImports:
                         "lfx-openai",
                         "lfx-datastax",
                         "lfx-oracle",
+                        # litellm has no 3.14-compatible release, so it is gated to
+                        # python_version<'3.14'. Its absence surfaces transitively
+                        # via crewai (``from crewai import Agent`` -> litellm) and
+                        # via toolguard (the policies components import it directly).
+                        "litellm",
+                        "toolguard",
                     ]
                 ):
                     return ("skipped", modname, "missing optional dependency")
