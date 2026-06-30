@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
+from lfx.base.models.azure_ai_foundry_constants import AZURE_AI_FOUNDRY_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
@@ -33,6 +34,7 @@ model_provider_metadata = get_model_provider_metadata()
 
 _STATIC_MODELS_DETAILED: list[list[dict]] = [
     ANTHROPIC_MODELS_DETAILED,
+    AZURE_AI_FOUNDRY_MODELS_DETAILED,
     OPENAI_MODELS_DETAILED,
     OPENAI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,

@@ -43,6 +43,9 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "OPENROUTER_API_KEY",
     "OPENROUTER_SITE_URL",
     "OPENROUTER_APP_NAME",
+    # Azure AI Foundry variables
+    "AZURE_AI_FOUNDRY_API_KEY",
+    "AZURE_AI_FOUNDRY_ENDPOINT",
 ]
 
 # Agentic experience specific variables

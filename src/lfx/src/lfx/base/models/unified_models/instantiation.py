@@ -260,12 +260,10 @@ def get_llm(
 
         # Priority: component value > database value > env var
         watsonx_url_value = (
-            watsonx_url if watsonx_url else provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
+            watsonx_url or provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
         )
         watsonx_project_id_value = (
-            watsonx_project_id
-            if watsonx_project_id
-            else provider_vars.get("WATSONX_PROJECT_ID") or _env_if_allowed("WATSONX_PROJECT_ID")
+            watsonx_project_id or provider_vars.get("WATSONX_PROJECT_ID") or _env_if_allowed("WATSONX_PROJECT_ID")
         )
 
         has_url = bool(watsonx_url_value)
@@ -295,9 +293,7 @@ def get_llm(
 
         # Priority: component value > database value > env var
         ollama_base_url_value = (
-            ollama_base_url
-            if ollama_base_url
-            else provider_vars.get("OLLAMA_BASE_URL") or _env_if_allowed("OLLAMA_BASE_URL")
+            ollama_base_url or provider_vars.get("OLLAMA_BASE_URL") or _env_if_allowed("OLLAMA_BASE_URL")
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
@@ -332,6 +328,16 @@ def get_llm(
                 default_headers[header_name] = value
         if default_headers:
             kwargs["default_headers"] = default_headers
+    elif provider == "Azure AI Foundry":
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        endpoint_value = provider_vars.get("AZURE_AI_FOUNDRY_ENDPOINT") or _env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT")
+        if not endpoint_value:
+            msg = (
+                "Azure AI Foundry endpoint is required. Configure AZURE_AI_FOUNDRY_ENDPOINT "
+                "in Settings → Model Providers or set the environment variable."
+            )
+            raise ValueError(msg)
+        kwargs["endpoint"] = endpoint_value
     elif is_registered(provider):
         # Bundle-contributed provider: apply its declared connection variables
         # (base_url, attribution headers, etc.) generically from its metadata.
@@ -478,7 +484,7 @@ def get_embeddings(
         "request_timeout": float(request_timeout) if request_timeout else None,
         "max_retries": int(max_retries) if max_retries else None,
         "show_progress_bar": show_progress_bar,
-        "model_kwargs": model_kwargs if model_kwargs else None,
+        "model_kwargs": model_kwargs or None,
     }
 
     # Watson-specific parameters
