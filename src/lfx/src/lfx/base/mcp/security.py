@@ -165,6 +165,13 @@ SHELL_WRAPPERS = frozenset({"cmd", "sh", "bash"})
 SHELL_EXEC_FLAGS = frozenset({"-c", "/c"})
 
 
+def _is_shell_exec_flag(arg: str) -> bool:
+    arg_lower = arg.lower()
+    if arg_lower in SHELL_EXEC_FLAGS:
+        return True
+    return arg_lower.startswith("-") and not arg_lower.startswith("--") and "c" in arg_lower[1:]
+
+
 class MCPStdioSecurityError(ValueError):
     """Raised when an MCP stdio server config fails security validation.
 
@@ -323,7 +330,7 @@ def validate_mcp_stdio_config(
     #    before the metacharacter scan so a `-c` on a non-shell command is reported as such.
     if command and args:
         base_command = extract_base_command(command)
-        has_shell_exec_flag = any(arg in SHELL_EXEC_FLAGS for arg in args)
+        has_shell_exec_flag = any(_is_shell_exec_flag(arg) for arg in args)
 
         if has_shell_exec_flag and base_command not in SHELL_WRAPPERS:
             msg = f"Flag -c or /c is only allowed with shell wrappers (cmd/sh/bash), not with '{base_command}'"
@@ -332,7 +339,7 @@ def validate_mcp_stdio_config(
         if base_command in SHELL_WRAPPERS:
             wrapped_command = None
             for i, arg in enumerate(args):
-                if arg in SHELL_EXEC_FLAGS and i + 1 < len(args):
+                if _is_shell_exec_flag(arg) and i + 1 < len(args):
                     wrapped_command = args[i + 1]
                     break
 

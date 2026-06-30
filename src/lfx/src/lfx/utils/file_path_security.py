@@ -126,4 +126,4 @@ def enforce_local_file_access(resolved_path: str | Path) -> Path:
     if candidate in _reserved_secret_paths(data_dir):
         msg = "Access to this server-managed file is not permitted (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
         raise LocalFileAccessError(msg)
-    return path
+    return candidate

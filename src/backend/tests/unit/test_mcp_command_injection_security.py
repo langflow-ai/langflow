@@ -62,9 +62,9 @@ class TestMCPCommandInjectionSecurity:
         """Test that shell wrappers (cmd/sh/bash) are allowed when wrapping safe commands."""
         # These should all pass validation
         valid_configs = [
-            MCPServerConfig(command="cmd", args=["/c", "uvx", "mcp-server"]),
+            MCPServerConfig(command="cmd", args=["/C", "uvx", "mcp-server"]),
             MCPServerConfig(command="sh", args=["-c", "npx @modelcontextprotocol/server"]),
-            MCPServerConfig(command="bash", args=["-c", "python -m mcp_server"]),
+            MCPServerConfig(command="bash", args=["-lc", "python -m mcp_server"]),
             MCPServerConfig(command="cmd", args=["/c", "node", "server.js"]),
         ]
 
@@ -99,6 +99,7 @@ class TestMCPCommandInjectionSecurity:
             ("python", ["-c", "import os; os.system('rm -rf /')"]),
             ("python3", ["-c", "malicious code"]),
             ("node", ["-c", "require('child_process').exec('evil')"]),
+            ("python", ["-Lc", "import os"]),
         ]
 
         for cmd, args in dangerous_c_usage:
@@ -142,6 +143,8 @@ class TestMCPCommandInjectionSecurity:
         for cmd in packed:
             with pytest.raises(ValidationError):
                 MCPServerConfig(command=cmd, args=[])
+            with pytest.raises(ValidationError):
+                MCPServerConfig(command=cmd, args=None)
 
     def test_command_injection_via_semicolon_rejected(self):
         """Test that command injection via semicolon is rejected."""

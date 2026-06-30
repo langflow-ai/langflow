@@ -638,14 +638,15 @@ class SaveToFileComponent(Component):
             msg = f"Invalid file format '{file_format}' for {self._get_input_type()}. Allowed: {allowed_formats}"
             raise ValueError(msg)
 
-        # Prepare file path. file_name is tenant-controlled and this writes to local disk:
-        # reject path traversal first, then confine it to the storage dir when
-        # LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is enabled (multi-tenant) before
-        # creating any directory or writing.
-        file_path = enforce_local_file_access(Path(self._get_safe_local_file_name()).expanduser())
+        # Prepare file path. file_name is tenant-controlled and this writes to local disk.
+        settings = get_settings_service().settings
+        file_path = Path(self._get_safe_local_file_name()).expanduser()
+        if settings.restrict_local_file_access and not file_path.is_absolute():
+            file_path = Path(settings.config_dir) / file_path
+        file_path = self._adjust_file_path_with_format(file_path, file_format)
+        file_path = enforce_local_file_access(file_path)
         if not file_path.parent.exists():
             file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path = self._adjust_file_path_with_format(file_path, file_format)
 
         # Save the input to file based on type
         if self._get_input_type() == "DataFrame":

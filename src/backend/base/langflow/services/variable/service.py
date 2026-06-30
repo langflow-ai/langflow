@@ -362,7 +362,6 @@ class DatabaseVariableService(VariableService, Service):
     ):
         query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
         db_variable = (await session.exec(query)).one()
-        db_variable.updated_at = datetime.now(timezone.utc)
 
         # Security: prevent a CREDENTIAL -> GENERIC type-confusion that would expose the
         # decrypted secret. Credential values are stored as Fernet ciphertext ("gAAAAA...").
@@ -396,6 +395,7 @@ class DatabaseVariableService(VariableService, Service):
                 variable.value = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
             # GENERIC_TYPE variables are stored as plain text
 
+        db_variable.updated_at = datetime.now(timezone.utc)
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
             setattr(db_variable, key, value)

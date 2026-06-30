@@ -49,5 +49,7 @@ async def test_gitloader_blocks_dangerous_clone_url():
     from lfx.utils.ssrf_protection import SSRFProtectionError
 
     component = GitLoaderComponent(repo_source="Remote", clone_url='ext::sh -c "id"')
-    with pytest.raises((SSRFProtectionError, ValueError)):
-        await component.build_gitloader()
+    with patch("lfx.components.git.git.GitLoader") as mock_loader:
+        with pytest.raises((SSRFProtectionError, ValueError)):
+            await component.build_gitloader()
+        assert mock_loader.call_count == 0

@@ -484,7 +484,7 @@ class TestDatabaseURLValidation:
             "postgresql://127.0.0.1:5432/db",
             "postgresql://localhost/db",
             "mysql://10.0.0.5:3306/db",
-            "postgresql+psycopg2://user:pass@192.168.1.10/db",
+            "postgresql+psycopg2://user:pass@192.168.1.10/db",  # pragma: allowlist secret
         ],
     )
     def test_internal_hosts_blocked(self, uri):
@@ -603,7 +603,7 @@ class TestGitRepositoryURLValidation:
             patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
         ):
             mock_resolve.return_value = ["172.18.0.2"]
-            validate_database_url_for_ssrf("postgresql://database:5432/app")
+            validate_git_repository_url("https://database/user/repo.git")
 
 
 class TestConnectorURLValidation:

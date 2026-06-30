@@ -506,11 +506,11 @@ async def update_project(
             existing_project.description = project.description
 
         if project.parent_id is not None:
-            # Validate the supplied parent references a folder the caller owns, so a tenant
-            # cannot reparent their project under another user's folder by guessing its id.
+            # Validate the supplied parent references a folder owned by the project owner, so
+            # shared-project writes cannot create cross-owner folder hierarchies.
             parent = (
                 await session.exec(
-                    select(Folder).where(Folder.id == project.parent_id, Folder.user_id == current_user.id)
+                    select(Folder).where(Folder.id == project.parent_id, Folder.user_id == project_owner_id)
                 )
             ).first()
             if parent is None:

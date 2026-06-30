@@ -77,7 +77,11 @@ async def test_is_valid_ollama_url_blocks_metadata_without_request():
 async def test_get_ollama_models_blocks_metadata():
     from lfx.base.models import model_utils
 
-    with ssrf_enabled(), pytest.raises(ValueError, match="Could not get model names"):
+    with (
+        ssrf_enabled(),
+        patch.object(model_utils.httpx, "AsyncClient") as mock_client,
+        pytest.raises(ValueError, match="Could not get model names"),
+    ):
         await model_utils.get_ollama_models(
             base_url_value=METADATA_URL,
             desired_capability="completion",
@@ -85,6 +89,7 @@ async def test_get_ollama_models_blocks_metadata():
             json_name_key="name",
             json_capabilities_key="capabilities",
         )
+    assert mock_client.return_value.__aenter__.return_value.get.call_count == 0
 
 
 async def test_lmstudio_get_model_blocks_metadata():
@@ -92,16 +97,26 @@ async def test_lmstudio_get_model_blocks_metadata():
     pytest.importorskip("langchain_openai")
     from lfx.components.lmstudio.lmstudiomodel import LMStudioModelComponent
 
-    with ssrf_enabled(), pytest.raises(ValueError, match="Could not retrieve models"):
+    with (
+        ssrf_enabled(),
+        patch("lfx.utils.ssrf_httpx.httpx.AsyncClient") as mock_client,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
         await LMStudioModelComponent.get_model(f"{METADATA_URL}/v1")
+    assert mock_client.call_count == 0
 
 
 async def test_lmstudio_embeddings_get_model_blocks_metadata():
     pytest.importorskip("lfx_bundles.lmstudio")
     from lfx.components.lmstudio.lmstudioembeddings import LMStudioEmbeddingsComponent
 
-    with ssrf_enabled(), pytest.raises(ValueError, match="Could not retrieve models"):
+    with (
+        ssrf_enabled(),
+        patch("lfx.utils.ssrf_httpx.httpx.AsyncClient") as mock_client,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
         await LMStudioEmbeddingsComponent.get_model(f"{METADATA_URL}/v1")
+    assert mock_client.call_count == 0
 
 
 def test_get_watsonx_llm_models_blocks_metadata_without_request():

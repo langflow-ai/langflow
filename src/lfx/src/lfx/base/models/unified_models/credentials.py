@@ -126,7 +126,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
 
     if is_env_fallback_disabled():
         return None
-    return os.getenv(variable_name)
+    env_value = safe_getenv(variable_name)
+    return env_value.strip() if env_value and env_value.strip() else None
 
 
 def _env_value_for(var_key: str) -> str | None:
@@ -437,7 +438,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             if base_url:
                 from lfx.utils.util import transform_localhost_url
 
-                llm_kwargs["base_url"] = transform_localhost_url(base_url)
+                transformed_base_url = transform_localhost_url(base_url)
+                validate_connector_url_for_ssrf(transformed_base_url)
+                llm_kwargs["base_url"] = transformed_base_url
             llm = ChatOpenAI(**llm_kwargs)
             llm.invoke("test")
 
@@ -467,6 +470,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             url = variables.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
             if not api_key or not project_id:
                 return
+            validate_connector_url_for_ssrf(url)
             llm = ChatWatsonx(
                 apikey=api_key,
                 url=url,

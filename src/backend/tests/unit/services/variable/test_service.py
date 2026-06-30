@@ -496,6 +496,7 @@ async def test_credential_to_generic_type_flip_without_value_is_rejected(service
     db_var.value = _FERNET_TOKEN
     session.add(db_var)
     await session.flush()
+    assert db_var.updated_at is None
 
     # Attacker sends only {id, type=Generic} with no value -> must be rejected.
     flip = VariableUpdate(id=saved_id, type=GENERIC_TYPE)
@@ -510,6 +511,7 @@ async def test_credential_to_generic_type_flip_without_value_is_rejected(service
     # The row must remain CREDENTIAL-typed (transition rejected, not silently applied).
     db_var_after = await service.get_variable_by_id(user_id, saved_id, session=session)
     assert db_var_after.type == CREDENTIAL_TYPE
+    assert db_var_after.updated_at is None
 
 
 async def test_get_all_never_returns_decrypted_credential_as_generic(service, session: AsyncSession):

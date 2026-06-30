@@ -81,7 +81,7 @@ class OpenAPIAgentComponent(LCAgentComponent):
         # self.path is tenant-controlled: confine reads to the storage dir when
         # LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is enabled (multi-tenant), blocking /etc/passwd etc.
         path = enforce_local_file_access(Path(self.path))
-        if path.suffix in {"yaml", "yml"}:
+        if path.suffix in {".yaml", ".yml"}:
             with path.open(encoding="utf-8") as file:
                 yaml_dict = yaml.safe_load(file)
             spec = JsonSpec(dict_=yaml_dict)

@@ -145,17 +145,27 @@ def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
 #   - PythonCodeStructuredTool (removed): tool_code exec input, type retained
 _EXPECTED_CODE_FIELDS_BY_TYPE: dict[str, set[str]] = {
     "CSVAgent": {"allow_dangerous_code"},
+    "LambdaFilterComponent": {"filter_instruction"},
+    "Python Code Structured": {"tool_code"},
+    "Python Function": {"code"},
+    "Python Interpreter": {"python_code", "global_imports"},
+    "Python REPL": {"code", "global_imports"},
     "PythonREPLComponent": {"python_code", "global_imports"},
+    "PythonREPLToolComponent": {"code", "global_imports"},
     "PythonREPLTool": {"code", "global_imports"},
     "Smart Transform": {"filter_instruction"},
     "PythonCodeStructuredTool": {"tool_code"},
+    "PythonFunction": {"code"},
+    "PythonFunctionComponent": {"code"},
 }
 
 # Code-execution components with no tweakable code/sandbox field. They are still
 # blocked on unauthenticated public builds by CODE_EXECUTION_COMPONENT_TYPES.
 _CODE_EXECUTION_TYPES_WITHOUT_TWEAK_CODE_FIELDS = {
     "CodeActAgentSmolagents",
+    "CodeAct Agent (Smolagents)",
     "Cuga",
+    "OpenDsStar Agent",
     "OpenDsStarAgent",
 }
 
