@@ -6,6 +6,7 @@ direction, letting a flow call out to any spec-compliant A2A agent via the a2a-s
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 import httpx
@@ -34,30 +35,39 @@ def build_a2a_client(
     api_key: str | None = None,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> httpx.AsyncClient:
-    """Build the httpx client used for all A2A calls, pinned to the ``agent_url`` origin.
+    """Build the httpx client used for all A2A calls, anchored to the ``agent_url`` origin.
 
-    ``create_ssrf_protected_client`` only DNS-pins the ``agent_url`` host. The a2a SDK then
-    POSTs ``message/send`` to whatever RPC url the fetched card declares, which could be a
-    different (unpinned) origin, reopening DNS-rebind SSRF and leaking the ``x-api-key``. The
-    per-request hook below forbids any off-origin hop, so both the card GET and the message
-    POST stay on the configured agent origin and the api key never reaches another host.
+    ``create_ssrf_protected_client`` only DNS-pins the ``agent_url`` host, so same-origin
+    targets (the card GET and a same-origin ``message/send`` POST) are validated up front by
+    ``send_to_agent`` and pinned to ``validated_ips``. A spec-compliant agent card may
+    legitimately advertise its RPC ``url`` on a *different* origin; the transport does NOT pin
+    that host (it falls through to normal DNS with no SSRF check), and the configured
+    ``x-api-key`` must never reach it.
+
+    The per-request hook handles those off-origin hops: it strips the ``x-api-key`` header so
+    the key only ever reaches the configured agent, and it SSRF-validates the target (resolve
+    + reject internal/metadata IPs) before the connection opens, covering the unpinned host the
+    transport doesn't. Same-origin requests are already validated and pinned, so they keep the
+    key and skip the redundant re-resolution. Redirects stay disabled so a 3xx can't smuggle the
+    key or connection to an unvalidated host.
     """
     agent_origin = _origin(agent_url)
 
-    async def _enforce_agent_origin(request: httpx.Request) -> None:
-        if _origin(request.url) != agent_origin:
-            msg = (
-                f"A2A agent card declared an off-origin endpoint "
-                f"({request.url.scheme}://{request.url.host}); refusing to send the request or "
-                f"API key to a host other than the configured agent URL ({agent_url})."
-            )
-            raise SSRFProtectionError(msg)
+    async def _guard_request(request: httpx.Request) -> None:
+        if _origin(request.url) == agent_origin:
+            return
+        # Off-origin hop: never leak the configured api key to a card-declared foreign host.
+        request.headers.pop("x-api-key", None)
+        # The transport doesn't pin this host, so SSRF-validate it here (resolves the hostname
+        # and raises SSRFProtectionError if any resolved IP is blocked) before the connection
+        # opens. to_thread keeps the blocking DNS resolution off the event loop.
+        await asyncio.to_thread(validate_and_resolve_url, str(request.url))
 
     client_kwargs = {
         "timeout": timeout,
         "headers": {"x-api-key": api_key} if api_key else None,
         "follow_redirects": False,
-        "event_hooks": {"request": [_enforce_agent_origin]},
+        "event_hooks": {"request": [_guard_request]},
     }
     hostname = httpx.URL(agent_url).host
     if validated_ips and hostname:
