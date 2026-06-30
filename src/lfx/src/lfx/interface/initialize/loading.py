@@ -41,8 +41,14 @@ def instantiate_class(
         msg = "No base type provided for vertex"
         raise ValueError(msg)
 
+    from lfx.utils.flow_validation import resolve_trusted_code_for_build
+
     custom_params = get_params(vertex.params)
     code = custom_params.pop("code")
+    # Restricted-mode hardening (allow_custom_components=False): exec the server's trusted copy
+    # keyed by this code's hash, never the node's stored bytes, to close the 48-bit hash-collision
+    # RCE on the authenticated build path. No-op in permissive mode (the default).
+    code = resolve_trusted_code_for_build(code)
     class_object: type[CustomComponent | Component] = eval_custom_component_code(code)
     custom_component: CustomComponent | Component = class_object(
         _user_id=user_id,

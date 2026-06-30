@@ -385,6 +385,38 @@ def get_trusted_code_for_validation(code: str) -> str | None:
     return code_by_hash.get(_compute_code_hash(code))
 
 
+def resolve_trusted_code_for_build(code: str) -> str:
+    """Return the component code to ``exec`` for a build, enforcing restricted-mode substitution.
+
+    In permissive mode (``allow_custom_components=True``, the default) the node's own ``code`` is
+    returned unchanged — no behavior change.
+
+    In restricted mode (``allow_custom_components=False``) the node only reached the build because
+    it cleared the truncated-hash gate. Because that gate is a 48-bit prefix, a second-preimage
+    collision could carry attacker bytes whose hash matches a built-in. Substitute the server's
+    trusted source keyed by the same hash so a collision merely re-runs the server's own
+    component. Fail closed (raise) when no trusted source is known for the hash, rather than fall
+    back to the client bytes.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    # Missing settings cannot prove permissive mode, but every consumer of allow_custom_components
+    # in this module treats a missing attribute as the True default, so mirror that here.
+    allow_custom_components = True
+    if settings_service is not None:
+        allow_custom_components = getattr(settings_service.settings, "allow_custom_components", True)
+
+    if allow_custom_components:
+        return code
+
+    trusted = get_trusted_code_for_validation(code)
+    if trusted is None:
+        msg = "Flow build blocked: no trusted server component matches this component's code."
+        raise CustomComponentValidationError(msg)
+    return trusted
+
+
 def check_flow_and_raise(
     flow_data: dict | None,
     *,
