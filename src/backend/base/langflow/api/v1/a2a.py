@@ -20,6 +20,7 @@ executor (``a2a_executor.FlowAgentExecutor``). Tasks persist in the ``a2a_tasks`
 table so they survive restart and are visible across workers.
 """
 
+import hashlib
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -32,12 +33,13 @@ from a2a.server.tasks import TaskStore
 from a2a.types import a2a_pb2 as pb
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
-from lfx.schema.workflow import WorkflowExecutionResponse, WorkflowRunRequest
+from lfx.schema.workflow import GLOBAL_KEY_MAX_LEN, WorkflowExecutionResponse, WorkflowRunRequest
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
 from lfx.workflow.converters import parse_workflow_run_request
 from sqlmodel import select
 
 from langflow.api.utils import DbSession
+from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.v1.a2a_executor import FlowAgentExecutor
 from langflow.api.v1.a2a_utils import A2A_APIKEY_HEADER, build_agent_card, folder_auth_type
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -96,7 +98,7 @@ class _FlowContextBuilder(DefaultServerCallContextBuilder):
         return context
 
 
-async def _run_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecutionResponse:
+async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | None) -> WorkflowExecutionResponse:
     """Run a flow synchronously through the v2 surface, as the flow owner.
 
     The public A2A endpoint carries no caller identity, so the run executes as
@@ -104,6 +106,12 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecution
     session is held across the up-to-300s run. ``task_id`` doubles as the v2
     job_id when it is a UUID (so run_id == taskId on the sync path); a non-UUID
     client task id falls back to a fresh job_id.
+
+    The A2A ``context_id`` is namespaced under a per-(owner, flow) virtual id and
+    that becomes the flow ``session_id``, so multi-turn calls sharing a contextId
+    share chat memory while a contextId can never address another flow's session.
+    The SDK mints a contextId when the client omits one, so each conversation gets
+    its own isolated session.
     """
     # Lazy import: langflow.api.v2.workflow pulls in the execution stack and this
     # module is imported during router assembly.
@@ -111,7 +119,28 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecution
 
     user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id)
-    parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow_id), input_value=text, mode="sync"))
+    # context_id is client-controlled on a public endpoint, so namespace it under a
+    # per-(owner, flow) virtual id before it becomes the chat session_id: a contextId
+    # can never address another flow's session, and since the run always executes as the
+    # flow owner (apikey-gated flows admit only the owner's key) the owner id folds the
+    # principal into the key. The namespaced value lands in the indexed
+    # MessageTable.session_id (Postgres btree entries are size-capped), so when the
+    # composed key would exceed the bound, hash the contextId rather than truncating
+    # (which would collide two long ids) or falling back to the shared per-flow default
+    # (which would re-open the cross-caller leak). Only an absent contextId uses the default.
+    namespace = str(compute_virtual_flow_id(user.id, flow_id))
+    if context_id:
+        scoped = scope_session_to_namespace(context_id, namespace)
+        session_id = (
+            scoped
+            if scoped and len(scoped) <= GLOBAL_KEY_MAX_LEN
+            else f"{namespace}:{hashlib.sha256(context_id.encode()).hexdigest()}"
+        )
+    else:
+        session_id = None
+    parsed = parse_workflow_run_request(
+        WorkflowRunRequest(flow_id=str(flow_id), input_value=text, mode="sync", session_id=session_id)
+    )
     try:
         job_id = UUID(task_id)
     except ValueError:
