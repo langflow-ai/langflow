@@ -1,9 +1,10 @@
-"""Integration tests for the F2 A2A agent-card discovery endpoint.
+"""Integration tests for the A2A endpoints (agent card + JSON-RPC message/send).
 
-The route is public and gated behind LANGFLOW_A2A_ENABLED (default off). These
-tests drive the real endpoint against the test DB: flows and folders are created
+The routes are public and gated behind LANGFLOW_A2A_ENABLED (default off). These
+tests drive the real endpoints against the test DB: flows and folders are created
 directly via session_scope, the server flag is toggled on the live settings
-object, and the served card is revalidated against the a2a-sdk model.
+object, the served card is revalidated against the a2a-sdk model, and message/send
+runs a real echo flow through the v2 surface.
 """
 
 import uuid
@@ -296,3 +297,121 @@ async def test_malformed_overrides_fall_back_to_defaults(client: AsyncClient, ac
     assert body["version"] == get_version_info()["version"]
     assert body["skills"][0]["tags"] == ["langflow"]
     assert "examples" not in body["skills"][0]
+
+
+# --- JSON-RPC message/send + tasks/get -------------------------------------
+
+_ECHO_FLOW = Path(__file__).parents[3] / "data" / "chat_echo_no_llm.json"
+
+
+@pytest.fixture
+def echo_flow_data():
+    """ChatInput -> ChatOutput echo flow (no LLM); a sync run returns input_value verbatim."""
+    return orjson.loads(_ECHO_FLOW.read_bytes())["data"]
+
+
+def _text_message(text, message_id="m1"):
+    return {"message": {"role": "user", "parts": [{"kind": "text", "text": text}], "messageId": message_id}}
+
+
+async def _jsonrpc(client: AsyncClient, flow_id, method, params, rpc_id=1):
+    return await client.post(
+        f"api/v1/a2a/{flow_id}/jsonrpc",
+        json={"jsonrpc": "2.0", "id": rpc_id, "method": method, "params": params},
+    )
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_message_send_runs_flow_and_returns_completed_task(client: AsyncClient, active_user, echo_flow_data):
+    """message/send runs the flow through the v2 surface and returns a completed Task with a text artifact."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+
+    response = await _jsonrpc(client, flow_id, "message/send", _text_message("hello a2a"))
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["kind"] == "task"
+    assert result["status"]["state"] == "completed"
+    assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_tasks_get_returns_prior_task(client: AsyncClient, active_user, echo_flow_data):
+    """tasks/get reads back the Task a prior message/send created (shared in-memory store)."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    sent = (await _jsonrpc(client, flow_id, "message/send", _text_message("remember me"))).json()["result"]
+    task_id = sent["id"]
+
+    got = (await _jsonrpc(client, flow_id, "tasks/get", {"id": task_id})).json()["result"]
+
+    assert got["kind"] == "task"
+    assert got["id"] == task_id
+    assert got["status"]["state"] == "completed"
+    assert got["artifacts"][0]["parts"][0]["text"] == "remember me"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_jsonrpc_dispatches_by_flow_id(client: AsyncClient, active_user, echo_flow_data):
+    """The same shared handler routes each request to the flow named in the path.
+
+    Same input to two different flows yields different intrinsic outcomes (a
+    buildable echo completes; an unbuildable flow fails), so the path's flow_id
+    really selects the flow rather than always running one of them.
+    """
+    good = await _create_flow(active_user.id, data=echo_flow_data)
+    broken = await _create_flow(active_user.id, data={})
+
+    good_result = (await _jsonrpc(client, good, "message/send", _text_message("ping"))).json()["result"]
+    broken_result = (await _jsonrpc(client, broken, "message/send", _text_message("ping"))).json()["result"]
+
+    assert good_result["status"]["state"] == "completed"
+    assert good_result["artifacts"][0]["parts"][0]["text"] == "ping"
+    assert broken_result["status"]["state"] == "failed"
+    assert broken_result["status"]["message"]["parts"][0]["text"]
+
+
+async def test_jsonrpc_flag_off_returns_404(client: AsyncClient, active_user, echo_flow_data):
+    """With the server flag off, the JSON-RPC route 404s before any dispatch."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+
+    response = await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))
+
+    assert response.status_code == 404
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_jsonrpc_non_agent_or_disabled_returns_404(client: AsyncClient, active_user, echo_flow_data):
+    """Workflow-typed and a2a-disabled flows 404 on the JSON-RPC route, like the card route."""
+    workflow_id = await _create_flow(active_user.id, data=echo_flow_data, flow_type=FlowType.WORKFLOW)
+    disabled_id = await _create_flow(active_user.id, data=echo_flow_data, a2a_enabled=False)
+
+    assert (await _jsonrpc(client, workflow_id, "message/send", _text_message("hi"))).status_code == 404
+    assert (await _jsonrpc(client, disabled_id, "message/send", _text_message("hi"))).status_code == 404
+    assert (await _jsonrpc(client, uuid.uuid4(), "message/send", _text_message("hi"))).status_code == 404
+
+
+def _response(*, output, outputs=None):
+    from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
+
+    return WorkflowExecutionResponse(flow_id="f", status=JobStatus.COMPLETED, output=output, outputs=outputs or {})
+
+
+def test_answer_texts_resolves_each_output_reason():
+    """SINGLE keeps its text (even ""); MULTIPLE recovers every text channel; NONE is empty."""
+    from langflow.api.v1.a2a_executor import _answer_texts
+    from lfx.schema.workflow import ComponentOutput, JobStatus, OutputReason, WorkflowOutput
+
+    single = _response(output=WorkflowOutput(reason=OutputReason.SINGLE, text=""))
+    assert _answer_texts(single) == [""]
+
+    multi = _response(
+        output=WorkflowOutput(reason=OutputReason.MULTIPLE),
+        outputs={
+            "a": ComponentOutput(type="message", status=JobStatus.COMPLETED, content="x"),
+            "b": ComponentOutput(type="text", status=JobStatus.COMPLETED, content="y"),
+        },
+    )
+    assert _answer_texts(multi) == ["x", "y"]
+
+    none = _response(output=WorkflowOutput(reason=OutputReason.NONE))
+    assert _answer_texts(none) == []
