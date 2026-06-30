@@ -257,6 +257,45 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             "model_param": "model",
         },
     },
+    "Azure AI Foundry": {
+        "icon": "Azure",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+            {
+                "variable_name": "Azure AI Foundry API Key",
+                "variable_key": "AZURE_AI_FOUNDRY_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "credential",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to AZURE_AI_FOUNDRY_API_KEY environment variable",
+                },
+            },
+            {
+                "variable_name": "Azure AI Foundry Endpoint",
+                "variable_key": "AZURE_AI_FOUNDRY_ENDPOINT",
+                "description": (
+                    "OpenAI-compatible endpoint from the Foundry portal (Get endpoint). "
+                    "Example: https://<resource>.services.ai.azure.com/openai/v1"
+                ),
+                "required": True,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "endpoint",
+            },
+        ],
+        "api_docs_url": "https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-models",
+        "mapping": {
+            "model_class": "AzureAIOpenAIApiChatModel",
+            "model_param": "model",
+        },
+    },
     "IBM WatsonX": {
         "icon": "WatsonxAI",
         "max_tokens_field_name": "max_tokens",

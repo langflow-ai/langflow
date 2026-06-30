@@ -283,6 +283,18 @@ def get_llm(
                 default_headers[header_name] = value
         if default_headers:
             kwargs["default_headers"] = default_headers
+    elif provider == "Azure AI Foundry":
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        endpoint_value = provider_vars.get("AZURE_AI_FOUNDRY_ENDPOINT") or _env_if_allowed(
+            "AZURE_AI_FOUNDRY_ENDPOINT"
+        )
+        if not endpoint_value:
+            msg = (
+                "Azure AI Foundry endpoint is required. Configure AZURE_AI_FOUNDRY_ENDPOINT "
+                "in Settings → Model Providers or set the environment variable."
+            )
+            raise ValueError(msg)
+        kwargs["endpoint"] = endpoint_value
 
     try:
         return model_class(**kwargs)

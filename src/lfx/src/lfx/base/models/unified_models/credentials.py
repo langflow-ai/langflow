@@ -417,6 +417,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         "Anthropic",
         "Google Generative AI",
         "IBM WatsonX",
+        "Azure AI Foundry",
     ]:
         return
 
@@ -504,6 +505,21 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 msg = f"Could not reach OpenRouter to validate the API key: {e}"
                 logger.warning(msg)
                 raise ValueError(msg) from e
+
+        elif provider == "Azure AI Foundry":
+            from langchain_azure_ai.chat_models import AzureAIOpenAIApiChatModel
+
+            api_key = variables.get("AZURE_AI_FOUNDRY_API_KEY")
+            endpoint = variables.get("AZURE_AI_FOUNDRY_ENDPOINT")
+            if not api_key or not endpoint or not validation_model:
+                return
+            llm = AzureAIOpenAIApiChatModel(
+                credential=api_key,
+                endpoint=endpoint,
+                model=validation_model,
+                max_tokens=1,
+            )
+            llm.invoke("test")
 
         elif provider == "Ollama":
             import requests
