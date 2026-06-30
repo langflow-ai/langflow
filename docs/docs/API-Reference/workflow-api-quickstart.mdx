@@ -1,0 +1,159 @@
+---
+title: Workflow API quickstart
+slug: /workflow-api-quickstart
+---
+import CodeBlock from '@theme/CodeBlock';
+import exampleQuickstartSync from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-quickstart-sync.sh';
+import examplePythonQuickstartSync from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-quickstart-sync.py';
+import exampleJavascriptQuickstartSync from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-quickstart-sync.js';
+import exampleQuickstartStreamTokens from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-quickstart-stream-tokens.sh';
+import examplePythonQuickstartStreamTokens from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-quickstart-stream-tokens.py';
+import exampleJavascriptQuickstartStreamTokens from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-quickstart-stream-tokens.js';
+import exampleStreamAguiParse from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-stream-agui-parse.sh';
+import examplePythonStreamAguiParse from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-stream-agui-parse.py';
+import exampleJavascriptStreamAguiParse from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-stream-agui-parse.js';
+import exampleQuickstartBackgroundPoll from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-quickstart-background-poll.sh';
+import examplePythonQuickstartBackgroundPoll from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-quickstart-background-poll.py';
+import exampleJavascriptQuickstartBackgroundPoll from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-quickstart-background-poll.js';
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialAPISetup from '@site/docs/_partial-api-setup.mdx';
+
+The [Workflow API](/workflow-api) executes Langflow flows over `POST /api/v2/workflows` in three modes.
+
+Use the default **`sync`** mode when you want to wait for the full JSON result in one response. Use **`stream`** when you need live Server-Sent Events (SSE) emitted as the flow runs. Use **`background`** when you want to queue a job and then poll or re-attach to its event stream.
+
+This quickstart runs the same flow with each mode, so you can use the mode that fits your application.
+
+<PartialAPISetup />
+
+The examples on this page also expect `FLOW_ID` to be set to your flow's UUID. Use a chat-style flow (for example **Basic Prompting**) so `output.text` contains the assistant reply.
+
+## Run a flow synchronously
+
+Omit `mode` or set `"mode": "sync"` to run inline. When the flow finishes, the response includes a top-level `output.text` field with the primary answer.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonQuickstartSync}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptQuickstartSync}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleQuickstartSync}</CodeBlock>
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Example sync response</summary>
+
+```json
+{
+  "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+  "session_id": "session-123",
+  "object": "response",
+  "status": "completed",
+  "output": {
+    "reason": "single",
+    "text": "2 + 2 equals 4.",
+    "source": "ChatOutput-xyz"
+  },
+  "has_errors": false
+}
+```
+
+Pass the same `session_id` on the next request to continue chat history for that conversation.
+
+</details>
+
+## Stream LLM tokens
+
+Set `"mode": "stream"` to open an SSE stream. Choose the wire format with `stream_protocol`:
+
+- **`langflow`** (default): Langflow `EventManager` frames for existing Langflow clients.
+- **`agui`**: [AG-UI](https://docs.ag-ui.com/introduction) lifecycle events for compatible clients.
+
+For request examples, event types, and protocol details, see [Execute flow with selected `stream` mode](/workflow-api#execute-flow-with-selected-stream-mode) in the Workflow API reference.
+
+### Langflow EventManager (default)
+
+Each `data:` line is JSON shaped like `{"event": "<type>", "data": {...}}`. The example below prints only `token` events (`data.chunk`) as they arrive.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonQuickstartStreamTokens}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptQuickstartStreamTokens}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleQuickstartStreamTokens}</CodeBlock>
+
+</TabItem>
+</Tabs>
+
+### AG-UI {#ag-ui}
+
+Send `"stream_protocol": "agui"`. Each `data:` line contains one AG-UI event as JSON. The example below handles `TEXT_MESSAGE_CONTENT`, `TOOL_CALL_RESULT`, and `RUN_FINISHED`, extracts a number from the first reply, then chains a follow-up prompt in the same `session_id`.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonStreamAguiParse}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptStreamAguiParse}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleStreamAguiParse}</CodeBlock>
+
+</TabItem>
+</Tabs>
+
+## Run in the background
+
+Set `"mode": "background"` to queue a job and receive a `job_id` immediately. Poll `GET /api/v2/workflows?job_id=…` until `status` is `completed`, then read `output.text` from the result.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonQuickstartBackgroundPoll}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptQuickstartBackgroundPoll}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleQuickstartBackgroundPoll}</CodeBlock>
+
+</TabItem>
+</Tabs>
+
+While a job is still `queued` or `in_progress`, the poll endpoint returns a job object (`object: "job"`) with `links` for status, events, and stop. When the job completes, the same endpoint returns the full execution response.
+
+To connect to a background run, see [Re-attach to a background run](/workflow-api#re-attach-to-a-background-run).
+
+## Next steps
+
+* [Workflow API reference](/workflow-api) — request body fields, response schemas, status polling, stop endpoint, tweaks, globals, and error codes.
+* [Flow trigger endpoints](/api-flows-run) — v1 `/run` and `/webhook` endpoints if you are migrating from or comparing with the v1 API.
