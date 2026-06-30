@@ -2,7 +2,7 @@
 name = "langflow"
 version = "1.10.1"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.15"
+requires-python = "==3.12.*"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -41,7 +41,6 @@ dev = [
     "pytest-sugar>=1.0.0",
     "respx>=0.21.1",
     "pytest-asyncio>=0.23.0",
-    "pytest-profiling>=1.7.0",
     "pre-commit>=3.7.0",
     "vulture>=2.11",
     "dictdiffer>=0.9.0",
@@ -52,7 +51,7 @@ dev = [
     "pytest-github-actions-annotate-failures>=0.2.0",
     "blockbuster>=1.5.20,<1.6",
     "types-aiofiles>=24.1.0.20240626",
-    "codeflash>=0.8.4",
+    # "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
     "locust~=2.43.4",
     "pytest-rerunfailures>=15.0",
@@ -70,6 +69,11 @@ dev = [
 ]
 
 [[tool.uv.index]]
+name = "power_rag"
+url = "https://na.artifactory.swg-devops.com/artifactory/api/pypi/hyc-cpd-skywalker-team-lakehouse-on-prem-op-rag-pypi-local/simple"
+explicit = true
+
+[[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
@@ -85,8 +89,31 @@ lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
 lfx-docling = { workspace = true }
 # langflow-extensions:bundle-sources-end
-torch = { index = "pytorch-cpu" }
+torch = [
+  { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" }]
 torchvision = { index = "pytorch-cpu" }
+faiss-cpu = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+playwright = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+crc32c = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+simsimd = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+msgpack = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+clevercsv = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+lz4 = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+tiktoken = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+asyncpg = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+fastavro = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+jq = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+matplotlib = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+scipy = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+fastparquet = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+chromadb = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+py-rust-stemmers = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+fastuuid = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+impit = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+scikit-learn = { index = "power_rag", marker = "platform_machine == 'ppc64le'" }
+
+
+
 
 [tool.uv.workspace]
 members = [
@@ -129,7 +156,7 @@ audio = [
 
 
 couchbase = [
-    "couchbase>=4.2.1"
+    "couchbase==4.6.1"
 ]
 cassio = [
     "cassio>=0.1.7"
@@ -142,10 +169,10 @@ clickhouse-connect = [
     "clickhouse-connect==0.7.19"
 ]
 
-nv-ingest = [
-    "nv-ingest-api>=26.1.0,<27.0.0 ; python_version >= '3.12'",
-    "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
-]
+# nv-ingest = [
+#     "nv-ingest-api>=26.1.0,<27.0.0 ; python_version >= '3.12'",
+#     "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
+# ]
 
 postgresql = [
     "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
@@ -153,6 +180,7 @@ postgresql = [
 ]
 
 [tool.uv]
+environments = ["sys_platform == 'linux' and platform_machine == 'ppc64le'"]
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",

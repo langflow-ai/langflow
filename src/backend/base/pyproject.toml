@@ -2,7 +2,7 @@
 name = "langflow-base"
 version = "0.10.1"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.15"
+requires-python = "==3.12.*"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -47,13 +47,13 @@ dependencies = [
     "orjson>=3.11.6,<4.0.0",
     "alembic>=1.13.0,<2.0.0",
     "passlib>=1.7.4,<2.0.0",
-    "bcrypt==4.0.1",
+    "bcrypt>=4.0.1",
     "pillow>=12.1.1,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
     "PyJWT>=2.12.1",
     "pandas>=2.2.3",
     "multiprocess>=0.70.14,<1.0.0",
-    "duckdb>=1.0.0,<2.0.0",
+    "duckdb==1.5.2",
     "python-docx>=1.1.0,<2.0.0",
     "jq>=1.7.0,<2.0.0; sys_platform != 'win32'",
     "nest-asyncio>=1.6.0,<2.0.0",
@@ -108,6 +108,16 @@ dependencies = [
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
     "transformers>=5.6.0,<6.0.0",
+    "crc32c>=2.8",
+    "simsimd>=6.5.16",
+    "lz4>=4.4.5",
+    "scikit-learn>=1.9.0",
+    "py-rust-stemmers>=0.1.8",
+    "fastuuid>=0.14.0",
+    "docling-parse==6.2.0",
+    "matplotlib>=3.11.0",
+    "impit==0.12.0"
+
 ]
 
 [tool.uv]
@@ -141,6 +151,9 @@ dev = [
     "types-markdown>=3.7.0.20240822",
     "codeflash>=0.8.4",
     "fakeredis>=2.0.0",
+    "msgpack==1.1.2",
+    "clevercsv>=0.8.5",
+    "asyncpg>=0.31.0"
 ]
 
 
@@ -194,7 +207,7 @@ local = [
 ]
 
 # Individual database providers
-couchbase = ["couchbase>=4.2.1"]
+couchbase = ["couchbase==4.6.1"]
 cassandra = ["cassio>=0.1.7"]
 clickhouse = ["clickhouse-connect==0.7.19"]
 
