@@ -85,6 +85,7 @@ EXPECTED_FIELDS = {
     "add_projects_to_mcp_servers",
     "mcp_composer_enabled",
     "mcp_composer_version",
+    "a2a_enabled",
     # TelemetrySettings
     "sentry_dsn",
     "sentry_traces_sample_rate",

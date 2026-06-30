@@ -6,7 +6,7 @@ from lfx.log.logger import logger
 
 
 class McpSettings(BaseModel):
-    """MCP server, session manager, and composer settings."""
+    """MCP server, session manager, and composer settings, plus the A2A protocol toggle."""
 
     mcp_base_url: str = ""
     """External base URL used to build MCP server URLs in the UI configuration JSON
@@ -63,6 +63,12 @@ class McpSettings(BaseModel):
     """If set to False, Langflow will not start the MCP Composer service."""
     mcp_composer_version: str = "==0.1.0.8.10"
     """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
+
+    # A2A protocol
+    a2a_enabled: bool = False
+    """If set to True, Langflow serves spec-valid A2A agent cards at a per-flow
+    discovery endpoint for agent-typed, a2a_enabled flows. Default off (opt-in).
+    Env var: LANGFLOW_A2A_ENABLED."""
 
     # MCP Server management
     mcp_servers_locked: bool = False
