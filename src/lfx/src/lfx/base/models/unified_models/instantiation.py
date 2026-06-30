@@ -714,6 +714,7 @@ def get_embeddings(
                 "Add the provider to EMBEDDING_PROVIDER_CLASS_MAPPING or re-select the model."
             )
             raise ValueError(msg)
+        unified_models_module.get_embedding_class(embedding_class_name)
         param_mapping = metadata.get("param_mapping") or EMBEDDING_PARAM_MAPPINGS.get(provider, {})
         if not param_mapping:
             msg = (
