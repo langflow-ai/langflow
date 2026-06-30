@@ -6,8 +6,9 @@ SDK, so these tests drive that client directly against real localhost servers:
 
 - it pins the configured ``x-api-key`` to the ``agent_url`` origin (card GET + same-origin
   POST carry it),
-- it blocks any off-origin hop (a card declaring an RPC url on a different host/port), so
-  the api key can never leak there,
+- it strips the configured ``x-api-key`` on any off-origin hop (a card declaring an RPC url
+  on a different host/port), so the key can never leak there, while still SSRF-validating that
+  off-origin target (an internal/metadata target is blocked),
 - an internal/loopback ``agent_url`` is rejected by SSRF protection before any call.
 """
 
@@ -64,11 +65,11 @@ class _Server:
         return self.httpd.received
 
 
-async def test_api_key_pinned_to_agent_origin_and_off_origin_blocked(monkeypatch):
-    """The api key reaches the agent origin (card + RPC) but never an off-origin RPC url."""
+async def test_api_key_pinned_to_agent_origin_off_origin_stripped(monkeypatch):
+    """The api key reaches the agent origin (card + RPC) but is stripped on any off-origin hop."""
     monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
-    # Allowlist loopback so the legit path is reachable; origins still differ by port,
-    # which is what the off-origin guard must catch.
+    # Allowlist loopback so both servers are reachable; the two origins still differ by port,
+    # which is what the off-origin guard keys on to strip the api key.
     monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
 
     with _Server() as agent, _Server() as attacker:
@@ -85,14 +86,34 @@ async def test_api_key_pinned_to_agent_origin_and_off_origin_blocked(monkeypatch
             ok = await client.post(f"{agent_url}/rpc", json={"hello": "world"})
             assert ok.status_code == 200
 
-            # Card-declared RPC url on a DIFFERENT origin: blocked before it leaves.
-            with pytest.raises(SSRFProtectionError):
-                await client.post(f"http://127.0.0.1:{attacker.port}/rpc", json={"hello": "world"})
+            # Card-declared RPC url on a DIFFERENT origin: spec allows a cross-origin service
+            # url, so the call goes through, but the api key is stripped first.
+            off = await client.post(f"http://127.0.0.1:{attacker.port}/rpc", json={"hello": "world"})
+            assert off.status_code == 200
 
     assert [m for m, _p, _h in agent.received] == ["GET", "POST"]
     assert all(h.get("x-api-key") == "super-secret" for _m, _p, h in agent.received)
-    # The off-origin host was never contacted, so the key never leaked there.
-    assert attacker.received == []
+    # The off-origin host was contacted, but the key was stripped, so it never leaked.
+    assert [m for m, _p, _h in attacker.received] == ["POST"]
+    assert all(h.get("x-api-key") is None for _m, _p, h in attacker.received)
+
+
+async def test_off_origin_internal_target_blocked(monkeypatch):
+    """An off-origin hop to an internal/metadata IP is SSRF-validated by the hook and blocked."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    # Allowlist only loopback, so the agent is reachable but the metadata IP is not.
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    with _Server() as agent:
+        agent_url = f"http://127.0.0.1:{agent.port}"
+        _url, validated_ips = validate_and_resolve_url(agent_url)
+
+        client = build_a2a_client(agent_url, validated_ips, api_key="super-secret", timeout=10)
+        async with client:
+            # The transport never pins this host, so the hook is the only SSRF check; it must
+            # block the metadata IP before any connection opens.
+            with pytest.raises(SSRFProtectionError):
+                await client.post("http://169.254.169.254/rpc", json={"hello": "world"})
 
 
 async def test_loopback_agent_url_rejected_by_ssrf(monkeypatch):
