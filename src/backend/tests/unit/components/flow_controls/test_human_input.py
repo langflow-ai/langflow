@@ -58,10 +58,11 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
         assert [o.name for o in component.outputs] == ["branch_approve", "branch_reject"]
 
     def test_decisions_has_no_options_so_outputs_rebuild_on_load(self, component_class):
-        """decisions must serialize with empty options so the frontend rebuilds branch outputs
-        from the saved value on mount (useFetchDataOnMount fires for a real_time_refresh field
-        only when its options are empty-but-defined). Re-adding options reintroduces the
-        'outputs revert to defaults after page refresh' bug.
+        """Decisions must serialize with empty options so the frontend rebuilds outputs on load.
+
+        useFetchDataOnMount fires for a real_time_refresh field only when its options are
+        empty-but-defined; re-adding options reintroduces the 'outputs revert to defaults
+        after page refresh' bug.
         """
         component = component_class()
         decisions = next(i for i in component.inputs if i.name == "decisions")

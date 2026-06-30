@@ -1,6 +1,9 @@
-"""The v1 run endpoint cannot suspend/resume, so flows that pause for a human
+"""Guard tests for blocking HITL flows on the synchronous v1 run endpoint.
+
+The v1 run endpoint cannot suspend/resume, so flows that pause for a human
 (a connected Human Input node, or an agent tool gated for approval) must be
-rejected up front with a clear pointer to the v2 workflows API."""
+rejected up front with a clear pointer to the v2 workflows API.
+"""
 
 from langflow.api.v1.run_validation import flow_requires_hitl
 
@@ -26,11 +29,7 @@ class TestFlowRequiresHitl:
         assert flow_requires_hitl(data) is False
 
     def test_tool_with_approval_actions_requires_hitl(self):
-        template = {
-            "tools_metadata": {
-                "value": [{"name": "fetch_content", "approval_actions": ["approve", "reject"]}]
-            }
-        }
+        template = {"tools_metadata": {"value": [{"name": "fetch_content", "approval_actions": ["approve", "reject"]}]}}
         data = {"nodes": [_node("url", "URLComponent", template)], "edges": []}
         assert flow_requires_hitl(data) is True
 

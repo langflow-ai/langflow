@@ -30,9 +30,7 @@ def flow_requires_hitl(graph_data: dict) -> bool:
             return True
         template = (node_data.get("node") or {}).get("template") or {}
         rows = (template.get("tools_metadata") or {}).get("value")
-        if isinstance(rows, list) and any(
-            isinstance(row, dict) and row.get("approval_actions") for row in rows
-        ):
+        if isinstance(rows, list) and any(isinstance(row, dict) and row.get("approval_actions") for row in rows):
             return True
     return False
 
