@@ -238,6 +238,17 @@ async def run_sync_with_mapping(
         ) from e
     except HTTPException:
         raise
+    except OperationalError as e:
+        await logger.aexception("Database error during workflow execution")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable, Please try again.",
+                "code": "DATABASE_ERROR",
+                "message": "Failed to fetch flow. Please try again.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from e
     except Exception as err:
         await logger.aexception("Unexpected error during workflow execution")
         raise HTTPException(
@@ -323,6 +334,17 @@ async def submit_background_with_mapping(
         ) from err
     except HTTPException:
         raise
+    except OperationalError as e:
+        await logger.aexception("Database error during workflow execution")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable, Please try again.",
+                "code": "DATABASE_ERROR",
+                "message": "Failed to fetch flow. Please try again.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from e
     except Exception as err:
         await logger.aexception("Unexpected error during workflow execution")
         raise HTTPException(

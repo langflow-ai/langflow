@@ -276,10 +276,12 @@ def create_workflow_router(
     ``False`` short-circuits before the flag is consulted and its surface stays
     exactly ``POST {prefix}``.
 
-    ``developer_api_guard`` controls the ``developer_api_enabled`` 403 guard.
-    The langflow backend keeps it ``True`` (byte-identical to today's behavior).
-    Bare ``lfx serve`` passes ``False`` so its public surface stays unchanged —
-    serve never carried a developer-API gate and has no settings service to read.
+    ``developer_api_guard`` controls the ``developer_api_enabled`` 403 guard. It
+    defaults to ``True`` but is an opt-in that no production mount enables: both
+    the langflow backend and bare ``lfx serve`` pass ``False``, and the v2
+    ``/workflows`` surface never carried a developer-API gate (byte-identical to
+    today's behavior). Bare ``lfx serve`` also has no settings service to read,
+    so the guard could not run there anyway.
     """
     dependencies = [Depends(check_developer_api_enabled)] if developer_api_guard else []
     router = APIRouter(prefix=prefix, tags=list(tags), dependencies=dependencies)
