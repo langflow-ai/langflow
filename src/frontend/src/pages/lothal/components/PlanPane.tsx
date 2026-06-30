@@ -41,6 +41,16 @@ import { PlanLedger } from "./PlanLedger";
 
 type PlanView = "tree" | "graph" | "ledger";
 
+// Node states that count as "frozen" — its definition of done is locked, so the
+// plan can be approved. `draft` (never ratified) and `failed`/`invalidated`
+// (needs rework) do not, and block plan approval.
+const RATIFIED_OR_BEYOND = new Set([
+  "ratified",
+  "in_progress",
+  "in_verification",
+  "verified",
+]);
+
 function ViewTabs({
   view,
   onChange,
@@ -357,6 +367,26 @@ function NodeDetailPanel({
   const canEdit = editable && isDraft;
   const ratifyReason = ratify.isError ? reasonOf(ratify.error) : null;
 
+  // The node's own subtree, so it's excluded from the parent options below —
+  // reparenting under a descendant would create a cycle (PM rejects it anyway).
+  const childrenOf = new Map<string, string[]>();
+  for (const n of nodes) {
+    if (n.parent_id)
+      childrenOf.set(n.parent_id, [...(childrenOf.get(n.parent_id) ?? []), n.id]);
+  }
+  const descendantIds = new Set<string>();
+  const stack = [node.id];
+  while (stack.length) {
+    const cur = stack.pop();
+    if (cur === undefined) break;
+    for (const childId of childrenOf.get(cur) ?? []) {
+      if (!descendantIds.has(childId)) {
+        descendantIds.add(childId);
+        stack.push(childId);
+      }
+    }
+  }
+
   return (
     <div
       style={{
@@ -389,7 +419,7 @@ function NodeDetailPanel({
           >
             <option value="">— root —</option>
             {nodes
-              .filter((n) => n.id !== node.id)
+              .filter((n) => n.id !== node.id && !descendantIds.has(n.id))
               .map((n) => (
                 <option key={n.id} value={n.id}>
                   {n.name}
@@ -655,6 +685,12 @@ export function PlanPane({ project }: { project: Project }) {
   const { nodes, links } = data;
   const editable = project.phase === "PLAN";
 
+  // A plan is ready to approve only once every node has been frozen — ratified or
+  // beyond. Approving with a draft (or invalidated/failed) node would advance to
+  // code generation on an unverified definition of done, defeating the gate.
+  const planReady =
+    nodes.length > 0 && nodes.every((n) => RATIFIED_OR_BEYOND.has(n.state));
+
   const addNode = () => {
     const trimmed = name.trim();
     if (!trimmed || createNode.isPending) return;
@@ -691,11 +727,13 @@ export function PlanPane({ project }: { project: Project }) {
         {editable && (
           <Button
             onClick={() => approve.mutate()}
-            disabled={approve.isPending || nodes.length === 0}
+            disabled={approve.isPending || !planReady}
             title={
               nodes.length === 0
                 ? "Add at least one node before approving"
-                : "Approve the plan and move to code generation"
+                : !planReady
+                  ? "Every node must be ratified before the plan can be approved"
+                  : "Approve the plan and move to code generation"
             }
           >
             {approve.isPending ? "Approving…" : "Approve plan"}

@@ -435,6 +435,11 @@ export type PlanTree = {
 };
 
 const planKey = (projectId: string) => ["lothal", "plan", projectId] as const;
+// Defined here (ahead of the mutations) so node create/move can invalidate them.
+const planDagKey = (projectId: string) =>
+  ["lothal", "plan", projectId, "dag"] as const;
+const planEventsKey = (projectId: string, nodeId: string) =>
+  ["lothal", "plan", projectId, "events", nodeId] as const;
 
 // `GET /plan`. Phase-gated to PLAN onward: a read before then is a deterministic
 // 403 (the pane keys its NotReady state off it), so skip retrying that, the stray
@@ -466,7 +471,10 @@ export function useCreatePlanNode(projectId: string) {
       );
       return res.data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: planKey(projectId) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: planKey(projectId) });
+      qc.invalidateQueries({ queryKey: planDagKey(projectId) }); // topology changed
+    },
   });
 }
 
@@ -548,6 +556,7 @@ function invalidatePlanNode(
 ) {
   qc.invalidateQueries({ queryKey: planKey(projectId) }); // tree (state badges)
   qc.invalidateQueries({ queryKey: planNodeKey(projectId, nodeId) }); // the panel
+  qc.invalidateQueries({ queryKey: planEventsKey(projectId, nodeId) }); // node history
   qc.invalidateQueries({ queryKey: planActivityKey(projectId) }); // ledger
 }
 
@@ -704,11 +713,6 @@ export type PlanEvent = {
   to_state?: string | null;
 };
 
-const planEventsKey = (projectId: string, nodeId: string) =>
-  ["lothal", "plan", projectId, "events", nodeId] as const;
-const planDagKey = (projectId: string) =>
-  ["lothal", "plan", projectId, "dag"] as const;
-
 export function useCreatePlanLink(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -781,6 +785,9 @@ export function useMovePlanNode(projectId: string) {
       });
       return res.data;
     },
-    onSuccess: (_data, vars) => invalidatePlanNode(qc, projectId, vars.nodeId),
+    onSuccess: (_data, vars) => {
+      invalidatePlanNode(qc, projectId, vars.nodeId);
+      qc.invalidateQueries({ queryKey: planDagKey(projectId) }); // topology changed
+    },
   });
 }

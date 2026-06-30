@@ -24,7 +24,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from lfx.log.logger import logger
 from sqlmodel import select
@@ -1129,7 +1129,9 @@ async def create_plan_link(*, project: OwnedProject, body: dict[str, Any]) -> di
     "/projects/{project_id}/plan/activity",
     summary="Get the planning tree's decision/provenance ledger",
 )
-async def plan_activity(*, project: OwnedProject, limit: int = 200) -> list[dict[str, Any]]:
+async def plan_activity(
+    *, project: OwnedProject, limit: Annotated[int, Query(ge=1, le=500)] = 200
+) -> list[dict[str, Any]]:
     _require_plan_visible(project)
     try:
         async with PMClient.from_env() as pm:

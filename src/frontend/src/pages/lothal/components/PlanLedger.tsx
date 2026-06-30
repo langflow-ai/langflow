@@ -4,6 +4,7 @@
 
 import { type PlanEvent, usePlanActivity } from "@/controllers/API/queries/lothal";
 import { EmptyHint } from "./EmptyHint";
+import { NotReady } from "./NotReady";
 
 // Tolerate the PM service's exact field names — build a human line from whatever
 // the event carries (a summary, a state transition, or the bare event kind).
@@ -41,7 +42,15 @@ export function PlanLedger({ projectId }: { projectId: string }) {
       </div>
     );
   }
-  if (error || !events || events.length === 0) {
+  if (error) {
+    return (
+      <NotReady
+        title="Couldn't load the ledger"
+        detail="The activity ledger failed to load — the planning service may be unavailable. Try again in a moment."
+      />
+    );
+  }
+  if (!events || events.length === 0) {
     return (
       <div style={{ paddingTop: 80 }}>
         <EmptyHint

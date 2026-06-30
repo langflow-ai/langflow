@@ -23,18 +23,22 @@ Configuration (env, with dev-friendly defaults matching the PM image):
 from __future__ import annotations
 
 import os
-from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
 import httpx
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from typing_extensions import Self
 
 _DEFAULT_PM_BASE_URL = "http://pm:8000"
+# Dev-only parity with the PM image's seeded superuser. Production MUST override
+# both via LOTHAL_PM_USER / LOTHAL_PM_PASSWORD (the compose wiring sets them);
+# these are never a real credential, only a local zero-config convenience.
 _DEFAULT_PM_USER = "admin"
-_DEFAULT_PM_PASSWORD = "admin"
+_DEFAULT_PM_PASSWORD = "admin"  # noqa: S105 — dev seed, not a production secret (see note above)
 _TIMEOUT = httpx.Timeout(30.0)
 
 

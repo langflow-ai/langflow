@@ -237,7 +237,7 @@ class PrototypeRefineRequest(BaseModel):
 
 
 class PrototypeApproveResponse(BaseModel):
-    """`POST /projects/{id}/prototype/approve` — the phase after advancing (→ CODE_GENERATION)."""
+    """`POST /projects/{id}/prototype/approve` — the phase after advancing (→ PLAN)."""
 
     phase: Phase
 

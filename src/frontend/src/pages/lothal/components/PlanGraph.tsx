@@ -3,7 +3,8 @@
 // project is editable, an add-link form. The same native-shell surface as the tree
 // view; no iframe.
 
-import { useState } from "react";
+import DOMPurify from "dompurify";
+import { useMemo, useState } from "react";
 import {
   type PlanLink,
   type PlanLinkType,
@@ -43,11 +44,29 @@ export function PlanGraph({
   links: PlanLink[];
   editable: boolean;
 }) {
-  const { data: svg, isLoading } = usePlanDag(projectId);
+  const { data: svg, isLoading, error } = usePlanDag(projectId);
   const createLink = useCreatePlanLink(projectId);
   const [source, setSource] = useState("");
   const [target, setTarget] = useState("");
   const [type, setType] = useState<PlanLinkType>("derives_from");
+
+  // The SVG comes from our own PM service (d2), but treat it as untrusted before
+  // injecting it (defence-in-depth, mirroring D2Canvas): sanitize to the SVG
+  // profile and drop the script / foreignObject vectors. It carries no root
+  // width/height, so we also force it to scale to the pane width.
+  const safeSvg = useMemo(
+    () =>
+      svg
+        ? DOMPurify.sanitize(svg, {
+            USE_PROFILES: { svg: true, svgFilters: true },
+            FORBID_TAGS: ["script", "foreignObject"],
+          }).replace(
+            "<svg ",
+            '<svg style="width:100%;height:auto;display:block" ',
+          )
+        : "",
+    [svg],
+  );
 
   const nameOf = (id: string) => nodes.find((n) => n.id === id)?.name ?? id.slice(0, 8);
 
@@ -76,10 +95,14 @@ export function PlanGraph({
           <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
             Rendering graph…
           </span>
-        ) : svg ? (
-          // The SVG is rendered by our own PM service (d2) — trusted markup. It
-          // carries no root width/height and uses d2's own palette, so we render
-          // it on a light card and force it to scale to the pane width.
+        ) : error ? (
+          <EmptyHint
+            title="Couldn't render the graph"
+            sub="The dependency graph failed to load — the planning service may be unavailable. Try again in a moment."
+          />
+        ) : safeSvg ? (
+          // Sanitized server-rendered d2 SVG (see `safeSvg`), shown on a light
+          // card because d2 uses its own palette and emits no root width/height.
           <div
             style={{
               background: "#fbfbfd",
@@ -91,12 +114,7 @@ export function PlanGraph({
               boxShadow: "0 1px 0 var(--border)",
             }}
             // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{
-              __html: svg.replace(
-                "<svg ",
-                '<svg style="width:100%;height:auto;display:block" ',
-              ),
-            }}
+            dangerouslySetInnerHTML={{ __html: safeSvg }}
           />
         ) : (
           <EmptyHint
