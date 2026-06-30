@@ -4,8 +4,9 @@ Two public per-flow endpoints, both behind ``LANGFLOW_A2A_ENABLED`` (default off
 
 - ``GET  /api/v1/a2a/{flow_id}/.well-known/agent-card.json`` serves the agent card.
 - ``POST /api/v1/a2a/{flow_id}/jsonrpc`` serves the A2A JSON-RPC surface
-  (``message/send`` runs the flow and returns a terminal Task; ``tasks/get``
-  reads it back from the durable, DB-backed task store).
+  (``message/send`` runs the flow and returns a terminal Task; ``message/stream``
+  streams the same run's lifecycle as SSE; ``tasks/get`` reads a task back from
+  the durable, DB-backed store; ``tasks/resubscribe`` re-attaches to a live run).
 
 The router is mounted unconditionally and a per-request guard returns 404 when
 the flag is off, so the routes are indistinguishable from "not mounted". This
@@ -16,8 +17,7 @@ The a2a-sdk server stack is protobuf-based. One shared ``DefaultRequestHandler``
 + ``DurableTaskStore`` + ``JsonRpcDispatcher`` serve every flow; the per-request
 ``flow_id`` is carried via the server call-context state into the protocol-pure
 executor (``a2a_executor.FlowAgentExecutor``). Tasks persist in the ``a2a_tasks``
-table so they survive restart and are visible across workers. Streaming is a
-separate, later slice.
+table so they survive restart and are visible across workers.
 """
 
 from typing import Any
@@ -139,18 +139,24 @@ class DurableTaskStore(TaskStore):
 
 
 # One shared handler/store/dispatcher serve every flow; the per-request flow_id
-# selects the flow. agent_card is an empty proto card (only read on stream/push
-# paths, which this slice doesn't mount); the real per-flow card is the GET route.
+# selects the flow. The handler card carries only capabilities the SDK reads to
+# gate methods: streaming=True lets the @validate guard admit message/stream and
+# tasks/resubscribe. The real per-flow discovery card is the GET route.
 # DurableTaskStore does no DB work at construction, so the import-time singleton is safe.
+# ponytail: streaming emits the run's lifecycle events (submitted -> working ->
+# artifact -> completed) as SSE; per-token deltas would inject a stream_flow callable
+# into the executor. tasks/resubscribe is best-effort same-worker live re-attach (the
+# default in-memory QueueManager); a terminal or cross-worker task returns a spec error
+# and tasks/get covers terminal reads. Durable cross-worker re-attach is a later slice.
 _HANDLER = DefaultRequestHandler(
     agent_executor=FlowAgentExecutor(_run_flow),
     task_store=DurableTaskStore(),
-    agent_card=pb.AgentCard(),
+    agent_card=pb.AgentCard(capabilities=pb.AgentCapabilities(streaming=True)),
 )
 _DISPATCHER = JsonRpcDispatcher(
     request_handler=_HANDLER,
     context_builder=_FlowContextBuilder(),
-    enable_v0_3_compat=True,  # routes the spec method names message/send and tasks/get
+    enable_v0_3_compat=True,  # routes spec method names: message/send, message/stream, tasks/get, tasks/resubscribe
 )
 
 
@@ -175,7 +181,7 @@ async def get_agent_card(flow_id: UUID, request: Request, session: DbSession) ->
 
 @router.post("/{flow_id}/jsonrpc")
 async def a2a_jsonrpc(flow_id: UUID, request: Request) -> Response:
-    """Serve the A2A JSON-RPC surface (message/send, tasks/get) for an agent flow.
+    """Serve the A2A JSON-RPC surface (message/send, message/stream, tasks/get, tasks/resubscribe) for an agent flow.
 
     Public and gated like the card route; the flow runs as its owner. Returns the
     SDK's JSON-RPC response (HTTP 200 even for JSON-RPC-level errors). No
