@@ -7,6 +7,7 @@ object, the served card is revalidated against the a2a-sdk model, and message/se
 runs a real echo flow through the v2 surface.
 """
 
+import asyncio
 import uuid
 from pathlib import Path
 
@@ -452,7 +453,8 @@ async def test_resubscribe_to_terminal_task_errors_without_hanging(client: Async
         assert resp.status_code == 200
         frames = [orjson.loads(line[len("data:") :]) async for line in resp.aiter_lines() if line.startswith("data:")]
 
-    assert any("error" in f for f in frames)
+    errors = [f["error"]["message"] for f in frames if "error" in f]
+    assert any("no active stream to resubscribe" in msg for msg in errors), errors
     assert not any(f.get("result", {}).get("kind") == "artifact-update" for f in frames)
 
 
@@ -469,6 +471,31 @@ async def test_tasks_get_returns_prior_task(client: AsyncClient, active_user, ec
     assert got["id"] == task_id
     assert got["status"]["state"] == "completed"
     assert got["artifacts"][0]["parts"][0]["text"] == "remember me"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_tasks_get_is_scoped_to_the_owning_flow(client: AsyncClient, active_user, echo_flow_data):
+    """A task created under flow A is not readable through flow B's JSON-RPC endpoint.
+
+    Both flows are public (no folder), so the store owner is "" for each and only the
+    flow scope keeps one flow's tasks out of another flow's endpoint. The resume path
+    enforces this via a flow_id check; tasks/get must too, otherwise flow B can read flow
+    A's task and artifacts by id.
+    """
+    flow_a = await _create_flow(active_user.id, data=echo_flow_data)
+    flow_b = await _create_flow(active_user.id, data=echo_flow_data)
+
+    sent = (await _jsonrpc(client, flow_a, "message/send", _text_message("secret a"))).json()["result"]
+    task_id = sent["id"]
+
+    # Flow A reads its own task back.
+    own = (await _jsonrpc(client, flow_a, "tasks/get", {"id": task_id})).json()["result"]
+    assert own["id"] == task_id
+
+    # Flow B must not see flow A's task: the SDK returns a TaskNotFound JSON-RPC error.
+    foreign = (await _jsonrpc(client, flow_b, "tasks/get", {"id": task_id})).json()
+    assert "error" in foreign
+    assert "result" not in foreign
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -755,7 +782,8 @@ async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_use
     paused = (await _jsonrpc(client, flow_a, "message/send", _text_message("start"))).json()["result"]
     task_id, context_id = paused["id"], paused["contextId"]
 
-    # Same task id, but sent to flow B: must not run flow A's graph.
+    # Same task id, but sent to flow B. Scoped reads mean flow B can't see flow A's task,
+    # so the SDK rejects the message as task-not-found before flow A's graph could run.
     via_b = (
         await _jsonrpc(
             client,
@@ -763,9 +791,42 @@ async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_use
             "message/send",
             _text_message("Approve", message_id="m2", context_id=context_id, task_id=task_id),
         )
-    ).json()["result"]
+    ).json()
 
-    assert via_b["status"]["state"] == "failed"
+    assert "error" in via_b
+    assert "result" not in via_b
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_resubscribe_to_input_required_task_does_not_hang(
+    client: AsyncClient, active_user, human_input_flow_data
+):
+    """tasks/resubscribe to a paused (non-terminal) task with no live producer ends with an error, not a hang.
+
+    After a sync pause the task is input-required in the durable store but has no live streaming
+    producer. The SDK's default handler would tap the idle in-memory queue and block waiting for a
+    terminal event that never arrives, so _FlowRequestHandler rejects resubscribe outright. The
+    assertion checks for that specific rejection message rather than just "an error frame": a
+    regression that reintroduces the hang fails the wait_for, and a regression that errors for the
+    wrong reason (e.g. an internal AttributeError) carries a different message and fails here too.
+    """
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id = paused["id"]
+
+    async def _drain():
+        async with client.stream(
+            "POST",
+            f"api/v1/a2a/{flow_id}/jsonrpc",
+            json={"jsonrpc": "2.0", "id": 1, "method": "tasks/resubscribe", "params": {"id": task_id}},
+        ) as resp:
+            assert resp.status_code == 200
+            return [orjson.loads(line[len("data:") :]) async for line in resp.aiter_lines() if line.startswith("data:")]
+
+    frames = await asyncio.wait_for(_drain(), timeout=10)
+    errors = [f["error"]["message"] for f in frames if "error" in f]
+    assert any("no active stream to resubscribe" in msg for msg in errors), errors
 
 
 # --- apikey auth enforcement ----------------------------------------------
@@ -864,6 +925,30 @@ async def test_stream_rejects_missing_key_plain_401(client: AsyncClient, active_
         assert not resp.headers["content-type"].startswith("text/event-stream")
 
 
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_apikey_gate_enforced_on_all_methods(client: AsyncClient, active_user, echo_flow_data):
+    """The apikey gate runs before dispatch, so every method 401s without a key, not just message/send.
+
+    All other apikey tests use message/send; a per-method dispatch refactor or an alternate
+    read path could silently drop the gate for tasks/get or pushNotificationConfig. This pins
+    that the whole POST is gated regardless of the method named in the body.
+    """
+    flow_id = await _apikey_flow(active_user, echo_flow_data)
+    some_id = uuid.uuid4().hex
+
+    methods = (
+        ("tasks/get", {"id": some_id}),
+        ("tasks/resubscribe", {"id": some_id}),
+        (
+            "tasks/pushNotificationConfig/set",
+            {"taskId": some_id, "pushNotificationConfig": {"url": "https://8.8.8.8/h"}},
+        ),
+    )
+    for method, params in methods:
+        resp = await _jsonrpc(client, flow_id, method, params)
+        assert resp.status_code == 401, f"{method} should 401 without a key"
+
+
 # --- push notifications ----------------------------------------------------
 
 
@@ -943,6 +1028,61 @@ async def test_push_config_public_url_accepted(client: AsyncClient, active_user,
 
     assert "error" not in body
     assert "result" in body
+
+
+async def _start_capture_server():
+    """A real loopback HTTP server that records the JSON bodies it's POSTed.
+
+    Used to prove the push sender actually delivers, no mock: the module-level
+    _PUSH_HTTP_CLIENT makes a real loopback POST that this server captures.
+    """
+    from aiohttp import web
+
+    received: list[dict] = []
+    got_one = asyncio.Event()
+
+    async def handler(request):
+        received.append(await request.json())
+        got_one.set()
+        return web.Response(text="ok")
+
+    app = web.Application()
+    app.router.add_post("/hook", handler)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "127.0.0.1", 0)
+    await site.start()
+    port = site._server.sockets[0].getsockname()[1]
+    return runner, port, received, got_one
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_push_config_delivers_post_to_webhook(client: AsyncClient, active_user, echo_flow_data):
+    """A webhook registered via message/send actually receives a POST for the task's lifecycle.
+
+    Registration is covered elsewhere; this proves delivery happens (the sender is wired and
+    the config is matched to the task), which no other test exercises. The webhook targets
+    loopback, so it needs a2a_allow_private_webhooks on to pass the SSRF guard.
+    """
+    settings = get_settings_service().settings
+    original = settings.a2a_allow_private_webhooks
+    settings.a2a_allow_private_webhooks = True
+    runner, port, received, got_one = await _start_capture_server()
+    try:
+        flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+        params = {
+            **_text_message("hello a2a"),
+            "configuration": {"pushNotificationConfig": {"url": f"http://127.0.0.1:{port}/hook"}},
+        }
+        resp = await _jsonrpc(client, flow_id, "message/send", params)
+        assert resp.status_code == 200
+
+        # Delivery may land just after the response returns; bound the wait so a dead sender fails fast.
+        await asyncio.wait_for(got_one.wait(), timeout=10)
+        assert received, "the registered webhook never received a push notification"
+    finally:
+        await runner.cleanup()
+        settings.a2a_allow_private_webhooks = original
 
 
 # --- client component (consume a remote A2A agent) -------------------------

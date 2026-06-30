@@ -6,7 +6,8 @@ Two public per-flow endpoints, both behind ``LANGFLOW_A2A_ENABLED`` (default off
 - ``POST /api/v1/a2a/{flow_id}/jsonrpc`` serves the A2A JSON-RPC surface
   (``message/send`` runs the flow and returns a terminal Task; ``message/stream``
   streams the same run's lifecycle as SSE; ``tasks/get`` reads a task back from
-  the durable, DB-backed store; ``tasks/resubscribe`` re-attaches to a live run).
+  the durable, DB-backed store; ``tasks/resubscribe`` is advertised but always
+  returns a spec error, since synchronous runs leave no live producer to re-attach to).
 
 The router is mounted unconditionally and a per-request guard returns 404 when
 the flag is off, so the routes are indistinguishable from "not mounted". This
@@ -33,7 +34,7 @@ from a2a.server.routes.common import DefaultServerCallContextBuilder
 from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
 from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, TaskStore
 from a2a.types import a2a_pb2 as pb
-from a2a.utils.errors import InvalidParamsError
+from a2a.utils.errors import InvalidParamsError, UnsupportedOperationError
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
 from lfx.graph.checkpoint.schema import GraphCheckpoint
@@ -114,7 +115,12 @@ class _FlowContextBuilder(DefaultServerCallContextBuilder):
 
     def build(self, request: Request) -> ServerCallContext:
         context = super().build(request)
-        context.state["flow_id"] = request.path_params["flow_id"]
+        # Canonicalize the raw URL path segment to the same string form the checkpoint
+        # guard uses (str(UUID(...))), so the durable-store scope and the resume guard
+        # agree across non-canonical encodings (uppercase/hyphenless). The /{flow_id}
+        # route types flow_id as UUID, so FastAPI 422s a malformed segment before dispatch
+        # and UUID() here always parses.
+        context.state["flow_id"] = str(UUID(request.path_params["flow_id"]))
         return context
 
 
@@ -397,19 +403,25 @@ class DurableTaskStore(TaskStore):
 
     async def save(self, task: pb.Task, context: ServerCallContext) -> None:
         owner = resolve_user_scope(context)
+        flow_id = str(context.state.get("flow_id", ""))
         blob: dict[str, Any] = MessageToDict(task)
         async with session_scope() as session:
             row = await session.get(A2ATask, (task.id, owner))
             if row is None:
-                session.add(A2ATask(id=task.id, owner=owner, task=blob))
+                session.add(A2ATask(id=task.id, owner=owner, flow_id=flow_id, task=blob))
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
+                row.flow_id = flow_id  # keep the scope in sync across re-saves
 
     async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
         owner = resolve_user_scope(context)
+        flow_id = str(context.state.get("flow_id", ""))
         async with session_scope_readonly() as session:  # pure read, no commit
             row = await session.get(A2ATask, (task_id, owner))
-            blob = row.task if row is not None else None
+            # Scope the read to the owning flow: a task id known to one flow's endpoint
+            # must not read another flow's task off the shared store (the resume path
+            # applies the same flow_id guard to checkpoints).
+            blob = row.task if row is not None and row.flow_id == flow_id else None
         if blob is None:
             return None
         task = pb.Task()
@@ -442,6 +454,27 @@ async def close_push_client() -> None:
     await _PUSH_HTTP_CLIENT.aclose()
 
 
+class _FlowRequestHandler(DefaultRequestHandler):
+    """DefaultRequestHandler that disables tasks/resubscribe for the synchronous run model.
+
+    Our flow runs are synchronous: a producer streams events only for the duration of the
+    originating message/stream request. By the time a client can resubscribe, that request
+    has returned, so there is no live producer to tail. The SDK's on_subscribe_to_task taps
+    the task's event queue and waits for events; for a task parked at input-required (or any
+    task whose ActiveTask lingers idle in the registry) that queue never receives another
+    event, so the tap blocks forever. Re-attaching to a still-running producer would be the
+    only case that does not hang, but that case no longer exists once the synchronous request
+    returns. So this method does not inspect task state or producer liveness: it
+    unconditionally raises a spec error and lets tasks/get cover reading a paused/terminal
+    task back.
+    """
+
+    async def on_subscribe_to_task(self, params, _context):
+        msg = f"Task {params.id} has no active stream to resubscribe to"
+        raise UnsupportedOperationError(message=msg)
+        yield  # unreachable: the raise above always fires, but the yield makes this an async generator
+
+
 # One shared handler/store/dispatcher serve every flow; the per-request flow_id
 # selects the flow. The handler card carries only capabilities the SDK reads to gate
 # methods: streaming=True admits message/stream + tasks/resubscribe; push_notifications=True
@@ -449,11 +482,12 @@ async def close_push_client() -> None:
 # GET route. The stores do no DB work at construction, so the import-time singletons are safe.
 # ponytail: streaming emits the run's lifecycle events (submitted -> working ->
 # artifact -> completed) as SSE; per-token deltas would inject a stream_flow callable
-# into the executor. tasks/resubscribe is best-effort same-worker live re-attach (the
-# default in-memory QueueManager); a terminal or cross-worker task returns a spec error
-# and tasks/get covers terminal reads. Push configs are in-memory per-worker; durable
-# cross-worker re-attach and push delivery are a later slice.
-_HANDLER = DefaultRequestHandler(
+# into the executor. tasks/resubscribe is advertised (streaming=True gates it) but always
+# returns a spec error: synchronous runs leave no live producer to re-attach to once the
+# request returns, so _FlowRequestHandler rejects it and tasks/get covers terminal/paused
+# reads. Push configs are in-memory per-worker; durable cross-worker re-attach and push
+# delivery are a later slice.
+_HANDLER = _FlowRequestHandler(
     agent_executor=FlowAgentExecutor(_run_flow, _resume_flow),
     task_store=DurableTaskStore(),
     agent_card=pb.AgentCard(capabilities=pb.AgentCapabilities(streaming=True, push_notifications=True)),
