@@ -20,7 +20,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialAPISetup from '@site/docs/_partial-api-setup.mdx';
 
-The [Workflow API](/workflow-api) executes Langflow flows over `POST /api/v2/workflows` in three modes.
+The [Workflow API](./workflow-api) executes Langflow flows over `POST /api/v2/workflows` in three modes.
 
 Use the default **`sync`** mode when you want to wait for the full JSON result in one response. Use **`stream`** when you need live Server-Sent Events (SSE) emitted as the flow runs. Use **`background`** when you want to queue a job and then poll or re-attach to its event stream.
 
@@ -81,7 +81,7 @@ Set `"mode": "stream"` to open an SSE stream. Choose the wire format with `strea
 - **`langflow`** (default): Langflow `EventManager` frames for existing Langflow clients.
 - **`agui`**: [AG-UI](https://docs.ag-ui.com/introduction) lifecycle events for compatible clients.
 
-For request examples, event types, and protocol details, see [Execute flow with selected `stream` mode](/workflow-api#execute-flow-with-selected-stream-mode) in the Workflow API reference.
+For request examples, event types, and protocol details, see [Execute flow with selected `stream` mode](./workflow-api#execute-flow-with-selected-stream-mode) in the Workflow API reference.
 
 ### Langflow EventManager (default)
 
@@ -151,9 +151,9 @@ Set `"mode": "background"` to queue a job and receive a `job_id` immediately. Po
 
 While a job is still `queued` or `in_progress`, the poll endpoint returns a job object (`object: "job"`) with `links` for status, events, and stop. When the job completes, the same endpoint returns the full execution response.
 
-To connect to a background run, see [Re-attach to a background run](/workflow-api#re-attach-to-a-background-run).
+To connect to a background run, see [Re-attach to a background run](./workflow-api#re-attach-to-a-background-run).
 
 ## Next steps
 
-* [Workflow API reference](/workflow-api) — request body fields, response schemas, status polling, stop endpoint, tweaks, globals, and error codes.
+* [Workflow API reference](./workflow-api) — request body fields, response schemas, status polling, stop endpoint, tweaks, globals, and error codes.
 * [Flow trigger endpoints](/api-flows-run) — v1 `/run` and `/webhook` endpoints if you are migrating from or comparing with the v1 API.
