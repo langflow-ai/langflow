@@ -82,9 +82,21 @@ _ENUM_RELABELS: dict[str, dict[str, str]] = {
 
 
 def _existing_labels(conn, type_name: str) -> set[str]:
-    """Return the current label set of a PostgreSQL enum type, or empty if it doesn't exist."""
+    """Return the current label set of a PostgreSQL enum type, or empty if it doesn't exist.
+
+    Scoped to ``pg_type_is_visible`` so introspection resolves the *same* type the
+    unqualified ``ALTER TYPE`` in :func:`_rename_labels` will rename — otherwise an
+    enum of the same name in another schema could leak labels into the guard and
+    skip the rename on the actually-visible (broken) type.
+    """
     rows = conn.execute(
-        sa.text("SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid WHERE t.typname = :type_name"),
+        sa.text(
+            "SELECT e.enumlabel "
+            "FROM pg_enum e "
+            "JOIN pg_type t ON t.oid = e.enumtypid "
+            "WHERE t.typname = :type_name "
+            "AND pg_type_is_visible(t.oid)"
+        ),
         {"type_name": type_name},
     )
     return {row[0] for row in rows}
