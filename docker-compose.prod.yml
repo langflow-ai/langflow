@@ -148,6 +148,19 @@ services:
       # — agent gateway + onboarding bypass — succeed) and the browser-facing
       # "https://od.<domain>" the embedded web UI calls /api from. Comma-separated.
       OD_ALLOWED_ORIGINS: ${OD_ALLOWED_ORIGINS:-http://open-design:7456}
+      # Route OD's own LLM calls through Lothal's gateway (Story U.3/U.9). OD's
+      # `claude` agent and its memory-llm read the LLM endpoint from the *container*
+      # environment (process.env.ANTHROPIC_BASE_URL) — NOT from OD's per-agent
+      # config — so the gateway URL must live here, on the container, to take
+      # effect. claude appends `/v1/messages`, so the base omits `/v1`. The token
+      # is only an inbound pass to the gateway (it injects the real subscription
+      # upstream), so any non-empty value works while the gateway's inbound auth is
+      # off. claude needs a writable config dir — the image is read-only except the
+      # /app/.od volume. Set the values in /opt/lothal/.env (see .env.prod.example).
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
+      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLAUDE_CONFIG_DIR: ${CLAUDE_CONFIG_DIR:-/app/.od/.claude}
     ports:
       # Published on loopback ONLY so the *host* nginx can reverse-proxy the
       # od.<domain> vhost to it for the U.9 embed. It is NOT publicly exposed: host
