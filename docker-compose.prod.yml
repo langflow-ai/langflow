@@ -155,11 +155,18 @@ services:
       # effect. claude appends `/v1/messages`, so the base omits `/v1`. The token
       # is only an inbound pass to the gateway (it injects the real subscription
       # upstream), so any non-empty value works while the gateway's inbound auth is
-      # off. claude needs a writable config dir — the image is read-only except the
-      # /app/.od volume. Set the values in /opt/lothal/.env (see .env.prod.example).
-      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
-      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # off; if you set LOTHAL_GATEWAY_TOKEN (inbound auth on), override the token
+      # vars below to match. claude needs a writable config dir — the image is
+      # read-only except the /app/.od volume.
+      #
+      # These DEFAULT to the in-compose backend + an off-auth placeholder, so OD's
+      # claude works out of the box without any /opt/lothal/.env entries (a host on
+      # an older .env stays working rather than silently dropping into the broken
+      # not-logged-in path). Override in .env only for a different topology or a
+      # locked-down gateway.
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-http://backend:7860/api/v1/lothal/gateway}
+      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-lothal}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-lothal}
       CLAUDE_CONFIG_DIR: ${CLAUDE_CONFIG_DIR:-/app/.od/.claude}
     ports:
       # Published on loopback ONLY so the *host* nginx can reverse-proxy the
