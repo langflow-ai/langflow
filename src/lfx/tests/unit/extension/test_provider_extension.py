@@ -165,6 +165,63 @@ def test_core_name_collision_is_skipped_warning(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
+# Discovery of provider-only extensions (no bundles[0] IndexError)
+# ---------------------------------------------------------------------------
+
+
+def _write_provider_only_seed(seed: Path, ext_id: str = "lfx-fakeco") -> None:
+    sub = seed / ext_id
+    sub.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "id": ext_id,
+        "version": "0.1.0",
+        "name": "FakeCo Provider",
+        "lfx": {"compat": ["1"]},
+        "providers": [_provider_entry()],
+    }
+    (sub / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def test_discover_seed_provider_only_extension_does_not_crash(tmp_path: Path):
+    from lfx.extension.discovery import discover_seed_extensions
+
+    seed = tmp_path / "seed"
+    _write_provider_only_seed(seed)
+
+    extensions, errors = discover_seed_extensions(seed_dir_env=str(seed))
+
+    assert not errors, errors
+    assert len(extensions) == 1
+    assert extensions[0].extension_id == "lfx-fakeco"
+    # Provider-only extension: no component bundle.
+    assert extensions[0].bundle_name is None
+
+
+def test_discover_installed_provider_only_extension_does_not_crash(tmp_path: Path):
+    from lfx.extension.discovery import discover_installed_extensions
+
+    from .test_discovery import _FakeDistribution
+
+    root = tmp_path / "lfx_fakeco"
+    root.mkdir()
+    manifest = {
+        "id": "lfx-fakeco",
+        "version": "0.1.0",
+        "name": "FakeCo Provider",
+        "lfx": {"compat": ["1"]},
+        "providers": [_provider_entry()],
+    }
+    (root / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    dist = _FakeDistribution(name="lfx-fakeco", root=root, manifest_relative="extension.json")
+
+    extensions, errors = discover_installed_extensions(distributions=[dist])
+
+    assert not errors, errors
+    assert len(extensions) == 1
+    assert extensions[0].bundle_name is None
+
+
+# ---------------------------------------------------------------------------
 # Manifest schema rules
 # ---------------------------------------------------------------------------
 

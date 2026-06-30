@@ -85,13 +85,20 @@ def get_model_provider_variable_mapping() -> dict[str, str]:
     """
     result = {}
     for provider, meta in model_provider_metadata.items():
-        for var in meta.get("variables", []):
-            if var.get("required") and var.get("is_secret"):
-                result[provider] = var["variable_key"]
-                break
-        # Fallback to first variable if no required secret found
-        if provider not in result and meta.get("variables"):
-            result[provider] = meta["variables"][0]["variable_key"]
+        variables = meta.get("variables", [])
+        # Prefer a required secret (the canonical API key); then any secret
+        # (an *optional* API key, e.g. a local OpenAI-compatible server like
+        # vLLM whose VLLM_API_KEY is optional); only then fall back to the first
+        # variable. Without the "any secret" step the mapping would point at the
+        # first required *non-secret* connection field (e.g. a base URL), which
+        # get_api_key_for_provider would then resolve and send as the API key.
+        chosen = next((v["variable_key"] for v in variables if v.get("required") and v.get("is_secret")), None)
+        if chosen is None:
+            chosen = next((v["variable_key"] for v in variables if v.get("is_secret")), None)
+        if chosen is None and variables:
+            chosen = variables[0]["variable_key"]
+        if chosen is not None:
+            result[provider] = chosen
     return result
 
 

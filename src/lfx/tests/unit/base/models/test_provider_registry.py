@@ -262,6 +262,45 @@ def test_get_llm_applies_registered_provider_base_url(monkeypatch):
     assert captured["api_key"] == "EMPTY"  # pragma: allowlist secret
 
 
+def test_variable_mapping_prefers_secret_over_first_variable():
+    # A provider whose first (required) variable is a non-secret base URL and
+    # whose API key is an optional secret must map to the secret, not the base
+    # URL -- otherwise get_api_key_for_provider would send the endpoint as the
+    # bearer token.
+    from lfx.base.models.unified_models import get_model_provider_variable_mapping
+
+    register_provider(_fakeco_spec(metadata=_fakeco_metadata_with_base_url(), api_key_required=False))
+    assert get_model_provider_variable_mapping()["FakeCo"] == "FAKECO_API_KEY"
+
+
+def test_get_llm_real_resolver_uses_placeholder_not_base_url(monkeypatch):
+    # Exercise the REAL get_api_key_for_provider path (not a patched stub): with
+    # only the base URL configured, the api_key must resolve to the "EMPTY"
+    # placeholder, never the base URL.
+    from lfx.base.models import unified_models as um
+    from lfx.base.models.unified_models.instantiation import get_llm
+
+    captured: dict = {}
+
+    class FakeChat:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    register_provider(_fakeco_spec(metadata=_fakeco_metadata_with_base_url(), api_key_required=False))
+    monkeypatch.setenv("FAKECO_API_BASE", "http://vllm.example:8000")
+    monkeypatch.delenv("FAKECO_API_KEY", raising=False)
+    monkeypatch.setattr(um, "get_model_class", lambda _name: FakeChat)
+    # Base URL comes from the env via the connection handler; do NOT patch the
+    # api-key resolver -- that is the path under test.
+    monkeypatch.setattr(um, "get_all_variables_for_provider", lambda *_a, **_k: {})
+
+    model_selection = [{"name": "m1", "provider": "FakeCo", "metadata": {"model_class": "ChatOpenAI"}}]
+    get_llm(model_selection, user_id=None)
+
+    assert captured["api_key"] == "EMPTY"  # pragma: allowlist secret
+    assert captured["base_url"] == "http://vllm.example:8000"
+
+
 def test_get_embeddings_applies_registered_provider_base_url_and_key(monkeypatch):
     from lfx.base.models import unified_models as um
     from lfx.base.models.unified_models.instantiation import get_embeddings

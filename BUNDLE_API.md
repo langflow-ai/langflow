@@ -488,7 +488,11 @@ the deserialize half is covered by
   collision.  `bundles[]` is now **0-or-1** rather than exactly one, so a
   *provider-only* extension may ship providers with no component bundle; an
   extension must declare at least one of `bundles` or `providers`.  Existing
-  single-bundle manifests are unaffected.
+  single-bundle manifests are unaffected.  Discovery
+  (`discover_installed_extensions` / `discover_seed_extensions`) surfaces a
+  provider-only extension with `DiscoveredExtension.bundle_name = None`, and
+  `registry.Extension.bundle_name` is likewise now `str | None` (the
+  `lfx extension list` BUNDLE column shows `—` for such extensions).
 - **New typed error codes (additive): `provider-invalid`, `provider-skipped`.**
   A malformed provider spec surfaces `provider-invalid`; a provider whose name
   collides with a built-in or already-loaded provider surfaces
