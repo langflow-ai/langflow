@@ -1,12 +1,12 @@
 from typing import Any
 from urllib.parse import urljoin
 
-import httpx
-
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.field_typing import Embeddings
 from lfx.inputs.inputs import DropdownInput, SecretStrInput
 from lfx.io import FloatInput, MessageTextInput
+from lfx.utils.ssrf_httpx import ssrf_safe_async_get, validate_url_for_ssrf_or_raise
+from lfx.utils.ssrf_protection import SSRFProtectionError
 
 
 class LMStudioEmbeddingsComponent(LCEmbeddingsModel):
@@ -31,12 +31,14 @@ class LMStudioEmbeddingsComponent(LCEmbeddingsModel):
     async def get_model(base_url_value: str) -> list[str]:
         try:
             url = urljoin(base_url_value, "/v1/models")
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url)
-                response.raise_for_status()
-                data = response.json()
+            response = await ssrf_safe_async_get(url)
+            response.raise_for_status()
+            data = response.json()
 
-                return [model["id"] for model in data.get("data", [])]
+            return [model["id"] for model in data.get("data", [])]
+        except SSRFProtectionError as e:
+            msg = f"SSRF Protection: {e}"
+            raise ValueError(msg) from e
         except Exception as e:
             msg = "Could not retrieve models. Please, make sure the LM Studio server is running."
             raise ValueError(msg) from e
@@ -71,6 +73,8 @@ class LMStudioEmbeddingsComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        validate_url_for_ssrf_or_raise(self.base_url)
+
         try:
             from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
         except ImportError as e:

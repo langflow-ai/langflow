@@ -177,9 +177,164 @@ jobs:
 
           echo "✅ Release dependencies validated successfully."
 
+  determine-rc-number:
+    name: Determine Shared RC Number
+    needs: [validate-tag, validate-dependencies]
+    runs-on: ubuntu-latest
+    outputs:
+      rc_number: ${{ steps.rc.outputs.rc_number || steps.stable.outputs.rc_number }}
+    steps:
+      - name: Use stable RC number
+        id: stable
+        if: ${{ !inputs.pre_release }}
+        run: |
+          echo "rc_number=0" >> "$GITHUB_OUTPUT"
+          echo "Not a pre-release; shared rc number is 0."
+
+      - name: Checkout code
+        if: ${{ inputs.pre_release }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Setup Environment
+        if: ${{ inputs.pre_release }}
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Determine shared pre-release RC number
+        id: rc
+        if: ${{ inputs.pre_release }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          read_pyproject_version() {
+            python3 - "$1" <<'PY'
+          import pathlib
+          import sys
+          import tomllib
+
+          data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())
+          print(data["project"]["version"])
+          PY
+          }
+
+          fetch_pypi_versions() {
+            local package_name="$1"
+            local output_file="$2"
+            local response_file
+            response_file="$(mktemp)"
+            local status
+            status=$(curl --retry 3 --retry-delay 2 --retry-connrefused -sS -o "$response_file" -w "%{http_code}" "https://pypi.org/pypi/${package_name}/json")
+            if [ "$status" = "404" ]; then
+              : > "$output_file"
+              return
+            fi
+            if [ "$status" != "200" ]; then
+              echo "Failed to fetch PyPI releases for ${package_name}: HTTP ${status}" >&2
+              cat "$response_file" >&2 || true
+              exit 1
+            fi
+            jq -r '.releases | keys[]' "$response_file" > "$output_file"
+          }
+
+          fetch_docker_tags() {
+            local repository="$1"
+            local output_file="$2"
+            local response_file
+            response_file="$(mktemp)"
+            local status
+            status=$(curl --retry 3 --retry-delay 2 --retry-connrefused -sS -o "$response_file" -w "%{http_code}" "https://registry.hub.docker.com/v2/repositories/${repository}/tags?page_size=100")
+            if [ "$status" != "200" ]; then
+              echo "Failed to fetch Docker tags for ${repository}: HTTP ${status}" >&2
+              cat "$response_file" >&2 || true
+              exit 1
+            fi
+            jq -r '.results[].name' "$response_file" > "$output_file"
+          }
+
+          max_rc=0
+          consider_versions() {
+            local label="$1"
+            local base_version="$2"
+            local versions_file="$3"
+            local rc_number
+            rc_number=$(uv run ./scripts/ci/langflow_pre_release_tag.py "$base_version" --print-rc-number - < "$versions_file")
+            echo "${label}: next rc number for ${base_version} is ${rc_number}"
+            if [ "$rc_number" -gt "$max_rc" ]; then
+              max_rc="$rc_number"
+            fi
+          }
+
+          tmp_dir="$(mktemp -d)"
+
+          if [ "${{ inputs.release_package_main }}" = "true" ]; then
+            version="$(read_pyproject_version pyproject.toml)"
+            fetch_pypi_versions "langflow" "$tmp_dir/langflow-pypi.txt"
+            consider_versions "PyPI langflow" "$version" "$tmp_dir/langflow-pypi.txt"
+          fi
+
+          if [ "${{ inputs.release_package_base }}" = "true" ]; then
+            version="$(read_pyproject_version src/backend/base/pyproject.toml)"
+            fetch_pypi_versions "langflow-base" "$tmp_dir/langflow-base-pypi.txt"
+            consider_versions "PyPI langflow-base" "$version" "$tmp_dir/langflow-base-pypi.txt"
+          fi
+
+          if [ "${{ inputs.release_lfx }}" = "true" ]; then
+            version="$(read_pyproject_version src/lfx/pyproject.toml)"
+            fetch_pypi_versions "lfx" "$tmp_dir/lfx-pypi.txt"
+            consider_versions "PyPI lfx" "$version" "$tmp_dir/lfx-pypi.txt"
+          fi
+
+          if [ "${{ inputs.release_sdk || inputs.release_lfx }}" = "true" ]; then
+            version="$(read_pyproject_version src/sdk/pyproject.toml)"
+            fetch_pypi_versions "langflow-sdk" "$tmp_dir/langflow-sdk-pypi.txt"
+            consider_versions "PyPI langflow-sdk" "$version" "$tmp_dir/langflow-sdk-pypi.txt"
+          fi
+
+          if [ "${{ inputs.release_bundles }}" = "true" ]; then
+            for pyproject in src/bundles/*/pyproject.toml; do
+              package_name=$(python3 - "$pyproject" <<'PY'
+          import pathlib
+          import sys
+          import tomllib
+
+          data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())
+          print(data["project"]["name"])
+          PY
+          )
+              version="$(read_pyproject_version "$pyproject")"
+              output_file="$tmp_dir/${package_name}-pypi.txt"
+              fetch_pypi_versions "$package_name" "$output_file"
+              consider_versions "PyPI ${package_name}" "$version" "$output_file"
+            done
+          fi
+
+          if [ "${{ inputs.build_docker_main }}" = "true" ]; then
+            version="$(read_pyproject_version pyproject.toml)"
+            fetch_docker_tags "langflowai/langflow" "$tmp_dir/langflow-docker.txt"
+            grep -v '^base-' "$tmp_dir/langflow-docker.txt" | grep -vE '\-(amd64|arm64)$' > "$tmp_dir/langflow-docker-release-tags.txt" || true
+            consider_versions "Docker langflowai/langflow" "$version" "$tmp_dir/langflow-docker-release-tags.txt"
+          fi
+
+          if [ "${{ inputs.build_docker_base }}" = "true" ]; then
+            version="$(read_pyproject_version src/backend/base/pyproject.toml)"
+            fetch_docker_tags "langflowai/langflow" "$tmp_dir/langflow-base-docker.txt"
+            grep -E '^base-' "$tmp_dir/langflow-base-docker.txt" | grep -vE '\-(amd64|arm64)$' | sed 's/^base-//' > "$tmp_dir/langflow-base-docker-release-tags.txt" || true
+            consider_versions "Docker langflowai/langflow base" "$version" "$tmp_dir/langflow-base-docker-release-tags.txt"
+          fi
+
+          echo "Shared pre-release rc number: ${max_rc}"
+          echo "rc_number=${max_rc}" >> "$GITHUB_OUTPUT"
+
   determine-base-version:
     name: Determine Base Version
-    needs: [validate-tag, validate-dependencies]
+    needs: [validate-tag, validate-dependencies, determine-rc-number]
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -212,16 +367,16 @@ jobs:
           echo "Base version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
-            last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
-            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
-            echo "Latest base pre-release version: $last_released_version"
+            rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
+            echo "Shared release candidate number: rc$rc_number"
             echo "Base pre-release version to be released: $version"
           else
             last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
             echo "Latest base release version: $last_released_version"
           fi
 
-          if [ "$version" = "$last_released_version" ]; then
+          if [ "$version" = "$last_released_version" ] && [ "${{ inputs.release_package_base }}" = "true" ]; then
             echo "Base pypi version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
             exit 1
@@ -232,7 +387,7 @@ jobs:
 
   determine-main-version:
     name: Determine Main Version
-    needs: [validate-tag, validate-dependencies]
+    needs: [validate-tag, validate-dependencies, determine-rc-number]
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -261,16 +416,16 @@ jobs:
           echo "Main version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
-            last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
-            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
-            echo "Latest main pre-release version: $last_released_version"
+            rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
+            echo "Shared release candidate number: rc$rc_number"
             echo "Main pre-release version to be released: $version"
           else
             last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
             echo "Latest main release version: $last_released_version"
           fi
 
-          if [ "$version" = "$last_released_version" ]; then
+          if [ "$version" = "$last_released_version" ] && [ "${{ inputs.release_package_main }}" = "true" ]; then
             echo "Main pypi version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
             exit 1
@@ -281,7 +436,7 @@ jobs:
 
   determine-lfx-version:
     name: Determine LFX Version
-    needs: [validate-tag, validate-dependencies]
+    needs: [validate-tag, validate-dependencies, determine-rc-number]
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -310,9 +465,9 @@ jobs:
           echo "LFX version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
-            last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
-            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
-            echo "Latest LFX pre-release version: $last_released_version"
+            rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
+            echo "Shared release candidate number: rc$rc_number"
             echo "LFX pre-release version to be released: $version"
           else
             last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
@@ -330,7 +485,7 @@ jobs:
 
   determine-sdk-version:
     name: Determine SDK Version
-    needs: [validate-tag, validate-dependencies]
+    needs: [validate-tag, validate-dependencies, determine-rc-number]
     if: ${{ inputs.release_sdk || inputs.release_lfx }}
     runs-on: ubuntu-latest
     outputs:
@@ -368,11 +523,17 @@ jobs:
           if [ "$pypi_response" = "404" ]; then
             echo "langflow-sdk has never been published to PyPI. This will be the first release."
             last_released_version=""
+            if [ ${{inputs.pre_release}} == "true" ]; then
+              rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
+              version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
+              echo "Shared release candidate number: rc$rc_number"
+              echo "SDK pre-release version to be released: $version"
+            fi
           else
             if [ ${{inputs.pre_release}} == "true" ]; then
-              last_released_version=$(curl -s "https://pypi.org/pypi/langflow-sdk/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
-              version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
-              echo "Latest SDK pre-release version: $last_released_version"
+              rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
+              version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
+              echo "Shared release candidate number: rc$rc_number"
               echo "SDK pre-release version to be released: $version"
             else
               last_released_version=$(curl -s "https://pypi.org/pypi/langflow-sdk/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
@@ -862,7 +1023,7 @@ jobs:
 
   build-bundles:
     name: Build Langflow Bundles
-    needs: [build-lfx, determine-lfx-version]
+    needs: [build-lfx, determine-lfx-version, determine-rc-number]
     if: |
       always() &&
       !cancelled() &&
@@ -888,6 +1049,26 @@ jobs:
           prune-cache: false
       - name: Install the project
         run: uv sync
+      - name: Set bundle versions for pre-release
+        if: ${{ inputs.pre_release }}
+        run: |
+          RC_NUMBER="${{ needs.determine-rc-number.outputs.rc_number }}"
+          echo "Setting bundle pre-release versions with shared rc number: rc$RC_NUMBER"
+          for pyproject in src/bundles/*/pyproject.toml; do
+            CURRENT_VERSION=$(python3 - "$pyproject" <<'PY'
+          import pathlib
+          import sys
+          import tomllib
+
+          data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())
+          print(data["project"]["version"])
+          PY
+          )
+            VERSION=$(uv run ./scripts/ci/langflow_pre_release_tag.py "$CURRENT_VERSION" --rc-number "$RC_NUMBER")
+            sed -i.bak "0,/^version = /s|^version = .*|version = \"$VERSION\"|" "$pyproject"
+            rm -f "${pyproject}.bak"
+            grep "^version" "$pyproject" | sed "s|^|  ${pyproject}: |"
+          done
       - name: Relax bundle lfx floor for pre-release
         if: ${{ inputs.pre_release }}
         run: |
@@ -1129,72 +1310,78 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: ${{ inputs.build_docker_base }}
-    needs: [ci]
+    needs: [ci, determine-base-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
+      version_override: ${{ needs.determine-base-version.outputs.version }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: ${{ inputs.build_docker_main }}
-    needs: [ci]
+    needs: [ci, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
+      version_override: ${{ needs.determine-main-version.outputs.version }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main_backend:
     name: Call Docker Build Workflow for Langflow Backend
     if: ${{ inputs.build_docker_main && !inputs.dry_run }}
-    needs: [call_docker_build_main]
+    needs: [call_docker_build_main, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main-backend
       pre_release: ${{ inputs.pre_release }}
+      version_override: ${{ needs.determine-main-version.outputs.version }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main_frontend:
     name: Call Docker Build Workflow for Langflow Frontend
     if: ${{ inputs.build_docker_main && !inputs.dry_run }}
-    needs: [call_docker_build_main]
+    needs: [call_docker_build_main, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main-frontend
       pre_release: ${{ inputs.pre_release }}
+      version_override: ${{ needs.determine-main-version.outputs.version }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: ${{ inputs.build_docker_main }}
-    needs: [ci]
+    needs: [ci, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main-ep
       pre_release: ${{ inputs.pre_release }}
+      version_override: ${{ needs.determine-main-version.outputs.version }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
     if: ${{ inputs.build_docker_main }}
-    needs: [ci]
+    needs: [ci, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
+      version_override: ${{ needs.determine-main-version.outputs.version }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 

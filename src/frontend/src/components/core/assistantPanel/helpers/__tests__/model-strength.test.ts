@@ -76,6 +76,53 @@ describe("classifyModelStrength", () => {
     });
   });
 
+  describe("weak — bare local-server tags whose default size is small", () => {
+    // Live finding (2026-06-12): Ollama/LM Studio tags often omit the param
+    // count ("llama3.2:latest" is the 3B default) and fell through to
+    // "strong"; llama3.2 and qwen2.5-7b demonstrably fail the agent loop.
+    it.each([
+      "llama3.2:latest",
+      "llama3.2",
+      "llama3.1",
+      "llama2",
+      "mistral",
+      "mistral-nemo",
+      "qwen2.5",
+      "qwen2.5-coder",
+      "qwen2",
+      "gemma2",
+      "gemma3",
+      "smollm2",
+      "hermes3",
+    ])("classifies %s as weak", (model) => {
+      expect(classifyModelStrength(model)).toBe("weak");
+    });
+  });
+
+  describe("strong — large models and flagships", () => {
+    it.each([
+      "qwen2.5-coder:32b",
+      "llama3.2-vision:90b",
+      "mistral-large",
+      "glm-5:cloud",
+    ])("classifies %s as strong", (model) => {
+      expect(classifyModelStrength(model)).toBe("strong");
+    });
+  });
+
+  describe("weak — families that are unreliable on agent tasks regardless of size", () => {
+    // Live finding (2026-06-12): gpt-oss on Ollama leaks harmony reasoning
+    // into the tool-call channel, emits malformed calls and churns to the
+    // recursion limit — size does not save it, so the size override must
+    // not either.
+    it.each(["gpt-oss:20b", "gpt-oss:120b", "gpt-oss"])(
+      "classifies %s as weak",
+      (model) => {
+        expect(classifyModelStrength(model)).toBe("weak");
+      },
+    );
+  });
+
   describe("strong — flagship / large models stay strong", () => {
     it.each([
       // OpenAI flagships

@@ -54,6 +54,27 @@ class TestBuildModelConfigUsesRegisteredClassNames:
         assert build_model_config(provider, "m")[0]["metadata"]["model_class"] == expected
 
 
+class TestBuildModelConfigUsesCorrectModelParamName:
+    """WatsonX died with 400 "model <id> not found" (GitHub #13735 follow-up).
+
+    ``build_model_config`` read the non-existent key ``model_name_param`` from
+    ``get_provider_param_mapping`` (which only emits ``model_param``), so it fell
+    back to "model" for every provider and explicitly set metadata["model_name_param"]="model".
+    That truthy value defeats the #13684 fallback in get_llm, so for WatsonX it passes
+    ``model=`` instead of ``model_id=`` — routing ChatWatsonx through the OpenAI-compatible
+    AI Gateway (400 "model not found") instead of native ModelInference. OpenAI/Anthropic
+    were unaffected because their ``model_param`` is already "model".
+    """
+
+    def test_should_use_model_id_param_when_provider_is_watsonx(self):
+        config = build_model_config("IBM WatsonX", "mistral-large-2512")
+        assert config[0]["metadata"]["model_name_param"] == "model_id"
+
+    @pytest.mark.parametrize("provider", ["OpenAI", "Anthropic"])
+    def test_should_keep_model_param_for_openai_and_anthropic(self, provider):
+        assert build_model_config(provider, "m")[0]["metadata"]["model_name_param"] == "model"
+
+
 class TestRegistryKnowsGroqAndAzure:
     """Latent variant of Bug #1 — Groq / Azure class names must be registered.
 
