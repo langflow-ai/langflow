@@ -32,6 +32,52 @@ import {
 import { Button } from "./Button";
 import { EmptyHint } from "./EmptyHint";
 import { isNotImplemented, NotReady } from "./NotReady";
+import { PlanGraph } from "./PlanGraph";
+import { PlanLedger } from "./PlanLedger";
+
+type PlanView = "tree" | "graph" | "ledger";
+
+function ViewTabs({
+  view,
+  onChange,
+}: {
+  view: PlanView;
+  onChange: (v: PlanView) => void;
+}) {
+  const tabs: { id: PlanView; label: string }[] = [
+    { id: "tree", label: "Tree" },
+    { id: "graph", label: "Graph" },
+    { id: "ledger", label: "Ledger" },
+  ];
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        border: "1px solid var(--border)",
+        borderRadius: 8,
+        overflow: "hidden",
+      }}
+    >
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => onChange(t.id)}
+          style={{
+            fontSize: 12,
+            padding: "5px 14px",
+            border: "none",
+            cursor: "pointer",
+            background: view === t.id ? "var(--ink)" : "transparent",
+            color: view === t.id ? "var(--paper)" : "var(--ink-soft)",
+          }}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 const KINDS: PlanNodeKind[] = ["app", "component", "epic", "story"];
 const METHODOLOGIES: TestMethodology[] = ["unit", "integration", "system", "acceptance"];
@@ -477,6 +523,7 @@ export function PlanPane({ project }: { project: Project }) {
   const [kind, setKind] = useState<PlanNodeKind>("component");
   const [parentId, setParentId] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [view, setView] = useState<PlanView>("tree");
 
   if (isLoading) return <PaneLoading label="Opening the plan…" />;
   if (error) {
@@ -523,6 +570,7 @@ export function PlanPane({ project }: { project: Project }) {
             {!editable && " · read-only"}
           </span>
         </div>
+        <ViewTabs view={view} onChange={setView} />
         {editable && (
           <Button
             onClick={() => approve.mutate()}
@@ -538,7 +586,17 @@ export function PlanPane({ project }: { project: Project }) {
         )}
       </header>
 
-      <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
+      {view === "graph" ? (
+        <PlanGraph
+          projectId={project.id}
+          nodes={nodes}
+          links={links}
+          editable={editable}
+        />
+      ) : view === "ledger" ? (
+        <PlanLedger projectId={project.id} />
+      ) : (
+        <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
         {/* Tree (master) */}
         <div
           style={{
@@ -585,9 +643,10 @@ export function PlanPane({ project }: { project: Project }) {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      )}
 
-      {editable && (
+      {editable && view === "tree" && (
         <footer
           style={{
             display: "flex",

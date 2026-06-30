@@ -244,6 +244,12 @@ class PMClient:
         """`POST /api/projects/:id/nodes` — add a node (see PM ``NodeCreate``)."""
         return await self._request_json("POST", f"/api/projects/{plan_id}/nodes", json=body)
 
+    async def move_node(self, plan_id: str, node_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """`POST /api/projects/:id/nodes/:nid/move` — reparent a node (``new_parent_id``, null = root)."""
+        return await self._request_json(
+            "POST", f"/api/projects/{plan_id}/nodes/{node_id}/move", json=body
+        )
+
     async def update_contract(self, plan_id: str, node_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """`PATCH /api/projects/:id/nodes/:nid/contract` — edit assume/guarantee (draft only)."""
         return await self._request_json(

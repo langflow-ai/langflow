@@ -660,3 +660,127 @@ export function useCreatePlanTest(projectId: string, nodeId: string) {
     },
   });
 }
+
+export type TestStatus = "passed" | "failed" | "error" | "skipped";
+
+// Record a test run (pass/fail). A passing run is what lets a leaf node verify.
+export function useRecordPlanTestRun(projectId: string, nodeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { testId: string; status: TestStatus; output?: string }) => {
+      const res = await api.post(
+        `${BASE}${projectId}/plan/tests/${vars.testId}/runs`,
+        { status: vars.status, output: vars.output },
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: planTestsKey(projectId, nodeId) });
+      invalidatePlanNode(qc, projectId, nodeId);
+    },
+  });
+}
+
+// --- Plan: links, ledger, DAG, node history, move --------------------------
+
+export type PlanLinkType =
+  | "blocks"
+  | "blocked_by"
+  | "relates_to"
+  | "derives_from"
+  | "verifies";
+
+// The ledger / audit event shape is intentionally permissive — the pane shows a
+// timestamp + a human line and tolerates the PM service's exact field names.
+export type PlanEvent = {
+  id: string;
+  created_at: string;
+  kind?: string;
+  event_type?: string;
+  summary?: string;
+  detail?: string | null;
+  actor?: string | null;
+  from_state?: string | null;
+  to_state?: string | null;
+};
+
+const planEventsKey = (projectId: string, nodeId: string) =>
+  ["lothal", "plan", projectId, "events", nodeId] as const;
+const planDagKey = (projectId: string) =>
+  ["lothal", "plan", projectId, "dag"] as const;
+
+export function useCreatePlanLink(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      source_id: string;
+      target_id: string;
+      link_type: PlanLinkType;
+    }) => {
+      const res = await api.post(`${BASE}${projectId}/plan/links`, body);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: planKey(projectId) });
+      qc.invalidateQueries({ queryKey: planActivityKey(projectId) });
+      qc.invalidateQueries({ queryKey: planDagKey(projectId) });
+    },
+  });
+}
+
+// `GET /plan/activity` — the project's decision/provenance ledger (newest first).
+export function usePlanActivity(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: planActivityKey(projectId),
+    queryFn: async () => {
+      const res = await api.get<PlanEvent[]>(`${BASE}${projectId}/plan/activity`);
+      return res.data;
+    },
+    enabled,
+    retry: retrySkipping(501, 403, 409),
+  });
+}
+
+// `GET /plan/nodes/{id}/events` — one node's history (its ledger slice).
+export function usePlanNodeEvents(projectId: string, nodeId: string | null) {
+  return useQuery({
+    queryKey: planEventsKey(projectId, nodeId ?? ""),
+    queryFn: async () => {
+      const res = await api.get<PlanEvent[]>(
+        `${BASE}${projectId}/plan/nodes/${nodeId}/events`,
+      );
+      return res.data;
+    },
+    enabled: !!nodeId,
+    retry: retrySkipping(501, 403, 409, 404),
+  });
+}
+
+// `GET /plan/dag.svg` — the server-rendered dependency graph as raw SVG text.
+export function usePlanDag(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: planDagKey(projectId),
+    queryFn: async () => {
+      const res = await api.get<string>(`${BASE}${projectId}/plan/dag.svg`, {
+        responseType: "text",
+      });
+      return res.data;
+    },
+    enabled,
+    retry: retrySkipping(501, 403, 409),
+  });
+}
+
+// Reparent a node (and its subtree); `new_parent_id: null` moves it to the root.
+export function useMovePlanNode(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { nodeId: string; new_parent_id: string | null }) => {
+      const res = await api.post(`${BASE}${projectId}/plan/nodes/${vars.nodeId}/move`, {
+        new_parent_id: vars.new_parent_id,
+      });
+      return res.data;
+    },
+    onSuccess: (_data, vars) => invalidatePlanNode(qc, projectId, vars.nodeId),
+  });
+}

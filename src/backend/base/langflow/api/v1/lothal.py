@@ -1139,6 +1139,20 @@ async def plan_activity(*, project: OwnedProject, limit: int = 200) -> list[dict
         raise _pm_error_to_http(exc) from exc
 
 
+@router.post(
+    "/projects/{project_id}/plan/nodes/{node_id}/move",
+    summary="Reparent a node (and its subtree) within the planning tree",
+)
+async def move_plan_node(*, project: OwnedProject, node_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+    _require_plan_active(project)
+    try:
+        async with PMClient.from_env() as pm:
+            plan_id = await pm.ensure_plan(str(project.id))
+            return await pm.move_node(plan_id, str(node_id), body)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
 @router.patch(
     "/projects/{project_id}/plan/nodes/{node_id}/criteria",
     summary="Edit a node's verification criteria (draft only)",
