@@ -98,8 +98,12 @@ def get_llm(
     # Get API key from user input or global variables
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
 
-    # Validate API key (Ollama doesn't require one)
-    if not api_key and provider != "Ollama":
+    # Validate API key. Ollama needs none; extension-bundle providers that
+    # declare api_key_required=False (e.g. local OpenAI-compatible servers such
+    # as vLLM) also opt out via provider_registry.
+    from lfx.base.models.provider_registry import is_api_key_optional
+
+    if not api_key and provider != "Ollama" and not is_api_key_optional(provider):
         # Bug 2 [P1] — Defensive guard: provider arriving as empty / None /
         # literal "Unknown" produces a nonsense error message (the worst
         # case being ``Unknown API key is required when using Unknown
@@ -354,7 +358,9 @@ def get_embeddings(
 
     # --- resolve API key -----------------------------------------------------
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
-    if not api_key and provider != "Ollama":
+    from lfx.base.models.provider_registry import is_api_key_optional
+
+    if not api_key and provider != "Ollama" and not is_api_key_optional(provider):
         provider_variable_map = unified_models_module.get_model_provider_variable_mapping()
         variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
         msg = (

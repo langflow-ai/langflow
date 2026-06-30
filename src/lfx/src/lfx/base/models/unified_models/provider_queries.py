@@ -120,8 +120,17 @@ def _get_all_provider_specific_field_names() -> set[str]:
 
 
 def get_model_providers() -> list[str]:
-    """Return a sorted list of unique provider names."""
-    return sorted({md.get("provider", "Unknown") for group in get_models_detailed() for md in group})
+    """Return a sorted list of unique provider names.
+
+    Unions providers that have a static model catalog (``get_models_detailed``)
+    with every provider declared in ``MODEL_PROVIDER_METADATA``. The latter
+    covers providers that ship no static catalog and rely entirely on live
+    discovery -- including providers contributed by extension bundles via
+    ``provider_registry`` (which merge their metadata in place).
+    """
+    providers = {md.get("provider", "Unknown") for group in get_models_detailed() for md in group}
+    providers.update(model_provider_metadata.keys())
+    return sorted(providers)
 
 
 def get_provider_for_model_name(model_name: str) -> str:

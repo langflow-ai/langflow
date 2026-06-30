@@ -411,6 +411,19 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
     validation_model = model_name or first_model
 
+    # Providers contributed by extension bundles validate through their own
+    # callable (registered via provider_registry; imported lazily to avoid an
+    # import cycle). A registered provider that ships no validator falls through
+    # to a no-op generic pass. The callable raises ValueError on failure, which
+    # matches this function's contract.
+    from lfx.base.models.provider_registry import is_registered, validator_for
+
+    if is_registered(provider):
+        bundle_validator = validator_for(provider)
+        if bundle_validator is not None:
+            bundle_validator(provider, variables, validation_model)
+        return
+
     # For providers that need a model to test credentials
     if not validation_model and provider in [
         "OpenAI",
