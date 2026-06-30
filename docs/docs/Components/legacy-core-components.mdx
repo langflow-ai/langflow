@@ -135,7 +135,7 @@ The following Processing components are in legacy status:
 <details>
 <summary>Alter Metadata</summary>
 
-Replace this legacy component with the [**JSON Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](operations). Set **Input Type** to `JSON`.
 
 This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both `Message` and `JSON` objects, and can also create a new `JSON` object from user-provided text.
 
@@ -154,7 +154,7 @@ It accepts the following parameters:
 <details>
 <summary>Combine Data</summary>
 
-Replace this legacy component with the [**JSON Operations** component](/data-operations) or the [**Loop** component](/loop).
+Replace this legacy component with the [**Operations** component](operations). Set **Input Type** to `JSON`, or the [**Loop** component](/loop).
 
 This component combines multiple data sources into a single unified `JSON` object.
 
@@ -169,7 +169,7 @@ The merging process uses the addition operator to combine data objects.
 <details>
 <summary>Combine Text</summary>
 
-Replace this legacy component with the [**JSON Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](operations). Set **Input Type** to `JSON`.
 
 This component concatenates two text inputs into a single text chunk using a specified delimiter, outputting a `Message` object with the combined text.
 
@@ -192,9 +192,18 @@ It accepts the following parameters:
 </details>
 
 <details>
+<summary>JSON Operations, Table Operations, and Text Operations</summary>
+
+Replace these legacy components with the [**Operations** component](operations), which provides a unified interface for Text, JSON, and Table operations.
+Set **Input Type** on the **Operations** component to match the data you need to process.
+For more information, see the [**Operations** component](operations) documentation.
+
+</details>
+
+<details>
 <summary>Data to DataFrame/Data to Message</summary>
 
-Replace these legacy components with newer Processing components, such as the [**JSON Operations** component](/data-operations) and [**Type Convert** component](/type-convert).
+Replace these legacy components with newer Processing components, such as the [**Operations** component](operations) and [**Type Convert** component](/type-convert).
 
 These components converted one or more `JSON` objects into a `Table` or `Message` object.
 
@@ -206,7 +215,7 @@ Fields from the `.data` attribute become columns, and the `.text` field (if pres
 <details>
 <summary>Extract Key</summary>
 
-Replace this legacy component with the [**JSON Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](operations). Set **Input Type** to `JSON`.
 
 This component extracts a specific key from a `JSON` object and returns the value associated with that key.
 
@@ -215,7 +224,7 @@ This component extracts a specific key from a `JSON` object and returns the valu
 <details>
 <summary>Filter Data</summary>
 
-Replace this legacy component with the [**JSON Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](operations). Set **Input Type** to `JSON`.
 
 This component filters a `JSON` object based on a list of keys (`filter_criteria`), returning a new `JSON` object (`filtered_data`) that contains only the key-value pairs that match the filter criteria.
 
@@ -224,7 +233,7 @@ This component filters a `JSON` object based on a list of keys (`filter_criteria
 <details>
 <summary>Filter Values</summary>
 
-Replace this legacy component with the [**JSON Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](operations). Set **Input Type** to `JSON`.
 
 The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
 
@@ -271,7 +280,7 @@ This component converts `Message` objects to `JSON` objects.
 <details>
 <summary>Parse DataFrame</summary>
 
-Replace this legacy component with the [**Table Operations** component](/dataframe-operations) or [**Parser** component](/parser).
+Replace this legacy component with the [**Operations** component](operations). Set **Input Type** to `Table`, or the [**Parser** component](/parser).
 
 This component converts `Table` objects into plain text using templates.
 
@@ -307,7 +316,7 @@ This component extracts patterns in text using regular expressions. It can be us
 <details>
 <summary>Select Data</summary>
 
-Replace this legacy component with the [**JSON Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](operations). Set **Input Type** to `JSON`.
 
 This component selects a single `JSON` object from a list.
 
@@ -324,7 +333,7 @@ It accepts the following parameters:
 <details>
 <summary>Update Data</summary>
 
-Replace this legacy component with the [**JSON Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](operations). Set **Input Type** to `JSON`.
 
 This component dynamically updates or appends data with specified fields.
 
