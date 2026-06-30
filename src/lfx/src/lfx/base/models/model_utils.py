@@ -728,6 +728,22 @@ def get_live_models_for_provider(
         return fetch_live_openrouter_models(user_id, model_type)
     if provider == "OpenAI":
         return fetch_live_openai_compatible_models(user_id, model_type)
+
+    # Providers contributed by extension bundles supply their own live-discovery
+    # callable via provider_registry (imported lazily to avoid an import cycle).
+    from lfx.base.models.provider_registry import live_discovery_for
+
+    discovery = live_discovery_for(provider)
+    if discovery is not None:
+        try:
+            models = discovery(user_id, model_type)
+        except Exception:  # noqa: BLE001
+            logger.debug(f"Live discovery failed for bundle provider {provider!r}; returning no live models")
+            return []
+        if isinstance(models, list):
+            return models
+        logger.warning(f"Live discovery for bundle provider {provider!r} returned a non-list result; ignoring")
+        return []
     return []
 
 
