@@ -217,6 +217,38 @@ async def test_security_schemes_apikey(client: AsyncClient, active_user, flow_da
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
+async def test_card_with_overrides_and_apikey_is_spec_valid(client: AsyncClient, active_user, flow_data):
+    """The full card revalidates against the spec model on the override + apikey path.
+
+    The default-card test pins the bare path; the override and apikey tests above assert
+    individual fields but never round-trip the merged card. A client parses the whole
+    thing at once, so this asserts overrides, the security scheme, and examples together
+    still produce a card the a2a-sdk model accepts.
+    """
+    overrides = {
+        "name": "Custom Agent",
+        "description": "Custom desc",
+        "version": "9.9.9",
+        "tags": ["x", "y"],
+        "examples": ["How do I get a refund?"],
+    }
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
+    flow_id = await _create_flow(active_user.id, data=flow_data, folder_id=folder_id, overrides=overrides)
+
+    body = (await client.get(_card_url(flow_id))).json()
+
+    # The served card carries inputSchema; drop the non-model key, then the card round-trips through the spec model.
+    assert "inputSchema" in body["skills"][0]
+    skill = {k: v for k, v in body["skills"][0].items() if k != "inputSchema"}
+    a2a_types.AgentCard.model_validate({**body, "skills": [skill]})
+
+    assert body["version"] == "9.9.9"
+    assert body["securitySchemes"]["apiKey"]["name"] == "x-api-key"
+    assert body["security"] == [{"apiKey": []}]
+    assert body["skills"][0]["examples"] == ["How do I get a refund?"]
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
 async def test_no_security_for_oauth_folder(client: AsyncClient, active_user, flow_data):
     """OAuth is out of F2 scope, so no security is advertised."""
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "oauth"})
