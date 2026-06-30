@@ -92,7 +92,7 @@ def test_symlink_inside_storage_pointing_inside_allowed(tmp_path):
     link = storage / "link.txt"
     link.symlink_to(real)
     with mock_settings(restricted=True, config_dir=str(storage)):
-        assert enforce_local_file_access(str(link)) == Path(str(link))
+        assert enforce_local_file_access(str(link)) == real.resolve()
 
 
 @pytest.mark.parametrize("name", ["secret_key", "private_key.pem", "public_key.pem"])
