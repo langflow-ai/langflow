@@ -80,6 +80,19 @@ def test_short_import_path_flow_upgrades(migration_table) -> None:
 
 
 @pytest.mark.integration
+def test_legacy_slot_flow_upgrades(migration_table) -> None:
+    """The pre-Phase-A ``@official-pre-a`` slot form upgrades to the canonical ID."""
+    from lfx.extension.migration.rewrite import migrate_flow_payload
+
+    flow = _saved_flow(_saved_flow_node("paddle-4", "ext:paddle:PaddleOCRComponent@official-pre-a"))
+    report = migrate_flow_payload(flow, table=migration_table)
+
+    assert report.rewritten_count == 1
+    assert flow["data"]["nodes"][0]["data"]["type"] == EXPECTED_TARGET
+    assert report.records[0].legacy_form_kind == "legacy_slot"
+
+
+@pytest.mark.integration
 def test_lfx_paddle_distribution_is_importable() -> None:
     """The bundle's package is importable in the development workspace."""
     try:

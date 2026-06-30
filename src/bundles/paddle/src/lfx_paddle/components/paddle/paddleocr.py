@@ -209,9 +209,16 @@ class PaddleOCRComponent(BaseFileComponent):
         }
         poll_timeout = int(self.poll_timeout or 600)
 
+        # ``base_url`` is operator-configurable, so the submit and poll requests
+        # (which carry the bearer token and the uploaded file) are validated for
+        # SSRF up front and DNS-pinned for the rest of the run.  Like
+        # ``_fetch_result``, this is a no-op when SSRF protection is disabled
+        # (the default), so default behavior is unchanged.
+        _validated_url, base_ips = validate_and_resolve_url(base_url)
+
         try:
             for file in file_list:
-                file.data = self._process_file(file.path, base_url, headers, poll_timeout)
+                file.data = self._process_file(file.path, base_url, base_ips, headers, poll_timeout)
         except Exception as e:
             error_message = self._format_paddleocr_error(e)
             self.log(error_message)
@@ -219,20 +226,31 @@ class PaddleOCRComponent(BaseFileComponent):
 
         return file_list
 
-    def _process_file(self, file_path: Path, base_url: str, headers: dict[str, str], poll_timeout: int) -> Data:
+    def _process_file(
+        self, file_path: Path, base_url: str, base_ips: list[str], headers: dict[str, str], poll_timeout: int
+    ) -> Data:
         options = self._build_ocr_options() if self.task_type == "ocr" else self._build_document_parsing_options()
-        job_id = self._submit_job(base_url=base_url, headers=headers, file_path=file_path, options=options)
-        jsonl_data = self._poll_job(base_url=base_url, headers=headers, job_id=job_id, poll_timeout=poll_timeout)
+        job_id = self._submit_job(
+            base_url=base_url, base_ips=base_ips, headers=headers, file_path=file_path, options=options
+        )
+        jsonl_data = self._poll_job(
+            base_url=base_url, base_ips=base_ips, headers=headers, job_id=job_id, poll_timeout=poll_timeout
+        )
 
         if self.task_type == "ocr":
             return self._ocr_result_to_data(job_id, jsonl_data, file_path)
         return self._document_result_to_data(job_id, jsonl_data, file_path)
 
-    def _submit_job(self, *, base_url: str, headers: dict[str, str], file_path: Path, options: dict[str, Any]) -> str:
+    def _submit_job(
+        self, *, base_url: str, base_ips: list[str], headers: dict[str, str], file_path: Path, options: dict[str, Any]
+    ) -> str:
         url = f"{base_url}{self.API_PATH}"
         data = {"model": self.model, "optionalPayload": json.dumps(options)}
-        with file_path.open("rb") as file_obj:
-            response = httpx.post(
+        with (
+            file_path.open("rb") as file_obj,
+            self._build_client(url, base_ips) as client,
+        ):
+            response = client.post(
                 url,
                 data=data,
                 files={"file": (file_path.name, file_obj)},
@@ -241,7 +259,7 @@ class PaddleOCRComponent(BaseFileComponent):
             )
         response.raise_for_status()
         payload = response.json()
-        job_id = payload.get("data", {}).get("jobId") or payload.get("jobId")
+        job_id = (payload.get("data") or {}).get("jobId") or payload.get("jobId")
         if not job_id:
             msg = f"PaddleOCR job ID not found in response: {payload}"
             raise ValueError(msg)
@@ -251,6 +269,7 @@ class PaddleOCRComponent(BaseFileComponent):
         self,
         *,
         base_url: str,
+        base_ips: list[str],
         headers: dict[str, str],
         job_id: str,
         poll_timeout: int,
@@ -259,30 +278,34 @@ class PaddleOCRComponent(BaseFileComponent):
         deadline = time.monotonic() + poll_timeout
         interval = self.INITIAL_POLL_INTERVAL
 
-        while True:
-            if time.monotonic() >= deadline:
-                msg = f"PaddleOCR job {job_id} timed out."
-                raise TimeoutError(msg)
+        with self._build_client(status_url, base_ips) as client:
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    msg = f"PaddleOCR job {job_id} timed out."
+                    raise TimeoutError(msg)
 
-            response = httpx.get(status_url, headers=headers, timeout=self.REQUEST_TIMEOUT)
-            response.raise_for_status()
-            payload = response.json()
-            data = payload.get("data", {})
-            state = data.get("state") or payload.get("state")
+                # Bound each request by the remaining budget so a hung poll cannot
+                # overrun ``poll_timeout`` by up to ``REQUEST_TIMEOUT``.
+                response = client.get(status_url, headers=headers, timeout=min(self.REQUEST_TIMEOUT, remaining))
+                response.raise_for_status()
+                payload = response.json()
+                data = payload.get("data") or {}
+                state = data.get("state") or payload.get("state")
 
-            if state == "done":
-                result_url = data.get("resultJsonUrl") or (data.get("resultUrl") or {}).get("jsonUrl")
-                if not result_url:
-                    msg = f"PaddleOCR result URL not found in response: {payload}"
-                    raise ValueError(msg)
-                return self._fetch_result(result_url)
+                if state == "done":
+                    result_url = data.get("resultJsonUrl") or (data.get("resultUrl") or {}).get("jsonUrl")
+                    if not result_url:
+                        msg = f"PaddleOCR result URL not found in response: {payload}"
+                        raise ValueError(msg)
+                    return self._fetch_result(result_url)
 
-            if state == "failed":
-                msg = f"PaddleOCR job failed: {payload}"
-                raise RuntimeError(msg)
+                if state == "failed":
+                    msg = f"PaddleOCR job failed: {payload}"
+                    raise RuntimeError(msg)
 
-            time.sleep(min(interval, max(deadline - time.monotonic(), 0)))
-            interval = min(interval * self.POLL_MULTIPLIER, self.MAX_POLL_INTERVAL)
+                time.sleep(min(interval, max(deadline - time.monotonic(), 0)))
+                interval = min(interval * self.POLL_MULTIPLIER, self.MAX_POLL_INTERVAL)
 
     def _fetch_result(self, result_url: str) -> list[dict[str, Any]]:
         # ``result_url`` comes from the remote job-status response, not from
@@ -295,7 +318,7 @@ class PaddleOCRComponent(BaseFileComponent):
         # and pins DNS to the validated IPs.  This mirrors the shared pattern in
         # ``lfx.components.data_source.api_request``.
         _validated_url, validated_ips = validate_and_resolve_url(result_url)
-        with self._build_result_client(result_url, validated_ips) as client:
+        with self._build_client(result_url, validated_ips) as client:
             response = client.get(result_url)
         response.raise_for_status()
         text = response.text.strip()
@@ -313,13 +336,14 @@ class PaddleOCRComponent(BaseFileComponent):
             return [payload]
         return []
 
-    def _build_result_client(self, url: str, validated_ips: list[str]) -> httpx.Client:
-        """Create the HTTP client used to fetch the result, pinning DNS when SSRF protection applies.
+    def _build_client(self, url: str, validated_ips: list[str]) -> httpx.Client:
+        """Create the HTTP client for ``url``, pinning DNS when SSRF protection applies.
 
-        Returns a client that pins DNS to ``validated_ips`` (preventing rebinding)
-        when SSRF protection is enabled and the host resolved to validated IPs;
-        otherwise a standard client (protection disabled, allowlisted host, or
-        hostname extraction failure).
+        Used for the submit, poll, and result-fetch requests.  Returns a client
+        that pins DNS to ``validated_ips`` (preventing rebinding) when SSRF
+        protection is enabled and the host resolved to validated IPs; otherwise a
+        standard client (protection disabled, allowlisted host, or hostname
+        extraction failure).
         """
         if is_ssrf_protection_enabled() and validated_ips:
             hostname = httpx.URL(url).host

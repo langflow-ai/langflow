@@ -33,18 +33,20 @@ def test_paddleocr_ocr_mode_processes_text(monkeypatch, tmp_path):
 
     captured = {}
 
-    def fake_submit(_self, *, base_url, headers, file_path, options):
+    def fake_submit(_self, *, base_url, base_ips, headers, file_path, options):
         captured["submit"] = {
             "base_url": base_url,
+            "base_ips": base_ips,
             "headers": headers,
             "file_path": file_path,
             "options": options,
         }
         return "ocr-job-id"
 
-    def fake_poll(_self, *, base_url, headers, job_id, poll_timeout):
+    def fake_poll(_self, *, base_url, base_ips, headers, job_id, poll_timeout):
         captured["poll"] = {
             "base_url": base_url,
+            "base_ips": base_ips,
             "headers": headers,
             "job_id": job_id,
             "poll_timeout": poll_timeout,
@@ -105,8 +107,14 @@ def test_paddleocr_document_parsing_processes_markdown(monkeypatch, tmp_path):
 
     captured = {}
 
-    def fake_submit(_self, *, base_url, headers, file_path, options):
-        captured["submit"] = {"base_url": base_url, "headers": headers, "file_path": file_path, "options": options}
+    def fake_submit(_self, *, base_url, base_ips, headers, file_path, options):
+        captured["submit"] = {
+            "base_url": base_url,
+            "base_ips": base_ips,
+            "headers": headers,
+            "file_path": file_path,
+            "options": options,
+        }
         return "doc-job-id"
 
     def fake_poll(_self, **_kwargs):
@@ -214,15 +222,58 @@ def test_paddleocr_formats_auth_error():
     )
 
 
-def test_build_result_client_is_plain_when_ssrf_disabled():
-    # SSRF protection is off by default, so the result fetch uses a standard client
+def test_build_client_is_plain_when_ssrf_disabled():
+    # SSRF protection is off by default, so requests use a standard client
     # (no DNS pinning) and behavior matches the pre-hardening port.
     component = PaddleOCRComponent()
-    client = component._build_result_client("https://example.com/result.json", [])
+    client = component._build_client("https://example.com/result.json", [])
     try:
         assert isinstance(client, httpx.Client)
     finally:
         client.close()
+
+
+def test_build_client_pins_dns_when_ssrf_enabled(monkeypatch):
+    # When SSRF protection is enabled and the host resolved to validated IPs,
+    # the request goes through the DNS-pinned protected client.
+    import lfx_paddle.components.paddle.paddleocr as mod
+
+    sentinel = httpx.Client()
+    captured = {}
+
+    def fake_protected_client(*, hostname, validated_ips, **_kwargs):
+        captured["hostname"] = hostname
+        captured["validated_ips"] = validated_ips
+        return sentinel
+
+    monkeypatch.setattr(mod, "is_ssrf_protection_enabled", lambda: True)
+    monkeypatch.setattr(mod, "create_ssrf_protected_sync_client", fake_protected_client)
+
+    component = PaddleOCRComponent()
+    try:
+        client = component._build_client("https://example.com/result.json", ["93.184.216.34"])
+        assert client is sentinel
+        assert captured["hostname"] == "example.com"
+        assert captured["validated_ips"] == ["93.184.216.34"]
+    finally:
+        sentinel.close()
+
+
+def test_fetch_result_blocks_internal_url_when_ssrf_enabled(monkeypatch):
+    # An internal/metadata result URL is rejected before any request is made
+    # when SSRF protection is enabled.
+    import lfx_paddle.components.paddle.paddleocr as mod
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+
+    def fake_validate(url):
+        msg = f"Access to {url} is blocked by SSRF protection"
+        raise SSRFProtectionError(msg)
+
+    monkeypatch.setattr(mod, "validate_and_resolve_url", fake_validate)
+
+    component = PaddleOCRComponent()
+    with pytest.raises(SSRFProtectionError):
+        component._fetch_result("http://169.254.169.254/latest/meta-data/")
 
 
 def test_fetch_result_parses_json_list(monkeypatch):
@@ -234,7 +285,7 @@ def test_fetch_result_parses_json_list(monkeypatch):
     def fake_build_client(_self, _url, _ips):
         return httpx.Client(transport=httpx.MockTransport(handler))
 
-    monkeypatch.setattr(PaddleOCRComponent, "_build_result_client", fake_build_client)
+    monkeypatch.setattr(PaddleOCRComponent, "_build_client", fake_build_client)
     assert component._fetch_result("https://example.com/result.json") == [{"x": 1}]
 
 
@@ -247,7 +298,7 @@ def test_fetch_result_parses_jsonl_fallback(monkeypatch):
     def fake_build_client(_self, _url, _ips):
         return httpx.Client(transport=httpx.MockTransport(handler))
 
-    monkeypatch.setattr(PaddleOCRComponent, "_build_result_client", fake_build_client)
+    monkeypatch.setattr(PaddleOCRComponent, "_build_client", fake_build_client)
     assert component._fetch_result("https://example.com/result.jsonl") == [{"a": 1}, {"b": 2}]
 
 
