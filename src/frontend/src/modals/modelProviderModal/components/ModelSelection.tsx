@@ -290,6 +290,10 @@ const ModelSelection = ({
 
   const isOllama = providerName?.toLowerCase() === "ollama";
   const isVllm = providerName?.toLowerCase() === "vllm";
+  // For vLLM, models lack metadata.model_type — apply search query directly.
+  const vllmFilteredModels = isVllm
+    ? availableModels.filter(matchesModelQuery)
+    : [];
   // Use the unfiltered availableModels for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
@@ -299,16 +303,20 @@ const ModelSelection = ({
   const embeddingAvailableCount = availableModels.filter(
     (m) => m.metadata?.model_type === "embeddings",
   ).length;
-  const noModelsAvailable =
-    (modelType === "llm" && llmAvailableCount === 0) ||
-    (modelType === "embeddings" && embeddingAvailableCount === 0) ||
-    (modelType === "all" && availableModels.length === 0);
+  const noModelsAvailable = isVllm
+    ? availableModels.length === 0
+    : (modelType === "llm" && llmAvailableCount === 0) ||
+      (modelType === "embeddings" && embeddingAvailableCount === 0) ||
+      (modelType === "all" && availableModels.length === 0);
 
-  const noModelsMatchQuery =
-    !noModelsAvailable &&
-    trimmedModelQuery.length > 0 &&
-    llmModels.length === 0 &&
-    embeddingModels.length === 0;
+  const noModelsMatchQuery = isVllm
+    ? !noModelsAvailable &&
+      trimmedModelQuery.length > 0 &&
+      vllmFilteredModels.length === 0
+    : !noModelsAvailable &&
+      trimmedModelQuery.length > 0 &&
+      llmModels.length === 0 &&
+      embeddingModels.length === 0;
 
   return (
     <div data-testid="model-provider-selection" className="flex flex-col gap-6">
@@ -362,7 +370,7 @@ const ModelSelection = ({
           </a>
         </div>
       ) : isVllm ? (
-        renderModelSection("Available Models", availableModels, "available")
+        renderModelSection("Available Models", vllmFilteredModels, "available")
       ) : (
         <>
           {modelType === "all" ? (

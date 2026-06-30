@@ -202,25 +202,27 @@ async def list_models(
 
     # Ensure providers in MODEL_PROVIDER_METADATA appear in results even when they have no
     # static models (e.g. vLLM which uses dynamic-only discovery via LIVE_MODEL_PROVIDERS).
-    existing_providers = {p.get("provider") for p in filtered_models}
-    all_metadata = get_model_provider_metadata()
-    for prov_name, meta in all_metadata.items():
-        if prov_name not in existing_providers:
-            if selected_providers and prov_name not in selected_providers:
-                continue
-            is_configured = provider_configured_status.get(prov_name, False)
-            prov_models_status = enabled_models_map.get(prov_name, {})
-            has_active_model = any(prov_models_status.values())
-            filtered_models.append(
-                {
-                    "provider": prov_name,
-                    "icon": meta.get("icon", prov_name),
-                    "models": [],
-                    "api_docs_url": meta.get("api_docs_url", ""),
-                    "is_configured": is_configured,
-                    "is_enabled": has_active_model,
-                }
-            )
+    # Skip when model-level filters are active — an empty-model provider cannot satisfy them.
+    if model_name is None and not metadata_filters:
+        existing_providers = {p.get("provider") for p in filtered_models}
+        all_metadata = get_model_provider_metadata()
+        for prov_name, meta in all_metadata.items():
+            if prov_name not in existing_providers:
+                if selected_providers and prov_name not in selected_providers:
+                    continue
+                is_configured = provider_configured_status.get(prov_name, False)
+                prov_models_status = enabled_models_map.get(prov_name, {})
+                has_active_model = any(prov_models_status.values())
+                filtered_models.append(
+                    {
+                        "provider": prov_name,
+                        "icon": meta.get("icon", prov_name),
+                        "models": [],
+                        "api_docs_url": meta.get("api_docs_url", ""),
+                        "is_configured": is_configured,
+                        "is_enabled": has_active_model,
+                    }
+                )
 
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")

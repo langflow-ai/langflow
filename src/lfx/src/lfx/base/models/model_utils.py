@@ -25,6 +25,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
+from lfx.utils.ssrf_protection import validate_url_for_ssrf
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -718,6 +719,7 @@ def fetch_live_vllm_models(user_id: UUID | str | None, model_type: str = "llm") 
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
 
+        validate_url_for_ssrf(models_url)
         response = requests.get(models_url, headers=headers, timeout=5)
         response.raise_for_status()
         data = response.json()

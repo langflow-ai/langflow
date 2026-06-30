@@ -18,7 +18,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-
 # ---------------------------------------------------------------------------
 # Metadata
 # ---------------------------------------------------------------------------
@@ -56,8 +55,11 @@ def test_vllm_metadata_shape():
 
 
 def test_vllm_base_url_mapping_field_recognized_by_param_mapping():
-    """mapping_field 'vllm_base_url' must contain 'base_url' so get_provider_param_mapping
-    classifies it as a URL parameter and sets base_url_param for downstream consumers."""
+    """Ensure mapping_field 'vllm_base_url' contains 'base_url'.
+
+    get_provider_param_mapping classifies it as a URL parameter and sets
+    base_url_param for downstream consumers.
+    """
     from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
 
     meta = MODEL_PROVIDER_METADATA["vLLM"]
@@ -70,7 +72,7 @@ def test_vllm_base_url_mapping_field_recognized_by_param_mapping():
 
 
 def test_vllm_appears_in_get_model_providers():
-    """vLLM must appear in get_model_providers() even though it has no static catalog."""
+    """VLLM must appear in get_model_providers() even though it has no static catalog."""
     from lfx.base.models.unified_models import get_model_providers
 
     assert "vLLM" in get_model_providers()
@@ -109,6 +111,7 @@ def test_fetch_live_vllm_models_openai_dict_format():
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", return_value=response),
     ):
         result = model_utils.fetch_live_vllm_models("user-id", "llm")
@@ -129,6 +132,7 @@ def test_fetch_live_vllm_models_plain_list_format():
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", return_value=response),
     ):
         result = model_utils.fetch_live_vllm_models("user-id", "llm")
@@ -144,6 +148,7 @@ def test_fetch_live_vllm_models_sorts_alphabetically():
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", return_value=response),
     ):
         result = model_utils.fetch_live_vllm_models("user-id", "llm")
@@ -158,12 +163,13 @@ def test_fetch_live_vllm_models_url_with_v1_suffix_not_duplicated():
     response = _ok_response({"data": [{"id": "llama-3"}]})
     captured_url = []
 
-    def fake_get(url, **kwargs):
+    def fake_get(url, **_kwargs):
         captured_url.append(url)
         return response
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=["http://localhost:8000/v1", None]),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", side_effect=fake_get),
     ):
         model_utils.fetch_live_vllm_models("user-id", "llm")
@@ -178,12 +184,13 @@ def test_fetch_live_vllm_models_url_without_v1_gets_v1_prepended():
     response = _ok_response({"data": [{"id": "llama-3"}]})
     captured_url = []
 
-    def fake_get(url, **kwargs):
+    def fake_get(url, **_kwargs):
         captured_url.append(url)
         return response
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", side_effect=fake_get),
     ):
         model_utils.fetch_live_vllm_models("user-id", "llm")
@@ -198,7 +205,7 @@ def test_fetch_live_vllm_models_forwards_api_key_as_bearer():
     response = _ok_response({"data": [{"id": "llama-3"}]})
     captured_headers = []
 
-    def fake_get(url, headers=None, **kwargs):
+    def fake_get(_url, headers=None, **_kwargs):
         captured_headers.append(headers or {})
         return response
 
@@ -208,6 +215,7 @@ def test_fetch_live_vllm_models_forwards_api_key_as_bearer():
             "get_provider_variable_value",
             side_effect=["http://localhost:8000", "my-secret-key"],  # pragma: allowlist secret
         ),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", side_effect=fake_get),
     ):
         model_utils.fetch_live_vllm_models("user-id", "llm")
@@ -222,12 +230,13 @@ def test_fetch_live_vllm_models_no_auth_header_when_no_key():
     response = _ok_response({"data": [{"id": "llama-3"}]})
     captured_headers = []
 
-    def fake_get(url, headers=None, **kwargs):
+    def fake_get(_url, headers=None, **_kwargs):
         captured_headers.append(headers or {})
         return response
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", side_effect=fake_get),
     ):
         model_utils.fetch_live_vllm_models("user-id", "llm")
@@ -240,6 +249,7 @@ def test_fetch_live_vllm_models_swallows_connection_error():
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", side_effect=requests.ConnectionError("refused")),
     ):
         assert model_utils.fetch_live_vllm_models("user-id", "llm") == []
@@ -250,6 +260,7 @@ def test_fetch_live_vllm_models_swallows_timeout():
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", side_effect=requests.Timeout("timeout")),
     ):
         assert model_utils.fetch_live_vllm_models("user-id", "llm") == []
@@ -263,30 +274,33 @@ def test_fetch_live_vllm_models_swallows_bad_payload():
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=["http://localhost:8000", None]),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", return_value=response),
     ):
         assert model_utils.fetch_live_vllm_models("user-id", "llm") == []
 
 
 def test_fetch_live_vllm_models_llm_and_embeddings_same_output():
-    """vLLM returns all models regardless of model_type — both calls yield the same list."""
+    """VLLM returns all models regardless of model_type — both calls yield the same list."""
     from lfx.base.models import model_utils
 
     response = _ok_response({"data": [{"id": "llama-3"}, {"id": "embedding-model"}]})
 
-    def get_var(user_id, key):
+    def get_var(_user_id, key):
         if key == "VLLM_API_BASE":
             return "http://localhost:8000"
         return None
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=get_var),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", return_value=response),
     ):
         llm_result = model_utils.fetch_live_vllm_models("user-id", "llm")
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=get_var),
+        patch.object(model_utils, "validate_url_for_ssrf", return_value=None),
         patch.object(model_utils.requests, "get", return_value=response),
     ):
         emb_result = model_utils.fetch_live_vllm_models("user-id", "embeddings")
@@ -348,7 +362,7 @@ def test_validate_vllm_uses_v1_models_endpoint():
     response.raise_for_status.return_value = None
     captured_url = []
 
-    def fake_get(url, **kwargs):
+    def fake_get(url, **_kwargs):
         captured_url.append(url)
         return response
 
@@ -367,9 +381,9 @@ def test_validate_vllm_forwards_api_key():
     response = MagicMock()
     response.status_code = 200
     response.raise_for_status.return_value = None
-    captured_kwargs = {}
+    captured_kwargs: dict = {}
 
-    def fake_get(url, **kwargs):
+    def fake_get(_url, **kwargs):
         captured_kwargs.update(kwargs)
         return response
 
@@ -392,9 +406,9 @@ def test_validate_vllm_no_auth_header_without_api_key():
     response = MagicMock()
     response.status_code = 200
     response.raise_for_status.return_value = None
-    captured_kwargs = {}
+    captured_kwargs: dict = {}
 
-    def fake_get(url, **kwargs):
+    def fake_get(_url, **kwargs):
         captured_kwargs.update(kwargs)
         return response
 
@@ -477,7 +491,7 @@ def test_validate_vllm_v1_suffix_not_duplicated():
     response.raise_for_status.return_value = None
     captured_url = []
 
-    def fake_get(url, **kwargs):
+    def fake_get(url, **_kwargs):
         captured_url.append(url)
         return response
 
@@ -494,7 +508,7 @@ def test_validate_vllm_v1_suffix_not_duplicated():
 
 
 def test_get_llm_does_not_raise_when_no_api_key_for_vllm():
-    """vLLM does not require an API key — get_llm must not raise on a missing key."""
+    """VLLM does not require an API key — get_llm must not raise on a missing key."""
     from lfx.base.models import unified_models as unified_models_module
     from lfx.base.models.unified_models.instantiation import get_llm
 
@@ -524,3 +538,44 @@ def test_get_llm_does_not_raise_when_no_api_key_for_vllm():
         get_llm(model_selection, user_id=None)
 
     assert captured_kwargs["model"] == "llama-3-8b"
+
+
+def test_get_embeddings_does_not_raise_when_no_api_key_for_vllm():
+    """VLLM Embeddings does not require an API key and resolves base_url from VLLM_API_BASE."""
+    from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.unified_models.instantiation import get_embeddings
+
+    captured_kwargs: dict = {}
+
+    class FakeOpenAIEmbeddings:
+        def __init__(self, **kwargs):
+            captured_kwargs.update(kwargs)
+
+    model_selection = [
+        {
+            "name": "text-embedding-ada-002",
+            "provider": "vLLM Embeddings",
+            "metadata": {
+                "embedding_class": "OpenAIEmbeddings",
+                "param_mapping": {
+                    "model": "model",
+                    "api_key": "api_key",  # pragma: allowlist secret
+                    "api_base": "base_url",
+                },
+            },
+        }
+    ]
+
+    with (
+        patch.object(unified_models_module, "get_api_key_for_provider", return_value=None),
+        patch.object(unified_models_module, "get_embedding_class", return_value=FakeOpenAIEmbeddings),
+        patch.object(
+            unified_models_module,
+            "get_all_variables_for_provider",
+            return_value={"VLLM_API_BASE": "http://localhost:8000"},
+        ),
+    ):
+        get_embeddings(model_selection, user_id=None)
+
+    assert captured_kwargs["model"] == "text-embedding-ada-002"
+    assert captured_kwargs.get("base_url") == "http://localhost:8000"
