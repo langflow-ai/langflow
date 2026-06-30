@@ -249,6 +249,49 @@ def test_get_llm_applies_registered_provider_base_url(monkeypatch):
     assert captured["api_key"] == "EMPTY"  # pragma: allowlist secret
 
 
+def test_get_embeddings_applies_registered_provider_base_url_and_key(monkeypatch):
+    from lfx.base.models import unified_models as um
+    from lfx.base.models.unified_models.instantiation import get_embeddings
+
+    captured: dict = {}
+
+    class FakeEmbeddings:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    register_provider(
+        _fakeco_spec(
+            metadata=_fakeco_metadata_with_base_url(),
+            api_key_required=False,
+            embedding_class_name="OpenAIEmbeddings",
+            embedding_param_key="FakeCo",
+            embedding_param_mapping={"model": "model", "api_base": "base_url"},
+        )
+    )
+    monkeypatch.setattr(um, "get_api_key_for_provider", lambda *_a, **_k: None)
+    monkeypatch.setattr(um, "get_embedding_class", lambda _name: FakeEmbeddings)
+    monkeypatch.setattr(
+        um, "get_all_variables_for_provider", lambda *_a, **_k: {"FAKECO_API_BASE": "http://vllm.example:8000"}
+    )
+
+    model_selection = [
+        {
+            "name": "emb-1",
+            "provider": "FakeCo",
+            "metadata": {
+                "embedding_class": "OpenAIEmbeddings",
+                "param_mapping": {"model": "model", "api_base": "base_url"},
+            },
+        }
+    ]
+    get_embeddings(model_selection, user_id=None)
+
+    assert captured["model"] == "emb-1"
+    assert captured["base_url"] == "http://vllm.example:8000"
+    # No "api_key" slot in param_mapping -> the seam still passes the placeholder.
+    assert captured["api_key"] == "EMPTY"  # pragma: allowlist secret
+
+
 # ---------------------------------------------------------------------------
 # Embedding wiring
 # ---------------------------------------------------------------------------

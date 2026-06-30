@@ -462,6 +462,12 @@ def get_embeddings(
     # API key
     if "api_key" in param_mapping and api_key:
         kwargs[param_mapping["api_key"]] = api_key
+    elif is_registered(provider) and api_key:
+        # Bundle providers may omit an explicit "api_key" slot in their embedding
+        # param_mapping; pass the resolved key (or the api-key-optional
+        # placeholder) under the OpenAI-compatible "api_key" kwarg so the client
+        # still authenticates.
+        kwargs.setdefault("api_key", api_key)
 
     # Optional parameters - only add when both a value is supplied *and* the
     # provider's param_mapping declares the corresponding key.
