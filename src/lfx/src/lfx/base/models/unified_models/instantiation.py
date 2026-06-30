@@ -259,9 +259,7 @@ def get_llm(
         provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
 
         # Priority: component value > database value > env var
-        watsonx_url_value = (
-            watsonx_url or provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
-        )
+        watsonx_url_value = watsonx_url or provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
         watsonx_project_id_value = (
             watsonx_project_id or provider_vars.get("WATSONX_PROJECT_ID") or _env_if_allowed("WATSONX_PROJECT_ID")
         )
