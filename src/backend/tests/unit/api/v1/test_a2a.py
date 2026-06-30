@@ -310,10 +310,12 @@ def echo_flow_data():
     return orjson.loads(_ECHO_FLOW.read_bytes())["data"]
 
 
-def _text_message(text, message_id="m1", context_id=None):
+def _text_message(text, message_id="m1", context_id=None, task_id=None):
     message = {"role": "user", "parts": [{"kind": "text", "text": text}], "messageId": message_id}
     if context_id is not None:
         message["contextId"] = context_id
+    if task_id is not None:
+        message["taskId"] = task_id
     return {"message": message}
 
 
@@ -624,6 +626,114 @@ async def test_oversized_context_ids_get_distinct_hashed_sessions(client: AsyncC
     assert await _session_texts(str(flow_id)) == set()
     assert await _session_texts(huge_a) == set()
     assert "long b" not in await _session_texts(session_a)
+
+
+# --- input-required (HITL) -------------------------------------------------
+
+_HUMAN_INPUT_FLOW = Path(__file__).parents[3] / "data" / "human_input_flow.json"
+
+
+@pytest.fixture
+def human_input_flow_data():
+    """HumanInput -> ChatOutput flow: pauses for an Approve/Reject decision, then routes on it."""
+    return orjson.loads(_HUMAN_INPUT_FLOW.read_bytes())["data"]
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_pausing_flow_returns_input_required(client: AsyncClient, active_user, human_input_flow_data):
+    """A flow that pauses for human input returns an input-required Task carrying the prompt."""
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    result = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+
+    assert result["kind"] == "task"
+    assert result["status"]["state"] == "input-required"
+    assert result["status"]["message"]["parts"][0]["text"] == "Approve this?"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_resume_input_required_task_completes(client: AsyncClient, active_user, human_input_flow_data):
+    """A follow-up message on the input-required task supplies the decision and completes the run.
+
+    The second message/send references the same taskId + contextId; "Approve" maps to the
+    HumanInput's approve branch, so the run resumes from the checkpoint and the chosen branch's
+    ChatOutput produces the answer.
+    """
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id, context_id = paused["id"], paused["contextId"]
+
+    resumed = (
+        await _jsonrpc(
+            client,
+            flow_id,
+            "message/send",
+            _text_message("Approve", message_id="m2", context_id=context_id, task_id=task_id),
+        )
+    ).json()["result"]
+
+    assert resumed["id"] == task_id
+    assert resumed["status"]["state"] == "completed"
+    assert resumed["artifacts"][0]["parts"][0]["text"] == "Approve this?"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_unmatched_decision_re_parks_task(client: AsyncClient, active_user, human_input_flow_data):
+    """A reply that matches no offered action re-parks the task instead of burning it.
+
+    The run isn't advanced and the checkpoint is kept, so a later valid reply still completes it.
+    """
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    task_id, context_id = paused["id"], paused["contextId"]
+
+    # "maybe" is neither an allowed action nor an option label.
+    reparked = (
+        await _jsonrpc(
+            client,
+            flow_id,
+            "message/send",
+            _text_message("maybe", message_id="m2", context_id=context_id, task_id=task_id),
+        )
+    ).json()["result"]
+    assert reparked["status"]["state"] == "input-required"
+    assert reparked["status"]["message"]["parts"][0]["text"] == "Approve this?"
+
+    # The task survived: a valid reply still completes it.
+    done = (
+        await _jsonrpc(
+            client,
+            flow_id,
+            "message/send",
+            _text_message("Approve", message_id="m3", context_id=context_id, task_id=task_id),
+        )
+    ).json()["result"]
+    assert done["status"]["state"] == "completed"
+    assert done["artifacts"][0]["parts"][0]["text"] == "Approve this?"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_user, human_input_flow_data):
+    """A task parked under one flow cannot be resumed through a different flow's endpoint."""
+    flow_a = await _create_flow(active_user.id, data=human_input_flow_data)
+    flow_b = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    paused = (await _jsonrpc(client, flow_a, "message/send", _text_message("start"))).json()["result"]
+    task_id, context_id = paused["id"], paused["contextId"]
+
+    # Same task id, but sent to flow B: must not run flow A's graph.
+    via_b = (
+        await _jsonrpc(
+            client,
+            flow_b,
+            "message/send",
+            _text_message("Approve", message_id="m2", context_id=context_id, task_id=task_id),
+        )
+    ).json()["result"]
+
+    assert via_b["status"]["state"] == "failed"
 
 
 # --- apikey auth enforcement ----------------------------------------------

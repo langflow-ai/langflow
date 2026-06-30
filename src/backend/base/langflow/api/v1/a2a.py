@@ -20,6 +20,7 @@ executor (``a2a_executor.FlowAgentExecutor``). Tasks persist in the ``a2a_tasks`
 table so they survive restart and are visible across workers.
 """
 
+import asyncio
 import hashlib
 from typing import Any
 from uuid import UUID, uuid4
@@ -33,9 +34,18 @@ from a2a.server.tasks import TaskStore
 from a2a.types import a2a_pb2 as pb
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
-from lfx.schema.workflow import GLOBAL_KEY_MAX_LEN, WorkflowExecutionResponse, WorkflowRunRequest
+from lfx.graph.checkpoint.schema import GraphCheckpoint
+from lfx.graph.checkpoint.store import CheckpointStore
+from lfx.graph.exceptions import GraphPausedException
+from lfx.graph.graph.base import Graph
+from lfx.schema.workflow import (
+    GLOBAL_KEY_MAX_LEN,
+    JobStatus,
+    WorkflowExecutionResponse,
+    WorkflowRunRequest,
+)
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
-from lfx.workflow.converters import parse_workflow_run_request
+from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
 from sqlmodel import select
 
 from langflow.api.utils import DbSession
@@ -44,7 +54,7 @@ from langflow.api.v1.a2a_executor import FlowAgentExecutor
 from langflow.api.v1.a2a_utils import A2A_APIKEY_HEADER, build_agent_card, folder_auth_type
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
-from langflow.services.database.models import A2ATask, Flow
+from langflow.services.database.models import A2ACheckpoint, A2ATask, Flow
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.flow.model import FlowType
 
@@ -152,7 +162,156 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | No
         current_user=user,
         background_tasks=BackgroundTasks(),
         http_request=None,
+        # HITL: a flow with a HumanInput node durably checkpoints and returns a suspended
+        # response instead of running through. Resume happens in _resume_flow.
+        checkpoint_store=A2ACheckpointStore(),
     )
+
+
+def _resolve_action(text: str, pending: dict[str, Any]) -> str | None:
+    """The allowed HumanInput action id the reply selects, or None when it matches none.
+
+    The node routes on an ``action_id`` (``label.lower().replace(" ", "_")``). Match the reply
+    against the pause's allowed action ids, then against option labels. None means "no offered
+    action", so the caller re-parks rather than taking an empty no-branch path.
+    """
+    allowed = pending.get("allowed_decisions") or []
+    candidate = text.strip().lower().replace(" ", "_")
+    if candidate in allowed:
+        return candidate
+    for option in pending.get("options") or []:
+        if str(option.get("label", "")).strip().lower() == text.strip().lower():
+            return option.get("action_id")
+    return None
+
+
+def _suspended_response(flow_id: UUID, task_id: str, session_id: str | None, pending: dict[str, Any]):
+    return WorkflowExecutionResponse(
+        flow_id=str(flow_id),
+        session_id=session_id,
+        job_id=task_id,
+        status=JobStatus.SUSPENDED,
+        human_request=pending,
+    )
+
+
+async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecutionResponse:
+    """Resume a HITL run that paused for human input, advancing to the next pause or completion.
+
+    The A2A task id is the run id, so the parked checkpoint is loaded by it. The follow-up
+    message text becomes the HumanInput decision; the restored graph re-runs from the paused
+    node and either completes (checkpoint cleared) or pauses again (a new checkpoint, another
+    ``input-required``). Built on lfx checkpoint primitives so it is portable to lfx serve.
+
+    A reply that matches no offered action re-parks the task (the human can answer again) rather
+    than burning it on an empty completion. The checkpoint is dropped on completion or failure,
+    but a never-answered task keeps its row (no background reaper on this path yet).
+    """
+    store = A2ACheckpointStore()
+    checkpoint = await store.load_by_run_id(task_id)
+    if checkpoint is None:
+        # The parked run is unrecoverable (cleared/expired); surface a failed task.
+        msg = f"No resumable checkpoint for A2A task {task_id}"
+        raise RuntimeError(msg)
+    # Defense in depth: a task parked under one flow must not be resumable via another flow's
+    # endpoint (which would run a different owner's graph). Don't delete it on mismatch.
+    if checkpoint.flow_id != str(flow_id):
+        msg = f"A2A task {task_id} does not belong to flow {flow_id}"
+        raise RuntimeError(msg)
+
+    pending = (checkpoint.pause_context or {}).get("data") or {}
+    allowed = pending.get("allowed_decisions") or []
+    action_id = _resolve_action(text, pending)
+    if allowed and action_id is None:
+        # Out-of-range answer: re-park so the human can retry, keeping the checkpoint.
+        return _suspended_response(flow_id, task_id, checkpoint.session_id, pending)
+
+    decision = {"action_id": action_id or text.strip().lower().replace(" ", "_"), "values": {}}
+    graph = Graph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+    graph.checkpointing_enabled = True
+    graph.checkpoint_store = store
+    request_id = pending.get("request_id")
+    graph.human_input_decisions = {request_id: decision}
+    # Un-build the paused node so it re-runs and reads the injected decision.
+    for vertex in graph.vertices:
+        if f"{vertex.id}:{graph.run_id}" == request_id:
+            vertex.built = False
+
+    from langflow.api.v2.workflow import EXECUTION_TIMEOUT
+    from langflow.processing.process import run_graph_internal
+
+    try:
+        run_outputs, session_id = await asyncio.wait_for(
+            run_graph_internal(
+                graph,
+                str(flow_id),
+                session_id=graph.session_id,
+                inputs=[],
+                outputs=graph.get_terminal_nodes(),
+            ),
+            timeout=EXECUTION_TIMEOUT,
+        )
+    except GraphPausedException as exc:
+        # Paused again (multi-step HITL): the new checkpoint is already saved under this run_id.
+        return _suspended_response(flow_id, task_id, graph.session_id, exc.data or {})
+    except Exception:
+        # Failure/timeout: drop the now-unusable checkpoint so it doesn't orphan a terminal task.
+        await store.delete_by_run_id(task_id)
+        raise
+
+    await store.delete_by_run_id(task_id)
+    from langflow.api.v1.schemas import RunResponse
+
+    run_response = RunResponse(outputs=run_outputs, session_id=session_id)
+    return run_response_to_workflow_response(
+        run_response=run_response,
+        flow_id=str(flow_id),
+        job_id=task_id,
+        inputs={},
+        graph=graph,
+    )
+
+
+class A2ACheckpointStore(CheckpointStore):
+    """DB-backed graph checkpoint store for A2A HITL resume, keyed by ``run_id`` (the task id).
+
+    The graph saves a checkpoint here when a HumanInput node pauses; resume reads it back by
+    run id. ``GraphCheckpoint`` round-trips through JSON, so it lives in one ``a2a_checkpoints``
+    row. Only ``save`` / ``load_by_run_id`` / ``delete_by_run_id`` are used; the id/session
+    lookups would scan the table and aren't on any A2A path, so they raise. lfx-portable:
+    ``session_scope`` + one SQLModel table, no langflow job machinery.
+    """
+
+    async def save(self, checkpoint: GraphCheckpoint) -> None:
+        blob: dict[str, Any] = checkpoint.model_dump(mode="json")
+        async with session_scope() as session:
+            row = await session.get(A2ACheckpoint, checkpoint.run_id)
+            if row is None:
+                session.add(A2ACheckpoint(run_id=checkpoint.run_id, checkpoint=blob))
+            else:
+                row.checkpoint = blob  # fresh dict reference flags the JSON column dirty
+
+    async def load_by_run_id(self, run_id: str) -> GraphCheckpoint | None:
+        async with session_scope_readonly() as session:  # pure read, no commit
+            row = await session.get(A2ACheckpoint, run_id)
+            blob = row.checkpoint if row is not None else None
+        return GraphCheckpoint.model_validate(blob) if blob is not None else None
+
+    async def delete_by_run_id(self, run_id: str) -> None:
+        async with session_scope() as session:
+            row = await session.get(A2ACheckpoint, run_id)
+            if row is not None:
+                await session.delete(row)
+
+    async def load(self, checkpoint_id: str) -> GraphCheckpoint | None:
+        # A2A resolves by run_id (== task id); a by-checkpoint-id lookup isn't mounted.
+        raise NotImplementedError
+
+    async def delete(self, checkpoint_id: str) -> None:
+        raise NotImplementedError
+
+    async def list_by_session(self, session_id: str) -> list[GraphCheckpoint]:
+        raise NotImplementedError
 
 
 class DurableTaskStore(TaskStore):
@@ -206,7 +365,7 @@ class DurableTaskStore(TaskStore):
 # default in-memory QueueManager); a terminal or cross-worker task returns a spec error
 # and tasks/get covers terminal reads. Durable cross-worker re-attach is a later slice.
 _HANDLER = DefaultRequestHandler(
-    agent_executor=FlowAgentExecutor(_run_flow),
+    agent_executor=FlowAgentExecutor(_run_flow, _resume_flow),
     task_store=DurableTaskStore(),
     agent_card=pb.AgentCard(capabilities=pb.AgentCapabilities(streaming=True)),
 )

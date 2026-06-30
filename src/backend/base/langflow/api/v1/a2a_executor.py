@@ -28,6 +28,9 @@ logger = logging.getLogger(__name__)
 # (flow_id, task_id, input_text, context_id) -> the v2 sync run result.
 # context_id scopes the run's chat memory (the A2A conversation = the flow session).
 RunFlow = Callable[[UUID, str, str, str | None], Awaitable[WorkflowExecutionResponse]]
+# (flow_id, task_id, decision_text) -> the run result after applying a human decision to a
+# paused (input-required) task. The text carries the chosen action for the HumanInput node.
+ResumeFlow = Callable[[UUID, str, str], Awaitable[WorkflowExecutionResponse]]
 
 
 def _answer_texts(response: WorkflowExecutionResponse) -> list[str]:
@@ -51,34 +54,53 @@ def _answer_texts(response: WorkflowExecutionResponse) -> list[str]:
 class FlowAgentExecutor(AgentExecutor):
     """Runs a Langflow flow for one A2A ``message/send`` and reports a terminal Task."""
 
-    def __init__(self, run_flow: RunFlow) -> None:
+    def __init__(self, run_flow: RunFlow, resume_flow: ResumeFlow) -> None:
         self._run_flow = run_flow
+        self._resume_flow = resume_flow
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         flow_id = context.call_context.state["flow_id"]
 
-        # DefaultRequestHandlerV2 rejects a status/artifact event before a Task
-        # event ("Agent should enqueue Task before TaskStatusUpdateEvent"), and
-        # this SDK version has no new_task helper, so enqueue the proto Task first.
-        await event_queue.enqueue_event(
-            pb.Task(
-                id=context.task_id,
-                context_id=context.context_id,
-                status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_SUBMITTED),
+        # A follow-up message on an input-required task resumes the paused run with the
+        # message as the human decision; a first message starts a fresh run. The SDK only
+        # routes a follow-up here when the existing (owner-scoped) task is non-terminal.
+        existing = context.current_task
+        resuming = existing is not None and existing.status.state == pb.TaskState.TASK_STATE_INPUT_REQUIRED
+
+        if not resuming:
+            # DefaultRequestHandlerV2 rejects a status/artifact event before a Task
+            # event ("Agent should enqueue Task before TaskStatusUpdateEvent"), and
+            # this SDK version has no new_task helper, so enqueue the proto Task first.
+            # On resume the Task already exists, so don't re-submit it.
+            await event_queue.enqueue_event(
+                pb.Task(
+                    id=context.task_id,
+                    context_id=context.context_id,
+                    status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_SUBMITTED),
+                )
             )
-        )
         updater = TaskUpdater(event_queue, context.task_id, context.context_id)
         await updater.start_work()
 
         text = context.get_user_input()
         try:
-            response = await self._run_flow(UUID(flow_id), context.task_id, text, context.context_id)
+            if resuming:
+                response = await self._resume_flow(UUID(flow_id), context.task_id, text)
+            else:
+                response = await self._run_flow(UUID(flow_id), context.task_id, text, context.context_id)
         except Exception:
             # Unexpected build/timeout/system failures become a failed Task, not a 500.
             # The endpoint is unauthenticated, so don't hand the caller raw exception
             # text (graph-build internals, DB errors); log it server-side instead.
             logger.exception("A2A flow execution failed for task %s", context.task_id)
             await updater.failed(updater.new_agent_message([new_text_part("Flow execution failed")]))
+            return
+
+        # The run paused for human input: park the task as input-required carrying the prompt,
+        # so a follow-up message resumes it. Not terminal, so the task stays open.
+        if response.status == JobStatus.SUSPENDED:
+            prompt = (response.human_request or {}).get("prompt") or "Input required"
+            await updater.requires_input(updater.new_agent_message([new_text_part(prompt)]))
             return
 
         # Component/runtime errors come back in-band as a FAILED status, not raised.
