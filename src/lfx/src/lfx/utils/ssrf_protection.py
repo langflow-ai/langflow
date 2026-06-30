@@ -417,6 +417,42 @@ def is_connector_ssrf_validation_enabled() -> bool:
         return True
 
 
+def is_connector_loopback_allowed() -> bool:
+    """Whether a literal loopback host is allowed for CONNECTOR / model-provider URLs.
+
+    Connector and model-provider components routinely target a *local* service — Ollama and
+    LM Studio default to ``http://localhost:11434`` / ``http://localhost:1234`` and local vector
+    stores bind to loopback — so loopback is allowed by default (True). Cloud-metadata and
+    RFC1918 ranges are blocked regardless. A multi-tenant deployer, where a tenant pointing a
+    connector at the *server's* loopback is an SSRF vector, sets this to False to block loopback
+    too. Defaults to True (lenient single-tenant default) if settings are unavailable.
+    """
+    import os
+
+    env_value = os.getenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK")
+    if env_value is not None:
+        return env_value.lower() in ("true", "1", "yes", "on")
+    try:
+        return bool(get_settings_service().settings.connector_ssrf_allow_loopback)
+    except Exception:  # noqa: BLE001 - settings may be unavailable; default to allowed (single-tenant default)
+        return True
+
+
+def _is_loopback_host(hostname: str) -> bool:
+    """True if ``hostname`` is a literal loopback reference (``localhost`` or a loopback IP).
+
+    Only literal forms are matched (``localhost``, ``127.0.0.0/8``, ``::1``). A hostname that
+    merely *resolves* to loopback is intentionally NOT matched, so it still flows through the full
+    SSRF check — defeating a DNS-rebinding trick that points a public-looking host at loopback.
+    """
+    if hostname.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        return False
+
+
 def validate_connector_url_for_ssrf(url: str) -> None:
     """SSRF-validate a tenant-controlled connector URL unless connector validation is disabled.
 
@@ -454,6 +490,13 @@ def validate_connector_url_for_ssrf(url: str) -> None:
                 "it to LANGFLOW_SSRF_ALLOWED_HOSTS (allowlisting alone does not permit a scheme-less host)."
             )
             raise SSRFProtectionError(msg)
+        # Connectors commonly target a local service (Ollama / LM Studio default to localhost,
+        # local vector stores bind to loopback). Allow a literal loopback host by default; a
+        # multi-tenant deployer sets connector_ssrf_allow_loopback=false to block it too. Only a
+        # literal loopback reference is exempted — a hostname that resolves to loopback still goes
+        # through the full check below, so DNS-rebinding cannot abuse this.
+        if is_connector_loopback_allowed() and _is_loopback_host(parsed.hostname):
+            return
     validate_url_for_ssrf(url)
 
 
