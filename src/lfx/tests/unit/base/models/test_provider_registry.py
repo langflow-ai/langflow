@@ -245,6 +245,8 @@ def test_get_llm_applies_registered_provider_base_url(monkeypatch):
 
     assert captured["model"] == "m1"
     assert captured["base_url"] == "http://vllm.example:8000"
+    # api_key_optional provider with no configured key gets a non-empty placeholder.
+    assert captured["api_key"] == "EMPTY"  # pragma: allowlist secret
 
 
 # ---------------------------------------------------------------------------

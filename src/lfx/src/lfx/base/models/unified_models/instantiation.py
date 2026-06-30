@@ -184,6 +184,12 @@ def get_llm(
             )
         raise ValueError(msg)
 
+    # OpenAI-compatible servers that opt out of API keys (api_key_required=False)
+    # still need a non-empty placeholder so the client library constructs, e.g.
+    # a local vLLM endpoint without auth.
+    if not api_key and is_api_key_optional(provider):
+        api_key = "EMPTY"  # pragma: allowlist secret
+
     # Get model class from metadata, falling back to the provider-level
     # mapping when the stored model value was sourced from
     # ``get_unified_models_detailed`` (which, unlike
@@ -411,6 +417,11 @@ def get_embeddings(
             f"Please provide it in the component or configure it globally as {variable_name}."
         )
         raise ValueError(msg)
+
+    # OpenAI-compatible embedding servers that opt out of API keys still need a
+    # non-empty placeholder so the client library constructs (e.g. local vLLM).
+    if not api_key and is_api_key_optional(provider):
+        api_key = "EMPTY"  # pragma: allowlist secret
 
     if not model_name:
         msg = "Embedding model name is required"
