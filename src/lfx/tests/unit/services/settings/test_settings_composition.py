@@ -109,6 +109,7 @@ EXPECTED_FIELDS = {
     "ssrf_protection_enabled",
     "ssrf_allowed_hosts",
     "connector_ssrf_validation_enabled",
+    "connector_ssrf_allow_loopback",
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
