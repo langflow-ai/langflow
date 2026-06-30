@@ -45,19 +45,22 @@ def update_lfx_dep_in_base(pyproject_path: str, lfx_version: str) -> None:
     content = filepath.read_text(encoding="utf-8")
 
     # Updated pattern to handle PEP 440 version suffixes, both ~= and == version specifiers,
-    # and both lfx and lfx-nightly names
-    pattern = re.compile(r'("lfx(?:-nightly)?(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
+    # both lfx and lfx-nightly names, and extras (e.g. lfx[cassandra], lfx[toolguard]).
+    # The extras group (2) MUST be preserved: base's `[complete]` extra pulls these
+    # `lfx[extra]` references, and if they keep a `~=X.Y.0` floor while base's bare `lfx`
+    # dep is pinned to `==X.Y.0.devN`, the floor (>=X.Y.0) excludes the dev release and
+    # the nightly resolve becomes unsatisfiable.
+    pattern = re.compile(r'"lfx(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*"')
     # Pin base's lfx dep to the exact canonical dev version (single `lfx` distribution, no
     # `lfx-nightly`), so there is no `lfx` vs `lfx-nightly` install collision with the bundles.
-    replacement = f'"lfx=={lfx_version}"'
 
     # Check if the pattern is found
     if not pattern.search(content):
         msg = f'LFX dependency not found in "{filepath}"'
         raise ValueError(msg)
 
-    # Replace the matched pattern with the new one
-    content = pattern.sub(replacement, content)
+    # Replace each match, preserving its own extras (e.g. `[cassandra]`, `[toolguard]`).
+    content = pattern.sub(lambda m: f'"lfx{m.group(1)}=={lfx_version}"', content)
     filepath.write_text(content, encoding="utf-8")
 
 
