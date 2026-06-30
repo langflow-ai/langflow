@@ -40,6 +40,7 @@ dependencies = [
     "lfx-oracle>=0.1.0,<1.0.0",
     "lfx-firecrawl>=0.1.0,<1.0.0",
     "lfx-nextplaid>=0.1.0,<1.0.0",
+    "lfx-paddle>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -110,6 +111,7 @@ lfx-cohere = { workspace = true }
 lfx-oracle = { workspace = true }
 lfx-firecrawl = { workspace = true }
 lfx-nextplaid = { workspace = true }
+lfx-paddle = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -135,6 +137,7 @@ members = [
     "src/bundles/oracle",
     "src/bundles/firecrawl",
     "src/bundles/nextplaid",
+    "src/bundles/paddle",
     # langflow-extensions:bundle-members-end
 ]
 
