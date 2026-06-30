@@ -36,7 +36,7 @@ class TestEmpirioLabsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes(default_kwargs)
 
-        assert component.display_name == "EmpirioLabs"
+        assert component.display_name == "EmpirioLabs AI"
         assert component.description == "Generates text using EmpirioLabs AI LLMs (OpenAI compatible)."
         assert component.icon == "EmpirioLabs"
         assert component.name == "EmpirioLabsModel"

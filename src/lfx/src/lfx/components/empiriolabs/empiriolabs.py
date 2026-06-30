@@ -21,7 +21,7 @@ EMPIRIOLABS_BASE_URL = "https://api.empiriolabs.ai/v1"
 
 
 class EmpirioLabsModelComponent(LCModelComponent):
-    display_name = "EmpirioLabs"
+    display_name = "EmpirioLabs AI"
     description = "Generates text using EmpirioLabs AI LLMs (OpenAI compatible)."
     icon = "EmpirioLabs"
     name = "EmpirioLabsModel"

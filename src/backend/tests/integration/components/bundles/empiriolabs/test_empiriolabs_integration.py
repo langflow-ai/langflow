@@ -27,7 +27,7 @@ class TestEmpirioLabsIntegration:
     def test_component_instantiation(self, component):
         """Test that the component can be instantiated."""
         assert component is not None
-        assert component.display_name == "EmpirioLabs"
+        assert component.display_name == "EmpirioLabs AI"
         assert component.name == "EmpirioLabsModel"
 
     def test_component_inputs_present(self, component):
