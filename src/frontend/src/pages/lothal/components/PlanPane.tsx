@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 import type { Project } from "@/controllers/API/queries/lothal";
 import {
+  type PlanEvent,
   type PlanNode,
   type PlanNodeKind,
   type TestMethodology,
@@ -21,10 +22,13 @@ import {
   useApprovePlan,
   useCreatePlanNode,
   useCreatePlanTest,
+  useMovePlanNode,
   usePlan,
   usePlanNode,
+  usePlanNodeEvents,
   usePlanTests,
   useRatifyPlanNode,
+  useRecordPlanTestRun,
   useTransitionPlanNode,
   useUpdatePlanContract,
   useUpdatePlanCriteria,
@@ -102,6 +106,26 @@ function reasonOf(error: unknown): string | null {
 
 const toLines = (s: string): string[] =>
   s.split("\n").map((x) => x.trim()).filter(Boolean);
+
+const eventStamp = (iso: string): string => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleTimeString();
+};
+const eventLabel = (e: PlanEvent): string =>
+  e.summary ||
+  (e.from_state || e.to_state
+    ? `${e.from_state ?? "—"} → ${e.to_state ?? "—"}`
+    : e.event_type || e.kind || "event");
+
+const runBtn = (color: string) => ({
+  fontSize: 10,
+  padding: "2px 7px",
+  borderRadius: 5,
+  cursor: "pointer",
+  border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+  background: "transparent",
+  color,
+});
 
 function PaneLoading({ label }: { label: string }) {
   return (
@@ -190,13 +214,16 @@ function NodeTests({
   projectId,
   nodeId,
   canEdit,
+  canRun,
 }: {
   projectId: string;
   nodeId: string;
   canEdit: boolean;
+  canRun: boolean;
 }) {
   const { data: tests } = usePlanTests(projectId, nodeId);
   const createTest = useCreatePlanTest(projectId, nodeId);
+  const recordRun = useRecordPlanTestRun(projectId, nodeId);
   const [title, setTitle] = useState("");
   const [scope, setScope] = useState<TestScope>("unit");
 
@@ -224,6 +251,28 @@ function NodeTests({
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>{t.title}</span>
             {t.latest_status && <StateChip state={t.latest_status} />}
+            {canRun && (
+              <span style={{ display: "inline-flex", gap: 4 }}>
+                <button
+                  type="button"
+                  title="Record a passing run"
+                  disabled={recordRun.isPending}
+                  onClick={() => recordRun.mutate({ testId: t.id, status: "passed" })}
+                  style={runBtn("var(--success)")}
+                >
+                  pass
+                </button>
+                <button
+                  type="button"
+                  title="Record a failing run"
+                  disabled={recordRun.isPending}
+                  onClick={() => recordRun.mutate({ testId: t.id, status: "failed" })}
+                  style={runBtn("#c0552e")}
+                >
+                  fail
+                </button>
+              </span>
+            )}
           </div>
         ))
       )}
@@ -267,16 +316,20 @@ function NodeDetailPanel({
   projectId,
   nodeId,
   editable,
+  nodes,
 }: {
   projectId: string;
   nodeId: string;
   editable: boolean;
+  nodes: PlanNode[];
 }) {
   const { data: node, isLoading, error } = usePlanNode(projectId, nodeId);
   const saveContract = useUpdatePlanContract(projectId, nodeId);
   const saveCriteria = useUpdatePlanCriteria(projectId, nodeId);
   const ratify = useRatifyPlanNode(projectId);
   const reopen = useTransitionPlanNode(projectId);
+  const move = useMovePlanNode(projectId);
+  const { data: events } = usePlanNodeEvents(projectId, nodeId);
 
   const [assumptions, setAssumptions] = useState("");
   const [guarantees, setGuarantees] = useState("");
@@ -322,6 +375,29 @@ function NodeDetailPanel({
         </span>
         <StateChip state={node.state} />
       </div>
+
+      {canEdit && nodes.length > 1 && (
+        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={fieldLabel}>Parent</span>
+          <select
+            value={nodes.find((n) => n.id === node.id)?.parent_id ?? ""}
+            disabled={move.isPending}
+            onChange={(e) =>
+              move.mutate({ nodeId: node.id, new_parent_id: e.target.value || null })
+            }
+            style={{ ...areaStyle, resize: undefined, maxWidth: 260 }}
+          >
+            <option value="">— root —</option>
+            {nodes
+              .filter((n) => n.id !== node.id)
+              .map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.name}
+                </option>
+              ))}
+          </select>
+        </label>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-soft)" }}>
@@ -414,7 +490,35 @@ function NodeDetailPanel({
         )}
       </div>
 
-      <NodeTests projectId={projectId} nodeId={node.id} canEdit={canEdit} />
+      <NodeTests
+        projectId={projectId}
+        nodeId={node.id}
+        canEdit={canEdit}
+        canRun={editable}
+      />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-soft)" }}>
+          History
+        </span>
+        {(events ?? []).length === 0 ? (
+          <span style={{ fontSize: 12, color: "var(--ink-mute)" }}>No events yet.</span>
+        ) : (
+          (events ?? []).slice(0, 8).map((e) => (
+            <div
+              key={e.id}
+              style={{ display: "flex", gap: 8, fontSize: 12, color: "var(--ink-soft)" }}
+            >
+              <span
+                style={{ color: "var(--ink-mute)", fontSize: 10.5, whiteSpace: "nowrap" }}
+              >
+                {eventStamp(e.created_at)}
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>{eventLabel(e)}</span>
+            </div>
+          ))
+        )}
+      </div>
 
       {/* The ratify gate. Its failure reason is the PM service's own verdict. */}
       {editable && (
@@ -437,13 +541,26 @@ function NodeDetailPanel({
               {ratify.isPending ? "Ratifying…" : "Ratify node"}
             </Button>
           ) : (
-            <Button
-              variant="outline"
-              disabled={reopen.isPending}
-              onClick={() => reopen.mutate({ nodeId: node.id, target: "draft" })}
-            >
-              {reopen.isPending ? "Reopening…" : "Reopen to edit"}
-            </Button>
+            <div style={{ display: "flex", gap: 8 }}>
+              {node.state === "ratified" && (
+                <Button
+                  variant="accent"
+                  disabled={reopen.isPending}
+                  onClick={() =>
+                    reopen.mutate({ nodeId: node.id, target: "in_progress" })
+                  }
+                >
+                  Start work
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                disabled={reopen.isPending}
+                onClick={() => reopen.mutate({ nodeId: node.id, target: "draft" })}
+              >
+                {reopen.isPending ? "…" : "Reopen to edit"}
+              </Button>
+            </div>
           )}
           {ratifyReason && (
             <div
@@ -633,6 +750,7 @@ export function PlanPane({ project }: { project: Project }) {
               projectId={project.id}
               nodeId={selected}
               editable={editable}
+              nodes={nodes}
             />
           ) : (
             <div style={{ paddingTop: 80 }}>

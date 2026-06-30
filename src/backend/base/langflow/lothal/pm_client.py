@@ -326,10 +326,18 @@ class PMClient:
             "POST", f"/api/projects/{plan_id}/nodes/{node_id}/tests", json=body
         )
 
-    async def record_test_run(self, plan_id: str, test_id: str, body: dict[str, Any]) -> dict[str, Any]:
-        """`POST /api/projects/:id/tests/:tid/runs` — record a test run result."""
+    async def record_test_run(
+        self, plan_id: str, node_id: str, test_id: str, body: dict[str, Any]
+    ) -> dict[str, Any]:
+        """`POST /api/projects/:id/nodes/:nid/tests/:tid/runs` — record a test run result.
+
+        The PM service only accepts runs once the node is ``in_progress`` (it 4xxs
+        otherwise — frozen-before-build: you run the frozen tests, you don't re-run a draft).
+        """
         return await self._request_json(
-            "POST", f"/api/projects/{plan_id}/tests/{test_id}/runs", json=body
+            "POST",
+            f"/api/projects/{plan_id}/nodes/{node_id}/tests/{test_id}/runs",
+            json=body,
         )
 
     # --- DAG render -----------------------------------------------------------

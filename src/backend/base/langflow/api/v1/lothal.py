@@ -1238,15 +1238,17 @@ async def create_plan_test(*, project: OwnedProject, node_id: UUID, body: dict[s
 
 
 @router.post(
-    "/projects/{project_id}/plan/tests/{test_id}/runs",
-    summary="Record a test run result",
+    "/projects/{project_id}/plan/nodes/{node_id}/tests/{test_id}/runs",
+    summary="Record a test run result (node must be in progress)",
 )
-async def record_plan_test_run(*, project: OwnedProject, test_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+async def record_plan_test_run(
+    *, project: OwnedProject, node_id: UUID, test_id: UUID, body: dict[str, Any]
+) -> dict[str, Any]:
     _require_plan_active(project)
     try:
         async with PMClient.from_env() as pm:
             plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.record_test_run(plan_id, str(test_id), body)
+            return await pm.record_test_run(plan_id, str(node_id), str(test_id), body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 

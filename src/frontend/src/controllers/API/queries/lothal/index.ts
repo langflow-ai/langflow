@@ -669,7 +669,7 @@ export function useRecordPlanTestRun(projectId: string, nodeId: string) {
   return useMutation({
     mutationFn: async (vars: { testId: string; status: TestStatus; output?: string }) => {
       const res = await api.post(
-        `${BASE}${projectId}/plan/tests/${vars.testId}/runs`,
+        `${BASE}${projectId}/plan/nodes/${nodeId}/tests/${vars.testId}/runs`,
         { status: vars.status, output: vars.output },
       );
       return res.data;
