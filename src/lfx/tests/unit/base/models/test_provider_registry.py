@@ -192,6 +192,62 @@ def test_registered_provider_without_validator_is_noop():
 
 
 # ---------------------------------------------------------------------------
+# Connection-variable application (get_llm / get_embeddings)
+# ---------------------------------------------------------------------------
+
+
+def _fakeco_metadata_with_base_url() -> dict:
+    meta = _fakeco_metadata()
+    meta["variables"] = [
+        {
+            "variable_name": "FakeCo Base URL",
+            "variable_key": "FAKECO_API_BASE",
+            "required": True,
+            "is_secret": False,
+            "is_list": False,
+            "options": [],
+            "langchain_param": "base_url",
+        },
+        *meta["variables"],
+    ]
+    return meta
+
+
+def test_get_llm_applies_registered_provider_base_url(monkeypatch):
+    from lfx.base.models import unified_models as um
+    from lfx.base.models.unified_models.instantiation import get_llm
+
+    captured: dict = {}
+
+    class FakeChat:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    register_provider(_fakeco_spec(metadata=_fakeco_metadata_with_base_url(), api_key_required=False))
+    monkeypatch.setattr(um, "get_api_key_for_provider", lambda *_a, **_k: None)
+    monkeypatch.setattr(um, "get_model_class", lambda _name: FakeChat)
+    monkeypatch.setattr(
+        um, "get_all_variables_for_provider", lambda *_a, **_k: {"FAKECO_API_BASE": "http://vllm.example:8000"}
+    )
+
+    model_selection = [
+        {
+            "name": "m1",
+            "provider": "FakeCo",
+            "metadata": {
+                "model_class": "ChatOpenAI",
+                "model_name_param": "model",
+                "api_key_param": "api_key",  # pragma: allowlist secret
+            },
+        }
+    ]
+    get_llm(model_selection, user_id=None)
+
+    assert captured["model"] == "m1"
+    assert captured["base_url"] == "http://vllm.example:8000"
+
+
+# ---------------------------------------------------------------------------
 # Embedding wiring
 # ---------------------------------------------------------------------------
 
