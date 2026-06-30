@@ -997,6 +997,8 @@ async def webhook_run_flow(
         error_msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
         raise HTTPException(status_code=400, detail=error_msg)
 
+    raise_if_hitl_unsupported(flow.data or {})
+
     try:
         # get all webhook components in the flow
         webhook_components = get_all_webhook_components_in_flow(flow.data)
@@ -1154,9 +1156,12 @@ async def experimental_run_flow(
         try:
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
+            raise_if_hitl_unsupported(graph_data)
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
         except CustomComponentValidationError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        except HTTPException:
+            raise
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
