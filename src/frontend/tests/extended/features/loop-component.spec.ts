@@ -112,6 +112,12 @@ test(
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
+    // The unified Operations component defaults to the "Text" input type.
+    // Switch it to "JSON" so its JSON input/output handles render and the
+    // JSON operations (e.g. "Append or Update") become selectable below.
+    await page.getByTestId("tab_1_json").first().click();
+    await page.waitForTimeout(500);
+
     // Loop Item -> Update Data
 
     await page
