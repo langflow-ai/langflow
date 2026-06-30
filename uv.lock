@@ -39,6 +39,7 @@ members = [
     "lfx-datastax",
     "lfx-docling",
     "lfx-duckduckgo",
+    "lfx-empiriolabs",
     "lfx-firecrawl",
     "lfx-ibm",
     "lfx-nextplaid",
@@ -7898,6 +7899,7 @@ dependencies = [
     { name = "lfx-datastax" },
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
+    { name = "lfx-empiriolabs" },
     { name = "lfx-firecrawl" },
     { name = "lfx-ibm" },
     { name = "lfx-nextplaid" },
@@ -8001,6 +8003,7 @@ requires-dist = [
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["local"], marker = "extra == 'docling'", editable = "src/bundles/docling" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
+    { name = "lfx-empiriolabs", editable = "src/bundles/empiriolabs" },
     { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
@@ -9998,6 +10001,23 @@ requires-dist = [
     { name = "ddgs", specifier = ">=9.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-empiriolabs"
+version = "0.1.0"
+source = { editable = "src/bundles/empiriolabs" }
+dependencies = [
+    { name = "langchain-openai" },
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-openai", specifier = ">=1.1.6" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "requests", specifier = ">=2.32.0" },
 ]
 
 [[package]]
