@@ -49,7 +49,6 @@ from langflow.services.database.models.folder.constants import (
 )
 from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
 from langflow.services.deps import (
-    get_auth_service,
     get_settings_service,
     get_storage_service,
     get_variable_service,
@@ -1348,15 +1347,29 @@ async def initialize_auto_login_default_superuser() -> None:
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return
-    # In AUTO_LOGIN mode, always use the default credentials for initial bootstrapping
-    # without persisting the password in memory after setup.
-    from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+    # In AUTO_LOGIN mode, bootstrap with a configured password if the operator
+    # provided one; otherwise generate an unknown password for the default user.
+    from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
-    username = DEFAULT_SUPERUSER
-    password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    from langflow.services.database.models.user.crud import get_user_by_username
+    from langflow.services.utils import get_auto_login_superuser_password, get_or_create_super_user
+
+    username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+    password = get_auto_login_superuser_password(settings_service.auth_settings)
 
     async with session_scope() as async_session:
-        super_user = await get_auth_service().create_super_user(username, password, db=async_session)
+        super_user = await get_or_create_super_user(
+            async_session,
+            username,
+            password,
+            is_default=True,
+            rotate_legacy_default_password=True,
+        )
+        if super_user is None:
+            super_user = await get_user_by_username(async_session, username)
+        if super_user is None or not super_user.is_superuser:
+            msg = "Auto-login superuser was not initialized."
+            raise RuntimeError(msg)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables

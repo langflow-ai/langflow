@@ -2068,10 +2068,10 @@
             "description": "# 📄 Document Q&A\n\nAsk questions about your documents and get answers grounded in their content,\nusing a Knowledge Base for retrieval.\n\n## Setup\n1. **Knowledge Base** — add your documents to a Knowledge Base first (via the\n   **Knowledge** module in Langflow, or a separate ingestion flow). This flow\n   only **retrieves** — it does not ingest.\n2. **Knowledge (Retrieve)** — select the Knowledge Base that holds your documents.\n3. **Agent** — add your LLM key (any provider in the Model dropdown).\n\n## How it works\n1. **Chat Input → Knowledge (Retrieve)** — your question pulls the most relevant\n   passages from the Knowledge Base.\n2. **Parser → Prompt** — the retrieved passages become the context, combined with\n   your question.\n3. **Agent → Chat Output** — the Agent answers using **only** the retrieved\n   context (it won't make things up beyond your documents).\n\n## Run\nMake sure your Knowledge Base is populated, then type a question in the Playground.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.document_q_a.0e21c05f",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.document_q_a.0e21c05f"
+            }
           },
           "type": "note"
         },

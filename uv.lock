@@ -39,15 +39,19 @@ members = [
     "lfx-datastax",
     "lfx-docling",
     "lfx-duckduckgo",
+    "lfx-empiriolabs",
     "lfx-firecrawl",
     "lfx-ibm",
     "lfx-nextplaid",
     "lfx-openai",
     "lfx-oracle",
+    "lfx-paddle",
+    "lfx-vllm",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
     { name = "gunicorn", specifier = ">=25.3.0" },
+    { name = "litellm", marker = "python_full_version < '3.14'", specifier = ">=1.85.1,<2.0.0" },
     { name = "lxml", specifier = ">=6.1.0,<7.0.0" },
     { name = "mako", specifier = ">=1.3.12,<2.0.0" },
     { name = "markdown", specifier = ">=3.8.0" },
@@ -160,7 +164,7 @@ dependencies = [
     { name = "langchain-core", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "langchain-huggingface", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "langchain-text-splitters", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
-    { name = "litellm", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "litellm", marker = "(python_full_version >= '3.12' and python_full_version < '3.14') or (python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "llm-sandbox", extra = ["docker", "podman"], marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "nltk", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -2032,23 +2036,24 @@ wheels = [
 
 [[package]]
 name = "composio"
-version = "0.9.2"
+version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "composio-client" },
+    { name = "json-schema-to-pydantic" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "pysher" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/07/1a/49395ad89ac93adf83038989e46801f9c56fc529146047f92406342b758f/composio-0.9.2.tar.gz", hash = "sha256:a8584e2321123a8b4536b1564ebd6a0519220d6cadea849ccbf8fc6f1afff190", size = 78508, upload-time = "2025-11-10T12:40:49.116Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/fc/842a49ee8804f0c203c3ee97d9a64b44fa93db7d4d63b05ee7f01ff448eb/composio-0.16.0.tar.gz", hash = "sha256:e794c834204cea9a6044a338aea64855db8aa5bf641d6e0af1667612f6164853", size = 226925, upload-time = "2026-06-25T00:20:05.976Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/20/07/b3a95802b01ade7cd4b5568cbc61a8227bd351ec922907a62cbfd200d964/composio-0.9.2-py3-none-any.whl", hash = "sha256:022762c0c69d072aead35f0a979843e408015fc99bcba51ef80deb9339870602", size = 73584, upload-time = "2025-11-10T12:40:34.663Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/0d/fa76009158da0f490d281b6d89bfd04fe031586785b045b4f63e0c117d0b/composio-0.16.0-py3-none-any.whl", hash = "sha256:3da72dd9d20e98565aeb79fb6b20d733bfa71f5a2aa3ad0161bede6b3af62701", size = 148493, upload-time = "2026-06-25T00:19:51.879Z" },
 ]
 
 [[package]]
 name = "composio-client"
-version = "1.40.0"
+version = "1.41.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -2058,22 +2063,22 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/5a/f715690c950b40b5a2b5a801d27abed6dde3f1e9925e5a486813b677b7ec/composio_client-1.40.0.tar.gz", hash = "sha256:ccfb46c5909e3411fe63fa6275df1f3f7af180ae4bcd82d509e14470c615b0d3", size = 248822, upload-time = "2026-05-19T16:01:17.905Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/b1/3eaeb0bf6f45a5a4114c0464479aab3181b4676644cf84ff08ab7ef389e2/composio_client-1.41.0.tar.gz", hash = "sha256:5b37205123b38a4568d6a75c4227d38929b8f9526adc8d0810281733e547d8a6", size = 244988, upload-time = "2026-06-19T12:15:31.258Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/5d/aa520ecaaf143f69b8d3e1dab5945aeecd25b1b068a9093b9164408fabbd/composio_client-1.40.0-py3-none-any.whl", hash = "sha256:1785bd210f948496d034059b3d5133c5f480a07f55fb4c2f8bfe5a1612f249e5", size = 284567, upload-time = "2026-05-19T16:01:16.597Z" },
+    { url = "https://files.pythonhosted.org/packages/78/34/8841fcc4da6e4ccb74daac47c4714607f9314240c5bf43a0ef653f758e50/composio_client-1.41.0-py3-none-any.whl", hash = "sha256:18344f1b9209c56c25258c87c9a2f0423553690c94a4e62fb933072f76b37cd1", size = 276180, upload-time = "2026-06-19T12:15:29.949Z" },
 ]
 
 [[package]]
 name = "composio-langchain"
-version = "0.9.2"
+version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "composio" },
     { name = "langchain" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/cc/669386924108b555eddbe6d8b5a34695620dac9377efb3dde073868c56d0/composio_langchain-0.9.2.tar.gz", hash = "sha256:1b31dae214937b220faa87ffef783638d4ab4a09622f7bc46331612f3ccb93d4", size = 3057, upload-time = "2025-11-10T12:40:53.593Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/82/70c4f029de2f46340f6723431eebd9a81c01a9d09d0f1db959e80dd34ba7/composio_langchain-0.16.0.tar.gz", hash = "sha256:dff4ffc705cdf4028d514ed2af8aa59d9c42b5de8abbf7b20ae06f6aa4057d58", size = 2748, upload-time = "2026-06-25T00:20:11.005Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/35/9405ae02b26c91c46e251fe20158e7305b1175c8ee52ed613ddfe4dde8d1/composio_langchain-0.9.2-py3-none-any.whl", hash = "sha256:a3126625d69102fb73e902883c60769c3548df3fa3b902ebcb436bca8bac0980", size = 3363, upload-time = "2025-11-10T12:40:44.04Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/48/5f097d81df3a48b1d0308d0a5066abb0b1d6f5d0d712547f683f2a0ad4c9/composio_langchain-0.16.0-py3-none-any.whl", hash = "sha256:df8e191c1c4a9694b2b0cd55119267634136cf6bc3faec2ad3ccdc918f9af4cd", size = 3038, upload-time = "2026-06-25T00:20:00.773Z" },
 ]
 
 [[package]]
@@ -6900,6 +6905,18 @@ wheels = [
 ]
 
 [[package]]
+name = "json-schema-to-pydantic"
+version = "0.4.11"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/60/d8/423895b918706c80db1cee679c13fbe810200b9a9d9a9442c7a58d35c3f2/json_schema_to_pydantic-0.4.11.tar.gz", hash = "sha256:35448ed711a28dd33396b095c8492939b4925aa30eb31942e9b8e08d04279465", size = 56597, upload-time = "2026-03-09T20:53:55.692Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f3/64/7cfeb8c6d2a5e73e0f8d732032aa62be9a7724c04beb461d677de0b4beb3/json_schema_to_pydantic-0.4.11-py3-none-any.whl", hash = "sha256:da2ccc39d070ee03dbcf0517d16720e3e33f7aa8d61257ace09af8c51bd46348", size = 17842, upload-time = "2026-03-09T20:53:54.576Z" },
+]
+
+[[package]]
 name = "jsonlines"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -7883,11 +7900,14 @@ dependencies = [
     { name = "lfx-datastax" },
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
+    { name = "lfx-empiriolabs" },
     { name = "lfx-firecrawl" },
     { name = "lfx-ibm" },
     { name = "lfx-nextplaid" },
     { name = "lfx-openai" },
     { name = "lfx-oracle" },
+    { name = "lfx-paddle" },
+    { name = "lfx-vllm" },
 ]
 
 [package.optional-dependencies]
@@ -7985,11 +8005,14 @@ requires-dist = [
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["local"], marker = "extra == 'docling'", editable = "src/bundles/docling" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
+    { name = "lfx-empiriolabs", editable = "src/bundles/empiriolabs" },
     { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
+    { name = "lfx-paddle", editable = "src/bundles/paddle" },
+    { name = "lfx-vllm", editable = "src/bundles/vllm" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
@@ -8174,8 +8197,9 @@ all = [
     { name = "langfuse" },
     { name = "langsmith" },
     { name = "langwatch", marker = "python_full_version < '3.14'" },
-    { name = "lfx", extra = ["cassandra", "toolguard"] },
-    { name = "litellm" },
+    { name = "lfx", extra = ["cassandra"] },
+    { name = "lfx", extra = ["toolguard"], marker = "python_full_version < '3.14'" },
+    { name = "litellm", marker = "python_full_version < '3.14'" },
     { name = "mcp" },
     { name = "openinference-instrumentation-langchain" },
     { name = "openlayer" },
@@ -8185,7 +8209,7 @@ all = [
     { name = "traceloop-sdk" },
 ]
 altk = [
-    { name = "agent-lifecycle-toolkit", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "agent-lifecycle-toolkit", marker = "(python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
 ]
 apify = [
     { name = "apify-client", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -8244,8 +8268,9 @@ complete = [
     { name = "langfuse" },
     { name = "langsmith" },
     { name = "langwatch", marker = "python_full_version < '3.14'" },
-    { name = "lfx", extra = ["cassandra", "toolguard"] },
-    { name = "litellm" },
+    { name = "lfx", extra = ["cassandra"] },
+    { name = "lfx", extra = ["toolguard"], marker = "python_full_version < '3.14'" },
+    { name = "litellm", marker = "python_full_version < '3.14'" },
     { name = "mcp" },
     { name = "openinference-instrumentation-langchain" },
     { name = "openlayer" },
@@ -8256,7 +8281,6 @@ complete = [
 ]
 composio = [
     { name = "composio" },
-    { name = "composio-client" },
     { name = "composio-langchain" },
 ]
 couchbase = [
@@ -8383,7 +8407,7 @@ litellm = [
     { name = "apscheduler" },
     { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64') or (python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.14' and platform_machine == 'arm64') or (python_full_version >= '3.14' and platform_machine == 'x86_64') or (python_full_version >= '3.14' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version < '3.11' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and sys_platform != 'darwin')" },
-    { name = "litellm" },
+    { name = "litellm", marker = "python_full_version < '3.14'" },
 ]
 local = [
     { name = "ctransformers" },
@@ -8512,7 +8536,7 @@ supabase = [
     { name = "supabase" },
 ]
 toolguard = [
-    { name = "lfx", extra = ["toolguard"] },
+    { name = "lfx", extra = ["toolguard"], marker = "python_full_version < '3.14'" },
 ]
 traceloop = [
     { name = "traceloop-sdk" },
@@ -8577,7 +8601,7 @@ dev = [
 requires-dist = [
     { name = "ag-ui-protocol", specifier = "==0.1.18" },
     { name = "ag2", marker = "extra == 'ag2'", specifier = ">=0.1.0" },
-    { name = "agent-lifecycle-toolkit", marker = "(platform_machine != 'x86_64' and extra == 'altk') or (sys_platform != 'darwin' and extra == 'altk')", specifier = ">=0.10.1,<1.0" },
+    { name = "agent-lifecycle-toolkit", marker = "(python_full_version < '3.14' and platform_machine != 'x86_64' and extra == 'altk') or (python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'altk')", specifier = ">=0.10.1,<1.0" },
     { name = "aioboto3", marker = "extra == 'aioboto3'", specifier = ">=15.2.0,<16.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
@@ -8599,9 +8623,8 @@ requires-dist = [
     { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
-    { name = "composio", marker = "extra == 'composio'", specifier = "==0.9.2" },
-    { name = "composio-client", marker = "extra == 'composio'", specifier = "<1.41.0" },
-    { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.9.2" },
+    { name = "composio", marker = "extra == 'composio'", specifier = "==0.16.0" },
+    { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.16.0" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=48.0.1" },
     { name = "cryptography", marker = "extra == 'litellm'" },
@@ -8714,7 +8737,7 @@ requires-dist = [
     { name = "lfx", editable = "src/lfx" },
     { name = "lfx", marker = "extra == 'beautifulsoup'", editable = "src/lfx" },
     { name = "lfx", extras = ["cassandra"], marker = "extra == 'cassandra'", editable = "src/lfx" },
-    { name = "lfx", extras = ["toolguard"], marker = "extra == 'toolguard'", editable = "src/lfx" },
+    { name = "lfx", extras = ["toolguard"], marker = "python_full_version < '3.14' and extra == 'toolguard'", editable = "src/lfx" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.85.1,<2.0.0" },
     { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
     { name = "markdown", marker = "extra == 'markdown'", specifier = ">=3.8.0" },
@@ -9183,7 +9206,7 @@ opendsstar = [
     { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin')" },
 ]
 toolguard = [
-    { name = "toolguard" },
+    { name = "toolguard", marker = "python_full_version < '3.14'" },
 ]
 
 [package.dev-dependencies]
@@ -9253,7 +9276,7 @@ requires-dist = [
     { name = "setuptools", specifier = ">=80.0.0,<81.0.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "tomli", specifier = ">=2.2.1,<3.0.0" },
-    { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.20,<1.0.0" },
+    { name = "toolguard", marker = "python_full_version < '3.14' and extra == 'toolguard'", specifier = ">=0.2.20,<1.0.0" },
     { name = "typer", specifier = ">=0.16.0,<1.0.0" },
     { name = "typing-extensions", specifier = ">=4.14.0,<5.0.0" },
     { name = "uvicorn", specifier = ">=0.34.3,<1.0.0" },
@@ -9356,7 +9379,6 @@ all = [
     { name = "cleanlab-tlm" },
     { name = "clickhouse-connect" },
     { name = "composio" },
-    { name = "composio-client" },
     { name = "composio-langchain" },
     { name = "couchbase" },
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
@@ -9466,7 +9488,6 @@ cometapi = [
 ]
 composio = [
     { name = "composio" },
-    { name = "composio-client" },
     { name = "composio-langchain" },
 ]
 confluence = [
@@ -9673,9 +9694,8 @@ requires-dist = [
     { name = "chromadb", marker = "extra == 'chroma'", specifier = ">=1.0.0,<2.0.0" },
     { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
-    { name = "composio", marker = "extra == 'composio'", specifier = "==0.9.2" },
-    { name = "composio-client", marker = "extra == 'composio'", specifier = "<1.41.0" },
-    { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.9.2" },
+    { name = "composio", marker = "extra == 'composio'", specifier = "==0.16.0" },
+    { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.16.0" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cuga", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
     { name = "cuga", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
@@ -9987,6 +10007,23 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-empiriolabs"
+version = "0.1.0"
+source = { editable = "src/bundles/empiriolabs" }
+dependencies = [
+    { name = "langchain-openai" },
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-openai", specifier = ">=1.1.6" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "requests", specifier = ">=2.32.0" },
+]
+
+[[package]]
 name = "lfx-firecrawl"
 version = "0.1.0"
 source = { editable = "src/bundles/firecrawl" }
@@ -10074,6 +10111,36 @@ requires-dist = [
     { name = "langchain-oracledb", specifier = ">=1.0.1,<2.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "oracledb", specifier = ">=2.2.0,<4.0.0" },
+]
+
+[[package]]
+name = "lfx-paddle"
+version = "0.1.0"
+source = { editable = "src/bundles/paddle" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-vllm"
+version = "0.1.0"
+source = { editable = "src/bundles/vllm" }
+dependencies = [
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "lfx", editable = "src/lfx" },
+    { name = "requests", specifier = ">=2.31.0,<3.0.0" },
 ]
 
 [[package]]
@@ -10304,18 +10371,18 @@ name = "litellm"
 version = "1.89.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "aiohttp" },
-    { name = "click" },
-    { name = "fastuuid" },
-    { name = "httpx" },
-    { name = "importlib-metadata" },
-    { name = "jinja2" },
-    { name = "jsonschema" },
-    { name = "openai" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "tiktoken" },
-    { name = "tokenizers" },
+    { name = "aiohttp", marker = "python_full_version < '3.14'" },
+    { name = "click", marker = "python_full_version < '3.14'" },
+    { name = "fastuuid", marker = "python_full_version < '3.14'" },
+    { name = "httpx", marker = "python_full_version < '3.14'" },
+    { name = "importlib-metadata", marker = "python_full_version < '3.14'" },
+    { name = "jinja2", marker = "python_full_version < '3.14'" },
+    { name = "jsonschema", marker = "python_full_version < '3.14'" },
+    { name = "openai", marker = "python_full_version < '3.14'" },
+    { name = "pydantic", marker = "python_full_version < '3.14'" },
+    { name = "python-dotenv", marker = "python_full_version < '3.14'" },
+    { name = "tiktoken", marker = "python_full_version < '3.14'" },
+    { name = "tokenizers", marker = "python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/56/f1/f7cfead063f2ab1877c8fb465d0d7fe300b75f081bcb73525f6d550aeb1c/litellm-1.89.3.tar.gz", hash = "sha256:8fcdb2b7a0ef3381d41adf164443842e31ef9f0cd5bcda6fc3c0bd8bc2959510", size = 14080611, upload-time = "2026-06-20T22:42:26.997Z" }
 wheels = [
@@ -13267,7 +13334,7 @@ dependencies = [
     { name = "click" },
     { name = "httpx" },
     { name = "jinja2" },
-    { name = "litellm" },
+    { name = "litellm", marker = "python_full_version < '3.14'" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -15527,8 +15594,8 @@ name = "pyright"
 version = "1.1.410"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nodeenv" },
-    { name = "typing-extensions" },
+    { name = "nodeenv", marker = "python_full_version < '3.14'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/10/53/e4d8ea1391bd4355231be6f91bf239479aa0014260ed3fb5526eeb12a1f2/pyright-1.1.410.tar.gz", hash = "sha256:07a073b8ba6749826773c1269773efa11b93440d9a6aa60419d9a3172d6dc488", size = 4062013, upload-time = "2026-06-01T17:35:48.894Z" }
 wheels = [
@@ -15641,8 +15708,8 @@ name = "pytest-json-report"
 version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pytest" },
-    { name = "pytest-metadata" },
+    { name = "pytest", marker = "python_full_version < '3.14'" },
+    { name = "pytest-metadata", marker = "python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4f/d3/765dae9712fcd68d820338908c1337e077d5fdadccd5cacf95b9b0bea278/pytest-json-report-1.5.0.tar.gz", hash = "sha256:2dde3c647851a19b5f3700729e8310a6e66efb2077d674f27ddea3d34dc615de", size = 21241, upload-time = "2022-03-15T21:03:10.2Z" }
 wheels = [
@@ -15654,7 +15721,7 @@ name = "pytest-metadata"
 version = "3.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pytest" },
+    { name = "pytest", marker = "python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a6/85/8c969f8bec4e559f8f2b958a15229a35495f5b4ce499f6b865eac54b878d/pytest_metadata-3.1.1.tar.gz", hash = "sha256:d2a29b0355fbc03f168aa96d41ff88b1a3b44a3b02acbe491801c98a048017c8", size = 9952, upload-time = "2024-02-12T19:38:44.887Z" }
 wheels = [
@@ -18886,18 +18953,18 @@ name = "toolguard"
 version = "0.2.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "datamodel-code-generator" },
-    { name = "fastmcp" },
-    { name = "langchain-core" },
-    { name = "litellm" },
-    { name = "loguru" },
-    { name = "markdown" },
-    { name = "pydantic" },
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-json-report" },
-    { name = "smolagents" },
+    { name = "datamodel-code-generator", marker = "python_full_version < '3.14'" },
+    { name = "fastmcp", marker = "python_full_version < '3.14'" },
+    { name = "langchain-core", marker = "python_full_version < '3.14'" },
+    { name = "litellm", marker = "python_full_version < '3.14'" },
+    { name = "loguru", marker = "python_full_version < '3.14'" },
+    { name = "markdown", marker = "python_full_version < '3.14'" },
+    { name = "pydantic", marker = "python_full_version < '3.14'" },
+    { name = "pyright", marker = "python_full_version < '3.14'" },
+    { name = "pytest", marker = "python_full_version < '3.14'" },
+    { name = "pytest-asyncio", marker = "python_full_version < '3.14'" },
+    { name = "pytest-json-report", marker = "python_full_version < '3.14'" },
+    { name = "smolagents", marker = "python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/05/4adc710f0b11beb340dfb3be680f539cf509b4566aad40f6cfa9ab6506a9/toolguard-0.2.20.tar.gz", hash = "sha256:d88044bdd72525f2b65355c6526b267c2a41c234836d3a8fa786ee9ef0571333", size = 69224, upload-time = "2026-06-21T06:20:23.362Z" }
 wheels = [

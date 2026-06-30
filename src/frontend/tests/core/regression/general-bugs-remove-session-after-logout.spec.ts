@@ -41,7 +41,7 @@ test(
       .fill(TEXTS.authDefaultCredential);
     await page
       .getByPlaceholder(TEXTS.placeholderPassword)
-      .fill(TEXTS.authDefaultCredential);
+      .fill(TEXTS.authDefaultPassword);
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");

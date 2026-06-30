@@ -1599,10 +1599,10 @@
             "description": "# Vector Store RAG\n\nAsk questions over a **Knowledge Base** (retrieval-augmented generation), fully **bundle-free** - the core **Knowledge** component, no external vector database. Rebuilt on the new **Agent** core component (replaces the Language Model).\n\n## Setup\n1. Point the **Knowledge** node at a populated Knowledge Base - pick one in the dropdown, or ingest documents first (e.g. via the Document Q&A flow).\n2. **Agent** - add your LLM key (any provider in the Model dropdown).\n\n## How it works\n1. **Chat Input → Knowledge (Retrieve)** - semantic search for the most relevant chunks.\n2. **Parser → Prompt** - formats the chunks as context alongside your question.\n3. **Agent → Chat Output** - answers using only that retrieved context.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.vector_store_rag.cdd6e091",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.vector_store_rag.cdd6e091"
+            }
           },
           "type": "note"
         },
