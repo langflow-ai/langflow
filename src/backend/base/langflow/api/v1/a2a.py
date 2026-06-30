@@ -39,10 +39,11 @@ from sqlmodel import select
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.a2a_executor import FlowAgentExecutor
-from langflow.api.v1.a2a_utils import build_agent_card
+from langflow.api.v1.a2a_utils import A2A_APIKEY_HEADER, build_agent_card, folder_auth_type
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.database.models import A2ATask, Flow
+from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.flow.model import FlowType
 
 router = APIRouter(prefix="/a2a", tags=["a2a"])
@@ -57,6 +58,33 @@ def _require_a2a_enabled() -> None:
     settings = get_settings_service().settings
     if not getattr(settings, "a2a_enabled", False):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+
+
+async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
+    """Enforce the apikey scheme the card advertises, before any dispatch.
+
+    When the flow's folder requires apikey auth, the request must carry a valid
+    langflow API key in ``x-api-key`` whose owner is the flow owner. The flow always
+    runs as its owner (see ``_run_flow``), so accepting another user's valid key would
+    let them trigger a run under the owner's identity, so scope to ``flow.user_id``.
+
+    Uses ``check_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
+    returns the superuser for a *missing* key, which would silently bypass this gate.
+    ``"none"`` / missing / no-folder stay public; ``"oauth"`` stays public this slice
+    (the card advertises no scheme for it, so a discovery client sends no key).
+    """
+    # Short writable session (check_key flushes usage counters), closed before
+    # dispatch so no lock is held across the up-to-300s run.
+    async with session_scope() as session:
+        if await folder_auth_type(flow, session) != "apikey":
+            return  # public agent
+        api_key = request.headers.get(A2A_APIKEY_HEADER)
+        if not api_key:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")
+        user = await check_key(session, api_key)
+        # Same message for invalid and wrong-owner: don't reveal a key is valid for another user.
+        if user is None or user.id != flow.user_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
 
 class _FlowContextBuilder(DefaultServerCallContextBuilder):
@@ -183,18 +211,22 @@ async def get_agent_card(flow_id: UUID, request: Request, session: DbSession) ->
 async def a2a_jsonrpc(flow_id: UUID, request: Request) -> Response:
     """Serve the A2A JSON-RPC surface (message/send, message/stream, tasks/get, tasks/resubscribe) for an agent flow.
 
-    Public and gated like the card route; the flow runs as its owner. Returns the
-    SDK's JSON-RPC response (HTTP 200 even for JSON-RPC-level errors). No
-    ``DbSession`` dependency here: holding a session open across the run would
-    fight the v2 surface's lock-avoidance design, and the gate/run resolve from
-    flow_id via short self-managed sessions.
+    Gated like the card route; apikey-folder flows additionally require a valid owner
+    key (401). The flow runs as its owner. Returns the SDK's JSON-RPC response (HTTP 200
+    even for JSON-RPC-level errors). No ``DbSession`` dependency here: holding a session
+    open across the run would fight the v2 surface's lock-avoidance design, and the
+    gate/run resolve from flow_id via short self-managed sessions.
     """
     _require_a2a_enabled()
 
-    # Public endpoint: gate on the flow itself (resolve by PK, owner-agnostic),
-    # like the card route. _run_flow resolves the owner for the actual run.
+    # Gate on the flow itself (resolve by PK, owner-agnostic), like the card route.
+    # _run_flow resolves the owner for the actual run.
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
     if flow.flow_type != FlowType.AGENT or not flow.a2a_enabled:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+
+    # apikey-folder flows require a valid owner key here (401); "none" stays public.
+    # Runs after the 404 gate, so disabled/non-agent/unknown flows never reach a 401.
+    await _enforce_a2a_auth(flow, request)
 
     return await _DISPATCHER.handle_requests(request)
