@@ -43,6 +43,17 @@ def _get_variable_query(
     if flow_id:
         stmt = stmt.where(MessageTable.flow_id == flow_id)
     if user_id:
+        # Runtime callers (e.g. _safe_graph_user_id -> graph.user_id) supply user_id as a str,
+        # but MessageTable.user_id is UUID-typed: on SQLite the Uuid bind processor calls
+        # ``value.hex`` and raises ``'str' object has no attribute 'hex'`` for a raw string.
+        # Coerce to UUID so the owner predicate is built consistently with the write path
+        # (MessageTable.from_message), rather than crashing authenticated retrieval.
+        if isinstance(user_id, str):
+            try:
+                user_id = UUID(user_id)
+            except ValueError as exc:
+                msg = f"User ID {user_id} is not a valid UUID"
+                raise ValueError(msg) from exc
         stmt = stmt.where(MessageTable.user_id == user_id)
     if order_by:
         if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:

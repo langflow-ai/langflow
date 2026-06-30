@@ -36,6 +36,27 @@ async def test_aget_messages_scopes_by_user_id(client):  # noqa: ARG001
     assert len(unscoped) == 2
 
 
+async def test_aget_messages_scopes_by_string_user_id(client):  # noqa: ARG001
+    """Retrieval must accept a *string* user_id scope, as runtime callers supply.
+
+    ``_safe_graph_user_id`` returns ``graph.user_id`` unchanged (a ``str``), so ``aget_messages``
+    receives a string scope. ``MessageTable.user_id`` is UUID-typed; on SQLite the ``Uuid`` bind
+    processor calls ``value.hex`` and raises ``'str' object has no attribute 'hex'`` for a raw
+    string. The query path must coerce the scope to ``UUID`` before building the predicate.
+    """
+    user_a, user_b = uuid4(), uuid4()
+    session_id = "shared-session-le1675-str"
+    await _store(session_id, user_a, "secret from A")
+    await _store(session_id, user_b, "secret from B")
+
+    # Pass the scope as a string, mirroring _safe_graph_user_id(graph.user_id).
+    a_msgs = await aget_messages(session_id=session_id, user_id=str(user_a))
+    b_msgs = await aget_messages(session_id=session_id, user_id=str(user_b))
+
+    assert [m.text for m in a_msgs] == ["secret from A"]
+    assert [m.text for m in b_msgs] == ["secret from B"]
+
+
 async def test_from_message_stamps_user_id():
     """from_message stamps and coerces user_id; an invalid string is rejected."""
     user_a = uuid4()
