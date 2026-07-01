@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-dakera",
+  "version": "0.1.0",
+  "name": "Dakera Memory",
+  "description": "Store and semantically search memories using a self-hosted Dakera server.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "dakera",
+      "path": "components/dakera"
+    }
+  ]
+}
