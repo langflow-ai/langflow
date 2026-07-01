@@ -294,7 +294,7 @@ async def _build_project_tools_response(
                 # Use action_name and action_description if available, otherwise use defaults
                 name = sanitize_mcp_name(flow.action_name) if flow.action_name else flow_name
                 description = flow.action_description or (
-                    flow.description if flow.description else f"Tool generated from flow: {flow_name}"
+                    flow.description or f"Tool generated from flow: {flow_name}"
                 )
                 try:
                     tool = MCPSettings(

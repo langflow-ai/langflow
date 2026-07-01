@@ -451,7 +451,7 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
                 )
 
             # Set final answer
-            agent_message.text = final_answer if final_answer else ""
+            agent_message.text = final_answer or ""
             agent_message.properties.state = "complete"
             agent_message = await self.send_message(message=agent_message)
 
@@ -658,7 +658,7 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
             temperature=0.0,  # Fixed for now, could be made configurable
             tools=tools,
             system_prompt=(
-                system_prompt if system_prompt else "You are a helpful assistant that can execute code to solve tasks."
+                system_prompt or "You are a helpful assistant that can execute code to solve tasks."
             ),
             max_steps=max_iterations,
             code_timeout=code_timeout,

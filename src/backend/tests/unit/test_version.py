@@ -15,3 +15,8 @@ def test_compute_main():
     assert _compute_non_prerelease_version("1.0.10.rc0") == "1.0.10"
     assert _compute_non_prerelease_version("1.0.10.dev9") == "1.0.10"
     assert _compute_non_prerelease_version("1.0.10") == "1.0.10"
+    assert _compute_non_prerelease_version("1.0.10a1") == "1.0.10"
+    assert _compute_non_prerelease_version("1.0.10b112") == "1.0.10"
+    assert _compute_non_prerelease_version("1.0.10rc0") == "1.0.10"
+    assert _compute_non_prerelease_version("1.0.10dev9") == "1.0.10"
+    assert _compute_non_prerelease_version("1.0.10-rc1") == "1.0.10"

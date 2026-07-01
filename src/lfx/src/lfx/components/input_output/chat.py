@@ -83,7 +83,7 @@ class ChatInput(ChatComponent):
 
     async def message_response(self) -> Message:
         # Ensure files is a list and filter out empty/None values
-        files = self.files if self.files else []
+        files = self.files or []
         if files and not isinstance(files, list):
             files = [files]
         # Filter out None/empty values

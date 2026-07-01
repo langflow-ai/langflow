@@ -266,7 +266,7 @@ async def read_docx_file_async(file_path: str) -> str:
 
     # Create temp file with .docx extension
     # Extract filename from path for suffix
-    suffix = Path(file_path.split("/")[-1]).suffix
+    suffix = Path(file_path.rsplit("/", maxsplit=1)[-1]).suffix
     with tempfile.NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
         tmp_file.write(content)
         temp_path = tmp_file.name

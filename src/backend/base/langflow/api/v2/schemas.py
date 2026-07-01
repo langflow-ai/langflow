@@ -328,7 +328,7 @@ def _extract_base_command(command: str) -> str:
         or (len(command) >= drive_letter_len and command[1:3] == ":\\")  # Windows drive letter
     )
 
-    command_only = command.split()[0] if not is_file_path and command.strip() else command
+    command_only = command.split(maxsplit=1)[0] if not is_file_path and command.strip() else command
 
     normalized_path = command_only.replace("\\", "/")
     base_command = Path(normalized_path).name

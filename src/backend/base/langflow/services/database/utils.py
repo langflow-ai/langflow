@@ -129,7 +129,7 @@ def normalize_string_or_none(v: str | None) -> str | None:
     if v is None:
         return None
     stripped = v.strip()
-    return stripped if stripped else None
+    return stripped or None
 
 
 def parse_uuid(value: UUID | str, *, field_name: str = "value") -> UUID:

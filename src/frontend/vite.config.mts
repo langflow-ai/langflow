@@ -21,7 +21,13 @@ export default defineConfig(({ mode }) => {
 
   const envLangflow = envLangflowResult.parsed || {};
 
-  const apiRoutes = API_ROUTES || ["^/api/v1/", "^/api/v2/", "/health"];
+  const resolvedBasePath = process.env.LANGFLOW_ROOT_PATH || envLangflow.LANGFLOW_ROOT_PATH || BASENAME || "";
+
+  const apiRoutes = [
+    `^${resolvedBasePath}/api/v1/`,
+    `^${resolvedBasePath}/api/v2/`,
+    `^${resolvedBasePath}/health`,
+  ];
 
   const target =
     env.VITE_PROXY_TARGET || PROXY_TARGET || "http://localhost:7860";
@@ -39,7 +45,7 @@ export default defineConfig(({ mode }) => {
   }, {});
 
   return {
-    base: BASENAME || "",
+    base: resolvedBasePath,
     build: {
       outDir: "build",
     },
@@ -72,6 +78,9 @@ export default defineConfig(({ mode }) => {
       ),
       "import.meta.env.LANGFLOW_WXO_UTM_SOURCE": JSON.stringify(
         envLangflow.LANGFLOW_WXO_UTM_SOURCE ?? "langflow",
+      ),
+      "process.env.LANGFLOW_ROOT_PATH": JSON.stringify(
+        process.env.LANGFLOW_ROOT_PATH || envLangflow.LANGFLOW_ROOT_PATH || "",
       ),
     },
     plugins: [
