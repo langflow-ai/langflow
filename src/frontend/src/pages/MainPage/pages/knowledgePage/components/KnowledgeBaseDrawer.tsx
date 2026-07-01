@@ -30,12 +30,24 @@ const KnowledgeBaseDrawer = ({
     knowledgeBase.backend_config as Record<string, unknown> | undefined,
   );
   const backendTarget = getKnowledgeBaseBackendTarget(knowledgeBase);
+  const headingId = `kb-drawer-heading-${knowledgeBase.dir_name}`;
 
   return (
-    <div className="flex h-full w-80 flex-col border-l bg-background">
+    <div
+      role="region"
+      aria-labelledby={headingId}
+      className="flex h-full w-80 flex-col border-l bg-background"
+    >
       <div className="flex items-center justify-between pt-4 px-4">
-        <h3 className="font-semibold">{knowledgeBase.name}</h3>
-        <Button variant="ghost" size="iconSm" onClick={onClose}>
+        <h3 id={headingId} className="font-semibold">
+          {knowledgeBase.name}
+        </h3>
+        <Button
+          variant="ghost"
+          size="iconSm"
+          onClick={onClose}
+          aria-label={t("knowledge.a11y.closeDrawer")}
+        >
           <ForwardedIconComponent name="X" className="h-4 w-4" />
         </Button>
       </div>
@@ -51,27 +63,27 @@ const KnowledgeBaseDrawer = ({
           <Separator />
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">
+            <div className="text-sm font-medium">
               {t("knowledge.embeddingProviderLabel")}
-            </label>
+            </div>
             <div className="text-sm font-medium text-muted-foreground">
               {knowledgeBase.embedding_provider || t("knowledge.unknown")}
             </div>
           </div>
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">
+            <div className="text-sm font-medium">
               {t("knowledge.embeddingModelLabel")}
-            </label>
+            </div>
             <div className="text-sm font-medium text-muted-foreground">
               {knowledgeBase.embedding_model || t("knowledge.unknown")}
             </div>
           </div>
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">
+            <div className="text-sm font-medium">
               {t("knowledge.vectorStoreLabel")}
-            </label>
+            </div>
             <div className="text-sm font-medium text-muted-foreground">
               {backendLabel}
             </div>
@@ -79,9 +91,9 @@ const KnowledgeBaseDrawer = ({
 
           {backendTarget && (
             <div className="space-y-2 px-4">
-              <label className="text-sm font-medium">
+              <div className="text-sm font-medium">
                 {t("knowledge.targetLabel")}
-              </label>
+              </div>
               <div className="text-sm font-medium text-muted-foreground">
                 {backendTarget}
               </div>
@@ -89,9 +101,9 @@ const KnowledgeBaseDrawer = ({
           )}
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">
+            <div className="text-sm font-medium">
               {t("knowledge.statusLabel")}
-            </label>
+            </div>
             <div className="text-sm font-medium text-muted-foreground">
               {knowledgeBase.status || t("knowledge.unknown")}
             </div>

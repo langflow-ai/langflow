@@ -86,7 +86,11 @@ export const ChunksMetadataFilter = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72" align="end">
-        <div className="flex flex-col gap-2">
+        <div
+          className="flex flex-col gap-2"
+          role="group"
+          aria-describedby={error ? "kb-metadata-filter-error" : undefined}
+        >
           <MetadataCombobox
             value={key}
             onChange={(next) => {
@@ -142,7 +146,14 @@ export const ChunksMetadataFilter = ({
               {t("knowledge.chunksMetadataShowingFirst")}
             </span>
           )}
-          {error && <span className="text-xs text-destructive">{error}</span>}
+          {error && (
+            <span
+              id="kb-metadata-filter-error"
+              className="text-xs text-destructive"
+            >
+              {error}
+            </span>
+          )}
           <Button
             onClick={submit}
             size="sm"

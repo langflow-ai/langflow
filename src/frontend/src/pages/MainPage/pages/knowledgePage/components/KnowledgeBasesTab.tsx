@@ -310,6 +310,7 @@ const KnowledgeBasesTab = ({
             className="w-full"
             value={quickFilterText || ""}
             onChange={(event) => setQuickFilterText(event.target.value)}
+            aria-label={t("knowledge.a11y.searchKnowledgeBases")}
           />
         </div>
         {quantitySelected > 0 ? (

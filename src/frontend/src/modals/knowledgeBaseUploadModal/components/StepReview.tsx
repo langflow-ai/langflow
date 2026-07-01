@@ -118,6 +118,7 @@ export function StepReview({
             className="h-7 w-7 rounded-md hover:bg-accent"
             disabled={chunkPreviews.length === 0 || currentChunkIndex === 0}
             onClick={() => onCurrentChunkIndexChange(currentChunkIndex - 1)}
+            aria-label={t("knowledge.a11y.previousChunk")}
           >
             <ForwardedIconComponent
               name="ChevronLeft"
@@ -138,6 +139,7 @@ export function StepReview({
               currentChunkIndex === chunkPreviews.length - 1
             }
             onClick={() => onCurrentChunkIndexChange(currentChunkIndex + 1)}
+            aria-label={t("knowledge.a11y.nextChunk")}
           >
             <ForwardedIconComponent
               name="ChevronRight"

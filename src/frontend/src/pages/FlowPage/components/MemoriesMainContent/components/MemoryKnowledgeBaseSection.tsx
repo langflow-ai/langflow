@@ -133,6 +133,11 @@ export function MemoryKnowledgeBaseSection({
                 docs.map((doc, idx) => (
                   <TableRow
                     key={`${sessionId}-${doc.message_id}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t("knowledge.a11y.openDocument", {
+                      sender: doc.sender || "-",
+                    })}
                     className={cn(
                       "cursor-pointer",
                       idx === 0 && sessionId !== "(no session)"
@@ -140,6 +145,12 @@ export function MemoryKnowledgeBaseSection({
                         : "",
                     )}
                     onClick={() => handleOpenDocumentPanel(doc)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleOpenDocumentPanel(doc);
+                      }
+                    }}
                   >
                     <TableCell
                       className="text-xs text-muted-foreground [&>button]:text-left"

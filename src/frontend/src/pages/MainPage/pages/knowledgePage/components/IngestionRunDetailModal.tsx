@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -32,11 +33,25 @@ const IngestionRunDetailModal = ({
     run_id: runId,
   });
 
+  const titleId = "ingestion-run-detail-title";
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={titleId}
       onClick={onClose}
     >
       <div
@@ -45,7 +60,7 @@ const IngestionRunDetailModal = ({
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
-            <div className="text-sm font-semibold">
+            <div id={titleId} className="text-sm font-semibold">
               {t("knowledge.ingestionRunDetail")}
             </div>
             {data && (
@@ -55,7 +70,13 @@ const IngestionRunDetailModal = ({
               </div>
             )}
           </div>
-          <Button variant="ghost" size="iconSm" onClick={onClose}>
+          <Button
+            ref={closeButtonRef}
+            variant="ghost"
+            size="iconSm"
+            onClick={onClose}
+            aria-label={t("knowledge.a11y.closeDialog")}
+          >
             <ForwardedIconComponent name="X" className="h-4 w-4" />
           </Button>
         </div>
