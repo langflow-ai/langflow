@@ -2,11 +2,11 @@ import { render } from "@testing-library/react";
 import * as React from "react";
 import {
   Select,
+  SelectContent,
+  SelectContentWithoutPortal,
+  SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectContent,
-  SelectItem,
-  SelectContentWithoutPortal,
 } from "../select-custom";
 
 describe("Select - Radix Slot 1.3.0 compatibility", () => {
