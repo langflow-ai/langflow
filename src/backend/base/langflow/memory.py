@@ -186,12 +186,25 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
 
 async def _rollback_session_after_cancel(session: AsyncSession) -> None:
     rollback_task = asyncio.create_task(session.rollback())
-    while not rollback_task.done():
+    # Cleanup failures should be logged without replacing the original cancellation.
+    while True:
         try:
             await asyncio.shield(rollback_task)
         except asyncio.CancelledError:
-            continue
-    await rollback_task
+            if not rollback_task.done():
+                continue
+            try:
+                await rollback_task
+            except asyncio.CancelledError:
+                return
+            except Exception as e:  # noqa: BLE001
+                await logger.aexception(e)
+            return
+        except Exception as e:  # noqa: BLE001
+            await logger.aexception(e)
+            return
+        else:
+            return
 
 
 async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):

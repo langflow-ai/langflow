@@ -189,6 +189,21 @@ async def test_aadd_messagetables_finishes_rollback_when_cleanup_is_cancelled():
     session.rollback.assert_awaited_once()
 
 
+async def test_aadd_messagetables_keeps_cancelled_error_when_rollback_fails():
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=asyncio.CancelledError()),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(side_effect=RuntimeError("rollback failed")),
+    )
+
+    with pytest.raises(asyncio.CancelledError):
+        await aadd_messagetables([message], session)
+
+    session.rollback.assert_awaited_once()
+
+
 @pytest.mark.usefixtures("client")
 def test_delete_messages():
     session_id = "new_session_id"
