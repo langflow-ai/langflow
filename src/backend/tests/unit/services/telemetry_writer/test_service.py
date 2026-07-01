@@ -759,7 +759,7 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
         async def __aexit__(self, *_):
             return False
 
-        async def execute(self, *_):
+        async def execute(self, *_, **__):
             await hang.wait()
 
         async def commit(self):

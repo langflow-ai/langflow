@@ -101,8 +101,8 @@
             "description": "# 🔎 Knowledge Retrieval\n\nRun a semantic search against a **Knowledge Base** and return the matching passages — **pure retrieval, no LLM** (the output is the raw retrieved text, not a generated answer). Use it to inspect what your KB returns, or as a building block for a RAG flow.\n\n> **Prerequisite:** you need a Knowledge Base that already has data in it. Create and populate one under **Knowledge Bases**, or ingest documents with another flow first.\n\n## Setup\n1. **Knowledge** node → pick your Knowledge Base from the dropdown (click **Refresh List** if it's not shown).\n2. (Optional) set a default **Search Query**.\n\n## Use\nOpen the **Playground**, type a query → the flow returns the top matching passages (default **5**, configurable under **Controls**).\n\n## How it works\n1. **Chat Input → Knowledge (Retrieve)** — semantic search over the KB.\n2. **Parser → Chat Output** — formats the retrieved passages as readable text.",
             "display_name": "",
             "documentation": "",
-            "template": {},
-            "i18n_key": "template_notes.knowledge_retrieval.7b546850"
+            "i18n_key": "template_notes.knowledge_retrieval.7b546850",
+            "template": {}
           },
           "type": "note"
         },
