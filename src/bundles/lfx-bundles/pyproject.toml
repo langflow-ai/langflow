@@ -89,7 +89,6 @@ unstructured = ["langchain-unstructured~=1.0.0"]
 upstash = ["upstash-vector==0.6.0", "langchain-community>=0.4.1,<1.0.0"]
 vectara = ["langchain-community>=0.4.1,<1.0.0"]
 vertexai = ["langchain-google-vertexai>=3.2.0"]
-vllm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 vlmrun = ["vlmrun[all]>=0.2.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0", "langchain-weaviate>=0.0.6"]
 wikipedia = ["wikipedia==1.4.0", "langchain-community>=0.4.1,<1.0.0"]
@@ -162,7 +161,6 @@ all = [
     "lfx-bundles[upstash]",
     "lfx-bundles[vectara]",
     "lfx-bundles[vertexai]",
-    "lfx-bundles[vllm]",
     "lfx-bundles[vlmrun]",
     "lfx-bundles[weaviate]",
     "lfx-bundles[wikipedia]",

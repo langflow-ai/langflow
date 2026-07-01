@@ -78,6 +78,9 @@ class TestAllModulesImportable:
         # 3.14-gating moved with them.
         gated_on_py314 = {
             "altk.ALTKAgentComponent",
+            "crewai.CrewAIAgentComponent",
+            "crewai.HierarchicalCrewComponent",
+            "crewai.SequentialCrewComponent",
         }
         on_py314 = sys.version_info >= (3, 14)
 
