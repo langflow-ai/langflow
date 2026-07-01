@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from copy import deepcopy
 from typing import Any, cast
 
 import litellm
@@ -123,6 +124,22 @@ def convert_tools(tools):
     return [Tool.from_langchain(tool) for tool in tools]
 
 
+def _build_runtime_copy_memo(*objects: Any) -> dict[int, Any]:
+    """Preserve non-copyable runtime-bound attributes during deepcopy."""
+    memo: dict[int, Any] = {}
+    for obj in objects:
+        if obj is None:
+            continue
+        items = obj if isinstance(obj, list | tuple | set) else [obj]
+        for item in items:
+            for attr in ("llm", "tools"):
+                if hasattr(item, attr):
+                    value = getattr(item, attr)
+                    if value is not None:
+                        memo[id(value)] = value
+    return memo
+
+
 class BaseCrewComponent(Component):
     description: str = (
         "Represents a group of agents, defining how they should collaborate and the tasks they should perform."
@@ -160,21 +177,35 @@ class BaseCrewComponent(Component):
         if not agents_list:
             agents_list = self.agents or []
 
+        copied_state = deepcopy(
+            {"tasks": self.tasks, "agents": agents_list},
+            _build_runtime_copy_memo(self.tasks, agents_list),
+        )
+        tasks = copied_state["tasks"]
+        agents_copy = copied_state["agents"]
+
         # Set all the agents llm attribute to the crewai llm
-        for agent in agents_list:
+        for agent in agents_copy:
             # Convert Agent LLM and Tools to proper format
             agent.llm = convert_llm(agent.llm)
             agent.tools = convert_tools(agent.tools)
 
-        return self.tasks, agents_list
+        return tasks, agents_copy
 
     def get_manager_llm(self):
         if not self.manager_llm:
             return None
 
-        self.manager_llm = convert_llm(self.manager_llm)
+        return convert_llm(self.manager_llm)
 
-        return self.manager_llm
+    def get_manager_agent(self):
+        if not getattr(self, "manager_agent", None):
+            return None
+
+        manager_agent = deepcopy(self.manager_agent, _build_runtime_copy_memo(self.manager_agent))
+        manager_agent.llm = convert_llm(manager_agent.llm)
+        manager_agent.tools = convert_tools(manager_agent.tools)
+        return manager_agent
 
     def build_crew(self):
         msg = "build_crew must be implemented in subclasses"

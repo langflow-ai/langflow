@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -30,7 +31,17 @@ def allow_custom_components_by_default(monkeypatch):
     """Keep LFX tests aligned with the documented default unless a test opts out."""
     from lfx.services.deps import get_settings_service
 
-    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+    settings_service = get_settings_service()
+    if settings_service is None:
+        settings_service = SimpleNamespace(
+            settings=SimpleNamespace(
+                allow_custom_components=True,
+                fallback_to_env_var=True,
+            )
+        )
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
 
 
 # Set up test data paths
