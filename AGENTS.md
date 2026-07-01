@@ -6,6 +6,16 @@ This file provides guidance to AI coding agents when working with code in this r
 
 Langflow is a visual workflow builder for AI-powered agents. It has a Python/FastAPI backend, React/TypeScript frontend, and a lightweight executor CLI (lfx).
 
+## Contributor Guardrail Skills
+
+Author-time skills under `.agents/skills/` (the cross-tool [Agent Skills](https://agentskills.io/) convention — read by IBM Bob, Codex CLI, Gemini CLI, Copilot, and other compatible agents) auto-fire when contributors edit specific surfaces. They surface the engineering practices an experienced contributor would apply by reflex — tests, formatting, identifier stability, the consult-a-maintainer expectation on user-visible changes. Most are advisory; the breaking-change gate halts work until explicit agreement is confirmed.
+
+- `langflow-component-edit` — components under `src/backend/base/langflow/components/`.
+- `langflow-ux-change` — user-visible changes under `src/frontend/` or to component `display_name`/`description`/`icon`.
+- `langflow-starter-project-edit` — starter projects under `src/backend/base/langflow/initial_setup/starter_projects/`.
+- `langflow-issue-or-spec` — drafting GitHub issues, RFCs, design docs.
+- `langflow-breaking-change-gate` — gates renames/removals of identifiers, public exports, API routes, schema fields, migrations, and CLI commands.
+
 ## Prerequisites
 
 - **Python:** 3.10-3.14
@@ -60,6 +70,8 @@ make alembic-revision message="Description"  # Create migration
 make alembic-upgrade                         # Apply migrations
 make alembic-downgrade                       # Rollback one version
 ```
+
+**IMPORTANT:** Database migrations are permanent once shipped. Once a migration has run on user databases it cannot be edited or removed. Any new or modified migration requires maintainer agreement before merge — both the schema shape (is this the right column/table forever?) and the rollback story.
 
 ## Architecture
 
@@ -138,7 +150,7 @@ Components live in `src/backend/base/langflow/components/`. To add a new compone
 3. Add to `__init__.py` (alphabetical order)
 4. Run with `LFX_DEV=1 make backend` for hot reload
 
-**IMPORTANT:** Changing a component's class name is a breaking change and should never be done. The class name serves as an identifier used to match components in saved flows and to flag them for updates in the UI. Renaming it will break existing flows that use that component.
+**IMPORTANT:** A component's class name, input `name=` fields, output `name=` fields, and output `method=` fields are all identifiers stored in users' saved flow files. Renaming or removing any of them is a breaking change and requires maintainer agreement before merge. Editing `display_name`, `description`, or `icon` is fine — those are not identifiers.
 
 ### Component Structure
 ```python
@@ -175,6 +187,8 @@ Required fixtures: `component_class`, `default_kwargs`, `file_names_mapping`
 - **Zustand** for state management
 - **@xyflow/react** for graph visualization
 - **Tailwind CSS** for styling
+
+**IMPORTANT:** User-visible UI, copy, icon, or component-metadata changes are product decisions. Consult a maintainer or decision-maker before shipping them, not after. Run and update Playwright tests (`make tests_frontend`) when behavior changes.
 
 ### Custom Icons
 1. Create SVG component in `src/frontend/src/icons/YourIcon/`
