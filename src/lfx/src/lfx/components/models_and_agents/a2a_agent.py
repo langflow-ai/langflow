@@ -15,7 +15,7 @@ from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
 from lfx.schema.message import Message
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
-from lfx.utils.ssrf_transport import create_ssrf_protected_client
+from lfx.utils.ssrf_transport import SSRFProtectedTransport
 
 DEFAULT_TIMEOUT = 60.0
 # Cap aggregated reply size so a chatty/streaming agent can't make us buffer unbounded text.
@@ -37,42 +37,51 @@ def build_a2a_client(
 ) -> httpx.AsyncClient:
     """Build the httpx client used for all A2A calls, anchored to the ``agent_url`` origin.
 
-    ``create_ssrf_protected_client`` only DNS-pins the ``agent_url`` host, so same-origin
-    targets (the card GET and a same-origin ``message/send`` POST) are validated up front by
-    ``send_to_agent`` and pinned to ``validated_ips``. A spec-compliant agent card may
-    legitimately advertise its RPC ``url`` on a *different* origin; the transport does NOT pin
-    that host (it falls through to normal DNS with no SSRF check), and the configured
-    ``x-api-key`` must never reach it.
+    The client always uses the DNS-pinning transport over a single, mutable ``pinned_ips`` map.
+    The map is seeded with the ``agent_url`` host (validated up front by ``send_to_agent``), so
+    same-origin targets (the card GET and a same-origin ``message/send`` POST) carry the
+    ``x-api-key`` and connect to the pinned IPs. An allowlisted agent host resolves to no IPs
+    (trusted by config) and is simply left unpinned, matching the SSRF util.
 
-    The per-request hook handles those off-origin hops: it strips the ``x-api-key`` header so
-    the key only ever reaches the configured agent, and it SSRF-validates the target (resolve
-    + reject internal/metadata IPs) before the connection opens, covering the unpinned host the
-    transport doesn't. Same-origin requests are already validated and pinned, so they keep the
-    key and skip the redundant re-resolution. Redirects stay disabled so a 3xx can't smuggle the
-    key or connection to an unvalidated host.
+    A spec-compliant agent card may legitimately advertise its RPC ``url`` on a *different*
+    origin. The per-request hook handles those off-origin hops: it strips the ``x-api-key`` so
+    the key only ever reaches the configured agent, then SSRF-validates the target (resolve +
+    reject internal/metadata IPs) AND pins the validated IPs into the shared map before the
+    connection opens. Pinning is the fix for a DNS-rebind window: without it the hook validates
+    a public answer but httpx then does a fresh, unpinned lookup that could rebind to an internal
+    IP. Writing the validated IPs into the map the transport reads at connect time makes the
+    connection use exactly what was cleared, with no second resolution. Same-origin requests are
+    already validated and pinned, so they keep the key and skip the redundant re-resolution.
+    Redirects stay disabled so a 3xx can't smuggle the key or connection to an unvalidated host.
     """
     agent_origin = _origin(agent_url)
+    hostname = httpx.URL(agent_url).host
+    # Shared, mutable host -> validated-IPs map read by the transport's network backend at
+    # connect time. The hook adds each off-origin host before its connection opens; the a2a
+    # client issues its hops sequentially, so there is no concurrent write to this dict.
+    pinned_ips: dict[str, list[str]] = {}
+    if validated_ips and hostname:
+        pinned_ips[hostname] = list(validated_ips)
 
     async def _guard_request(request: httpx.Request) -> None:
         if _origin(request.url) == agent_origin:
             return
         # Off-origin hop: never leak the configured api key to a card-declared foreign host.
         request.headers.pop("x-api-key", None)
-        # The transport doesn't pin this host, so SSRF-validate it here (resolves the hostname
-        # and raises SSRFProtectionError if any resolved IP is blocked) before the connection
-        # opens. to_thread keeps the blocking DNS resolution off the event loop.
-        await asyncio.to_thread(validate_and_resolve_url, str(request.url))
+        # SSRF-validate the target (raises SSRFProtectionError if any resolved IP is blocked),
+        # then pin the validated IPs so httpx connects to exactly what we cleared instead of a
+        # fresh lookup a rebind could poison. to_thread keeps the blocking DNS off the event loop.
+        _validated_url, off_origin_ips = await asyncio.to_thread(validate_and_resolve_url, str(request.url))
+        if request.url.host and off_origin_ips:
+            pinned_ips[request.url.host] = off_origin_ips
 
-    client_kwargs = {
-        "timeout": timeout,
-        "headers": {"x-api-key": api_key} if api_key else None,
-        "follow_redirects": False,
-        "event_hooks": {"request": [_guard_request]},
-    }
-    hostname = httpx.URL(agent_url).host
-    if validated_ips and hostname:
-        return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips, **client_kwargs)
-    return httpx.AsyncClient(**client_kwargs)
+    return httpx.AsyncClient(
+        transport=SSRFProtectedTransport(pinned_ips=pinned_ips),
+        timeout=timeout,
+        headers={"x-api-key": api_key} if api_key else None,
+        follow_redirects=False,
+        event_hooks={"request": [_guard_request]},
+    )
 
 
 async def call_a2a_agent(
