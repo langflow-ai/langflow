@@ -43,6 +43,7 @@ dependencies = [
     "lfx-paddle>=0.1.0,<1.0.0",
     "lfx-vllm>=0.1.0,<1.0.0",
     "lfx-empiriolabs>=0.1.0,<1.0.0",
+    "lfx-openai-compatible>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -116,6 +117,7 @@ lfx-nextplaid = { workspace = true }
 lfx-paddle = { workspace = true }
 lfx-vllm = { workspace = true }
 lfx-empiriolabs = { workspace = true }
+lfx-openai-compatible = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -144,6 +146,7 @@ members = [
     "src/bundles/paddle",
     "src/bundles/vllm",
     "src/bundles/empiriolabs",
+    "src/bundles/openai-compatible",
     # langflow-extensions:bundle-members-end
 ]
 
