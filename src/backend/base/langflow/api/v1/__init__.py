@@ -10,6 +10,7 @@ from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.extensions import router as extensions_router
 from langflow.api.v1.files import router as files_router
 from langflow.api.v1.flow_events import router as flow_events_router
+from langflow.api.v1.flow_graph import router as flow_graph_router
 from langflow.api.v1.flow_version import router as flow_version_router
 from langflow.api.v1.flows import router as flows_router
 from langflow.api.v1.folders import router as folders_router
@@ -44,6 +45,7 @@ __all__ = [
     "extensions_router",
     "files_router",
     "flow_events_router",
+    "flow_graph_router",
     "flow_version_router",
     "flows_router",
     "folders_router",
