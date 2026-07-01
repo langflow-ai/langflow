@@ -1,13 +1,15 @@
 // Lothal landing page (Epic 0.5) — the public front door at "/". The marketing
-// surface for the verification-driven build pipeline: a sticky blur nav, a
-// centered hero with an early-access pill and a live product preview of the
-// sample bakery project ("larder" — clarification chat beside a diagram), a
-// principles grid, the six stages (Clarify → Design → Prototype → Plan →
-// Generate → Deliver), a verification-driven-planning band (the differentiator),
-// the artifacts you accumulate, a glowing closing CTA, and the footer. Stages 5
-// and 6 (Generate, Deliver) are not built yet, so they're tagged "Coming next".
-// The page's only actions are Log in and Sign up — it never opens the projects
-// app directly; /lothal lives behind auth (ProtectedRoute).
+// surface, reframed for a developer / technical-founder audience as a "trust
+// ladder": the emotion it answers is a skeptical engineer's distrust of AI
+// codegen, so the page argues that Lothal is disciplined software engineering
+// ACCELERATED by AI — with the discipline enforced, not optional. Running order:
+// sticky blur nav, hero (early-access pill + live preview), the reframe band
+// (name the problem), an honest phase ribbon (Generate/Deliver are not built yet
+// → tagged "coming"), then the ladder — Clarify, Architecture (risk-ordered),
+// the enforced-validation gate (flagship 1), the contract/dependency tree
+// (flagship 2, the visual centerpiece), git-per-node + traceability, delivery,
+// a "pay for verified work" trust line, the closing CTA, and the footer.
+// The page's only actions are Log in and Sign up; /lothal lives behind auth.
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +18,6 @@ import {
   isCodePhase,
   LOTHAL_VERSION,
   LothalMark,
-  type LothalPhaseId,
   PHASES,
   SampleDiagram,
   type SampleMessage,
@@ -24,45 +25,18 @@ import {
 } from "../components";
 import { LothalSurface } from "../theme/LothalSurface";
 
-// Step copy from the design, keyed by the shared phase ids so a phase added
-// or renamed in phases.ts fails loudly here instead of drifting. The Record
-// requires all six keys — Generate and Deliver aren't built yet (they're tagged
-// "Coming next" in the UI), so their copy is written in a forward register.
-const STEP_COPY: Record<LothalPhaseId, string> = {
-  CLARIFICATION:
-    "Describe what you want in plain words; Lothal answers with focused questions — multiple choice or free text — until no assumptions are left, then captures it as a PRD.",
-  ARCHITECTURE:
-    "Lothal turns the spec into an Architecture Decision Record plus context, container, data-model, and sequence diagrams — refined by conversation and approved by you.",
-  PROTOTYPE:
-    "From the approved design, Lothal drives Open Design to produce an interactive UI/UX prototype you can preview, edit, and comment on without leaving the page.",
-  PLAN: "Lothal breaks the work into a tree — app, component, epic, story — and gives each item an assume-guarantee contract, acceptance criteria, and frozen tests before a line is written.",
-  CODE_GENERATION:
-    "Each ratified item is implemented against the very tests and contract it was frozen with — a definition of done the build can't move.",
-  DONE: "Leave with every artifact — PRD, diagrams, prototype, and code — each one traceable back to the plan you ratified.",
-};
-
-// A short serif lead shown under each step's label.
-const STEP_LEAD: Record<LothalPhaseId, string> = {
-  CLARIFICATION: "Questions until the spec is solid",
-  ARCHITECTURE: "An ADR and four diagrams",
-  PROTOTYPE: "See it before you build it",
-  PLAN: "Every item carries a contract",
-  CODE_GENERATION: "Built against a frozen spec",
-  DONE: "Take the whole project with you",
-};
-
 const SECTION_IDS = {
   how: "lothal-how",
-  plan: "lothal-plan",
+  gate: "lothal-gate",
+  tree: "lothal-tree",
   deliver: "lothal-deliver",
 } as const;
 
-// --- The sample bakery project ("larder") --------------------------------------
-// The same mini system the design mocks up, drawn as a sequence diagram (the
-// product's real output, Epic D): a customer submits an order, the order service
-// reserves stock, inventory reports back, and the kitchen board pings the
-// customer. Decorative — <SampleDiagram> is a static illustration, not the live
-// <D2Canvas>.
+// --- The sample project ("larder") ---------------------------------------------
+// The same mini system used across the app's mocks, drawn as a sequence diagram
+// (the product's real Design output, Epic D): a customer submits an order, the
+// order service reserves stock, inventory reports back, the kitchen board pings
+// the customer. Decorative — <SampleDiagram> is a static illustration.
 
 const LARDER_PARTICIPANTS: SampleParticipant[] = [
   { id: "customer", label: "Customer" },
@@ -110,7 +84,6 @@ function SceneChat() {
           textAlign: "left",
         }}
       >
-        {/* user */}
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <div
             style={{
@@ -126,7 +99,6 @@ function SceneChat() {
             A tool to track bakery inventory and the week's orders.
           </div>
         </div>
-        {/* assistant question with choice chips */}
         <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
           <span
             style={{
@@ -189,7 +161,6 @@ function SceneChat() {
             </div>
           </div>
         </div>
-        {/* assistant streaming line */}
         <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
           <span
             style={{
@@ -256,7 +227,6 @@ function HeroScene() {
         overflow: "hidden",
       }}
     >
-      {/* Window chrome */}
       <div
         style={{
           display: "flex",
@@ -301,7 +271,6 @@ function HeroScene() {
         <span style={{ width: 56 }} />
       </div>
 
-      {/* Split: chat + canvas */}
       <div
         className="land-hero-split"
         style={{
@@ -345,7 +314,7 @@ function HeroScene() {
   );
 }
 
-// --- Section head helper ---------------------------------------------------------
+// --- Section head + shared bits --------------------------------------------------
 
 /** Eyebrow + serif title + optional sub, centered or left-aligned. */
 function SectionHead({
@@ -367,7 +336,7 @@ function SectionHead({
         gap: 12,
         alignItems: align === "center" ? "center" : "flex-start",
         textAlign: align === "center" ? "center" : "left",
-        maxWidth: align === "center" ? 640 : "none",
+        maxWidth: align === "center" ? 660 : "none",
         margin: align === "center" ? "0 auto" : 0,
       }}
     >
@@ -401,85 +370,202 @@ function SectionHead({
   );
 }
 
-// --- Plan node preview (the verification band's right visual) --------------------
-
-/** A static mock of a PLAN node's detail: kind, state machine, frozen contract,
- *  and frozen tests — the verification artifact the differentiator describes. */
-function PlanNodeScene() {
-  const states = [
-    "draft",
-    "ratified",
-    "in-progress",
-    "in-verification",
-    "verified",
-  ];
-  const current = "ratified";
-  const chip = (text: string, hue: string) => (
+/** A small "Coming next" chip — the honesty marker for code-generation features
+ *  that aren't live yet, matching the phase-ribbon's treatment. */
+function ComingChip() {
+  return (
     <span
       className="mono"
       style={{
-        fontSize: 9.5,
-        fontWeight: 600,
-        textTransform: "uppercase",
-        letterSpacing: "0.04em",
-        color: hue,
-        background: `color-mix(in srgb, ${hue} 15%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${hue} 35%, transparent)`,
-        borderRadius: 5,
-        padding: "2px 7px",
+        fontSize: 10.5,
+        color: "var(--ink-faint)",
+        border: "1px solid var(--border)",
+        borderRadius: 999,
+        padding: "2px 9px",
         whiteSpace: "nowrap",
       }}
     >
-      {text}
+      Coming next
     </span>
   );
-  const cardLabel = (label: string) => (
-    <span
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 7,
-        marginBottom: 9,
-      }}
-    >
-      <span className="label" style={{ color: "var(--ink-mute)" }}>
-        {label}
-      </span>
+}
+
+/** A two-column feature row: copy (eyebrow/title/body/bullets) beside a visual.
+ *  `flip` puts the visual on the left; used to alternate the ladder's rhythm. */
+function FeatureRow({
+  eyebrow,
+  title,
+  body,
+  bullets,
+  aside,
+  coming,
+  visual,
+  flip,
+}: {
+  eyebrow: string;
+  title: ReactNode;
+  body: ReactNode;
+  bullets?: string[];
+  aside?: string;
+  coming?: boolean;
+  visual: ReactNode;
+  flip?: boolean;
+}) {
+  const copy = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <span
-        className="mono"
         style={{
-          fontSize: 9,
-          color: "var(--ink-soft)",
-          border: "1px solid var(--border)",
-          borderRadius: 5,
-          padding: "1px 6px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap",
         }}
       >
-        frozen ⟡
+        <span className="label" style={{ color: "var(--accent)" }}>
+          {eyebrow}
+        </span>
+        {coming && <ComingChip />}
       </span>
-    </span>
-  );
-  const cardStyle = {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 11,
-    padding: "13px 15px",
-  } as const;
-  const bullet = (mark: string, hue: string, text: string) => (
-    <div
-      style={{
-        display: "flex",
-        gap: 8,
-        fontSize: 12.5,
-        color: "var(--ink-90)",
-        lineHeight: 1.45,
-      }}
-    >
-      <span style={{ color: hue, flex: "none", fontWeight: 700 }}>{mark}</span>
-      <span>{text}</span>
+      <h2
+        className="serif"
+        style={{
+          fontSize: "clamp(26px, 3vw, 36px)",
+          lineHeight: 1.18,
+          letterSpacing: "-0.015em",
+          color: "var(--ink)",
+          margin: 0,
+        }}
+      >
+        {title}
+      </h2>
+      <p
+        style={{
+          fontSize: 15.5,
+          lineHeight: 1.7,
+          color: "var(--ink-mute)",
+          margin: 0,
+          maxWidth: 540,
+        }}
+      >
+        {body}
+      </p>
+      {bullets && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {bullets.map((b) => (
+            <div
+              key={b}
+              style={{ display: "flex", alignItems: "flex-start", gap: 10 }}
+            >
+              <span
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 5,
+                  flexShrink: 0,
+                  marginTop: 1,
+                  background: "var(--accent-soft)",
+                  color: "var(--accent)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11,
+                }}
+              >
+                ✓
+              </span>
+              <span
+                style={{
+                  fontSize: 14.5,
+                  color: "var(--ink-90)",
+                  lineHeight: 1.5,
+                }}
+              >
+                {b}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {aside && (
+        <p
+          style={{
+            fontSize: 13,
+            lineHeight: 1.6,
+            color: "var(--ink-soft)",
+            margin: 0,
+            paddingLeft: 12,
+            borderLeft: "2px solid var(--border-strong)",
+            maxWidth: 520,
+          }}
+        >
+          {aside}
+        </p>
+      )}
     </div>
   );
+  return (
+    <div
+      className="land-feature"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 48,
+        alignItems: "center",
+      }}
+    >
+      {flip ? (
+        <>
+          <div className="land-feature-visual">{visual}</div>
+          {copy}
+        </>
+      ) : (
+        <>
+          {copy}
+          <div className="land-feature-visual">{visual}</div>
+        </>
+      )}
+    </div>
+  );
+}
 
+// --- Scene: the enforced gate (flagship 1) ---------------------------------------
+
+const chip = (text: string, hue: string) => (
+  <span
+    className="mono"
+    style={{
+      fontSize: 9.5,
+      fontWeight: 600,
+      textTransform: "uppercase",
+      letterSpacing: "0.04em",
+      color: hue,
+      background: `color-mix(in srgb, ${hue} 15%, transparent)`,
+      border: `1px solid color-mix(in srgb, ${hue} 35%, transparent)`,
+      borderRadius: 5,
+      padding: "2px 7px",
+      whiteSpace: "nowrap",
+    }}
+  >
+    {text}
+  </span>
+);
+
+const GREEN = "#4e9a6a";
+const AMBER = "#c9903a";
+
+/** The gate visual: a node's acceptance criteria, each either covered by a
+ *  passing test or — for the uncovered one — rejected, blocking "verified". */
+function GateScene() {
+  const criteria: Array<{ text: string; test: string | null }> = [
+    { text: "Rejects expired or unknown codes", test: "unit · pass" },
+    { text: "Applies at most one discount per order", test: "unit · pass" },
+    {
+      text: "Recomputes the order total server-side",
+      test: "integration · pass",
+    },
+    { text: "Reflects the discount in the receipt", test: null },
+  ];
+  const covered = criteria.filter((c) => c.test).length;
   return (
     <div
       style={{
@@ -499,15 +585,14 @@ function PlanNodeScene() {
           gap: 10,
         }}
       >
-        <span className="label">Plan</span>
+        <span className="label">Definition of done</span>
         <span
           className="mono"
           style={{ fontSize: 10, color: "var(--ink-faint)" }}
         >
-          node detail
+          enforced
         </span>
       </div>
-
       <div
         style={{
           padding: 18,
@@ -517,180 +602,506 @@ function PlanNodeScene() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          {chip("story", "#4e9a6a")}
-          <span className="serif" style={{ fontSize: 18, color: "var(--ink)" }}>
+          {chip("story", GREEN)}
+          <span className="serif" style={{ fontSize: 17, color: "var(--ink)" }}>
             Apply a discount code at checkout
           </span>
         </div>
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {states.map((s) => {
-            const on = s === current;
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {criteria.map((c) => {
+            const ok = !!c.test;
+            const hue = ok ? GREEN : "#c05b52";
             return (
-              <span
-                key={s}
-                className="mono"
+              <div
+                key={c.text}
                 style={{
-                  fontSize: 10,
-                  padding: "3px 8px",
-                  borderRadius: 999,
-                  color: on ? "var(--accent-fg)" : "var(--ink-soft)",
-                  background: on ? "var(--accent)" : "var(--surface)",
-                  border: `1px solid ${on ? "var(--accent)" : "var(--border)"}`,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "9px 11px",
+                  borderRadius: 9,
+                  background: "var(--surface)",
+                  border: `1px solid color-mix(in srgb, ${hue} 28%, var(--border))`,
                 }}
               >
-                {s}
-              </span>
+                <span
+                  style={{
+                    width: 17,
+                    height: 17,
+                    borderRadius: 5,
+                    flex: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    color: "#fff",
+                    background: hue,
+                  }}
+                >
+                  {ok ? "✓" : "✕"}
+                </span>
+                <span
+                  style={{ flex: 1, fontSize: 12.5, color: "var(--ink-90)" }}
+                >
+                  {c.text}
+                </span>
+                {ok ? (
+                  <span
+                    className="mono"
+                    style={{ fontSize: 9.5, color: "var(--ink-soft)" }}
+                  >
+                    {c.test}
+                  </span>
+                ) : (
+                  chip("no test — rejected", "#c05b52")
+                )}
+              </div>
             );
           })}
         </div>
-
-        <div style={cardStyle}>
-          {cardLabel("Contract")}
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            <div>
-              <div className="label" style={{ marginBottom: 4 }}>
-                Assumes
-              </div>
-              {bullet(
-                "→",
-                "var(--ink-soft)",
-                "a valid cart and a signed-in shopper",
-              )}
-            </div>
-            <div>
-              <div className="label" style={{ marginBottom: 4 }}>
-                Guarantees
-              </div>
-              {bullet("✓", "#4e9a6a", "one discount applied, or a typed error")}
-            </div>
-          </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            padding: "10px 12px",
+            borderRadius: 9,
+            background: "color-mix(in srgb, #c05b52 10%, transparent)",
+            border: "1px solid color-mix(in srgb, #c05b52 32%, transparent)",
+          }}
+        >
+          <span style={{ fontSize: 12.5, color: "var(--ink-90)" }}>
+            {covered} of {criteria.length} criteria covered — can't be verified.
+          </span>
+          <span
+            className="mono"
+            style={{ fontSize: 10.5, color: "#c05b52", fontWeight: 600 }}
+          >
+            blocked
+          </span>
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <div style={cardStyle}>
-          {cardLabel("Tests")}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <span
-                className="mono"
-                style={{
-                  fontSize: 9.5,
-                  color: "#5b8dc9",
-                  flex: "none",
-                  width: 64,
-                }}
-              >
-                unit
-              </span>
-              <span style={{ flex: 1, fontSize: 12, color: "var(--ink-90)" }}>
-                rejects expired or unknown codes
-              </span>
-              {chip("pass", "#4e9a6a")}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <span
-                className="mono"
-                style={{
-                  fontSize: 9.5,
-                  color: "#c074b0",
-                  flex: "none",
-                  width: 64,
-                }}
-              >
-                integration
-              </span>
-              <span style={{ flex: 1, fontSize: 12, color: "var(--ink-90)" }}>
-                recomputes the order total
-              </span>
-              {chip("pending", "var(--ink-soft)")}
-            </div>
-          </div>
+// --- Scene: the contract / dependency tree (flagship 2 — the centerpiece) ---------
+
+/** The showstopper visual: a live dependency tree of contracts. One node's
+ *  contract just changed (amber); everything downstream is flagged to re-verify
+ *  in a click, while independent branches still hold. "No surprises." */
+function ContractTreeScene() {
+  // Fixed layout on a small grid so the connectors line up crisply.
+  const W = 176;
+  const node = (
+    x: number,
+    y: number,
+    label: string,
+    kind: string,
+    state: "changed" | "reverify" | "holds",
+  ) => {
+    const map = {
+      changed: { hue: AMBER, tag: "contract changed" },
+      reverify: { hue: AMBER, tag: "re-verify" },
+      holds: { hue: GREEN, tag: "holds" },
+    } as const;
+    const { hue, tag } = map[state];
+    const dashed = state === "reverify";
+    return (
+      <div
+        style={{
+          position: "absolute",
+          left: x,
+          top: y,
+          width: W,
+          boxSizing: "border-box",
+          padding: "9px 11px",
+          borderRadius: 10,
+          background: "var(--surface)",
+          border: `1.5px ${dashed ? "dashed" : "solid"} color-mix(in srgb, ${hue} ${state === "holds" ? 40 : 70}%, var(--border))`,
+          boxShadow:
+            state === "changed"
+              ? `0 0 0 3px color-mix(in srgb, ${hue} 22%, transparent)`
+              : "none",
+          zIndex: 2,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            className="mono"
+            style={{ fontSize: 8.5, color: "var(--ink-soft)" }}
+          >
+            {kind}
+          </span>
+          <span
+            className="mono"
+            style={{
+              marginLeft: "auto",
+              fontSize: 8.5,
+              fontWeight: 600,
+              color: hue,
+            }}
+          >
+            {tag}
+          </span>
         </div>
+        <div style={{ fontSize: 12.5, color: "var(--ink)", marginTop: 2 }}>
+          {label}
+        </div>
+      </div>
+    );
+  };
 
+  return (
+    <div
+      style={{
+        borderRadius: 16,
+        border: "1px solid var(--border-strong)",
+        background: "var(--paper)",
+        overflow: "hidden",
+        boxShadow: "0 40px 90px -44px rgba(0,0,0,.55)",
+      }}
+    >
+      <div
+        style={{
+          padding: "11px 16px",
+          borderBottom: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span className="label">Dependency tree</span>
         <span
           className="mono"
-          style={{ fontSize: 10.5, color: "var(--ink-soft)" }}
+          style={{ fontSize: 10, color: "var(--ink-faint)" }}
         >
-          read-only to the implementer
+          contracts · live
+        </span>
+        <span
+          className="mono"
+          style={{
+            marginLeft: "auto",
+            fontSize: 10,
+            color: AMBER,
+            border: `1px solid color-mix(in srgb, ${AMBER} 45%, transparent)`,
+            borderRadius: 999,
+            padding: "3px 10px",
+          }}
+        >
+          ↻ Re-verify downstream
+        </span>
+      </div>
+
+      <div style={{ position: "relative", height: 320, padding: "8px 12px" }}>
+        {/* connectors */}
+        <svg
+          width="100%"
+          height="100%"
+          style={{ position: "absolute", inset: 0, zIndex: 1 }}
+          aria-hidden
+          preserveAspectRatio="none"
+        >
+          <title>Contract dependency edges</title>
+          {/* Checkout → Cart / Discounts / Payment */}
+          <path
+            d="M108,74 C108,104 96,104 96,132"
+            fill="none"
+            stroke="var(--border-strong)"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M150,74 C220,104 250,104 250,132"
+            fill="none"
+            stroke={`color-mix(in srgb, ${AMBER} 60%, transparent)`}
+            strokeWidth="1.5"
+          />
+          <path
+            d="M170,74 C360,104 404,104 404,132"
+            fill="none"
+            stroke="var(--border-strong)"
+            strokeWidth="1.5"
+          />
+          {/* Discounts → Order total (downstream, amber dashed) */}
+          <path
+            d="M262,178 C262,208 250,208 250,238"
+            fill="none"
+            stroke={`color-mix(in srgb, ${AMBER} 70%, transparent)`}
+            strokeWidth="1.5"
+            strokeDasharray="4 4"
+          />
+          {/* Payment → Order total (downstream, amber dashed) */}
+          <path
+            d="M404,178 C404,208 300,208 300,238"
+            fill="none"
+            stroke={`color-mix(in srgb, ${AMBER} 70%, transparent)`}
+            strokeWidth="1.5"
+            strokeDasharray="4 4"
+          />
+        </svg>
+
+        {node(70, 34, "Checkout", "app", "holds")}
+        {node(8, 132, "Cart", "component", "holds")}
+        {node(174, 132, "Discounts", "component", "changed")}
+        {node(316, 132, "Payment", "component", "reverify")}
+        {node(174, 238, "Order total", "story", "reverify")}
+      </div>
+
+      <div
+        style={{
+          padding: "11px 16px",
+          borderTop: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          flexWrap: "wrap",
+          fontSize: 11.5,
+          color: "var(--ink-soft)",
+        }}
+      >
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{
+              width: 9,
+              height: 9,
+              borderRadius: 3,
+              background: `color-mix(in srgb, ${AMBER} 70%, transparent)`,
+            }}
+          />
+          2 nodes need re-ratifying against the new contract
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{
+              width: 9,
+              height: 9,
+              borderRadius: 3,
+              background: `color-mix(in srgb, ${GREEN} 70%, transparent)`,
+            }}
+          />
+          Cart is unaffected — it still holds
         </span>
       </div>
     </div>
   );
 }
 
-// --- Page --------------------------------------------------------------------------
+// --- Scene: git-per-node + traceability ------------------------------------------
 
-const PRINCIPLES = [
+/** Two stacked panels: automatic git (each finished node = a commit) above a
+ *  trace that walks a line of code back to the decisions that produced it. */
+function GitTraceScene() {
+  const commits = [
+    { msg: "feat: discount code validation", sha: "a1b2c3d", done: true },
+    { msg: "feat: cart totals recompute", sha: "c3d4e5f", done: true },
+    { msg: "feat: server-side receipt render", sha: "9f8e7d6", done: false },
+  ];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div
+        style={{
+          borderRadius: 12,
+          border: "1px solid var(--border-strong)",
+          background: "var(--paper)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            padding: "9px 13px",
+            borderBottom: "1px solid var(--border)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <span className="label">History</span>
+          <span
+            className="mono"
+            style={{ fontSize: 10, color: "var(--ink-faint)" }}
+          >
+            one commit per node
+          </span>
+        </div>
+        <div style={{ padding: "6px 0" }}>
+          {commits.map((c) => (
+            <div
+              key={c.sha}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "7px 13px",
+              }}
+            >
+              <span
+                style={{
+                  width: 15,
+                  height: 15,
+                  borderRadius: "50%",
+                  flex: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 9,
+                  color: "#fff",
+                  background: c.done ? GREEN : "var(--ink-faint)",
+                }}
+              >
+                {c.done ? "✓" : "…"}
+              </span>
+              <span
+                className="mono"
+                style={{ fontSize: 11.5, color: "var(--ink-90)", flex: 1 }}
+              >
+                {c.msg}
+              </span>
+              <span
+                className="mono"
+                style={{ fontSize: 10.5, color: "var(--ink-soft)" }}
+              >
+                {c.sha}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div
+        style={{
+          borderRadius: 12,
+          border: "1px solid var(--border-strong)",
+          background: "var(--paper)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            padding: "9px 13px",
+            borderBottom: "1px solid var(--border)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <span className="label">Trace</span>
+          <span
+            className="mono"
+            style={{ fontSize: 10, color: "var(--ink-faint)" }}
+          >
+            why this line exists
+          </span>
+        </div>
+        <div style={{ padding: 13 }}>
+          <div
+            className="mono"
+            style={{
+              fontSize: 11,
+              color: "var(--ink-90)",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: 7,
+              padding: "8px 10px",
+              lineHeight: 1.7,
+            }}
+          >
+            <span style={{ color: "var(--ink-faint)" }}>if </span>
+            <span
+              style={{
+                background:
+                  "color-mix(in srgb, var(--accent) 22%, transparent)",
+                borderRadius: 3,
+                padding: "0 3px",
+              }}
+            >
+              code.expired
+            </span>
+            <span style={{ color: "var(--ink-faint)" }}>: reject(410)</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              marginTop: 10,
+            }}
+          >
+            {[
+              ["you", "chose server-side validation", "var(--accent)"],
+              ["ai", "decided to reject expired codes", GREEN],
+              ["test", "rejects expired or unknown codes", "#5b8dc9"],
+            ].map(([who, what, hue]) => (
+              <div
+                key={who}
+                style={{ display: "flex", alignItems: "center", gap: 9 }}
+              >
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    color: hue,
+                    width: 34,
+                    flex: "none",
+                  }}
+                >
+                  {who}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--ink-90)" }}>
+                  {what}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Page content ----------------------------------------------------------------
+
+const DELIVERY = [
   {
-    k: "Nothing built on a guess",
-    v: "The clarification loop runs until your intent and the spec are the same thing. Lothal asks before it builds.",
+    t: "Internal git",
+    d: "A real, versioned repository from the first node — full history, diffs, and revert, managed for you.",
   },
   {
-    k: "'Done' is defined first",
-    v: "Every item gets a contract, acceptance criteria, and frozen tests before implementation — a definition of done that can't quietly drift.",
+    t: "Your GitHub",
+    d: "Push the project to your own GitHub org and keep building with your team on your terms.",
   },
   {
-    k: "You hold every gate",
-    v: "Designs, prototypes, and plans only move forward when you approve them. The flow is forward-only by design.",
+    t: "Download whole",
+    d: "Export the entire project — code, tests, and artifacts — as a ZIP. It runs without Lothal.",
   },
 ];
 
-const PLAN_FEATS = [
-  "Frozen on ratification — contracts, criteria, and tests can't silently drift once work begins.",
-  "A roll-up gate — a parent only turns verified when every child is verified and its integration tests pass.",
-  "Surgical invalidation — change a contract and only the items downstream of it need re-checking.",
-];
-
-const ARTIFACTS = [
-  {
-    t: "A clear spec",
-    d: "A PRD synthesized from the clarification conversation — the confirmed definition of what to build.",
-  },
-  {
-    t: "An architecture you approved",
-    d: "An ADR plus context, container, data-model, and sequence diagrams, refined until they're right.",
-  },
-  {
-    t: "An interactive prototype",
-    d: "A real UI/UX prototype you shaped and signed off — not a static mockup.",
-  },
-  {
-    t: "A verification-ready plan",
-    d: "A tree of items, each with a frozen contract, acceptance criteria, and tests — the blueprint the build runs against.",
-  },
-];
-
-// Responsive tweaks for the landing, scoped under the lothal surface.
 const LANDING_CSS = `
-  @media (max-width: 860px) {
+  @media (max-width: 900px) {
     .lothal-surface .land-navlinks { display: none !important; }
     .lothal-surface .land-hero-split { grid-template-columns: 1fr !important; }
     .lothal-surface .land-hero-split > div:first-child { border-right: none !important; border-bottom: 1px solid var(--border) !important; }
-    .lothal-surface .land-showcase { grid-template-columns: 1fr !important; }
-    .lothal-surface .land-step { grid-template-columns: auto 1fr !important; gap: 16px !important; }
-    .lothal-surface .land-step-label { grid-column: 2; }
-    .lothal-surface .land-step p { grid-column: 2; }
+    .lothal-surface .land-feature { grid-template-columns: 1fr !important; gap: 28px !important; }
+    .lothal-surface .land-feature-visual { order: 2; }
+    .lothal-surface .land-ribbon { grid-template-columns: 1fr 1fr !important; }
   }
 `;
 
 /** The landing content; assumes a surrounding LothalSurface for theme tokens. */
 function LandingView() {
   const navigate = useNavigate();
-
-  // The landing's only actions: create an account or sign in. The Lothal login
-  // page defaults its own post-login redirect to /lothal, so these go plain.
   const goSignup = () => navigate("/signup");
   const goLogin = () => navigate("/login");
 
-  // The marketing title, restored to the app default on the way out.
   useEffect(() => {
-    document.title = "Lothal — build software by describing it";
+    document.title = "Lothal — software engineering, accelerated";
     return () => {
       document.title = "Lothal";
     };
   }, []);
 
-  // The nav gains a blur backdrop once the page scrolls.
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -731,11 +1142,19 @@ function LandingView() {
     </button>
   );
 
+  const sectionPad = {
+    maxWidth: 1120,
+    margin: "0 auto",
+    width: "100%",
+    padding: "72px 32px",
+    scrollMarginTop: 56,
+    boxSizing: "border-box",
+  } as const;
+
   return (
     <div ref={scrollRef} style={{ height: "100%", overflowY: "auto" }}>
       <style>{LANDING_CSS}</style>
 
-      {/* Ambient aubergine glow behind the hero. */}
       <div
         aria-hidden
         style={{
@@ -793,7 +1212,8 @@ function LandingView() {
               aria-label="Landing sections"
             >
               {navLink("How it works", SECTION_IDS.how)}
-              {navLink("Verification", SECTION_IDS.plan)}
+              {navLink("The gate", SECTION_IDS.gate)}
+              {navLink("Change-aware", SECTION_IDS.tree)}
               {navLink("What you get", SECTION_IDS.deliver)}
             </nav>
 
@@ -873,14 +1293,14 @@ function LandingView() {
               fontSize: "clamp(15px, 1.6vw, 18px)",
               lineHeight: 1.6,
               color: "var(--ink-mute)",
-              maxWidth: 600,
+              maxWidth: 640,
             }}
           >
-            Describe what you want in plain language. Lothal asks the right
-            questions, designs the architecture, and shapes an interactive
-            prototype with you — then turns it into a plan where every piece of
-            work carries a contract and frozen tests, before a line of code is
-            written.
+            Describe what you want in plain language. Lothal clarifies it,
+            designs an architecture you can see and shape, then builds it —
+            proving every step against criteria you approved.
+            Software-engineering discipline, accelerated by AI, and enforced at
+            every step.
           </p>
 
           <div
@@ -905,182 +1325,269 @@ function LandingView() {
           </div>
         </section>
 
-        {/* ── Principles strip ── */}
+        {/* ── Reframe: name the problem ── */}
         <section
           style={{
-            maxWidth: 1120,
-            margin: "0 auto",
-            width: "100%",
-            padding: "44px 32px",
-            boxSizing: "border-box",
+            background: "var(--paper-deep)",
+            borderTop: "1px solid var(--border)",
+            borderBottom: "1px solid var(--border)",
           }}
         >
           <div
             style={{
+              maxWidth: 900,
+              margin: "0 auto",
+              padding: "60px 32px",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              gap: 18,
+              alignItems: "center",
+              boxSizing: "border-box",
+            }}
+          >
+            <span className="label" style={{ color: "var(--accent)" }}>
+              Not vibe-coding
+            </span>
+            <h2
+              className="serif"
+              style={{
+                fontSize: "clamp(26px, 3.4vw, 38px)",
+                lineHeight: 1.2,
+                letterSpacing: "-0.015em",
+                color: "var(--ink)",
+                margin: 0,
+              }}
+            >
+              Most AI builders remove the engineering.
+              <br />
+              Lothal keeps it — and removes the drudgery.
+            </h2>
+            <p
+              style={{
+                fontSize: 16,
+                lineHeight: 1.7,
+                color: "var(--ink-mute)",
+                margin: 0,
+                maxWidth: 680,
+              }}
+            >
+              You prompt, it generates, and you find out what's wrong at the end
+              — reading code no one specified, testing nothing you agreed on.
+              Lothal runs the process a real engineer would: clarify the spec,
+              design the architecture, freeze a definition of done, then prove
+              each piece against it before anything depends on it. The same
+              rigor a senior team brings — reached in a fraction of the time.
+            </p>
+            <p
+              className="serif"
+              style={{
+                fontSize: "clamp(17px, 2vw, 21px)",
+                fontStyle: "italic",
+                color: "var(--ink)",
+                margin: "4px 0 0",
+                maxWidth: 660,
+                lineHeight: 1.5,
+              }}
+            >
+              The aim isn't to replace software development with AI. It's to
+              accelerate it — with confidence and transparency.
+            </p>
+          </div>
+        </section>
+
+        {/* ── Phase ribbon (honest roadmap) ── */}
+        <section id={SECTION_IDS.how} style={sectionPad}>
+          <SectionHead
+            eyebrow="How it works"
+            title="From a sentence to a shipped build — one accountable step at a time."
+            sub="A forward-only flow with a gate at every stage. Nothing advances until you approve it, and nothing is built until the plan is ratified."
+          />
+          <div
+            className="land-ribbon"
+            style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gridTemplateColumns: `repeat(${PHASES.length}, 1fr)`,
               gap: 1,
               background: "var(--border)",
               border: "1px solid var(--border)",
               borderRadius: 14,
               overflow: "hidden",
+              marginTop: 34,
             }}
           >
-            {PRINCIPLES.map((it) => (
-              <div
-                key={it.k}
-                style={{
-                  background: "var(--paper)",
-                  padding: "24px 22px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                <h3
-                  className="serif"
-                  style={{ fontSize: 21, color: "var(--ink)" }}
-                >
-                  {it.k}
-                </h3>
-                <p
-                  style={{
-                    fontSize: 13.5,
-                    lineHeight: 1.6,
-                    color: "var(--ink-mute)",
-                    margin: 0,
-                  }}
-                >
-                  {it.v}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── How it works ── */}
-        <section
-          id={SECTION_IDS.how}
-          style={{
-            maxWidth: 1120,
-            margin: "0 auto",
-            width: "100%",
-            padding: "60px 32px",
-            scrollMarginTop: 56,
-            boxSizing: "border-box",
-          }}
-        >
-          <SectionHead
-            eyebrow="How it works"
-            title="Six stages, from a sentence to a build-ready plan."
-            sub="A forward-only flow with an approval gate at every stage. Nothing advances until you sign off — and nothing is built until the plan is ratified."
-          />
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 0,
-              marginTop: 36,
-            }}
-          >
-            {PHASES.map((p) => (
-              <div
-                key={p.id}
-                className="land-step"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "auto 200px 1fr",
-                  gap: 28,
-                  alignItems: "start",
-                  padding: "26px 0",
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                <span
-                  className="mono"
-                  style={{
-                    fontSize: 13,
-                    color: "var(--accent)",
-                    paddingTop: 4,
-                  }}
-                >
-                  {p.short}
-                </span>
+            {PHASES.map((p) => {
+              const soon = isCodePhase(p.id);
+              return (
                 <div
-                  className="land-step-label"
+                  key={p.id}
                   style={{
+                    background: "var(--paper)",
+                    padding: "18px 16px",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 6,
+                    gap: 8,
+                    opacity: soon ? 0.66 : 1,
                   }}
                 >
                   <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 9,
-                      flexWrap: "wrap",
-                    }}
+                    className="mono"
+                    style={{ fontSize: 11, color: "var(--accent)" }}
                   >
-                    <h3
-                      className="serif"
-                      style={{
-                        fontSize: 30,
-                        color: "var(--ink)",
-                        lineHeight: 1,
-                        margin: 0,
-                      }}
-                    >
-                      {p.label}
-                    </h3>
-                    {isCodePhase(p.id) && (
-                      <span
-                        className="mono"
-                        style={{
-                          fontSize: 10.5,
-                          color: "var(--ink-faint)",
-                          border: "1px solid var(--border)",
-                          borderRadius: 999,
-                          padding: "2px 8px",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Coming next
-                      </span>
-                    )}
+                    {p.short}
                   </span>
                   <span
                     className="serif"
                     style={{
-                      fontSize: 14.5,
-                      fontStyle: "italic",
-                      color: "var(--ink-soft)",
-                      lineHeight: 1.3,
+                      fontSize: 18,
+                      color: "var(--ink)",
+                      lineHeight: 1.1,
                     }}
                   >
-                    {STEP_LEAD[p.id]}
+                    {p.label}
                   </span>
+                  {soon && (
+                    <span
+                      className="mono"
+                      style={{ fontSize: 9.5, color: "var(--ink-faint)" }}
+                    >
+                      coming next
+                    </span>
+                  )}
                 </div>
-                <p
-                  style={{
-                    fontSize: 15,
-                    lineHeight: 1.6,
-                    color: "var(--ink-mute)",
-                    margin: 0,
-                    maxWidth: 560,
-                  }}
-                >
-                  {STEP_COPY[p.id]}
-                </p>
-              </div>
-            ))}
-            <div style={{ borderTop: "1px solid var(--border)" }} />
+              );
+            })}
           </div>
         </section>
 
-        {/* ── Verification-driven planning (the differentiator) ── */}
+        {/* ── Ladder ── */}
         <section
-          id={SECTION_IDS.plan}
+          style={{
+            maxWidth: 1120,
+            margin: "0 auto",
+            width: "100%",
+            padding: "8px 32px 24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 88,
+            boxSizing: "border-box",
+          }}
+        >
+          {/* Clarify */}
+          <FeatureRow
+            eyebrow="01 · Clarify"
+            title="No assumptions. It asks before it builds."
+            body={
+              <>
+                The clarification loop keeps going — multiple-choice or free
+                text, your call — until your intent and the spec are the same
+                thing. What you approve is a{" "}
+                <strong style={{ color: "var(--ink)" }}>
+                  PRD you confirmed
+                </strong>
+                , not one the model guessed at.
+              </>
+            }
+            visual={<PrdScene />}
+          />
+
+          {/* Architecture */}
+          <FeatureRow
+            flip
+            eyebrow="02 · Design"
+            title="Real architecture, before a line of code."
+            body={
+              <>
+                From the spec, Lothal produces an{" "}
+                <strong style={{ color: "var(--ink)" }}>
+                  Architecture Decision Record
+                </strong>{" "}
+                — the chosen design, technology choices with rationale, and the
+                alternatives it rejected and why — with a diagram set at four
+                altitudes: system context, containers, data model, and runtime
+                sequence. You refine it on a canvas; every edit is re-validated
+                against the spec before it sticks.
+              </>
+            }
+            aside="Then the build is risk-ordered: the parts most likely to break — the scariest endpoints first — are implemented and proven before anything depends on them."
+            visual={<AdrScene />}
+          />
+
+          {/* The gate (flagship 1) */}
+          <div id={SECTION_IDS.gate} style={{ scrollMarginTop: 56 }}>
+            <FeatureRow
+              eyebrow="The gate · enforced validation"
+              title={
+                <>
+                  The AI doesn't get to say “done.”
+                  <br />
+                  It has to pass.
+                </>
+              }
+              body={
+                <>
+                  Planning can be automated — creating a work item can't. Every
+                  item is{" "}
+                  <strong style={{ color: "var(--ink)" }}>required</strong> to
+                  carry acceptance criteria before anything is built; Lothal
+                  forces the model to write them, and you add your own on top.
+                  Nothing is marked verified unless every criterion is covered
+                  by a passing test. An uncovered criterion is rejected — and
+                  unverified work can't advance, can't roll up, and can't reach
+                  your codebase.
+                </>
+              }
+              aside="Specify, then verify, at every level — criteria before build, tests before done, integration proven as it composes. A V-model discipline, enforced by the tool."
+              visual={<GateScene />}
+            />
+          </div>
+
+          {/* The contract tree (flagship 2 — centerpiece) */}
+          <div id={SECTION_IDS.tree} style={{ scrollMarginTop: 56 }}>
+            <FeatureRow
+              flip
+              eyebrow="Change-aware · the contract tree"
+              title="Change one thing, and Lothal knows everything it touches."
+              body={
+                <>
+                  The whole project is a live dependency tree of contracts,
+                  built from the start. Change a node's contract and every
+                  downstream node is automatically re-tested against it — in one
+                  click. Whatever still holds, holds; whatever breaks is flagged
+                  for you to update and re-ratify.{" "}
+                  <strong style={{ color: "var(--ink)" }}>
+                    No silent breakage three layers down. No surprises.
+                  </strong>
+                </>
+              }
+              visual={<ContractTreeScene />}
+            />
+          </div>
+
+          {/* Git-per-node + traceability */}
+          <FeatureRow
+            eyebrow="Real & accountable"
+            coming
+            title="Every task ships like a developer finished it — and you can prove why."
+            body={
+              <>
+                Git is managed for you: each completed node becomes its own
+                commit, with a real history you can read, diff, and revert. And
+                every line is accountable —{" "}
+                <strong style={{ color: "var(--ink)" }}>
+                  select any piece of the codebase and walk back
+                </strong>{" "}
+                through the inputs and decisions that produced it, yours and the
+                AI's. Every line has a documented reason to exist.
+              </>
+            }
+            visual={<GitTraceScene />}
+          />
+        </section>
+
+        {/* ── Delivery ── */}
+        <section
+          id={SECTION_IDS.deliver}
           style={{
             background: "var(--paper-deep)",
             borderTop: "1px solid var(--border)",
@@ -1089,152 +1596,59 @@ function LandingView() {
           }}
         >
           <div
-            className="land-showcase"
             style={{
               maxWidth: 1120,
               margin: "0 auto",
               width: "100%",
               padding: "64px 32px",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 48,
-              alignItems: "center",
               boxSizing: "border-box",
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-              <SectionHead
-                align="left"
-                eyebrow="Verification-driven planning"
-                title="Proven before it composes."
-              />
-              <p
-                style={{
-                  fontSize: 15,
-                  lineHeight: 1.7,
-                  color: "var(--ink-mute)",
-                  margin: 0,
-                  maxWidth: 540,
-                }}
-              >
-                Most AI builders sprint from prompt to output and leave you to
-                find what's wrong. Lothal works the other way around. Before
-                anything is built, every item in the plan — app, component,
-                epic, story — gets an assume-guarantee contract: what it needs
-                coming in, what it promises going out. Ratify it, and that
-                contract, its acceptance criteria, and its tests freeze into a
-                definition of done the implementation can't move. A roll-up gate
-                then holds every parent open until its children are verified —
-                so correctness composes upward through contracts you approved.
-              </p>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                  marginTop: 4,
-                }}
-              >
-                {PLAN_FEATS.map((f) => (
-                  <div
-                    key={f}
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 10,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 18,
-                        height: 18,
-                        borderRadius: 5,
-                        flexShrink: 0,
-                        marginTop: 1,
-                        background: "var(--accent-soft)",
-                        color: "var(--accent)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 11,
-                      }}
-                    >
-                      ✓
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 14.5,
-                        color: "var(--ink-90)",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {f}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <PlanNodeScene />
-          </div>
-        </section>
-
-        {/* ── Delivery ── */}
-        <section
-          id={SECTION_IDS.deliver}
-          style={{
-            maxWidth: 1120,
-            margin: "0 auto",
-            width: "100%",
-            padding: "64px 32px",
-            scrollMarginTop: 56,
-            boxSizing: "border-box",
-          }}
-        >
-          <SectionHead
-            eyebrow="What you get"
-            title="Real artifacts at every step, not just a final answer."
-            sub="Every project is persistent and resumable — close the tab and come back to the same conversation, design, prototype, and plan, exactly where you left them."
-          />
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: 14,
-              marginTop: 36,
-            }}
-          >
-            {ARTIFACTS.map((w) => (
-              <div
-                key={w.t}
-                style={{
-                  border: "1px solid var(--border)",
-                  borderRadius: 14,
-                  background: "var(--surface)",
-                  padding: "22px 20px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                <h3
-                  className="serif"
-                  style={{ fontSize: 22, color: "var(--ink)" }}
-                >
-                  {w.t}
-                </h3>
-                <p
+            <SectionHead
+              eyebrow="What you get"
+              title="The code is yours, and it's real."
+              sub="A versioned git repo — every node a commit — that you can push to your own GitHub or export whole. No lock-in. No black box."
+            />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                gap: 14,
+                marginTop: 36,
+              }}
+            >
+              {DELIVERY.map((w) => (
+                <div
+                  key={w.t}
                   style={{
-                    fontSize: 13.5,
-                    lineHeight: 1.6,
-                    color: "var(--ink-mute)",
-                    margin: 0,
+                    border: "1px solid var(--border)",
+                    borderRadius: 14,
+                    background: "var(--surface)",
+                    padding: "22px 20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
                   }}
                 >
-                  {w.d}
-                </p>
-              </div>
-            ))}
+                  <h3
+                    className="serif"
+                    style={{ fontSize: 22, color: "var(--ink)" }}
+                  >
+                    {w.t}
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: 13.5,
+                      lineHeight: 1.6,
+                      color: "var(--ink-mute)",
+                      margin: 0,
+                    }}
+                  >
+                    {w.d}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -1244,7 +1658,7 @@ function LandingView() {
             maxWidth: 1120,
             margin: "0 auto",
             width: "100%",
-            padding: "20px 32px 80px",
+            padding: "8px 32px 80px",
             boxSizing: "border-box",
           }}
         >
@@ -1289,13 +1703,14 @@ function LandingView() {
               style={{
                 fontSize: 16,
                 color: "var(--ink-mute)",
-                maxWidth: 480,
+                maxWidth: 520,
                 position: "relative",
                 margin: 0,
+                lineHeight: 1.6,
               }}
             >
-              No setup, no boilerplate, no guessing what the AI understood.
-              Describe it — and approve every step before it's built.
+              No setup, no boilerplate, no guessing what the AI understood — and
+              nothing in your codebase you didn't verify. Just describe it.
             </p>
             <div
               style={{
@@ -1345,7 +1760,7 @@ function LandingView() {
                   marginLeft: 6,
                 }}
               >
-                build software by describing it
+                software engineering, accelerated
               </span>
             </div>
             <div
@@ -1358,10 +1773,193 @@ function LandingView() {
             >
               <span>© 2026 Lothal</span>
               <span className="mono">v{LOTHAL_VERSION}</span>
-              <span className="mono">built on langflow</span>
             </div>
           </div>
         </footer>
+      </div>
+    </div>
+  );
+}
+
+/** The Clarify row's visual: the confirmed PRD — the output of the clarification
+ *  loop — so the rung shows what you approve, not a repeat of the hero chat. */
+function PrdScene() {
+  const reqs = [
+    "One page to create a link and view its stats",
+    "302 redirect on visit, with a per-link click count",
+    "REST API for create / resolve / stats",
+    "No auth — open and anonymous by design",
+  ];
+  return (
+    <div
+      style={{
+        borderRadius: 14,
+        border: "1px solid var(--border-strong)",
+        background: "var(--paper)",
+        overflow: "hidden",
+        boxShadow: "0 30px 70px -40px rgba(0,0,0,.5)",
+      }}
+    >
+      <div
+        style={{
+          padding: "10px 14px",
+          borderBottom: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span className="label">PRD · larder</span>
+        <span
+          className="mono"
+          style={{ fontSize: 10, color: "var(--ink-faint)" }}
+        >
+          confirmed with you
+        </span>
+        {chip("approved", GREEN)}
+      </div>
+      <div
+        style={{
+          padding: 18,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
+        <span className="serif" style={{ fontSize: 17, color: "var(--ink)" }}>
+          A minimal URL shortener
+        </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          {reqs.map((r) => (
+            <div
+              key={r}
+              style={{ display: "flex", gap: 9, alignItems: "center" }}
+            >
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: 4,
+                  flex: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 10,
+                  color: "#fff",
+                  background: GREEN,
+                }}
+              >
+                ✓
+              </span>
+              <span style={{ fontSize: 13, color: "var(--ink-90)" }}>{r}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The Architecture row's visual: an ADR — the chosen decision plus the
+ *  alternatives it rejected and why, with the four diagram altitudes. */
+function AdrScene() {
+  return (
+    <div
+      style={{
+        borderRadius: 14,
+        border: "1px solid var(--border-strong)",
+        background: "var(--paper)",
+        overflow: "hidden",
+        boxShadow: "0 30px 70px -40px rgba(0,0,0,.5)",
+      }}
+    >
+      <div
+        style={{
+          padding: "10px 14px",
+          borderBottom: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span className="label">ADR 001</span>
+        <span
+          className="mono"
+          style={{ fontSize: 10, color: "var(--ink-faint)" }}
+        >
+          architecture decision
+        </span>
+      </div>
+      <div
+        style={{
+          padding: 18,
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+        }}
+      >
+        <div>
+          <div className="label" style={{ marginBottom: 6 }}>
+            Decision
+          </div>
+          <span
+            style={{ fontSize: 13.5, color: "var(--ink-90)", lineHeight: 1.5 }}
+          >
+            A single service serving the API and static UI — atomic click counts
+            in Postgres, base62 short codes.
+          </span>
+        </div>
+        <div>
+          <div className="label" style={{ marginBottom: 6 }}>
+            Rejected
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {[
+              ["Redis counter", "adds a moving part before it's needed"],
+              ["Sequential IDs", "leak volume and are enumerable"],
+            ].map(([opt, why]) => (
+              <div
+                key={opt}
+                style={{ display: "flex", gap: 8, alignItems: "baseline" }}
+              >
+                <span
+                  className="mono"
+                  style={{ fontSize: 10, color: "#c05b52", flex: "none" }}
+                >
+                  ✕ {opt}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
+                  {why}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            flexWrap: "wrap",
+            borderTop: "1px solid var(--border)",
+            paddingTop: 12,
+          }}
+        >
+          {["context", "containers", "data model", "sequence"].map((d) => (
+            <span
+              key={d}
+              className="mono"
+              style={{
+                fontSize: 10,
+                color: "var(--ink-soft)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "3px 8px",
+              }}
+            >
+              {d}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
