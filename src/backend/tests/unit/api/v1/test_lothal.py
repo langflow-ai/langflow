@@ -1840,8 +1840,10 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
     Drives the live `POST /chat` endpoint with a realistic app description and
     progressively detailed answers. Asserts the model asks focused questions with
     tappable suggestions while gathering requirements, then within a few turns
-    emits `[CLARITY_REACHED]`: the project advances to ARCHITECTURE, the
-    control token is stripped, and `GET /prd` returns the stored summary.
+    emits `[CLARITY_REACHED]`: the PRD is drafted and stored (token stripped,
+    surfaced by `GET /prd`) while the project HOLDS in CLARIFICATION (phase-gates —
+    no auto-advance), and the explicit `POST /prd/approve` is what moves it to
+    ARCHITECTURE.
     """
     if find_spec("claude_agent_sdk") is None:
         pytest.skip("claude-agent-sdk not installed")
@@ -1866,39 +1868,39 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
 
     saw_suggestions = bool(reply["suggestions"])
 
-    async def has_transitioned() -> bool:
-        # A turn's reply is stamped with the phase it ran *under*, so a transition
-        # only shows up on the project row — never on `reply["phase"]`.
+    async def drafted_prd() -> str | None:
+        # phase-gates: clarity no longer advances the phase — it drafts the PRD and
+        # HOLDS in CLARIFICATION. The clarity signal is `prd_content` being set (a
+        # turn's reply is stamped with the phase it ran under, always CLARIFICATION).
         project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-        return project["phase"] != "CLARIFICATION"
+        return project["prd_content"]
 
-    transitioned = await has_transitioned()
-
-    # Keep answering until the model reaches clarity (phase moves off CLARIFICATION),
-    # falling back to a generic nudge once the canned answers run out.
+    # Keep answering until the model reaches clarity (a PRD is drafted), falling
+    # back to a generic nudge once the canned answers run out.
     answers = iter(_SMOKE_ANSWERS)
     turns = 1
-    while not transitioned and turns < _SMOKE_MAX_TURNS:
+    while not await drafted_prd() and turns < _SMOKE_MAX_TURNS:
         answer = next(answers, "That's everything you need — please write the spec now.")
         reply = await send(answer)
         turns += 1
         saw_suggestions = saw_suggestions or bool(reply["suggestions"])
-        transitioned = await has_transitioned()
 
-    # Clarity must be reached within the bounded number of turns.
+    # Clarity must be reached within the bounded number of turns, and the project
+    # HOLDS in CLARIFICATION with a drafted PRD (no auto-advance).
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "ARCHITECTURE", f"never reached clarity in {turns} turns"
+    assert project["prd_content"], f"never reached clarity in {turns} turns"
+    assert project["phase"] == "CLARIFICATION", f"phase should hold at clarification, got {project['phase']}"
 
     # At least one clarification turn offered tappable suggestions (focused questions).
     assert saw_suggestions, "no clarification turn returned suggestions"
 
-    # The clarity turn's reply is the PRD summary with the control token stripped.
+    # The clarity turn's reply is a short handoff (not the PRD) with the token stripped.
     assert "[CLARITY_REACHED]" not in reply["content"]
     assert reply["suggestions"] == []
 
-    # The PRD is stored and surfaced by `GET /prd`, token-free.
+    # The PRD is stored on the main page and surfaced by `GET /prd`, token-free.
     prd = (await client.get(f"api/v1/lothal/projects/{project_id}/prd", headers=logged_in_headers)).json()
-    assert prd["content"], "PRD was not stored on transition"
+    assert prd["content"], "PRD was not stored"
     assert "[CLARITY_REACHED]" not in prd["content"]
     assert project["prd_content"] == prd["content"]
 
@@ -1907,6 +1909,11 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
     assert len(messages) == turns * 2  # each turn = user + assistant
     assert messages[0]["role"] == "USER"
     assert all("[CLARITY_REACHED]" not in m["content"] for m in messages)
+
+    # The explicit approve is the gate that advances CLARIFICATION → ARCHITECTURE.
+    approve = await client.post(f"api/v1/lothal/projects/{project_id}/prd/approve", headers=logged_in_headers)
+    assert approve.status_code == status.HTTP_200_OK
+    assert approve.json() == {"phase": "ARCHITECTURE"}
 
 
 # --- Prototype stage (Epic UI, Stories U.4-U.7) ------------------------------
