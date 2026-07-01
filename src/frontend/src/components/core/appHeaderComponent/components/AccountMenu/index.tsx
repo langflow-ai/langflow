@@ -136,7 +136,7 @@ export const AccountMenu = () => {
                 id="menu_github_button"
                 className="flex items-center gap-2"
               >
-                <FaGithub className="h-4 w-4" />
+                <FaGithub className="h-4 w-4" aria-hidden="true" />
                 {t("account.github")}
               </span>
             </HeaderMenuItemLink>
@@ -146,7 +146,10 @@ export const AccountMenu = () => {
                 id="menu_discord_button"
                 className="flex items-center gap-2"
               >
-                <FaDiscord className="h-4 w-4 text-[#5865F2]" />
+                <FaDiscord
+                  className="h-4 w-4 text-[#5865F2]"
+                  aria-hidden="true"
+                />
                 {t("account.discord")}
               </span>
             </HeaderMenuItemLink>

@@ -28,6 +28,8 @@ def test_ext_key_yields_bare_class_name_alias():
     assert EXT_KEY in aliases
     assert "TavilySearchComponent" in aliases
     assert "TavilySearch" in aliases
+    assert "TavilyAISearch" in aliases
+    assert "TavilySearchToolComponent" in aliases
 
 
 def test_ext_key_without_component_suffix_yields_only_class_name():
@@ -50,6 +52,8 @@ def test_flatten_resolves_legacy_type_for_ext_component():
     flat = flatten_components_with_aliases(all_types_dict)
     assert flat["TavilySearchComponent"] is flat[EXT_KEY]
     assert flat["TavilySearch"] is flat[EXT_KEY]
+    assert flat["TavilyAISearch"] is flat[EXT_KEY]
+    assert flat["TavilySearchToolComponent"] is flat[EXT_KEY]
 
 
 def test_flatten_alias_never_overrides_real_key():

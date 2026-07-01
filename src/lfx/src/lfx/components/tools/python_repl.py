@@ -1,7 +1,6 @@
 import importlib
 
 from langchain_core.tools import StructuredTool, ToolException
-from langchain_experimental.utilities import PythonREPL
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -85,6 +84,8 @@ class PythonREPLToolComponent(LCToolComponent):
                 # imports and escape gadgets; combined with the restricted builtins in
                 # get_globals(). A fresh globals namespace is built per invocation so
                 # state does not leak across tool calls.
+                from langchain_experimental.utilities import PythonREPL
+
                 cleaned_code = PythonREPL.sanitize_input(code)
                 validate_code_safety(cleaned_code)
                 python_repl = PythonREPL(_globals=self.get_globals(self.global_imports))

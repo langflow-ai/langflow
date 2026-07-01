@@ -47,6 +47,7 @@ export const SidebarOpenView = ({
                   data-testid="new-chat"
                   variant="ghost"
                   className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
+                  aria-label={t("chat.newChat")}
                   onClick={(_) => {
                     setvisibleSession(undefined);
                     setSelectedViewField(undefined);

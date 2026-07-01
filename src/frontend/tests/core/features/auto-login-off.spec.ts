@@ -7,7 +7,7 @@ import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
-  { tag: ["@release", "@api", "@database", "@mainpage"] },
+  { tag: ["@release", "@api", "@database"] },
   async ({ page }) => {
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
@@ -50,7 +50,7 @@ test(
       .fill(TEXTS.authDefaultCredential);
     await page
       .getByPlaceholder(TEXTS.placeholderPassword)
-      .fill(TEXTS.authDefaultCredential);
+      .fill(TEXTS.authDefaultPassword);
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
@@ -280,7 +280,7 @@ test(
       .fill(TEXTS.authDefaultCredential);
     await page
       .getByPlaceholder(TEXTS.placeholderPassword)
-      .fill(TEXTS.authDefaultCredential);
+      .fill(TEXTS.authDefaultPassword);
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");

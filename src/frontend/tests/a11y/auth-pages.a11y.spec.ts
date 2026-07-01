@@ -63,7 +63,7 @@ async function forceLightTheme(page: LangflowPage) {
 }
 
 test.describe("auth page accessibility", () => {
-  test("scans empty login", { tag: ["@a11y"] }, async ({ page }) => {
+  test("scans empty login", { tag: ["@release"] }, async ({ page }) => {
     await forceLightTheme(page);
     await disableAutoLogin(page);
 
@@ -73,7 +73,7 @@ test.describe("auth page accessibility", () => {
     await page.runA11yScan("auth-login-empty");
   });
 
-  test("scans login validation", { tag: ["@a11y"] }, async ({ page }) => {
+  test("scans login validation", { tag: ["@release"] }, async ({ page }) => {
     await forceLightTheme(page);
     await disableAutoLogin(page);
 
@@ -85,7 +85,7 @@ test.describe("auth page accessibility", () => {
     await page.runA11yScan("auth-login-validation");
   });
 
-  test("scans login error toast", { tag: ["@a11y"] }, async ({ page }) => {
+  test("scans login error toast", { tag: ["@release"] }, async ({ page }) => {
     await forceLightTheme(page);
     await disableAutoLogin(page);
     await mockLoginError(page);
@@ -105,7 +105,7 @@ test.describe("auth page accessibility", () => {
     await page.runA11yScan("auth-login-error-toast");
   });
 
-  test("scans empty signup", { tag: ["@a11y"] }, async ({ page }) => {
+  test("scans empty signup", { tag: ["@release"] }, async ({ page }) => {
     await forceLightTheme(page);
     await disableAutoLogin(page);
     await page.goto("/signup");
@@ -116,7 +116,7 @@ test.describe("auth page accessibility", () => {
 
   test(
     "scans signup password mismatch",
-    { tag: ["@a11y"] },
+    { tag: ["@release"] },
     async ({ page }) => {
       await forceLightTheme(page);
       await disableAutoLogin(page);
@@ -136,7 +136,7 @@ test.describe("auth page accessibility", () => {
     },
   );
 
-  test("scans signup error toast", { tag: ["@a11y"] }, async ({ page }) => {
+  test("scans signup error toast", { tag: ["@release"] }, async ({ page }) => {
     await forceLightTheme(page);
     await disableAutoLogin(page);
     await mockSignupError(page);
@@ -157,7 +157,7 @@ test.describe("auth page accessibility", () => {
     await page.runA11yScan("auth-signup-error-toast");
   });
 
-  test("scans login in dark mode", { tag: ["@a11y"] }, async ({ page }) => {
+  test("scans login in dark mode", { tag: ["@release"] }, async ({ page }) => {
     await forceDarkTheme(page);
     await disableAutoLogin(page);
 

@@ -47,19 +47,19 @@ describe("LangflowCounts accessibility", () => {
 
   it("should_expose_github_button_with_accessible_name", () => {
     expect(
-      screen.getByRole("button", { name: /go to github repo/i }),
+      screen.getByRole("button", { name: /github 1234/i }),
     ).toBeInTheDocument();
   });
 
   it("should_expose_discord_button_with_accessible_name", () => {
     expect(
-      screen.getByRole("button", { name: /go to discord server/i }),
+      screen.getByRole("button", { name: /discord 5678/i }),
     ).toBeInTheDocument();
   });
 
   it("should_hide_github_icon_from_assistive_technology", () => {
     const githubButton = screen.getByRole("button", {
-      name: /go to github repo/i,
+      name: /github 1234/i,
     });
     const svg = githubButton.querySelector("svg");
     expect(svg).toHaveAttribute("aria-hidden", "true");
@@ -67,7 +67,7 @@ describe("LangflowCounts accessibility", () => {
 
   it("should_hide_discord_icon_from_assistive_technology", () => {
     const discordButton = screen.getByRole("button", {
-      name: /go to discord server/i,
+      name: /discord 5678/i,
     });
     const svg = discordButton.querySelector("svg");
     expect(svg).toHaveAttribute("aria-hidden", "true");

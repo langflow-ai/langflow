@@ -151,6 +151,7 @@ EXPECTED_FIELDS = {
     # ---- Added in 1.10.0, folded into the mixins during the release back-merge ----
     # PathSettings
     "kb_allowed_folder_roots",
+    "directory_component_allowed_roots",
     # McpSettings
     "mcp_tool_execution_timeout",
     "mcp_servers_locked",
@@ -178,6 +179,7 @@ EXPECTED_FIELDS = {
     "redis_queue_polling_stale_threshold_s",
     "redis_queue_polling_watchdog_interval_s",
     "max_ingestion_timeout_secs",
+    "executor_kind",
     # UiSettings
     "embedded_mode",
     "hide_getting_started_progress",

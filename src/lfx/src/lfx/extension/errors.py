@@ -128,6 +128,11 @@ ERROR_CODES: frozenset[str] = frozenset(
         # authenticated user; clients that pass ``?keyspace=...`` are
         # rejected so the contract is explicit instead of silently dropped.
         "extension-events-keyspace-forbidden",
+        # Model-provider registration (manifest ``providers[]``). Both are
+        # warning-only: a malformed or colliding provider is skipped so the rest
+        # of the extension still loads.
+        "provider-invalid",
+        "provider-skipped",
     }
 )
 
@@ -347,6 +352,8 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "The {location} query parameter is not accepted; events are scoped server-side to the "
         "authenticated user (rejected value: {content!r})."
     ),
+    "provider-invalid": ("Model provider {content!r} declared at {location} could not be registered: {message}"),
+    "provider-skipped": ("Model provider {content!r} declared at {location} was skipped: {message}"),
 }
 
 
