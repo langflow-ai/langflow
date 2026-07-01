@@ -605,4 +605,47 @@ describe("Lothal Workspace", () => {
     fireEvent.click(settingsBtn);
     expect(mockNavigate).toHaveBeenCalledWith("/lothal/settings");
   });
+
+  // --- Workspace shell: chat dock + phase browsing (this PR) ---------------
+
+  it("collapses and restores the conversation dock", () => {
+    localStorage.clear(); // dock state persists; start from the default (expanded)
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
+    render(<Workspace />);
+    // Expanded by default → the affordance offers to hide it.
+    fireEvent.click(screen.getByTitle("Hide conversation"));
+    // Collapsed → the affordance flips to "Show conversation".
+    expect(screen.getByTitle("Show conversation")).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle("Show conversation"));
+    expect(screen.getByTitle("Hide conversation")).toBeInTheDocument();
+  });
+
+  it("browses to an earlier stage read-only and returns to the live phase", () => {
+    // A PLAN-phase project has earlier stages to browse back to.
+    // ARCHITECTURE-phase project: it and the earlier CLARIFICATION stage both
+    // render the (already-mocked) artifacts pane, so browsing between them doesn't
+    // drag in the PLAN/PROTOTYPE panes' hooks.
+    mockUseProject.mockReturnValue({
+      data: { ...project, phase: "ARCHITECTURE" },
+      isLoading: false,
+    });
+    render(<Workspace />);
+    // On the live phase there is no read-only banner.
+    expect(screen.queryByText(/stage — read-only\./)).toBeNull();
+    // Step back one stage (Design → Clarify) → the browse banner appears.
+    fireEvent.click(screen.getByLabelText("Previous stage"));
+    expect(screen.getByText(/stage — read-only\./)).toBeInTheDocument();
+    // The back-to-live control names the project's real phase and clears the browse.
+    fireEvent.click(screen.getByRole("button", { name: /Back to Design/ }));
+    expect(screen.queryByText(/stage — read-only\./)).toBeNull();
+  });
+
+  it("disables the phase-nav arrows at the boundaries", () => {
+    // A CLARIFICATION project sits at index 0 with no later live phase, so neither
+    // direction is reachable.
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
+    render(<Workspace />);
+    expect(screen.getByLabelText("Previous stage")).toBeDisabled();
+    expect(screen.getByLabelText("Next stage")).toBeDisabled();
+  });
 });

@@ -118,16 +118,25 @@ export function NodeLinksCard({
               <button
                 key={r.key}
                 type="button"
-                onClick={() => onSelect(r.peerId)}
+                disabled={!r.peer}
+                title={
+                  r.peer
+                    ? undefined
+                    : "Peer node is unavailable in this snapshot"
+                }
+                onClick={() => {
+                  if (r.peer) onSelect(r.peerId);
+                }}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
                   padding: "9px 11px",
+                  cursor: r.peer ? "pointer" : "default",
+                  opacity: r.peer ? 1 : 0.6,
                   border: "1px solid var(--border)",
                   borderRadius: 9,
                   background: "var(--paper)",
-                  cursor: "pointer",
                   textAlign: "left",
                   width: "100%",
                   color: "var(--ink)",

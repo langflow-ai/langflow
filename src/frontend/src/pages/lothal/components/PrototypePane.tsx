@@ -122,7 +122,12 @@ function PreviewFrame({ html }: { html: string }) {
     <iframe
       title="Prototype preview"
       srcDoc={html}
-      sandbox="allow-scripts allow-forms"
+      // Read-only snapshot review of captured/generated HTML: an OPAQUE-ORIGIN
+      // sandbox (no allow-same-origin, so it can't reach the app's DOM, cookies,
+      // or storage), with forms disabled and no referrer. `allow-scripts` stays so
+      // JS-driven prototypes still render; without same-origin they run isolated.
+      sandbox="allow-scripts"
+      referrerPolicy="no-referrer"
       style={{
         width: "100%",
         height: "100%",

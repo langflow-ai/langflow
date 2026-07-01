@@ -101,6 +101,40 @@ describe("PhaseStepper", () => {
     expect(screen.getByText("Design")).toBeInTheDocument();
     expect(screen.getByText("Deliver")).toBeInTheDocument();
   });
+
+  it("makes stages up to currentPhase clickable and reports the phase id", () => {
+    const onSelect = jest.fn();
+    render(
+      <PhaseStepper
+        phase="ARCHITECTURE"
+        currentPhase="PLAN"
+        onSelect={onSelect}
+      />,
+    );
+    // Reachable stages (index <= the live PLAN phase) render as buttons.
+    fireEvent.click(screen.getByTitle("View the Design stage"));
+    expect(onSelect).toHaveBeenCalledWith("ARCHITECTURE");
+    fireEvent.click(screen.getByTitle("View the Plan stage"));
+    expect(onSelect).toHaveBeenLastCalledWith("PLAN");
+    // Future stages (beyond the live phase) are NOT navigable.
+    expect(screen.queryByTitle("View the Generate stage")).toBeNull();
+    expect(screen.queryByTitle("View the Deliver stage")).toBeNull();
+  });
+
+  it("keys done-marks and the live dot off currentPhase, not the viewed phase", () => {
+    const { rerender } = render(
+      <PhaseStepper phase="ARCHITECTURE" currentPhase="PLAN" />,
+    );
+    // done = every stage before the live phase: Clarify, Design, Prototype.
+    expect(screen.getAllByText("✓")).toHaveLength(3);
+    // Without onSelect even reachable stages aren't clickable.
+    expect(screen.queryByTitle("View the Design stage")).toBeNull();
+    // Viewing an earlier stage marks the live one with the "Current stage" dot.
+    expect(screen.getByTitle("Current stage")).toBeInTheDocument();
+    // Viewing the live stage itself → no separate dot (active === live).
+    rerender(<PhaseStepper phase="PLAN" currentPhase="PLAN" />);
+    expect(screen.queryByTitle("Current stage")).toBeNull();
+  });
 });
 
 describe("TopBar", () => {

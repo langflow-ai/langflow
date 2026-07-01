@@ -336,12 +336,16 @@ function NodeTests({
   projectId,
   nodeId,
   tests,
+  loading,
+  error,
   canEdit,
   canRun,
 }: {
   projectId: string;
   nodeId: string;
   tests: PlanTest[];
+  loading: boolean;
+  error: boolean;
   canEdit: boolean;
   canRun: boolean;
 }) {
@@ -356,12 +360,25 @@ function NodeTests({
     createTest.mutate({ scope, title: t }, { onSuccess: () => setTitle("") });
   };
 
+  // Distinguish a failed/loading query from a genuinely empty test set — otherwise
+  // a request failure reads as "no tests" and the gate can't be trusted.
+  const emptyLabel = error
+    ? "Couldn't load tests — the planning service may be unavailable."
+    : loading
+      ? "Loading tests…"
+      : "No tests authored yet.";
+
   return (
     <Card label="Tests">
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {tests.length === 0 ? (
-          <span style={{ fontSize: 12, color: "var(--ink-mute)" }}>
-            No tests authored yet.
+          <span
+            style={{
+              fontSize: 12,
+              color: error ? "var(--state-failed)" : "var(--ink-mute)",
+            }}
+          >
+            {emptyLabel}
           </span>
         ) : (
           tests.map((t) => (
@@ -656,13 +673,21 @@ function NodeDetailPanel({
   onOpenGraph: () => void;
 }) {
   const { data: node, isLoading, error } = usePlanNode(projectId, nodeId);
-  const { data: testsData } = usePlanTests(projectId, nodeId);
+  const {
+    data: testsData,
+    isLoading: testsLoading,
+    isError: testsError,
+  } = usePlanTests(projectId, nodeId);
   const saveContract = useUpdatePlanContract(projectId, nodeId);
   const saveCriteria = useUpdatePlanCriteria(projectId, nodeId);
   const ratify = useRatifyPlanNode(projectId);
   const transition = useTransitionPlanNode(projectId);
   const move = useMovePlanNode(projectId);
-  const { data: events } = usePlanNodeEvents(projectId, nodeId);
+  const {
+    data: events,
+    isLoading: eventsLoading,
+    isError: eventsError,
+  } = usePlanNodeEvents(projectId, nodeId);
 
   const [mode, setMode] = useState<"item" | "impl">("item");
   const [assumptions, setAssumptions] = useState("");
@@ -696,12 +721,16 @@ function NodeDetailPanel({
     );
 
   const tests = testsData ?? [];
+  // Only trust the reconstructed gate once the tests query has actually resolved —
+  // otherwise a childless node reads gate-open (empty checks) before we know its
+  // test results, wrongly enabling "Mark verified".
+  const testsReady = testsData !== undefined;
   const isDraft = node.state === "draft";
   const canEdit = editable && isDraft;
   const frozen = !isDraft;
   const treeNode = nodes.find((n) => n.id === node.id);
   const children = childrenOf.get(node.id) ?? [];
-  const gateOpen = isGateOpen(children, tests);
+  const gateOpen = testsReady && isGateOpen(children, tests);
   const txReason = ratify.isError
     ? reasonOf(ratify.error)
     : transition.isError
@@ -1024,6 +1053,8 @@ function NodeDetailPanel({
               projectId={projectId}
               nodeId={node.id}
               tests={tests}
+              loading={testsLoading}
+              error={testsError}
               canEdit={canEdit}
               canRun={editable}
             />
@@ -1056,8 +1087,19 @@ function NodeDetailPanel({
               }
             >
               {(events ?? []).length === 0 ? (
-                <span style={{ fontSize: 12, color: "var(--ink-mute)" }}>
-                  No events yet.
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: eventsError
+                      ? "var(--state-failed)"
+                      : "var(--ink-mute)",
+                  }}
+                >
+                  {eventsError
+                    ? "Couldn't load the history — the planning service may be unavailable."
+                    : eventsLoading
+                      ? "Loading history…"
+                      : "No events yet."}
                 </span>
               ) : (
                 <div

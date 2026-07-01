@@ -37,8 +37,8 @@ const STEP_COPY: Record<LothalPhaseId, string> = {
     "From the approved design, Lothal drives Open Design to produce an interactive UI/UX prototype you can preview, edit, and comment on without leaving the page.",
   PLAN: "Lothal breaks the work into a tree — app, component, epic, story — and gives each item an assume-guarantee contract, acceptance criteria, and frozen tests before a line is written.",
   CODE_GENERATION:
-    "Coming next: each ratified item is implemented against the very tests and contract it was frozen with — a definition of done the build can't move.",
-  DONE: "Coming next: leave with every artifact — PRD, diagrams, prototype, and code — each one traceable back to the plan you ratified.",
+    "Each ratified item is implemented against the very tests and contract it was frozen with — a definition of done the build can't move.",
+  DONE: "Leave with every artifact — PRD, diagrams, prototype, and code — each one traceable back to the plan you ratified.",
 };
 
 // A short serif lead shown under each step's label.

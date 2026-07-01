@@ -40,6 +40,16 @@ const CARD_H = 62;
 const COL_GAP = 230;
 const ROW_GAP = 92;
 const PAD = 24;
+// How far a same-column edge bows to the right of its cards — reserved in the
+// canvas width so the rightmost column's loops aren't clipped by the scroll area.
+const EDGE_BOW = 48;
+
+// The PM service's user-facing reason (validation verdict) rides on a 4xx.
+function linkErrorReason(error: unknown): string | null {
+  const detail = (error as { response?: { data?: { detail?: unknown } } })
+    ?.response?.data?.detail;
+  return typeof detail === "string" ? detail : null;
+}
 
 type Placed = PlanNode & { x: number; y: number };
 
@@ -71,7 +81,8 @@ function layout(nodes: PlanNode[]): {
   }
   return {
     placed,
-    width: PAD * 2 + maxDepth * COL_GAP + CARD_W,
+    // + EDGE_BOW so a same-column loop off the rightmost column stays in view.
+    width: PAD * 2 + maxDepth * COL_GAP + CARD_W + EDGE_BOW,
     height: PAD * 2 + Math.max(0, maxRows - 1) * ROW_GAP + CARD_H,
   };
 }
@@ -185,8 +196,8 @@ function GraphCanvas({
           if (Math.abs(t.x - s.x) < 1) {
             sx = s.x + CARD_W;
             tx = t.x + CARD_W;
-            cx1 = sx + 48;
-            cx2 = tx + 48;
+            cx1 = sx + EDGE_BOW;
+            cx2 = tx + EDGE_BOW;
           } else {
             const forward = t.x > s.x;
             sx = forward ? s.x + CARD_W : s.x;
@@ -527,6 +538,27 @@ export function PlanGraph({
             >
               Link
             </Button>
+          </div>
+        )}
+        {createLink.isError && (
+          <div
+            style={{
+              marginTop: 8,
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: "var(--ink-mute)",
+              background: tint("#cf9a3a", 8),
+              border: `1px solid ${tint("#cf9a3a", 30)}`,
+              borderRadius: 8,
+              padding: "7px 10px",
+            }}
+          >
+            <strong style={{ color: "var(--ink)", fontWeight: 600 }}>
+              Couldn't add the link
+            </strong>
+            {linkErrorReason(createLink.error)
+              ? ` — ${linkErrorReason(createLink.error)}`
+              : ". Try again in a moment."}
           </div>
         )}
       </div>

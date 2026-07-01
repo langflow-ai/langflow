@@ -701,7 +701,7 @@ def _is_html_artifact(path: str, kind: str) -> bool:
 def _approval_summary(artifacts: list[prototype_engine.ApprovedArtifact]) -> str:
     """The single-chat-bridge summary posted on approval (Story U.10)."""
     if not artifacts:
-        return "Prototype approved. Generating the code from your approved architecture next."
+        return "Prototype approved. Planning the build next."
     listed = "\n".join(f"- {a.title}" for a in artifacts)
     plural = "artifact" if len(artifacts) == 1 else "artifacts"
     return f"Prototype approved with {len(artifacts)} {plural}:\n{listed}\n\nPlanning the build next."

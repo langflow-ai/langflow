@@ -525,6 +525,10 @@ function WorkspaceView() {
   // drag we mutate the column's width directly (no per-frame React render) and
   // commit to state only on release.
   const chatColRef = useRef<HTMLDivElement>(null);
+  // Holds the active drag's teardown so it always runs — on mouseup, but also on
+  // unmount mid-drag (otherwise the document listeners + body cursor/userSelect
+  // overrides would survive and leave the app stuck in col-resize).
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
   const startChatResize = (e: React.MouseEvent) => {
     e.preventDefault();
     let next = chatWidth;
@@ -532,19 +536,26 @@ function WorkspaceView() {
       next = clampChatWidth(ev.clientX);
       if (chatColRef.current) chatColRef.current.style.width = `${next}px`;
     };
-    const onUp = () => {
-      setChatWidth(next);
-      writeChatWidth(next);
+    const teardown = () => {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
       document.body.style.userSelect = "";
       document.body.style.cursor = "";
+      resizeCleanupRef.current = null;
     };
+    const onUp = () => {
+      setChatWidth(next);
+      writeChatWidth(next);
+      teardown();
+    };
+    resizeCleanupRef.current = teardown;
     document.body.style.userSelect = "none";
     document.body.style.cursor = "col-resize";
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
   };
+  // Safety net: if the component unmounts mid-drag, tear the session down.
+  useEffect(() => () => resizeCleanupRef.current?.(), []);
 
   // Tab title carries the open project ("Tide Tracker — Lothal"); restored on
   // the way out.
@@ -642,9 +653,14 @@ function WorkspaceView() {
   const viewedIdx = phaseIndex(viewedPhase);
   const browsingPast =
     viewedIdx >= 0 && currentIdx >= 0 && viewedIdx !== currentIdx;
+  // Selecting the project's real phase normalizes back to `null` (follow live) so
+  // a later server phase change still advances the right pane; only an EARLIER
+  // phase pins the read-only browse.
+  const selectViewedPhase = (id: string) =>
+    setViewedPhase(id === project.phase ? null : id);
   const gotoPhase = (delta: number) => {
     const next = Math.min(Math.max(viewedIdx + delta, 0), currentIdx);
-    setViewedPhase(PHASE_IDS[next]);
+    selectViewedPhase(PHASE_IDS[next]);
   };
 
   return (
@@ -744,7 +760,7 @@ function WorkspaceView() {
               phase={viewedPhase}
               currentPhase={project.phase}
               variant="stepper"
-              onSelect={(id) => setViewedPhase(id)}
+              onSelect={selectViewedPhase}
             />
             <button
               type="button"
@@ -874,7 +890,7 @@ function WorkspaceView() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => setViewedPhase(project.phase)}
+                onClick={() => setViewedPhase(null)}
               >
                 Back to {phaseLabel(project.phase)}
               </Button>
