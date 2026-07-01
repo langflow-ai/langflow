@@ -98,7 +98,6 @@ def test_deepseek_get_models(mocker):
         "https://api.deepseek.com/models",
         headers={"Authorization": "Bearer test-key", "Accept": "application/json"},
         timeout=10,
-        allow_redirects=False,
     )
 
 
