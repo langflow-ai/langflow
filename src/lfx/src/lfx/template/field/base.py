@@ -180,6 +180,9 @@ class Output(BaseModel):
     types: list[str] = Field(default=[])
     """List of output types for the field."""
 
+    schema_: Any | None = Field(default=None, alias="schema")
+    """Pydantic model schema for structured output validation."""
+
     selected: str | None = Field(default=None)
     """The selected output type for the field."""
 

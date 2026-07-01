@@ -1,3 +1,5 @@
+from lfx.schema.data import Data
+from pydantic import BaseModel, ValidationError
 import ast
 import types
 from pathlib import Path
@@ -701,3 +703,121 @@ def test_metadata_always_returned_comprehensive():
     # assert frontend_node4["metadata"]["module"] == "custom_components.test_with_inputs"
     # assert "code_hash" in frontend_node4["metadata"]
     # assert len(frontend_node4["metadata"]["code_hash"]) == 12
+
+
+@pytest.mark.asyncio
+async def test_component_output_schema_validation_dict_success():
+    """Test that a dict output is validated and normalized against Output.schema_."""
+    code = dedent("""
+    from lfx.custom import Component
+    from lfx.template.field.base import Output
+    from pydantic import BaseModel
+    
+    class InnerSchema(BaseModel):
+        name: str
+        age: int
+        
+    class SchemaComponent(Component):
+        display_name = "Schema Component"
+        outputs = [
+            Output(display_name="Output", name="output", method="get_result", schema_=InnerSchema)
+        ]
+        
+        def get_result(self) -> dict:
+            return {"name": "Alice", "age": "30", "extra": "ignored"}
+    """)
+    component = Component(_code=code)
+    output_obj = component._outputs_map["output"]
+    result = await component._get_output_result(output_obj)
+    
+    assert isinstance(result, dict)
+    assert result["name"] == "Alice"
+    assert result["age"] == 30
+
+@pytest.mark.asyncio
+async def test_component_output_schema_validation_list_success():
+    """Test that a list of dict outputs is validated against Output.schema_."""
+    code = dedent("""
+    from lfx.custom import Component
+    from lfx.template.field.base import Output
+    from pydantic import BaseModel
+    
+    class InnerSchema(BaseModel):
+        name: str
+        age: int
+        
+    class SchemaComponent(Component):
+        display_name = "Schema Component"
+        outputs = [
+            Output(display_name="Output", name="output", method="get_result", schema_=InnerSchema)
+        ]
+        
+        def get_result(self) -> list:
+            return [{"name": "Alice", "age": "30"}, {"name": "Bob", "age": 25}]
+    """)
+    component = Component(_code=code)
+    output_obj = component._outputs_map["output"]
+    result = await component._get_output_result(output_obj)
+    
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert result[0]["age"] == 30
+    assert result[1]["name"] == "Bob"
+
+@pytest.mark.asyncio
+async def test_component_output_schema_validation_data_success():
+    """Test that a Data object output is validated against Output.schema_."""
+    code = dedent("""
+    from lfx.custom import Component
+    from lfx.template.field.base import Output
+    from lfx.schema.data import Data
+    from pydantic import BaseModel
+    
+    class InnerSchema(BaseModel):
+        name: str
+        age: int
+        
+    class SchemaComponent(Component):
+        display_name = "Schema Component"
+        outputs = [
+            Output(display_name="Output", name="output", method="get_result", schema_=InnerSchema)
+        ]
+        
+        def get_result(self) -> Data:
+            return Data(data={"name": "Alice", "age": "30", "extra": "ignored"})
+    """)
+    component = Component(_code=code)
+    output_obj = component._outputs_map["output"]
+    result = await component._get_output_result(output_obj)
+    
+    assert isinstance(result, Data)
+    assert result.data["name"] == "Alice"
+    assert result.data["age"] == 30
+
+@pytest.mark.asyncio
+async def test_component_output_schema_validation_error():
+    """Test that returning invalid data for Output.schema_ raises ValidationError."""
+    from pydantic import ValidationError
+    code = dedent("""
+    from lfx.custom import Component
+    from lfx.template.field.base import Output
+    from pydantic import BaseModel
+    
+    class InnerSchema(BaseModel):
+        name: str
+        age: int
+        
+    class SchemaComponent(Component):
+        display_name = "Schema Component"
+        outputs = [
+            Output(display_name="Output", name="output", method="get_result", schema_=InnerSchema)
+        ]
+        
+        def get_result(self) -> dict:
+            return {"name": "Alice", "age": "not_an_int"}
+    """)
+    component = Component(_code=code)
+    output_obj = component._outputs_map["output"]
+    
+    with pytest.raises(ValidationError):
+        await component._get_output_result(output_obj)

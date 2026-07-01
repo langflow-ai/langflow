@@ -261,7 +261,7 @@ class GroqModelDiscovery:
                 "moonshotai": "Moonshot AI",
                 "qwen": "Alibaba Cloud",
             }
-            prefix = model_id.split("/")[0]
+            prefix = model_id.split("/", maxsplit=1)[0]
             return provider_map.get(prefix, prefix.title())
 
         # Common patterns

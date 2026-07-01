@@ -165,7 +165,7 @@ class ChunkDoclingDocumentComponent(Component):
             except (ImportError, RuntimeError) as e:
                 msg = f"HybridChunker is not installed. {_CHUNKING_INSTALL_HINT}"
                 raise ImportError(msg) from e
-            max_tokens: int | None = self.max_tokens if self.max_tokens else None
+            max_tokens: int | None = self.max_tokens or None
             if self.provider == "Hugging Face":
                 try:
                     from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
