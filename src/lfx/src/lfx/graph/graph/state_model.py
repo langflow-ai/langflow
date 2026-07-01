@@ -54,13 +54,11 @@ def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
             msg = f"Vertex {vertex.id} does not have a component instance."
             raise ValueError(msg)
 
-    state_model_getters = [
-        vertex.custom_component.get_state_model_instance_getter()
-        for vertex in graph.vertices
-        if hasattr(vertex, "custom_component") and hasattr(vertex.custom_component, "get_state_model_instance_getter")
-    ]
-    fields = {
-        camel_to_snake(vertex.id): state_model_getter
-        for vertex, state_model_getter in zip(graph.vertices, state_model_getters, strict=False)
-    }
+    filtered_vertices = []
+    state_model_getters = []
+    for vertex in graph.vertices:
+        if hasattr(vertex, "custom_component") and hasattr(vertex.custom_component, "get_state_model_instance_getter"):
+            filtered_vertices.append(vertex)
+            state_model_getters.append(vertex.custom_component.get_state_model_instance_getter())
+    fields = {camel_to_snake(v.id): getter for v, getter in zip(filtered_vertices, state_model_getters, strict=False)}
     return create_state_model(model_name="GraphStateModel", validate=False, **fields)
