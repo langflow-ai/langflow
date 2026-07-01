@@ -87,7 +87,8 @@ async def test_clarity_reached_drafts_prd_holds_phase_and_hands_off(fake_llm):
     assert CLARITY_TOKEN not in response.prd
     assert response.prd.startswith("# PRD")
     assert "personal todo app" in response.prd
-    assert response.text.strip() and "# PRD" not in response.text
+    assert response.text.strip()  # a non-empty chat handoff…
+    assert "# PRD" not in response.text  # …not the PRD itself
 
 
 async def test_clarity_token_alone_yields_non_empty_prd(fake_llm):
@@ -96,14 +97,17 @@ async def test_clarity_token_alone_yields_non_empty_prd(fake_llm):
 
     assert response.next_phase is None
     assert response.text.strip()  # the handoff line (LLMResponse forbids empty text)
-    assert response.prd and response.prd.strip()  # a non-empty placeholder PRD
+    assert response.prd is not None
+    assert response.prd.strip()  # a non-empty placeholder PRD
 
 
 async def test_revise_mode_rewrites_the_prd_when_one_already_exists(fake_llm):
     # A drafted PRD already on the project → a further turn revises it (no
     # questions, no transition), carrying the new spec back on `prd`.
     fake_llm["_reply"] = "# PRD\n\n## Overview\nA personal todo app, now dark-mode first."
-    response = await ClarificationEngine().process([], "make it dark-mode first", prd="# PRD\n\n## Overview\nA todo app.")
+    response = await ClarificationEngine().process(
+        [], "make it dark-mode first", prd="# PRD\n\n## Overview\nA todo app."
+    )
 
     assert response.next_phase is None
     assert response.suggestions == []
