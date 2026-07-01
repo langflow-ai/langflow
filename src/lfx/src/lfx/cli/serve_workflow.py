@@ -33,9 +33,11 @@ class ServeWorkflowHost(WorkflowHostBase):
     """No-db, single-tenant host backed by the in-memory ``FlowRegistry``.
 
     ``supports_background = False`` makes the durable path unreachable;
-    ``supports_request_overrides = False`` rejects tweaks/data/files/globals/
-    partial-run boundaries with 422. ``authorize`` / ``session`` inherit the
-    base no-op / yield-``None`` defaults.
+    ``supports_request_overrides = False`` rejects tweaks/data/files/partial-run
+    boundaries with 422 (request-level ``globals`` are the exception: they need no
+    graph rebuild, so the lfx-default run/stream path applies them as
+    request-scoped variables). ``authorize`` / ``session`` inherit the base no-op
+    / yield-``None`` defaults.
     """
 
     supports_background = False
