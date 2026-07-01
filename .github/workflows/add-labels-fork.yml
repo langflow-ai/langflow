@@ -1,37 +1,54 @@
-name: Manage Review Labels
+name: Manage Review Labels (fork bridge)
+
+# Fork PRs run "Manage Review Labels" with a restricted GITHUB_TOKEN that
+# cannot write labels. This workflow runs in the base repo context (default
+# branch) with the workflow-declared permissions, so it can apply the label
+# on the fork PR's behalf.
 
 on:
-  pull_request_review:
-    types: [submitted]
+  workflow_run:
+    workflows: ["Manage Review Labels"]
+    types: [completed]
 
 jobs:
-  label-on-review:
+  apply-label:
+    if: ${{ github.event.workflow_run.event == 'pull_request_review' }}
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
       issues: write
     steps:
+      - name: Download review event artifact
+        id: download
+        uses: actions/download-artifact@v4
+        with:
+          name: review-event
+          path: review-event
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+        continue-on-error: true
+
       - name: Manage LGTM Review Label
-        if: ${{ !github.event.pull_request.head.repo.fork }}
+        if: steps.download.outcome == 'success'
         uses: actions/github-script@v8
         with:
           script: |
+            const fs = require('fs');
             const LGTM_LABEL = 'lgtm';
 
-            // Extract review details
-            const { state: reviewState } = context.payload.review;
-            const pullRequestNumber = context.payload.pull_request.number;
+            const payload = JSON.parse(fs.readFileSync('review-event/payload.json', 'utf8'));
+            const pullRequestNumber = payload.pr_number;
+            const reviewState = payload.review_state;
+
             const repoDetails = {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pullRequestNumber
             };
 
-            // Log review information
             console.log(`Processing review for PR #${pullRequestNumber}`);
             console.log(`Review state: ${reviewState}`);
 
-            // Helper function to check for LGTM label
             async function hasLgtmLabel() {
               const { data: labels } = await github.rest.issues.listLabelsOnIssue(repoDetails);
               return labels.some(label => label.name === LGTM_LABEL);
@@ -64,28 +81,3 @@ jobs:
                 console.log(`No ${LGTM_LABEL} label to remove`);
               }
             }
-
-      # Fork PRs run with a restricted GITHUB_TOKEN that cannot write labels.
-      # Persist the event payload so the companion add-labels-fork workflow
-      # (triggered via workflow_run from the base repo context) can apply the
-      # label on our behalf.
-      - name: Save review event for fork bridge
-        if: ${{ github.event.pull_request.head.repo.fork }}
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REVIEW_STATE: ${{ github.event.review.state }}
-        run: |
-          mkdir -p review-event
-          jq -n \
-            --arg pr "$PR_NUMBER" \
-            --arg state "$REVIEW_STATE" \
-            '{pr_number: ($pr | tonumber), review_state: $state}' \
-            > review-event/payload.json
-
-      - name: Upload review event artifact
-        if: ${{ github.event.pull_request.head.repo.fork }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: review-event
-          path: review-event/
-          retention-days: 1
