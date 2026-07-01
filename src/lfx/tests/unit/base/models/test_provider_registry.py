@@ -21,6 +21,7 @@ from lfx.base.models.model_metadata import LIVE_MODEL_PROVIDERS, MODEL_PROVIDER_
 from lfx.base.models.model_utils import get_live_models_for_provider
 from lfx.base.models.provider_registry import ProviderSpec, register_provider
 from lfx.base.models.unified_models import (
+    get_live_only_providers,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
@@ -131,6 +132,34 @@ def test_duplicate_bundle_registration_is_ignored():
     assert register_provider(_fakeco_spec(metadata={**_fakeco_metadata(), "icon": "Other"})) is False
     # First registration wins.
     assert MODEL_PROVIDER_METADATA["FakeCo"]["icon"] == "FakeCo"
+
+
+# ---------------------------------------------------------------------------
+# Live-only provider surface (feeds the /api/v1/models union)
+# ---------------------------------------------------------------------------
+
+
+def test_live_only_providers_empty_at_core_baseline():
+    # Azure OpenAI / Groq carry metadata but no live gate and must not surface;
+    # every live-capable core provider ships static catalog rows.
+    assert get_live_only_providers() == []
+
+
+def test_live_registration_appears_in_live_only_providers():
+    register_provider(_fakeco_spec(live=True, live_discovery=_LIVE_DISCOVERY_PATH))
+    assert get_live_only_providers() == ["FakeCo"]
+
+
+def test_conditional_live_registration_appears_in_live_only_providers():
+    register_provider(_fakeco_spec(conditional_live=True, live_discovery=_LIVE_DISCOVERY_PATH))
+    assert get_live_only_providers() == ["FakeCo"]
+
+
+def test_non_live_registration_excluded_from_live_only_providers():
+    # Without a live gate the provider could never list models; excluding it
+    # mirrors the deliberate absence of Azure OpenAI / Groq from the unified UI.
+    register_provider(_fakeco_spec())
+    assert get_live_only_providers() == []
 
 
 # ---------------------------------------------------------------------------

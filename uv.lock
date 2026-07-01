@@ -44,6 +44,7 @@ members = [
     "lfx-ibm",
     "lfx-nextplaid",
     "lfx-openai",
+    "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-paddle",
     "lfx-vllm",
@@ -7904,6 +7905,7 @@ dependencies = [
     { name = "lfx-ibm" },
     { name = "lfx-nextplaid" },
     { name = "lfx-openai" },
+    { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
     { name = "lfx-paddle" },
     { name = "lfx-vllm" },
@@ -8008,6 +8010,7 @@ requires-dist = [
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
+    { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", editable = "src/bundles/paddle" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
@@ -10083,6 +10086,21 @@ requires-dist = [
     { name = "langchain-openai", specifier = ">=1.1.6" },
     { name = "lfx", editable = "src/lfx" },
     { name = "openai", specifier = ">=1.68.2,<3.0.0" },
+]
+
+[[package]]
+name = "lfx-openai-compatible"
+version = "0.1.0"
+source = { editable = "src/bundles/openai-compatible" }
+dependencies = [
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "lfx", editable = "src/lfx" },
+    { name = "requests", specifier = ">=2.31.0,<3.0.0" },
 ]
 
 [[package]]
