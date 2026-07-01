@@ -463,7 +463,10 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
-            mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
+            if get_settings_service().settings.skip_mcp_auto_init:
+                await logger.adebug("Skipping MCP server auto-initialization (skip_mcp_auto_init=True)")
+            else:
+                mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
             async def refresh_models_dev_periodically() -> None:
                 """Hydrate the models.dev catalog at startup and refresh daily.
