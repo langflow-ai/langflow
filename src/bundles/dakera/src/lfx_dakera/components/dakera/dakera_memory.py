@@ -28,6 +28,8 @@ from lfx.inputs.inputs import (
     SecretStrInput,
 )
 from lfx.schema.data import Data
+
+_DEFAULT_IMPORTANCE = 0.5
 from lfx.template.field.base import Output
 
 
@@ -102,9 +104,9 @@ class DakeraMemoryComponent(Component):
         FloatInput(
             name="importance",
             display_name="Importance",
-            info="Initial importance score for the stored memory (0.0 – 1.0). "
+            info="Initial importance score for the stored memory (0.0 - 1.0). "
                  "Decays over time based on access patterns.",
-            value=0.5,
+            value=_DEFAULT_IMPORTANCE,
             required=False,
             advanced=True,
         ),
@@ -127,7 +129,7 @@ class DakeraMemoryComponent(Component):
         IntInput(
             name="top_k",
             display_name="Top K",
-            info="Maximum number of memories to retrieve (1–20).",
+            info="Maximum number of memories to retrieve (1-20).",
             value=5,
             required=False,
             advanced=True,
@@ -197,8 +199,8 @@ class DakeraMemoryComponent(Component):
         sid = self._session_id()
         if sid:
             body["session_id"] = sid
-        importance = float(self.importance or 0.5)
-        if importance != 0.5:
+        importance = float(self.importance or _DEFAULT_IMPORTANCE)
+        if importance != _DEFAULT_IMPORTANCE:
             body["importance"] = importance
         tags_raw = (self.tags or "").strip()
         if tags_raw:
