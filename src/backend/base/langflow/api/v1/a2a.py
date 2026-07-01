@@ -83,23 +83,34 @@ def _require_a2a_enabled() -> None:
 
 
 async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
-    """Enforce the apikey scheme the card advertises, before any dispatch.
+    """Enforce the folder's auth scheme before any dispatch, failing closed on the rest.
 
-    When the flow's folder requires apikey auth, the request must carry a valid
-    langflow API key in ``x-api-key`` whose owner is the flow owner. The flow always
-    runs as its owner (see ``_run_flow``), so accepting another user's valid key would
-    let them trigger a run under the owner's identity, so scope to ``flow.user_id``.
+    The flow always runs as its owner (see ``_run_flow``), so an unauthenticated run is a
+    run under the owner's identity. Gate by the folder's ``auth_type``:
+
+    - ``"none"`` / missing / no-folder -> public agent (the intended public A2A model).
+    - ``"apikey"`` -> require a valid langflow API key in ``x-api-key`` whose owner is the
+      flow owner. Accepting another user's valid key would let them trigger a run under the
+      owner's identity, so scope to ``flow.user_id``.
+    - anything else (e.g. ``"oauth"``, which A2A can't enforce yet) -> fail closed with 403.
+      The card advertises no scheme for it, but treating a *protected* folder as public would
+      expose an owner-identity run anonymously, so deny until that scheme lands.
 
     Uses ``check_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
     returns the superuser for a *missing* key, which would silently bypass this gate.
-    ``"none"`` / missing / no-folder stay public; ``"oauth"`` stays public this slice
-    (the card advertises no scheme for it, so a discovery client sends no key).
     """
     # Short writable session (check_key flushes usage counters), closed before
     # dispatch so no lock is held across the up-to-300s run.
     async with session_scope() as session:
-        if await folder_auth_type(flow, session) != "apikey":
+        auth_type = await folder_auth_type(flow, session)
+        if auth_type == "none":
             return  # public agent
+        if auth_type != "apikey":
+            # Protected folder with a scheme A2A can't enforce yet: fail closed, never public.
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"A2A access is disabled for this agent: unsupported folder auth type {auth_type!r}.",
+            )
         api_key = request.headers.get(A2A_APIKEY_HEADER)
         if not api_key:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")

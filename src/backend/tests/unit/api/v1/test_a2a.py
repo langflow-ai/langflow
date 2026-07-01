@@ -802,12 +802,24 @@ async def test_none_folder_stays_public(client: AsyncClient, active_user, echo_f
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_oauth_folder_stays_public(client: AsyncClient, active_user, echo_flow_data):
-    """An oauth folder advertises no scheme yet, so the route stays public this slice."""
+async def test_oauth_folder_fails_closed(client: AsyncClient, active_user, echo_flow_data):
+    """A2A can't enforce oauth yet, so an oauth folder fails closed (403), never public.
+
+    Otherwise a protected flow would run anonymously as its owner.
+    """
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "oauth"})
     flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
 
-    assert (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).status_code == 200
+    assert (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).status_code == 403
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_unknown_folder_auth_type_fails_closed(client: AsyncClient, active_user, echo_flow_data):
+    """Any protected auth type A2A doesn't understand fails closed (403), never public."""
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "saml"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+
+    assert (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).status_code == 403
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
