@@ -9,7 +9,11 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
-from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
+from lfx.base.models.model_metadata import (
+    CONDITIONAL_LIVE_MODEL_PROVIDERS,
+    LIVE_MODEL_PROVIDERS,
+    MODEL_PROVIDER_METADATA,
+)
 from lfx.base.models.ollama_constants import (
     OLLAMA_EMBEDDING_MODELS_DETAILED,
     OLLAMA_MODELS_DETAILED,
@@ -138,6 +142,32 @@ def get_model_providers() -> list[str]:
     providers = {md.get("provider", "Unknown") for group in get_models_detailed() for md in group}
     providers.update(model_provider_metadata.keys())
     return sorted(providers)
+
+
+def get_live_only_providers() -> list[str]:
+    """Return providers whose models come exclusively from live discovery.
+
+    A provider qualifies when it is declared in the provider metadata and in
+    the live-discovery gates but ships no static catalog rows -- today always
+    a provider contributed by an extension bundle via ``provider_registry``
+    (e.g. vLLM, OpenAI Compatible). Catalog-driven listings such as
+    ``get_unified_models_detailed`` can never emit these, and
+    ``replace_with_live_models`` only appends a provider once it is configured
+    *and* its endpoint returns models, so provider-facing surfaces (the Model
+    Providers dialog) must union them in explicitly or an unconfigured
+    provider would be undiscoverable.
+
+    Metadata-only providers that are *not* live-capable (Azure OpenAI, Groq)
+    are deliberately excluded: with neither a catalog nor live discovery they
+    could never list models, and they are intentionally absent from the
+    unified-model UI today.
+
+    Not cached: ``register_provider`` mutates the metadata and live gates in
+    place, and the underlying collections are small.
+    """
+    cataloged = {md.get("provider") for group in get_models_detailed() for md in group}
+    live_capable = {*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS}
+    return sorted(name for name in model_provider_metadata if name in live_capable and name not in cataloged)
 
 
 def get_provider_for_model_name(model_name: str) -> str:
