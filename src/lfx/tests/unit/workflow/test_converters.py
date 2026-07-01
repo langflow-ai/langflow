@@ -27,7 +27,15 @@ from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
-from langflow.api.v2.converters import (
+from lfx.schema.workflow import (
+    ComponentOutput,
+    ErrorDetail,
+    JobStatus,
+    OutputReason,
+    WorkflowExecutionResponse,
+    WorkflowJobResponse,
+)
+from lfx.workflow.converters import (
     _build_metadata_for_non_output,
     _extract_file_path,
     _extract_model_source,
@@ -41,14 +49,6 @@ from langflow.api.v2.converters import (
     create_error_response,
     create_job_response,
     run_response_to_workflow_response,
-)
-from lfx.schema.workflow import (
-    ComponentOutput,
-    ErrorDetail,
-    JobStatus,
-    OutputReason,
-    WorkflowExecutionResponse,
-    WorkflowJobResponse,
 )
 
 
@@ -1127,8 +1127,8 @@ class TestParseWorkflowRunRequest:
     """``parse_workflow_run_request`` projects ``WorkflowRunRequest`` onto ``ParsedWorkflowRun``."""
 
     def test_minimal_body_round_trips_with_defaults(self):
-        from langflow.api.v2.converters import parse_workflow_run_request
         from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
 
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=_VALID_UUID))
 
@@ -1144,8 +1144,8 @@ class TestParseWorkflowRunRequest:
         assert parsed.files is None
 
     def test_full_body_round_trip(self):
-        from langflow.api.v2.converters import parse_workflow_run_request
         from lfx.schema.workflow import WorkflowMode, WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
 
         request = WorkflowRunRequest(
             flow_id=_VALID_UUID,
@@ -1174,8 +1174,8 @@ class TestParseWorkflowRunRequest:
 
     def test_run_id_is_always_none_on_the_parsed_record(self):
         """The endpoint generates run_id; callers cannot supply it via the body."""
-        from langflow.api.v2.converters import parse_workflow_run_request
         from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
 
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=_VALID_UUID))
         assert parsed.run_id is None
