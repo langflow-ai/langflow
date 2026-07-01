@@ -15,8 +15,14 @@ export const useChatHistory = (visibleSession: string | null) => {
   const messageQueryParams: Parameters<typeof useGetMessagesQuery>[0] = {
     id: currentFlowId,
     mode: "union",
+    params: {
+      limit: 30,
+      order: "DESC"
+    }
   };
-  const { data: queryData } = useGetMessagesQuery(messageQueryParams);
+  const { data: queryData } = useGetMessagesQuery(messageQueryParams, {
+    enabled: !!visibleSession,
+  });
 
   // Session cache key - this is the single source of truth for messages
   const sessionCacheKey = useMemo(

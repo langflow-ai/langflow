@@ -227,7 +227,16 @@ async def get_messages(
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    order: Annotated[str | None, Query()] = "ASC",
+    limit: Annotated[int | None, Query()] = None,
 ) -> list[MessageResponse]:
+    if order_by and order_by not in {"id", "timestamp", "sender", "sender_name", "session_id", "text", "flow_id"}:
+        raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+    if order and order.upper() not in {"ASC", "DESC"}:
+        raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
+    if limit is not None and (limit < 1 or limit > 1000):
+        raise HTTPException(status_code=400, detail="Limit must be between 1 and 1000")
+
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
         # share-aware path lets a non-owner with a read grant see the flow's
@@ -255,8 +264,14 @@ async def get_messages(
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
         if order_by:
-            order_col = getattr(MessageTable, order_by).asc()
+            order_col = getattr(MessageTable, order_by)
+            if order and order.upper() == "DESC":
+                order_col = order_col.desc()
+            else:
+                order_col = order_col.asc()
             stmt = stmt.order_by(order_col)
+        if limit is not None:
+            stmt = stmt.limit(limit)
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
     except Exception as e:
