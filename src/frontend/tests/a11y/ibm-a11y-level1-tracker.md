@@ -1,11 +1,11 @@
 # IBM Accessibility Level 1 — Validation Tracker
 
-> Companion to the criteria guide: [IBM_ACCESSIBILITY_LEVEL1.md](IBM_ACCESSIBILITY_LEVEL1.md)
+> Companion to the criteria guide: [ibm-a11y-level1-criteria.md](ibm-a11y-level1-criteria.md)
 > Scope: Langflow frontend (`src/frontend/src`). Standard: IBM Equal Access Toolkit v7.3 — Level 1.
 
 This is a **manual validation tracker**. It does not run any checks — shared checklist to confirm each piece of UI has been validated for IBM Level 1 accessibility. It complements the automated scanners in [`scripts/a11y/`](scripts/a11y/) and [`src/frontend/tests/a11y/`](src/frontend/tests/a11y); it does not replace them.
 
-> **Validation method (2026-07-01): static source-code audit.** The current checkbox states were set by reading each component/route's source and judging it against the essentials in [IBM_ACCESSIBILITY_LEVEL1.md](IBM_ACCESSIBILITY_LEVEL1.md). This is **not** a substitute for the IBM Equal Access Checker or a real keyboard/screen-reader pass — treat `[x]` as "no blocking issue found in code," not "certified."
+> **Validation method (2026-07-01): static source-code audit.** The current checkbox states were set by reading each component/route's source and judging it against the essentials in [ibm-a11y-level1-criteria.md](ibm-a11y-level1-criteria.md). This is **not** a substitute for the IBM Equal Access Checker or a real keyboard/screen-reader pass — treat `[x]` as "no blocking issue found in code," not "certified."
 > - **What gates a check:** code-verifiable, non-visual essentials — accessible name/role/value (4.1.2), keyboard operability and no traps (2.1.1/2.1.2), labels/instructions (3.3.2/1.3.1), image text alternatives (1.1.1), status roles (4.1.3), focus management (2.4.3/2.4.7), and dragging alternatives (2.5.7). A missing one leaves the box empty with a `> Gap:` note.
 > - **What does NOT gate a check (visual, needs human eyes):** color/contrast (1.4.3/1.4.11), resize/zoom & reflow (1.4.4/1.4.10), text spacing (1.4.12). When one of these is the only open question, the item is marked `[x]` with a `> Note:` pointing to what to confirm visually.
 > - **Cannot be verified statically at all:** actual runtime focus visibility, screen-reader output, and true contrast/reflow — these still require the manual + automated passes above.
@@ -16,7 +16,7 @@ This is a **manual validation tracker**. It does not run any checks — shared c
 
 1. **Validate a component once, in the Registry (Section A).** Every reusable component has exactly one checkbox there.
 2. **Routes (Section B) do NOT re-check shared components.** A route lists the components it renders as links back to their Registry entry. The only checkbox a route owns is its own route-specific shell.
-3. **Tick a box only when the item passes IBM Level 1** per the criteria in [IBM_ACCESSIBILITY_LEVEL1.md](IBM_ACCESSIBILITY_LEVEL1.md) (keyboard, focus, name/role/value, contrast, labels, etc.).
+3. **Tick a box only when the item passes IBM Level 1** per the criteria in [ibm-a11y-level1-criteria.md](ibm-a11y-level1-criteria.md) (keyboard, focus, name/role/value, contrast, labels, etc.).
 
 ### Checkbox legend
 
@@ -373,4 +373,4 @@ Because IBM Level 1 coverage must not have gaps, keep the two sections in sync w
 4. **Refactor that moves imports** → re-derive the affected route's "Reused" list. Coverage still holds via the Registry even if a route list drifts, but keep it accurate.
 5. **Cross-check periodically:** every component in Section A should appear in at least one Section B route (or be intentionally unused); every route in `a11y_routes.json` should have a Section B entry.
 
-> Reminder: ticking a box means the item was manually validated against [IBM_ACCESSIBILITY_LEVEL1.md](IBM_ACCESSIBILITY_LEVEL1.md), ideally corroborated by the IBM Equal Access Checker and a keyboard/screen-reader pass.
+> Reminder: ticking a box means the item was manually validated against [ibm-a11y-level1-criteria.md](ibm-a11y-level1-criteria.md), ideally corroborated by the IBM Equal Access Checker and a keyboard/screen-reader pass.

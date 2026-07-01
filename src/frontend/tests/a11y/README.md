@@ -1,11 +1,23 @@
-# Accessibility scan coverage
+# Accessibility test coverage
 
 Langflow has two a11y scan layers:
 
-- Playwright specs in this directory are regression hosts. GitHub Actions runs
+- **Playwright specs** in this directory are regression hosts. GitHub Actions runs
   every spec that calls `page.runA11yScan(...)` in `.github/workflows/a11y-scan.yml`.
-- `scripts/a11y/a11y_scan.py` is the ad-hoc route/report tool. Use it when you need a
+- **`scripts/a11y/a11y_scan.py`** is the ad-hoc route/report tool. Use it when you need a
   Markdown or HTML report for a custom route batch, modal state, or local triage.
+
+## IBM Level 1 compliance docs
+
+| File | Purpose |
+|---|---|
+| [`ibm-a11y-level1-criteria.md`](ibm-a11y-level1-criteria.md) | Reference guide — IBM Equal Access Toolkit v7.3 Level 1 criteria (WCAG 2.2 A & AA). Read this to understand what each checkbox in the tracker means. |
+| [`ibm-a11y-level1-tracker.md`](ibm-a11y-level1-tracker.md) | **Validation tracker** — one checkbox per reusable component (Section A) and per route shell (Section B). Tick a box only when the item has been validated for IBM Level 1. |
+
+The tracker is a **manual checklist** that complements the automated Playwright scans; it does
+not replace them. `[x]` means no blocking issue was found during a static code audit
+(2026-07-01 baseline). Open `> Gap:` notes are items still needing a fix; `> Note:` items need
+a human visual/screen-reader confirmation pass.
 
 ## Static route coverage
 
