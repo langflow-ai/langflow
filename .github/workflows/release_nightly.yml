@@ -350,9 +350,32 @@ jobs:
           mkdir -p main-dist
           cp "${MAIN_WHEELS[0]}" main-dist/
 
-      # Bundles are NOT rebuilt/republished for nightly. The stable `lfx-*` bundles on
-      # PyPI work as-is against the canonical `lfx` pre-release (see src/bundles/NIGHTLY.md). The
-      # cross-platform test self-builds the bundles from src/bundles for install coverage.
+      - name: Build bundle wheels for cross-platform test
+        id: build-bundles
+        run: |
+          shopt -s nullglob
+          bundles=(src/bundles/*/pyproject.toml)
+          if [ ${#bundles[@]} -eq 0 ]; then
+            echo "No bundles found under src/bundles/*/"
+            echo "bundles-found=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p bundles-dist
+          BUNDLES_DIST="$PWD/bundles-dist"
+          for bundle_pyproject in "${bundles[@]}"; do
+            bundle_dir=$(dirname "$bundle_pyproject")
+            echo "Building wheel for $bundle_dir"
+            (cd "$bundle_dir" && uv build --wheel --out-dir "$BUNDLES_DIST")
+          done
+          echo "bundles-found=1" >> "$GITHUB_OUTPUT"
+          ls -la bundles-dist/
+
+      - name: Upload Bundles Artifact
+        if: steps.build-bundles.outputs.bundles-found == '1'
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-nightly-bundles
+          path: bundles-dist
 
       # PyPI publishing moved to after cross-platform testing
 
@@ -371,6 +394,8 @@ jobs:
       main-artifact-name: "dist-nightly-main"
       lfx-artifact-name: "dist-nightly-lfx"
       sdk-artifact-name: "dist-nightly-sdk"
+      bundles-artifact-name: "dist-nightly-bundles"
+      pre_release: true
 
   publish-nightly-lfx:
     name: Publish LFX Nightly to PyPI
@@ -457,10 +482,89 @@ jobs:
         run: |
           make publish base=true
 
-  publish-nightly-main:
-    name: Publish Langflow Main Nightly to PyPI
+  check-nightly-main-pypi-dependencies:
+    name: Check Main Nightly PyPI Dependencies
     needs: [build-nightly-main, test-cross-platform, publish-nightly-base]
     if: ${{ always() && needs.build-nightly-main.result == 'success' && needs.test-cross-platform.result == 'success' && needs.publish-nightly-base.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.nightly_tag_release }}
+          persist-credentials: true
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
+      - name: Check direct bundle dependencies on PyPI
+        run: |
+          uv run --with packaging --no-project python - <<'PY'
+          import json
+          import sys
+          import tomllib
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          from packaging.requirements import Requirement
+          from packaging.utils import canonicalize_name
+          from packaging.version import InvalidVersion, Version
+
+          data = tomllib.loads(Path("pyproject.toml").read_text())
+          requirements = []
+          for dependency in data["project"].get("dependencies", []):
+            requirement = Requirement(dependency)
+            name = canonicalize_name(requirement.name)
+            if name.startswith("lfx-"):
+              requirements.append(requirement)
+
+          if not requirements:
+            print("No direct lfx-* dependencies found.")
+            sys.exit(0)
+
+          missing = []
+          unsatisfied = []
+          for requirement in requirements:
+            name = canonicalize_name(requirement.name)
+            url = f"https://pypi.org/pypi/{name}/json"
+            try:
+              with urllib.request.urlopen(url, timeout=30) as response:
+                project = json.load(response)
+            except urllib.error.HTTPError as exc:
+              if exc.code == 404:
+                missing.append(name)
+                continue
+              raise
+
+            matching_versions = []
+            for version_text in project.get("releases", {}):
+              try:
+                version = Version(version_text)
+              except InvalidVersion:
+                continue
+              if version in requirement.specifier:
+                matching_versions.append(version)
+
+            if not matching_versions:
+              unsatisfied.append(f"{name}{requirement.specifier}")
+            else:
+              latest = max(matching_versions)
+              print(f"{name}{requirement.specifier}: available, latest matching {latest}")
+
+          if missing or unsatisfied:
+            if missing:
+              print("Missing PyPI projects: " + ", ".join(missing), file=sys.stderr)
+            if unsatisfied:
+              print("No published version satisfies: " + ", ".join(unsatisfied), file=sys.stderr)
+            sys.exit(1)
+          PY
+
+  publish-nightly-main:
+    name: Publish Langflow Main Nightly to PyPI
+    needs: [build-nightly-main, test-cross-platform, publish-nightly-base, check-nightly-main-pypi-dependencies]
+    if: ${{ always() && needs.build-nightly-main.result == 'success' && needs.test-cross-platform.result == 'success' && needs.publish-nightly-base.result == 'success' && needs.check-nightly-main-pypi-dependencies.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

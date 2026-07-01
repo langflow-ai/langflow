@@ -75,7 +75,7 @@ class CalculatorToolComponent(LCToolComponent):
 
     def _evaluate_expression(self, expression: str) -> list[Data]:
         try:
-            # Parse the expression and evaluate it
+            # Parse the expression and evaluate the safe arithmetic AST.
             tree = ast.parse(expression, mode="eval")
             result = self._eval_expr(tree.body)
 

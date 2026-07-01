@@ -73,9 +73,21 @@ const enablePreferredOpenAiModel = async (page: Page) => {
   return modelName;
 };
 
+const languageModelNodes = (page: Page) =>
+  page.locator(".react-flow__node", {
+    has: page.locator(
+      [
+        '[data-testid="title-language model"]',
+        '[data-testid="title-agent"]',
+        '[data-testid="title-batch run"]',
+        '[data-testid="title-structured output"]',
+      ].join(", "),
+    ),
+  });
+
 export const selectGptModel = async (page: Page) => {
-  const nodes = page.locator(".react-flow__node", {
-    has: page.getByTestId("title-language model"),
+  const nodes = languageModelNodes(page).filter({
+    has: page.getByTestId("model_model"),
   });
 
   const gptModelDropdownCount = await nodes.count();

@@ -919,3 +919,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         output_names = [out.name for out in component.outputs]
         assert "embeddings" in output_names
+
+    @pytest.fixture(autouse=True)
+    def disable_ssrf_protection(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")

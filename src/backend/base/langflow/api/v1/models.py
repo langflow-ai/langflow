@@ -17,6 +17,7 @@ from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.authorization import VariableAction, ensure_variable_permission
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
@@ -195,32 +196,23 @@ async def list_models(
         **metadata_filters,
     )
 
-    # Add configured and enabled status to each provider
+    # Run before status is computed so live-only providers appended here (e.g. IBM WatsonX,
+    # whose static catalog is fully deprecated) still receive is_enabled/is_configured (#13735).
+    configured_providers = {p for p, configured in provider_configured_status.items() if configured}
+    replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
+
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")
         provider_dict["is_configured"] = provider_configured_status.get(prov_name, False)
-
-        # Provider is "enabled" (active) if it has at least one enabled model
         prov_models_status = enabled_models_map.get(prov_name, {})
         has_active_model = any(prov_models_status.values())
         provider_dict["is_enabled"] = has_active_model
 
-    # Replace static models with live models for providers that support it
-    configured_providers = {p for p, configured in provider_configured_status.items() if configured}
-    replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
-
-    # Sort providers:
-    # 1. Provider with default model first
-    # 2. Configured providers next
-    # 3. Alphabetically after that
     def sort_key(provider_dict):
         provider_name = provider_dict.get("provider", "")
-        # Use is_configured for sorting priority (so they appear at top when ready)
         is_configured = provider_dict.get("is_configured", False)
         is_default = provider_name == default_provider
-
-        # Return tuple for sorting: (not is_default, not is_configured, provider_name)
-        # This way default comes first (False < True), then configured, then alphabetical
+        # default first, then configured, then alphabetical (False sorts before True)
         return (not is_default, not is_configured, provider_name)
 
     filtered_models.sort(key=sort_key)
@@ -528,17 +520,14 @@ async def get_enabled_models(
     model_names: Annotated[list[str] | None, Query()] = None,
 ):
     """Get enabled models for the current user."""
-    # Get all models - this returns a list of provider dicts with nested models
     all_models_by_provider = get_unified_models_detailed(
         include_unsupported=True,
         include_deprecated=True,
     )
 
-    # Get enabled providers status
     enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
     provider_status = enabled_providers_result.get("provider_status", {})
 
-    # Replace static models with live models for providers that support it
     configured_providers = {p for p, configured in provider_status.items() if configured}
     replace_with_live_models(all_models_by_provider, current_user.id, configured_providers)
 
@@ -546,10 +535,8 @@ async def get_enabled_models(
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
 
-    # Build model status based on provider enablement
     enabled_models: dict[str, dict[str, bool]] = {}
 
-    # Iterate through providers and their models
     for provider_dict in all_models_by_provider:
         provider = provider_dict.get("provider")
         models = provider_dict.get("models", [])
@@ -567,13 +554,6 @@ async def get_enabled_models(
             is_not_supported = metadata.get("not_supported", False)
             is_default = metadata.get("default", False)
 
-            # Model is enabled if:
-            # 1. Provider is enabled
-            # 2. Model is not deprecated/unsupported
-            # 3. Model is either:
-            #    - Marked as default (default=True), OR
-            #    - Explicitly enabled by user (in explicitly_enabled_models), AND
-            #    - NOT explicitly disabled by user (not in disabled_models)
             is_enabled = (
                 provider_status.get(provider, False)
                 and not is_deprecated
@@ -614,6 +594,14 @@ async def update_enabled_models(
     Accepts a list of model IDs with their desired enabled status.
     This only affects model-level enablement - provider credentials must still be configured.
     """
+    # Persists the enabled/disabled model lists as the user's own Variables: a
+    # variable WRITE. Enforce so the external access ceiling caps a "viewer";
+    # the owner with no ceiling fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.WRITE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(
@@ -755,6 +743,14 @@ async def set_default_model(
     request: DefaultModelRequest,
 ):
     """Set the default model for the current user."""
+    # Creating/updating the default-model Variable is a variable WRITE. Enforce
+    # so the external access ceiling caps a "viewer"; the owner with no ceiling
+    # fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.WRITE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(
@@ -830,6 +826,14 @@ async def clear_default_model(
     model_type: Annotated[str, Query(description="Type of model: 'language' or 'embedding'")] = "language",
 ):
     """Clear the default model for the current user."""
+    # Deleting the default-model Variable is a variable DELETE. Enforce so the
+    # external access ceiling caps a "viewer"; the owner with no ceiling
+    # fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.DELETE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(

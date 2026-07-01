@@ -81,6 +81,11 @@ async def run(
         show_default=True,
         help="Check global variables for environment compatibility",
     ),
+    check_dependencies: bool = typer.Option(
+        default=True,
+        show_default=True,
+        help="Preflight the flow's required packages; fail fast with install guidance when any are missing",
+    ),
     verbose: bool = typer.Option(
         False,  # noqa: FBT003
         "-v",
@@ -128,6 +133,7 @@ async def run(
         flow_json: Inline JSON flow content as a string
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
+        check_dependencies: Preflight required packages and fail fast when any are missing
         timing: Include detailed timing information in output
         session_id: Optional session ID; auto-generated if not supplied
         upgrade_flow: Component compatibility mode ('check' or 'safe')
@@ -144,6 +150,7 @@ async def run(
             flow_json=flow_json,
             stdin=bool(stdin),
             check_variables=check_variables,
+            check_dependencies=check_dependencies,
             verbose=verbose,
             verbose_detailed=verbose_detailed,
             verbose_full=verbose_full,

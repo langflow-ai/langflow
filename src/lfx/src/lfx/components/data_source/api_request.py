@@ -69,6 +69,9 @@ REDIRECT_STATUS_CODES = frozenset(
     }
 )
 
+# Default ports per scheme, used to compare redirect origins.
+DEFAULT_SCHEME_PORTS = {"http": 80, "https": 443}
+
 
 class APIRequestComponent(Component):
     display_name = "API Request"
@@ -642,15 +645,28 @@ class APIRequestComponent(Component):
 
     @staticmethod
     def _headers_for_redirect(headers: dict | None, current_url: str, next_url: str) -> dict | None:
-        """Drop sensitive headers when a redirect crosses to a different host.
+        """Drop sensitive headers when a redirect crosses to a different origin.
 
         Mirrors httpx's auto-follow behavior so manually following redirects does not
-        leak credentials (Authorization / Cookie) to a different host than the one the
-        caller intended them for. Same-host redirects keep all headers.
+        leak credentials (Authorization / Cookie) to an origin other than the one the
+        caller intended them for. Headers are kept only when the redirect stays on the
+        same origin (scheme, host, port) or is a direct https upgrade of the same host
+        on default ports - the exact cases where httpx keeps the Authorization header.
         """
         if not headers:
             return headers
-        if urlparse(current_url).hostname == urlparse(next_url).hostname:
+        current, nxt = urlparse(current_url), urlparse(next_url)
+        current_port = current.port or DEFAULT_SCHEME_PORTS.get(current.scheme)
+        next_port = nxt.port or DEFAULT_SCHEME_PORTS.get(nxt.scheme)
+        same_origin = (current.scheme, current.hostname, current_port) == (nxt.scheme, nxt.hostname, next_port)
+        https_upgrade = (
+            current.hostname == nxt.hostname
+            and current.scheme == "http"
+            and nxt.scheme == "https"
+            and current_port == DEFAULT_SCHEME_PORTS["http"]
+            and next_port == DEFAULT_SCHEME_PORTS["https"]
+        )
+        if same_origin or https_upgrade:
             return headers
         sensitive = {"authorization", "proxy-authorization", "cookie"}
         return {k: v for k, v in headers.items() if k.lower() not in sensitive}
@@ -803,8 +819,21 @@ class APIRequestComponent(Component):
             content_disposition = response.headers["Content-Disposition"]
             filename_match = re.search(r'filename="(.+?)"', content_disposition)
             if filename_match:
-                extracted_filename = filename_match.group(1)
-                filename = extracted_filename
+                # Reduce to the basename to prevent path traversal: the response
+                # (and therefore this header) is fully attacker-influenced, so a
+                # value like filename="../../../../tmp/evil.sh" must not escape
+                # component_temp_dir. Path(...).name strips any directory parts.
+                # Normalize backslashes to forward slashes first so Windows-style
+                # separators (e.g. filename="..\..\tmp\evil.sh") are also stripped
+                # on POSIX, where "\\" is a valid filename character that
+                # Path(...).name would otherwise leave intact. NUL bytes are
+                # stripped too: they survive Path(...).name and would otherwise
+                # make the later .resolve() raise a cryptic "embedded null
+                # character" ValueError instead of failing cleanly here.
+                normalized_filename = filename_match.group(1).replace("\\", "/").replace("\x00", "")
+                extracted_filename = Path(normalized_filename).name
+                if extracted_filename and extracted_filename not in (".", ".."):
+                    filename = extracted_filename
 
         # Step 3: Infer file extension or use part of the request URL if no filename
         if not filename:
@@ -827,6 +856,12 @@ class APIRequestComponent(Component):
 
         # Step 4: Define the full file path
         file_path = component_temp_dir / filename
+
+        # Defense-in-depth: ensure the resolved path stays within the component
+        # temp dir even if filename derivation above is ever changed.
+        if not file_path.resolve().is_relative_to(component_temp_dir.resolve()):
+            msg = "Resolved output path escapes the component temporary directory"
+            raise ValueError(msg)
 
         # Step 5: Check if file exists asynchronously and handle accordingly
         try:

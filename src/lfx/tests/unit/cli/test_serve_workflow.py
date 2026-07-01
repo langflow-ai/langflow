@@ -5,9 +5,12 @@ exercised through the FastAPI app, asserting the v2 ``WorkflowExecutionResponse`
 (sync) and the AG-UI / langflow SSE streams, plus the guard responses.
 """
 
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
+from lfx.cli.serve_workflow import _terminal_node_ids, _WorkflowEventQueue
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 
@@ -128,3 +131,60 @@ def test_unknown_flow_404(client):
 def test_missing_api_key_401(client):
     resp = client.post("/workflows", json={"flow_id": _FLOW_ID, "input_value": "x"})
     assert resp.status_code == 401
+
+
+def test_globals_accepted(client):
+    """Request-level globals are applied, not rejected (backend v2 parity)."""
+    resp = client.post(
+        "/workflows",
+        json={"flow_id": _FLOW_ID, "input_value": "hello", "mode": "sync", "globals": {"MY_VAR": "v"}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["flow_id"] == _FLOW_ID
+
+
+def test_unknown_output_ids_rejected_422(client):
+    """Unknown output_ids are a 422 up front, before running (backend v2 parity)."""
+    resp = client.post(
+        "/workflows",
+        json={"flow_id": _FLOW_ID, "input_value": "x", "mode": "sync", "output_ids": ["does-not-exist"]},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 422
+    detail = resp.json()["detail"]
+    assert detail["code"] == "UNKNOWN_OUTPUT_IDS"
+    assert "does-not-exist" in detail["message"]
+
+
+def test_valid_output_ids_accepted(client):
+    """A real terminal node id is accepted and runs to completion."""
+    terminal_ids = _terminal_node_ids(_echo_graph())
+    resp = client.post(
+        "/workflows",
+        json={"flow_id": _FLOW_ID, "input_value": "hello", "mode": "sync", "output_ids": terminal_ids},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200, resp.text
+
+
+async def test_stream_event_queue_overflow_emits_error():
+    """A full queue (slow client) surfaces an explicit error frame, not a silent drop."""
+    queue = _WorkflowEventQueue(maxsize=1)
+    queue.put_nowait(("a", b'{"event": "token"}', 0.0))  # fills the queue
+    queue.put_nowait(("b", b'{"event": "token"}', 0.0))  # overflow -> triggers the error task
+
+    first = await queue.get()
+    assert first[0] == "a"
+
+    err_id, err_val, _ = await queue.get()
+    assert err_id.startswith("error-")
+    assert json.loads(err_val.decode("utf-8"))["event"] == "error"
+
+    sentinel = await queue.get()
+    assert sentinel[0] is None
+    assert sentinel[1] is None
+
+    # Once overflowed the queue drops further puts instead of unbounded growth.
+    queue.put_nowait(("c", b"{}", 0.0))
+    await queue.aclose()
