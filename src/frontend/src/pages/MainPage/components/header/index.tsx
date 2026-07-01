@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { usePermissions } from "@/contexts/permissionsContext";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
 import { ENABLE_MCP } from "@/customization/feature-flags";
@@ -123,6 +124,14 @@ const HeaderComponent = ({
 
   const hasSelection = selectedFlows.length > 0;
 
+  // Bulk actions operate on the same flow ids as the per-card menu, so gate
+  // them on the same actions: every selected flow must allow the action. This
+  // keeps the single-item and bulk entry points consistent. Fail-open (no
+  // provider / OSS pass-through) leaves both buttons enabled.
+  const { can } = usePermissions();
+  const canBulkDownload = selectedFlows.every((id) => can(id, "read"));
+  const canBulkDelete = selectedFlows.every((id) => can(id, "delete"));
+
   return (
     <>
       <div
@@ -227,6 +236,12 @@ const HeaderComponent = ({
                           : "text-muted-foreground hover:bg-muted"
                       }`}
                       onClick={() => setView(viewType as "list" | "grid")}
+                      aria-label={t(
+                        viewType === "list"
+                          ? "flows.viewList"
+                          : "flows.viewGrid",
+                      )}
+                      aria-pressed={view === viewType}
                     >
                       <ForwardedIconComponent
                         name={viewType === "list" ? "Menu" : "LayoutGrid"}
@@ -251,7 +266,9 @@ const HeaderComponent = ({
                     data-testid="download-bulk-btn"
                     onClick={handleDownload}
                     loading={isDownloading}
-                    tabIndex={hasSelection ? 0 : -1}
+                    disabled={!canBulkDownload}
+                    tabIndex={hasSelection && canBulkDownload ? 0 : -1}
+                    aria-label={t("flows.downloadSelected")}
                   >
                     <ForwardedIconComponent name="Download" />
                   </Button>
@@ -271,7 +288,8 @@ const HeaderComponent = ({
                       className="px-2.5 !text-mmd"
                       data-testid="delete-bulk-btn"
                       loading={isDeleting}
-                      tabIndex={hasSelection ? 0 : -1}
+                      disabled={!canBulkDelete}
+                      tabIndex={hasSelection && canBulkDelete ? 0 : -1}
                     >
                       <ForwardedIconComponent name="Trash2" />
                       {t("mainPage.delete")}

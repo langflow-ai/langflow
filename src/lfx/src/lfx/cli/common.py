@@ -29,6 +29,7 @@ from lfx.cli.script_loader import (
     find_graph_variable,
     load_graph_from_script,
 )
+from lfx.execution import get_default_coordinator
 from lfx.load import load_flow_from_json
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars
 from lfx.schema.schema import InputValueRequest
@@ -307,7 +308,13 @@ def prepare_graph(graph, verbose_print):
         raise typer.Exit(1) from e
 
 
-async def execute_graph_with_capture(graph, input_value: str | None, session_id: str | None = None, event_manager=None):
+async def execute_graph_with_capture(
+    graph,
+    input_value: str | None,
+    session_id: str | None = None,
+    event_manager=None,
+    user_id: str | None = None,
+):
     """Execute a graph and capture output.
 
     Args:
@@ -318,9 +325,16 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
             whitespace-only string is rejected with ``ValueError`` to surface
             shell/env-var typos (see ``lfx.run._defaults.validate_provided_id``).
         event_manager: Optional ``EventManager``. When provided it is threaded
-            into ``graph.async_start`` so components emit token/message/error
-            events to its queue as the run progresses (used by the streaming
-            workflow endpoint). ``None`` keeps the non-streaming behavior.
+            into the run so components emit token/message/error events to its
+            queue as the run progresses (used by the streaming workflow
+            endpoint). ``None`` keeps the non-streaming behavior.
+        user_id: Optional verified caller identity (e.g. forwarded by an edge
+            gateway via a verified JWT — see ``lfx.cli.serve_identity``). ``None``
+            keeps any ``user_id`` already pinned on the graph, and auto-generates
+            a throwaway UUID when the graph has none (components require a
+            non-empty user_id, but lfx's variable service is env-backed so the
+            value is not used for scoping). A non-``None`` value overwrites the
+            graph's value (the verified identity is authoritative).
 
     Returns:
         Tuple of (results, captured_logs)
@@ -329,9 +343,11 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
         Exception: Re-raises any exception that occurs during graph execution
     """
     # Apply session_id, user_id, and Memory-vertex propagation defaults via the
-    # shared helper (same logic as run_flow). user_id is not exposed in this
-    # entry point, so any pre-existing graph.user_id is preserved.
-    apply_run_defaults(graph, session_id=session_id, user_id=None, overwrite_user_id=False)
+    # shared helper (same logic as run_flow). A supplied (verified) user_id
+    # overwrites any graph-pinned value; when None (off mode / CLI runs) the
+    # graph's existing user_id is kept, or a UUID auto-generated if it has none —
+    # the same result as calling this function before user_id was a parameter.
+    apply_run_defaults(graph, session_id=session_id, user_id=user_id, overwrite_user_id=user_id is not None)
 
     # Create input request
     inputs = InputValueRequest(input_value=input_value) if input_value else None
@@ -354,9 +370,12 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
         results = [
-            result
-            async for result in graph.async_start(
-                inputs, fallback_to_env_vars=fallback_to_env_vars, event_manager=event_manager
+            payload
+            async for payload in get_default_coordinator().stream(
+                graph,
+                initial_inputs=inputs,
+                fallback_to_env_vars=fallback_to_env_vars,
+                event_manager=event_manager,
             )
         ]
     except Exception as exc:

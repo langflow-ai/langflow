@@ -1,13 +1,25 @@
 import { renderHook } from "@testing-library/react";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../../use-debounce";
 import useAutoSaveFlow from "../use-autosave-flow";
 import useSaveFlow from "../use-save-flow";
+
+const mockUsePermissions = jest.fn();
+
+const makeMockFlow = (): FlowType =>
+  ({
+    id: "flow-1",
+    name: "Test Flow",
+  }) as FlowType;
 
 // Mock dependencies
 jest.mock("../use-save-flow");
 jest.mock("../../use-debounce");
 jest.mock("@/stores/flowsManagerStore");
+jest.mock("@/contexts/permissionsContext", () => ({
+  usePermissions: () => mockUsePermissions(),
+}));
 
 describe("useAutoSaveFlow", () => {
   const mockSaveFlow = jest.fn();
@@ -21,6 +33,10 @@ describe("useAutoSaveFlow", () => {
       mockDebouncedFn.mockImplementation(fn);
       return mockDebouncedFn;
     });
+    mockUsePermissions.mockReturnValue({
+      can: jest.fn(() => true),
+      isLoading: false,
+    });
   });
 
   it("should return a debounced autosave function", () => {
@@ -29,6 +45,7 @@ describe("useAutoSaveFlow", () => {
         const state = {
           autoSaving: true,
           autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
         };
         return selector(state);
       },
@@ -46,6 +63,7 @@ describe("useAutoSaveFlow", () => {
         const state = {
           autoSaving: true,
           autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
         };
         return selector(state);
       },
@@ -54,7 +72,7 @@ describe("useAutoSaveFlow", () => {
     const { result } = renderHook(() => useAutoSaveFlow());
     const autoSaveFlow = result.current;
 
-    const mockFlow = { id: "flow-1", name: "Test Flow" } as any;
+    const mockFlow = makeMockFlow();
     autoSaveFlow(mockFlow);
 
     expect(mockSaveFlow).toHaveBeenCalledWith(mockFlow);
@@ -66,6 +84,7 @@ describe("useAutoSaveFlow", () => {
         const state = {
           autoSaving: false,
           autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
         };
         return selector(state);
       },
@@ -74,7 +93,7 @@ describe("useAutoSaveFlow", () => {
     const { result } = renderHook(() => useAutoSaveFlow());
     const autoSaveFlow = result.current;
 
-    const mockFlow = { id: "flow-1", name: "Test Flow" } as any;
+    const mockFlow = makeMockFlow();
     autoSaveFlow(mockFlow);
 
     expect(mockSaveFlow).not.toHaveBeenCalled();
@@ -86,6 +105,7 @@ describe("useAutoSaveFlow", () => {
         const state = {
           autoSaving: true,
           autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
         };
         return selector(state);
       },
@@ -107,6 +127,7 @@ describe("useAutoSaveFlow", () => {
         const state = {
           autoSaving: true,
           autoSavingInterval: customInterval,
+          currentFlowId: "flow-1",
         };
         return selector(state);
       },
@@ -131,6 +152,7 @@ describe("useAutoSaveFlow", () => {
         const state = {
           autoSaving: true,
           autoSavingInterval: 10000,
+          currentFlowId: "flow-1",
         };
         return selector(state);
       },
@@ -152,13 +174,14 @@ describe("useAutoSaveFlow", () => {
         const state = {
           autoSaving,
           autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
         };
         return selector(state);
       },
     );
 
     const { result, rerender } = renderHook(() => useAutoSaveFlow());
-    const mockFlow = { id: "flow-1", name: "Test Flow" } as any;
+    const mockFlow = makeMockFlow();
 
     // AutoSaving enabled
     result.current(mockFlow);
@@ -171,6 +194,82 @@ describe("useAutoSaveFlow", () => {
     rerender();
 
     result.current(mockFlow);
+    expect(mockSaveFlow).not.toHaveBeenCalled();
+  });
+
+  it("should not call saveFlow while permissions are loading", () => {
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) => {
+        const state = {
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        };
+        return selector(state);
+      },
+    );
+    mockUsePermissions.mockReturnValue({
+      can: jest.fn(() => true),
+      isLoading: true,
+    });
+
+    const { result } = renderHook(() => useAutoSaveFlow());
+    result.current(makeMockFlow());
+
+    expect(mockSaveFlow).not.toHaveBeenCalled();
+  });
+
+  it("should flush a pending autosave after permissions finish loading", () => {
+    let isLoading = true;
+    const can = jest.fn(() => true);
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) => {
+        const state = {
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        };
+        return selector(state);
+      },
+    );
+    mockUsePermissions.mockImplementation(() => ({
+      can,
+      isLoading,
+    }));
+
+    const { result, rerender } = renderHook(() => useAutoSaveFlow());
+    const mockFlow = makeMockFlow();
+    result.current(mockFlow);
+    expect(mockSaveFlow).not.toHaveBeenCalled();
+
+    isLoading = false;
+    rerender();
+
+    expect(can).toHaveBeenCalledWith("flow-1", "write");
+    expect(mockSaveFlow).toHaveBeenCalledWith(mockFlow);
+  });
+
+  it("should not call saveFlow when write permission is denied", () => {
+    const can = jest.fn(() => false);
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) => {
+        const state = {
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        };
+        return selector(state);
+      },
+    );
+    mockUsePermissions.mockReturnValue({
+      can,
+      isLoading: false,
+    });
+
+    const { result } = renderHook(() => useAutoSaveFlow());
+    result.current(makeMockFlow());
+
+    expect(can).toHaveBeenCalledWith("flow-1", "write");
     expect(mockSaveFlow).not.toHaveBeenCalled();
   });
 });
