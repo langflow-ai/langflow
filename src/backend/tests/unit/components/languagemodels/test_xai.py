@@ -145,7 +145,6 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
                     "Accept": "application/json",
                 },
                 timeout=10,
-                allow_redirects=False,
             )
 
     def test_get_models_no_api_key(self):
