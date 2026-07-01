@@ -179,7 +179,7 @@ class DakeraMemoryComponent(Component):
 
     def _session_id(self) -> str | None:
         sid = (self.session_id or "").strip()
-        return sid if sid else None
+        return sid or None
 
     # ------------------------------------------------------------------ #
     #  Output methods
@@ -261,16 +261,16 @@ class DakeraMemoryComponent(Component):
         results = [
             Data(
                 data={
-                    "id": item["memory"]["id"],
-                    "content": item["memory"]["content"],
-                    "score": round(item["score"], 4),
-                    "agent_id": item["memory"].get("agent_id", ""),
-                    "session_id": item["memory"].get("session_id"),
-                    "metadata": item["memory"].get("metadata", {}),
+                    "id": item.get("memory", {}).get("id", ""),
+                    "content": item.get("memory", {}).get("content", ""),
+                    "score": round(float(item.get("score", 0.0)), 4),
+                    "agent_id": item.get("memory", {}).get("agent_id", ""),
+                    "session_id": item.get("memory", {}).get("session_id"),
+                    "metadata": item.get("memory", {}).get("metadata", {}),
                 }
             )
             for item in memories
-            if "memory" in item
+            if item.get("memory")
         ]
         self.status = f"{len(results)} results"
         return results
