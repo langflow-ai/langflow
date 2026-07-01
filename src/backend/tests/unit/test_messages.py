@@ -1,6 +1,8 @@
+import asyncio
 import base64
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -116,6 +118,90 @@ async def test_aadd_messagetables(async_session):
     added_messages = await aadd_messagetables(messages, async_session)
     assert len(added_messages) == 1
     assert added_messages[0].text == "New Test message"
+
+
+async def test_aadd_messagetables_propagates_cancelled_error_from_commit():
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=asyncio.CancelledError()),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(),
+    )
+
+    with pytest.raises(asyncio.CancelledError):
+        await aadd_messagetables([message], session)
+
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.refresh.assert_not_awaited()
+
+
+async def test_aadd_messagetables_propagates_cancelled_error_from_refresh():
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(),
+        refresh=AsyncMock(side_effect=asyncio.CancelledError()),
+        rollback=AsyncMock(),
+    )
+
+    with pytest.raises(asyncio.CancelledError):
+        await aadd_messagetables([message], session)
+
+    session.commit.assert_awaited_once()
+    session.refresh.assert_awaited_once_with(message)
+    session.rollback.assert_awaited_once()
+
+
+async def test_aadd_messagetables_finishes_rollback_when_cleanup_is_cancelled():
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    rollback_started = asyncio.Event()
+    finish_rollback = asyncio.Event()
+    rollback_completed = False
+
+    async def rollback():
+        nonlocal rollback_completed
+        rollback_started.set()
+        await finish_rollback.wait()
+        rollback_completed = True
+
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=asyncio.CancelledError()),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(side_effect=rollback),
+    )
+    add_task = asyncio.create_task(aadd_messagetables([message], session))
+
+    await rollback_started.wait()
+    add_task.cancel()
+    await asyncio.sleep(0)
+
+    assert not add_task.done()
+    assert not rollback_completed
+
+    finish_rollback.set()
+    with pytest.raises(asyncio.CancelledError):
+        await add_task
+
+    assert rollback_completed
+    session.rollback.assert_awaited_once()
+
+
+async def test_aadd_messagetables_keeps_cancelled_error_when_rollback_fails():
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=asyncio.CancelledError()),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(side_effect=RuntimeError("rollback failed")),
+    )
+
+    with pytest.raises(asyncio.CancelledError):
+        await aadd_messagetables([message], session)
+
+    session.rollback.assert_awaited_once()
 
 
 @pytest.mark.usefixtures("client")
