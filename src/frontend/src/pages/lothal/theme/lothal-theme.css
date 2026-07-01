@@ -27,6 +27,16 @@
   --accent-fg: #fff;
   --warn: #b06a14;
   --success: #5a7242;
+  /* PLAN node-lifecycle hues — the verification-tree status palette. Theme-
+     independent (the same hues read on both grounds), so they're defined once
+     here and inherited into the dark block; `--state-draft` tracks --ink-soft. */
+  --state-draft: var(--ink-soft);
+  --state-ratified: #5b8dc9;
+  --state-in-progress: #cf9a3a;
+  --state-in-verification: #c074b0;
+  --state-verified: #4e9a6a;
+  --state-failed: #d6584a;
+  --state-invalidated: #d08738;
   /* Minimap viewport mask — a faint scrim over the off-screen area. */
   --minimap-mask: rgba(44, 0, 30, 0.07);
 

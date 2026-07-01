@@ -24,7 +24,7 @@ describe("Lothal Landing", () => {
     expect(document.title).toBe("Lothal — build software by describing it");
   });
 
-  it("shows the larder sample: bakery chat plus two sample-diagram renders", () => {
+  it("shows the larder sample: bakery chat plus the hero sample-diagram render", () => {
     render(<Landing />);
     expect(
       screen.getByText(
@@ -35,33 +35,45 @@ describe("Lothal Landing", () => {
       screen.getByText("Who places orders, and how do they reach you?"),
     ).toBeInTheDocument();
     expect(screen.getByText("Phone + a webpage")).toBeInTheDocument();
-    // The hero + showcase each render a <SampleDiagram> (an accessible SVG figure).
+    // The hero renders the <SampleDiagram> (an accessible SVG figure); the
+    // verification band now shows a plan-node mock instead of a second diagram.
     const diagrams = screen.getAllByRole("img", {
       name: /bakery order flow/i,
     });
-    expect(diagrams).toHaveLength(2);
+    expect(diagrams).toHaveLength(1);
   });
 
-  it("lists all four steps from the shared phase metadata", () => {
+  it("lists all six stages from the shared phase metadata", () => {
     render(<Landing />);
-    for (const label of ["Clarify", "Design", "Generate", "Deliver"]) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+    // "Design" and "Plan" also appear in the hero overlay / plan-node mock, so
+    // assert presence rather than uniqueness.
+    for (const label of [
+      "Clarify",
+      "Design",
+      "Prototype",
+      "Plan",
+      "Generate",
+      "Deliver",
+    ]) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
     expect(
-      screen.getByText("Four steps from a sentence to a codebase."),
+      screen.getByText("Six stages, from a sentence to a build-ready plan."),
     ).toBeInTheDocument();
+    // Generate + Deliver are not built yet — flagged honestly.
+    expect(screen.getAllByText("Coming next").length).toBe(2);
   });
 
-  it("shows the principles, canvas showcase, and delivery sections", () => {
+  it("shows the principles, verification band, and artifacts sections", () => {
     render(<Landing />);
-    expect(screen.getByText("No assumptions")).toBeInTheDocument();
-    expect(screen.getByText("Diagram before code")).toBeInTheDocument();
-    expect(screen.getByText("You stay in control")).toBeInTheDocument();
-    expect(
-      screen.getByText("A real diagram, not a black box."),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Internal Git")).toBeInTheDocument();
-    expect(screen.getByText("Download ZIP")).toBeInTheDocument();
+    expect(screen.getByText("Nothing built on a guess")).toBeInTheDocument();
+    expect(screen.getByText("'Done' is defined first")).toBeInTheDocument();
+    expect(screen.getByText("You hold every gate")).toBeInTheDocument();
+    // The differentiator band (verification-driven planning).
+    expect(screen.getByText("Proven before it composes.")).toBeInTheDocument();
+    // The artifacts you accumulate (real, shipped — not the old code-delivery stubs).
+    expect(screen.getByText("A clear spec")).toBeInTheDocument();
+    expect(screen.getByText("A verification-ready plan")).toBeInTheDocument();
   });
 
   it("offers sign up and log in, never opening the projects app directly", () => {

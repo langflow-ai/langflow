@@ -23,16 +23,18 @@ import {
 } from "../index";
 
 describe("phases", () => {
-  it("orders the five phases and resolves indices", () => {
+  it("orders the six phases and resolves indices", () => {
     expect(PHASES.map((p) => p.id)).toEqual([
       "CLARIFICATION",
       "ARCHITECTURE",
       "PROTOTYPE",
+      "PLAN",
       "CODE_GENERATION",
       "DONE",
     ]);
     expect(phaseIndex("ARCHITECTURE")).toBe(1);
     expect(phaseIndex("PROTOTYPE")).toBe(2);
+    expect(phaseIndex("PLAN")).toBe(3);
     expect(phaseIndex("UNKNOWN")).toBe(-1);
   });
 });
@@ -87,9 +89,9 @@ describe("PhaseStepper", () => {
     }
   });
 
-  it("renders the NN / 05 counter in pill form", () => {
+  it("renders the NN / 06 counter in pill form", () => {
     render(<PhaseStepper phase="ARCHITECTURE" variant="pill" />);
-    expect(screen.getByText("02 / 05")).toBeInTheDocument();
+    expect(screen.getByText("02 / 06")).toBeInTheDocument();
   });
 
   it("marks completed phases with a check in the default stepper variant", () => {

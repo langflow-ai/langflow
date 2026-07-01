@@ -39,7 +39,9 @@ import {
   LOTHAL_VERSION,
   LothalMark,
   NotReady,
+  PHASE_IDS,
   PhaseStepper,
+  phaseIndex,
   phaseLabel,
   StatusDot,
   SystemBlock,
@@ -84,6 +86,122 @@ function ArrowLeft({ size = 16 }: { size?: number }) {
       />
     </svg>
   );
+}
+
+function Chevron({ dir, size = 14 }: { dir: "left" | "right"; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d={dir === "left" ? "M10 3.5 5.5 8l4.5 4.5" : "M6 3.5 10.5 8 6 12.5"}
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// A left-panel glyph; the vertical bar fills when the panel is open.
+function PanelIcon({ open, size = 16 }: { open: boolean; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect
+        x="3"
+        y="4"
+        width="18"
+        height="16"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      <line
+        x1="9"
+        y1="4"
+        x2="9"
+        y2="20"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      {open && (
+        <rect
+          x="3.5"
+          y="4.5"
+          width="5"
+          height="15"
+          rx="1"
+          fill="currentColor"
+          opacity="0.32"
+        />
+      )}
+    </svg>
+  );
+}
+
+function navArrowStyle(disabled: boolean) {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    border: "1px solid var(--border)",
+    background: "transparent",
+    color: disabled ? "var(--ink-faint)" : "var(--ink-mute)",
+    cursor: disabled ? "default" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+  } as const;
+}
+
+// Workspace chat-pane preferences — persisted so they survive reloads.
+const CHAT_COLLAPSED_KEY = "lothal:chatCollapsed";
+const CHAT_WIDTH_KEY = "lothal:chatWidth";
+const CHAT_MIN_WIDTH = 280;
+const CHAT_DEFAULT_WIDTH = 440;
+// Leave at least this much for the right pane; otherwise the chat can stretch
+// almost the whole window (the max tracks the viewport rather than a fixed cap).
+const RIGHT_PANE_RESERVE = 220;
+
+function readChatCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(CHAT_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeChatCollapsed(v: boolean): void {
+  try {
+    window.localStorage.setItem(CHAT_COLLAPSED_KEY, v ? "1" : "0");
+  } catch {
+    // best-effort
+  }
+}
+function chatMaxWidth(): number {
+  try {
+    return Math.max(CHAT_MIN_WIDTH, window.innerWidth - RIGHT_PANE_RESERVE);
+  } catch {
+    return 1600;
+  }
+}
+const clampChatWidth = (w: number): number =>
+  Math.max(CHAT_MIN_WIDTH, Math.min(chatMaxWidth(), w));
+function readChatWidth(): number {
+  try {
+    const raw = Number(window.localStorage.getItem(CHAT_WIDTH_KEY));
+    return Number.isFinite(raw) && raw > 0
+      ? clampChatWidth(raw)
+      : CHAT_DEFAULT_WIDTH;
+  } catch {
+    return CHAT_DEFAULT_WIDTH;
+  }
+}
+function writeChatWidth(w: number): void {
+  try {
+    window.localStorage.setItem(CHAT_WIDTH_KEY, String(Math.round(w)));
+  } catch {
+    // best-effort
+  }
 }
 
 // Pulsing dots while the assistant reply is in flight.
@@ -387,6 +505,46 @@ function WorkspaceView() {
   // The artifact the right pane is showing (Epic E.5). Lifted here so a refine
   // turn in the chat (left pane) targets the diagram/ADR the user is viewing.
   const [activeArtifact, setActiveArtifact] = useState<string | null>(null);
+  // The conversation column can be collapsed to give the right pane full width,
+  // and dragged wider/narrower via the divider.
+  const [chatCollapsed, setChatCollapsed] = useState(readChatCollapsed);
+  const [chatWidth, setChatWidth] = useState(readChatWidth);
+  // The phase whose artifacts the right pane is showing. Null = follow the
+  // project's real phase; set when the user browses an earlier completed phase.
+  const [viewedPhaseRaw, setViewedPhase] = useState<string | null>(null);
+
+  const toggleChat = () => {
+    setChatCollapsed((c) => {
+      writeChatCollapsed(!c);
+      return !c;
+    });
+  };
+
+  // Drag the divider to resize the chat column. The split container starts at the
+  // viewport's left edge, so the pointer's clientX is the chat width. For a smooth
+  // drag we mutate the column's width directly (no per-frame React render) and
+  // commit to state only on release.
+  const chatColRef = useRef<HTMLDivElement>(null);
+  const startChatResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    let next = chatWidth;
+    const onMove = (ev: MouseEvent) => {
+      next = clampChatWidth(ev.clientX);
+      if (chatColRef.current) chatColRef.current.style.width = `${next}px`;
+    };
+    const onUp = () => {
+      setChatWidth(next);
+      writeChatWidth(next);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
 
   // Tab title carries the open project ("Tide Tracker — Lothal"); restored on
   // the way out.
@@ -476,6 +634,19 @@ function WorkspaceView() {
     );
   }
 
+  // Phase navigation: you can browse any phase up to the project's real one to
+  // review the artifacts it produced. The right pane renders the viewed phase;
+  // the live (current) phase is the only editable one.
+  const currentIdx = phaseIndex(project.phase);
+  const viewedPhase = viewedPhaseRaw ?? project.phase;
+  const viewedIdx = phaseIndex(viewedPhase);
+  const browsingPast =
+    viewedIdx >= 0 && currentIdx >= 0 && viewedIdx !== currentIdx;
+  const gotoPhase = (delta: number) => {
+    const next = Math.min(Math.max(viewedIdx + delta, 0), currentIdx);
+    setViewedPhase(PHASE_IDS[next]);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <TopBar
@@ -508,6 +679,29 @@ function WorkspaceView() {
             >
               <ArrowLeft />
             </button>
+            <button
+              type="button"
+              aria-label={
+                chatCollapsed ? "Show conversation" : "Hide conversation"
+              }
+              title={chatCollapsed ? "Show conversation" : "Hide conversation"}
+              aria-pressed={!chatCollapsed}
+              onClick={toggleChat}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 28,
+                height: 28,
+                borderRadius: 7,
+                border: "1px solid var(--border)",
+                background: chatCollapsed ? "transparent" : "var(--surface)",
+                color: chatCollapsed ? "var(--ink-soft)" : "var(--ink)",
+                cursor: "pointer",
+              }}
+            >
+              <PanelIcon open={!chatCollapsed} />
+            </button>
             <span style={{ color: "var(--accent)", display: "inline-flex" }}>
               <LothalMark size={18} />
             </span>
@@ -532,7 +726,38 @@ function WorkspaceView() {
             </span>
           </span>
         }
-        center={<PhaseStepper phase={project.phase} variant="stepper" />}
+        center={
+          <span
+            style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+          >
+            <button
+              type="button"
+              aria-label="Previous stage"
+              title="Previous stage"
+              disabled={viewedIdx <= 0}
+              onClick={() => gotoPhase(-1)}
+              style={navArrowStyle(viewedIdx <= 0)}
+            >
+              <Chevron dir="left" />
+            </button>
+            <PhaseStepper
+              phase={viewedPhase}
+              currentPhase={project.phase}
+              variant="stepper"
+              onSelect={(id) => setViewedPhase(id)}
+            />
+            <button
+              type="button"
+              aria-label="Next stage"
+              title="Next stage"
+              disabled={viewedIdx >= currentIdx}
+              onClick={() => gotoPhase(1)}
+              style={navArrowStyle(viewedIdx >= currentIdx)}
+            >
+              <Chevron dir="right" />
+            </button>
+          </span>
+        }
         right={
           <span
             style={{ display: "inline-flex", alignItems: "center", gap: 16 }}
@@ -566,48 +791,110 @@ function WorkspaceView() {
       />
 
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        {/* Chat — left */}
+        {/* Chat — left (collapsible + resizable) */}
+        {!chatCollapsed && (
+          <>
+            <div
+              ref={chatColRef}
+              style={{
+                width: chatWidth,
+                flexShrink: 0,
+                background: "var(--paper)",
+                minHeight: 0,
+              }}
+            >
+              <ChatPanel
+                project={project}
+                composerRef={composerRef}
+                activeArtifact={activeArtifact}
+              />
+            </div>
+            {/* Drag handle — resizes the chat column. */}
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize conversation"
+              title="Drag to resize"
+              onMouseDown={startChatResize}
+              onDoubleClick={() => {
+                setChatWidth(CHAT_DEFAULT_WIDTH);
+                writeChatWidth(CHAT_DEFAULT_WIDTH);
+              }}
+              style={{
+                width: 6,
+                flexShrink: 0,
+                cursor: "col-resize",
+                background: "var(--border)",
+                borderLeft: "1px solid var(--border-strong)",
+              }}
+            />
+          </>
+        )}
+
+        {/* Right pane — switches by the VIEWED phase so earlier completed stages
+            can be browsed read-only (their artifact reads are phase-gated to
+            "this stage onward", so a later project can still load them):
+            • CODE_GENERATION/DONE → the generated-code surface (Story B.5);
+            • PROTOTYPE → the embedded Open Design prototype pane (Epic UI U.8/U.9);
+            • PLAN → the verification tree (Epic U-PLAN);
+            • CLARIFICATION/ARCHITECTURE → the architecture doc-and-diagrams view
+              (Epic E.5). Editing stays gated to the project's real phase inside
+              each pane, so a browsed past stage is inherently read-only. */}
         <div
           style={{
-            flexBasis: "40%",
-            minWidth: 360,
-            maxWidth: 540,
-            borderRight: "1px solid var(--border)",
-            background: "var(--paper)",
+            flex: 1,
+            minWidth: 0,
+            background: "var(--paper-deep)",
+            display: "flex",
+            flexDirection: "column",
             minHeight: 0,
           }}
         >
-          <ChatPanel
-            project={project}
-            composerRef={composerRef}
-            activeArtifact={activeArtifact}
-          />
-        </div>
-
-        {/* Right pane — switches by phase:
-            • CODE_GENERATION/DONE → the generated-code surface (Story B.5);
-            • PROTOTYPE → the embedded Open Design prototype pane (Epic UI U.8/U.9);
-            • otherwise (CLARIFICATION/ARCHITECTURE) → the architecture
-              doc-and-diagrams view (Epic E.5): the ADR as Markdown plus the
-              diagram set as tabs. Double-clicking a box or arrow on a diagram
-              drops an inline reference chip in the composer (Epic D.7); the
-              active tab is the artifact a refine turn targets. It falls back to a
-              phase-aware placeholder before generation and to NotReady while
-              /artifacts can't load or render. */}
-        <div style={{ flex: 1, minWidth: 0, background: "var(--paper-deep)" }}>
-          {isCodePhase(project.phase) ? (
-            <CodePanel project={project} />
-          ) : project.phase === "PROTOTYPE" ? (
-            <PrototypePane project={project} />
-          ) : project.phase === "PLAN" ? (
-            <PlanPane project={project} />
-          ) : (
-            <ArtifactsPane
-              project={project}
-              onAnchor={(a) => composerRef.current?.insertAnchor(a)}
-              onActiveArtifactChange={setActiveArtifact}
-            />
+          {browsingPast && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "7px 16px",
+                borderBottom: "1px solid var(--border)",
+                background: "var(--surface)",
+                fontSize: 12,
+                color: "var(--ink-mute)",
+                flex: "none",
+              }}
+            >
+              <span>
+                Viewing the{" "}
+                <b style={{ color: "var(--ink)", fontWeight: 600 }}>
+                  {phaseLabel(viewedPhase)}
+                </b>{" "}
+                stage — read-only.
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setViewedPhase(project.phase)}
+              >
+                Back to {phaseLabel(project.phase)}
+              </Button>
+            </div>
           )}
+          <div style={{ flex: 1, minHeight: 0 }}>
+            {isCodePhase(viewedPhase) ? (
+              <CodePanel project={project} />
+            ) : viewedPhase === "PROTOTYPE" ? (
+              <PrototypePane project={project} />
+            ) : viewedPhase === "PLAN" ? (
+              <PlanPane project={project} />
+            ) : (
+              <ArtifactsPane
+                project={project}
+                onAnchor={(a) => composerRef.current?.insertAnchor(a)}
+                onActiveArtifactChange={setActiveArtifact}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

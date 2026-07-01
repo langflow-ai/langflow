@@ -81,9 +81,7 @@ async def test_seed_and_generate_creates_project_and_run():
     with respx.mock:
         respx.get(f"{OD_BASE}/api/projects").mock(return_value=httpx.Response(200, json=[]))
         respx.get(f"{OD_BASE}/api/runs").mock(return_value=httpx.Response(200, json=[]))
-        create = respx.post(f"{OD_BASE}/api/projects").mock(
-            return_value=httpx.Response(200, json={"id": "od-1"})
-        )
+        create = respx.post(f"{OD_BASE}/api/projects").mock(return_value=httpx.Response(200, json={"id": "od-1"}))
         run = respx.post(f"{OD_BASE}/api/runs").mock(
             return_value=httpx.Response(200, json={"runId": "run-1", "conversationId": "conv-1"})
         )
@@ -147,9 +145,7 @@ async def test_seed_and_generate_reuses_project_and_does_not_double_run():
 async def test_seed_and_generate_is_idempotent_when_already_linked():
     # Already linked → returns the existing linkage and makes no OD call (no respx
     # routes registered, so any request would error).
-    result = await prototype.seed_and_generate(
-        _proj(od_project_id="od-existing", od_conversation_id="conv-existing")
-    )
+    result = await prototype.seed_and_generate(_proj(od_project_id="od-existing", od_conversation_id="conv-existing"))
     assert result.created is False
     assert result.od_project_id == "od-existing"
     assert result.od_conversation_id == "conv-existing"
@@ -164,9 +160,7 @@ async def test_refine_starts_run_in_existing_conversation():
         run = respx.post(f"{OD_BASE}/api/runs").mock(
             return_value=httpx.Response(200, json={"runId": "run-2", "conversationId": "conv-1"})
         )
-        result = await prototype.refine(
-            _proj(od_project_id="od-1", od_conversation_id="conv-1"), "make it dark"
-        )
+        result = await prototype.refine(_proj(od_project_id="od-1", od_conversation_id="conv-1"), "make it dark")
 
     assert result.od_conversation_id == "conv-1"
     body = json.loads(run.calls.last.request.content)
@@ -194,8 +188,12 @@ async def test_refine_falls_back_to_stored_conversation_when_run_omits_it():
 @pytest.mark.usefixtures("_od_env")
 async def test_collect_state_ready_filters_non_artifacts():
     files = [
-        {"name": "home.html", "path": "home.html", "artifactKind": "prototype",
-         "artifactManifest": {"kind": "prototype", "title": "Home"}},
+        {
+            "name": "home.html",
+            "path": "home.html",
+            "artifactKind": "prototype",
+            "artifactManifest": {"kind": "prototype", "title": "Home"},
+        },
         {"name": "notes.txt", "path": "notes.txt"},  # not an artifact
     ]
     with respx.mock:
@@ -250,8 +248,12 @@ async def test_collect_state_artifact_field_fallbacks():
 async def test_collect_state_ready_when_design_exists_and_no_active_run():
     """OD's run list can empty out after a run; a design + no in-flight run is READY (not stuck GENERATING)."""
     files = [
-        {"name": "home.html", "path": "home.html", "artifactKind": "prototype",
-         "artifactManifest": {"kind": "prototype", "title": "Home"}},
+        {
+            "name": "home.html",
+            "path": "home.html",
+            "artifactKind": "prototype",
+            "artifactManifest": {"kind": "prototype", "title": "Home"},
+        },
     ]
     with respx.mock:
         respx.get(f"{OD_BASE}/api/projects/od-1/files").mock(return_value=httpx.Response(200, json=files))
@@ -262,6 +264,22 @@ async def test_collect_state_ready_when_design_exists_and_no_active_run():
         state = await prototype.collect_state(_proj(od_project_id="od-1", prototype_status="GENERATING"))
     assert state.status == "READY"
     assert state.preview_html == "<html>home</html>"
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_collect_state_not_ready_when_run_succeeded_but_no_design():
+    """A succeeded run with no design artifact stays GENERATING, not READY."""
+    with respx.mock:
+        respx.get(f"{OD_BASE}/api/projects/od-1/files").mock(
+            return_value=httpx.Response(200, json=[])  # no design built yet
+        )
+        respx.get(f"{OD_BASE}/api/runs").mock(
+            return_value=httpx.Response(200, json=[{"id": "r1", "status": "succeeded", "createdAt": "2026-01-02"}])
+        )
+        state = await prototype.collect_state(_proj(od_project_id="od-1", prototype_status="GENERATING"))
+    assert state.status == "GENERATING"  # not READY — nothing was built
+    assert state.preview_html is None
+    assert state.artifacts == []
 
 
 async def test_collect_state_unlinked_returns_stored_without_od_call():
@@ -297,10 +315,18 @@ def test_derive_status_picks_latest_run_by_created_at():
 @pytest.mark.usefixtures("_od_env")
 async def test_collect_for_approval_fetches_content_and_keeps_unreadable():
     files = [
-        {"name": "home.html", "path": "home.html", "artifactKind": "prototype",
-         "artifactManifest": {"kind": "prototype", "title": "Home"}},
-        {"name": "logo.png", "path": "logo.png", "artifactKind": "image",
-         "artifactManifest": {"kind": "image", "title": "Logo"}},
+        {
+            "name": "home.html",
+            "path": "home.html",
+            "artifactKind": "prototype",
+            "artifactManifest": {"kind": "prototype", "title": "Home"},
+        },
+        {
+            "name": "logo.png",
+            "path": "logo.png",
+            "artifactKind": "image",
+            "artifactManifest": {"kind": "image", "title": "Logo"},
+        },
         {"name": "notes.txt", "path": "notes.txt"},  # not an artifact, skipped
     ]
     with respx.mock:

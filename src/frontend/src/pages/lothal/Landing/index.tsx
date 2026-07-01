@@ -1,16 +1,19 @@
-// Lothal landing page (Epic 0.5) — the public front door at "/". A faithful
-// port of the landing design (Lothal/src/landing.jsx in the design bundle):
-// sticky blur nav, centered hero with an early-access pill and a live product
-// preview of the sample bakery project ("larder" — clarification chat beside
-// a real diagram canvas), a principles grid, the four steps, a canvas
-// showcase band, delivery cards, a glowing closing CTA, and the footer.
+// Lothal landing page (Epic 0.5) — the public front door at "/". The marketing
+// surface for the verification-driven build pipeline: a sticky blur nav, a
+// centered hero with an early-access pill and a live product preview of the
+// sample bakery project ("larder" — clarification chat beside a diagram), a
+// principles grid, the six stages (Clarify → Design → Prototype → Plan →
+// Generate → Deliver), a verification-driven-planning band (the differentiator),
+// the artifacts you accumulate, a glowing closing CTA, and the footer. Stages 5
+// and 6 (Generate, Deliver) are not built yet, so they're tagged "Coming next".
 // The page's only actions are Log in and Sign up — it never opens the projects
-// app directly; /lothal lives behind auth (ProtectedRoute) for a later epic.
+// app directly; /lothal lives behind auth (ProtectedRoute).
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
+  isCodePhase,
   LOTHAL_VERSION,
   LothalMark,
   type LothalPhaseId,
@@ -22,20 +25,35 @@ import {
 import { LothalSurface } from "../theme/LothalSurface";
 
 // Step copy from the design, keyed by the shared phase ids so a phase added
-// or renamed in phases.ts fails loudly here instead of drifting.
+// or renamed in phases.ts fails loudly here instead of drifting. The Record
+// requires all six keys — Generate and Deliver aren't built yet (they're tagged
+// "Coming next" in the UI), so their copy is written in a forward register.
 const STEP_COPY: Record<LothalPhaseId, string> = {
   CLARIFICATION:
-    "Describe what you want in plain words. Lothal responds with focused questions — multiple choice or free text — until there are no assumptions left.",
+    "Describe what you want in plain words; Lothal answers with focused questions — multiple choice or free text — until no assumptions are left, then captures it as a PRD.",
   ARCHITECTURE:
-    "Once it understands, Lothal designs your architecture — the actors, the calls between them, and the order things happen — then refines it as you say what's wrong. Each change is checked against the agreed spec before it sticks.",
+    "Lothal turns the spec into an Architecture Decision Record plus context, container, data-model, and sequence diagrams — refined by conversation and approved by you.",
+  PROTOTYPE:
+    "From the approved design, Lothal drives Open Design to produce an interactive UI/UX prototype you can preview, edit, and comment on without leaving the page.",
+  PLAN: "Lothal breaks the work into a tree — app, component, epic, story — and gives each item an assume-guarantee contract, acceptance criteria, and frozen tests before a line is written.",
   CODE_GENERATION:
-    "With the architecture locked, Lothal writes the full codebase, committing to an internal Git repository as it goes.",
-  DONE: "Pull the repo, push to your own GitHub, or download a ZIP. The code traces back to a design you verified, step by step.",
+    "Coming next: each ratified item is implemented against the very tests and contract it was frozen with — a definition of done the build can't move.",
+  DONE: "Coming next: leave with every artifact — PRD, diagrams, prototype, and code — each one traceable back to the plan you ratified.",
+};
+
+// A short serif lead shown under each step's label.
+const STEP_LEAD: Record<LothalPhaseId, string> = {
+  CLARIFICATION: "Questions until the spec is solid",
+  ARCHITECTURE: "An ADR and four diagrams",
+  PROTOTYPE: "See it before you build it",
+  PLAN: "Every item carries a contract",
+  CODE_GENERATION: "Built against a frozen spec",
+  DONE: "Take the whole project with you",
 };
 
 const SECTION_IDS = {
   how: "lothal-how",
-  canvas: "lothal-canvas",
+  plan: "lothal-plan",
   deliver: "lothal-deliver",
 } as const;
 
@@ -305,7 +323,7 @@ function HeroScene() {
               zIndex: 5,
             }}
           >
-            <span className="label">Canvas</span>
+            <span className="label">Design</span>
             <span
               className="mono"
               style={{ fontSize: 10, color: "var(--ink-faint)" }}
@@ -383,42 +401,262 @@ function SectionHead({
   );
 }
 
+// --- Plan node preview (the verification band's right visual) --------------------
+
+/** A static mock of a PLAN node's detail: kind, state machine, frozen contract,
+ *  and frozen tests — the verification artifact the differentiator describes. */
+function PlanNodeScene() {
+  const states = [
+    "draft",
+    "ratified",
+    "in-progress",
+    "in-verification",
+    "verified",
+  ];
+  const current = "ratified";
+  const chip = (text: string, hue: string) => (
+    <span
+      className="mono"
+      style={{
+        fontSize: 9.5,
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.04em",
+        color: hue,
+        background: `color-mix(in srgb, ${hue} 15%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${hue} 35%, transparent)`,
+        borderRadius: 5,
+        padding: "2px 7px",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {text}
+    </span>
+  );
+  const cardLabel = (label: string) => (
+    <span
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        marginBottom: 9,
+      }}
+    >
+      <span className="label" style={{ color: "var(--ink-mute)" }}>
+        {label}
+      </span>
+      <span
+        className="mono"
+        style={{
+          fontSize: 9,
+          color: "var(--ink-soft)",
+          border: "1px solid var(--border)",
+          borderRadius: 5,
+          padding: "1px 6px",
+        }}
+      >
+        frozen ⟡
+      </span>
+    </span>
+  );
+  const cardStyle = {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 11,
+    padding: "13px 15px",
+  } as const;
+  const bullet = (mark: string, hue: string, text: string) => (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        fontSize: 12.5,
+        color: "var(--ink-90)",
+        lineHeight: 1.45,
+      }}
+    >
+      <span style={{ color: hue, flex: "none", fontWeight: 700 }}>{mark}</span>
+      <span>{text}</span>
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        borderRadius: 14,
+        border: "1px solid var(--border-strong)",
+        background: "var(--paper)",
+        overflow: "hidden",
+        boxShadow: "0 30px 70px -40px rgba(0,0,0,.5)",
+      }}
+    >
+      <div
+        style={{
+          padding: "10px 14px",
+          borderBottom: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span className="label">Plan</span>
+        <span
+          className="mono"
+          style={{ fontSize: 10, color: "var(--ink-faint)" }}
+        >
+          node detail
+        </span>
+      </div>
+
+      <div
+        style={{
+          padding: 18,
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          {chip("story", "#4e9a6a")}
+          <span className="serif" style={{ fontSize: 18, color: "var(--ink)" }}>
+            Apply a discount code at checkout
+          </span>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {states.map((s) => {
+            const on = s === current;
+            return (
+              <span
+                key={s}
+                className="mono"
+                style={{
+                  fontSize: 10,
+                  padding: "3px 8px",
+                  borderRadius: 999,
+                  color: on ? "var(--accent-fg)" : "var(--ink-soft)",
+                  background: on ? "var(--accent)" : "var(--surface)",
+                  border: `1px solid ${on ? "var(--accent)" : "var(--border)"}`,
+                }}
+              >
+                {s}
+              </span>
+            );
+          })}
+        </div>
+
+        <div style={cardStyle}>
+          {cardLabel("Contract")}
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            <div>
+              <div className="label" style={{ marginBottom: 4 }}>
+                Assumes
+              </div>
+              {bullet(
+                "→",
+                "var(--ink-soft)",
+                "a valid cart and a signed-in shopper",
+              )}
+            </div>
+            <div>
+              <div className="label" style={{ marginBottom: 4 }}>
+                Guarantees
+              </div>
+              {bullet("✓", "#4e9a6a", "one discount applied, or a typed error")}
+            </div>
+          </div>
+        </div>
+
+        <div style={cardStyle}>
+          {cardLabel("Tests")}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span
+                className="mono"
+                style={{
+                  fontSize: 9.5,
+                  color: "#5b8dc9",
+                  flex: "none",
+                  width: 64,
+                }}
+              >
+                unit
+              </span>
+              <span style={{ flex: 1, fontSize: 12, color: "var(--ink-90)" }}>
+                rejects expired or unknown codes
+              </span>
+              {chip("pass", "#4e9a6a")}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span
+                className="mono"
+                style={{
+                  fontSize: 9.5,
+                  color: "#c074b0",
+                  flex: "none",
+                  width: 64,
+                }}
+              >
+                integration
+              </span>
+              <span style={{ flex: 1, fontSize: 12, color: "var(--ink-90)" }}>
+                recomputes the order total
+              </span>
+              {chip("pending", "var(--ink-soft)")}
+            </div>
+          </div>
+        </div>
+
+        <span
+          className="mono"
+          style={{ fontSize: 10.5, color: "var(--ink-soft)" }}
+        >
+          read-only to the implementer
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // --- Page --------------------------------------------------------------------------
 
 const PRINCIPLES = [
   {
-    k: "No assumptions",
-    v: "Lothal asks before it builds. The clarification loop keeps going until your intent and the spec are the same thing.",
+    k: "Nothing built on a guess",
+    v: "The clarification loop runs until your intent and the spec are the same thing. Lothal asks before it builds.",
   },
   {
-    k: "Diagram before code",
-    v: "You see and shape the architecture as a sequence diagram first. Nothing is generated until you approve it.",
+    k: "'Done' is defined first",
+    v: "Every item gets a contract, acceptance criteria, and frozen tests before implementation — a definition of done that can't quietly drift.",
   },
   {
-    k: "You stay in control",
-    v: "Edit on the canvas or in plain language. Every change is validated against the spec, then re-rendered.",
+    k: "You hold every gate",
+    v: "Designs, prototypes, and plans only move forward when you approve them. The flow is forward-only by design.",
   },
 ];
 
-const CANVAS_FEATS = [
-  "Drag nodes, rewire edges, edit labels inline",
-  "Pan, zoom, fit-to-view, and a live mini-map",
-  "Sync, async, and return calls, drawn distinctly",
-  "Every edit re-validated against your spec",
+const PLAN_FEATS = [
+  "Frozen on ratification — contracts, criteria, and tests can't silently drift once work begins.",
+  "A roll-up gate — a parent only turns verified when every child is verified and its integration tests pass.",
+  "Surgical invalidation — change a contract and only the items downstream of it need re-checking.",
 ];
 
-const DELIVERY_WAYS = [
+const ARTIFACTS = [
   {
-    t: "Internal Git",
-    d: "Every diagram revision and code generation is a versioned commit. Nothing is lost between sessions.",
+    t: "A clear spec",
+    d: "A PRD synthesized from the clarification conversation — the confirmed definition of what to build.",
   },
   {
-    t: "Your GitHub",
-    d: "Push the finished repository straight to a GitHub repo you own, whenever you're ready.",
+    t: "An architecture you approved",
+    d: "An ADR plus context, container, data-model, and sequence diagrams, refined until they're right.",
   },
   {
-    t: "Download ZIP",
-    d: "Prefer to take it offline? Export the whole codebase as a ZIP in one click.",
+    t: "An interactive prototype",
+    d: "A real UI/UX prototype you shaped and signed off — not a static mockup.",
+  },
+  {
+    t: "A verification-ready plan",
+    d: "A tree of items, each with a frozen contract, acceptance criteria, and tests — the blueprint the build runs against.",
   },
 ];
 
@@ -430,7 +668,7 @@ const LANDING_CSS = `
     .lothal-surface .land-hero-split > div:first-child { border-right: none !important; border-bottom: 1px solid var(--border) !important; }
     .lothal-surface .land-showcase { grid-template-columns: 1fr !important; }
     .lothal-surface .land-step { grid-template-columns: auto 1fr !important; gap: 16px !important; }
-    .lothal-surface .land-step h3 { grid-column: 2; }
+    .lothal-surface .land-step-label { grid-column: 2; }
     .lothal-surface .land-step p { grid-column: 2; }
   }
 `;
@@ -555,8 +793,8 @@ function LandingView() {
               aria-label="Landing sections"
             >
               {navLink("How it works", SECTION_IDS.how)}
-              {navLink("The canvas", SECTION_IDS.canvas)}
-              {navLink("Delivery", SECTION_IDS.deliver)}
+              {navLink("Verification", SECTION_IDS.plan)}
+              {navLink("What you get", SECTION_IDS.deliver)}
             </nav>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -620,13 +858,13 @@ function LandingView() {
               maxWidth: 900,
             }}
           >
-            Build software the way
-            <br />
-            you'd{" "}
+            Build software the way you'd{" "}
             <span style={{ fontStyle: "italic", color: "var(--accent)" }}>
               explain
             </span>{" "}
-            it to someone.
+            it.
+            <br />
+            Define “done” before you build it.
           </h1>
 
           <p
@@ -639,8 +877,10 @@ function LandingView() {
             }}
           >
             Describe what you want in plain language. Lothal asks the right
-            questions, draws a diagram you can shape by hand, and turns the
-            approved design into a working, version-controlled codebase.
+            questions, designs the architecture, and shapes an interactive
+            prototype with you — then turns it into a plan where every piece of
+            work carries a contract and frozen tests, before a line of code is
+            written.
           </p>
 
           <div
@@ -732,8 +972,8 @@ function LandingView() {
         >
           <SectionHead
             eyebrow="How it works"
-            title="Four steps from a sentence to a codebase."
-            sub="A forward-only flow. You can't skip ahead to code before the architecture is approved — that's the point."
+            title="Six stages, from a sentence to a build-ready plan."
+            sub="A forward-only flow with an approval gate at every stage. Nothing advances until you sign off — and nothing is built until the plan is ratified."
           />
           <div
             style={{
@@ -766,12 +1006,61 @@ function LandingView() {
                 >
                   {p.short}
                 </span>
-                <h3
-                  className="serif"
-                  style={{ fontSize: 30, color: "var(--ink)", lineHeight: 1 }}
+                <div
+                  className="land-step-label"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
                 >
-                  {p.label}
-                </h3>
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 9,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <h3
+                      className="serif"
+                      style={{
+                        fontSize: 30,
+                        color: "var(--ink)",
+                        lineHeight: 1,
+                        margin: 0,
+                      }}
+                    >
+                      {p.label}
+                    </h3>
+                    {isCodePhase(p.id) && (
+                      <span
+                        className="mono"
+                        style={{
+                          fontSize: 10.5,
+                          color: "var(--ink-faint)",
+                          border: "1px solid var(--border)",
+                          borderRadius: 999,
+                          padding: "2px 8px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Coming next
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className="serif"
+                    style={{
+                      fontSize: 14.5,
+                      fontStyle: "italic",
+                      color: "var(--ink-soft)",
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {STEP_LEAD[p.id]}
+                  </span>
+                </div>
                 <p
                   style={{
                     fontSize: 15,
@@ -789,9 +1078,9 @@ function LandingView() {
           </div>
         </section>
 
-        {/* ── Canvas showcase ── */}
+        {/* ── Verification-driven planning (the differentiator) ── */}
         <section
-          id={SECTION_IDS.canvas}
+          id={SECTION_IDS.plan}
           style={{
             background: "var(--paper-deep)",
             borderTop: "1px solid var(--border)",
@@ -816,10 +1105,28 @@ function LandingView() {
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <SectionHead
                 align="left"
-                eyebrow="The canvas"
-                title="A real diagram, not a black box."
-                sub="A real node-and-edge canvas for wiring up agents. Your architecture is something you can actually touch."
+                eyebrow="Verification-driven planning"
+                title="Proven before it composes."
               />
+              <p
+                style={{
+                  fontSize: 15,
+                  lineHeight: 1.7,
+                  color: "var(--ink-mute)",
+                  margin: 0,
+                  maxWidth: 540,
+                }}
+              >
+                Most AI builders sprint from prompt to output and leave you to
+                find what's wrong. Lothal works the other way around. Before
+                anything is built, every item in the plan — app, component,
+                epic, story — gets an assume-guarantee contract: what it needs
+                coming in, what it promises going out. Ratify it, and that
+                contract, its acceptance criteria, and its tests freeze into a
+                definition of done the implementation can't move. A roll-up gate
+                then holds every parent open until its children are verified —
+                so correctness composes upward through contracts you approved.
+              </p>
               <div
                 style={{
                   display: "flex",
@@ -828,7 +1135,7 @@ function LandingView() {
                   marginTop: 4,
                 }}
               >
-                {CANVAS_FEATS.map((f) => (
+                {PLAN_FEATS.map((f) => (
                   <div
                     key={f}
                     style={{
@@ -868,48 +1175,7 @@ function LandingView() {
               </div>
             </div>
 
-            <div
-              style={{
-                borderRadius: 14,
-                border: "1px solid var(--border-strong)",
-                background: "var(--paper)",
-                overflow: "hidden",
-                boxShadow: "0 30px 70px -40px rgba(0,0,0,.5)",
-                position: "relative",
-              }}
-            >
-              <div
-                style={{
-                  padding: "10px 14px",
-                  borderBottom: "1px solid var(--border)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <span className="label">Sequence diagram</span>
-                <span
-                  className="mono"
-                  style={{ fontSize: 10, color: "var(--ink-faint)" }}
-                >
-                  v2 · refining
-                </span>
-                <span style={{ flex: 1 }} />
-                <span
-                  className="mono"
-                  style={{ fontSize: 10.5, color: "var(--ink-soft)" }}
-                >
-                  120%
-                </span>
-              </div>
-              <div style={{ position: "relative", height: 300, padding: 16 }}>
-                <SampleDiagram
-                  participants={LARDER_PARTICIPANTS}
-                  messages={LARDER_MESSAGES}
-                  title="Sample sequence diagram: a bakery order flow"
-                />
-              </div>
-            </div>
+            <PlanNodeScene />
           </div>
         </section>
 
@@ -926,9 +1192,9 @@ function LandingView() {
           }}
         >
           <SectionHead
-            eyebrow="Delivery"
-            title="The code is yours, traceable to a design you approved."
-            sub="Projects are persistent and resumable. Close the tab and come back — the conversation, the diagram, and the phase you were in are all restored."
+            eyebrow="What you get"
+            title="Real artifacts at every step, not just a final answer."
+            sub="Every project is persistent and resumable — close the tab and come back to the same conversation, design, prototype, and plan, exactly where you left them."
           />
           <div
             style={{
@@ -938,7 +1204,7 @@ function LandingView() {
               marginTop: 36,
             }}
           >
-            {DELIVERY_WAYS.map((w) => (
+            {ARTIFACTS.map((w) => (
               <div
                 key={w.t}
                 style={{
@@ -1028,8 +1294,8 @@ function LandingView() {
                 margin: 0,
               }}
             >
-              No setup, no boilerplate, no guessing what the AI understood. Just
-              describe it.
+              No setup, no boilerplate, no guessing what the AI understood.
+              Describe it — and approve every step before it's built.
             </p>
             <div
               style={{

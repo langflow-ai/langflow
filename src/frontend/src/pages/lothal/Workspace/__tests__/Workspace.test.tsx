@@ -392,8 +392,10 @@ describe("Lothal Workspace", () => {
     expect(
       screen.getByText("Architecture approved — building the prototype"),
     ).toBeInTheDocument();
+    // PLAN now sits before CODE_GENERATION, so entering the code phase reads
+    // "Plan approved …" (the boundary note keys off the entered phase).
     expect(
-      screen.getByText("Prototype approved — generating the code"),
+      screen.getByText("Plan approved — generating the code"),
     ).toBeInTheDocument();
   });
 

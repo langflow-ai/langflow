@@ -73,6 +73,10 @@ _DIAGRAM_VISIBLE_PHASES = frozenset(
     {
         ProjectPhase.ARCHITECTURE.value,
         ProjectPhase.PROTOTYPE.value,
+        # PLAN sits after PROTOTYPE; the architecture artifacts stay readable so a
+        # later stage can browse back to them (parity with _PROTOTYPE_VISIBLE_PHASES,
+        # which was updated for PLAN when the stage was inserted).
+        ProjectPhase.PLAN.value,
         ProjectPhase.CODE_GENERATION.value,
         ProjectPhase.DONE.value,
     }
@@ -697,9 +701,7 @@ def _is_html_artifact(path: str, kind: str) -> bool:
 def _approval_summary(artifacts: list[prototype_engine.ApprovedArtifact]) -> str:
     """The single-chat-bridge summary posted on approval (Story U.10)."""
     if not artifacts:
-        return (
-            "Prototype approved. Generating the code from your approved architecture next."
-        )
+        return "Prototype approved. Generating the code from your approved architecture next."
     listed = "\n".join(f"- {a.title}" for a in artifacts)
     plural = "artifact" if len(artifacts) == 1 else "artifacts"
     return f"Prototype approved with {len(artifacts)} {plural}:\n{listed}\n\nPlanning the build next."
@@ -1071,9 +1073,7 @@ async def get_plan_node(*, project: OwnedProject, node_id: UUID) -> dict[str, An
     "/projects/{project_id}/plan/nodes/{node_id}/contract",
     summary="Edit a node's assume-guarantee contract (draft only)",
 )
-async def update_plan_contract(
-    *, project: OwnedProject, node_id: UUID, body: dict[str, Any]
-) -> dict[str, Any]:
+async def update_plan_contract(*, project: OwnedProject, node_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
     _require_plan_active(project)
     try:
         async with PMClient.from_env() as pm:

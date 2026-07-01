@@ -20,7 +20,7 @@
 //   GENERATING (no embed) → "building" placeholder
 //   embed available       → OD's project page embedded; Approve advances the stage
 
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { Project } from "@/controllers/API/queries/lothal";
 import {
   type PrototypeArtifact,
@@ -113,6 +113,27 @@ function OdFrame({ url }: { url: string }) {
   );
 }
 
+// The finished prototype itself — the captured design HTML, rendered in a
+// SANDBOXED frame (no same-origin, so it can't touch the app) with none of OD's
+// editing chrome. This is what a read-only revisit of an approved prototype
+// shows: just the built screen.
+function PreviewFrame({ html }: { html: string }) {
+  return (
+    <iframe
+      title="Prototype preview"
+      srcDoc={html}
+      sandbox="allow-scripts allow-forms"
+      style={{
+        width: "100%",
+        height: "100%",
+        border: "none",
+        display: "block",
+        background: "#fff",
+      }}
+    />
+  );
+}
+
 // Fallback when OD can't be embedded (no public OD base configured): list the
 // produced artifacts with any preview links, so the pane is still useful.
 function ArtifactList({ artifacts }: { artifacts: PrototypeArtifact[] }) {
@@ -186,11 +207,22 @@ function ArtifactList({ artifacts }: { artifacts: PrototypeArtifact[] }) {
   );
 }
 
+// Phases in which the approved prototype stays readable — mirrors the backend
+// `_PROTOTYPE_VISIBLE_PHASES`. Lets a later stage browse back to the prototype.
+const PROTOTYPE_VISIBLE = new Set([
+  "PROTOTYPE",
+  "PLAN",
+  "CODE_GENERATION",
+  "DONE",
+]);
+
 export function PrototypePane({ project }: { project: Project }) {
+  // Editing/approving the prototype is live only during PROTOTYPE; from PLAN
+  // onward the pane is a read-only review of the approved prototype.
   const inPrototype = project.phase === "PROTOTYPE";
   const { data, isLoading, isError, error } = usePrototype(
     project.id,
-    inPrototype,
+    PROTOTYPE_VISIBLE.has(project.phase),
   );
   const generate = useGeneratePrototype(project.id);
   const approve = useApprovePrototype(project.id);
@@ -205,11 +237,13 @@ export function PrototypePane({ project }: { project: Project }) {
     seededRef.current = false;
   }, [project.id]);
   useEffect(() => {
-    if (status === "IDLE" && !seededRef.current) {
+    // Only auto-seed while the project is actually in PROTOTYPE — browsing back
+    // to a read-only prototype from a later phase must not kick off generation.
+    if (inPrototype && status === "IDLE" && !seededRef.current) {
       seededRef.current = true;
       generate.mutate();
     }
-  }, [status, generate]);
+  }, [inPrototype, status, generate]);
 
   // Latch a successful approve so a second click can't 409 against the now
   // CODE_GENERATION phase in the window before the project refetch swaps the pane.
@@ -267,25 +301,45 @@ export function PrototypePane({ project }: { project: Project }) {
 
   const artifacts = data?.artifacts ?? [];
   const embedUrl = data?.embed_url ?? null;
+  const previewHtml = data?.preview_html ?? null;
   const isBuilding = status === "IDLE" || status === "GENERATING";
 
-  // Primary surface: OD's own project page, embedded. Until it's available (not
-  // seeded yet, or no public OD base configured) show the building placeholder
-  // while OD works, then fall back to the artifact list.
-  const body = embedUrl ? (
-    <OdFrame url={embedUrl} />
-  ) : isBuilding ? (
-    <BuildingPlaceholder
-      title={
-        status === "IDLE"
-          ? "Starting your prototype…"
-          : "Building your prototype…"
-      }
-      sub="Lothal is generating an interactive UI/UX prototype from your approved architecture. This can take a little while — it'll appear here when it's ready."
-    />
-  ) : (
-    <ArtifactList artifacts={artifacts} />
-  );
+  // Read-only revisit (the project has moved past PROTOTYPE): show the FINISHED
+  // prototype — the captured design itself, sandboxed, with none of OD's editing
+  // chrome — rather than the live OD editor. Falls back to the artifact list, then
+  // a clear "nothing was captured" note (e.g. an old prototype approved with no
+  // built design).
+  let body: ReactNode;
+  if (!inPrototype) {
+    body = previewHtml ? (
+      <PreviewFrame html={previewHtml} />
+    ) : artifacts.length > 0 ? (
+      <ArtifactList artifacts={artifacts} />
+    ) : (
+      <BuildingPlaceholder
+        title="No prototype to show"
+        sub="This stage has no captured prototype — it was approved before a design was built. Re-enter the prototype stage to build one."
+      />
+    );
+  } else {
+    // Live PROTOTYPE stage: OD's own project page, embedded, so the user can
+    // answer the design brief, iterate, and refine. Falls back to a building
+    // placeholder (no public OD base) then the artifact list.
+    body = embedUrl ? (
+      <OdFrame url={embedUrl} />
+    ) : isBuilding ? (
+      <BuildingPlaceholder
+        title={
+          status === "IDLE"
+            ? "Starting your prototype…"
+            : "Building your prototype…"
+        }
+        sub="Lothal is generating an interactive UI/UX prototype from your approved architecture. This can take a little while — it'll appear here when it's ready."
+      />
+    ) : (
+      <ArtifactList artifacts={artifacts} />
+    );
+  }
 
   const canApprove = inPrototype;
 
