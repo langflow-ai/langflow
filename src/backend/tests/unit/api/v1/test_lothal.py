@@ -1203,6 +1203,19 @@ async def test_architecture_generate_populates_the_artifact_map(
         assert stored.diagram_d2 == _diagram_reply()
 
 
+async def test_architecture_generate_rejected_without_a_prd(client: AsyncClient, logged_in_headers: dict):
+    """Never design an architecture from nothing — a missing PRD is a 409."""
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "ARCHITECTURE"  # reached without a PRD (defensive guard)
+        session.add(project)
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/architecture/generate", headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
 async def test_architecture_generate_rejected_when_already_generated(client: AsyncClient, logged_in_headers: dict):
     project_id = await _create_chat_project(client, logged_in_headers)
     async with session_scope() as session:

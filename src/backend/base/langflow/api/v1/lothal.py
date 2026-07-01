@@ -768,10 +768,11 @@ async def generate_architecture(*, session: DbSession, project: OwnedProject) ->
     the artifact map and the mirrored sequence D2, and stores the assistant reply
     as a chat turn (no synthetic user turn).
 
-    Only valid in ARCHITECTURE with an EMPTY map: a second call once artifacts
-    exist is a `409` (further changes go through `/chat` refinement), so a
-    double-fire can't clobber a generated set. Serialized under a `FOR UPDATE`
-    lock like `chat`/`approve_diagram`.
+    Only valid in ARCHITECTURE with an EMPTY map and an approved PRD: a second call
+    once artifacts exist is a `409` (further changes go through `/chat` refinement),
+    so a double-fire can't clobber a generated set, and a missing PRD is a `409`
+    rather than generating an architecture from nothing. Serialized under a
+    `FOR UPDATE` lock like `chat`/`approve_diagram`.
     """
     await session.refresh(project, with_for_update=True)
     if project.phase != ProjectPhase.ARCHITECTURE.value:
@@ -783,6 +784,14 @@ async def generate_architecture(*, session: DbSession, project: OwnedProject) ->
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="The architecture has already been generated.",
+        )
+    # The architecture is designed *from* the approved spec — never generate one
+    # with no PRD to ground it (normally impossible, since reaching ARCHITECTURE
+    # goes through `POST /prd/approve`, which requires a PRD; guarded defensively).
+    if not (project.prd_content and project.prd_content.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="There is no approved specification to design the architecture from.",
         )
 
     history = await _project_messages(session, project.id)

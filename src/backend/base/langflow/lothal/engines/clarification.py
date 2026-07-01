@@ -132,9 +132,15 @@ def _parse_reply(raw: str) -> LLMResponse:
         if data is not None and isinstance(data.get("message"), str) and data["message"].strip():
             summary = data["message"].strip()
         if not summary:
-            # The token was the entire reply; keep a non-empty PRD placeholder so
-            # the drafted-PRD turn still carries a storable spec to review.
-            summary = "## Overview\n\n_Specification confirmed — ready to review._"
+            # The token was the entire reply; keep a non-empty PRD placeholder that
+            # mirrors the four-section scaffold the prompt asks for, so the drafted
+            # spec is still shaped for review/editing (not just a lone Overview).
+            summary = (
+                "## Overview\n\n_Specification confirmed — review and fill in the details below._\n\n"
+                "## Target Users\n\n_TBD_\n\n"
+                "## Core Features\n\n_TBD_\n\n"
+                "## Key Flows\n\n_TBD_"
+            )
         # Hold in CLARIFICATION: the PRD rides on `prd` (persisted to the main
         # page), the chat gets a short handoff, and the phase advances only when
         # the user approves.

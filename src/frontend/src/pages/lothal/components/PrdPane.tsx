@@ -142,6 +142,9 @@ export function PrdPane({ project }: { project: Project }) {
         {inClarification && !editing && (
           <button
             type="button"
+            // Once approval is in flight (or done) the spec is frozen — don't let
+            // a late Edit reopen the textarea over a stage that's leaving.
+            disabled={approve.isPending || approved}
             onClick={() => {
               setDraft(prd);
               setEditing(true);
@@ -154,7 +157,8 @@ export function PrdPane({ project }: { project: Project }) {
               borderRadius: 7,
               padding: "4px 10px",
               fontSize: 12,
-              cursor: "pointer",
+              cursor: approve.isPending || approved ? "default" : "pointer",
+              opacity: approve.isPending || approved ? 0.5 : 1,
             }}
           >
             Edit

@@ -229,8 +229,12 @@ export function ArtifactsPane({
             title="Couldn't start the architecture"
             detail="The design engine couldn't be reached to begin generating. Try again in a moment."
             action={
-              <Button variant="accent" onClick={() => generate.mutate()}>
-                Retry
+              <Button
+                variant="accent"
+                onClick={() => generate.mutate()}
+                disabled={generate.isPending}
+              >
+                {generate.isPending ? "Retrying…" : "Retry"}
               </Button>
             }
           />

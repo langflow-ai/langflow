@@ -82,6 +82,7 @@ describe("PhaseStepper", () => {
       "Clarify",
       "Design",
       "Prototype",
+      "Plan",
       "Generate",
       "Deliver",
     ]) {
