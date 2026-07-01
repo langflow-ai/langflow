@@ -28,7 +28,7 @@ from lfx_openai_compatible import discovery
 def test_bundle_registers_provider_end_to_end():
     """Loading the bundle registers OpenAI Compatible into the unified model system."""
     from lfx.base.models import provider_registry
-    from lfx.base.models.unified_models import get_model_providers
+    from lfx.base.models.unified_models import get_live_only_providers, get_model_providers
     from lfx.extension import load_extension
 
     provider_registry.clear()
@@ -39,6 +39,10 @@ def test_bundle_registers_provider_end_to_end():
         assert result.components == []  # provider-only bundle: no components
         assert provider_registry.is_registered("OpenAI Compatible")
         assert "OpenAI Compatible" in get_model_providers()
+        # No static catalog + live discovery => must surface through the
+        # /api/v1/models live-only union so the unconfigured provider is
+        # offered for configuration in the Model Providers dialog.
+        assert "OpenAI Compatible" in get_live_only_providers()
         assert provider_registry.is_api_key_optional("OpenAI Compatible")
         assert provider_registry.live_discovery_for("OpenAI Compatible") is not None
         assert provider_registry.validator_for("OpenAI Compatible") is not None
