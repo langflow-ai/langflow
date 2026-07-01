@@ -1783,10 +1783,10 @@
             "description": "# 🧩 Custom Component Generator\n\nDescribe the component you want and an **Agent** writes a Langflow custom Component (Python). It pulls Langflow's reference code on demand and remembers the conversation so you can iterate.\n\n## Setup\n1. **Agent** - add your LLM key (any provider in the Model dropdown).\n2. **URL** and **Memory** tools need no key.\n\n## How it works\n1. **Chat Input → Agent** - your component request.\n2. The Agent uses the **URL** tool to fetch Langflow reference code (base class, examples) when it needs the exact conventions, and **Memory** to recall earlier turns.\n3. **Agent → Chat Output** - the generated Python. Ask follow-ups to refine it.\n\n## Run\nOpen **Playground**, describe the component you need, and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.custom_component_generator.b1d3ed28",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.custom_component_generator.b1d3ed28"
+            }
           },
           "type": "note"
         },

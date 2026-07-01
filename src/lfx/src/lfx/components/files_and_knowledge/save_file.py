@@ -1,6 +1,6 @@
 import json
 from collections.abc import AsyncIterator, Iterator
-from pathlib import Path
+from pathlib import Path, PurePath, PureWindowsPath
 from typing import Any
 
 import orjson
@@ -383,6 +383,31 @@ class SaveToFileComponent(Component):
             return Path(f"{path}.xlsx").expanduser() if file_extension not in ["xlsx", "xls"] else path
         return Path(f"{path}.{fmt}").expanduser() if file_extension != fmt else path
 
+    def _get_safe_local_file_name(self) -> str:
+        """Return a local file basename, rejecting paths before any file access."""
+        file_name = str(self.file_name).strip()
+        if not file_name:
+            msg = "File name must be provided."
+            raise ValueError(msg)
+
+        local_path = PurePath(file_name)
+        windows_path = PureWindowsPath(file_name)
+        path_parts = (*local_path.parts, *windows_path.parts)
+
+        if (
+            "\x00" in file_name
+            or local_path.is_absolute()
+            or windows_path.is_absolute()
+            or windows_path.drive
+            or len(local_path.parts) != 1
+            or len(windows_path.parts) != 1
+            or any(part in {"", ".", ".."} for part in path_parts)
+        ):
+            msg = "Local file name must be a file name only, without paths or parent directory references."
+            raise ValueError(msg)
+
+        return file_name
+
     def _is_plain_text_format(self, fmt: str) -> bool:
         """Check if a file format is plain text (supports appending)."""
         plain_text_formats = ["txt", "json", "markdown", "md", "csv", "xml", "html", "yaml", "log", "tsv", "jsonl"]
@@ -613,9 +638,7 @@ class SaveToFileComponent(Component):
             raise ValueError(msg)
 
         # Prepare file path
-        file_path = Path(self.file_name).expanduser()
-        if not file_path.parent.exists():
-            file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path = Path(self._get_safe_local_file_name())
         file_path = self._adjust_file_path_with_format(file_path, file_format)
 
         # Save the input to file based on type

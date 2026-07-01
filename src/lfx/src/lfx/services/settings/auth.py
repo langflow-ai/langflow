@@ -72,7 +72,7 @@ class AuthSettings(BaseSettings):
     AUTO_LOGIN: bool = Field(
         default=True,  # TODO: Set to False in v2.0
         description=(
-            "Enable automatic login with default credentials. "
+            "Enable automatic login with a configured or generated bootstrap account. "
             "SECURITY WARNING: This bypasses authentication and should only be used in development environments. "
             "Set to False in production. This will default to False in v2.0."
         ),
@@ -298,27 +298,6 @@ class AuthSettings(BaseSettings):
     def reset_credentials(self) -> None:
         # Preserve the configured username but scrub the password from memory to avoid plaintext exposure.
         self.SUPERUSER_PASSWORD = SecretStr("")
-
-    # If autologin is true, then we need to set the credentials to
-    # the default values
-    # so we need to validate the superuser and superuser_password
-    # fields
-    @field_validator("SUPERUSER", "SUPERUSER_PASSWORD", mode="before")
-    @classmethod
-    def validate_superuser(cls, value, info):
-        # When AUTO_LOGIN is enabled, force superuser to use default values.
-        if info.data.get("AUTO_LOGIN"):
-            logger.debug("Auto login is enabled, forcing superuser to use default values")
-            if info.field_name == "SUPERUSER":
-                if value != DEFAULT_SUPERUSER:
-                    logger.debug("Resetting superuser to default value")
-                return DEFAULT_SUPERUSER
-            if info.field_name == "SUPERUSER_PASSWORD":
-                if value != DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
-                    logger.debug("Resetting superuser password to default value")
-                return DEFAULT_SUPERUSER_PASSWORD
-
-        return value
 
     @field_validator("SECRET_KEY", mode="before")
     @classmethod
