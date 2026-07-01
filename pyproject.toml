@@ -187,8 +187,15 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
-timeout = 150
-timeout_method = "signal"
+# DIAGNOSTIC (temporary): lowered from 150 and switched from "signal" to "thread" to identify the
+# nightly Backend Unit Tests Group 3 stall. Group 3 app-boot ("client" fixture) tests hang ~127s on
+# a firewalled outbound connect (Linux tcp_syn_retries); at timeout=150 that stall finished just
+# under the cap, so the per-test timeout never fired and the group silently accumulated until the
+# 50-min step wall. A 90s cap fires below the ~127s stall, and timeout_method="thread" dumps ALL
+# thread stacks (faulthandler) — naming the exact blocking call even when it is a leaked background
+# task. Revert to timeout=150 / timeout_method="signal" once the stall is identified and bounded.
+timeout = 90
+timeout_method = "thread"
 minversion = "6.0"
 testpaths = ["src/backend/tests", "src/lfx/tests", "src/bundles/*/tests"]
 console_output_style = "progress"
