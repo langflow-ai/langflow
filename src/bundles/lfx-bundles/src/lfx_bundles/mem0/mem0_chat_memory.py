@@ -1,10 +1,20 @@
+import importlib
+import os
+
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.inputs.inputs import DictInput, HandleInput, MessageTextInput, NestedDictInput, SecretStrInput
 from lfx.io import Output
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
-from mem0 import Memory, MemoryClient
+
+# mem0 creates PostHog clients at import time. Keep that third-party telemetry
+# disabled by default unless the deployer explicitly opts in.
+os.environ.setdefault("MEM0_TELEMETRY", "False")
+
+_mem0 = importlib.import_module("mem0")
+Memory = _mem0.Memory
+MemoryClient = _mem0.MemoryClient
 
 disable_component_in_astra_cloud_msg = (
     "Mem0 chat memory is not supported in Astra cloud environment. Please use local storage mode or mem0 cloud."

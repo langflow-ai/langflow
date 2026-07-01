@@ -231,6 +231,51 @@ class TestKBIngestionHelperBuildEmbeddings:
 
         assert mock_component_cls.called
 
+    @pytest.mark.asyncio
+    async def test_ollama_embeddings_honor_configured_base_url(self, monkeypatch):
+        """Ollama KB ingestion must use the configured OLLAMA_BASE_URL, not localhost.
+
+        Regression for https://github.com/langflow-ai/langflow/issues/13883. The helper
+        builds ``EmbeddingModelComponent`` programmatically; the component's
+        ``ollama_base_url`` ``StrInput`` defaults to ``http://localhost:11434``, and that
+        truthy default used to leak through ``getattr`` and short-circuit the
+        ``OLLAMA_BASE_URL`` global-variable lookup in ``get_embeddings`` — so a KB
+        pointed at a remote Ollama server silently tried localhost and failed with
+        "Failed to connect to Ollama". This test exercises the REAL component (no mock)
+        so the resolution path is covered end to end.
+        """
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+        user = MagicMock(id=uuid.uuid4())
+
+        with (
+            patch("lfx.base.models.unified_models.get_api_key_for_provider", return_value=None),
+            patch(
+                "lfx.base.models.unified_models.get_all_variables_for_provider",
+                return_value={"OLLAMA_BASE_URL": "http://ollama-server:11434"},
+            ),
+        ):
+            embeddings = await KBIngestionHelper.build_embeddings("Ollama", "nomic-embed-text", user)
+
+        assert str(embeddings.base_url).rstrip("/") == "http://ollama-server:11434"
+
+    @pytest.mark.asyncio
+    async def test_ollama_embeddings_fall_back_to_localhost_when_unconfigured(self, monkeypatch):
+        """With no OLLAMA_BASE_URL configured, the localhost fallback is preserved."""
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+        user = MagicMock(id=uuid.uuid4())
+
+        with (
+            patch("lfx.base.models.unified_models.get_api_key_for_provider", return_value=None),
+            patch("lfx.base.models.unified_models.get_all_variables_for_provider", return_value={}),
+        ):
+            embeddings = await KBIngestionHelper.build_embeddings("Ollama", "nomic-embed-text", user)
+
+        assert str(embeddings.base_url).rstrip("/") == "http://localhost:11434"
+
 
 class TestMemoryBaseModel:
     def test_defaults(self):

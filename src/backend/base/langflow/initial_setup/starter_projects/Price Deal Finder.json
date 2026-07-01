@@ -2467,10 +2467,10 @@
             "description": "# 💰 Price Deal Finder\n\nAn **Agent** that hunts for the best price on a product: it searches the web (and coupon news), reads listing pages, does the math, and remembers what you're tracking - returning the deals as a structured table.\n\n## Setup\n1. **Agent** - add your LLM key. Its tools are Web Search, URL, Calculator, and Memory.\n2. **Web Search** / **URL** - no key needed.\n3. **Memory** - recalls your watchlist and preferences across sessions (no key).\n\n## How it works\n1. **Chat Input → Agent** - the product you're shopping for.\n2. The Agent searches the web (and News for coupons), reads a listing with URL, computes savings with the Calculator, and checks Memory for anything you tracked before.\n3. **Agent → Chat Output** - the best deals as a structured table (retailer, price, link, notes).\n\n## Run\nOpen **Playground**, name a product, and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.price_deal_finder.6de222f2",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.price_deal_finder.6de222f2"
+            }
           },
           "type": "note"
         },

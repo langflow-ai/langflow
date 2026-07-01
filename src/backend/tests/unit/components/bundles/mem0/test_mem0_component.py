@@ -11,6 +11,14 @@ from lfx.components.mem0.mem0_chat_memory import Mem0MemoryComponent
 class TestMem0CloudValidation:
     """Test Mem0 component cloud validation."""
 
+    def test_mem0_telemetry_is_disabled_by_default(self):
+        """Langflow should not start mem0's PostHog telemetry on component import."""
+        from mem0.memory import telemetry as mem0_telemetry
+
+        assert os.environ["MEM0_TELEMETRY"] == "False"
+        assert mem0_telemetry.MEM0_TELEMETRY is False
+        assert mem0_telemetry.client_telemetry.posthog is None
+
     def test_build_mem0_disabled_in_astra_cloud(self):
         """Test that build_mem0 raises an error when ASTRA_CLOUD_DISABLE_COMPONENT is true."""
         with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "true"}):
@@ -32,14 +40,15 @@ class TestMem0CloudValidation:
         """
         with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "false"}):
             os.environ.pop("OPENAI_API_KEY", None)
-            component = Mem0MemoryComponent(openai_api_key="test-key")
+            fake_key = "not-a-real-openai-key"
+            component = Mem0MemoryComponent(openai_api_key=fake_key)
             component.build_mem0()
 
             # Key flows through config, not the environment.
             mock_memory.from_config.assert_called_once()
             config = mock_memory.from_config.call_args.kwargs["config_dict"]
-            assert config["llm"]["config"]["api_key"] == "test-key"
-            assert config["embedder"]["config"]["api_key"] == "test-key"
+            assert config["llm"]["config"]["api_key"] == fake_key
+            assert config["embedder"]["config"]["api_key"] == fake_key
             # Regression guard for the credential-bleed bug: never pollute os.environ.
             assert "OPENAI_API_KEY" not in os.environ
 
