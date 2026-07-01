@@ -130,9 +130,7 @@ def test_manifest_rejects_model_entry_with_mismatched_provider():
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError, match="mismatched provider"):
-        ProviderManifestEntry(
-            **_minimal_provider_entry(models=[{"name": "gpt-4o", "provider": "WrongCloud"}])
-        )
+        ProviderManifestEntry(**_minimal_provider_entry(models=[{"name": "gpt-4o", "provider": "WrongCloud"}]))
 
 
 def test_manifest_accepts_model_entry_without_provider_key():
@@ -147,9 +145,7 @@ def test_manifest_accepts_model_entry_with_matching_provider():
     """ProviderManifestEntry must accept models[] entries where 'provider' matches the provider name."""
     from lfx.extension.manifest import ProviderManifestEntry
 
-    entry = ProviderManifestEntry(
-        **_minimal_provider_entry(models=[{"name": "gpt-4o", "provider": "TestCloud"}])
-    )
+    entry = ProviderManifestEntry(**_minimal_provider_entry(models=[{"name": "gpt-4o", "provider": "TestCloud"}]))
     assert entry.models[0]["name"] == "gpt-4o"
 
 
