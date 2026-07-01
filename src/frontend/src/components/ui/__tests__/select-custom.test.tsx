@@ -1,6 +1,13 @@
 import { render } from "@testing-library/react";
 import * as React from "react";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectContentWithoutPortal, } from "../select-custom";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  SelectContentWithoutPortal,
+} from "../select-custom";
 
 describe("Select - Radix Slot 1.3.0 compatibility", () => {
   const renderSelect = () =>
@@ -9,7 +16,7 @@ describe("Select - Radix Slot 1.3.0 compatibility", () => {
         <SelectTrigger>
           <SelectValue placeholder="Trigger" />
         </SelectTrigger>
-      </Select>
+      </Select>,
     );
 
   it("does not crash when rendering SelectTrigger with Slot composition", () => {
@@ -35,8 +42,8 @@ describe("Select - Radix Slot 1.3.0 compatibility", () => {
           <SelectContent>
             <SelectItem value="a">A</SelectItem>
           </SelectContent>
-        </Select>
-      )
+        </Select>,
+      ),
     ).not.toThrow();
   });
 
@@ -52,8 +59,8 @@ describe("Select - Radix Slot 1.3.0 compatibility", () => {
           <SelectContentWithoutPortal>
             <SelectItem value="a">A</SelectItem>
           </SelectContentWithoutPortal>
-        </Select>
-      )
+        </Select>,
+      ),
     ).not.toThrow();
   });
 });
