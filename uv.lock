@@ -9649,10 +9649,6 @@ vectara = [
 vertexai = [
     { name = "langchain-google-vertexai" },
 ]
-vllm = [
-    { name = "langchain-openai" },
-    { name = "openai" },
-]
 vlmrun = [
     { name = "vlmrun", extra = ["all"] },
 ]
@@ -9753,7 +9749,6 @@ requires-dist = [
     { name = "langchain-openai", marker = "extra == 'lmstudio'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'novita'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'openrouter'", specifier = ">=1.1.6" },
-    { name = "langchain-openai", marker = "extra == 'vllm'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'xai'", specifier = ">=1.1.6" },
     { name = "langchain-perplexity", marker = "extra == 'perplexity'", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14' and extra == 'pinecone'", specifier = "~=0.2.13" },
@@ -9825,7 +9820,6 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["upstash"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["vectara"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["vertexai"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["vllm"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["vlmrun"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["weaviate"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["wikipedia"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9843,7 +9837,6 @@ requires-dist = [
     { name = "openai", marker = "extra == 'deepseek'", specifier = ">=1.68.2,<3.0.0" },
     { name = "openai", marker = "extra == 'litellm'", specifier = ">=1.68.2,<3.0.0" },
     { name = "openai", marker = "extra == 'lmstudio'", specifier = ">=1.68.2,<3.0.0" },
-    { name = "openai", marker = "extra == 'vllm'", specifier = ">=1.68.2,<3.0.0" },
     { name = "openai", marker = "extra == 'xai'", specifier = ">=1.68.2,<3.0.0" },
     { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64' and extra == 'codeagents') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'codeagents')", specifier = "==1.0.26" },
     { name = "opensearch-py", marker = "extra == 'elastic'", specifier = "==2.8.0" },
@@ -9874,7 +9867,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "exa", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vllm", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "exa", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
 
 [[package]]
 name = "lfx-cohere"
