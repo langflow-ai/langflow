@@ -6,9 +6,17 @@ object — a question plus 2-4 tappable example answers — and the engine maps 
 to clarification `suggestions` for the chat UI (the user can always free-text an
 "Other" answer instead). When the model has heard enough to write the spec it
 emits a `[CLARITY_REACHED]` token followed by a PRD summary; the engine strips
-the token, clears the suggestions, and transitions the project to
-`ARCHITECTURE` (the merged Epic E stage). The returned `text` on that turn is the
-PRD summary the chat endpoint stores (Story 1.2).
+the token, clears the suggestions, and carries the summary out on
+`LLMResponse.prd` — the spec the user reviews on the main page. The turn does
+NOT advance the phase: the project holds in `CLARIFICATION` with a drafted PRD,
+and leaving for `ARCHITECTURE` is an explicit `POST /prd/approve` the user
+triggers after reviewing/editing. The `text` on that turn is a short chat handoff
+line, not the PRD itself (the PRD lives on the main page, not in the chat).
+
+Once a PRD exists, a further turn is a **revision**: the engine rewrites the
+whole PRD from the user's feedback (revise mode) and returns the new spec on
+`prd` again — still without advancing — so the user can iterate by chat as well
+as by direct edit.
 
 The engine is pure conversation logic: it builds the message array (Story 0.2),
 calls the LLM (Story 0.1), parses the reply, and returns an `LLMResponse`. It
@@ -63,6 +71,30 @@ final turn, do NOT use the JSON shape. Instead reply with the literal token \
 these sections: Overview, Target Users, Core Features, Key Flows. Do not include \
 any suggestions on that turn."""
 
+# Once the PRD exists, a chat turn revises it instead of asking questions. The
+# current PRD is spliced in below (concatenated, never `str.format`, so literal
+# braces in the Markdown can't break the template).
+REVISE_PROMPT_HEAD = """\
+You are Lothal's clarification assistant, revising a draft product spec (PRD) from \
+the user's feedback. Here is the current PRD:
+
+--- CURRENT PRD ---
+"""
+REVISE_PROMPT_TAIL = """
+--- END PRD ---
+
+Apply the user's requested change and output the COMPLETE revised PRD in Markdown, \
+keeping the sections Overview, Target Users, Core Features, and Key Flows. Output \
+ONLY the PRD Markdown — no commentary, no code fences, no preamble."""
+
+# Short chat lines that accompany a drafted / revised PRD; the PRD itself goes to
+# the main page (LLMResponse.prd), not the chat, so the chat stays a handoff.
+CLARITY_HANDOFF = (
+    "I've drafted the spec from our conversation — review and edit it on the right, "
+    "then approve it to design the architecture."
+)
+REVISE_HANDOFF = "I've updated the spec — review the changes on the right, then approve when you're ready."
+
 
 def _coerce_suggestions(value: object) -> list[str]:
     """Keep only non-empty string suggestions, trimmed and capped at the max."""
@@ -75,10 +107,10 @@ def _coerce_suggestions(value: object) -> list[str]:
 def _parse_reply(raw: str) -> LLMResponse:
     """Turn one raw LLM reply into the engine's `LLMResponse`.
 
-    Two shapes: a `[CLARITY_REACHED]` reply transitions to ARCHITECTURE
-    (token stripped, no suggestions, the remaining text is the PRD summary); any
-    other reply is a clarification turn (JSON question + suggestions, phase
-    unchanged).
+    Two shapes: a `[CLARITY_REACHED]` reply drafts the PRD (token stripped, no
+    suggestions, the remaining text carried on `prd`; a short handoff line is the
+    chat `text`; the phase does NOT advance); any other reply is a clarification
+    turn (JSON question + suggestions, phase unchanged).
     """
     # Anchor the transition to the *start* of the reply. The system prompt asks
     # for the token "on its own", leading the PRD, so a clarity turn begins with
@@ -101,9 +133,12 @@ def _parse_reply(raw: str) -> LLMResponse:
             summary = data["message"].strip()
         if not summary:
             # The token was the entire reply; keep a non-empty PRD placeholder so
-            # the transition still carries a storable assistant message.
-            summary = "Specification confirmed. Designing the architecture next."
-        return LLMResponse(text=summary, suggestions=[], next_phase=ProjectPhase.ARCHITECTURE)
+            # the drafted-PRD turn still carries a storable spec to review.
+            summary = "## Overview\n\n_Specification confirmed — ready to review._"
+        # Hold in CLARIFICATION: the PRD rides on `prd` (persisted to the main
+        # page), the chat gets a short handoff, and the phase advances only when
+        # the user approves.
+        return LLMResponse(text=CLARITY_HANDOFF, suggestions=[], prd=summary)
 
     data = extract_json_object(raw)
     if data is not None and isinstance(data.get("message"), str) and data["message"].strip():
@@ -122,9 +157,20 @@ class ClarificationEngine(PhaseEngine):
 
     phase = ProjectPhase.CLARIFICATION
 
-    async def process(self, history: list[Message], user_message: str, **_kwargs) -> LLMResponse:
-        # `**_kwargs` absorbs the refinement inputs (`prd`/`current_d2`, see
-        # `PhaseEngine.process`); clarification predates the diagram and ignores them.
+    async def process(
+        self, history: list[Message], user_message: str, *, prd: str | None = None, **_kwargs
+    ) -> LLMResponse:
+        # `**_kwargs` absorbs the other refinement inputs (`current_d2`/`artifacts`,
+        # see `PhaseEngine.process`); clarification uses only `prd`.
+        #
+        # A drafted PRD already on the project → this turn REVISES it (rewrite the
+        # whole spec from the user's feedback), still without advancing. Otherwise
+        # the idea isn't captured yet → keep asking questions until clarity.
+        if prd and prd.strip():
+            system = REVISE_PROMPT_HEAD + prd.strip() + REVISE_PROMPT_TAIL
+            revised = (await call_llm(build_messages(system, history, user_message))).strip()
+            # Never drop the spec on an empty model reply — keep the current PRD.
+            return LLMResponse(text=REVISE_HANDOFF, suggestions=[], prd=revised or prd.strip())
         messages = build_messages(SYSTEM_PROMPT, history, user_message)
         raw = await call_llm(messages)
         return _parse_reply(raw)

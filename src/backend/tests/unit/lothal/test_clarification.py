@@ -2,9 +2,10 @@
 
 Per the backlog's testing philosophy these tests inject a fake `call_llm` and
 assert *our* behaviour: that a structured reply becomes `text` + `suggestions`
-with the phase unchanged, and that a `[CLARITY_REACHED]` reply strips the token,
-clears the suggestions, and transitions to ARCHITECTURE. No real LLM, no
-DB — the engine is pure conversation logic.
+with the phase unchanged, that a `[CLARITY_REACHED]` reply strips the token,
+clears the suggestions, and drafts the PRD on `prd` while HOLDING the phase (no
+auto-advance — leaving is an explicit approve), and that a further turn with a
+PRD present revises it. No real LLM, no DB — the engine is pure conversation logic.
 """
 
 import pytest
@@ -74,23 +75,48 @@ async def test_process_builds_messages_with_system_prompt_history_and_turn(fake_
 # --- clarity reached (transition) --------------------------------------------
 
 
-async def test_clarity_reached_strips_token_clears_suggestions_and_transitions(fake_llm):
+async def test_clarity_reached_drafts_prd_holds_phase_and_hands_off(fake_llm):
     fake_llm["_reply"] = f"{CLARITY_TOKEN}\n# PRD\n\n## Overview\nA personal todo app."
     response = await ClarificationEngine().process([], "that's everything")
 
-    assert response.next_phase == ProjectPhase.ARCHITECTURE
+    # Holds in CLARIFICATION — leaving is now an explicit `POST /prd/approve`.
+    assert response.next_phase is None
     assert response.suggestions == []
-    assert CLARITY_TOKEN not in response.text
-    assert response.text.startswith("# PRD")
-    assert "personal todo app" in response.text
+    # The PRD rides on `prd` (→ the main page), not `text` (a short chat handoff).
+    assert response.prd is not None
+    assert CLARITY_TOKEN not in response.prd
+    assert response.prd.startswith("# PRD")
+    assert "personal todo app" in response.prd
+    assert response.text.strip() and "# PRD" not in response.text
 
 
-async def test_clarity_token_alone_yields_non_empty_summary(fake_llm):
+async def test_clarity_token_alone_yields_non_empty_prd(fake_llm):
     fake_llm["_reply"] = CLARITY_TOKEN
     response = await ClarificationEngine().process([], "done")
 
-    assert response.next_phase == ProjectPhase.ARCHITECTURE
-    assert response.text.strip()  # LLMResponse forbids empty text
+    assert response.next_phase is None
+    assert response.text.strip()  # the handoff line (LLMResponse forbids empty text)
+    assert response.prd and response.prd.strip()  # a non-empty placeholder PRD
+
+
+async def test_revise_mode_rewrites_the_prd_when_one_already_exists(fake_llm):
+    # A drafted PRD already on the project → a further turn revises it (no
+    # questions, no transition), carrying the new spec back on `prd`.
+    fake_llm["_reply"] = "# PRD\n\n## Overview\nA personal todo app, now dark-mode first."
+    response = await ClarificationEngine().process([], "make it dark-mode first", prd="# PRD\n\n## Overview\nA todo app.")
+
+    assert response.next_phase is None
+    assert response.suggestions == []
+    assert response.prd is not None
+    assert "dark-mode first" in response.prd
+
+
+async def test_revise_mode_keeps_existing_prd_on_empty_reply(fake_llm):
+    # Never blank the spec if the model returns nothing on a revise turn.
+    current = "# PRD\n\n## Overview\nA todo app."
+    fake_llm["_reply"] = "   "
+    response = await ClarificationEngine().process([], "tweak it", prd=current)
+    assert response.prd == current
 
 
 # --- parsing robustness (unit, no LLM) ---------------------------------------
@@ -129,8 +155,8 @@ def test_parse_reply_handles_whitespace_only_reply():
 def test_parse_reply_handles_clarity_token_wrapped_in_json():
     raw = f'{CLARITY_TOKEN} {{"message": "Spec: a todo app for teams."}}'
     response = _parse_reply(raw)
-    assert response.next_phase == ProjectPhase.ARCHITECTURE
-    assert response.text == "Spec: a todo app for teams."
+    assert response.next_phase is None
+    assert response.prd == "Spec: a todo app for teams."
     assert response.suggestions == []
 
 
@@ -143,9 +169,9 @@ def test_parse_reply_keeps_full_prd_when_it_contains_an_embedded_json_object():
         'Clients send messages as JSON like {"message": "hello team"} over the socket.'
     )
     response = _parse_reply(f"{CLARITY_TOKEN}\n{prd}")
-    assert response.next_phase == ProjectPhase.ARCHITECTURE
-    assert response.text == prd  # whole spec preserved, not "hello team"
-    assert "## Overview" in response.text
+    assert response.next_phase is None
+    assert response.prd == prd  # whole spec preserved, not "hello team"
+    assert "## Overview" in response.prd
 
 
 def test_parse_reply_strips_only_the_leading_clarity_token():
@@ -153,9 +179,9 @@ def test_parse_reply_strips_only_the_leading_clarity_token():
     # preserved rather than silently rewritten by a blanket replace.
     body = "# PRD\n\n## Overview\nThe app shows a [CLARITY_REACHED] banner when a spec is locked."
     response = _parse_reply(f"{CLARITY_TOKEN}\n{body}")
-    assert response.next_phase == ProjectPhase.ARCHITECTURE
-    assert response.text == body
-    assert response.text.count(CLARITY_TOKEN) == 1  # the body mention survived
+    assert response.next_phase is None
+    assert response.prd == body
+    assert response.prd.count(CLARITY_TOKEN) == 1  # the body mention survived
 
 
 def test_parse_reply_does_not_transition_when_token_only_mentioned_mid_reply():

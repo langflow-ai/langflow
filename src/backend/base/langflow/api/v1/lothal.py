@@ -46,7 +46,9 @@ from langflow.lothal.schemas import (
     DiagramResponse,
     MessageRead,
     NotImplementedResponse,
+    PRDApproveResponse,
     PRDResponse,
+    PRDUpdate,
     ProjectCreate,
     ProjectRead,
     PrototypeApproveResponse,
@@ -444,6 +446,14 @@ async def chat(*, session: DbSession, project: OwnedProject, body: ChatRequest) 
         project.diagram_d2 = response.diagram_d2
         session.add(project)
 
+    if response.prd is not None:
+        # Phase-gates: a CLARIFICATION turn drafted or revised the PRD. Persist it
+        # for the main-page PRD pane (`GET /prd`); the project holds in
+        # CLARIFICATION — leaving for ARCHITECTURE is an explicit `POST /prd/approve`,
+        # so no `next_phase` is set on this turn.
+        project.prd_content = response.prd
+        session.add(project)
+
     if response.next_phase is not None and response.next_phase != turn_phase:
         # The PRD is the clarification engine's parting summary; capture it as the
         # project leaves CLARIFICATION (`GET /prd` reads it, Story 1.3).
@@ -486,15 +496,88 @@ async def list_messages(*, session: DbSession, project: OwnedProject) -> list[Me
     summary="Get the project's PRD summary",
 )
 async def get_prd(project: OwnedProject) -> PRDResponse:
-    """Return the synthesised PRD (Story 1.3).
+    """Return the synthesised PRD (Story 1.3; phase-gates).
 
-    `content` is `null` while the project is still in CLARIFICATION and becomes
-    the stored summary once the clarification engine reaches clarity and the
-    project leaves that phase (see `chat`, which writes `prd_content` on the
-    transition). This is a plain read of `lothal_project.prd_content` behind the
-    shared ownership check.
+    `content` is `null` while the clarification loop is still asking questions and
+    becomes the drafted spec once the engine reaches clarity — at which point the
+    project HOLDS in CLARIFICATION so the user can review/edit it on the main page.
+    A plain read of `lothal_project.prd_content` behind the shared ownership check.
     """
     return PRDResponse(content=project.prd_content)
+
+
+@router.patch(
+    "/projects/{project_id}/prd",
+    summary="Edit the drafted PRD",
+)
+async def update_prd(*, session: DbSession, project: OwnedProject, body: PRDUpdate) -> PRDResponse:
+    """Save a direct edit of the drafted spec (phase-gates).
+
+    The main-page companion to chat revision: the user rewrites the PRD and saves
+    it. Only valid in CLARIFICATION with a drafted spec — the spec freezes on
+    approval, so editing after the project has advanced is a `409` (the UI won't
+    offer it). An empty body is rejected (`422`) rather than blanking the spec.
+    """
+    content = body.content.strip()
+    if not content:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="PRD content cannot be empty.")
+
+    await session.refresh(project, with_for_update=True)
+    if project.phase != ProjectPhase.CLARIFICATION.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The PRD can only be edited during the clarification stage.",
+        )
+    if not (project.prd_content and project.prd_content.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="There is no drafted PRD to edit yet.",
+        )
+
+    project.prd_content = content
+    project.updated_at = datetime.now(timezone.utc)
+    session.add(project)
+    await session.flush()
+    await session.refresh(project)
+    return PRDResponse(content=project.prd_content)
+
+
+@router.post(
+    "/projects/{project_id}/prd/approve",
+    summary="Approve the PRD and advance to the architecture stage",
+)
+async def approve_prd(*, session: DbSession, project: OwnedProject) -> PRDApproveResponse:
+    """Approve the drafted spec and advance CLARIFICATION → ARCHITECTURE (phase-gates).
+
+    Clarification no longer auto-advances: it drafts the PRD and holds so the user
+    can review, edit, and iterate it on the main page. Approving is the single
+    forward action out of the stage, and it is only valid in CLARIFICATION with a
+    non-empty PRD — anything else is a `409` the UI shouldn't have offered.
+    Architecture generation is not run here (it's a long LLM batch); the
+    architecture pane kicks it off on entry via `POST /architecture/generate`.
+
+    Serialized against concurrent turns like `chat`/`approve_diagram`: re-read the
+    row under a `FOR UPDATE` lock so an edit and an approve can't interleave.
+    """
+    await session.refresh(project, with_for_update=True)
+
+    if project.phase != ProjectPhase.CLARIFICATION.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The PRD can only be approved during the clarification stage.",
+        )
+    if not (project.prd_content and project.prd_content.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="There is no PRD to approve yet.",
+        )
+
+    project.phase = ProjectPhase.ARCHITECTURE.value
+    project.updated_at = datetime.now(timezone.utc)
+    session.add(project)
+    await session.flush()
+    await session.refresh(project)
+    return PRDApproveResponse(phase=project.phase)
 
 
 # --- Diagram -----------------------------------------------------------------
@@ -669,6 +752,70 @@ async def approve_diagram(*, session: DbSession, project: OwnedProject) -> Diagr
     await session.flush()
     await session.refresh(project)
     return DiagramApproveResponse(phase=project.phase)
+
+
+@router.post(
+    "/projects/{project_id}/architecture/generate",
+    summary="Generate the architecture artifacts on entering the stage",
+)
+async def generate_architecture(*, session: DbSession, project: OwnedProject) -> MessageRead:
+    """Generate the ADR + diagram set for a freshly-entered ARCHITECTURE project.
+
+    The architecture pane calls this once on entry (empty artifact map) so the
+    design appears on its own — the fix for the "stuck designing…" hang, where the
+    old flow only generated if the user happened to send a chat turn. Runs the
+    ARCHITECTURE engine's generate path (the long ADR + 4-diagram batch), persists
+    the artifact map and the mirrored sequence D2, and stores the assistant reply
+    as a chat turn (no synthetic user turn).
+
+    Only valid in ARCHITECTURE with an EMPTY map: a second call once artifacts
+    exist is a `409` (further changes go through `/chat` refinement), so a
+    double-fire can't clobber a generated set. Serialized under a `FOR UPDATE`
+    lock like `chat`/`approve_diagram`.
+    """
+    await session.refresh(project, with_for_update=True)
+    if project.phase != ProjectPhase.ARCHITECTURE.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The architecture can only be generated during the architecture stage.",
+        )
+    if project.artifacts:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The architecture has already been generated.",
+        )
+
+    history = await _project_messages(session, project.id)
+    try:
+        response = await process_turn(
+            ProjectPhase.ARCHITECTURE.value,
+            history,
+            "Generate the architecture from the approved specification.",
+            prd=project.prd_content,
+            artifacts=None,
+        )
+    except (LLMConfigError, LLMConnectionError) as exc:
+        raise _llm_error_to_http(exc) from exc
+
+    assistant_message = Message(
+        project_id=project.id,
+        role=MessageRole.ASSISTANT,
+        content=response.text,
+        suggestions=response.suggestions,
+        phase=ProjectPhase.ARCHITECTURE.value,
+    )
+    session.add(assistant_message)
+    if response.artifacts is not None:
+        project.artifacts = response.artifacts
+        session.add(project)
+    if response.diagram_d2 is not None:
+        project.diagram_d2 = response.diagram_d2
+        session.add(project)
+    project.updated_at = datetime.now(timezone.utc)
+    session.add(project)
+    await session.flush()
+    await session.refresh(assistant_message)
+    return _to_message_read(assistant_message)
 
 
 # --- Prototype (Epic UI) -----------------------------------------------------

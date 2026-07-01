@@ -49,6 +49,15 @@ jest.mock("@/controllers/API/queries/lothal", () => ({
     mutateAsync: mockApproveMutate,
     isPending: false,
   }),
+  // Phase-gates: the CLARIFICATION pane (PrdPane) edits/approves the PRD, and the
+  // ARCHITECTURE pane auto-generates on entry.
+  useUpdatePrd: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useApprovePrd: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useGenerateArchitecture: () => ({
+    mutate: jest.fn(),
+    isPending: false,
+    isError: false,
+  }),
 }));
 
 // Stub the live D2 canvas (real one needs SVG layout/pointer gestures). It fires
@@ -453,11 +462,26 @@ describe("Lothal Workspace", () => {
 
   // --- Code surface (right pane in code phases) ---
 
-  it("shows the canvas (not code) while still in a diagram phase", () => {
+  it("shows the PRD pane (not code) while still in the clarification phase", () => {
+    // phase-gates: CLARIFICATION renders the PRD pane. With no drafted spec yet it
+    // shows the clarifying placeholder — the design surface, never the code panel.
     mockUseProject.mockReturnValue({ data: project, isLoading: false });
     render(<Workspace />);
+    expect(screen.getByText("Clarifying your idea…")).toBeInTheDocument();
+  });
+
+  it("shows the drafted PRD on the main page with an approve gate", () => {
+    mockUseProject.mockReturnValue({
+      data: { ...project, prd_content: "# Spec\n\nA tide-tracking tool." },
+      isLoading: false,
+    });
+    render(<Workspace />);
+    // The PRD renders on the main page (not just the chat), behind an explicit
+    // "Approve & design architecture" gate. (react-markdown is mocked to a single
+    // node here, so match the spec text as a substring.)
+    expect(screen.getByText(/A tide-tracking tool/)).toBeInTheDocument();
     expect(
-      screen.getByText("The diagram takes shape here"),
+      screen.getByRole("button", { name: "Approve & design architecture" }),
     ).toBeInTheDocument();
   });
 

@@ -49,6 +49,7 @@ import {
 } from "../components";
 import { ArtifactsPane } from "../components/ArtifactsPane";
 import { PlanPane } from "../components/PlanPane";
+import { PrdPane } from "../components/PrdPane";
 import { PrototypePane } from "../components/PrototypePane";
 import { LothalSurface } from "../theme/LothalSurface";
 
@@ -899,6 +900,10 @@ function WorkspaceView() {
           <div style={{ flex: 1, minHeight: 0 }}>
             {isCodePhase(viewedPhase) ? (
               <CodePanel project={project} />
+            ) : viewedPhase === "CLARIFICATION" ? (
+              // Phase-gates: the drafted PRD lands on the main page for review /
+              // edit / approve (read-only when browsed from a later stage).
+              <PrdPane project={project} />
             ) : viewedPhase === "PROTOTYPE" ? (
               <PrototypePane project={project} />
             ) : viewedPhase === "PLAN" ? (

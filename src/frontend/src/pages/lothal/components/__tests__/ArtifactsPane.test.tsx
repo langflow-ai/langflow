@@ -13,13 +13,20 @@ jest.mock("react-markdown", () => ({
 jest.mock("remark-gfm", () => ({ __esModule: true, default: () => {} }));
 
 // The pane reads GET /artifacts (Epic E.4) and, on approve, advances the phase.
+// Phase-gates: it also auto-generates on entering ARCHITECTURE with an empty map.
 const mockUseArtifacts = jest.fn();
 const mockApproveMutate = jest.fn();
+const mockGenerateMutate = jest.fn();
 jest.mock("@/controllers/API/queries/lothal", () => ({
   useArtifacts: (...args: unknown[]) => mockUseArtifacts(...args),
   useApproveDiagram: () => ({
     mutateAsync: mockApproveMutate,
     isPending: false,
+  }),
+  useGenerateArchitecture: () => ({
+    mutate: mockGenerateMutate,
+    isPending: false,
+    isError: false,
   }),
 }));
 
@@ -115,13 +122,16 @@ describe("ArtifactsPane", () => {
     ).toBeInTheDocument();
   });
 
-  it("falls back to the placeholder while the map is still empty", () => {
+  it("auto-generates and shows a designing state while the map is empty", () => {
     mockUseArtifacts.mockReturnValue({
       ...idle,
       data: { artifacts: {}, svgs: {} },
     });
     render(<ArtifactsPane project={project()} />);
-    expect(screen.getByText("Designing the architecture")).toBeInTheDocument();
+    // phase-gates: entering ARCHITECTURE with an empty map fires generation once,
+    // and the pane shows a designing state instead of a passive placeholder.
+    expect(mockGenerateMutate).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/Designing the architecture/)).toBeInTheDocument();
   });
 
   it("renders the ADR tab as markdown by default", () => {

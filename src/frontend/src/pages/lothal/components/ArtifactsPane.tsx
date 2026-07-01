@@ -18,13 +18,14 @@
 //   empty map ({})          → placeholder ("designing…")
 //   map present             → the tabbed ADR + diagrams view
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Project } from "@/controllers/API/queries/lothal";
 import {
   useApproveDiagram,
   useArtifacts,
+  useGenerateArchitecture,
 } from "@/controllers/API/queries/lothal";
 import { ADR_PATH, orderArtifacts } from "./artifacts";
 import { Button } from "./Button";
@@ -105,6 +106,41 @@ export function ArtifactsPane({
     hasArchitecture,
   );
 
+  // Auto-generate on entry (phase-gates): the ARCHITECTURE stage no longer waits
+  // for the user to send a chat turn. Once the read confirms an empty map, fire
+  // generation exactly once so the ADR + diagram set appear on their own — the fix
+  // for the "stuck designing…" hang. The ref guards against the polling refetch
+  // re-firing it across renders.
+  const generate = useGenerateArchitecture(project.id);
+  const seededRef = useRef(false);
+  useEffect(() => {
+    seededRef.current = false;
+  }, [project.id]);
+  const artifactCount = Object.keys(data?.artifacts ?? {}).length;
+  useEffect(() => {
+    if (
+      project.phase === "ARCHITECTURE" &&
+      hasArchitecture &&
+      !isLoading &&
+      !isError &&
+      data !== undefined &&
+      artifactCount === 0 &&
+      !seededRef.current &&
+      !generate.isPending
+    ) {
+      seededRef.current = true;
+      generate.mutate();
+    }
+  }, [
+    project.phase,
+    hasArchitecture,
+    isLoading,
+    isError,
+    data,
+    artifactCount,
+    generate,
+  ]);
+
   const tabs = useMemo(
     () => orderArtifacts(Object.keys(data?.artifacts ?? {})),
     [data?.artifacts],
@@ -182,9 +218,28 @@ export function ArtifactsPane({
       />
     );
   }
-  // Endpoint is live but the generator hasn't emitted anything yet → still
-  // designing.
+  // Endpoint is live but the map is still empty. In ARCHITECTURE that means the
+  // auto-generation (above) is in flight → show a designing state, or a retry if
+  // that call failed. Earlier phases keep the phase-aware placeholder.
   if (tabs.length === 0) {
+    if (project.phase === "ARCHITECTURE") {
+      if (generate.isError) {
+        return (
+          <NotReady
+            title="Couldn't start the architecture"
+            detail="The design engine couldn't be reached to begin generating. Try again in a moment."
+            action={
+              <Button variant="accent" onClick={() => generate.mutate()}>
+                Retry
+              </Button>
+            }
+          />
+        );
+      }
+      return (
+        <PaneLoading label="Designing the architecture — an ADR and diagram set…" />
+      );
+    }
     return <CanvasPlaceholder phase={project.phase} />;
   }
 

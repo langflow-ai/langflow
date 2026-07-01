@@ -53,6 +53,12 @@ class LLMResponse:
     diagram_d2: str | None = None
     artifacts: dict[str, str] | None = None
     warning: str | None = None
+    # The synthesised PRD when a CLARIFICATION turn drafts or revises it (the spec
+    # the user reviews on the main page before approving), and `None` for turns
+    # that don't touch it. Carried separately from `text` (the chat handoff line)
+    # so the PRD lands in `lothal_project.prd_content` without the phase advancing —
+    # leaving CLARIFICATION is now an explicit `POST /prd/approve`, not this turn.
+    prd: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.text, str) or not self.text.strip():
@@ -75,6 +81,9 @@ class LLMResponse:
             raise ValueError(msg)
         if self.warning is not None and (not isinstance(self.warning, str) or not self.warning.strip()):
             msg = "LLMResponse.warning must be a non-empty string or None."
+            raise ValueError(msg)
+        if self.prd is not None and (not isinstance(self.prd, str) or not self.prd.strip()):
+            msg = "LLMResponse.prd must be a non-empty string or None."
             raise ValueError(msg)
 
 
