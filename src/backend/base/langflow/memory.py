@@ -184,6 +184,16 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
 
 
+async def _rollback_session_after_cancel(session: AsyncSession) -> None:
+    rollback_task = asyncio.create_task(session.rollback())
+    while not rollback_task.done():
+        try:
+            await asyncio.shield(rollback_task)
+        except asyncio.CancelledError:
+            continue
+    await rollback_task
+
+
 async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):
     """Add messages to the database.
 
@@ -203,7 +213,7 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
         for message in messages:
             await session.refresh(message)
     except asyncio.CancelledError:
-        await session.rollback()
+        await _rollback_session_after_cancel(session)
         raise
     except Exception as e:
         await logger.aexception(e)
