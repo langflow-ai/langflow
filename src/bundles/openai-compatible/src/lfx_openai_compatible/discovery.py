@@ -93,8 +93,9 @@ def validate_openai_compatible_credentials(
     """Validate the configured endpoint by probing ``/v1/models``.
 
     Raises ``ValueError`` with an actionable message on a missing URL,
-    authentication failure, connection error, or timeout. ``provider`` and
-    ``model_name`` are part of the registry validator contract but unused here.
+    authentication failure, connection error, timeout, or any other HTTP or
+    transport failure. ``provider`` and ``model_name`` are part of the registry
+    validator contract but unused here.
     """
     base_url = variables.get("OPENAI_COMPATIBLE_BASE_URL")
     if not base_url:
@@ -125,5 +126,17 @@ def validate_openai_compatible_credentials(
         raise ValueError(msg) from e
     except requests.Timeout as e:
         msg = f"Connection to the OpenAI-compatible endpoint at {base_url.rstrip('/')} timed out."
+        logger.error(msg)
+        raise ValueError(msg) from e
+    except requests.HTTPError as e:
+        status = e.response.status_code if e.response is not None else "unknown"
+        msg = (
+            f"The OpenAI-compatible endpoint at {base_url.rstrip('/')} returned HTTP {status} for {models_url}. "
+            "Check that the base URL points to an OpenAI-compatible API."
+        )
+        logger.error(msg)
+        raise ValueError(msg) from e
+    except requests.RequestException as e:
+        msg = f"Could not validate the OpenAI-compatible endpoint at {base_url.rstrip('/')}: {e}"
         logger.error(msg)
         raise ValueError(msg) from e

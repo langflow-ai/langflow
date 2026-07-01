@@ -8,7 +8,7 @@ Covers:
     plain-list payloads, /v1 deduplication, bearer-header forwarding, no-auth,
     and degradation paths.
   - validate_openai_compatible_credentials: success, missing URL, 401/403,
-    connection error, timeout, and /v1 deduplication.
+    server error, connection error, timeout, and /v1 deduplication.
 """
 
 from __future__ import annotations
@@ -182,6 +182,25 @@ def test_fetch_swallows_bad_payload():
         assert discovery.fetch_live_openai_compatible_models("user-id", "llm") == []
 
 
+def test_fetch_swallows_api_key_lookup_error():
+    """A failing API-key lookup falls back to anonymous discovery instead of blocking it."""
+    response = _ok_response({"data": [{"id": "llama-3"}]})
+
+    def fake_get_var(_user_id, key):
+        if key == "OPENAI_COMPATIBLE_BASE_URL":
+            return "http://localhost:8000"
+        msg = "variable not found"
+        raise RuntimeError(msg)
+
+    with (
+        patch.object(discovery, "get_provider_variable_value", side_effect=fake_get_var),
+        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery.requests, "get", return_value=response),
+    ):
+        result = discovery.fetch_live_openai_compatible_models("user-id", "llm")
+    assert {m["name"] for m in result} == {"llama-3"}
+
+
 def test_fetch_embeddings_tagged_embeddings():
     response = _ok_response({"data": [{"id": "bge-m3"}]})
     with (
@@ -252,6 +271,22 @@ def test_validate_raises_on_auth_failure(status):
         patch.object(discovery, "validate_url_for_ssrf", return_value=None),
         patch.object(discovery.requests, "get", return_value=response),
         pytest.raises(ValueError, match="Authentication failed"),
+    ):
+        discovery.validate_openai_compatible_credentials(
+            "OpenAI Compatible", {"OPENAI_COMPATIBLE_BASE_URL": "http://localhost:8000"}
+        )
+
+
+def test_validate_raises_value_error_on_server_error():
+    """Non-auth HTTP failures (e.g. 500) surface as the same user-facing ValueError shape."""
+    response = MagicMock()
+    response.status_code = 500
+    http_error = requests.HTTPError("server error", response=response)
+    response.raise_for_status.side_effect = http_error
+    with (
+        patch.object(discovery, "validate_url_for_ssrf", return_value=None),
+        patch.object(discovery.requests, "get", return_value=response),
+        pytest.raises(ValueError, match="returned HTTP 500"),
     ):
         discovery.validate_openai_compatible_credentials(
             "OpenAI Compatible", {"OPENAI_COMPATIBLE_BASE_URL": "http://localhost:8000"}
