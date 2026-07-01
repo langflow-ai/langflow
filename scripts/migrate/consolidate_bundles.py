@@ -112,7 +112,6 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "lmstudio": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"],
     "novita": ["langchain-openai>=1.1.6", "requests>=2.32.0"],
     "openrouter": ["langchain-openai>=1.1.6"],
-    "vllm": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"],
     "xai": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"],
     # --- tranche 4: remaining single-SDK providers (post core-tail audit) ---
     "cleanlab": ["cleanlab-tlm>=1.1.2,<2.0.0"],

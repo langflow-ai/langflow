@@ -65,6 +65,22 @@ def disable_models_dev_refresh():
     os.environ.pop("LANGFLOW_MODELS_DEV_REFRESH", None)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def disable_mcp_auto_init():
+    """Keep the MCP server auto-initialization out of tests.
+
+    Every app boot otherwise schedules a lifespan task (``delayed_init_mcp_servers``)
+    that, ~10s in, reconciles each project's MCP server config. For apikey/none projects
+    that reconciliation spawns ``uvx mcp-proxy`` and makes an outbound connect with no
+    bounded timeout, so on a slow/CI runner it hangs until the OS connect timeout (~127s),
+    inflating every app-fixture test by ~130s and pushing the heaviest test split past the
+    CI step timeout. Skipping it keeps the boot local and deterministic.
+    """
+    os.environ["LANGFLOW_SKIP_MCP_AUTO_INIT"] = "true"
+    yield
+    os.environ.pop("LANGFLOW_SKIP_MCP_AUTO_INIT", None)
+
+
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
 @pytest.fixture(autouse=False)
 def blockbuster(request):
@@ -318,6 +334,8 @@ def distributed_client_fixture(
         db_path = Path(db_dir) / "test.db"
         monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
         monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
         # monkeypatch langflow.services.task.manager.USE_CELERY to True
         # monkeypatch.setattr(manager, "USE_CELERY", True)
         monkeypatch.setattr(celery_app, "celery_app", celery_app.make_celery("langflow", Config))
@@ -470,6 +488,8 @@ async def client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
             monkeypatch.setenv("DO_NOT_TRACK", "true")
             if "load_flows" in request.keywords:
                 shutil.copyfile(

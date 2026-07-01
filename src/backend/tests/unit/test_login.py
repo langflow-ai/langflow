@@ -7,6 +7,7 @@ from langflow.services.auth.exceptions import InvalidTokenError
 from langflow.services.database.models.auth import SSOUserProfile
 from langflow.services.database.models.user import User
 from langflow.services.deps import get_auth_service, get_settings_service, session_scope
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -115,6 +116,44 @@ async def test_login_unsuccessful_wrong_password(client, test_user, async_sessio
     response = await client.post("api/v1/login", data={"username": "testuser", "password": "wrongpassword"})
     assert response.status_code == 401
     assert response.json()["detail"] == "Incorrect username or password"
+
+
+async def test_login_rejects_legacy_default_superuser_password_when_auto_login_enabled(client):
+    settings = get_settings_service()
+    original_auto_login = settings.auth_settings.AUTO_LOGIN
+    original_superuser = settings.auth_settings.SUPERUSER
+    legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    settings.auth_settings.AUTO_LOGIN = True
+    settings.auth_settings.SUPERUSER = DEFAULT_SUPERUSER
+
+    async with session_scope() as session:
+        stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+        user = (await session.exec(stmt)).first()
+        if user is None:
+            user = User(
+                username=DEFAULT_SUPERUSER,
+                password=get_auth_service().get_password_hash(legacy_password),
+                is_active=True,
+                is_superuser=True,
+            )
+            session.add(user)
+            await session.commit()
+        else:
+            user.password = get_auth_service().get_password_hash(legacy_password)
+            user.is_active = True
+            user.is_superuser = True
+            await session.commit()
+
+    try:
+        response = await client.post(
+            "api/v1/login",
+            data={"username": DEFAULT_SUPERUSER, "password": legacy_password},
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Incorrect username or password"
+    finally:
+        settings.auth_settings.AUTO_LOGIN = original_auto_login
+        settings.auth_settings.SUPERUSER = original_superuser
 
 
 async def test_session_endpoint_unauthenticated(client):

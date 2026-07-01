@@ -1864,10 +1864,10 @@
             "description": "# 📝 Meeting Summary\n\nTranscribe a meeting recording, get a structured summary, and chat about it — all with a single Agent that's grounded in the transcript and remembers the conversation.\n\n## Setup\n1. **AssemblyAI Transcriber** — add your AssemblyAI API key and the **Audio File URL** of the recording.\n2. **Agent** — add your LLM key (any provider in the Model dropdown).\n3. **Memory** — keeps the chat context across turns (no key needed).\n\n## How it works\n1. **AssemblyAI Transcriber** transcribes the audio into a transcript.\n2. **Prompt** combines the transcript with your message and sends it to the **Agent**.\n3. **Agent** — with an empty message it returns a structured **summary** (overview, decisions, action items, key points); with a question it **answers from the transcript**. The **Memory** tool lets it handle follow-up questions.\n4. **Chat Output** shows the result.\n\n## Run\nAdd your keys and the audio URL, run once to get the summary, then ask follow-up questions in the Playground.\n\n> Tip: after the first transcription, **Freeze** the AssemblyAI Transcriber node so chatting reuses the saved transcript instead of re-transcribing (saves time and AssemblyAI credits).",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.meeting_summary.6e9c866c",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.meeting_summary.6e9c866c"
+            }
           },
           "type": "note"
         },
