@@ -59,14 +59,7 @@ The scaffold ships a working `Component` subclass that prints `"Hello, {name}!"`
     The full surface available to bundle code is enumerated in [`BUNDLE_API.md`](https://github.com/langflow-ai/langflow/blob/main/BUNDLE_API.md).
     Anything outside of [`BUNDLE_API.md`](https://github.com/langflow-ai/langflow/blob/main/BUNDLE_API.md) is not part of the API contract, and may move or break between releases.
 
-3. Before launching Langflow, run the static extension checker.
-
-    ```bash
-    lfx extension validate .
-    ```
-
-    The validator parses the manifest and reports typed errors.
-    It does not execute imports by default, so it is safe to run against an extension you just downloaded. Use `--execute-imports` only when you trust the source — it runs the import probe in a subprocess.
+3. Validate the extension — see [Validate an extension](#validate-extension).
 
 4. Run Langflow with the extension loaded.
 
@@ -105,6 +98,18 @@ The scaffold ships a working `Component` subclass that prints `"Hello, {name}!"`
 
     Discovery happens at server startup.
     The bundle appears in the palette without further configuration.
+
+## Validate an extension {#validate-extension}
+
+Run the static checker from your extension root before `lfx extension dev` or `pip install`:
+
+```bash
+lfx extension validate .
+```
+
+The validator parses the manifest, checks bundle paths, and walks Python source files. It reports the same structured errors as the loader — `code`, `message`, `location`, `content`, and `hint` — so you can fix problems without restarting Langflow.
+
+Imports are **not** executed by default, so validation is safe on extensions you just downloaded. Pass `--execute-imports` only when you trust the source; that flag runs an import probe in a subprocess.
 
 ## See also
 
