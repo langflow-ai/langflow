@@ -225,3 +225,27 @@ def test_validator_raises_on_invoke_failure():
             {"AZURE_AI_FOUNDRY_API_KEY": "k", "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.com"},
             model_name="gpt-4o",
         )
+
+
+def test_validator_raises_on_construction_failure():
+    """Validator must raise ValueError when AzureAIOpenAIApiChatModel construction fails."""
+    from lfx_azure_ai_foundry.validator import validate_azure_ai_foundry_credentials
+
+    class BrokenModel:
+        """Stub whose constructor always raises to exercise the construction error path."""
+
+        def __init__(self, **_kwargs):
+            """Raise immediately to simulate a broken/misconfigured client."""
+            msg = "bad endpoint"
+            raise ValueError(msg)
+
+    fake_module = SimpleNamespace(AzureAIOpenAIApiChatModel=BrokenModel)
+    with (
+        patch.dict("sys.modules", {"langchain_azure_ai": fake_module, "langchain_azure_ai.chat_models": fake_module}),
+        pytest.raises(ValueError, match="bad endpoint"),
+    ):
+        validate_azure_ai_foundry_credentials(
+            "Azure AI Foundry",
+            {"AZURE_AI_FOUNDRY_API_KEY": "k", "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.com"},
+            model_name="gpt-4o",
+        )
