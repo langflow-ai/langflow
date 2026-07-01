@@ -28,6 +28,18 @@ def _origin(url: httpx.URL | str) -> tuple[str | None, str | None, int | None]:
     return (parsed.scheme, parsed.host, parsed.port)
 
 
+def _pin_host(url: httpx.URL | str) -> str:
+    """The host httpcore actually connects to: the IDNA/punycode ``raw_host``, not unicode ``.host``.
+
+    httpx connects using ``raw_host`` (e.g. ``xn--exmple-cua.com``), not the unicode ``.host``
+    (``exämple.com``). The DNS-pin key must be this exact representation, or for an IDN host the
+    pin is stored under a key the transport never reads and is silently bypassed (rebind for IDN
+    hosts). Mirrors ``webhook_pin_host`` in the a2a backend utils.
+    """
+    parsed = url if isinstance(url, httpx.URL) else httpx.URL(url)
+    return parsed.raw_host.decode("ascii")
+
+
 def build_a2a_client(
     agent_url: str,
     validated_ips: list[str],
@@ -55,13 +67,14 @@ def build_a2a_client(
     Redirects stay disabled so a 3xx can't smuggle the key or connection to an unvalidated host.
     """
     agent_origin = _origin(agent_url)
-    hostname = httpx.URL(agent_url).host
+    agent_pin_host = _pin_host(agent_url)
     # Shared, mutable host -> validated-IPs map read by the transport's network backend at
-    # connect time. The hook adds each off-origin host before its connection opens; the a2a
-    # client issues its hops sequentially, so there is no concurrent write to this dict.
+    # connect time. Keys are the punycode ``raw_host`` the transport connects with, so IDN hosts
+    # match. The hook adds each off-origin host before its connection opens; the a2a client issues
+    # its hops sequentially, so there is no concurrent write to this dict.
     pinned_ips: dict[str, list[str]] = {}
-    if validated_ips and hostname:
-        pinned_ips[hostname] = list(validated_ips)
+    if validated_ips and agent_pin_host:
+        pinned_ips[agent_pin_host] = list(validated_ips)
 
     async def _guard_request(request: httpx.Request) -> None:
         if _origin(request.url) == agent_origin:
@@ -72,8 +85,9 @@ def build_a2a_client(
         # then pin the validated IPs so httpx connects to exactly what we cleared instead of a
         # fresh lookup a rebind could poison. to_thread keeps the blocking DNS off the event loop.
         _validated_url, off_origin_ips = await asyncio.to_thread(validate_and_resolve_url, str(request.url))
-        if request.url.host and off_origin_ips:
-            pinned_ips[request.url.host] = off_origin_ips
+        pin_host = _pin_host(request.url)
+        if pin_host and off_origin_ips:
+            pinned_ips[pin_host] = off_origin_ips
 
     return httpx.AsyncClient(
         transport=SSRFProtectedTransport(pinned_ips=pinned_ips),

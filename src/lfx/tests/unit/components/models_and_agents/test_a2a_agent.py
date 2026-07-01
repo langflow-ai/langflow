@@ -157,6 +157,34 @@ async def test_off_origin_host_is_dns_pinned_to_validated_ip(monkeypatch):
     assert client._transport.pinned_ips.get("remote-agent.example") == ["93.184.216.34"]
 
 
+async def test_agent_url_idn_seeded_under_punycode_key():
+    """An IDN agent_url is seeded under the punycode raw_host the transport connects with.
+
+    httpcore connects to ``xn--exmple-cua.com``, not the unicode ``exämple.com``; keying the pin
+    by the unicode host would store it where the transport never looks, silently bypassing the pin.
+    """
+    async with build_a2a_client("http://exämple.com", ["93.184.216.34"], timeout=2) as client:
+        assert client._transport.pinned_ips == {"xn--exmple-cua.com": ["93.184.216.34"]}
+
+
+async def test_off_origin_idn_host_pinned_under_punycode_key(monkeypatch):
+    """An off-origin IDN hop pins under the punycode raw_host, so the pin matches the connect host."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    agent_url = "http://127.0.0.1:9"
+    _url, validated_ips = validate_and_resolve_url(agent_url)
+    client = build_a2a_client(agent_url, validated_ips, api_key="super-secret", timeout=2)
+
+    with patch("socket.getaddrinfo", side_effect=_resolve_public):
+        async with client:
+            with contextlib.suppress(Exception):
+                await client.post("http://exämple.com/rpc", json={"hello": "world"})
+
+    assert client._transport.pinned_ips.get("xn--exmple-cua.com") == ["93.184.216.34"]
+    assert "exämple.com" not in client._transport.pinned_ips
+
+
 async def test_loopback_agent_url_rejected_by_ssrf(monkeypatch):
     """A loopback / metadata agent_url is rejected before any outbound call."""
     monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
