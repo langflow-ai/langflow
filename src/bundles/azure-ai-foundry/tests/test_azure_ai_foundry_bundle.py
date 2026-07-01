@@ -177,10 +177,14 @@ def test_validator_invokes_chat_model_on_success():
     calls: list[dict] = []
 
     class FakeModel:
+        """Stub that records constructor kwargs and returns a successful invoke result."""
+
         def __init__(self, **kwargs):
+            """Record kwargs for post-call assertions."""
             calls.append(kwargs)
 
         def invoke(self, _prompt):
+            """Return a fixed success response."""
             return "ok"
 
     fake_module = SimpleNamespace(AzureAIOpenAIApiChatModel=FakeModel)
@@ -201,10 +205,13 @@ def test_validator_raises_on_invoke_failure():
     from lfx_azure_ai_foundry.validator import validate_azure_ai_foundry_credentials
 
     class FakeModel:
+        """Stub whose invoke() always raises to exercise the validator error path."""
+
         def __init__(self, **kwargs):
-            pass
+            """Accept and discard constructor kwargs."""
 
         def invoke(self, _prompt):
+            """Raise RuntimeError to simulate a rejected credential."""
             msg = "auth failed"
             raise RuntimeError(msg)
 

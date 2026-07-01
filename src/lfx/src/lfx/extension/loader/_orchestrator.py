@@ -563,6 +563,7 @@ def _read_inline_bundle_json(
         return {}
 
     def _warn(detail: str) -> None:
+        """Append a ``bundle-json-invalid`` warning to result, if result is available."""
         if result is None:
             return
         result.warnings.append(
