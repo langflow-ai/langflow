@@ -18,7 +18,6 @@ Quick-start:
 from __future__ import annotations
 
 import httpx
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import (
     BoolInput,
@@ -28,9 +27,9 @@ from lfx.inputs.inputs import (
     SecretStrInput,
 )
 from lfx.schema.data import Data
+from lfx.template.field.base import Output
 
 _DEFAULT_IMPORTANCE = 0.5
-from lfx.template.field.base import Output
 
 
 class DakeraMemoryComponent(Component):
@@ -105,7 +104,7 @@ class DakeraMemoryComponent(Component):
             name="importance",
             display_name="Importance",
             info="Initial importance score for the stored memory (0.0 - 1.0). "
-                 "Decays over time based on access patterns.",
+            "Decays over time based on access patterns.",
             value=_DEFAULT_IMPORTANCE,
             required=False,
             advanced=True,
@@ -217,12 +216,14 @@ class DakeraMemoryComponent(Component):
             return Data(data={"error": f"Connection error: {exc}"})
 
         memory = payload.get("memory", {})
-        result = Data(data={
-            "id": memory.get("id", ""),
-            "content": memory.get("content", content),
-            "agent_id": memory.get("agent_id", self.agent_id),
-            "session_id": memory.get("session_id", sid),
-        })
+        result = Data(
+            data={
+                "id": memory.get("id", ""),
+                "content": memory.get("content", content),
+                "agent_id": memory.get("agent_id", self.agent_id),
+                "session_id": memory.get("session_id", sid),
+            }
+        )
         self.status = f"Stored (id={memory.get('id', '?')})"
         return result
 
@@ -258,14 +259,16 @@ class DakeraMemoryComponent(Component):
             return []
 
         results = [
-            Data(data={
-                "id": item["memory"]["id"],
-                "content": item["memory"]["content"],
-                "score": round(item["score"], 4),
-                "agent_id": item["memory"].get("agent_id", ""),
-                "session_id": item["memory"].get("session_id"),
-                "metadata": item["memory"].get("metadata", {}),
-            })
+            Data(
+                data={
+                    "id": item["memory"]["id"],
+                    "content": item["memory"]["content"],
+                    "score": round(item["score"], 4),
+                    "agent_id": item["memory"].get("agent_id", ""),
+                    "session_id": item["memory"].get("session_id"),
+                    "metadata": item["memory"].get("metadata", {}),
+                }
+            )
             for item in memories
             if "memory" in item
         ]
