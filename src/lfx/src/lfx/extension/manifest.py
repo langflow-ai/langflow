@@ -349,6 +349,19 @@ class ProviderManifestEntry(BaseModel):
         return value
 
     @model_validator(mode="after")
+    def _models_are_well_formed(self) -> ProviderManifestEntry:
+        """Raise if any models[] entry is missing a name or has a mismatched provider key."""
+        for entry in self.models:
+            if not entry.get("name"):
+                msg = f"provider {self.name!r} has a models[] entry without a non-empty 'name'"
+                raise ValueError(msg)
+            provider = entry.get("provider")
+            if provider is not None and provider != self.name:
+                msg = f"provider {self.name!r} has a models[] entry with mismatched provider {provider!r}"
+                raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
     def _live_mutually_exclusive(self) -> ProviderManifestEntry:
         """Raise if both ``live`` and ``conditional_live`` are set on the same provider."""
         if self.live and self.conditional_live:

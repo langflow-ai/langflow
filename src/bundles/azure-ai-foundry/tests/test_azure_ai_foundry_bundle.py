@@ -94,6 +94,65 @@ def test_bundle_root_exists():
     assert (root / "extension.json").exists()
 
 
+# ---------------------------------------------------------------------------
+# Manifest validation: models[] structural checks
+# ---------------------------------------------------------------------------
+
+
+def _minimal_provider_entry(**overrides):
+    """Return a minimal valid ProviderManifestEntry dict, with optional overrides."""
+    base = {
+        "name": "TestCloud",
+        "metadata": {
+            "icon": "Azure",
+            "variables": [],
+            "mapping": {"model_class": "ChatOpenAI", "model_param": "model"},
+        },
+    }
+    base.update(overrides)
+    return base
+
+
+def test_manifest_rejects_model_entry_without_name():
+    """ProviderManifestEntry must reject models[] entries that have no 'name' key."""
+    import pytest
+    from lfx.extension.manifest import ProviderManifestEntry
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="non-empty 'name'"):
+        ProviderManifestEntry(**_minimal_provider_entry(models=[{"provider": "TestCloud"}]))
+
+
+def test_manifest_rejects_model_entry_with_mismatched_provider():
+    """ProviderManifestEntry must reject models[] entries whose 'provider' key differs from the provider name."""
+    import pytest
+    from lfx.extension.manifest import ProviderManifestEntry
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="mismatched provider"):
+        ProviderManifestEntry(
+            **_minimal_provider_entry(models=[{"name": "gpt-4o", "provider": "WrongCloud"}])
+        )
+
+
+def test_manifest_accepts_model_entry_without_provider_key():
+    """ProviderManifestEntry must accept models[] entries that omit the optional 'provider' key."""
+    from lfx.extension.manifest import ProviderManifestEntry
+
+    entry = ProviderManifestEntry(**_minimal_provider_entry(models=[{"name": "gpt-4o"}]))
+    assert entry.models[0]["name"] == "gpt-4o"
+
+
+def test_manifest_accepts_model_entry_with_matching_provider():
+    """ProviderManifestEntry must accept models[] entries where 'provider' matches the provider name."""
+    from lfx.extension.manifest import ProviderManifestEntry
+
+    entry = ProviderManifestEntry(
+        **_minimal_provider_entry(models=[{"name": "gpt-4o", "provider": "TestCloud"}])
+    )
+    assert entry.models[0]["name"] == "gpt-4o"
+
+
 def test_azure_ai_foundry_appears_in_get_model_providers_after_load():
     """After loading the bundle, Azure AI Foundry must appear in get_model_providers()."""
     from lfx.base.models.provider_registry import clear
