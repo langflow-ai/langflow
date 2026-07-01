@@ -27,6 +27,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from lfx.cli.common import execute_graph_with_capture
+from lfx.cli.runtime_variables import apply_global_vars_to_graph, build_request_variables_from_global_vars
 from lfx.events.event_manager import create_stream_tokens_event_manager
 from lfx.processing.process import run_graph_internal
 from lfx.schema.schema import InputValueRequest
@@ -34,6 +35,7 @@ from lfx.schema.schema import InputValueRequest
 # WorkflowRunRequest stays a runtime import: FastAPI resolves the route's body
 # annotation at request-model build time, so it cannot live under TYPE_CHECKING.
 from lfx.schema.workflow import WorkflowRunRequest  # noqa: TC001
+from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables
 from lfx.utils.flow_validation import validate_flow_for_current_settings
 from lfx.workflow.adapters import (
     STREAM_ADAPTERS,
@@ -59,9 +61,90 @@ if TYPE_CHECKING:
 
 
 # Bounded queue between the graph run and the SSE consumer, mirroring the backend
-# stream loop: a slow client applies backpressure instead of letting frames
-# accumulate without bound.
+# stream loop: on overflow (a slow client) the run fails with an explicit stream
+# error rather than silently dropping frames.
 _STREAM_QUEUE_MAX_SIZE = 256
+
+_QueueItem = tuple[str | None, bytes | None, float]
+
+
+class _WorkflowEventQueue:
+    """Bounded EventManager handoff that fails explicitly instead of dropping events.
+
+    ``EventManager`` dispatches with ``put_nowait``, so a plain bounded
+    ``asyncio.Queue`` would silently drop frames via ``QueueFull`` when the SSE
+    client falls behind. Ported from the langflow backend v2 stream wrapper: the
+    first overflow flips the queue closed and enqueues a single ``error`` event
+    followed by the terminal sentinel, so the consumer surfaces the failure and
+    ends the stream cleanly.
+    """
+
+    def __init__(self, maxsize: int) -> None:
+        self._queue: asyncio.Queue[_QueueItem] = asyncio.Queue(maxsize=maxsize)
+        self._overflowed = False
+        self._loop = asyncio.get_running_loop()
+        self._overflow_task: asyncio.Task[None] | None = None
+
+    @property
+    def maxsize(self) -> int:
+        return self._queue.maxsize
+
+    async def get(self) -> _QueueItem:
+        return await self._queue.get()
+
+    async def put(self, item: _QueueItem) -> None:
+        if self._overflowed:
+            return
+        await self._queue.put(item)
+
+    def put_nowait(self, item: _QueueItem) -> None:
+        if self._overflowed:
+            return
+        try:
+            self._queue.put_nowait(item)
+        except asyncio.QueueFull:
+            self._overflowed = True
+            self._overflow_task = self._loop.create_task(self._emit_overflow_error())
+
+    async def _emit_overflow_error(self) -> None:
+        payload = {
+            "event": "error",
+            "data": {
+                "error": "Workflow event stream exceeded buffering capacity; client is consuming events too slowly."
+            },
+        }
+        await self._queue.put((f"error-{uuid4()}", json.dumps(payload).encode("utf-8"), time.time()))
+        await self._queue.put((None, None, time.time()))
+
+    async def aclose(self) -> None:
+        if self._overflow_task is not None and not self._overflow_task.done():
+            self._overflow_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._overflow_task
+
+
+def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[str]) -> None:
+    """Reject ``output_ids`` the flow does not produce, before running.
+
+    Mirrors the langflow backend v2 sync path: an unknown id is a 422 up front
+    rather than wasted compute followed by a completed response with no selected
+    output. Validated against the flow's terminal (sink) nodes, the same set the
+    converter resolves selections against.
+    """
+    if not output_ids:
+        return
+    known = set(terminal_node_ids)
+    unknown = [output_id for output_id in output_ids if output_id not in known]
+    if unknown:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "Unknown output_ids",
+                "code": "UNKNOWN_OUTPUT_IDS",
+                "message": f"output_ids not produced by this flow: {unknown}.",
+                "available": terminal_node_ids,
+            },
+        )
 
 
 @dataclass
@@ -76,10 +159,11 @@ def _reject_unsupported_fields(parsed: ParsedWorkflowRun) -> None:
     """Reject request fields lfx serve does not execute yet.
 
     lfx serve runs a pre-registered, prepared graph and has no per-request graph
-    rebuild, so live ``data`` overrides, ``tweaks``, ``files``, partial-run
-    boundaries, and request-level ``globals`` are not supported here yet (they
-    remain available on the langflow backend). Reject explicitly rather than
-    silently ignore so a caller is never surprised.
+    rebuild, so live ``data`` overrides, ``tweaks``, ``files``, and partial-run
+    boundaries are not supported here yet (they remain available on the langflow
+    backend). Request-level ``globals`` are supported and applied as
+    request-scoped variables, so they are not rejected here. Reject the rest
+    explicitly rather than silently ignore so a caller is never surprised.
     """
     unsupported: list[str] = []
     if parsed.tweaks:
@@ -88,8 +172,6 @@ def _reject_unsupported_fields(parsed: ParsedWorkflowRun) -> None:
         unsupported.append("data")
     if parsed.files:
         unsupported.append("files")
-    if parsed.globals:
-        unsupported.append("globals")
     if parsed.start_component_id is not None:
         unsupported.append("start_component_id")
     if parsed.stop_component_id is not None:
@@ -102,8 +184,7 @@ def _reject_unsupported_fields(parsed: ParsedWorkflowRun) -> None:
                 "error": "Unsupported request fields",
                 "code": "LFX_SERVE_UNSUPPORTED_FIELDS",
                 "message": f"lfx serve does not support these v2 fields yet: {fields}. Use the langflow "
-                "backend for live-data overrides, tweaks, files, partial-run boundaries, or "
-                "request-level globals.",
+                "backend for live-data overrides, tweaks, files, or partial-run boundaries.",
                 "fields": unsupported,
             },
         )
@@ -126,10 +207,20 @@ async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: st
 
     Uses ``run_graph_internal`` (the same primitive the langflow backend sync
     path uses) so the result is the aggregated ``RunOutputs`` shape the shared
-    converter expects. Component-level failures are returned in the body
-    (HTTP 200) to match the v2 two-tier contract.
+    converter expects. Unknown ``output_ids`` are rejected up front (422);
+    component-level failures are returned in the body (HTTP 200) to match the v2
+    two-tier contract.
     """
     job_id = str(uuid4())
+    terminal_ids = _terminal_node_ids(graph)
+    _validate_output_ids(parsed.output_ids, terminal_ids)
+
+    # Activate request-scoped variables (the route applied request-level globals
+    # to graph.context) so components resolving through VariableService.get_variable
+    # see them, matching the streaming path where execute_graph_with_capture does
+    # the same activation. run_graph_internal does not activate them itself.
+    scope_vars = build_request_variables_from_global_vars(graph.context.get("request_variables"))
+    scope_token = activate_request_variables(scope_vars or None)
     try:
         run_outputs, session_id = await run_graph_internal(
             graph,
@@ -137,7 +228,7 @@ async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: st
             stream=False,
             session_id=parsed.session_id,
             inputs=_build_inputs(parsed),
-            outputs=_terminal_node_ids(graph),
+            outputs=terminal_ids,
         )
     except Exception as exc:  # noqa: BLE001
         return create_error_response(
@@ -145,8 +236,10 @@ async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: st
             job_id=job_id,
             inputs=parsed.tweaks,
             error=exc,
-            effective_globals={},
+            effective_globals=parsed.globals,
         )
+    finally:
+        reset_request_variables(scope_token)
     run_response = _RunResponse(outputs=run_outputs, session_id=session_id)
     return run_response_to_workflow_response(
         run_response=run_response,
@@ -154,7 +247,7 @@ async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: st
         job_id=job_id,
         inputs=parsed.tweaks,
         graph=graph,
-        effective_globals={},
+        effective_globals=parsed.globals,
         selected_ids=parsed.output_ids,
     )
 
@@ -178,7 +271,7 @@ async def stream_workflow_frames(
     queue while this consumer translates them through the adapter. A failure
     becomes the adapter's terminal-error event rather than an HTTP error.
     """
-    queue: asyncio.Queue = asyncio.Queue(maxsize=_STREAM_QUEUE_MAX_SIZE)
+    queue = _WorkflowEventQueue(maxsize=_STREAM_QUEUE_MAX_SIZE)
     event_manager = create_stream_tokens_event_manager(queue=queue)
     drive_error: BaseException | None = None
 
@@ -228,6 +321,7 @@ async def stream_workflow_frames(
             run_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await run_task
+        await queue.aclose()
 
 
 def add_v2_workflow_routes(app: FastAPI, registry, *, api_key_dependency) -> None:
@@ -286,6 +380,10 @@ def add_v2_workflow_routes(app: FastAPI, registry, *, api_key_dependency) -> Non
         validate_flow_for_current_settings(graph)
         graph_copy = deepcopy(graph)
         registry.stamp(graph_copy)
+        # Apply request-level globals as request-scoped variables on the copy, the
+        # same way the run/stream endpoints do. Both sync and stream then resolve
+        # credentialized variables from the request (backend v2 parity).
+        apply_global_vars_to_graph(graph_copy, parsed.globals)
 
         if parsed.mode == "stream":
             adapter = get_stream_adapter(
