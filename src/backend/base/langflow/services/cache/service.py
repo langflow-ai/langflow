@@ -472,7 +472,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
 
     async def _upsert(self, key, value, lock: asyncio.Lock | None = None) -> None:
         existing_value = await self.get(key, lock)
-        if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
+        if existing_value is not CACHE_MISS and isinstance(existing_value, dict) and isinstance(value, dict):
             existing_value.update(value)
             value = existing_value
         await self.set(key, value, lock)
