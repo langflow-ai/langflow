@@ -215,6 +215,11 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
         var_key = var_info.get("variable_key")
         if not var_key or db_values.get(var_key):
             continue
+        # Honor the request's no-env-fallback contract: a served flow under
+        # no_env_fallback must stay isolated from process-wide credentials even on
+        # this post-DB-miss rotation fallback.
+        if is_env_fallback_disabled():
+            continue
         env_value = _env_value_for(var_key)
         if env_value:
             db_values[var_key] = env_value

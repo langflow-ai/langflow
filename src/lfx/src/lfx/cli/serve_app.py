@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 import traceback
 import uuid
@@ -62,8 +63,44 @@ _SERVE_ENV_PREFIX = "LFX_SERVE_"
 _SERVE_FLOW_DIR_ENV = f"{_SERVE_ENV_PREFIX}FLOW_DIR"
 _SERVE_NO_ENV_FALLBACK_ENV = f"{_SERVE_ENV_PREFIX}NO_ENV_FALLBACK"
 _SERVE_STARTUP_PATHS_ENV = f"{_SERVE_ENV_PREFIX}STARTUP_PATHS"
+# Opt-in (`lfx serve --reset-environ`): when "1", guarded_execute snapshots
+# os.environ before each flow run and restores it after, so env mutations made by
+# one request (or request-scoped credentials) cannot leak into the next request
+# served by the same warm worker. Off by default. Set by serve_command; read per
+# request in guarded_execute.
+_SERVE_RESET_ENVIRON_ENV = f"{_SERVE_ENV_PREFIX}RESET_ENVIRON"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
+
+# One in-flight flow execution per worker process. An async UvicornWorker can
+# accept a second connection while one request is mid-flight; this guard ensures
+# the env-sensitive execution section (where request-scoped vars are active and
+# flow code may touch os.environ) is never entered by two requests in the same
+# process at once. Matters most with per-request recycling (--max-requests 1).
+_EXECUTE_GUARD = asyncio.Semaphore(1)
+
+
+async def guarded_execute(graph_copy, input_value, session_id=None, user_id=None):
+    """Run ``execute_graph_with_capture`` under the per-worker single-in-flight guard.
+
+    Serializes the env-sensitive execution section so two concurrent requests in
+    the same async worker can never overlap a flow run before the worker recycles.
+
+    When ``LFX_SERVE_RESET_ENVIRON`` is "1" (``lfx serve --reset-environ``), the
+    process environment is snapshotted before the run and restored afterward, so a
+    flow's os.environ mutations (or request-scoped credentials) cannot leak into the
+    next request served by the same warm worker. Off by default — the snapshot is
+    skipped entirely unless opted in.
+    """
+    async with _EXECUTE_GUARD:
+        reset_environ = os.environ.get(_SERVE_RESET_ENVIRON_ENV) == "1"
+        env_snapshot = dict(os.environ) if reset_environ else None
+        try:
+            return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id, user_id=user_id)
+        finally:
+            if env_snapshot is not None and os.environ != env_snapshot:
+                os.environ.clear()
+                os.environ.update(env_snapshot)
 
 
 def verify_api_key(
@@ -295,6 +332,10 @@ class FlowRegistry:
         raw_json = self._store.read(flow_id)
         if raw_json is None:
             return None
+        # Cache-miss reconstruction from the store. With per-request worker recycling
+        # (gunicorn --max-requests 1), a flow not folded into the preload image pays
+        # this graph-rebuild cost on every request — log it so the overhead is observable.
+        logger.info(f"Reconstructing flow '{flow_id}' from store on cache miss")
         graph, meta = self._reconstruct(flow_id, raw_json)
         # Cache under the authoritative JSON id so requests by UUID find it.
         self._flows[meta.id] = (graph, meta)
@@ -532,7 +573,9 @@ async def run_flow_generator_for_serve(
         # For the serve app, we'll use execute_graph_with_capture with streaming
         # Note: This is a simplified version. In a full implementation, you might want
         # to integrate with the full LFX streaming pipeline from endpoints.py
-        results, logs = await execute_graph_with_capture(
+        # Routed through the single-in-flight guard so a streaming run can never
+        # overlap another run/stream in the same worker (see _EXECUTE_GUARD).
+        results, logs = await guarded_execute(
             graph, input_request.input_value, session_id=input_request.session_id, user_id=user_id
         )
         result_data = extract_result_data(results, logs)
@@ -550,6 +593,22 @@ async def run_flow_generator_for_serve(
 # -----------------------------------------------------------------------------
 # Application factory
 # -----------------------------------------------------------------------------
+
+
+def _ensure_variable_service_registered() -> None:
+    """Register the minimal in-memory :class:`VariableService` if none is registered.
+
+    Idempotent and safe to call on every worker startup: a previously registered
+    service (e.g. a real DB-backed one in a full Langflow process) is left untouched.
+    """
+    from lfx.services.deps import get_variable_service
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+    from lfx.services.variable.service import VariableService
+
+    if get_variable_service() is not None:
+        return
+    get_service_manager().register_service_class(ServiceType.VARIABLE_SERVICE, VariableService, override=False)
 
 
 def create_multi_serve_app(
@@ -576,6 +635,17 @@ def create_multi_serve_app(
         version="1.0.0",
     )
     app.state.registry = registry
+
+    # Register the minimal in-memory VariableService so the unified-model credential
+    # resolver can see request-scoped ``global_vars``. Standalone lfx ships no
+    # VariableService factory, so ``get_variable_service()`` is ``None`` by default;
+    # every credential path that resolves *through* the service
+    # (``get_api_key_for_provider``, ``get_all_variables_for_provider``,
+    # ``model_utils``, KB connectors) would then never consult the request scope and
+    # silently fall back to ``os.environ`` — defeating ``--no-env-fallback`` + per-request
+    # credential injection. The service reads request scope first, then env (honoring the
+    # no-env-fallback contract), so registering it makes those paths request-scope-aware.
+    _ensure_variable_service_registered()
 
     identity_config = identity_config or IdentityConfig()
     app.state.identity_config = identity_config
@@ -753,6 +823,13 @@ def create_multi_serve_app(
         # (Hence the FAST002 suppression: the Annotated form ruff wants would break this.)
         user_id: str | None = Depends(resolve_identity),  # noqa: FAST002
     ) -> RunResponse:
+        """Execute the flow synchronously and return its completed result.
+
+        This endpoint runs the flow to completion within the request and returns a
+        populated ``RunResponse`` (``result`` / ``success``) — it is NOT a
+        job-submission endpoint and never returns a task/job id to poll. Clients
+        that need incremental output should use ``POST /flows/{flow_id}/stream``.
+        """
         graph, _ = _get_flow_or_404(flow_id)
         try:
             validate_flow_for_current_settings(graph)
@@ -760,7 +837,7 @@ def create_multi_serve_app(
             # deepcopy() drops graph.context; re-apply the registry's env policy.
             registry.stamp(graph_copy)
             apply_global_vars_to_graph(graph_copy, request.global_vars)
-            results, logs = await execute_graph_with_capture(
+            results, logs = await guarded_execute(
                 graph_copy, request.input_value, session_id=request.session_id, user_id=user_id
             )
             result_data = extract_result_data(results, logs)
@@ -858,18 +935,16 @@ def create_multi_serve_app(
     return app
 
 
-def create_serve_app() -> FastAPI:
-    """ASGI app factory called by each uvicorn worker in multi-worker mode.
+def build_registry_from_env() -> FlowRegistry:
+    """Build and warm a ``FlowRegistry`` from the ``LFX_SERVE_*`` environment.
 
-    Workers cannot inherit the parent's in-memory app object. Instead, each
-    worker calls this factory, which reads ``LFX_SERVE_FLOW_DIR``,
-    ``LFX_SERVE_NO_ENV_FALLBACK`` and the ``LFX_SERVE_IDENTITY_*`` identity
-    settings from the environment, pre-warms its own in-memory cache from the
-    shared ``FilesystemFlowStore`` (and, in ``jwt`` identity mode, its own JWKS
-    cache), and returns a ready FastAPI app.
+    Reads ``LFX_SERVE_FLOW_DIR`` / ``LFX_SERVE_NO_ENV_FALLBACK`` /
+    ``LFX_SERVE_STARTUP_PATHS``. Safe to call at module-import time in a gunicorn
+    ``--preload`` master: the result is read-only after warming and is inherited
+    by forked workers via copy-on-write.
 
-    The parent process must set those env vars **before** calling
-    ``uvicorn.run("lfx.cli.serve_app:create_serve_app", workers=N, ...)``.
+    The parent process must set those env vars **before** the worker (or the
+    preload master) calls this function.
     """
     import asyncio
     import os
@@ -880,7 +955,6 @@ def create_serve_app() -> FastAPI:
     flow_dir_str = os.environ.get(_SERVE_FLOW_DIR_ENV)
     no_env_fallback = os.environ.get(_SERVE_NO_ENV_FALLBACK_ENV, "0") == "1"
     startup_paths_json = os.environ.get(_SERVE_STARTUP_PATHS_ENV, "")
-    identity_config = IdentityConfig.from_env(os.environ)
 
     flow_dir = Path(flow_dir_str) if flow_dir_str else None
     flow_store = FilesystemFlowStore(flow_dir) if flow_dir else NullFlowStore()
@@ -892,10 +966,11 @@ def create_serve_app() -> FastAPI:
         # When flow_dir IS set the parent already persisted startup JSON flows to the store;
         # workers pick them up via warm_from_store() below — no need to re-read files.
         #
-        # ``create_serve_app`` is called by uvicorn as an ASGI app factory while an
-        # event loop is already running in the worker process.  ``asyncio.run()``
-        # raises RuntimeError in that situation.  Running the coroutine in a fresh
-        # thread gives it a clean event loop with no interference.
+        # This is called by uvicorn as an ASGI app factory (or by the gunicorn
+        # preload master) while an event loop may already be running.
+        # ``asyncio.run()`` raises RuntimeError in that situation.  Running the
+        # coroutine in a fresh thread gives it a clean event loop with no
+        # interference.
         import concurrent.futures
 
         from lfx.cli.commands import build_registry_from_directory, build_registry_from_paths
@@ -923,4 +998,22 @@ def create_serve_app() -> FastAPI:
         registry = FlowRegistry(no_env_fallback=no_env_fallback, store=flow_store)
 
     registry.warm_from_store()
-    return create_multi_serve_app(registry=registry, identity_config=identity_config)
+    return registry
+
+
+def create_serve_app() -> FastAPI:
+    """ASGI app factory called by each uvicorn worker in multi-worker mode.
+
+    Workers cannot inherit the parent's in-memory app object. Instead, each
+    worker calls this factory, which reads the ``LFX_SERVE_*`` environment via
+    :func:`build_registry_from_env` (and the ``LFX_SERVE_IDENTITY_*`` identity
+    settings via :meth:`IdentityConfig.from_env`), pre-warms its own in-memory
+    cache from the shared ``FilesystemFlowStore``, and returns a ready FastAPI app.
+
+    The parent process must set those env vars **before** calling
+    ``uvicorn.run("lfx.cli.serve_app:create_serve_app", workers=N, ...)``.
+    """
+    return create_multi_serve_app(
+        registry=build_registry_from_env(),
+        identity_config=IdentityConfig.from_env(os.environ),
+    )

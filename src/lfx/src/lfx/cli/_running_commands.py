@@ -2,6 +2,7 @@
 
 import typer
 
+from lfx.cli import _serve_help
 from lfx.upgrade.cli_gate import UpgradeFlowMode
 
 
@@ -147,12 +148,17 @@ def register(app: typer.Typer) -> None:
         flow_dir: str | None = typer.Option(
             None,
             "--flow-dir",
-            help=(
-                "Directory for filesystem-backed flow storage. "
-                "All uvicorn workers sharing this path will serve the same flows. "
-                "Use /tmp/lfx-flows for single-pod sharing or a PVC mount for cross-pod. "
-                "Defaults to in-memory only when omitted."
-            ),
+            help=_serve_help.FLOW_DIR,
+        ),
+        max_requests: int | None = typer.Option(
+            None,
+            "--max-requests",
+            help=_serve_help.MAX_REQUESTS,
+        ),
+        timeout: int | None = typer.Option(
+            None,
+            "--timeout",
+            help=_serve_help.TIMEOUT,
         ),
         *,
         stdin: bool = typer.Option(
@@ -177,11 +183,17 @@ def register(app: typer.Typer) -> None:
         no_env_fallback: bool = typer.Option(
             False,
             "--no-env-fallback/--env-fallback",
-            help=(
-                "Disable os.environ fallback for credential variables. "
-                "Variables not supplied via global_vars on each request resolve to None "
-                "instead of reading from the process environment."
-            ),
+            help=_serve_help.NO_ENV_FALLBACK,
+        ),
+        reset_environ: bool = typer.Option(
+            False,
+            "--reset-environ/--no-reset-environ",
+            help=_serve_help.RESET_ENVIRON,
+        ),
+        sync_workers: bool = typer.Option(
+            False,
+            "--use-sync-workers/--use-async-workers",
+            help=_serve_help.SYNC_WORKERS,
         ),
         identity_mode: str = typer.Option(
             "off",
@@ -251,6 +263,10 @@ def register(app: typer.Typer) -> None:
             check_variables=check_variables,
             upgrade_flow=upgrade_flow,
             no_env_fallback=no_env_fallback,
+            max_requests=max_requests,
+            reset_environ=reset_environ,
+            sync_workers=sync_workers,
+            timeout=timeout,
             identity_mode=identity_mode,
             identity_jwt_issuer=identity_jwt_issuer,
             identity_jwt_audience=identity_jwt_audience,
