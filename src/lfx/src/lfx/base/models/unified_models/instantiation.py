@@ -27,6 +27,45 @@ def _env_if_allowed(key: str) -> str | None:
     return os.environ.get(key)
 
 
+def _apply_registered_provider_connection(provider: str, user_id: UUID | str | None, kwargs: dict[str, Any]) -> None:
+    """Apply a bundle-registered provider's non-secret connection variables to ``kwargs``.
+
+    Core providers keep their explicit per-provider branches in ``get_llm`` /
+    ``get_embeddings``; this generic path covers providers contributed via
+    ``provider_registry``. Each non-secret metadata variable is resolved
+    (database value, then process env when allowed) and applied to its declared
+    ``langchain_param`` -- or forwarded as an HTTP header when ``is_header`` is
+    set, mirroring the OpenRouter attribution-header handling. ``base_url`` is
+    localhost-rewritten so a Dockerised backend can still reach a host-side
+    server (e.g. a local vLLM endpoint). API keys / secrets are intentionally
+    skipped: they are resolved through the dedicated api-key path.
+    """
+    from lfx.base.models import unified_models as unified_models_module
+    from lfx.utils.util import transform_localhost_url
+
+    provider_meta = model_provider_metadata.get(provider, {})
+    provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+    default_headers: dict[str, str] = {}
+    for var in provider_meta.get("variables", []):
+        if var.get("is_secret"):
+            continue
+        variable_key = var.get("variable_key")
+        value = provider_vars.get(variable_key) or _env_if_allowed(variable_key)
+        if not value:
+            continue
+        if var.get("is_header"):
+            header_name = var.get("header_name")
+            if header_name:
+                default_headers[header_name] = value
+            continue
+        langchain_param = var.get("langchain_param")
+        if not langchain_param or kwargs.get(langchain_param):
+            continue
+        kwargs[langchain_param] = transform_localhost_url(value) if langchain_param == "base_url" else value
+    if default_headers:
+        kwargs.setdefault("default_headers", {}).update(default_headers)
+
+
 def get_llm(
     model,
     user_id: UUID | str | None,
@@ -98,8 +137,12 @@ def get_llm(
     # Get API key from user input or global variables
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
 
-    # Validate API key (Ollama doesn't require one)
-    if not api_key and provider != "Ollama":
+    # Validate API key. Ollama needs none; extension-bundle providers that
+    # declare api_key_required=False (e.g. local OpenAI-compatible servers such
+    # as vLLM) also opt out via provider_registry.
+    from lfx.base.models.provider_registry import is_api_key_optional, is_registered
+
+    if not api_key and provider != "Ollama" and not is_api_key_optional(provider):
         # Bug 2 [P1] — Defensive guard: provider arriving as empty / None /
         # literal "Unknown" produces a nonsense error message (the worst
         # case being ``Unknown API key is required when using Unknown
@@ -140,6 +183,12 @@ def get_llm(
                 f"Please provide it in the component or configure it globally as {variable_name}."
             )
         raise ValueError(msg)
+
+    # OpenAI-compatible servers that opt out of API keys (api_key_required=False)
+    # still need a non-empty placeholder so the client library constructs, e.g.
+    # a local vLLM endpoint without auth.
+    if not api_key and is_api_key_optional(provider):
+        api_key = "EMPTY"  # pragma: allowlist secret
 
     # Get model class from metadata, falling back to the provider-level
     # mapping when the stored model value was sourced from
@@ -283,6 +332,10 @@ def get_llm(
                 default_headers[header_name] = value
         if default_headers:
             kwargs["default_headers"] = default_headers
+    elif is_registered(provider):
+        # Bundle-contributed provider: apply its declared connection variables
+        # (base_url, attribution headers, etc.) generically from its metadata.
+        _apply_registered_provider_connection(provider, user_id, kwargs)
 
     try:
         return model_class(**kwargs)
@@ -354,7 +407,9 @@ def get_embeddings(
 
     # --- resolve API key -----------------------------------------------------
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
-    if not api_key and provider != "Ollama":
+    from lfx.base.models.provider_registry import is_api_key_optional, is_registered
+
+    if not api_key and provider != "Ollama" and not is_api_key_optional(provider):
         provider_variable_map = unified_models_module.get_model_provider_variable_mapping()
         variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
         msg = (
@@ -362,6 +417,11 @@ def get_embeddings(
             f"Please provide it in the component or configure it globally as {variable_name}."
         )
         raise ValueError(msg)
+
+    # OpenAI-compatible embedding servers that opt out of API keys still need a
+    # non-empty placeholder so the client library constructs (e.g. local vLLM).
+    if not api_key and is_api_key_optional(provider):
+        api_key = "EMPTY"  # pragma: allowlist secret
 
     if not model_name:
         msg = "Embedding model name is required"
@@ -402,6 +462,12 @@ def get_embeddings(
     # API key
     if "api_key" in param_mapping and api_key:
         kwargs[param_mapping["api_key"]] = api_key
+    elif is_registered(provider) and api_key:
+        # Bundle providers may omit an explicit "api_key" slot in their embedding
+        # param_mapping; pass the resolved key (or the api-key-optional
+        # placeholder) under the OpenAI-compatible "api_key" kwarg so the client
+        # still authenticates.
+        kwargs.setdefault("api_key", api_key)
 
     # Optional parameters - only add when both a value is supplied *and* the
     # provider's param_mapping declares the corresponding key.
@@ -472,6 +538,12 @@ def get_embeddings(
             or "http://localhost:11434"
         )
         kwargs[param_mapping["base_url"]] = base_url_value
+
+    # Bundle-contributed provider: apply its declared connection variables
+    # (e.g. an OpenAI-compatible base_url) generically from its metadata. Runs
+    # before the optional-params loop so an explicit api_base still wins.
+    if is_registered(provider):
+        _apply_registered_provider_connection(provider, user_id, kwargs)
 
     # Add optional parameters if they have values and are mapped
     for param_name, param_value in optional_params.items():

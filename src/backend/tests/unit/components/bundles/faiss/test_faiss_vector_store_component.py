@@ -7,6 +7,7 @@ import pytest
 
 pytest.importorskip("langchain_community")
 
+import lfx_bundles.faiss.faiss as faiss_module
 from langchain_core.documents import Document
 from lfx.io import BoolInput
 from lfx.schema.data import Data
@@ -72,7 +73,7 @@ def test_faiss_same_namespace_cannot_load_another_users_index(tmp_path: Path, mo
     attacker_document = "ATTACKER_PRESEEDED_FAISS_DOCUMENT"
     owner_document = "OWNER_EXPECTED_FAISS_DOCUMENT"
 
-    monkeypatch.setattr("lfx_bundles.faiss.faiss.FAISS", _FakeFAISS)
+    monkeypatch.setattr(faiss_module, "FAISS", _FakeFAISS)
 
     attacker_component = _component("attacker-user", tmp_path, attacker_document, "attacker")
     attacker_results = attacker_component.search_documents()
