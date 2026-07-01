@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.11.0"
+version = "v1.11.0.dev27"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.11.0",
+    "langflow-base[complete]==1.11.0.dev27",
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
     # curated lfx-* package, never exact pins -- exact pins in reusable library
