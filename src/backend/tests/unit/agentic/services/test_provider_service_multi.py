@@ -39,10 +39,8 @@ class TestGetEnabledProvidersForUserMulti:
                 "langflow.agentic.services.provider_service.get_provider_required_variable_keys"
             ) as mock_get_keys:
                 # WatsonX requires these 3 keys
-                mock_get_keys.side_effect = (
-                    lambda p: ["WATSONX_APIKEY", "WATSONX_PROJECT_ID", "WATSONX_URL"]
-                    if p == "IBM WatsonX"
-                    else ["OTHER_KEY"]
+                mock_get_keys.side_effect = lambda p: (
+                    ["WATSONX_APIKEY", "WATSONX_PROJECT_ID", "WATSONX_URL"] if p == "IBM WatsonX" else ["OTHER_KEY"]
                 )
 
                 with patch(
@@ -82,10 +80,8 @@ class TestGetEnabledProvidersForUserMulti:
                 "langflow.agentic.services.provider_service.get_provider_required_variable_keys"
             ) as mock_get_keys:
                 # WatsonX requires these 3 keys
-                mock_get_keys.side_effect = (
-                    lambda p: ["WATSONX_APIKEY", "WATSONX_PROJECT_ID", "WATSONX_URL"]
-                    if p == "IBM WatsonX"
-                    else ["OTHER_KEY"]
+                mock_get_keys.side_effect = lambda p: (
+                    ["WATSONX_APIKEY", "WATSONX_PROJECT_ID", "WATSONX_URL"] if p == "IBM WatsonX" else ["OTHER_KEY"]
                 )
 
                 with patch(

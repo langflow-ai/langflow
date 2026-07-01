@@ -37,7 +37,7 @@ class LangWatchTracer(BaseTracer):
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
-        self.flow_id = trace_name.split(" - ")[-1]
+        self.flow_id = trace_name.rsplit(" - ", maxsplit=1)[-1]
 
         try:
             self._ready: bool = self.setup_langwatch()

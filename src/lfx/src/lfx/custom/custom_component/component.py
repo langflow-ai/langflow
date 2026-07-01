@@ -667,7 +667,7 @@ class Component(CustomComponent):
                 telemetry_values[input_.name] = serialize(input_.value)
 
         # Cache for later O(1) retrieval
-        self._telemetry_input_values = telemetry_values if telemetry_values else None
+        self._telemetry_input_values = telemetry_values or None
 
     def _should_track_input(self, input_obj: InputTypes) -> bool:
         """Check if input should be tracked in telemetry."""
@@ -682,7 +682,7 @@ class Component(CustomComponent):
     def get_telemetry_input_values(self) -> dict[str, Any] | None:
         """Get cached telemetry input values. O(1) lookup, no iteration."""
         # Return all values including descriptive strings and None
-        return self._telemetry_input_values if self._telemetry_input_values else None
+        return self._telemetry_input_values or None
 
     def validate(self, params: dict) -> None:
         """Validates the component parameters.

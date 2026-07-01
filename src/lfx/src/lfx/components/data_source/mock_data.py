@@ -361,15 +361,17 @@ class MockDataGeneratorComponent(Component):
             except (ValueError, TypeError) as e:
                 self.log(f"Error creating age groups with pd.cut: {e!s}, using simple categorization")
                 df["age_group"] = df["age"].apply(
-                    lambda x: "18-25"
-                    if x <= age_group_18_25
-                    else "26-35"
-                    if x <= age_group_26_35
-                    else "36-50"
-                    if x <= age_group_36_50
-                    else "51-65"
-                    if x <= age_group_51_65
-                    else "65+"
+                    lambda x: (
+                        "18-25"
+                        if x <= age_group_18_25
+                        else "26-35"
+                        if x <= age_group_26_35
+                        else "36-50"
+                        if x <= age_group_36_50
+                        else "51-65"
+                        if x <= age_group_51_65
+                        else "65+"
+                    )
                 )
 
             self.log(f"Successfully generated DataFrame with shape: {df.shape}, columns: {list(df.columns)}")

@@ -85,7 +85,7 @@ class NativeTracer(BaseTracer):
         self.session_id = session_id or str(trace_id)
         # Prefer the explicit flow_id; fall back to parsing trace_name so callers
         # that don't pass flow_id separately still produce a usable value.
-        self.flow_id = flow_id or (trace_name.split(" - ")[-1] if " - " in trace_name else trace_name)
+        self.flow_id = flow_id or (trace_name.rsplit(" - ", maxsplit=1)[-1] if " - " in trace_name else trace_name)
 
         # OrderedDict preserves insertion order so spans flush in execution order.
         self.spans: dict[str, dict[str, Any]] = OrderedDict()

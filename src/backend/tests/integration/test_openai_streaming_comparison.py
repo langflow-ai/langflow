@@ -256,7 +256,7 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
     logger.info(f"  Our function_call events: {len(our_function_events)}")
 
     # Use the correct event type for OpenAI (function_call vs tool_call)
-    openai_actual_tool_events = openai_function_events if openai_function_events else openai_tool_events
+    openai_actual_tool_events = openai_function_events or openai_tool_events
 
     logger.info("Function call events:")
     logger.info(f"  OpenAI: {len(openai_actual_tool_events)} function call events")
