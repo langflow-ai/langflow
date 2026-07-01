@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 from lfx.components.processing.operations import (
     JSON_OPERATIONS,
+    OPERATIONS_BY_TYPE,
     TABLE_OPERATIONS,
     TEXT_OPERATIONS,
     OperationsComponent,
@@ -44,25 +45,38 @@ class TestOperationsComponent(ComponentTestBaseWithoutClient):
 
 
 class TestOperationCatalog:
-    """The unified picker exposes every operation across all three data types."""
+    """The unified picker exposes every operation across all three data types.
+
+    The Operation picker is filtered by the Input Type selector, so the picker's
+    ``options`` only ever hold one type's operations at a time. These tests
+    assert against the full catalog (``OPERATIONS_BY_TYPE``) plus the Text-typed
+    default the picker ships with.
+    """
+
+    @staticmethod
+    def _all_operations():
+        """Every operation across all input types (the full catalog)."""
+        return [opt for options in OPERATIONS_BY_TYPE.values() for opt in options]
 
     def test_picker_lists_all_operations(self):
+        names = {opt["name"] for opt in self._all_operations()}
+        assert names == JSON_OPERATIONS | TABLE_OPERATIONS | TEXT_OPERATIONS
+
+    def test_default_picker_shows_text_operations(self):
+        """A freshly dropped component defaults to "Text", so the picker is pre-filtered to Text ops."""
         component = OperationsComponent()
         operation_input = next(i for i in component.inputs if i.name == "operation")
         names = {opt["name"] for opt in operation_input.options}
-        assert names == JSON_OPERATIONS | TABLE_OPERATIONS | TEXT_OPERATIONS
+        assert names == TEXT_OPERATIONS
 
     def test_filter_values_operation_is_removed(self):
         """The legacy Data-List "Filter Values" remnant must not be carried forward."""
-        component = OperationsComponent()
-        operation_input = next(i for i in component.inputs if i.name == "operation")
-        names = {opt["name"] for opt in operation_input.options}
+        names = {opt["name"] for opt in self._all_operations()}
         assert "Filter Values" not in names
 
     def test_every_operation_has_field_mapping(self):
         component = OperationsComponent()
-        operation_input = next(i for i in component.inputs if i.name == "operation")
-        for opt in operation_input.options:
+        for opt in self._all_operations():
             assert opt["name"] in component.OPERATION_FIELDS
 
 
@@ -293,15 +307,24 @@ class TestTextOperations:
 
 
 class TestDynamicInputs:
-    """update_build_config surfaces only the input matching the operation's type."""
+    """update_build_config surfaces the input matching the selected Input Type.
 
-    def _build_config(self):
+    The Input Type selector drives which main input is shown; picking an
+    operation then reveals that operation's fields. The build_config is seeded
+    like the frontend: an ``input_type`` selector and an ``operation`` picker
+    alongside every main and operation-specific field.
+    """
+
+    def _build_config(self, input_type="Text"):
         fields = [*OperationsComponent.MAIN_INPUTS, *OperationsComponent.ALL_OPERATION_FIELDS]
-        return dotdict({f: {"show": True, "required": False, "value": None} for f in fields})
+        config = dotdict({f: {"show": True, "required": False, "value": None} for f in fields})
+        config["input_type"] = {"show": True, "required": False, "value": input_type}
+        config["operation"] = {"show": True, "options": OPERATIONS_BY_TYPE.get(input_type, []), "value": []}
+        return config
 
     def test_json_operation_shows_data_input(self):
         component = OperationsComponent()
-        result = component.update_build_config(self._build_config(), [{"name": "Select Keys"}], "operation")
+        result = component.update_build_config(self._build_config("JSON"), [{"name": "Select Keys"}], "operation")
         assert result["data"]["show"] is True
         assert result["data"]["required"] is True
         assert result["df"]["show"] is False
@@ -310,7 +333,7 @@ class TestDynamicInputs:
 
     def test_table_operation_shows_df_input(self):
         component = OperationsComponent()
-        result = component.update_build_config(self._build_config(), [{"name": "Filter"}], "operation")
+        result = component.update_build_config(self._build_config("Table"), [{"name": "Filter"}], "operation")
         assert result["df"]["show"] is True
         assert result["data"]["show"] is False
         assert result["text_input"]["show"] is False
@@ -319,7 +342,7 @@ class TestDynamicInputs:
 
     def test_text_operation_shows_text_input(self):
         component = OperationsComponent()
-        result = component.update_build_config(self._build_config(), [{"name": "Word Count"}], "operation")
+        result = component.update_build_config(self._build_config("Text"), [{"name": "Word Count"}], "operation")
         assert result["text_input"]["show"] is True
         assert result["data"]["show"] is False
         assert result["df"]["show"] is False
@@ -327,39 +350,56 @@ class TestDynamicInputs:
 
     def test_combine_sets_data_is_list(self):
         component = OperationsComponent()
-        config = self._build_config()
+        config = self._build_config("JSON")
         config["data"]["is_list"] = False
         result = component.update_build_config(config, [{"name": "Combine"}], "operation")
         assert result["data"]["is_list"] is True
 
     def test_non_combine_json_op_unsets_data_is_list(self):
         component = OperationsComponent()
-        config = self._build_config()
+        config = self._build_config("JSON")
         config["data"]["is_list"] = True
         result = component.update_build_config(config, [{"name": "Select Keys"}], "operation")
         assert result["data"]["is_list"] is False
 
-    def test_no_operation_shows_all_inputs(self):
+    def test_no_operation_shows_only_type_input(self):
+        """Clearing the operation leaves just the current input type's main input."""
         component = OperationsComponent()
-        result = component.update_build_config(self._build_config(), [], "operation")
-        assert result["data"]["show"] is True
+        result = component.update_build_config(self._build_config("Table"), [], "operation")
         assert result["df"]["show"] is True
-        assert result["text_input"]["show"] is True
+        assert result["data"]["show"] is False
+        assert result["text_input"]["show"] is False
         # All operation-specific fields hidden.
         assert result["select_keys_input"]["show"] is False
         assert result["column_name"]["show"] is False
 
+    def test_input_type_change_swaps_input_and_picker(self):
+        """Switching Input Type reveals its input, clears the operation, refilters the picker, drops stale fields."""
+        component = OperationsComponent()
+        config = self._build_config("Text")
+        # A stale table field is visible before the switch.
+        config["column_name"]["show"] = True
+        result = component.update_build_config(config, "JSON", "input_type")
+        assert result["data"]["show"] is True
+        assert result["df"]["show"] is False
+        assert result["text_input"]["show"] is False
+        assert result["operation"]["value"] == []
+        assert {opt["name"] for opt in result["operation"]["options"]} == JSON_OPERATIONS
+        assert result["column_name"]["show"] is False
+
     def test_switching_operation_hides_previous_fields(self):
         component = OperationsComponent()
-        config = self._build_config()
+        config = self._build_config("Table")
         # Select a table op first.
         config = component.update_build_config(config, [{"name": "Filter"}], "operation")
         assert config["column_name"]["show"] is True
-        # Switch to a text op: table fields must hide.
+        # Switch input type to Text and pick a text op: table fields must hide.
+        config["input_type"]["value"] = "Text"
         config = component.update_build_config(config, [{"name": "Word Count"}], "operation")
         assert config["column_name"]["show"] is False
         assert config["filter_value"]["show"] is False
         assert config["count_words"]["show"] is True
+        assert config["text_input"]["show"] is True
 
 
 class TestDynamicOutputs:
@@ -397,16 +437,27 @@ class TestDynamicOutputs:
         outputs = self._outputs_for("Text Join")
         assert [o.name for o in outputs] == ["text_output", "message_output"]
 
-    def test_no_operation_emits_all_default_outputs(self):
-        """With no operation selected the component advertises all three output types."""
+    def test_no_operation_emits_type_default_output(self):
+        """With no operation selected, the component advertises the input type's single default output."""
         component = OperationsComponent()
-        result = component.update_outputs({"outputs": []}, "operation", [])
-        assert [o.name for o in result["outputs"]] == ["data_output", "dataframe_output", "message_output"]
+        cases = {"Text": "message_output", "JSON": "data_output", "Table": "dataframe_output"}
+        for input_type, expected in cases.items():
+            frontend_node = {"outputs": [], "template": {"input_type": {"value": input_type}}}
+            result = component.update_outputs(frontend_node, "operation", [])
+            assert [o.name for o in result["outputs"]] == [expected]
 
-    def test_default_outputs_cover_all_types(self):
-        """The class default outputs make the component connectable before configuration."""
+    def test_input_type_change_emits_type_default_output(self):
+        """Switching the Input Type advertises that type's single default output."""
+        component = OperationsComponent()
+        cases = {"Text": "message_output", "JSON": "data_output", "Table": "dataframe_output"}
+        for input_type, expected in cases.items():
+            result = component.update_outputs({"outputs": []}, "input_type", input_type)
+            assert [o.name for o in result["outputs"]] == [expected]
+
+    def test_default_outputs_match_default_type(self):
+        """The class default output matches the default "Text" type so a fresh component is connectable."""
         names = [o.name for o in OperationsComponent.outputs]
-        assert names == ["data_output", "dataframe_output", "message_output"]
+        assert names == ["message_output"]
 
 
 if __name__ == "__main__":
