@@ -92,6 +92,41 @@ describe("PrototypePane", () => {
     expect(frame.getAttribute("src")).toBe(EMBED);
   });
 
+  it("shows the finished prototype read-only (preview, no OD chrome/approve) when past PROTOTYPE", () => {
+    mockUsePrototype.mockReturnValue(
+      ok(
+        state({
+          status: "APPROVED",
+          embed_url: EMBED,
+          preview_html: "<html><body>Built screen</body></html>",
+        }),
+      ),
+    );
+    render(<PrototypePane project={project({ phase: "PLAN" })} />);
+    // The finished design renders in the sandboxed preview frame…
+    const preview = screen.getByTitle("Prototype preview") as HTMLIFrameElement;
+    expect(preview).toBeInTheDocument();
+    expect(preview).toHaveAttribute("sandbox");
+    // …and OD's live editor + the approve action are NOT shown (read-only).
+    expect(
+      screen.queryByTitle("Open Design prototype"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Approve/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a 'no prototype' note when revisiting an approved stage with nothing captured", () => {
+    mockUsePrototype.mockReturnValue(
+      ok(state({ status: "APPROVED", embed_url: EMBED, preview_html: null })),
+    );
+    render(<PrototypePane project={project({ phase: "PLAN" })} />);
+    expect(screen.getByText("No prototype to show")).toBeInTheDocument();
+    expect(
+      screen.queryByTitle("Open Design prototype"),
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps embedding OD while a refine re-run is GENERATING (no flicker to placeholder)", () => {
     mockUsePrototype.mockReturnValue(
       ok(state({ status: "GENERATING", embed_url: EMBED })),

@@ -49,6 +49,15 @@ jest.mock("@/controllers/API/queries/lothal", () => ({
     mutateAsync: mockApproveMutate,
     isPending: false,
   }),
+  // Phase-gates: the CLARIFICATION pane (PrdPane) edits/approves the PRD, and the
+  // ARCHITECTURE pane auto-generates on entry.
+  useUpdatePrd: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useApprovePrd: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useGenerateArchitecture: () => ({
+    mutate: jest.fn(),
+    isPending: false,
+    isError: false,
+  }),
 }));
 
 // Stub the live D2 canvas (real one needs SVG layout/pointer gestures). It fires
@@ -392,8 +401,10 @@ describe("Lothal Workspace", () => {
     expect(
       screen.getByText("Architecture approved — building the prototype"),
     ).toBeInTheDocument();
+    // PLAN now sits before CODE_GENERATION, so entering the code phase reads
+    // "Plan approved …" (the boundary note keys off the entered phase).
     expect(
-      screen.getByText("Prototype approved — generating the code"),
+      screen.getByText("Plan approved — generating the code"),
     ).toBeInTheDocument();
   });
 
@@ -451,11 +462,26 @@ describe("Lothal Workspace", () => {
 
   // --- Code surface (right pane in code phases) ---
 
-  it("shows the canvas (not code) while still in a diagram phase", () => {
+  it("shows the PRD pane (not code) while still in the clarification phase", () => {
+    // phase-gates: CLARIFICATION renders the PRD pane. With no drafted spec yet it
+    // shows the clarifying placeholder — the design surface, never the code panel.
     mockUseProject.mockReturnValue({ data: project, isLoading: false });
     render(<Workspace />);
+    expect(screen.getByText("Clarifying your idea…")).toBeInTheDocument();
+  });
+
+  it("shows the drafted PRD on the main page with an approve gate", () => {
+    mockUseProject.mockReturnValue({
+      data: { ...project, prd_content: "# Spec\n\nA tide-tracking tool." },
+      isLoading: false,
+    });
+    render(<Workspace />);
+    // The PRD renders on the main page (not just the chat), behind an explicit
+    // "Approve & design architecture" gate. (react-markdown is mocked to a single
+    // node here, so match the spec text as a substring.)
+    expect(screen.getByText(/A tide-tracking tool/)).toBeInTheDocument();
     expect(
-      screen.getByText("The diagram takes shape here"),
+      screen.getByRole("button", { name: "Approve & design architecture" }),
     ).toBeInTheDocument();
   });
 
@@ -602,5 +628,48 @@ describe("Lothal Workspace", () => {
     const settingsBtn = screen.getByRole("button", { name: /settings/i });
     fireEvent.click(settingsBtn);
     expect(mockNavigate).toHaveBeenCalledWith("/lothal/settings");
+  });
+
+  // --- Workspace shell: chat dock + phase browsing (this PR) ---------------
+
+  it("collapses and restores the conversation dock", () => {
+    localStorage.clear(); // dock state persists; start from the default (expanded)
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
+    render(<Workspace />);
+    // Expanded by default → the affordance offers to hide it.
+    fireEvent.click(screen.getByTitle("Hide conversation"));
+    // Collapsed → the affordance flips to "Show conversation".
+    expect(screen.getByTitle("Show conversation")).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle("Show conversation"));
+    expect(screen.getByTitle("Hide conversation")).toBeInTheDocument();
+  });
+
+  it("browses to an earlier stage read-only and returns to the live phase", () => {
+    // A PLAN-phase project has earlier stages to browse back to.
+    // ARCHITECTURE-phase project: it and the earlier CLARIFICATION stage both
+    // render the (already-mocked) artifacts pane, so browsing between them doesn't
+    // drag in the PLAN/PROTOTYPE panes' hooks.
+    mockUseProject.mockReturnValue({
+      data: { ...project, phase: "ARCHITECTURE" },
+      isLoading: false,
+    });
+    render(<Workspace />);
+    // On the live phase there is no read-only banner.
+    expect(screen.queryByText(/stage — read-only\./)).toBeNull();
+    // Step back one stage (Design → Clarify) → the browse banner appears.
+    fireEvent.click(screen.getByLabelText("Previous stage"));
+    expect(screen.getByText(/stage — read-only\./)).toBeInTheDocument();
+    // The back-to-live control names the project's real phase and clears the browse.
+    fireEvent.click(screen.getByRole("button", { name: /Back to Design/ }));
+    expect(screen.queryByText(/stage — read-only\./)).toBeNull();
+  });
+
+  it("disables the phase-nav arrows at the boundaries", () => {
+    // A CLARIFICATION project sits at index 0 with no later live phase, so neither
+    // direction is reachable.
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
+    render(<Workspace />);
+    expect(screen.getByLabelText("Previous stage")).toBeDisabled();
+    expect(screen.getByLabelText("Next stage")).toBeDisabled();
   });
 });

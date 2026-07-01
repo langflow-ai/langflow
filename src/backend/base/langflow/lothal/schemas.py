@@ -123,6 +123,17 @@ class ChatRequest(BaseModel):
     artifact: str | None = None
 
 
+class PRDUpdate(BaseModel):
+    """`PATCH /projects/{id}/prd` body — the edited spec Markdown.
+
+    Direct-edit companion to chat revision: the user can rewrite the PRD on the
+    main page and save it. Only valid while the project is in CLARIFICATION (the
+    spec freezes once approved).
+    """
+
+    content: str
+
+
 class DebugLLMRequest(BaseModel):
     """`POST /debug/llm` body."""
 
@@ -133,7 +144,13 @@ class DebugLLMRequest(BaseModel):
 
 
 class PRDResponse(BaseModel):
-    """`GET /projects/{id}/prd` — `null` until the project leaves CLARIFICATION."""
+    """`GET`/`PATCH /projects/{id}/prd` — the drafted spec, `null` until clarity.
+
+    `content` is `null` while the clarification loop is still asking questions and
+    becomes the synthesised PRD once clarity is reached — the project then HOLDS in
+    CLARIFICATION so the user can review/edit the spec on the main page before
+    approving it (`POST /prd/approve`) to advance to ARCHITECTURE.
+    """
 
     content: str | None
 
@@ -176,6 +193,12 @@ class ArtifactsResponse(BaseModel):
 
 class DiagramApproveResponse(BaseModel):
     """`POST /projects/{id}/diagram/approve` — the phase after advancing."""
+
+    phase: Phase
+
+
+class PRDApproveResponse(BaseModel):
+    """`POST /projects/{id}/prd/approve` — the phase after advancing (ARCHITECTURE)."""
 
     phase: Phase
 

@@ -268,6 +268,68 @@ export function useApproveDiagram(projectId: string) {
   });
 }
 
+// --- PRD (phase-gates) ------------------------------------------------------
+// The drafted spec lives on `project.prd_content` (surfaced by the project query,
+// which chat invalidates). These mutate it: a direct edit (PATCH), and the
+// approve that ends the clarification stage. Both invalidate the project so the
+// PRD pane + phase badge refresh.
+
+// Save a direct edit of the drafted PRD (only valid in CLARIFICATION).
+export function useUpdatePrd(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (content: string) => {
+      const res = await api.patch<{ content: string | null }>(
+        `${BASE}${projectId}/prd`,
+        { content },
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+    },
+  });
+}
+
+// Approve the drafted PRD: advances CLARIFICATION → ARCHITECTURE. Invalidates the
+// project (phase badge, stepper, right-pane swap), the artifact map (the arch
+// pane then auto-generates), and the chat thread.
+export function useApprovePrd(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post<DiagramApprove>(
+        `${BASE}${projectId}/prd/approve`,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      qc.invalidateQueries({ queryKey: artifactsKey(projectId) });
+      qc.invalidateQueries({ queryKey: messagesKey(projectId) });
+    },
+  });
+}
+
+// Generate the architecture artifacts on entering the stage: the architecture
+// pane fires this once when the map is empty, so the ADR + diagrams appear
+// without a manual chat turn (the fix for the "stuck designing…" hang).
+export function useGenerateArchitecture(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post(`${BASE}${projectId}/architecture/generate`);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: artifactsKey(projectId) });
+      qc.invalidateQueries({ queryKey: diagramKey(projectId) });
+      qc.invalidateQueries({ queryKey: messagesKey(projectId) });
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+    },
+  });
+}
+
 // --- Code ------------------------------------------------------------------
 
 // The generated files for a project. A 501 stub until Epic 4 lights up code
@@ -563,7 +625,10 @@ function invalidatePlanNode(
 export function useUpdatePlanContract(projectId: string, nodeId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { assumptions?: string[]; guarantees?: string[] }) => {
+    mutationFn: async (body: {
+      assumptions?: string[];
+      guarantees?: string[];
+    }) => {
       const res = await api.patch<PlanNodeDetail>(
         `${BASE}${projectId}/plan/nodes/${nodeId}/contract`,
         body,
@@ -611,7 +676,11 @@ export function useRatifyPlanNode(projectId: string) {
 export function useTransitionPlanNode(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { nodeId: string; target: string; detail?: string }) => {
+    mutationFn: async (vars: {
+      nodeId: string;
+      target: string;
+      detail?: string;
+    }) => {
       const res = await api.post<PlanNodeDetail>(
         `${BASE}${projectId}/plan/nodes/${vars.nodeId}/transition`,
         { target: vars.target, detail: vars.detail },
@@ -676,7 +745,11 @@ export type TestStatus = "passed" | "failed" | "error" | "skipped";
 export function useRecordPlanTestRun(projectId: string, nodeId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { testId: string; status: TestStatus; output?: string }) => {
+    mutationFn: async (vars: {
+      testId: string;
+      status: TestStatus;
+      output?: string;
+    }) => {
       const res = await api.post(
         `${BASE}${projectId}/plan/nodes/${nodeId}/tests/${vars.testId}/runs`,
         { status: vars.status, output: vars.output },
@@ -737,7 +810,9 @@ export function usePlanActivity(projectId: string, enabled = true) {
   return useQuery({
     queryKey: planActivityKey(projectId),
     queryFn: async () => {
-      const res = await api.get<PlanEvent[]>(`${BASE}${projectId}/plan/activity`);
+      const res = await api.get<PlanEvent[]>(
+        `${BASE}${projectId}/plan/activity`,
+      );
       return res.data;
     },
     enabled,
@@ -779,10 +854,16 @@ export function usePlanDag(projectId: string, enabled = true) {
 export function useMovePlanNode(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { nodeId: string; new_parent_id: string | null }) => {
-      const res = await api.post(`${BASE}${projectId}/plan/nodes/${vars.nodeId}/move`, {
-        new_parent_id: vars.new_parent_id,
-      });
+    mutationFn: async (vars: {
+      nodeId: string;
+      new_parent_id: string | null;
+    }) => {
+      const res = await api.post(
+        `${BASE}${projectId}/plan/nodes/${vars.nodeId}/move`,
+        {
+          new_parent_id: vars.new_parent_id,
+        },
+      );
       return res.data;
     },
     onSuccess: (_data, vars) => {

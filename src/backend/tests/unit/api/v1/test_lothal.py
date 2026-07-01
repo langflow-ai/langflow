@@ -690,11 +690,12 @@ async def test_no_signal_chat_turn_bumps_updated_at_and_reorders_list(
 async def test_chat_three_no_signal_turns_then_clarity_transition(
     client: AsyncClient, logged_in_headers: dict, monkeypatch
 ):
-    """Backlog acceptance for the clarification turn lifecycle.
+    """Backlog acceptance for the clarification turn lifecycle (phase-gates).
 
     Three no-signal turns yield 6 messages with the phase unchanged; one
-    `[CLARITY_REACHED]` turn advances to ARCHITECTURE, stores the PRD, and
-    strips the control token.
+    `[CLARITY_REACHED]` turn DRAFTS the PRD (token stripped, stored on
+    `prd_content`) but HOLDS in CLARIFICATION — leaving is now an explicit
+    `POST /prd/approve`, and the chat reply is a short handoff, not the PRD.
     """
     project_id = await _create_chat_project(client, logged_in_headers)
 
@@ -726,7 +727,7 @@ async def test_chat_three_no_signal_turns_then_clarity_transition(
     assert project["phase"] == "CLARIFICATION"
     assert project["prd_content"] is None
 
-    # The clarity turn transitions the project and stores the PRD with the token stripped.
+    # The clarity turn drafts the PRD and HOLDS in CLARIFICATION (no auto-advance).
     response = await client.post(
         f"api/v1/lothal/projects/{project_id}/chat", json={"content": "looks good"}, headers=logged_in_headers
     )
@@ -735,13 +736,13 @@ async def test_chat_three_no_signal_turns_then_clarity_transition(
     assert reply["phase"] == "CLARIFICATION"  # the turn ran under CLARIFICATION
     assert reply["suggestions"] == []
     assert "[CLARITY_REACHED]" not in reply["content"]  # control token stripped
-    assert "Overview" in reply["content"]
+    assert "Overview" not in reply["content"]  # the chat reply is a handoff, not the PRD
 
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "ARCHITECTURE"  # phase persists on transition
+    assert project["phase"] == "CLARIFICATION"  # holds — leaving is an explicit approve
     assert project["prd_content"] is not None
     assert "[CLARITY_REACHED]" not in project["prd_content"]
-    assert "Overview" in project["prd_content"]
+    assert "Overview" in project["prd_content"]  # the PRD landed on the main page
 
 
 # --- Diagram generation (Story 2.1, re-pointed to D2 in Epic D.2) -------------
@@ -1037,9 +1038,7 @@ async def test_diagram_save_route_is_gone(client: AsyncClient, logged_in_headers
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_approve_in_architecture_advances_to_prototype_and_keeps_d2(
-    client: AsyncClient, logged_in_headers: dict
-):
+async def test_approve_in_architecture_advances_to_prototype_and_keeps_d2(client: AsyncClient, logged_in_headers: dict):
     """Acceptance for Epic UI U.0: approve ARCHITECTURE → PROTOTYPE (was CODE_GENERATION), D2 retained."""
     project_id = await _create_chat_project(client, logged_in_headers)
     seed_d2 = "shape: sequence_diagram\nuser: User\napi: API\n\nuser -> api: submit\napi -> user: ok"
@@ -1075,6 +1074,174 @@ async def test_approve_rejected_outside_architecture(client: AsyncClient, logged
     # The phase is unchanged — a rejected approve never advances the project.
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
     assert project["phase"] == phase
+
+
+# --- PRD edit + approve (phase-gates) ----------------------------------------
+
+
+async def test_prd_edit_updates_the_drafted_spec(client: AsyncClient, logged_in_headers: dict):
+    """PATCH /prd saves a direct edit while in CLARIFICATION with a drafted PRD."""
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.prd_content = "# Spec\n\nOld body."
+        session.add(project)
+
+    response = await client.patch(
+        f"api/v1/lothal/projects/{project_id}/prd",
+        json={"content": "# Spec\n\nNew body."},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["content"] == "# Spec\n\nNew body."
+
+    prd = (await client.get(f"api/v1/lothal/projects/{project_id}/prd", headers=logged_in_headers)).json()
+    assert prd["content"] == "# Spec\n\nNew body."
+
+
+async def test_prd_edit_rejects_blank(client: AsyncClient, logged_in_headers: dict):
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.prd_content = "# Spec\n\nBody."
+        session.add(project)
+    response = await client.patch(
+        f"api/v1/lothal/projects/{project_id}/prd", json={"content": "   "}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.parametrize("phase", ["ARCHITECTURE", "PROTOTYPE", "PLAN"])
+async def test_prd_edit_rejected_outside_clarification(client: AsyncClient, logged_in_headers: dict, phase: str):
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = phase
+        project.prd_content = "# Spec\n\nBody."
+        session.add(project)
+    response = await client.patch(
+        f"api/v1/lothal/projects/{project_id}/prd", json={"content": "edited"}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+async def test_prd_approve_advances_to_architecture(client: AsyncClient, logged_in_headers: dict):
+    """Approving the drafted PRD advances CLARIFICATION → ARCHITECTURE."""
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.prd_content = "# Spec\n\nA todo app."
+        session.add(project)
+
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/prd/approve", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"phase": "ARCHITECTURE"}
+
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "ARCHITECTURE"
+
+
+async def test_prd_approve_rejected_without_a_prd(client: AsyncClient, logged_in_headers: dict):
+    project_id = await _create_chat_project(client, logged_in_headers)  # CLARIFICATION, no PRD yet
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/prd/approve", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
+    assert project["phase"] == "CLARIFICATION"
+
+
+@pytest.mark.parametrize("phase", ["ARCHITECTURE", "PROTOTYPE", "PLAN", "CODE_GENERATION", "DONE"])
+async def test_prd_approve_rejected_outside_clarification(client: AsyncClient, logged_in_headers: dict, phase: str):
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = phase
+        project.prd_content = "# Spec\n\nBody."
+        session.add(project)
+    response = await client.post(f"api/v1/lothal/projects/{project_id}/prd/approve", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+# --- Architecture generate on entry (phase-gates) ----------------------------
+
+
+async def test_architecture_generate_populates_the_artifact_map(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """POST /architecture/generate runs the ADR + diagram batch on an empty map."""
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "ARCHITECTURE"
+        project.prd_content = "# Spec\n\nA todo app."
+        session.add(project)
+
+    async def fake_diagram_llm(_messages, **_kwargs):
+        return _diagram_reply()
+
+    async def fake_adr_llm(_messages, **_kwargs):
+        return "# Architecture Decision Record\n\n## Context\nA todo app."
+
+    monkeypatch.setattr(d2_gate, "call_llm", fake_diagram_llm)
+    monkeypatch.setattr(architecture_generation, "call_llm", fake_adr_llm)
+    monkeypatch.setattr(d2_validator, "call_llm", _stub_validator_reply("VALID"))
+
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/architecture/generate", headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["role"] == "ASSISTANT"
+
+    async with session_scope() as session:
+        stored = await session.get(Project, UUID(project_id))
+        assert set(stored.artifacts) == {
+            "adr.md",
+            "diagrams/context.d2",
+            "diagrams/container.d2",
+            "diagrams/data-model.d2",
+            "diagrams/sequence.d2",
+        }
+        assert stored.diagram_d2 == _diagram_reply()
+
+
+async def test_architecture_generate_rejected_without_a_prd(client: AsyncClient, logged_in_headers: dict):
+    """Never design an architecture from nothing — a missing PRD is a 409."""
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "ARCHITECTURE"  # reached without a PRD (defensive guard)
+        session.add(project)
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/architecture/generate", headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+async def test_architecture_generate_rejected_when_already_generated(client: AsyncClient, logged_in_headers: dict):
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = "ARCHITECTURE"
+        project.artifacts = {"adr.md": "# ADR"}
+        session.add(project)
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/architecture/generate", headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+@pytest.mark.parametrize("phase", ["CLARIFICATION", "PROTOTYPE", "PLAN"])
+async def test_architecture_generate_rejected_outside_architecture(
+    client: AsyncClient, logged_in_headers: dict, phase: str
+):
+    project_id = await _create_chat_project(client, logged_in_headers)
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+        project.phase = phase
+        session.add(project)
+    response = await client.post(
+        f"api/v1/lothal/projects/{project_id}/architecture/generate", headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
 
 
 async def test_approve_unowned_project_is_404(client: AsyncClient, logged_in_headers: dict, user_two):
@@ -1686,8 +1853,10 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
     Drives the live `POST /chat` endpoint with a realistic app description and
     progressively detailed answers. Asserts the model asks focused questions with
     tappable suggestions while gathering requirements, then within a few turns
-    emits `[CLARITY_REACHED]`: the project advances to ARCHITECTURE, the
-    control token is stripped, and `GET /prd` returns the stored summary.
+    emits `[CLARITY_REACHED]`: the PRD is drafted and stored (token stripped,
+    surfaced by `GET /prd`) while the project HOLDS in CLARIFICATION (phase-gates —
+    no auto-advance), and the explicit `POST /prd/approve` is what moves it to
+    ARCHITECTURE.
     """
     if find_spec("claude_agent_sdk") is None:
         pytest.skip("claude-agent-sdk not installed")
@@ -1712,39 +1881,39 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
 
     saw_suggestions = bool(reply["suggestions"])
 
-    async def has_transitioned() -> bool:
-        # A turn's reply is stamped with the phase it ran *under*, so a transition
-        # only shows up on the project row — never on `reply["phase"]`.
+    async def drafted_prd() -> str | None:
+        # phase-gates: clarity no longer advances the phase — it drafts the PRD and
+        # HOLDS in CLARIFICATION. The clarity signal is `prd_content` being set (a
+        # turn's reply is stamped with the phase it ran under, always CLARIFICATION).
         project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-        return project["phase"] != "CLARIFICATION"
+        return project["prd_content"]
 
-    transitioned = await has_transitioned()
-
-    # Keep answering until the model reaches clarity (phase moves off CLARIFICATION),
-    # falling back to a generic nudge once the canned answers run out.
+    # Keep answering until the model reaches clarity (a PRD is drafted), falling
+    # back to a generic nudge once the canned answers run out.
     answers = iter(_SMOKE_ANSWERS)
     turns = 1
-    while not transitioned and turns < _SMOKE_MAX_TURNS:
+    while not await drafted_prd() and turns < _SMOKE_MAX_TURNS:
         answer = next(answers, "That's everything you need — please write the spec now.")
         reply = await send(answer)
         turns += 1
         saw_suggestions = saw_suggestions or bool(reply["suggestions"])
-        transitioned = await has_transitioned()
 
-    # Clarity must be reached within the bounded number of turns.
+    # Clarity must be reached within the bounded number of turns, and the project
+    # HOLDS in CLARIFICATION with a drafted PRD (no auto-advance).
     project = (await client.get(f"api/v1/lothal/projects/{project_id}", headers=logged_in_headers)).json()
-    assert project["phase"] == "ARCHITECTURE", f"never reached clarity in {turns} turns"
+    assert project["prd_content"], f"never reached clarity in {turns} turns"
+    assert project["phase"] == "CLARIFICATION", f"phase should hold at clarification, got {project['phase']}"
 
     # At least one clarification turn offered tappable suggestions (focused questions).
     assert saw_suggestions, "no clarification turn returned suggestions"
 
-    # The clarity turn's reply is the PRD summary with the control token stripped.
+    # The clarity turn's reply is a short handoff (not the PRD) with the token stripped.
     assert "[CLARITY_REACHED]" not in reply["content"]
     assert reply["suggestions"] == []
 
-    # The PRD is stored and surfaced by `GET /prd`, token-free.
+    # The PRD is stored on the main page and surfaced by `GET /prd`, token-free.
     prd = (await client.get(f"api/v1/lothal/projects/{project_id}/prd", headers=logged_in_headers)).json()
-    assert prd["content"], "PRD was not stored on transition"
+    assert prd["content"], "PRD was not stored"
     assert "[CLARITY_REACHED]" not in prd["content"]
     assert project["prd_content"] == prd["content"]
 
@@ -1753,6 +1922,11 @@ async def test_clarification_end_to_end_real_subscription(client: AsyncClient, l
     assert len(messages) == turns * 2  # each turn = user + assistant
     assert messages[0]["role"] == "USER"
     assert all("[CLARITY_REACHED]" not in m["content"] for m in messages)
+
+    # The explicit approve is the gate that advances CLARIFICATION → ARCHITECTURE.
+    approve = await client.post(f"api/v1/lothal/projects/{project_id}/prd/approve", headers=logged_in_headers)
+    assert approve.status_code == status.HTTP_200_OK
+    assert approve.json() == {"phase": "ARCHITECTURE"}
 
 
 # --- Prototype stage (Epic UI, Stories U.4-U.7) ------------------------------
@@ -1902,9 +2076,7 @@ async def test_generate_is_idempotent_on_reentry(client: AsyncClient, logged_in_
 
     with respx.mock:
         _mock_od_discovery()
-        create = respx.post(f"{OD_BASE}/api/projects").mock(
-            return_value=httpx.Response(200, json={"id": "od-proj-1"})
-        )
+        create = respx.post(f"{OD_BASE}/api/projects").mock(return_value=httpx.Response(200, json={"id": "od-proj-1"}))
         respx.post(f"{OD_BASE}/api/runs").mock(
             return_value=httpx.Response(200, json={"runId": "run-1", "conversationId": "conv-1"})
         )
@@ -2149,9 +2321,7 @@ async def test_approve_copies_artifacts_and_advances(client: AsyncClient, logged
         assert project.phase == "PLAN"
         assert project.prototype_status == PrototypeStatus.APPROVED.value
         assert project.prototype_approved_at is not None
-        rows = (
-            await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))
-        ).all()
+        rows = (await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))).all()
         assert [r.od_path for r in rows] == ["home.html"]
         assert rows[0].content == "<html>home</html>"
         assert rows[0].title == "Home screen"
@@ -2198,9 +2368,7 @@ async def test_approve_with_no_artifacts_still_advances(client: AsyncClient, log
         assert project.phase == "PLAN"
         assert project.prototype_status == PrototypeStatus.APPROVED.value
         assert project.prototype_approved_at is not None
-        rows = (
-            await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))
-        ).all()
+        rows = (await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))).all()
         assert rows == []  # nothing to copy
 
     messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
@@ -2250,9 +2418,7 @@ async def test_approve_summary_pluralises_artifact_count(client: AsyncClient, lo
     assert response.status_code == status.HTTP_200_OK
     async with session_scope() as session:
         project = await session.get(Project, UUID(project_id))
-        rows = (
-            await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))
-        ).all()
+        rows = (await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))).all()
         assert {r.od_path for r in rows} == {"home.html", "about.html"}
     messages = (await client.get(f"api/v1/lothal/projects/{project_id}/messages", headers=logged_in_headers)).json()
     assert any("with 2 artifacts" in m["content"] for m in messages if m["role"] == "ASSISTANT")
@@ -2290,9 +2456,7 @@ async def test_approve_maps_od_failure_to_502_and_does_not_advance(client: Async
         project = await session.get(Project, UUID(project_id))
         assert project.phase == "PROTOTYPE"  # not advanced
         assert project.prototype_status == PrototypeStatus.READY.value
-        rows = (
-            await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))
-        ).all()
+        rows = (await session.exec(select(PrototypeArtifact).where(PrototypeArtifact.project_id == project.id))).all()
         assert rows == []
 
 

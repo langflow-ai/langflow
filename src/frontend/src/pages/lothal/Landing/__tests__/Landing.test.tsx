@@ -17,14 +17,14 @@ describe("Lothal Landing", () => {
     jest.clearAllMocks();
   });
 
-  it("renders the design's hero: headline, pill, and marketing title", () => {
+  it("renders the hero: developer-weighted headline, pill, and marketing title", () => {
     render(<Landing />);
     expect(screen.getByText(/Build software the way/)).toBeInTheDocument();
     expect(screen.getByText("Now in early access")).toBeInTheDocument();
-    expect(document.title).toBe("Lothal — build software by describing it");
+    expect(document.title).toBe("Lothal — software engineering, accelerated");
   });
 
-  it("shows the larder sample: bakery chat plus two sample-diagram renders", () => {
+  it("shows the larder sample once: the hero chat plus a single sample diagram", () => {
     render(<Landing />);
     expect(
       screen.getByText(
@@ -34,45 +34,74 @@ describe("Lothal Landing", () => {
     expect(
       screen.getByText("Who places orders, and how do they reach you?"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Phone + a webpage")).toBeInTheDocument();
-    // The hero + showcase each render a <SampleDiagram> (an accessible SVG figure).
-    const diagrams = screen.getAllByRole("img", {
-      name: /bakery order flow/i,
-    });
-    expect(diagrams).toHaveLength(2);
+    // The hero is the only place the chat + sample diagram appear — the ladder
+    // rungs use distinct visuals (PRD, ADR, gate, tree), so there's exactly one.
+    const diagrams = screen.getAllByRole("img", { name: /bakery order flow/i });
+    expect(diagrams).toHaveLength(1);
   });
 
-  it("lists all four steps from the shared phase metadata", () => {
+  it("lists all six stages and flags the unbuilt ones honestly", () => {
     render(<Landing />);
-    for (const label of ["Clarify", "Design", "Generate", "Deliver"]) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+    for (const label of [
+      "Clarify",
+      "Design",
+      "Prototype",
+      "Plan",
+      "Generate",
+      "Deliver",
+    ]) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
     expect(
-      screen.getByText("Four steps from a sentence to a codebase."),
+      screen.getByText(
+        "From a sentence to a shipped build — one accountable step at a time.",
+      ),
     ).toBeInTheDocument();
+    // Generate + Deliver aren't built yet — dimmed and tagged "coming next" in
+    // the phase ribbon.
+    expect(screen.getAllByText("coming next").length).toBe(2);
   });
 
-  it("shows the principles, canvas showcase, and delivery sections", () => {
+  it("frames the reframe and both flagships (the gate + the contract tree)", () => {
     render(<Landing />);
-    expect(screen.getByText("No assumptions")).toBeInTheDocument();
-    expect(screen.getByText("Diagram before code")).toBeInTheDocument();
-    expect(screen.getByText("You stay in control")).toBeInTheDocument();
+    // The reframe / core message: accelerate, don't replace.
     expect(
-      screen.getByText("A real diagram, not a black box."),
+      screen.getByText(/aim isn't to replace software development/i),
     ).toBeInTheDocument();
-    expect(screen.getByText("Internal Git")).toBeInTheDocument();
-    expect(screen.getByText("Download ZIP")).toBeInTheDocument();
+    // Flagship 1 — the enforced-validation gate (with the single V-model aside).
+    expect(screen.getByText(/It has to pass/)).toBeInTheDocument();
+    expect(screen.getByText(/V-model discipline/)).toBeInTheDocument();
+    expect(screen.getByText("Definition of done")).toBeInTheDocument();
+    // Flagship 2 — the change-aware contract/dependency tree (the centerpiece).
+    expect(
+      screen.getByText(
+        "Change one thing, and Lothal knows everything it touches.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("↻ Re-verify downstream")).toBeInTheDocument();
+    // The code-generation flagships are tagged "Coming next" (git + traceability).
+    expect(screen.getAllByText("Coming next").length).toBe(1);
+  });
+
+  it("shows delivery — 'the code is yours' with the git/GitHub/export options", () => {
+    render(<Landing />);
+    expect(
+      screen.getByText("The code is yours, and it's real."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Internal git")).toBeInTheDocument();
+    expect(screen.getByText("Your GitHub")).toBeInTheDocument();
+    expect(screen.getByText("Download whole")).toBeInTheDocument();
+    // Pricing was pulled for now — the page makes no charge claim.
+    const body = document.body.textContent ?? "";
+    expect(body).not.toMatch(/pay for verified work/i);
   });
 
   it("offers sign up and log in, never opening the projects app directly", () => {
     render(<Landing />);
-    // Primary CTA creates an account…
     fireEvent.click(screen.getAllByRole("button", { name: "Sign up free" })[0]);
     expect(mockNavigate).toHaveBeenCalledWith("/signup");
-    // …and the secondary CTA signs an existing user in.
     fireEvent.click(screen.getAllByRole("button", { name: "Log in" })[0]);
     expect(mockNavigate).toHaveBeenLastCalledWith("/login");
-    // The landing must never jump straight into the (auth-guarded) projects app.
     expect(mockNavigate).not.toHaveBeenCalledWith("/lothal");
   });
 
@@ -84,19 +113,12 @@ describe("Lothal Landing", () => {
     expect(scrollSpy).toHaveBeenCalled();
   });
 
-  // --- Version badge --------------------------------------------------------
-
   it("renders a v-prefixed version badge in the footer from LOTHAL_VERSION", () => {
     render(<Landing />);
-    // The footer renders `v{LOTHAL_VERSION}` in a mono span.  Assert that the
-    // rendered text starts with 'v' and equals the constant so neither the
-    // prefix nor the constant value can drift independently.
     const expected = `v${LOTHAL_VERSION}`;
     expect(screen.getByText(expected)).toBeInTheDocument();
     expect(screen.getByText(expected).textContent).toMatch(/^v/);
   });
-
-  // --- Voice guard + Langflow credit ----------------------------------------
 
   it("renders no nautical / dockyard wording anywhere on the page", () => {
     render(<Landing />);
@@ -104,10 +126,9 @@ describe("Lothal Landing", () => {
     expect(body).not.toMatch(/harbor|vessel|dockyard|keel|drydock/i);
   });
 
-  it("displays the 'Built on Langflow' credit in the footer", () => {
+  it("no longer carries the 'Built on Langflow' credit (removed by request)", () => {
     render(<Landing />);
-    // The footer credit is lowercase "built on langflow" in source; match
-    // case-insensitively so a capitalisation change doesn't create a false red.
-    expect(screen.getByText(/built on langflow/i)).toBeInTheDocument();
+    const body = document.body.textContent ?? "";
+    expect(body).not.toMatch(/built on langflow/i);
   });
 });

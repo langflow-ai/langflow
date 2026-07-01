@@ -473,12 +473,21 @@ async def collect_state(project: Project) -> StateResult:
                 logger.warning(f"could not read prototype preview {primary!r}: {exc}")
 
     artifacts = [v for f in files if (v := _artifact_view(f, project.od_project_id)) is not None]
-    status = _derive_status(project.prototype_status, runs)
-    # OD's run list can lag or empty out after a run finishes; if a design exists
-    # and nothing is actively running, the prototype is READY — don't get stuck
-    # showing GENERATING/"refining" forever.
-    if status != "READY" and (preview_html is not None or artifacts) and not _run_in_flight(runs):
+    # A prototype is "built" only once OD has produced a design artifact (the
+    # primary HTML, or other artifact files). An OD run can "succeed" while the
+    # agent is still working through the design brief — that completes a turn but
+    # builds nothing, so it must NOT read READY (which would let Approve advance to
+    # PLAN with no prototype captured). READY therefore requires an actual design
+    # AND no active run; a succeeded-but-empty run stays GENERATING (the agent is
+    # still gathering the brief — the user keeps interacting in the OD embed).
+    has_design = preview_html is not None or bool(artifacts)
+    if _run_in_flight(runs):
+        status = "GENERATING"
+    elif has_design:
         status = "READY"
+    else:
+        derived = _derive_status(project.prototype_status, runs)
+        status = "GENERATING" if derived == "READY" else derived
     return StateResult(
         status=status,
         embed_url=embed_url(project.od_project_id),

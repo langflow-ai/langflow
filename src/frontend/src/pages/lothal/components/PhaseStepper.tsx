@@ -10,11 +10,26 @@ export type PhaseStepperStyle = "stepper" | "pill" | "breadcrumb";
 export function PhaseStepper({
   phase,
   variant = "stepper",
+  currentPhase,
+  onSelect,
 }: {
+  /** The highlighted (active / viewed) phase. */
   phase: string;
   variant?: PhaseStepperStyle;
+  /**
+   * The project's real phase — drives the "done" checks, the navigable bound,
+   * and the "live" marker. Defaults to `phase` (the legacy single-phase use).
+   */
+  currentPhase?: string;
+  /**
+   * When provided, the default stepper renders each phase up to `currentPhase`
+   * as a button that calls this to navigate (view that phase's artifacts).
+   */
+  onSelect?: (phaseId: string) => void;
 }) {
   const idx = phaseIndex(phase);
+  // The farthest reached phase: drives completion + the clickable bound.
+  const cur = currentPhase != null ? phaseIndex(currentPhase) : idx;
 
   if (variant === "pill") {
     return (
@@ -82,12 +97,21 @@ export function PhaseStepper({
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
       {PHASES.map((p, i) => {
-        const done = i < idx;
+        // `done` tracks the project's real progress (cur); `active` is the
+        // highlighted/viewed step. They coincide in the legacy single-phase use.
+        const done = i < cur;
         const active = i === idx;
+        const isLive = i === cur;
+        const navigable = !!onSelect && i <= cur;
+        const Step = navigable ? "button" : "div";
         return (
           <Fragment key={p.id}>
-            <div
+            <Step
+              type={navigable ? "button" : undefined}
+              onClick={navigable ? () => onSelect?.(p.id) : undefined}
+              title={navigable ? `View the ${p.label} stage` : undefined}
               style={{
+                position: "relative",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
@@ -97,16 +121,19 @@ export function PhaseStepper({
                 border: active
                   ? "1px solid var(--border-strong)"
                   : "1px solid transparent",
+                cursor: navigable ? "pointer" : "default",
+                font: "inherit",
+                color: "inherit",
               }}
             >
               <span
                 className="mono"
                 style={{
                   fontSize: 10,
-                  color: done
-                    ? "var(--ink-soft)"
-                    : active
-                      ? "var(--accent)"
+                  color: active
+                    ? "var(--accent)"
+                    : done
+                      ? "var(--ink-soft)"
                       : "var(--ink-faint)",
                   fontWeight: 500,
                 }}
@@ -116,10 +143,10 @@ export function PhaseStepper({
               <span
                 style={{
                   fontSize: 12.5,
-                  color: done
-                    ? "var(--ink-mute)"
-                    : active
-                      ? "var(--ink)"
+                  color: active
+                    ? "var(--ink)"
+                    : done
+                      ? "var(--ink-mute)"
                       : "var(--ink-soft)",
                   fontWeight: active ? 500 : 400,
                 }}
@@ -129,13 +156,26 @@ export function PhaseStepper({
               {done && (
                 <span style={{ color: "var(--success)", fontSize: 10 }}>✓</span>
               )}
-            </div>
+              {/* Mark the project's real phase when you're viewing an earlier one. */}
+              {isLive && !active && (
+                <span
+                  title="Current stage"
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: "50%",
+                    background: "var(--accent)",
+                    marginLeft: 1,
+                  }}
+                />
+              )}
+            </Step>
             {i < PHASES.length - 1 && (
               <span
                 style={{
                   width: 12,
                   height: 1,
-                  background: done ? "var(--ink-faint)" : "var(--border)",
+                  background: i < cur ? "var(--ink-faint)" : "var(--border)",
                 }}
               />
             )}
