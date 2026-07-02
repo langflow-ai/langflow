@@ -9,7 +9,7 @@ registers under a string name; the endpoint dispatches by name and returns
 from __future__ import annotations
 
 import pytest
-from langflow.api.v2.adapters import (
+from lfx.workflow.adapters import (
     STREAM_ADAPTERS,
     StreamAdapterContext,
     StreamEvent,
