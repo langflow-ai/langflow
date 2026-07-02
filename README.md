@@ -41,7 +41,7 @@ Requires Python 3.10–3.14 and [uv](https://docs.astral.sh/uv/getting-started/i
 
 #### Install
 
-
+ 
 From a fresh directory, run:
 ```shell
 uv pip install langflow -U
