@@ -1213,3 +1213,44 @@ async def test_durable_store_roundtrips_on_real_migrated_db():
             return "other"
 
     assert await DurableTaskStore().get(task_id, ServerCallContext(user=_Other())) is None
+
+
+# --- tasks/cancel ----------------------------------------------------------
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_cancel_input_required_task(client: AsyncClient, active_user, human_input_flow_data):
+    """tasks/cancel transitions a parked input-required task to canceled, durably."""
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id = paused["id"]
+
+    canceled = (await _jsonrpc(client, flow_id, "tasks/cancel", {"id": task_id})).json()["result"]
+    assert canceled["status"]["state"] == "canceled"
+
+    # Durably persisted: tasks/get reads canceled back from the store.
+    got = (await _jsonrpc(client, flow_id, "tasks/get", {"id": task_id})).json()["result"]
+    assert got["status"]["state"] == "canceled"
+
+
+@pytest.mark.usefixtures("client")
+async def test_durable_store_wont_clobber_terminal_cancel():
+    """A run completing on the same worker after a cancel must not overwrite terminal CANCELED."""
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import DurableTaskStore
+
+    store = DurableTaskStore()
+    ctx = ServerCallContext()
+    tid = uuid.uuid4().hex
+
+    await store.save(pb.Task(id=tid, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_CANCELED)), ctx)
+    # A late completion is ignored once the task is terminally canceled.
+    await store.save(
+        pb.Task(id=tid, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED)), ctx
+    )
+
+    got = await store.get(tid, ctx)
+    assert got.status.state == pb.TaskState.TASK_STATE_CANCELED

@@ -397,6 +397,11 @@ class A2ACheckpointStore(CheckpointStore):
         raise NotImplementedError
 
 
+def _is_terminal_cancel(blob: dict[str, Any] | None) -> bool:
+    """True when a stored task blob is in the terminal CANCELED state (MessageToDict enum name)."""
+    return bool(blob) and (blob.get("status") or {}).get("state") == "TASK_STATE_CANCELED"
+
+
 class DurableTaskStore(TaskStore):
     """DB-backed A2A task store keyed by ``(task_id, owner)``.
 
@@ -413,6 +418,10 @@ class DurableTaskStore(TaskStore):
             row = await session.get(A2ATask, (task.id, owner))
             if row is None:
                 session.add(A2ATask(id=task.id, owner=owner, task=blob))
+            elif _is_terminal_cancel(row.task) and not _is_terminal_cancel(blob):
+                # tasks/cancel already made this task terminal; a run that completes on this worker
+                # after the cancel must not clobber CANCELED with a non-cancel state. Terminal is final.
+                return
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
 
@@ -435,6 +444,30 @@ class DurableTaskStore(TaskStore):
     async def delete(self, task_id: str, context: ServerCallContext) -> None:
         # ponytail: no mounted path calls delete this slice.
         raise NotImplementedError
+
+
+# Shared durable task store: read/written by the SDK handler and by _DurableCancelHandler, which
+# forces a terminal CANCELED into it so tasks/cancel works for parked tasks and can't be lost to an
+# event-queue close.
+_TASK_STORE = DurableTaskStore()
+
+
+class _DurableCancelHandler(DefaultRequestHandler):
+    """Make tasks/cancel terminal, including for parked tasks the SDK won't touch.
+
+    The V2 handler only preempts a *live* producer (ActiveTask.cancel no-ops once the producer has
+    finished), so cancelling a parked input-required task returns it unchanged, and cancelling a live
+    run whose queue closed can leave it stuck 'working'. After delegating (which still preempts a live
+    producer same-worker), force CANCELED into the returned task and the durable store so the state is
+    terminal for both cases. A run on another worker still can't be preempted (LE-1699).
+    """
+
+    async def on_cancel_task(self, params, context: ServerCallContext):
+        task = await super().on_cancel_task(params, context)
+        if task is not None and task.status.state != pb.TaskState.TASK_STATE_CANCELED:
+            task.status.state = pb.TaskState.TASK_STATE_CANCELED
+            await _TASK_STORE.save(task, context)
+        return task
 
 
 # One shared httpx client sends webhooks; a short timeout so a slow/hostile webhook
@@ -464,9 +497,9 @@ async def close_push_client() -> None:
 # default in-memory QueueManager); a terminal or cross-worker task returns a spec error
 # and tasks/get covers terminal reads. Push configs are in-memory per-worker; durable
 # cross-worker re-attach and push delivery are a later slice.
-_HANDLER = DefaultRequestHandler(
+_HANDLER = _DurableCancelHandler(
     agent_executor=FlowAgentExecutor(_run_flow, _resume_flow),
-    task_store=DurableTaskStore(),
+    task_store=_TASK_STORE,
     agent_card=pb.AgentCard(capabilities=pb.AgentCapabilities(streaming=True, push_notifications=True)),
     push_config_store=_PUSH_CONFIG_STORE,
     push_sender=_PUSH_SENDER,
@@ -474,8 +507,8 @@ _HANDLER = DefaultRequestHandler(
 _DISPATCHER = JsonRpcDispatcher(
     request_handler=_HANDLER,
     context_builder=_FlowContextBuilder(),
-    # routes spec method names: message/send, message/stream, tasks/get, tasks/resubscribe,
-    # tasks/pushNotificationConfig/{set,get,list,delete}
+    # routes spec method names: message/send, message/stream, tasks/get, tasks/cancel,
+    # tasks/resubscribe, tasks/pushNotificationConfig/{set,get,list,delete}
     enable_v0_3_compat=True,
 )
 

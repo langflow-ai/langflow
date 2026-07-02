@@ -116,5 +116,8 @@ class FlowAgentExecutor(AgentExecutor):
         await updater.complete()
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
-        # ponytail: synchronous message/send runs aren't cancelable; tasks/cancel is out of scope.
-        raise NotImplementedError
+        # The durable terminal CANCELED is written by the request handler (see a2a.py); here we only
+        # emit the terminal cancel event so a live message/stream subscriber sees it. Must not raise:
+        # the SDK marks the task FAILED if agent cancel raises. Only invoked for a live producer; a
+        # parked (finished) task's cancel is handled entirely in the handler.
+        await TaskUpdater(event_queue, context.task_id, context.context_id).cancel()
