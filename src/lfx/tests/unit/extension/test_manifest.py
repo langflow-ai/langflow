@@ -98,7 +98,10 @@ def test_minimal_manifest_round_trip() -> None:
         ({"name": ""}, "name"),
         ({"lfx": {"compat": []}}, "compat"),
         ({"lfx": {"compat": ["0"]}}, "compat"),
-        ({"bundles": []}, "bundles"),
+        # Empty bundles is now allowed at the field level (provider-only
+        # extensions ship no components); the cross-field rule rejects a manifest
+        # that declares neither a bundle nor a provider.
+        ({"bundles": []}, "at least one bundle"),
         ({"bundles": [{"name": "Bad-Name", "path": "x"}]}, "name"),
         ({"bundles": [{"name": "x", "path": "/abs/path"}]}, "path"),
         ({"bundles": [{"name": "x", "path": "../escape"}]}, "path"),

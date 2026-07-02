@@ -1,5 +1,7 @@
 """Unit tests for LFX flow validation helpers."""
 
+import json
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -287,6 +289,14 @@ async def test_prepare_public_flow_build_noop_on_empty(monkeypatch, empty):
 # --- validate_public_flow_no_code_execution (report H1-3754930) -------------------
 
 
+REPORTED_CODE_EXECUTION_AGENT_TYPES = (
+    "CSVAgent",
+    "CodeActAgentSmolagents",
+    "Cuga",
+    "OpenDsStarAgent",
+)
+
+
 def _flow_with_component(component_type: str) -> dict:
     """Build minimal raw graph data containing a single node of ``component_type``."""
     node_id = f"{component_type}-1"
@@ -303,6 +313,27 @@ def _flow_with_component(component_type: str) -> dict:
         ],
         "edges": [],
     }
+
+
+@pytest.mark.parametrize("component_type", REPORTED_CODE_EXECUTION_AGENT_TYPES)
+def test_public_flow_blocks_reported_code_execution_agents(component_type):
+    """Regression for H1-3813558: shipped code agents must not build anonymously."""
+    with pytest.raises(PublicFlowValidationError) as exc_info:
+        validate_public_flow_no_code_execution(_flow_with_component(component_type))
+    assert component_type in str(exc_info.value)
+
+
+def test_public_flow_blocks_structured_data_analysis_starter_template():
+    """The bundled data-analysis starter contains OpenDsStarAgent and must be rejected publicly."""
+    repo_root = Path(__file__).resolve().parents[5]
+    starter_path = (
+        repo_root / "src/backend/base/langflow/initial_setup/starter_projects/Structured Data Analysis Agent.json"
+    )
+    starter_flow = json.loads(starter_path.read_text())
+
+    with pytest.raises(PublicFlowValidationError) as exc_info:
+        validate_public_flow_no_code_execution(starter_flow)
+    assert "OpenDsStarAgent" in str(exc_info.value)
 
 
 @pytest.mark.parametrize("component_type", sorted(CODE_EXECUTION_COMPONENT_TYPES))

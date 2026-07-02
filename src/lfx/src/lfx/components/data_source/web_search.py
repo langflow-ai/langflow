@@ -8,6 +8,7 @@ import re
 from typing import Any
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
+import httpx
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
@@ -16,6 +17,8 @@ from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, Output, TabInput
 from lfx.schema import DataFrame
 from lfx.utils.request_utils import get_user_agent
+from lfx.utils.ssrf_protection import SSRFProtectionError, is_ssrf_protection_enabled, validate_and_resolve_url
+from lfx.utils.ssrf_transport import create_ssrf_protected_sync_client
 
 
 class WebSearchComponent(Component):
@@ -143,6 +146,26 @@ class WebSearchComponent(Component):
             raise ValueError(msg)
         return url
 
+    def _build_safe_client(self, url: str, validated_ips: list[str]) -> httpx.Client:
+        """Create a sync HTTP client with DNS pinning when SSRF protection applies."""
+        if is_ssrf_protection_enabled() and validated_ips:
+            hostname = urlparse(url).hostname
+            if hostname:
+                return create_ssrf_protected_sync_client(hostname=hostname, validated_ips=validated_ips)
+        return httpx.Client()
+
+    def _safe_get_url(self, url: str, *, headers: dict[str, str] | None = None) -> httpx.Response:
+        """Validate an arbitrary URL and fetch it without following unvalidated redirects."""
+        url = self.ensure_url(url)
+        try:
+            safe_url, validated_ips = validate_and_resolve_url(url)
+        except SSRFProtectionError as e:
+            msg = f"SSRF Protection: {e}"
+            raise ValueError(msg) from e
+
+        with self._build_safe_client(safe_url, validated_ips) as client:
+            return client.get(safe_url, headers=headers, timeout=self.timeout, follow_redirects=False)
+
     def _sanitize_query(self, query: str) -> str:
         """Sanitize search query."""
         return re.sub(r'[<>"\']', "", query.strip())
@@ -189,12 +212,12 @@ class WebSearchComponent(Component):
 
                 try:
                     final_url = self.ensure_url(decoded_link)
-                    page = requests.get(final_url, headers=headers, timeout=self.timeout)
+                    page = self._safe_get_url(final_url, headers=headers)
                     page.raise_for_status()
                     content = BeautifulSoup(page.text, "lxml").get_text(separator=" ", strip=True)
-                except requests.RequestException as e:
+                except (httpx.HTTPError, ValueError) as e:
                     final_url = decoded_link
-                    content = f"(Failed to fetch: {e!s}"
+                    content = f"(Failed to fetch: {e!s})"
 
                 results.append(
                     {
@@ -278,7 +301,7 @@ class WebSearchComponent(Component):
             )
 
         try:
-            response = requests.get(rss_url, timeout=self.timeout)
+            response = self._safe_get_url(rss_url)
             response.raise_for_status()
             if not response.content.strip():
                 msg = "Empty response received"
@@ -293,7 +316,7 @@ class WebSearchComponent(Component):
 
             soup = BeautifulSoup(response.content, "xml")
             items = soup.find_all("item")
-        except (requests.RequestException, ValueError) as e:
+        except (httpx.HTTPError, ValueError) as e:
             self.status = f"Failed to fetch RSS: {e}"
             return DataFrame(pd.DataFrame([{"title": "Error", "link": "", "published": "", "summary": str(e)}]))
 
