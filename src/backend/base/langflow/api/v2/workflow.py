@@ -32,25 +32,21 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from fastapi.responses import EventSourceResponse, StreamingResponse
 from lfx.log.logger import logger
 from lfx.schema.workflow import (
-    WORKFLOW_EXECUTION_RESPONSES,
     WORKFLOW_STATUS_RESPONSES,
     JobId,
     JobStatus,
     WorkflowExecutionResponse,
     WorkflowJobResponse,
-    WorkflowRunRequest,
     WorkflowStopRequest,
     WorkflowStopResponse,
 )
 from lfx.services.deps import injectable_session_scope_readonly
+from lfx.workflow.actions import WorkflowAction
 from lfx.workflow.adapters import (
-    STREAM_ADAPTERS,
     StreamAdapterContext,
     UnknownStreamProtocolError,
-    available_protocols,
     get_stream_adapter,
 )
-from lfx.workflow.converters import parse_workflow_run_request
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
@@ -86,158 +82,45 @@ from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service
 
+# The langflow durable background routes (GET status, POST /stop, GET
+# /{job_id}/events). The POST run path is contributed by the shared lfx router
+# (``lfx.workflow.router.create_workflow_router``) bound to ``LangflowWorkflowHost``;
+# only these durable, behaviorally-rich routes stay langflow-owned. Both are
+# mounted on the same ``/workflows`` prefix in ``langflow.api.router``.
 router = APIRouter(prefix="/workflows", tags=["Workflow"])
 
 
-def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPException:
-    """Build the 422 response shared by ``stream`` and ``background`` paths.
-
-    Both branches validate ``stream_protocol`` against the live adapter registry
-    so the error body is identical: callers can switch ``mode`` without
-    learning a second error shape. ``available`` lists the registered protocol
-    names so clients can self-correct.
-    """
+def _flow_not_found_http_exception(flow_id: str) -> HTTPException:
+    """The structured 404 returned when a flow does not exist."""
     return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_404_NOT_FOUND,
         detail={
-            "error": "Unknown stream_protocol",
-            "code": "UNKNOWN_STREAM_PROTOCOL",
-            "message": f"Unknown stream_protocol {exc.name!r}.",
-            "available": exc.available,
+            "error": "Flow not found",
+            "code": "FLOW_NOT_FOUND",
+            "message": f"Flow '{flow_id}' does not exist. Verify the flow_id and try again.",
+            "flow_id": flow_id,
         },
     )
 
 
-@router.post(
-    "",
-    response_model=None,
-    response_model_exclude_none=True,
-    responses=WORKFLOW_EXECUTION_RESPONSES,
-    summary="Execute Workflow",
-    description="Execute a workflow with support for sync, stream, and background modes",
-)
-async def execute_workflow(
-    request: WorkflowRunRequest,
-    background_tasks: BackgroundTasks,
-    http_request: Request,
-    current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
-) -> WorkflowExecutionResponse | WorkflowJobResponse | StreamingResponse:
-    """Execute a flow from a native ``WorkflowRunRequest`` body.
+async def resolve_flow_for_execution(flow_id: str, current_user: UserRead):
+    """Share-aware fetch with the langflow error-to-HTTP mapping.
 
-    ``mode`` selects the execution path:
-        - **sync** (default): run inline, return ``WorkflowExecutionResponse``.
-        - **stream**: return an SSE stream in the protocol named by
-          ``stream_protocol`` (``langflow`` default, ``agui`` opt-in).
-        - **background**: queue a job, return ``WorkflowJobResponse`` with a
-          ``links.events`` URL for re-attach.
-
-    Error Handling:
-        - System errors (404, 500, 503, 504): HTTP error responses.
-        - Component execution errors: HTTP 200 with errors in the body.
-        - Unknown ``stream_protocol``: 422 with the available list.
-
-    Raises:
-        HTTPException:
-            - 404: Flow not found or user lacks access.
-            - 400: Invalid flow data or validation error.
-            - 422: Unknown ``stream_protocol``.
-            - 500: Internal server error.
-            - 503: Database unavailable.
-            - 408: Execution timeout exceeded.
+    The lookup widens to shared flows when an authorization plugin is
+    registered; ``authorize_flow_action`` enforces the action separately so an
+    API key with cross-user fetch enabled cannot bypass policy. A missing flow
+    becomes 404 FLOW_NOT_FOUND, a DB failure 503 DATABASE_ERROR, and anything
+    unexpected a sanitized 500.
     """
-    parsed = parse_workflow_run_request(request)
-    job_id = uuid4()
-
-    # Validate ``stream_protocol`` for every mode, even ``sync``: the field is
-    # part of the request contract regardless of which path runs. A name-only
-    # membership check here avoids instantiating an adapter the sync path will
-    # never use.
-    if request.stream_protocol not in STREAM_ADAPTERS:
-        raise _unknown_protocol_http_exception(
-            UnknownStreamProtocolError(request.stream_protocol, available_protocols())
-        )
-
     try:
-        # Share-aware fetch + RBAC: resolve the flow and enforce flow:execute.
-        # The lookup widens to shared flows when an authorization plugin is
-        # registered, so we enforce the action explicitly — otherwise an API
-        # key with cross-user fetch enabled would bypass policy here.
-        flow = await get_flow_by_id_or_endpoint_name(
-            parsed.flow_id,
+        return await get_flow_by_id_or_endpoint_name(
+            str(flow_id),
             current_user.id,
             widen_for_shares=True,
         )
-        try:
-            await ensure_flow_permission(
-                current_user,
-                FlowAction.EXECUTE,
-                flow_id=flow.id,
-                flow_user_id=flow.user_id,
-                workspace_id=getattr(flow, "workspace_id", None),
-                folder_id=getattr(flow, "folder_id", None),
-            )
-        except HTTPException as exc:
-            raise _flow_not_found_privacy_exception(exc, parsed.flow_id) from exc
-
-        _reject_unsupported_sync_fields(parsed)
-        _enforce_flow_data_override_owner(parsed, flow, current_user)
-        _validate_flow_data_for_execution(parsed, flow)
-
-        if parsed.mode == "sync":
-            return await execute_sync_workflow_with_timeout(
-                parsed=parsed,
-                flow=flow,
-                job_id=job_id,
-                current_user=current_user,
-                background_tasks=background_tasks,
-                http_request=http_request,
-            )
-
-        if parsed.mode == "background":
-            # Background owns its own adapter construction inside
-            # ``_buffer_background_run`` because the fire-and-forget coroutine
-            # needs its own ``StreamAdapterContext`` (different ``run_id``).
-            # The name-only check above already covered the 422 contract.
-            return await execute_workflow_background(
-                parsed=parsed,
-                flow=flow,
-                job_id=job_id,
-                current_user=current_user,
-                http_request=http_request,
-                stream_protocol=request.stream_protocol,
-            )
-
-        # Stream mode: the adapter instance drives the SSE frame loop, so we
-        # construct it here. ``get_stream_adapter`` can no longer raise
-        # ``UnknownStreamProtocolError`` on this path unless the registry
-        # mutates mid-request.
-        adapter = get_stream_adapter(
-            request.stream_protocol,
-            StreamAdapterContext(
-                run_id=str(job_id),
-                thread_id=parsed.session_id or str(flow.id),
-            ),
-        )
-        return _execute_streaming_workflow(
-            adapter=adapter,
-            parsed=parsed,
-            flow=flow,
-            current_user=current_user,
-            background_tasks=background_tasks,
-        )
-
     except HTTPException as e:
-        # Reformat 404 from get_flow_by_id_or_endpoint_name to structured format
         if e.status_code == status.HTTP_404_NOT_FOUND:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={
-                    "error": "Flow not found",
-                    "code": "FLOW_NOT_FOUND",
-                    "message": f"Flow '{parsed.flow_id}' does not exist. Verify the flow_id and try again.",
-                    "flow_id": parsed.flow_id,
-                },
-            ) from e
+            raise _flow_not_found_http_exception(str(flow_id)) from e
         raise
     except OperationalError as e:
         await logger.aexception("Database error fetching flow for workflow execution")
@@ -247,9 +130,89 @@ async def execute_workflow(
                 "error": "Service unavailable, Please try again.",
                 "code": "DATABASE_ERROR",
                 "message": "Failed to fetch flow. Please try again.",
-                "flow_id": parsed.flow_id,
+                "flow_id": str(flow_id),
             },
         ) from e
+    except Exception as err:
+        await logger.aexception("Unexpected error during workflow execution")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Internal server error",
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred.",
+                "flow_id": str(flow_id),
+            },
+        ) from err
+
+
+async def authorize_flow_action(
+    current_user: UserRead, flow, action: WorkflowAction, *, requested_id: str | None = None
+) -> None:
+    """Map a ``WorkflowAction`` to a ``FlowAction`` and enforce it.
+
+    A denied share-aware fetch is reframed to 404 so flow existence is not
+    leaked through a raw 403. ``requested_id`` is the identifier the caller sent
+    (an endpoint name or a UUID); the reframed body echoes it instead of the
+    resolved internal UUID. Falls back to ``flow.id`` when not provided.
+    """
+    flow_action = FlowAction.READ if action == WorkflowAction.READ else FlowAction.EXECUTE
+    # Echo the identifier the caller requested (which may be an endpoint name),
+    # not the resolved internal UUID, so a denial does not leak the canonical id.
+    echo_id = requested_id if requested_id is not None else str(flow.id)
+    try:
+        await ensure_flow_permission(
+            current_user,
+            flow_action,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=getattr(flow, "workspace_id", None),
+            folder_id=getattr(flow, "folder_id", None),
+        )
+    except HTTPException as exc:
+        privacy = _flow_not_found_privacy_exception(exc, echo_id)
+        # Preserve the legacy contract: any 404 on this path surfaces as the
+        # structured FLOW_NOT_FOUND body, not the privacy-reframe's string detail.
+        if privacy.status_code == status.HTTP_404_NOT_FOUND:
+            raise _flow_not_found_http_exception(echo_id) from exc
+        raise privacy from exc
+
+
+def _apply_execution_gates(parsed, flow, current_user: UserRead) -> None:
+    """The langflow request gates that run before a flow executes."""
+    _reject_unsupported_sync_fields(parsed)
+    try:
+        _enforce_flow_data_override_owner(parsed, flow, current_user)
+    except HTTPException as exc:
+        # The owner-override deny is a privacy 404 (string detail); re-wrap to the
+        # structured FLOW_NOT_FOUND body using the requested identifier (parsed.flow_id
+        # may be an endpoint name) so the resolved UUID is not leaked.
+        if exc.status_code == status.HTTP_404_NOT_FOUND:
+            raise _flow_not_found_http_exception(str(parsed.flow_id)) from exc
+        raise
+    _validate_flow_data_for_execution(parsed, flow)
+
+
+async def run_sync_with_mapping(
+    parsed,
+    flow,
+    current_user: UserRead,
+    *,
+    http_request: Request,
+    background_tasks: BackgroundTasks,
+) -> WorkflowExecutionResponse:
+    """Inline sync run with the langflow timeout/validation error mapping."""
+    _apply_execution_gates(parsed, flow, current_user)
+    job_id = uuid4()
+    try:
+        return await execute_sync_workflow_with_timeout(
+            parsed=parsed,
+            flow=flow,
+            job_id=job_id,
+            current_user=current_user,
+            background_tasks=background_tasks,
+            http_request=http_request,
+        )
     except WorkflowTimeoutError:
         timeout_seconds = _resolve_execution_timeout()
         raise HTTPException(
@@ -273,6 +236,82 @@ async def execute_workflow(
                 "flow_id": parsed.flow_id,
             },
         ) from e
+    except HTTPException:
+        raise
+    except OperationalError as e:
+        await logger.aexception("Database error during workflow execution")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable, Please try again.",
+                "code": "DATABASE_ERROR",
+                "message": "Failed to fetch flow. Please try again.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from e
+    except Exception as err:
+        await logger.aexception("Unexpected error during workflow execution")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Internal server error",
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from err
+
+
+def build_stream_response(
+    parsed,
+    flow,
+    current_user: UserRead,
+    *,
+    stream_protocol: str,
+    background_tasks: BackgroundTasks,
+) -> StreamingResponse:
+    """Live-stream a run via the v1 build-vertex loop (agui side-channel + persistence).
+
+    The langflow stream path is NOT lfx's leaner ``stream_workflow_frames``: it
+    drives ``generate_flow_events`` so per-vertex events, the agui ``CUSTOM``
+    side-channel, and vertex-build persistence all survive. Validation gates run
+    before the response is constructed so a bad request fails before streaming.
+    """
+    _apply_execution_gates(parsed, flow, current_user)
+    adapter = get_stream_adapter(
+        stream_protocol,
+        StreamAdapterContext(
+            run_id=str(uuid4()),
+            thread_id=parsed.session_id or str(flow.id),
+        ),
+    )
+    return _execute_streaming_workflow(
+        adapter=adapter,
+        parsed=parsed,
+        flow=flow,
+        current_user=current_user,
+        background_tasks=background_tasks,
+    )
+
+
+async def submit_background_with_mapping(
+    parsed,
+    flow,
+    current_user: UserRead,
+    *,
+    stream_protocol: str,
+) -> WorkflowJobResponse:
+    """Queue a durable background run with the langflow service error mapping."""
+    _apply_execution_gates(parsed, flow, current_user)
+    try:
+        return await execute_workflow_background(
+            parsed=parsed,
+            flow=flow,
+            job_id=uuid4(),
+            current_user=current_user,
+            http_request=None,
+            stream_protocol=stream_protocol,
+        )
     except WorkflowServiceUnavailableError as err:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -293,6 +332,19 @@ async def execute_workflow(
                 "flow_id": parsed.flow_id,
             },
         ) from err
+    except HTTPException:
+        raise
+    except OperationalError as e:
+        await logger.aexception("Database error during workflow execution")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable, Please try again.",
+                "code": "DATABASE_ERROR",
+                "message": "Failed to fetch flow. Please try again.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from e
     except Exception as err:
         await logger.aexception("Unexpected error during workflow execution")
         raise HTTPException(
@@ -304,6 +356,24 @@ async def execute_workflow(
                 "flow_id": parsed.flow_id,
             },
         ) from err
+
+
+def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPException:
+    """Build the 422 response for an unknown ``stream_protocol``.
+
+    Used by the public workflow router (``workflow_public.py``) so its error body
+    matches the shared lfx router's: ``available`` lists the registered protocol
+    names so clients can self-correct.
+    """
+    return HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail={
+            "error": "Unknown stream_protocol",
+            "code": "UNKNOWN_STREAM_PROTOCOL",
+            "message": f"Unknown stream_protocol {exc.name!r}.",
+            "available": exc.available,
+        },
+    )
 
 
 @router.get(

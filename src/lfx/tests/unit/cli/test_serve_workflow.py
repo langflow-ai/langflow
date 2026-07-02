@@ -10,9 +10,9 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
-from lfx.cli.serve_workflow import _terminal_node_ids, _WorkflowEventQueue
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
+from lfx.workflow.router import _terminal_node_ids, _WorkflowEventQueue
 
 # WorkflowRunRequest requires flow_id to be a UUID (the v2 contract).
 _FLOW_ID = "67ccd2be-17f0-4190-81ff-3bb2cf6508e6"
