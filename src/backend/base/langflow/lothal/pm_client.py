@@ -9,9 +9,11 @@ re-exposes its routes as the canonical Lothal API
 shell page renders. The browser never calls the PM service directly.
 
 Mirrors ``od_client.py``: an httpx async client, built ``from_env()``, with one
-method per PM endpoint. It differs in one way — the PM API is authenticated
+method per PM endpoint. It differs in two ways — the PM API is authenticated
 (JWT), so the client logs in once with a service account and sends the bearer on
-every call, re-authenticating once on a 401.
+every call, re-authenticating once on a 401; and the process holds a single
+shared instance (``pm_client()``), closed at lifespan shutdown, so the pool and
+the cached token persist across requests.
 
 Configuration (env, with dev-friendly defaults matching the PM image):
 - ``LOTHAL_PM_BASE_URL``  — PM base URL reachable from the backend (default
@@ -79,7 +81,9 @@ def _resolve_base_url() -> str:
 class PMClient:
     """Async client for the Lothal PM service.
 
-    Use as an async context manager so the connection is always closed::
+    Routes use the process-wide instance (``pm_client()`` below); for one-off
+    use (tests, scripts) it is also an async context manager so the connection
+    is always closed::
 
         async with PMClient.from_env() as pm:
             tree = await pm.list_nodes(plan_id)
@@ -112,6 +116,10 @@ class PMClient:
     def base_url(self) -> str:
         return self._base_url
 
+    async def aclose(self) -> None:
+        """Close the underlying connection pool."""
+        await self._client.aclose()
+
     async def __aenter__(self) -> Self:
         return self
 
@@ -121,7 +129,7 @@ class PMClient:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        await self._client.aclose()
+        await self.aclose()
 
     # --- auth ----------------------------------------------------------------
 
@@ -214,21 +222,9 @@ class PMClient:
             raise PMConnectionError(msg)
         return result
 
-    async def ensure_plan(self, langflow_project_id: str) -> str:
-        """Map a Langflow project to its PM tree, creating it on first use.
-
-        The PM service assigns its own ids, so we can't reuse the Langflow id
-        directly; instead the PM tree is *named* after the Langflow project id and
-        looked up by that name (idempotent — mirrors ``od_client`` list-then-create).
-        The name MUST be the marker (not a human title) or the lookup can't find it
-        and every call would create a new tree. Returns the PM project id.
-        """
-        marker = str(langflow_project_id)
-        for project in await self.list_projects():
-            if project.get("name") == marker:
-                return str(project["id"])
-        created = await self.create_project(marker)
-        return str(created["id"])
+    async def delete_project(self, pm_id: str) -> None:
+        """`DELETE /api/projects/:id` — remove a PM tree (used to clean up a lost create race)."""
+        await self._request("DELETE", f"/api/projects/{pm_id}")
 
     # --- nodes (the verification tree) ---------------------------------------
 
@@ -350,3 +346,35 @@ class PMClient:
         """`GET /api/projects/:id/dag.svg` — the server-rendered dependency graph as SVG text."""
         response = await self._request("GET", f"/api/projects/{plan_id}/dag.svg")
         return response.text
+
+
+# --- process-wide singleton ---------------------------------------------------
+#
+# One client per process, so the connection pool and the cached JWT survive
+# across requests (a per-request client would re-open the pool and re-log-in on
+# every call). Created lazily on first use rather than eagerly at startup so a
+# misconfigured/absent PM service surfaces as a per-request 503 instead of
+# failing app boot; the lifespan closes it on shutdown (``aclose_pm_client`` in
+# ``langflow.main``).
+
+_singleton: PMClient | None = None
+
+
+def pm_client() -> PMClient:
+    """Return the process-wide PM client, building it from the environment on first use.
+
+    Raises ``PMConfigError`` if the environment is misconfigured (routes map it
+    to a 503).
+    """
+    global _singleton  # noqa: PLW0603 — deliberate process-wide singleton
+    if _singleton is None:
+        _singleton = PMClient.from_env()
+    return _singleton
+
+
+async def aclose_pm_client() -> None:
+    """Close and clear the singleton (lifespan shutdown; tests use it to reset)."""
+    global _singleton  # noqa: PLW0603 — deliberate process-wide singleton
+    if _singleton is not None:
+        await _singleton.aclose()
+        _singleton = None

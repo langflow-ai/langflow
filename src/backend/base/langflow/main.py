@@ -342,6 +342,15 @@ def get_lifespan(*, fix_migration=False, version=None):
             # This ensures MCP subprocesses are killed even if shutdown is interrupted.
             await cleanup_mcp_sessions()
 
+            # Close the shared Lothal PM bridge client (its connection pool + cached
+            # JWT). Best-effort: a failure here must never block shutdown.
+            try:
+                from langflow.lothal.pm_client import aclose_pm_client
+
+                await aclose_pm_client()
+            except Exception as e:  # noqa: BLE001
+                await logger.aerror(f"Failed to close Lothal PM client: {e}")
+
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
             from langflow.__main__ import get_number_of_workers
