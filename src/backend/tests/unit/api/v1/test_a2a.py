@@ -302,6 +302,32 @@ async def test_malformed_overrides_fall_back_to_defaults(client: AsyncClient, ac
     assert "examples" not in body["skills"][0]
 
 
+# --- agent registry (owner-scoped listing) ---------------------------------
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_list_agents_is_owner_scoped(client: AsyncClient, active_user, logged_in_headers, flow_data):
+    """GET /a2a/agents lists only the caller's own agent + a2a_enabled flows, each with a card URL."""
+    enabled = await _create_flow(active_user.id, data=flow_data)  # agent + a2a_enabled: included
+    await _create_flow(active_user.id, data=flow_data, a2a_enabled=False)  # excluded: a2a disabled
+    await _create_flow(active_user.id, data=flow_data, flow_type=FlowType.WORKFLOW)  # excluded: not an agent
+    other = await _create_other_user()
+    await _create_flow(other, data=flow_data)  # excluded: another user's agent
+
+    resp = await client.get("api/v1/a2a/agents", headers=logged_in_headers)
+
+    assert resp.status_code == 200
+    agents = resp.json()
+    assert [a["id"] for a in agents] == [str(enabled)]
+    assert agents[0]["cardUrl"].endswith(f"/api/v1/a2a/{enabled}/.well-known/agent-card.json")
+
+
+async def test_list_agents_flag_off_returns_404(client: AsyncClient):
+    """The registry looks unmounted (404) when the flag is off, before auth runs (no 403 leak)."""
+    response = await client.get("api/v1/a2a/agents")
+    assert response.status_code == 404
+
+
 # --- JSON-RPC message/send + tasks/get -------------------------------------
 
 _ECHO_FLOW = Path(__file__).parents[3] / "data" / "chat_echo_no_llm.json"
