@@ -27,6 +27,13 @@ from langflow.utils.version import get_version_info
 A2A_APIKEY_SCHEME_NAME = "apiKey"  # pragma: allowlist secret
 A2A_APIKEY_HEADER = "x-api-key"  # pragma: allowlist secret
 
+# The A2A protocol version the server actually speaks: the JSON-RPC v0.3 surface served via the
+# a2a-sdk compat layer (JsonRpcDispatcher(enable_v0_3_compat=True) in a2a.py). Set explicitly on
+# the card instead of relying on the sdk's default, so an sdk bump can't silently change what we
+# advertise. The latest spec is on the 1.x line, but we serve 0.3 today, so 0.3 is the truthful
+# value; bump this when the server actually moves onto the 1.x protocol.
+A2A_PROTOCOL_VERSION = "0.3.0"
+
 # Served when a flow's graph can't be built; the card stays valid, the input
 # contract is just empty rather than 500ing the public discovery endpoint.
 _EMPTY_INPUT_SCHEMA = {"type": "object", "properties": {}, "required": []}
@@ -147,7 +154,10 @@ async def resolve_card_security(
     Reflects what the JSON-RPC route enforces. Returns ``(None, None)`` when there
     is no API-key requirement.
     """
-    if await folder_auth_type(flow, session) == "apikey":
+    # apikey and oauth both require an owner-scoped x-api-key at the A2A transport: oauth is
+    # fronted by an external broker, but the transport itself still takes an api key (mirrors
+    # mcp_projects.verify_project_auth), so both advertise the same apiKey scheme.
+    if await folder_auth_type(flow, session) in ("apikey", "oauth"):
         scheme = a2a_types.SecurityScheme(
             a2a_types.APIKeySecurityScheme(
                 in_=a2a_types.In.header,
@@ -157,8 +167,7 @@ async def resolve_card_security(
         )
         return {A2A_APIKEY_SCHEME_NAME: scheme}, [{A2A_APIKEY_SCHEME_NAME: []}]
 
-    # "none" / missing / "oauth" -> advertise no security. oauth has no advertised
-    # scheme yet, so the route leaves it public until that scheme lands.
+    # "none" / missing -> advertise no security (public agent).
     return None, None
 
 
@@ -206,6 +215,7 @@ async def build_agent_card(flow: Flow, *, rpc_url: str, session: AsyncSession) -
         description=description,
         url=rpc_url,
         version=version,
+        protocol_version=A2A_PROTOCOL_VERSION,
         capabilities=capabilities,
         default_input_modes=["application/json"],
         default_output_modes=["application/json"],

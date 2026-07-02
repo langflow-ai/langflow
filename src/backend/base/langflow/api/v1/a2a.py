@@ -34,7 +34,7 @@ from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
 from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, TaskStore
 from a2a.types import a2a_pb2 as pb
 from a2a.utils.errors import InvalidParamsError, TaskNotFoundError
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
 from lfx.graph.checkpoint.schema import GraphCheckpoint
 from lfx.graph.checkpoint.store import CheckpointStore
@@ -52,7 +52,7 @@ from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
 from sqlmodel import select
 
-from langflow.api.utils import DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.v1.a2a_executor import FlowAgentExecutor
 from langflow.api.v1.a2a_utils import (
@@ -89,12 +89,14 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
     run under the owner's identity. Gate by the folder's ``auth_type``:
 
     - ``"none"`` / missing / no-folder -> public agent (the intended public A2A model).
-    - ``"apikey"`` -> require a valid langflow API key in ``x-api-key`` whose owner is the
-      flow owner. Accepting another user's valid key would let them trigger a run under the
-      owner's identity, so scope to ``flow.user_id``.
-    - anything else (e.g. ``"oauth"``, which A2A can't enforce yet) -> fail closed with 403.
-      The card advertises no scheme for it, but treating a *protected* folder as public would
-      expose an owner-identity run anonymously, so deny until that scheme lands.
+    - ``"apikey"`` / ``"oauth"`` -> require a valid langflow API key in ``x-api-key`` whose
+      owner is the flow owner. An oauth folder is fronted by an external OAuth broker (the dance
+      happens in front); the langflow transport itself still takes an owner-scoped api key,
+      exactly as the MCP transport does (``mcp_projects.verify_project_auth``), since credential
+      forwarding from the broker isn't available yet. Accepting another user's valid key would
+      let them trigger a run under the owner's identity, so scope to ``flow.user_id``.
+    - anything else (an auth type A2A doesn't understand) -> fail closed with 403: treating a
+      *protected* folder as public would expose an owner-identity run anonymously.
 
     Uses ``check_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
     returns the superuser for a *missing* key, which would silently bypass this gate.
@@ -105,8 +107,8 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
         auth_type = await folder_auth_type(flow, session)
         if auth_type == "none":
             return  # public agent
-        if auth_type != "apikey":
-            # Protected folder with a scheme A2A can't enforce yet: fail closed, never public.
+        if auth_type not in ("apikey", "oauth"):
+            # Protected folder with a scheme A2A can't enforce: fail closed, never public.
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"A2A access is disabled for this agent: unsupported folder auth type {auth_type!r}.",
@@ -532,6 +534,35 @@ _DISPATCHER = JsonRpcDispatcher(
     # tasks/resubscribe, tasks/pushNotificationConfig/{set,get,list,delete}
     enable_v0_3_compat=True,
 )
+
+
+# The flag guard is a route dependency so it runs BEFORE the CurrentActiveUser auth dependency
+# (FastAPI resolves decorator dependencies first): a disabled route must look unmounted (404) to an
+# anonymous caller, not leak a 403 from auth resolving ahead of an in-body flag check.
+@router.get("/agents", dependencies=[Depends(_require_a2a_enabled)])
+async def list_a2a_agents(request: Request, session: DbSession, current_user: CurrentActiveUser) -> list[dict]:
+    """List the caller's own A2A-published agent flows, each with its agent-card URL.
+
+    Authenticated and owner-scoped, mirroring the MCP-projects catalog: a public cross-user
+    directory would strip the per-flow card's unguessable-id obscurity and expose other users'
+    agents, so this enumerates only the calling user's agents. Each ``cardUrl`` is the public
+    discovery entry point an orchestrator fetches per agent.
+    """
+    base = str(request.base_url).rstrip("/")
+    flows = (
+        await session.exec(select(Flow).where(Flow.user_id == current_user.id, Flow.flow_type == FlowType.AGENT))
+    ).all()
+    # a2a_enabled is bool|None; filter truthiness in Python, matching the card route's gate.
+    return [
+        {
+            "id": str(flow.id),
+            "name": flow.name,
+            "description": flow.description,
+            "cardUrl": f"{base}/api/v1/a2a/{flow.id}/.well-known/agent-card.json",
+        }
+        for flow in flows
+        if flow.a2a_enabled
+    ]
 
 
 @router.get("/{flow_id}/.well-known/agent-card.json")

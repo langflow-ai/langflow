@@ -14,11 +14,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 from collections.abc import Awaitable, Callable
 from uuid import UUID
 
-from a2a.helpers.proto_helpers import new_text_part
+from a2a.helpers.proto_helpers import get_data_parts, new_data_part, new_text_part
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
@@ -35,22 +36,27 @@ RunFlow = Callable[[UUID, str, str, str | None], Awaitable[WorkflowExecutionResp
 ResumeFlow = Callable[[UUID, str, str], Awaitable[WorkflowExecutionResponse]]
 
 
-def _answer_texts(response: WorkflowExecutionResponse) -> list[str]:
-    """The run's text answer(s) for the A2A artifact.
+def _answer_parts(response: WorkflowExecutionResponse) -> list[pb.Part]:
+    """The run's answer as A2A artifact parts: text for string channels, data for the rest.
 
-    SINGLE is the canonical agent shape (one ChatOutput); preserve its text,
-    including an intentional "". A multi-output agent flow resolves to MULTIPLE
-    with the answers in ``outputs`` (output.text is None), so emit each text
-    channel rather than silently dropping them. NONE/NON_STRING have no string
-    text channel, so there's nothing to return.
+    SINGLE is the canonical agent shape (one ChatOutput); preserve its text, including an
+    intentional "". Otherwise read each ``outputs`` channel: a string message/text becomes a
+    text part, and anything else that carries content (a ``data``-typed output, or a non-string
+    payload) becomes an ``application/json`` data part, so a structured / data-only flow emits
+    its JSON instead of being silently dropped to an empty text answer. The card already
+    advertises ``application/json`` output, so this makes that contract real.
     """
     if response.output.reason == OutputReason.SINGLE:
-        return [response.output.text or ""]
-    return [
-        output.content
-        for output in response.outputs.values()
-        if output.type in {"message", "text"} and isinstance(output.content, str)
-    ]
+        return [new_text_part(response.output.text or "")]
+    parts: list[pb.Part] = []
+    for output in response.outputs.values():
+        if output.content is None:
+            continue
+        if output.type in {"message", "text"} and isinstance(output.content, str):
+            parts.append(new_text_part(output.content))
+        else:
+            parts.append(new_data_part(output.content, media_type="application/json"))
+    return parts
 
 
 class FlowAgentExecutor(AgentExecutor):
@@ -85,6 +91,13 @@ class FlowAgentExecutor(AgentExecutor):
         await updater.start_work()
 
         text = context.get_user_input()
+        if not text and context.message is not None:
+            # A caller can send structured input as DataPart(s) with no text. The flow input is
+            # a text channel, so serialize the data to JSON so it reaches the flow rather than
+            # being dropped. Plain-text input is untouched (the common case).
+            data = get_data_parts(context.message.parts)
+            if data:
+                text = json.dumps(data[0] if len(data) == 1 else data)
         try:
             if resuming:
                 response = await self._resume_flow(UUID(flow_id), context.task_id, text)
@@ -122,7 +135,7 @@ class FlowAgentExecutor(AgentExecutor):
             await updater.failed(updater.new_agent_message([new_text_part(detail)]))
             return
 
-        parts = [new_text_part(answer) for answer in _answer_texts(response)]
+        parts = _answer_parts(response)
         await updater.add_artifact(parts or [new_text_part("")], name="result")
         await updater.complete()
 
