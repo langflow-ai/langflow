@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 import time
 import traceback
 import uuid
@@ -189,6 +190,12 @@ class FlowRegistry:
         # map to the *same* (graph, meta) tuple.  All deduplication logic
         # (list_metas, __len__, remove) uses meta.id as the canonical identity.
         self._flows: dict[str, tuple[Graph, FlowMeta]] = {}
+        # Guards all mutation of / iteration over the in-memory maps below (_flows and its
+        # companion caches). The background warm-up thread (_warm -> warm_from_store -> get)
+        # mutates these while request threads (/health, /readyz, /flows -> list_metas/__len__)
+        # read them; without this a concurrent insert raises "dict changed size during iteration".
+        # Reentrant so a locked writer (e.g. get) can call another locked helper (e.g. _evict).
+        self._lock = threading.RLock()
         self._no_env_fallback = no_env_fallback
         self._store = store if store is not None else NullFlowStore()
         # Maps meta.id → store key when they differ (pre-placed files with human-readable names).
@@ -224,39 +231,43 @@ class FlowRegistry:
         self._store_ids_cache = None
 
     def add(self, graph: Graph, meta: FlowMeta, *, overwrite: bool = False, raw_json: dict | None = None) -> None:
-        if not overwrite and meta.id in self._flows:
-            msg = f"Flow '{meta.id}' is already registered. Pass overwrite=True to replace it."
-            raise FlowAlreadyRegisteredError(msg)
-        # If overwriting a flow that was loaded from a differently-named store file
-        # (e.g. prompt_one.json whose JSON id is a UUID), delete the old file and
-        # clear the alias so the new file becomes the single source of truth.
-        if overwrite:
-            old_store_key = self._store_keys.pop(meta.id, None)
-            if old_store_key is not None:
-                self._store.delete(old_store_key)
-                self._flows.pop(old_store_key, None)
-            else:
-                # No alias recorded — the replace path skips the get() that would have
-                # learned it. A pre-placed file (e.g. my-flow.json) may still carry meta.id
-                # in its JSON "id" under a differently-named key; delete it so the new
-                # {uuid}.json becomes the single source of truth.
-                self._delete_aliased_store_files(meta.id)
-        if raw_json is not None:
-            self._store.write(meta.id, raw_json)
-            if getattr(self._store, "is_persistent", False):
-                self._store_sourced.add(meta.id)
-        self.stamp(graph)
-        self._flows[meta.id] = (graph, meta)
-        self._store_meta_cache.pop(meta.id, None)
-        self._invalidate_store_ids_cache()
+        # Whole body under the lock so the duplicate check and the insert are atomic w.r.t.
+        # a concurrent warm-up insert or a reader's snapshot.
+        with self._lock:
+            if not overwrite and meta.id in self._flows:
+                msg = f"Flow '{meta.id}' is already registered. Pass overwrite=True to replace it."
+                raise FlowAlreadyRegisteredError(msg)
+            # If overwriting a flow that was loaded from a differently-named store file
+            # (e.g. prompt_one.json whose JSON id is a UUID), delete the old file and
+            # clear the alias so the new file becomes the single source of truth.
+            if overwrite:
+                old_store_key = self._store_keys.pop(meta.id, None)
+                if old_store_key is not None:
+                    self._store.delete(old_store_key)
+                    self._flows.pop(old_store_key, None)
+                else:
+                    # No alias recorded — the replace path skips the get() that would have
+                    # learned it. A pre-placed file (e.g. my-flow.json) may still carry meta.id
+                    # in its JSON "id" under a differently-named key; delete it so the new
+                    # {uuid}.json becomes the single source of truth.
+                    self._delete_aliased_store_files(meta.id)
+            if raw_json is not None:
+                self._store.write(meta.id, raw_json)
+                if getattr(self._store, "is_persistent", False):
+                    self._store_sourced.add(meta.id)
+            self.stamp(graph)
+            self._flows[meta.id] = (graph, meta)
+            self._store_meta_cache.pop(meta.id, None)
+            self._invalidate_store_ids_cache()
 
     def _evict(self, meta_id: str) -> None:
         """Remove all in-memory traces of a store-sourced flow (e.g. deleted by another worker)."""
-        store_key = self._store_keys.pop(meta_id, meta_id)
-        for k in {meta_id, store_key}:
-            self._flows.pop(k, None)
-            self._store_meta_cache.pop(k, None)
-        self._store_sourced.discard(meta_id)
+        with self._lock:
+            store_key = self._store_keys.pop(meta_id, meta_id)
+            for k in {meta_id, store_key}:
+                self._flows.pop(k, None)
+                self._store_meta_cache.pop(k, None)
+            self._store_sourced.discard(meta_id)
 
     def _delete_aliased_store_files(self, canonical_id: str) -> None:
         """Delete stem-keyed store files that are aliases of *canonical_id*.
@@ -276,34 +287,41 @@ class FlowRegistry:
             stem_raw = self._store.read(stem_id)
             if stem_raw and stem_raw.get("id") == canonical_id:
                 self._store.delete(stem_id)
-                self._flows.pop(stem_id, None)
-                self._store_meta_cache.pop(stem_id, None)
+                with self._lock:
+                    self._flows.pop(stem_id, None)
+                    self._store_meta_cache.pop(stem_id, None)
 
     def get(self, flow_id: str) -> tuple[Graph, FlowMeta] | None:
-        if flow_id in self._flows:
-            _, meta = self._flows[flow_id]
+        with self._lock:
+            cached = self._flows.get(flow_id)
+        if cached is not None:
+            _, meta = cached
             # Cross-worker stale check: if this flow came from the store, verify it
             # hasn't been deleted by another worker since we cached it.
             # Use _store_keys to find the real store key (which may be a filename stem
-            # rather than the JSON UUID for pre-placed flows).
+            # rather than the JSON UUID for pre-placed flows). Store I/O stays outside
+            # the lock; _evict re-acquires it.
             if meta.id in self._store_sourced:
                 store_key = self._store_keys.get(meta.id, meta.id)
                 if self._store.read(store_key) is None:
                     self._evict(meta.id)
                     return None
-            return self._flows[flow_id]
+            return cached
+        # Cache miss: read + reconstruct (import/graph build heavy) OUTSIDE the lock so a
+        # background warm-up never serializes request threads behind graph construction.
         raw_json = self._store.read(flow_id)
         if raw_json is None:
             return None
         graph, meta = self._reconstruct(flow_id, raw_json)
-        # Cache under the authoritative JSON id so requests by UUID find it.
-        self._flows[meta.id] = (graph, meta)
-        self._store_meta_cache.pop(meta.id, None)
-        if flow_id != meta.id:
-            # Also keep the filename-stem alias so warm_from_store lookups hit.
-            self._flows[flow_id] = (graph, meta)
-            # Remember the store key so remove() can delete the right file.
-            self._store_keys[meta.id] = flow_id
+        with self._lock:
+            # Cache under the authoritative JSON id so requests by UUID find it.
+            self._flows[meta.id] = (graph, meta)
+            self._store_meta_cache.pop(meta.id, None)
+            if flow_id != meta.id:
+                # Also keep the filename-stem alias so warm_from_store lookups hit.
+                self._flows[flow_id] = (graph, meta)
+                # Remember the store key so remove() can delete the right file.
+                self._store_keys[meta.id] = flow_id
         return graph, meta
 
     @staticmethod
@@ -347,7 +365,11 @@ class FlowRegistry:
         seen: set[str] = set()
         result: list[FlowMeta] = []
         store_ids = set(self._get_cached_store_ids())
-        for _, meta in self._flows.values():
+        # Snapshot the in-memory flows under the lock so a concurrent warm_from_store()/get()
+        # insert can't raise "dict changed size during iteration" on a /health|/readyz|/flows read.
+        with self._lock:
+            cached_entries = list(self._flows.values())
+        for _, meta in cached_entries:
             if meta.id in seen:
                 continue
             # Skip flows deleted by another worker (still in our cache but gone from store).
@@ -379,28 +401,31 @@ class FlowRegistry:
         return result
 
     def remove(self, flow_id: str) -> bool:
-        # Resolve the canonical meta id and store key.
-        entry = self._flows.get(flow_id)
-        if entry is not None:
-            meta_id = entry[1].id
-            store_key = self._store_keys.get(meta_id, meta_id)
-            # Drop all cache keys that point to this flow (UUID and any filename alias).
-            for k in [meta_id, store_key]:
-                self._flows.pop(k, None)
-                self._store_meta_cache.pop(k, None)
-            self._store_keys.pop(meta_id, None)
-            self._store_sourced.discard(meta_id)
-            mem_had_it = True
-        else:
-            # Flow not in memory; derive both the stem key (flow_id) and the UUID from the file.
-            store_key = flow_id
-            self._store_meta_cache.pop(flow_id, None)
-            self._store_sourced.discard(flow_id)
-            mem_had_it = False
-            meta_id = flow_id  # best-effort default; overridden below if we can read the file
-            raw = self._store.read(flow_id)
-            if raw:
-                meta_id = raw.get("id") or flow_id
+        # In-memory resolution + eviction under the lock (keeps a reader's snapshot consistent);
+        # the store I/O below runs unlocked (_delete_aliased_store_files self-locks its mutations).
+        with self._lock:
+            # Resolve the canonical meta id and store key.
+            entry = self._flows.get(flow_id)
+            if entry is not None:
+                meta_id = entry[1].id
+                store_key = self._store_keys.get(meta_id, meta_id)
+                # Drop all cache keys that point to this flow (UUID and any filename alias).
+                for k in [meta_id, store_key]:
+                    self._flows.pop(k, None)
+                    self._store_meta_cache.pop(k, None)
+                self._store_keys.pop(meta_id, None)
+                self._store_sourced.discard(meta_id)
+                mem_had_it = True
+            else:
+                # Flow not in memory; derive both the stem key (flow_id) and the UUID from the file.
+                store_key = flow_id
+                self._store_meta_cache.pop(flow_id, None)
+                self._store_sourced.discard(flow_id)
+                mem_had_it = False
+                meta_id = flow_id  # best-effort default; overridden below if we can read the file
+                raw = self._store.read(flow_id)
+                if raw:
+                    meta_id = raw.get("id") or flow_id
 
         store_had_it = self._store.delete(store_key)
         # Ensure cross-worker DELETE propagation: delete BOTH the primary store key
@@ -609,8 +634,6 @@ def create_multi_serve_app(
     # flow's components on upload. A warm failure never blocks readiness (one bad flow must
     # not take the worker out of service) — warm_from_store already skips per-flow failures;
     # we still guard + mark ready so an unexpected error can't wedge the worker.
-    import threading
-
     app.state.ready = False
 
     def _warm() -> None:

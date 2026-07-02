@@ -87,6 +87,53 @@ class TestFlowRegistry:
         ids = {m.id for m in registry.list_metas()}
         assert ids == {"a", "b"}
 
+    def test_list_metas_tolerates_concurrent_flow_insert(self):
+        """Regression: list_metas()/__len__() must not iterate the live _flows dict.
+
+        The background warm-up thread (_warm -> warm_from_store -> get) inserts into
+        _flows while /health, /readyz and /flows read the registry. Iterating the live
+        dict raises "RuntimeError: dictionary changed size during iteration". Here a
+        store whose exists() runs *inside* the list_metas loop inserts a new flow,
+        deterministically standing in for that concurrent insert.
+        """
+        ref: list = [None]
+
+        class MutatingStore:
+            is_persistent = True
+
+            def write(self, *_a):
+                pass
+
+            def read(self, _flow_id):
+                return None
+
+            def delete(self, *_a):
+                return False
+
+            def list_ids(self):
+                return []
+
+            def exists(self, flow_id):
+                # Simulate the warm daemon inserting a new flow mid-iteration.
+                reg = ref[0]
+                key = f"late-{flow_id}"
+                if key not in reg._flows:
+                    reg._flows[key] = (
+                        MagicMock(),
+                        FlowMeta(id=key, relative_path=f"{key}.json", title=key, description=None),
+                    )
+                return True
+
+        registry = FlowRegistry(store=MutatingStore())
+        ref[0] = registry
+        # Two store-sourced flows so exists() (the injection point) fires before the loop
+        # ends, guaranteeing a subsequent __next__ that would raise pre-fix.
+        registry.add(MagicMock(), self._make_meta("a"), raw_json={"id": "a"})
+        registry.add(MagicMock(), self._make_meta("b"), raw_json={"id": "b"})
+
+        metas = registry.list_metas()  # must not raise RuntimeError
+        assert {"a", "b"}.issubset({m.id for m in metas})
+
     def test_duplicate_add_raises_without_overwrite(self):
         from lfx.cli.serve_app import FlowAlreadyRegisteredError
 
