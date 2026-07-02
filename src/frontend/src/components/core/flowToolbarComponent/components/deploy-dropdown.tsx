@@ -15,6 +15,7 @@ import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-up
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
+import A2AModal from "@/modals/a2aModal";
 import ApiModal from "@/modals/apiModal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import ExportModal from "@/modals/exportModal";
@@ -38,6 +39,7 @@ export default function PublishDropdown({
   const location = useHref("/");
   const domain = window.location.origin + location;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
+  const [openA2AModal, setOpenA2AModal] = useState(false);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flowId = currentFlow?.id;
   const flowName = currentFlow?.name;
@@ -145,6 +147,14 @@ export default function PublishDropdown({
               />
             </DropdownMenuItem>
           </CustomLink>
+          <DropdownMenuItem
+            className="deploy-dropdown-item group"
+            onClick={() => setOpenA2AModal(true)}
+            data-testid="a2a-agent-item"
+          >
+            <IconComponent name="Bot" className={`icon-size mr-2`} />
+            <span>{t("misc.a2aAgent")}</span>
+          </DropdownMenuItem>
           {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
@@ -229,6 +239,7 @@ export default function PublishDropdown({
         activeTweaks={false}
       ></EmbedModal>
       <ExportModal open={openExportModal} setOpen={setOpenExportModal} />
+      <A2AModal open={openA2AModal} setOpen={setOpenA2AModal} />
     </>
   );
 }
