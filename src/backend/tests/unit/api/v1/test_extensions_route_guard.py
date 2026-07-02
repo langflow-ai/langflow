@@ -49,7 +49,7 @@ def test_guard_raises_404_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None
     assert detail["code"] == "extension-reload-disabled"
     assert "LANGFLOW_ENABLE_EXTENSION_RELOAD" in detail["message"]
     assert detail["hint"]
-    assert detail["ref_url"].endswith("#extension-reload-disabled")
+    assert detail["ref_url"] == "https://docs.langflow.org/extensions/errors"
 
 
 def test_guard_passes_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:

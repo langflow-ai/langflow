@@ -498,3 +498,11 @@ the deserialize half is covered by
   collides with a built-in or already-loaded provider surfaces
   `provider-skipped`.  Both are warning-only — the rest of the extension still
   loads — so adding them is backward-compatible (no `BUNDLE_API_VERSION` bump).
+- **`ExtensionError.ref_url` / CLI ``see:`` no longer carry per-code anchors.**
+  Auto-derived ``ref_url`` values (and the rendered ``see:`` line) now point
+  to the single extension-error guidance page
+  (``https://docs.langflow.org/extensions/errors``) instead of
+  ``…/extensions/errors#<code>``.  The ``code``, ``message``, ``location``,
+  ``content``, and ``hint`` fields are unchanged; only the docs link shape
+  changed.  Callers that deep-linked on ``ref_url`` suffix should read
+  ``code`` directly instead.
