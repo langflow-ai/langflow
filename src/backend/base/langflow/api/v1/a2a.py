@@ -411,10 +411,13 @@ def _task_scope(context: ServerCallContext) -> str:
     keys all public flows' tasks together and a caller could read or cancel another flow's task by
     id through a different flow's endpoint. Folding the path ``flow_id`` into the key makes such a
     cross-flow lookup miss. Falls back to the plain owner scope when no flow_id is on the context.
+
+    Delimited by ':' like ``_push_config_scope``: the flow_id prefix is a UUID (no ':'), so the key
+    is unambiguous, and it avoids a NUL byte that Postgres text columns reject at write time.
     """
     owner = resolve_user_scope(context)
     flow_id = (getattr(context, "state", None) or {}).get("flow_id")
-    return f"{flow_id}\x00{owner}" if flow_id else owner
+    return f"{flow_id}:{owner}" if flow_id else owner
 
 
 class DurableTaskStore(TaskStore):

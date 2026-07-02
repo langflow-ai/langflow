@@ -142,6 +142,8 @@ class FlowAgentExecutor(AgentExecutor):
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         # The durable terminal CANCELED is written by the request handler (see a2a.py); here we only
         # emit the terminal cancel event so a live message/stream subscriber sees it. Must not raise:
-        # the SDK marks the task FAILED if agent cancel raises. Only invoked for a live producer; a
-        # parked (finished) task's cancel is handled entirely in the handler.
-        await TaskUpdater(event_queue, context.task_id, context.context_id).cancel()
+        # the SDK marks the task FAILED if agent cancel raises, so suppress a failed emit (e.g. an
+        # already-closed queue). Only invoked for a live producer; a parked (finished) task's cancel
+        # is handled entirely in the handler.
+        with contextlib.suppress(Exception):
+            await TaskUpdater(event_queue, context.task_id, context.context_id).cancel()

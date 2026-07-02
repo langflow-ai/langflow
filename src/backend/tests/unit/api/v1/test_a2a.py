@@ -1386,6 +1386,17 @@ async def test_durable_store_wont_clobber_terminal_cancel():
     assert got.status.state == pb.TaskState.TASK_STATE_CANCELED
 
 
+async def test_task_scope_key_is_postgres_safe():
+    """The flow-scoped store key must fold in the flow but carry no NUL byte (Postgres rejects NUL)."""
+    from a2a.server.context import ServerCallContext
+    from langflow.api.v1.a2a import _task_scope
+
+    flow_id = uuid.uuid4().hex
+    key = _task_scope(ServerCallContext(state={"flow_id": flow_id}))
+    assert "\x00" not in key
+    assert flow_id in key
+
+
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_cancel_is_scoped_to_the_path_flow(client: AsyncClient, active_user, human_input_flow_data):
     """A task can't be cancelled through a different flow's endpoint: the store is flow-scoped."""
