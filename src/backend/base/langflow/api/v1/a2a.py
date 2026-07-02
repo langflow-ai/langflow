@@ -34,7 +34,7 @@ from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
 from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, TaskStore
 from a2a.types import a2a_pb2 as pb
 from a2a.utils.errors import InvalidParamsError
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
 from lfx.graph.checkpoint.schema import GraphCheckpoint
 from lfx.graph.checkpoint.store import CheckpointStore
@@ -480,7 +480,10 @@ _DISPATCHER = JsonRpcDispatcher(
 )
 
 
-@router.get("/agents")
+# The flag guard is a route dependency so it runs BEFORE the CurrentActiveUser auth dependency
+# (FastAPI resolves decorator dependencies first): a disabled route must look unmounted (404) to an
+# anonymous caller, not leak a 403 from auth resolving ahead of an in-body flag check.
+@router.get("/agents", dependencies=[Depends(_require_a2a_enabled)])
 async def list_a2a_agents(request: Request, session: DbSession, current_user: CurrentActiveUser) -> list[dict]:
     """List the caller's own A2A-published agent flows, each with its agent-card URL.
 
@@ -489,7 +492,6 @@ async def list_a2a_agents(request: Request, session: DbSession, current_user: Cu
     agents, so this enumerates only the calling user's agents. Each ``cardUrl`` is the public
     discovery entry point an orchestrator fetches per agent.
     """
-    _require_a2a_enabled()
     base = str(request.base_url).rstrip("/")
     flows = (
         await session.exec(select(Flow).where(Flow.user_id == current_user.id, Flow.flow_type == FlowType.AGENT))

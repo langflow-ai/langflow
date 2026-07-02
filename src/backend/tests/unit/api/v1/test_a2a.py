@@ -319,6 +319,12 @@ async def test_list_agents_is_owner_scoped(client: AsyncClient, active_user, log
     assert agents[0]["cardUrl"].endswith(f"/api/v1/a2a/{enabled}/.well-known/agent-card.json")
 
 
+async def test_list_agents_flag_off_returns_404(client: AsyncClient):
+    """The registry looks unmounted (404) when the flag is off, before auth runs (no 403 leak)."""
+    response = await client.get("api/v1/a2a/agents")
+    assert response.status_code == 404
+
+
 # --- JSON-RPC message/send + tasks/get -------------------------------------
 
 _ECHO_FLOW = Path(__file__).parents[3] / "data" / "chat_echo_no_llm.json"
