@@ -1,0 +1,35 @@
+import Admonition from '@theme/Admonition';
+
+export const GraduatedBundleInstall = ({ packageName }) => {
+  const providers = {
+    'openai':    { name: 'OpenAI',         coreSupport: true  },
+    'anthropic': { name: 'Anthropic',       coreSupport: true  },
+    'amazon':    { name: 'Amazon Bedrock',  coreSupport: true  },
+    'cohere':    { name: 'Cohere',          coreSupport: true  },
+    'datastax':  { name: 'DataStax',        coreSupport: false },
+    'firecrawl': { name: 'Firecrawl',       coreSupport: false },
+  };
+
+  const { name, coreSupport } = providers[packageName] ?? { name: packageName, coreSupport: false };
+
+  return (
+    <Admonition type="tip">
+      {coreSupport && (
+        <p>
+          Basic {name} support is available in all Langflow installations through the core <strong>Language Model</strong> component.
+          This bundle adds an enhanced {name} component with additional provider-specific parameters.
+        </p>
+      )}
+      <p>
+        If you installed <code>lfx</code> directly (not as part of <code>langflow</code>), install the {name} bundle separately:
+      </p>
+      <ol>
+        <li>Run <code>uv pip install lfx-{packageName}</code>.</li>
+        <li>Restart Langflow.</li>
+        <li>To confirm the bundle loaded, run <code>lfx extension list</code>.</li>
+      </ol>
+      <p>If you installed Langflow with <code>uv pip install langflow</code>, all bundle components are already included.</p>
+      <p>For more information, see <a href="/extensions-overview">Install bundle components</a>.</p>
+    </Admonition>
+  );
+};
