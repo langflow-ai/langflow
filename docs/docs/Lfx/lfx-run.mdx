@@ -25,25 +25,30 @@ Both commands accept a `.json` flow file or a `.py` Python script.
 
 ## Install flow dependencies {#install-dependencies}
 
-LFX executes the flow's components, which may require Python packages not included in the base `lfx` install.
+`pip install lfx` and `uvx lfx` install the LFX engine only. Before running a flow, install the **extensions** that provide the flow's components.
 
-If you install the standalone `lfx` package or run LFX with `uvx`, install the required dependencies manually before running:
+If a component is missing, LFX reports `component-not-found` with a hint naming the bundle to install, for example:
 
-1. Run the flow to discover missing packages:
+```text
+component-not-found-with-hint: DuckDuckGoSearchComponent not found.
+Hint: try ext:duckduckgo:DuckDuckGoSearchComponent@official
+```
 
-   ```bash
-   uv run lfx run simple-agent-flow.json "test input"
-   ```
+Use the bundle name from the hint to find the pip package in the [Bundle list](./extensions-bundle-list).
 
-   LFX reports any missing dependencies in the error output.
+For more information, see [Install LFX with bundle components](./lfx-install#install-with-bundle-components).
 
-2. Install the reported packages. For example, to run the Simple Agent flow:
+### Generate requirements.txt
 
-   ```bash
-   uv pip install "langchain~=0.3.23" "langchain-core<1.0.0" "langchain-community" "langchain-openai" "langchain-text-splitters" beautifulsoup4 lxml requests
-   ```
+Extension packages cover component code. Some flows still need additional Python packages at runtime (third-party SDKs imported by those components).
 
-If LFX is installed as part of a full Langflow install, or if you're running from source at `src/lfx`, dependencies are already available.
+To list them from a flow JSON file, use [`lfx requirements`](./lfx-devops-sdk.mdx#generate-requirementstxt-for-flows):
+
+```bash
+lfx requirements simple-agent-flow.json
+```
+
+Install the reported packages in the same environment before running the flow.
 
 ## lfx serve {#lfx-serve}
 
@@ -283,4 +288,4 @@ uv run lfx serve my_flow.json
 - [About LFX](./lfx-overview)
 - [Install LFX](./lfx-install)
 - [Flow DevOps Toolkit SDK](./lfx-devops-sdk.mdx)
-- [Bundle extensions](./extensions-overview)
+- [Extensions overview](./extensions-overview)

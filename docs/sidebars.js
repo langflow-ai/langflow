@@ -523,9 +523,10 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Bundle extensions",
+          label: "Extensions",
           items: [
             "Lfx/extensions-overview",
+            "Lfx/extensions-bundle-list",
             "Lfx/extensions-quickstart",
             "Lfx/extensions-manifest",
           ],

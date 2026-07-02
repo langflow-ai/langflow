@@ -1,0 +1,49 @@
+`uv pip install langflow` installs all bundle components automatically.
+
+`uv pip install lfx` installs the core LFX executor _only_, with no provider bundles included.
+
+If your flows use bundle components, install the required packages in the same virtual environment.
+
+_Long-tail bundles_ are third-party provider integrations like vector stores or model providers that are shipped together in the `lfx-bundles` package.
+
+_Standalone bundles_ are high-traffic partner providers with their own release cadences, such as OpenAI and Anthropic.
+
+To install all long-tail bundles:
+
+```bash
+uv pip install lfx-bundles
+```
+
+To install one long-tail provider:
+
+```bash
+uv pip install "lfx-bundles[<bundle>]"
+```
+
+Alternatively, install LFX and all long-tail bundles together:
+
+```bash
+uv pip install "lfx[bundles]"
+```
+
+To install a standalone provider package:
+
+```bash
+uv pip install lfx-<provider>
+```
+
+For example:
+
+```bash
+uv pip install lfx-openai
+```
+
+For the complete bundle-to-package mapping, see the [Bundle list](/next/extensions-bundle-list).
+
+Bundle discovery happens at startup. Restart Langflow or your LFX server after installing.
+
+To see the extensions that are currently loaded, run:
+
+```bash
+lfx extension list
+```

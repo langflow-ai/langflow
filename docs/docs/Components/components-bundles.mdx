@@ -39,8 +39,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 ## Core components and bundles
 
 :::tip
-The Langflow documentation doesn't list all bundles or components in bundles.
-For the most accurate and up-to-date list of bundles and components for your version of Langflow, check <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
+For the most accurate and up-to-date list of components within each bundle for your version of Langflow, check <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
 
 If you can't find a component that you used in an earlier version of Langflow, it may have been removed or marked as a [legacy component](#legacy-bundles).
 :::
@@ -53,37 +52,9 @@ If all else fails, you can always create your own [custom components](/component
 
 ## Install bundle components {#bundle-install}
 
-`uv pip install langflow` includes all bundle components automatically. No additional steps are required.
+`uv pip install langflow` includes all bundle components automatically.
 
-If you install `lfx` directly with `uv pip install lfx`, only the `lfx` executor is installed without any bundle components.
-
-About 45 provider bundles are distributed together in the `lfx-bundles` metapackage. To install them all at once, run:
-
-```bash
-uv pip install lfx-bundles
-```
-
-After installation, restart Langflow and confirm the bundles loaded:
-
-```bash
-lfx extension list
-```
-
-Alternatively, install `lfx` and all bundles together in one command:
-
-```bash
-uv pip install "lfx[bundles]"
-```
-
-### Graduated partner bundles {#graduated-partner-bundles}
-
-Some providers have standalone packages with enhanced, provider-specific components. For OpenAI, Anthropic, Amazon Bedrock, and Cohere, basic LLM support is already included in all Langflow installations through the core [Language Model](/components-models) component. The bundle adds an enhanced component with additional provider-specific parameters.
-
-To install a graduated bundle:
-
-1. Run `uv pip install lfx-<name>` (for example, `uv pip install lfx-openai`).
-2. Restart Langflow.
-3. To confirm the bundle loaded, run `lfx extension list`.
+If you install `lfx` directly or need to add bundles to an existing environment, see [Install LFX with bundle components](./lfx-install#install-with-bundle-components).
 
 ## Legacy bundles
 
