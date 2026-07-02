@@ -7,6 +7,7 @@ object, the served card is revalidated against the a2a-sdk model, and message/se
 runs a real echo flow through the v2 surface.
 """
 
+import json
 import uuid
 from pathlib import Path
 
@@ -412,6 +413,74 @@ async def test_message_send_runs_flow_and_returns_completed_task(client: AsyncCl
     assert result["kind"] == "task"
     assert result["status"]["state"] == "completed"
     assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"
+
+
+# --- DataPart (structured application/json I/O) ----------------------------
+
+
+def _data_message(data, message_id="m1"):
+    """A message whose sole part is a structured DataPart (no text)."""
+    return {"message": {"role": "user", "parts": [{"kind": "data", "data": data}], "messageId": message_id}}
+
+
+def test_answer_parts_emits_data_for_structured_output():
+    """A data-typed / non-string output emits an application/json data part, not an empty text answer."""
+    from a2a.helpers.proto_helpers import get_data_parts, get_text_parts
+    from langflow.api.v1.a2a_executor import _answer_parts
+    from lfx.schema.workflow import (
+        ComponentOutput,
+        JobStatus,
+        OutputReason,
+        WorkflowExecutionResponse,
+        WorkflowOutput,
+    )
+
+    response = WorkflowExecutionResponse(
+        flow_id="f",
+        status=JobStatus.COMPLETED,
+        output=WorkflowOutput(reason=OutputReason.NONE),
+        outputs={
+            "c1": ComponentOutput(type="text", status=JobStatus.COMPLETED, content="hi"),
+            "c2": ComponentOutput(type="data", status=JobStatus.COMPLETED, content={"answer": "42"}),
+        },
+    )
+
+    parts = _answer_parts(response)
+
+    # The string channel stays text; the structured channel round-trips as a data part.
+    assert get_text_parts(parts) == ["hi"]
+    assert get_data_parts(parts) == [{"answer": "42"}]
+
+
+def test_answer_parts_single_stays_text():
+    """The canonical single-answer shape stays a text part (no regression)."""
+    from a2a.helpers.proto_helpers import get_data_parts, get_text_parts
+    from langflow.api.v1.a2a_executor import _answer_parts
+    from lfx.schema.workflow import JobStatus, OutputReason, WorkflowExecutionResponse, WorkflowOutput
+
+    response = WorkflowExecutionResponse(
+        flow_id="f",
+        status=JobStatus.COMPLETED,
+        output=WorkflowOutput(reason=OutputReason.SINGLE, text="hello"),
+    )
+
+    parts = _answer_parts(response)
+
+    assert get_text_parts(parts) == ["hello"]
+    assert get_data_parts(parts) == []
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_message_send_consumes_data_part_input(client: AsyncClient, active_user, echo_flow_data):
+    """A DataPart-only message (no text) reaches the flow as JSON; the echo flow returns it verbatim."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+
+    response = await _jsonrpc(client, flow_id, "message/send", _data_message({"foo": "bar"}))
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["status"]["state"] == "completed"
+    assert result["artifacts"][0]["parts"][0]["text"] == json.dumps({"foo": "bar"})
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -1065,13 +1134,14 @@ def _response(*, output, outputs=None):
     return WorkflowExecutionResponse(flow_id="f", status=JobStatus.COMPLETED, output=output, outputs=outputs or {})
 
 
-def test_answer_texts_resolves_each_output_reason():
-    """SINGLE keeps its text (even ""); MULTIPLE recovers every text channel; NONE is empty."""
-    from langflow.api.v1.a2a_executor import _answer_texts
+def test_answer_parts_resolves_each_output_reason():
+    """SINGLE keeps its text (even ""); MULTIPLE recovers every text channel; NONE emits nothing."""
+    from a2a.helpers.proto_helpers import get_data_parts, get_text_parts
+    from langflow.api.v1.a2a_executor import _answer_parts
     from lfx.schema.workflow import ComponentOutput, JobStatus, OutputReason, WorkflowOutput
 
     single = _response(output=WorkflowOutput(reason=OutputReason.SINGLE, text=""))
-    assert _answer_texts(single) == [""]
+    assert get_text_parts(_answer_parts(single)) == [""]
 
     multi = _response(
         output=WorkflowOutput(reason=OutputReason.MULTIPLE),
@@ -1080,10 +1150,11 @@ def test_answer_texts_resolves_each_output_reason():
             "b": ComponentOutput(type="text", status=JobStatus.COMPLETED, content="y"),
         },
     )
-    assert _answer_texts(multi) == ["x", "y"]
+    assert get_text_parts(_answer_parts(multi)) == ["x", "y"]
+    assert get_data_parts(_answer_parts(multi)) == []
 
     none = _response(output=WorkflowOutput(reason=OutputReason.NONE))
-    assert _answer_texts(none) == []
+    assert _answer_parts(none) == []
 
 
 # --- durable task store ----------------------------------------------------
