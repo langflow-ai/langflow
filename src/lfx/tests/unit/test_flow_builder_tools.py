@@ -3,6 +3,7 @@
 import asyncio
 import copy
 import json
+from unittest.mock import MagicMock, patch
 
 from lfx.mcp.flow_builder_tools import (
     AddComponent,
@@ -18,7 +19,76 @@ from lfx.mcp.flow_builder_tools import (
 )
 
 
+def _reset_registry_caches():
+    from lfx.graph.flow_builder import builder
+
+    builder._registry_cache = None
+    builder._registry_with_components_path_cache = {}
+
+
+def _components_path_settings_service():
+    settings_service = MagicMock()
+    settings_service.settings.components_path = ["/operator/components"]
+    return settings_service
+
+
+def _operator_bundle_registry():
+    return {
+        "operator_bundle": {
+            "BundleSearchTool": {
+                "display_name": "Bundle Search Tool",
+                "description": "Searches an operator bundle.",
+                "template": {},
+                "outputs": [],
+            },
+        },
+    }
+
+
+class TestComponentsPathRegistryLoading:
+    def teardown_method(self):
+        _reset_registry_caches()
+
+    def test_load_local_registry_deduplicates_and_protects_cached_components_paths(self):
+        from lfx.constants import BASE_COMPONENTS_PATH
+        from lfx.graph.flow_builder import builder
+
+        _reset_registry_caches()
+
+        with patch(
+            "lfx.graph.flow_builder.builder.build_custom_components", return_value=_operator_bundle_registry()
+        ) as build:
+            first = builder.load_local_registry([BASE_COMPONENTS_PATH, "/operator/components", "/operator/components"])
+            first["CallerOnlyComponent"] = {"template": {}}
+            second = builder.load_local_registry(["/operator/components"])
+
+        assert "BundleSearchTool" in first
+        assert "CallerOnlyComponent" not in second
+        build.assert_called_once_with(["/operator/components"])
+
+    def test_load_local_registry_without_components_path_uses_base_registry_only(self):
+        from lfx.graph.flow_builder import builder
+
+        _reset_registry_caches()
+
+        with patch("lfx.graph.flow_builder.builder.build_custom_components") as build:
+            registry = builder.load_local_registry(None)
+
+        assert "ChatInput" in registry
+        build.assert_not_called()
+
+
 class TestSearchComponentTypes:
+    def setup_method(self):
+        from lfx.mcp.tool_cache import reset_tool_cache
+
+        reset_tool_cache()
+
+    def teardown_method(self):
+        from lfx.mcp.tool_cache import reset_tool_cache
+
+        reset_tool_cache()
+
     def test_search_returns_results(self):
         comp = SearchComponentTypes()
         comp.set(query="Chat")
@@ -42,6 +112,37 @@ class TestSearchComponentTypes:
         expected = len(search_registry(load_local_registry()))
         assert result.data["count"] == expected
         assert result.data["count"] > 0
+
+    def test_search_includes_components_path_registry(self):
+        _reset_registry_caches()
+
+        with (
+            patch(
+                "lfx.mcp.flow_builder_tools._state.get_settings_service",
+                return_value=_components_path_settings_service(),
+            ),
+            patch("lfx.graph.flow_builder.builder.build_custom_components", return_value=_operator_bundle_registry()),
+        ):
+            comp = SearchComponentTypes()
+            comp.set(query="Bundle")
+            result = comp.search_components()
+
+        assert result.data["count"] == 1
+        assert result.data["results"][0]["type"] == "BundleSearchTool"
+
+    def test_search_uses_base_registry_when_settings_service_is_missing(self):
+        _reset_registry_caches()
+
+        with (
+            patch("lfx.mcp.flow_builder_tools._state.get_settings_service", return_value=None),
+            patch("lfx.graph.flow_builder.builder.build_custom_components") as build,
+        ):
+            comp = SearchComponentTypes()
+            comp.set(query="ChatInput")
+            result = comp.search_components()
+
+        assert any(item["type"] == "ChatInput" for item in result.data["results"])
+        build.assert_not_called()
 
 
 def _node(nid, ntype, template=None):
@@ -326,6 +427,26 @@ class TestDescribeComponentType:
         result = comp.describe_component()
         assert "error" in result.data
 
+    def test_describe_includes_components_path_registry(self):
+        from lfx.mcp.tool_cache import reset_tool_cache
+
+        reset_tool_cache()
+        _reset_registry_caches()
+
+        with (
+            patch(
+                "lfx.mcp.flow_builder_tools._state.get_settings_service",
+                return_value=_components_path_settings_service(),
+            ),
+            patch("lfx.graph.flow_builder.builder.build_custom_components", return_value=_operator_bundle_registry()),
+        ):
+            comp = DescribeComponentType()
+            comp.set(component_type="BundleSearchTool")
+            result = comp.describe_component()
+
+        assert result.data["type"] == "BundleSearchTool"
+        assert result.data["category"] == "operator_bundle"
+
 
 class TestBuildFlowFromSpec:
     def test_build_success_returns_text(self):
@@ -335,6 +456,24 @@ class TestBuildFlowFromSpec:
         result = comp.build_flow()
         assert "built successfully" in result.data["text"]
         assert "flow" in result.data
+
+    def test_build_includes_components_path_registry(self):
+        reset_working_flow()
+        _reset_registry_caches()
+
+        with (
+            patch(
+                "lfx.mcp.flow_builder_tools._state.get_settings_service",
+                return_value=_components_path_settings_service(),
+            ),
+            patch("lfx.graph.flow_builder.builder.build_custom_components", return_value=_operator_bundle_registry()),
+        ):
+            comp = BuildFlowFromSpec()
+            comp.set(spec="name: Bundle\nnodes:\n  A: BundleSearchTool")
+            result = comp.build_flow()
+
+        assert "error" not in result.data, result.data
+        assert "built successfully" in result.data["text"]
 
     def test_build_mutates_working_flow_in_place_not_rebind(self):
         # Production bug: build_flow did `_working_flow_var.set(new_dict)`
