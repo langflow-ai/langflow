@@ -1086,13 +1086,14 @@ def _response(*, output, outputs=None):
     return WorkflowExecutionResponse(flow_id="f", status=JobStatus.COMPLETED, output=output, outputs=outputs or {})
 
 
-def test_answer_texts_resolves_each_output_reason():
-    """SINGLE keeps its text (even ""); MULTIPLE recovers every text channel; NONE is empty."""
-    from langflow.api.v1.a2a_executor import _answer_texts
+def test_answer_parts_resolves_each_output_reason():
+    """SINGLE keeps its text (even ""); MULTIPLE recovers every text channel; NONE emits nothing."""
+    from a2a.helpers.proto_helpers import get_data_parts, get_text_parts
+    from langflow.api.v1.a2a_executor import _answer_parts
     from lfx.schema.workflow import ComponentOutput, JobStatus, OutputReason, WorkflowOutput
 
     single = _response(output=WorkflowOutput(reason=OutputReason.SINGLE, text=""))
-    assert _answer_texts(single) == [""]
+    assert get_text_parts(_answer_parts(single)) == [""]
 
     multi = _response(
         output=WorkflowOutput(reason=OutputReason.MULTIPLE),
@@ -1101,10 +1102,11 @@ def test_answer_texts_resolves_each_output_reason():
             "b": ComponentOutput(type="text", status=JobStatus.COMPLETED, content="y"),
         },
     )
-    assert _answer_texts(multi) == ["x", "y"]
+    assert get_text_parts(_answer_parts(multi)) == ["x", "y"]
+    assert get_data_parts(_answer_parts(multi)) == []
 
     none = _response(output=WorkflowOutput(reason=OutputReason.NONE))
-    assert _answer_texts(none) == []
+    assert _answer_parts(none) == []
 
 
 # --- durable task store ----------------------------------------------------
