@@ -132,6 +132,23 @@ async def test_off_origin_internal_target_blocked(monkeypatch):
                 await client.post("http://169.254.169.254/rpc", json={"hello": "world"})
 
 
+async def test_off_origin_internal_target_blocked_with_ssrf_toggle_off(monkeypatch):
+    """A card-controlled off-origin internal target is blocked even with the SSRF toggle off.
+
+    validate_and_resolve_url returns [] with no enforcement when the toggle is off; the
+    toggle-independent floor still rejects non-allowlisted internal IPs, mirroring the webhook path.
+    """
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    agent_url = "http://127.0.0.1:9"  # discard port; only the off-origin hop matters here
+    _url, validated_ips = validate_and_resolve_url(agent_url)  # [] (toggle off)
+    client = build_a2a_client(agent_url, validated_ips, api_key="super-secret", timeout=2)
+    async with client:
+        with pytest.raises(SSRFProtectionError):
+            await client.post("http://169.254.169.254/rpc", json={"hello": "world"})
+
+
 async def test_off_origin_host_is_dns_pinned_to_validated_ip(monkeypatch):
     """An off-origin hop pins the validated IP into the transport, closing the DNS-rebind window.
 

@@ -14,11 +14,19 @@ import httpx
 from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
 from lfx.schema.message import Message
-from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
+from lfx.utils.ssrf_protection import (
+    SSRFProtectionError,
+    is_host_allowed,
+    is_ip_blocked,
+    resolve_hostname,
+    validate_and_resolve_url,
+)
 from lfx.utils.ssrf_transport import SSRFProtectedTransport
 
 DEFAULT_TIMEOUT = 60.0
-# Cap aggregated reply size so a chatty/streaming agent can't make us buffer unbounded text.
+# Cap the aggregated reply STRING (not the buffered HTTP body: the a2a-sdk reads the whole
+# non-streaming response into memory before this loop runs). Bounding the body itself needs a
+# read-layer byte cap; tracked as a follow-up.
 MAX_A2A_RESPONSE_CHARS = 100_000
 
 
@@ -38,6 +46,25 @@ def _pin_host(url: httpx.URL | str) -> str:
     """
     parsed = url if isinstance(url, httpx.URL) else httpx.URL(url)
     return parsed.raw_host.decode("ascii")
+
+
+def _ssrf_floor_ips(url: httpx.URL | str) -> list[str]:
+    """Toggle-independent SSRF floor for a card-declared (caller-controlled) off-origin target.
+
+    ``validate_and_resolve_url`` returns ``[]`` with NO enforcement when the global SSRF toggle
+    is off, but a remote agent card can point the off-origin RPC ``url`` at an internal/metadata
+    IP (confused deputy). Resolve the host and reject any blocked IP even with the toggle off,
+    unless the host/IP is explicitly allowlisted. Mirrors ``validate_webhook_url``'s hard floor
+    for the equally caller-controlled webhook target. Returns the resolved IPs so the caller can
+    DNS-pin them.
+    """
+    host = _pin_host(url)
+    ips = resolve_hostname(host)
+    blocked = [ip for ip in ips if is_ip_blocked(ip) and not is_host_allowed(host, ip)]
+    if blocked:
+        msg = f"off-origin A2A target {host} resolves to a blocked address: {', '.join(blocked)}"
+        raise SSRFProtectionError(msg)
+    return ips
 
 
 def build_a2a_client(
@@ -64,7 +91,10 @@ def build_a2a_client(
     IP. Writing the validated IPs into the map the transport reads at connect time makes the
     connection use exactly what was cleared, with no second resolution. Same-origin requests are
     already validated and pinned, so they keep the key and skip the redundant re-resolution.
-    Redirects stay disabled so a 3xx can't smuggle the key or connection to an unvalidated host.
+    Because the off-origin target is card-controlled, a toggle-independent floor
+    (:func:`_ssrf_floor_ips`) still rejects non-allowlisted internal IPs even when the global SSRF
+    toggle is off, matching the webhook path. Redirects stay disabled so a 3xx can't smuggle the
+    key or connection to an unvalidated host.
     """
     agent_origin = _origin(agent_url)
     agent_pin_host = _pin_host(agent_url)
@@ -85,6 +115,11 @@ def build_a2a_client(
         # then pin the validated IPs so httpx connects to exactly what we cleared instead of a
         # fresh lookup a rebind could poison. to_thread keeps the blocking DNS off the event loop.
         _validated_url, off_origin_ips = await asyncio.to_thread(validate_and_resolve_url, str(request.url))
+        if not off_origin_ips:
+            # Framework returned no pins: the host is allowlisted OR the global SSRF toggle is
+            # off. This target came from the remote card (not the flow author), so apply a
+            # toggle-independent floor that still rejects non-allowlisted internal IPs.
+            off_origin_ips = await asyncio.to_thread(_ssrf_floor_ips, request.url)
         pin_host = _pin_host(request.url)
         if pin_host and off_origin_ips:
             pinned_ips[pin_host] = off_origin_ips
