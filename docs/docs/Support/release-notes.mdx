@@ -51,6 +51,26 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
+### Breaking changes
+
+- Default superuser password removed
+
+    Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
+    If `LANGFLOW_AUTO_LOGIN=False`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup.
+
+- Upcoming breaking change: bundle separation
+
+    Langflow 1.10.x introduced the Extension bundles model.
+    In future releases, bundle separation will extend to more component providers.
+
+    Saved flows continue to open normally, but the following may require manual updates before upgrading:
+
+    - Code or scripts that reference component class names or `lfx.components.<provider>` import paths.
+    - External tooling that reads component type identifiers from raw flow JSON.
+    - Custom deployment scripts that install or pin individual component packages.
+
+    For more information, see [Langflow Extensions overview](../Develop/extensions-overview.mdx).
+
 ### New features and enhancements
 
 - NextPlaid multi-vector bundle

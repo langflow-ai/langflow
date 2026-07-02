@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePermissions } from "@/contexts/permissionsContext";
 import { cn } from "@/utils/utils";
 import {
   type Deployment,
@@ -79,6 +80,7 @@ export default function DeploymentsTable({
   onDeleteDeployment,
 }: DeploymentsTableProps) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleExpanded = (id: string) => {
@@ -113,6 +115,9 @@ export default function DeploymentsTable({
           const hasAttachments = deployment.attached_count > 0;
           const displayName = getDeploymentDisplayName(deployment);
           const resolvedDisplayName = displayName || "—";
+          const canTest = can(deployment.id, "execute");
+          const canUpdate = can(deployment.id, "write");
+          const canDeleteDeployment = can(deployment.id, "delete");
           return (
             <Fragment key={deployment.id}>
               <TableRow
@@ -178,6 +183,7 @@ export default function DeploymentsTable({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
+                    disabled={!canTest}
                     data-testid={`test-deployment-${deployment.id}`}
                     aria-label={t("deployments.testDeploymentAriaLabel", {
                       name: resolvedDisplayName,
@@ -221,6 +227,7 @@ export default function DeploymentsTable({
                           {t("deployments.details")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          disabled={!canUpdate}
                           onClick={() => onUpdateDeployment?.(deployment)}
                         >
                           <ForwardedIconComponent
@@ -231,6 +238,7 @@ export default function DeploymentsTable({
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
+                          disabled={!canDeleteDeployment}
                           className="text-destructive focus:text-destructive"
                           data-testid={`delete-deployment-${deployment.id}`}
                           onClick={() => onDeleteDeployment?.(deployment)}

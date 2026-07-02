@@ -3,12 +3,14 @@
 This module exposes template search and creation functions as MCP tools using FastMCP decorators.
 """
 
+import asyncio
 from typing import Any
 from uuid import UUID
 
 from mcp.server.fastmcp import FastMCP
 
 from langflow.agentic.mcp.support import replace_none_and_null_with_empty_str
+from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 from langflow.agentic.utils.component_search import (
     get_all_component_types,
     get_component_by_name,
@@ -37,7 +39,31 @@ from langflow.agentic.utils.template_search import (
     get_templates_count,
     list_templates,
 )
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import get_db_service, get_settings_service, session_scope
+
+_services_initialized = False
+_services_init_lock = asyncio.Lock()
+
+
+async def _ensure_services() -> None:
+    """Boot the service registry for standalone stdio runs (no app lifespan).
+
+    Double-checked under a lock so concurrent MCP calls can't both run
+    ``initialize_services()`` (its startup/migration side effects are not
+    safe to run twice).
+    """
+    global _services_initialized  # noqa: PLW0603
+    if _services_initialized:
+        return
+    async with _services_init_lock:
+        if _services_initialized:
+            return
+        get_db_service()
+        from langflow.services.utils import initialize_services
+
+        await initialize_services()
+        _services_initialized = True
+
 
 # Initialize FastMCP server
 mcp = FastMCP("langflow-agentic")
@@ -598,6 +624,61 @@ async def list_flow_component_fields(
         ...     print(f"{field_name}: {field_info['value']} (type: {field_info['field_type']})")
     """
     return await list_component_fields(flow_id_or_name, component_id, user_id)
+
+
+@mcp.tool()
+async def run_assistant(
+    instruction: str,
+    user_id: str,
+    flow_id: str | None = None,
+    provider: str | None = None,
+    model_name: str | None = None,
+    session_id: str | None = None,
+) -> dict[str, Any]:
+    """Ask the Langflow Assistant to build, edit, or explain a flow.
+
+    The assistant runs its full agent loop (component search, flow build,
+    canvas edits) and any resulting canvas change is persisted to the flow
+    so it is immediately visible in the Langflow UI.
+
+    Args:
+        instruction: Natural-language request, e.g. "Build a flow with a
+            Chat Input connected to a Chat Output". Max 2000 characters.
+        user_id: UUID string of the user the assistant acts for.
+        flow_id: Optional UUID of an existing flow to edit. When omitted,
+            a new flow is created in the user's default folder.
+        provider: Optional model provider (e.g. "Ollama", "OpenAI").
+            Defaults to the first configured provider.
+        model_name: Optional model on that provider. Defaults to an
+            available model (for Ollama, an installed one).
+        session_id: Optional conversation id to keep multi-turn context.
+
+    Returns:
+        Dictionary containing:
+        - flow_id: The flow that was created/edited
+        - link: Relative UI link to open the flow
+        - result: The assistant's reply text
+        - flow_changed: Whether the canvas was modified and persisted
+        - session_id / provider / model_name: The resolved execution context
+
+    Example:
+        >>> result = await run_assistant(
+        ...     instruction="Build a simple chat flow",
+        ...     user_id="00000000-0000-0000-0000-000000000001",
+        ... )
+        >>> print(result["link"], result["flow_changed"])
+    """
+    await _ensure_services()
+    async with session_scope() as session:
+        return await run_assistant_and_persist(
+            session=session,
+            user_id=UUID(user_id),
+            instruction=instruction,
+            flow_id=flow_id,
+            provider=provider,
+            model_name=model_name,
+            session_id=session_id,
+        )
 
 
 # Entry point for running the server

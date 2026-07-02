@@ -13,10 +13,11 @@ from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.auth.base import BaseAuthService
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
 
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
-from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
+from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_SESSION_WARNING, AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
     AUTH_METHOD_AUTO_LOGIN,
     AUTH_METHOD_EXTERNAL,
@@ -805,19 +806,18 @@ class AuthService(BaseAuthService):
 
         if not super_user:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Super user hasn't been created")
-        access_token_expires_longterm = timedelta(days=365)
-        access_token = self.create_token(
-            data={"sub": str(super_user.id), "type": "access"},
-            expires_delta=access_token_expires_longterm,
-        )
 
-        await update_user_last_login_at(super_user.id, db)
-
-        return super_user.id, {
-            "access_token": access_token,
-            "refresh_token": None,
-            "token_type": "bearer",
-        }
+        # Security (GHSA-fjgc-vj2f-77hm): AUTO_LOGIN defaults on, so an
+        # unauthenticated GET /api/v1/auto_login reaches this code. It previously
+        # minted a 365-day superuser access token (with no refresh token) — i.e.
+        # a year-long superuser bearer token handed out without credentials.
+        # Issue normally-scoped tokens instead: a short-lived access token plus a
+        # refresh token (see create_user_tokens). The auto-login session stays
+        # seamless via refresh, but a leaked token is now bounded by
+        # ACCESS_TOKEN_EXPIRE_SECONDS instead of a year.
+        logger.warning(AUTO_LOGIN_SESSION_WARNING)
+        tokens = await self.create_user_tokens(user_id=super_user.id, db=db, update_last_login=True)
+        return super_user.id, tokens
 
     def create_user_api_key(self, user_id: UUID) -> dict:
         access_token = self.create_token(
@@ -947,6 +947,20 @@ class AuthService(BaseAuthService):
             if not user.last_login_at:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting for approval")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+
+        auth_settings = self.settings.auth_settings
+        auto_login_superuser = auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+        legacy_superuser_usernames = {DEFAULT_SUPERUSER, auto_login_superuser}
+        if username in legacy_superuser_usernames and password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
+            if request and request.client:
+                logger.warning(
+                    "Login failed: legacy default superuser password is disabled",
+                    auth_event="login_failed",
+                    reason="legacy_default_password_disabled",
+                    auth_id=str(user.id),
+                    client_ip=request.client.host,
+                )
+            return None
 
         if not self.verify_password(password, user.password):
             if request and request.client:

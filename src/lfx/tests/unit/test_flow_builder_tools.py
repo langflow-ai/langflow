@@ -1,6 +1,7 @@
 """Tests for flow_builder_tools components."""
 
 import asyncio
+import copy
 import json
 
 from lfx.mcp.flow_builder_tools import (
@@ -27,10 +28,20 @@ class TestSearchComponentTypes:
         assert "ChatInput" in types
 
     def test_search_no_query_returns_all(self):
+        from lfx.graph.flow_builder.builder import load_local_registry
+        from lfx.mcp.registry import search_registry
+
         comp = SearchComponentTypes()
         comp.set(query="")
         result = comp.search_components()
-        assert result.data["count"] > 100
+        # An empty query returns the entire (non-legacy) catalog. Tie the
+        # expectation to the registry itself rather than a hardcoded count:
+        # bundle extraction moves components out of lfx core over time, so a
+        # fixed threshold goes stale, but "no query == every component the
+        # registry exposes" is the durable contract.
+        expected = len(search_registry(load_local_registry()))
+        assert result.data["count"] == expected
+        assert result.data["count"] > 0
 
 
 def _node(nid, ntype, template=None):
@@ -200,6 +211,107 @@ class TestProposeFieldEditReadableSummary:
         assert "…" not in ev["description"]
 
 
+class TestApplyEditsLiveHeadless:
+    """Bug #13641: headless callers must apply proposed text edits live.
+
+    Headless callers (no review UI) must apply proposed text edits live and
+    narrate them as done — never as "(pending user approval)", which can never
+    resolve without a frontend. set_apply_edits_live(enabled=True) is the switch
+    the assistant service flips for the MCP/headless entrypoint.
+    """
+
+    def setup_method(self):
+        from lfx.mcp.flow_builder_tools import reset_working_flow
+
+        reset_working_flow()
+
+    def teardown_method(self):
+        from lfx.mcp.flow_builder_tools import reset_working_flow
+
+        reset_working_flow()
+
+    def test_propose_field_edit_applies_live_and_narrates_done_when_enabled(self):
+        from lfx.mcp.flow_builder_tools import (
+            ProposeFieldEdit,
+            _ensure_working_flow,
+            init_working_flow,
+            set_apply_edits_live,
+        )
+
+        init_working_flow(copy.deepcopy(_IO_FLOW), "flow-io-1")
+        set_apply_edits_live(enabled=True)
+
+        edit = ProposeFieldEdit()
+        edit.set(component_id="ChatInput-1", field_name="input_value", new_value="Dog")
+        result = edit.propose_field_edit()
+
+        assert "error" not in result.data, result.data
+        assert "pending user approval" not in result.data["text"], result.data["text"]
+        assert result.data["text"].startswith("Set "), result.data["text"]
+
+        flow = _ensure_working_flow()
+        node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == "ChatInput-1")
+        assert node["data"]["node"]["template"]["input_value"]["value"] == "Dog"
+
+    def test_propose_field_edit_stays_a_pending_proposal_when_disabled(self):
+        # Regression guard: the UI path keeps the reviewable proposal untouched.
+        from lfx.mcp.flow_builder_tools import ProposeFieldEdit, _ensure_working_flow, init_working_flow
+
+        init_working_flow(copy.deepcopy(_IO_FLOW), "flow-io-1")
+        edit = ProposeFieldEdit()
+        edit.set(component_id="ChatInput-1", field_name="input_value", new_value="Dog")
+        result = edit.propose_field_edit()
+
+        assert "pending user approval" in result.data["text"], result.data["text"]
+        flow = _ensure_working_flow()
+        node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == "ChatInput-1")
+        assert node["data"]["node"]["template"]["input_value"]["value"] == "Cat"
+
+    def test_configure_text_field_applies_live_when_enabled_despite_propose_mode(self):
+        from lfx.mcp.flow_builder_tools import (
+            ConfigureComponent,
+            _ensure_working_flow,
+            init_working_flow,
+            set_apply_edits_live,
+            set_propose_existing_edits,
+        )
+
+        init_working_flow(copy.deepcopy(_IO_FLOW), "flow-io-1")
+        set_propose_existing_edits(enabled=True)
+        set_apply_edits_live(enabled=True)
+
+        cfg = ConfigureComponent()
+        cfg.set(component_id="ChatInput-1", params='{"input_value": "Dog"}')
+        result = cfg.configure_component()
+
+        assert result.data.get("proposed") is None, result.data
+        assert "pending user approval" not in result.data.get("text", ""), result.data
+        flow = _ensure_working_flow()
+        node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == "ChatInput-1")
+        assert node["data"]["node"]["template"]["input_value"]["value"] == "Dog"
+
+    def test_configure_text_field_proposes_when_live_disabled(self):
+        # Regression guard: propose-mode without the headless switch still proposes.
+        from lfx.mcp.flow_builder_tools import (
+            ConfigureComponent,
+            _ensure_working_flow,
+            init_working_flow,
+            set_propose_existing_edits,
+        )
+
+        init_working_flow(copy.deepcopy(_IO_FLOW), "flow-io-1")
+        set_propose_existing_edits(enabled=True)
+
+        cfg = ConfigureComponent()
+        cfg.set(component_id="ChatInput-1", params='{"input_value": "Dog"}')
+        result = cfg.configure_component()
+
+        assert result.data.get("proposed") == ["input_value"], result.data
+        flow = _ensure_working_flow()
+        node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == "ChatInput-1")
+        assert node["data"]["node"]["template"]["input_value"]["value"] == "Cat"
+
+
 class TestDescribeComponentType:
     def test_describe_known_component(self):
         comp = DescribeComponentType()
@@ -299,20 +411,22 @@ class TestBuildFlowFromSpec:
         assert len(events) == 0
 
     # Regression: the agent has been observed to build flows with components
-    # that have no edges (e.g. an OpenAIModel sitting next to an Agent with
+    # that have no edges (e.g. a model component sitting next to an Agent with
     # nothing wired to it). Reject those so the LLM auto-corrects via retry.
     def test_build_should_reject_orphan_components(self):
         reset_working_flow()
         comp = BuildFlowFromSpec()
-        # ChatInput connects to ChatOutput, but OpenAIModel is added without
-        # any edge. This must fail validation, not silently produce a flow.
+        # ChatInput connects to ChatOutput, but LanguageModelComponent is added
+        # without any edge. This must fail validation, not silently produce a
+        # flow. (In-tree model type; provider models live in bundle packages
+        # not installed in this env.)
         comp.set(
             spec=(
                 "name: Has Orphan\n"
                 "nodes:\n"
                 "  A: ChatInput\n"
                 "  B: ChatOutput\n"
-                "  X: OpenAIModel\n"
+                "  X: LanguageModelComponent\n"
                 "edges:\n"
                 "  A.message -> B.input_value\n"
             ),
@@ -837,9 +951,11 @@ class TestConnectComponents:
 
         reset_working_flow()
 
-        add_openai = AddComponent()
-        add_openai.set(component_type="OpenAIModel")
-        openai_id = add_openai.add_component().data["id"]
+        # In-tree model type; provider models live in bundle packages not
+        # installed in this env.
+        add_model = AddComponent()
+        add_model.set(component_type="LanguageModelComponent")
+        model_id = add_model.add_component().data["id"]
 
         add_agent = AddComponent()
         add_agent.set(component_type="Agent")
@@ -849,7 +965,7 @@ class TestConnectComponents:
 
         conn = ConnectComponents()
         conn.set(
-            source_id=openai_id,
+            source_id=model_id,
             source_output="model_output",
             target_id=agent_id,
             target_input="model",
@@ -874,9 +990,9 @@ class TestConnectComponents:
         """  # noqa: D205
         reset_working_flow()
 
-        add_openai = AddComponent()
-        add_openai.set(component_type="OpenAIModel")
-        openai_id = add_openai.add_component().data["id"]
+        add_model = AddComponent()
+        add_model.set(component_type="LanguageModelComponent")
+        model_id = add_model.add_component().data["id"]
 
         add_agent = AddComponent()
         add_agent.set(component_type="Agent")
@@ -886,7 +1002,7 @@ class TestConnectComponents:
 
         conn = ConnectComponents()
         conn.set(
-            source_id=openai_id,
+            source_id=model_id,
             source_output="model_output",
             target_id=agent_id,
             target_input="model",
