@@ -33,7 +33,7 @@ from a2a.server.routes.common import DefaultServerCallContextBuilder
 from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
 from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, TaskStore
 from a2a.types import a2a_pb2 as pb
-from a2a.utils.errors import InvalidParamsError
+from a2a.utils.errors import InvalidParamsError, TaskNotFoundError
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
 from lfx.graph.checkpoint.schema import GraphCheckpoint
@@ -402,6 +402,19 @@ def _is_terminal_cancel(blob: dict[str, Any] | None) -> bool:
     return bool(blob) and (blob.get("status") or {}).get("state") == "TASK_STATE_CANCELED"
 
 
+def _task_scope(context: ServerCallContext) -> str:
+    """Owner key for the durable task store, scoped to the flow.
+
+    ``resolve_user_scope`` returns '' for every anonymous public caller, so without the flow it
+    keys all public flows' tasks together and a caller could read or cancel another flow's task by
+    id through a different flow's endpoint. Folding the path ``flow_id`` into the key makes such a
+    cross-flow lookup miss. Falls back to the plain owner scope when no flow_id is on the context.
+    """
+    owner = resolve_user_scope(context)
+    flow_id = (getattr(context, "state", None) or {}).get("flow_id")
+    return f"{flow_id}\x00{owner}" if flow_id else owner
+
+
 class DurableTaskStore(TaskStore):
     """DB-backed A2A task store keyed by ``(task_id, owner)``.
 
@@ -412,10 +425,12 @@ class DurableTaskStore(TaskStore):
     """
 
     async def save(self, task: pb.Task, context: ServerCallContext) -> None:
-        owner = resolve_user_scope(context)
+        owner = _task_scope(context)
         blob: dict[str, Any] = MessageToDict(task)
         async with session_scope() as session:
-            row = await session.get(A2ATask, (task.id, owner))
+            # Lock the row so a completion racing a cancel can't read stale state and then clobber
+            # the terminal CANCELED (Postgres row lock; a no-op on SQLite, which serializes writers).
+            row = await session.get(A2ATask, (task.id, owner), with_for_update=True)
             if row is None:
                 session.add(A2ATask(id=task.id, owner=owner, task=blob))
             elif _is_terminal_cancel(row.task) and not _is_terminal_cancel(blob):
@@ -426,7 +441,7 @@ class DurableTaskStore(TaskStore):
                 row.task = blob  # fresh dict reference flags the JSON column dirty
 
     async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
-        owner = resolve_user_scope(context)
+        owner = _task_scope(context)
         async with session_scope_readonly() as session:  # pure read, no commit
             row = await session.get(A2ATask, (task_id, owner))
             blob = row.task if row is not None else None
@@ -463,6 +478,12 @@ class _DurableCancelHandler(DefaultRequestHandler):
     """
 
     async def on_cancel_task(self, params, context: ServerCallContext):
+        # The in-memory ActiveTaskRegistry is keyed by task id only, not flow, so without this a
+        # cancel could reach a task created under a different flow's endpoint. Gate on the
+        # flow-scoped store: a task this flow can't see is "not found" here (and we never reveal
+        # that it exists under another flow).
+        if await _TASK_STORE.get(params.id, context) is None:
+            raise TaskNotFoundError
         task = await super().on_cancel_task(params, context)
         if task is not None and task.status.state != pb.TaskState.TASK_STATE_CANCELED:
             task.status.state = pb.TaskState.TASK_STATE_CANCELED

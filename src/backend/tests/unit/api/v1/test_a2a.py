@@ -716,14 +716,15 @@ async def test_unmatched_decision_re_parks_task(client: AsyncClient, active_user
 
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_user, human_input_flow_data):
-    """A task parked under one flow cannot be resumed through a different flow's endpoint."""
+    """A task parked under one flow can't be resumed or completed through a different flow's endpoint."""
     flow_a = await _create_flow(active_user.id, data=human_input_flow_data)
     flow_b = await _create_flow(active_user.id, data=human_input_flow_data)
 
     paused = (await _jsonrpc(client, flow_a, "message/send", _text_message("start"))).json()["result"]
     task_id, context_id = paused["id"], paused["contextId"]
 
-    # Same task id, but sent to flow B: must not run flow A's graph.
+    # Same task id, sent to flow B: the flow-scoped store means flow B can't address flow A's task,
+    # so it can't complete it (never runs flow A's graph as flow A's owner).
     via_b = (
         await _jsonrpc(
             client,
@@ -731,9 +732,19 @@ async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_use
             "message/send",
             _text_message("Approve", message_id="m2", context_id=context_id, task_id=task_id),
         )
-    ).json()["result"]
+    ).json()
+    assert via_b.get("result", {}).get("status", {}).get("state") != "completed"
 
-    assert via_b["status"]["state"] == "failed"
+    # Flow A's task is untouched and still resumable through flow A.
+    resumed = (
+        await _jsonrpc(
+            client,
+            flow_a,
+            "message/send",
+            _text_message("Approve", message_id="m3", context_id=context_id, task_id=task_id),
+        )
+    ).json()["result"]
+    assert resumed["status"]["state"] == "completed"
 
 
 # --- apikey auth enforcement ----------------------------------------------
@@ -1254,3 +1265,68 @@ async def test_durable_store_wont_clobber_terminal_cancel():
 
     got = await store.get(tid, ctx)
     assert got.status.state == pb.TaskState.TASK_STATE_CANCELED
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_cancel_is_scoped_to_the_path_flow(client: AsyncClient, active_user, human_input_flow_data):
+    """A task can't be cancelled through a different flow's endpoint: the store is flow-scoped."""
+    flow_a = await _create_flow(active_user.id, data=human_input_flow_data)
+    flow_b = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    paused = (await _jsonrpc(client, flow_a, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id = paused["id"]
+
+    # Same task id, sent to flow B: must not reach flow A's task (flow B can't see it).
+    via_b = (await _jsonrpc(client, flow_b, "tasks/cancel", {"id": task_id})).json()
+    assert via_b.get("result", {}).get("status", {}).get("state") != "canceled"
+
+    # Flow A's task is untouched by the cross-flow attempt.
+    got = (await _jsonrpc(client, flow_a, "tasks/get", {"id": task_id})).json()["result"]
+    assert got["status"]["state"] == "input-required"
+
+
+async def test_execute_emits_canceled_when_run_is_cancelled():
+    """A cancelled live run emits a terminal CANCELED on its own queue, so the consumer can't hang."""
+    import asyncio
+    import contextlib
+    from uuid import uuid4
+
+    from a2a.server.agent_execution import RequestContext
+    from a2a.server.context import ServerCallContext
+    from a2a.server.events import EventQueue
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a_executor import FlowAgentExecutor
+
+    started = asyncio.Event()
+
+    async def blocking_run(*_args):
+        started.set()
+        await asyncio.Event().wait()  # runs until cancelled
+
+    async def _no_resume(*_args):
+        pytest.fail("resume must not be called")
+
+    executor = FlowAgentExecutor(blocking_run, _no_resume)
+    queue = EventQueue()
+    ctx = RequestContext(
+        call_context=ServerCallContext(state={"flow_id": str(uuid4())}),
+        task_id=uuid4().hex,
+        context_id="c",
+    )
+    run = asyncio.create_task(executor.execute(ctx, queue))
+    await asyncio.wait_for(started.wait(), timeout=5)
+    run.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await run
+
+    states = []
+    while True:
+        try:
+            event = await asyncio.wait_for(queue.dequeue_event(), timeout=0.5)
+        except TimeoutError:
+            break
+        state = getattr(getattr(event, "status", None), "state", None)
+        if state is not None:
+            states.append(state)
+    assert pb.TaskState.TASK_STATE_CANCELED in states

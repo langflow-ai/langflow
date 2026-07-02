@@ -12,6 +12,8 @@ compat adapter wired up in ``a2a.py``.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from collections.abc import Awaitable, Callable
 from uuid import UUID
@@ -88,6 +90,15 @@ class FlowAgentExecutor(AgentExecutor):
                 response = await self._resume_flow(UUID(flow_id), context.task_id, text)
             else:
                 response = await self._run_flow(UUID(flow_id), context.task_id, text, context.context_id)
+        except asyncio.CancelledError:
+            # tasks/cancel preempted this live run (the SDK cancels the producer task). Emit a
+            # terminal CANCELED on this producer's OWN queue before it closes, so the original
+            # message/send / message/stream consumer gets a terminal event instead of hanging on the
+            # last 'working' state, then propagate the cancellation (never swallow it, or the task
+            # won't wind down). The durable store is set to CANCELED by the request handler.
+            with contextlib.suppress(Exception):
+                await updater.cancel()
+            raise
         except Exception:
             # Unexpected build/timeout/system failures become a failed Task, not a 500.
             # The endpoint is unauthenticated, so don't hand the caller raw exception
