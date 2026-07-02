@@ -265,6 +265,9 @@ const Sidebar = React.forwardRef<
   ) => {
     const { state, setOpen, defaultOpen } = useSidebar();
     const isMobile = useIsMobile();
+    const { "aria-label": ariaLabel, "aria-labelledby": ariaLabelledBy } =
+      props;
+    const SidebarRoot = ariaLabel || ariaLabelledBy ? "aside" : "div";
 
     React.useEffect(() => {
       if (collapsible === "none") {
@@ -286,7 +289,7 @@ const Sidebar = React.forwardRef<
 
     if (collapsible === "none") {
       return (
-        <aside
+        <SidebarRoot
           className={cn("group flex h-full flex-col")}
           data-side={side}
           ref={ref}
@@ -301,14 +304,16 @@ const Sidebar = React.forwardRef<
           >
             {children}
           </div>
-        </aside>
+        </SidebarRoot>
       );
     }
 
     return (
-      <aside
+      <SidebarRoot
         ref={ref}
         className="group peer relative block h-full flex-col"
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
@@ -360,7 +365,7 @@ const Sidebar = React.forwardRef<
             {children}
           </div>
         </div>
-      </aside>
+      </SidebarRoot>
     );
   },
 );

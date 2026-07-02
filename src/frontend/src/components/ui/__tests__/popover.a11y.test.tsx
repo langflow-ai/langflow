@@ -35,6 +35,7 @@ describe("Popover accessibility", () => {
 
     await user.click(trigger);
     expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(trigger).toHaveAttribute("aria-controls");
   });
 
   it("should_close_on_escape_and_restore_focus_to_trigger", async () => {

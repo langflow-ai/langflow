@@ -131,11 +131,11 @@ const ListComponent = ({
               type="button"
               className="absolute inset-0 z-0 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2"
               onClick={handleClick}
-              aria-labelledby={`${flowNameId} ${openActionLabelId}`}
+              aria-labelledby={`${openActionLabelId} ${flowNameId}`}
               data-testid="list-card-open-button"
             />
             <span id={openActionLabelId} className="sr-only">
-              {t("flows.openFlow", { defaultValue: "Open flow" })}
+              {t("flows.openFlow")}
             </span>
           </>
         )}
@@ -207,14 +207,14 @@ const ListComponent = ({
           </div>
         </div>
 
-        <div className="relative z-10 ml-5 flex items-center gap-2">
+        <div className="pointer-events-none relative z-10 ml-5 flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="iconMd"
                 data-testid="home-dropdown-menu"
-                className="group"
+                className="pointer-events-auto group"
                 aria-label={t("flows.moreOptions", { name: flowData.name })}
               >
                 <ForwardedIconComponent

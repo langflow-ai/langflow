@@ -3,11 +3,12 @@ import * as React from "react";
 export function useClosedTriggerAriaControls<T extends HTMLElement>(
   forwardedRef: React.ForwardedRef<T>,
 ) {
-  const triggerRef = React.useRef<T | null>(null);
+  const [trigger, setTrigger] = React.useState<T | null>(null);
+  const savedControlsRef = React.useRef<string | null>(null);
 
   const setTriggerRef = React.useCallback(
     (node: T | null) => {
-      triggerRef.current = node;
+      setTrigger((current) => (current === node ? current : node));
 
       if (typeof forwardedRef === "function") {
         forwardedRef(node);
@@ -19,27 +20,39 @@ export function useClosedTriggerAriaControls<T extends HTMLElement>(
   );
 
   React.useEffect(() => {
-    const trigger = triggerRef.current;
     if (!trigger) {
       return;
     }
 
-    const removeControlsWhenClosed = () => {
-      if (trigger.getAttribute("aria-expanded") === "false") {
+    const syncControls = () => {
+      const expanded = trigger.getAttribute("aria-expanded");
+      const controls = trigger.getAttribute("aria-controls");
+
+      if (controls) {
+        savedControlsRef.current = controls;
+      }
+
+      if (expanded === "false") {
         trigger.removeAttribute("aria-controls");
+      } else if (
+        expanded === "true" &&
+        savedControlsRef.current &&
+        !trigger.hasAttribute("aria-controls")
+      ) {
+        trigger.setAttribute("aria-controls", savedControlsRef.current);
       }
     };
 
-    removeControlsWhenClosed();
+    syncControls();
 
-    const observer = new MutationObserver(removeControlsWhenClosed);
+    const observer = new MutationObserver(syncControls);
     observer.observe(trigger, {
       attributes: true,
       attributeFilter: ["aria-controls", "aria-expanded"],
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [trigger]);
 
   return setTriggerRef;
 }
