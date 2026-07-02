@@ -755,7 +755,7 @@ def get_embeddings(
 
     # --- resolve API key for the selected provider ---------------------------
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
-    from lfx.base.models.provider_registry import is_api_key_optional, is_registered
+    from lfx.base.models.provider_registry import is_api_key_optional
 
     if not api_key and provider != "Ollama" and not is_api_key_optional(provider):
         provider_variable_map = unified_models_module.get_model_provider_variable_mapping()
