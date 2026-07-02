@@ -13,7 +13,7 @@
     --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --background: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --muted: 240 5% 96%; /* hsl(240, 5%, 96%) */
-    --muted-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
+    --muted-foreground: 240 4% 43%; /* hsl(240, 4%, 43%) — darkened from 46% to meet WCAG AA 4.5:1 */
     --card: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --card-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --popover: 0 0% 100%; /* hsl(0, 0%, 100%) */
