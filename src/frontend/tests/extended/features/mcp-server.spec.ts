@@ -3,6 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { openFlowCard } from "../../utils/flow/open-flow-card";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -817,7 +818,7 @@ test(
       .filter({ hasText: "New Flow" })
       .first();
     await newFlowDiv.waitFor({ state: "visible", timeout: 10000 });
-    await newFlowDiv.click();
+    await openFlowCard(page, "New Flow");
 
     // Wait for the MCP Tools component to be visible on canvas
     await page.waitForSelector('text="MCP Tools"', {
@@ -927,7 +928,7 @@ test(
       .filter({ hasText: "New Flow" })
       .first();
     await newFlowDiv2.waitFor({ state: "visible", timeout: 10000 });
-    await newFlowDiv2.click();
+    await openFlowCard(page, "New Flow");
 
     // Wait for the MCP Tools component to be visible on canvas
     await page.waitForSelector('text="MCP Tools"', {
