@@ -11,17 +11,31 @@ jobs:
       pull-requests: write
     steps:
       - name: Add community label
-        if: github.event.pull_request.author_association != 'MEMBER' && github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'COLLABORATOR'
         uses: actions/github-script@v8
         with:
           script: |
-            const pullRequestNumber = context.payload.pull_request.number;
-            const repoDetails = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pullRequestNumber
-            };
+            const prNumber = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Re-fetch the PR to get a fresh author_association
+            // instead of relying on the event payload which can be stale.
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+
+            const association = pr.author_association;
+            if (['MEMBER', 'OWNER', 'COLLABORATOR'].includes(association)) {
+              console.log(`Skipping community label: ${pr.user.login} is ${association}`);
+              return;
+            }
+
+            console.log(`Adding community label: ${pr.user.login} is ${association}`);
             await github.rest.issues.addLabels({
-              ...repoDetails,
+              owner,
+              repo,
+              issue_number: prNumber,
               labels: ['community']
             });
