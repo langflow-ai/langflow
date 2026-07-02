@@ -11,7 +11,7 @@ import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the 
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
 import cloneDeep from "lodash";
-import { type ElementRef, forwardRef, useRef, useState } from "react";
+import { type ElementRef, forwardRef, useMemo, useRef, useState } from "react";
 import TableOptions from "./components/TableOptions";
 import { useAgGridAccessibilityPatch } from "./hooks/use-ag-grid-accessibility-patch";
 import resetGrid from "./utils/reset-grid-columns";
@@ -60,6 +60,19 @@ const TableComponent = forwardRef<
     const resolvedAlertDescription =
       alertDescription ?? t("table.noDataMessage");
     const resolvedTableLabel = tableLabel ?? t("table.dataTable", "Data table");
+    const tableAccessibilityLabels = useMemo(
+      () => ({
+        endFocusBoundary: t("table.endFocusBoundary", {
+          tableLabel: resolvedTableLabel,
+        }),
+        rows: t("table.rows", { tableLabel: resolvedTableLabel }),
+        startFocusBoundary: t("table.startFocusBoundary", {
+          tableLabel: resolvedTableLabel,
+        }),
+        table: resolvedTableLabel,
+      }),
+      [resolvedTableLabel, t],
+    );
     const isSingleToggleRowEditable = (
       colField: string,
       // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -276,7 +289,7 @@ const TableComponent = forwardRef<
     const {
       containerRef: tableContainerRef,
       schedulePatch: scheduleGridAccessibilityPatch,
-    } = useAgGridAccessibilityPatch(resolvedTableLabel);
+    } = useAgGridAccessibilityPatch(tableAccessibilityLabels);
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);

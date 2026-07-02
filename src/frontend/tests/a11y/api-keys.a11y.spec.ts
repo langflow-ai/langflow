@@ -110,6 +110,66 @@ async function openApiKeysRoute(
     .catch(() => {});
 }
 
+type FocusableSnapshot = {
+  name: string;
+  role: string | null;
+  tagName: string;
+  testId: string | null;
+  tabIndex: number;
+  className: string;
+};
+
+async function getVisibleTabOrder(page: LangflowPage) {
+  return page.evaluate<FocusableSnapshot[]>(() => {
+    const focusableSelector = [
+      "a[href]",
+      "button:not([disabled])",
+      "input:not([disabled])",
+      "select:not([disabled])",
+      "textarea:not([disabled])",
+      '[tabindex]:not([tabindex="-1"])',
+      '[contenteditable="true"]',
+    ].join(",");
+
+    const isVisibleFocusable = (element: HTMLElement) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+
+      return (
+        element.tabIndex >= 0 &&
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        !element.closest('[inert], [aria-hidden="true"]')
+      );
+    };
+
+    const getName = (element: HTMLElement) =>
+      (
+        element.getAttribute("aria-label") ??
+        element.getAttribute("title") ??
+        element.innerText ??
+        element.getAttribute("data-testid") ??
+        element.id ??
+        element.tagName
+      )
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return Array.from(document.querySelectorAll<HTMLElement>(focusableSelector))
+      .filter(isVisibleFocusable)
+      .map((element) => ({
+        name: getName(element),
+        role: element.getAttribute("role"),
+        tagName: element.tagName.toLowerCase(),
+        testId: element.getAttribute("data-testid"),
+        tabIndex: element.tabIndex,
+        className: String(element.className),
+      }));
+  });
+}
+
 test.describe("API keys route accessibility", () => {
   test(
     "scans populated API keys table",
@@ -120,6 +180,55 @@ test.describe("API keys route accessibility", () => {
       await expect(page.getByText("A11y Expiring Key")).toBeVisible();
 
       await page.runA11yScan("settings-api-keys-data-rich");
+    },
+  );
+
+  test(
+    "keeps API keys route tab order usable",
+    { tag: ["@release", "@api"] },
+    async ({ page }) => {
+      await openApiKeysRoute(page);
+
+      const tabOrder = await getVisibleTabOrder(page);
+      const sidebarItems = tabOrder.filter((item) =>
+        item.testId?.startsWith("sidebar-nav-"),
+      );
+      const rowContainers = tabOrder.filter((item) => item.role === "row");
+      const disabledPagingButtons = tabOrder.filter((item) =>
+        item.className.includes("ag-paging-button ag-disabled"),
+      );
+
+      expect(
+        sidebarItems.map((item) => item.testId),
+        "settings nav should have one tab stop per item",
+      ).toEqual([
+        "sidebar-nav-General",
+        "sidebar-nav-MCP Servers",
+        "sidebar-nav-Langflow API Keys",
+        "sidebar-nav-Langflow MCP Client",
+        "sidebar-nav-Global Variables",
+        "sidebar-nav-Model Providers",
+        "sidebar-nav-DB Providers",
+        "sidebar-nav-Shortcuts",
+        "sidebar-nav-Messages",
+      ]);
+      expect(
+        rowContainers,
+        "AG Grid row containers should not be tabbable",
+      ).toHaveLength(0);
+      expect(
+        disabledPagingButtons,
+        "disabled AG Grid paging buttons should not be tabbable",
+      ).toHaveLength(0);
+      expect(
+        tabOrder.some(
+          (item) =>
+            item.role === "treegrid" &&
+            item.name === "Langflow API Keys" &&
+            item.tabIndex === 0,
+        ),
+        "table should keep one treegrid tab stop",
+      ).toBe(true);
     },
   );
 

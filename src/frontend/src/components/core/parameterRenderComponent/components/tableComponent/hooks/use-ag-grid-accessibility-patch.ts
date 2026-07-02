@@ -10,10 +10,21 @@ function setAttributeIfChanged(
   }
 }
 
-function patchGridAccessibility(container: HTMLDivElement, tableLabel: string) {
+type AgGridAccessibilityLabels = {
+  endFocusBoundary: string;
+  rows: string;
+  startFocusBoundary: string;
+  table: string;
+};
+
+function patchGridAccessibility(
+  container: HTMLDivElement,
+  labels: AgGridAccessibilityLabels,
+) {
   const treeGrid = container.querySelector('[role="treegrid"]');
   if (treeGrid) {
-    setAttributeIfChanged(treeGrid, "aria-label", tableLabel);
+    setAttributeIfChanged(treeGrid, "aria-label", labels.table);
+    setAttributeIfChanged(treeGrid, "tabindex", "0");
   }
 
   container
@@ -23,9 +34,7 @@ function patchGridAccessibility(container: HTMLDivElement, tableLabel: string) {
       setAttributeIfChanged(
         tabGuard,
         "aria-label",
-        index === 0
-          ? `${tableLabel} start focus boundary`
-          : `${tableLabel} end focus boundary`,
+        index === 0 ? labels.startFocusBoundary : labels.endFocusBoundary,
       );
     });
 
@@ -56,30 +65,47 @@ function patchGridAccessibility(container: HTMLDivElement, tableLabel: string) {
 
       setAttributeIfChanged(rowGroup, "role", "rowgroup");
       setAttributeIfChanged(rowGroup, "data-langflow-a11y-rowgroup", "true");
-      setAttributeIfChanged(rowGroup, "aria-label", `${tableLabel} rows`);
+      setAttributeIfChanged(rowGroup, "aria-label", labels.rows);
 
-      rows.forEach((row, rowIndex) => {
-        setAttributeIfChanged(row, "tabindex", rowIndex === 0 ? "0" : "-1");
+      rows.forEach((row) => {
+        setAttributeIfChanged(row, "tabindex", "-1");
       });
       cells.forEach((cell) => {
         setAttributeIfChanged(cell, "tabindex", "-1");
       });
     });
 
-  treeGrid?.querySelectorAll<HTMLElement>('[role="row"]').forEach((row) => {
-    if (
-      row.closest('[aria-hidden="true"], .ag-hidden') ||
-      row.offsetParent === null
-    ) {
-      setAttributeIfChanged(row, "tabindex", "-1");
-      return;
-    }
+  container
+    .querySelectorAll<HTMLElement>(".ag-paging-button")
+    .forEach((button) => {
+      if (
+        button.classList.contains("ag-disabled") ||
+        button.getAttribute("aria-disabled") === "true"
+      ) {
+        setAttributeIfChanged(button, "aria-disabled", "true");
+        setAttributeIfChanged(button, "tabindex", "-1");
+        return;
+      }
 
-    setAttributeIfChanged(row, "tabindex", "0");
+      setAttributeIfChanged(button, "tabindex", "0");
+    });
+
+  treeGrid?.querySelectorAll<HTMLElement>('[role="row"]').forEach((row) => {
+    setAttributeIfChanged(row, "tabindex", "-1");
+
+    if (row.closest('[aria-hidden="true"], .ag-hidden')) {
+      row
+        .querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        )
+        .forEach((focusable) => {
+          setAttributeIfChanged(focusable, "tabindex", "-1");
+        });
+    }
   });
 }
 
-export function useAgGridAccessibilityPatch(tableLabel: string) {
+export function useAgGridAccessibilityPatch(labels: AgGridAccessibilityLabels) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<number | undefined>(undefined);
   const timeoutRefs = useRef<number[]>([]);
@@ -95,9 +121,9 @@ export function useAgGridAccessibilityPatch(tableLabel: string) {
 
   const applyPatch = useCallback(() => {
     if (containerRef.current) {
-      patchGridAccessibility(containerRef.current, tableLabel);
+      patchGridAccessibility(containerRef.current, labels);
     }
-  }, [tableLabel]);
+  }, [labels]);
 
   const schedulePatch = useCallback(() => {
     clearScheduledPatch();
