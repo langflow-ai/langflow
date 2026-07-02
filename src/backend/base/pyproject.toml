@@ -320,9 +320,8 @@ markdown = ["Markdown>=3.8.0"]
 kubernetes = ["kubernetes==31.0.0"]
 json-repair = ["json_repair==0.30.3"]
 composio = [
-    "composio==0.9.2",
-    "composio-client<1.41.0",
-    "composio-langchain==0.9.2"
+    "composio==0.16.0",
+    "composio-langchain==0.16.0"
 ]
 ragstack = ["ragstack-ai-knowledge-store==0.2.1; python_version < '3.13'"]
 opensearch = ["opensearch-py==2.8.0"]
@@ -341,13 +340,17 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 # Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
 # Upper bound prevents breaking changes in future major versions
 # Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2
-# Python 3.14: agent-lifecycle-toolkit 0.10.x dropped its own <3.14 cap (now
-# requires-python >=3.10) and does not depend on OpenDsStar, so the python_version
-# gate is removed; the dependency tree resolves on 3.14 within the langflow lock.
-altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+# Python 3.14: re-gated off 3.14. altk 0.10.x itself supports 3.14 (requires-python
+# >=3.10) and no longer depends on OpenDsStar, but it depends on litellm<2.0.0, and
+# litellm has no 3.14-compatible release (every version from 1.83.8 on caps at <3.14,
+# see the litellm extra below). Without this gate the resolver pins an uninstallable
+# litellm on 3.14. Re-enable once upstream litellm supports 3.14.
+altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'"]
 
 # Toolguard Integration
-toolguard = ["lfx[toolguard]~=1.11.0"]  # toolguard relocated to lfx (lfx-core Policies component)
+# Gated off 3.14: lfx[toolguard] pulls the ToolGuard Policies component, which
+# depends on litellm. Re-enable once upstream litellm supports 3.14.
+toolguard = ["lfx[toolguard]~=1.11.0; python_version < '3.14'"]  # toolguard relocated to lfx
 
 # Additional LangChain integrations
 # Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels

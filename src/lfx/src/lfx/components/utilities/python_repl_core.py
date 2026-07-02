@@ -1,7 +1,5 @@
 import importlib
 
-from langchain_experimental.utilities import PythonREPL
-
 from lfx.custom.custom_component.component import Component
 from lfx.io import MultilineInput, Output, StrInput
 from lfx.schema.data import Data
@@ -85,6 +83,8 @@ class PythonREPLComponent(Component):
             # "python"/backticks/whitespace prefix before exec, so validate the sanitized
             # form. Rejects inline imports and escape gadgets (e.g.
             # ().__class__.__subclasses__()); combined with restricted builtins in get_globals().
+            from langchain_experimental.utilities import PythonREPL
+
             code = PythonREPL.sanitize_input(self.python_code)
             validate_code_safety(code)
             globals_ = self.get_globals(self.global_imports)

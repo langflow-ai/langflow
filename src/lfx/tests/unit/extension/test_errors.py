@@ -114,6 +114,8 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "multi-bundle-unsupported": "error[multi-bundle-unsupported]: Manifest declares more than one bundle entry; v0 supports exactly one bundle per extension.",  # noqa: E501
     "extension-reload-disabled": "error[extension-reload-disabled]: Extension reload is disabled on this server.  Set LANGFLOW_ENABLE_EXTENSION_RELOAD=true to enable it on a local-development install (Mode A).",  # noqa: E501
     "extension-events-keyspace-forbidden": "error[extension-events-keyspace-forbidden]: The loc query parameter is not accepted; events are scoped server-side to the authenticated user (rejected value: 'content').",  # noqa: E501
+    "provider-invalid": "error[provider-invalid]: Model provider 'content' declared at loc could not be registered: msg",  # noqa: E501
+    "provider-skipped": "error[provider-skipped]: Model provider 'content' declared at loc was skipped: msg",
 }
 
 

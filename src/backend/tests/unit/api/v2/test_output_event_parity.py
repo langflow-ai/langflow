@@ -15,9 +15,9 @@ import json
 from unittest.mock import Mock
 
 from langflow.api.build import _output_meta_for_vertex
-from langflow.api.v2.adapters import StreamAdapterContext
-from langflow.api.v2.adapters.langflow import LangflowAdapter
-from langflow.api.v2.converters import build_component_output, resolve_output_type
+from lfx.workflow.adapters import StreamAdapterContext
+from lfx.workflow.adapters.langflow import LangflowAdapter
+from lfx.workflow.converters import build_component_output, resolve_output_type
 
 
 def _adapter() -> LangflowAdapter:
