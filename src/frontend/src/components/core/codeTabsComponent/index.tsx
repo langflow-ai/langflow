@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import {
-  oneDark,
-  oneLight,
-} from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import a11yLight from "react-syntax-highlighter/dist/cjs/styles/prism/a11y-one-light";
 import { useDarkStore } from "@/stores/darkStore";
 import IconComponent from "../../common/genericIconComponent";
 import { Button } from "../../ui/button";
@@ -13,12 +11,17 @@ type SimplifiedCodeTabProps = {
   code: string;
   language: string;
   maxHeight?: string;
+  // Override the light-mode syntax theme. Defaults to a11yLight (WCAG-compliant
+  // contrast on bg-canvas). Pass a different prism style object if your call
+  // site uses a background where a11yLight's palette causes contrast issues.
+  lightStyle?: { [key: string]: React.CSSProperties };
 };
 
 export default function SimplifiedCodeTabComponent({
   code,
   language,
   maxHeight,
+  lightStyle = a11yLight,
 }: SimplifiedCodeTabProps) {
   const { t } = useTranslation();
   const [isCopied, setIsCopied] = useState<boolean>(false);
@@ -64,7 +67,7 @@ export default function SimplifiedCodeTabComponent({
       </div>
       <SyntaxHighlighter
         language={language.toLowerCase()}
-        style={dark ? oneDark : oneLight}
+        style={dark ? oneDark : lightStyle}
         className="!mt-0 h-full w-full overflow-auto !bg-canvas [&_code]:!bg-canvas !rounded-b-md !rounded-t-none border border-border text-left custom-scroll"
         customStyle={maxHeight ? { maxHeight } : undefined}
       >

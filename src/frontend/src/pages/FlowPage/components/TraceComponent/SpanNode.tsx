@@ -1,64 +1,54 @@
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
-import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
-import {
-  formatTokens,
-  formatTotalLatency,
-  getSpanIcon,
-  getStatusIconProps,
-} from "./traceViewHelpers";
 import { SpanNodeProps } from "./types";
+import { useSpanNode } from "./useSpanNode";
 
-/**
- * Single span row in the trace tree
- * Shows icon, name, latency, token count, and status
- */
 export function SpanNode({
   span,
   depth,
   isExpanded,
   isSelected,
+  tabIndex,
+  posInSet,
+  setSize,
   onToggle,
   onSelect,
+  registerNodeRef,
 }: SpanNodeProps) {
-  const { t } = useTranslation();
-  const nodes = useFlowStore((state) => state.nodes);
-  const componentIconMap = useMemo(() => {
-    const map = new Map<string, string>();
-    nodes.forEach((node) => {
-      const nodeData = node.data?.node;
-      const displayName = nodeData?.display_name;
-      const icon = nodeData && "icon" in nodeData ? nodeData.icon : undefined;
-      if (displayName && icon) {
-        map.set(displayName.toLowerCase(), icon);
-      }
-    });
-    return map;
-  }, [nodes]);
-
-  const spanIconName = span.name
-    ? (componentIconMap.get(span.name.toLowerCase()) ?? getSpanIcon(span.type))
-    : getSpanIcon(span.type);
-  const hasChildren = span.children.length > 0;
-  const tokenStr = formatTokens(span.tokenUsage?.totalTokens);
-
-  const { colorClass, iconName, shouldSpin } = getStatusIconProps(span.status);
+  const {
+    indentStyle,
+    spanIconName,
+    hasChildren,
+    tokenStr,
+    latency,
+    ariaLabel,
+    colorClass,
+    iconName,
+    shouldSpin,
+    expandButtonLabel,
+    handleKeyDown,
+    handleExpandClick,
+  } = useSpanNode({ span, depth, isExpanded, onSelect, onToggle });
 
   return (
     <div
+      ref={registerNodeRef ? (el) => registerNodeRef(span.id, el) : undefined}
       className={cn(
         "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
         "hover:bg-muted/50",
         isSelected && "bg-muted",
       )}
-      style={{ paddingLeft: `${depth * 16 + 8}px` }}
+      style={indentStyle}
       onClick={onSelect}
+      onKeyDown={handleKeyDown}
       data-testid={`span-node-${span.id}`}
       role="treeitem"
+      aria-label={ariaLabel}
       aria-selected={isSelected}
       aria-expanded={hasChildren ? isExpanded : undefined}
+      aria-posinset={posInSet}
+      aria-setsize={setSize}
+      tabIndex={tabIndex}
     >
       {/* Expand/collapse button */}
       <button
@@ -67,19 +57,10 @@ export function SpanNode({
           hasChildren && "hover:bg-muted-foreground/20",
           !hasChildren && "invisible",
         )}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (hasChildren) onToggle();
-        }}
+        onClick={handleExpandClick}
         tabIndex={-1}
         aria-hidden={!hasChildren}
-        aria-label={
-          hasChildren
-            ? isExpanded
-              ? t("trace.collapseSpan")
-              : t("trace.expandSpan")
-            : undefined
-        }
+        aria-label={expandButtonLabel}
       >
         <IconComponent
           name={isExpanded ? "ChevronDown" : "ChevronRight"}
@@ -111,19 +92,28 @@ export function SpanNode({
 
       {/* Token count (if applicable) */}
       {tokenStr && (
-        <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+        <span
+          className={cn(
+            "flex items-center gap-0.5 text-xs",
+            isSelected ? "text-foreground/65" : "text-muted-foreground",
+          )}
+        >
           <IconComponent name="Coins" className="h-3 w-3" />
           {tokenStr}
         </span>
       )}
 
       {/* Latency */}
-      <span className="min-w-[48px] text-right text-xs text-muted-foreground">
-        {formatTotalLatency(span.latencyMs)}
+      <span
+        className={cn(
+          "min-w-[48px] text-right text-xs",
+          isSelected ? "text-foreground/65" : "text-muted-foreground",
+        )}
+      >
+        {latency}
       </span>
 
-      {/* Status badge */}
-
+      {/* Status icon */}
       <IconComponent
         name={iconName}
         className={`h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
