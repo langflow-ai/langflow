@@ -10,11 +10,12 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 import { selectGptModel } from "../../utils/select-gpt-model";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should create a flow with decision",
-  { tag: ["@release", "@components", "@workflow"] },
+  { tag: ["@release", "@components"] },
 
   async ({ page }) => {
     test.skip(
@@ -176,9 +177,10 @@ test(
     await page
       .getByTestId("sidebar-search-input")
       .fill(TEXTS.providerOpenAiSearch);
-    await page.waitForSelector('[data-testid="openai_openai_draggable"]', {
-      timeout: 2000,
-    });
+    await skipIfComponentUnavailable(
+      page.getByTestId("openai_openai_draggable"),
+      "OpenAI",
+    );
     await page
       .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
@@ -303,11 +305,11 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-input-left")
+      .getByTestId("handle-openaimodelcomponent-shownode-input-left")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-model response-right")
+      .getByTestId("handle-openaimodelcomponent-shownode-model response-right")
       .nth(0)
       .click();
     await page

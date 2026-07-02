@@ -66,6 +66,9 @@ _initial_node_ids_var: ContextVar[frozenset[str]] = ContextVar("_initial_node_id
 # the diff card regardless of which tool the LLM chose. Default False so every
 # other path (fresh build, build+run, run, continuation) keeps applying live.
 _propose_existing_edits_var: ContextVar[bool] = ContextVar("_propose_existing_edits_var", default=False)
+# Headless MCP has no UI to apply a reviewable proposal, so the propose tools
+# apply live and narrate it as done. Default False keeps UI review cards.
+_apply_edits_live_var: ContextVar[bool] = ContextVar("_apply_edits_live_var", default=False)
 
 
 def _collect_node_ids(flow_data: dict | None) -> frozenset[str]:
@@ -94,6 +97,16 @@ def set_propose_existing_edits(*, enabled: bool) -> None:
 def should_propose_existing_edits() -> bool:
     """Whether edits to pre-existing components should surface as review cards."""
     return _propose_existing_edits_var.get(False)
+
+
+def set_apply_edits_live(*, enabled: bool) -> None:
+    """Enable/disable applying proposed edits live (headless callers with no review UI)."""
+    _apply_edits_live_var.set(enabled)
+
+
+def should_apply_edits_live() -> bool:
+    """Whether proposed edits should be applied live instead of surfaced for review."""
+    return _apply_edits_live_var.get(False)
 
 
 def _get_flow_events() -> deque[dict[str, Any]]:
@@ -135,6 +148,7 @@ def reset_working_flow() -> None:
     _current_flow_id_var.set(None)
     _initial_node_ids_var.set(frozenset())
     _propose_existing_edits_var.set(False)
+    _apply_edits_live_var.set(False)
     _get_flow_events().clear()
 
 
@@ -156,6 +170,7 @@ def isolate_flow_run_context() -> None:
     # nor its initial-node snapshot — those belong to the parent canvas only.
     _initial_node_ids_var.set(frozenset())
     _propose_existing_edits_var.set(False)
+    _apply_edits_live_var.set(False)
 
 
 def _emit(action: str, **data: Any) -> None:

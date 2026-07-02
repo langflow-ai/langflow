@@ -365,6 +365,7 @@ module.exports = {
               type: "category",
               label: "Processing",
               items: [
+                "Components/operations",
                 "Components/data-operations",
                 "Components/dataframe-operations",
                 "Components/dynamic-create-data",
@@ -475,6 +476,7 @@ module.exports = {
             "Components/bundles-docling",
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
+            "Components/bundles-empiriolabs",
             "Components/bundles-exa",
             "Components/bundles-faiss",
             "Components/bundles-files-ingestion",
@@ -500,6 +502,7 @@ module.exports = {
             "Components/bundles-ollama",
             "Components/bundles-openai",
             "Components/bundles-openrouter",
+            "Components/bundles-oracle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",

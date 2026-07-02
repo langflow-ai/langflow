@@ -171,6 +171,10 @@ export const lazyIconsMapping = {
     import("@/icons/ElasticsearchStore").then((mod) => ({
       default: mod.ElasticsearchIcon,
     })),
+  EmpirioLabs: () =>
+    import("@/icons/EmpirioLabs").then((mod) => ({
+      default: mod.EmpirioLabsIcon,
+    })),
   Evernote: () =>
     import("@/icons/Evernote").then((mod) => ({ default: mod.EvernoteIcon })),
   Exa: () => import("@/icons/Exa").then((mod) => ({ default: mod.ExaIcon })),
@@ -377,6 +381,8 @@ export const lazyIconsMapping = {
     })),
   OpenSearch: () =>
     import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
+  Oracle: () =>
+    import("@/icons/Oracle").then((mod) => ({ default: mod.OracleIcon })),
   Perplexity: () =>
     import("@/icons/Perplexity").then((mod) => ({
       default: mod.PerplexityIcon,
