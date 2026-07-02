@@ -11,7 +11,7 @@ class SelectDataComponent(Component):
     name: str = "SelectData"
     icon = "prototypes"
     legacy = True
-    replacement = ["processing.DataOperations"]
+    replacement = ["processing.Operations"]
 
     inputs = [
         DataInput(
