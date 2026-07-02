@@ -459,6 +459,35 @@ class TestDynamicOutputs:
         names = [o.name for o in OperationsComponent.outputs]
         assert names == ["message_output"]
 
+    def test_mapped_json_refresh_keeps_json_output(self):
+        """Refreshing Path Selection's "JSON to Map" field must not swap the JSON output for Message.
+
+        Real-time refreshes rebuild the frontend node with the class default
+        (Message) output, so update_outputs has to re-derive the output from
+        the saved operation for fields other than input_type/operation.
+        """
+        component = OperationsComponent()
+        frontend_node = {
+            "outputs": [],
+            "template": {
+                "input_type": {"value": "JSON"},
+                "operation": {"value": [{"name": "Path Selection"}]},
+            },
+        }
+        result = component.update_outputs(frontend_node, "mapped_json_display", '{"a": {"b": 1}}')
+        assert [o.name for o in result["outputs"]] == ["data_output"]
+        assert result["outputs"][0].method == "as_data"
+
+    def test_unrelated_field_refresh_without_operation_keeps_type_default(self):
+        """A non-operation refresh with no operation selected falls back to the input type's default output."""
+        component = OperationsComponent()
+        frontend_node = {
+            "outputs": [],
+            "template": {"input_type": {"value": "JSON"}, "operation": {"value": []}},
+        }
+        result = component.update_outputs(frontend_node, "mapped_json_display", "{}")
+        assert [o.name for o in result["outputs"]] == ["data_output"]
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

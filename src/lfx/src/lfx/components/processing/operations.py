@@ -737,18 +737,23 @@ class OperationsComponent(Component):
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create the output(s) appropriate to the selected input type and operation."""
-        if field_name not in ("input_type", "operation"):
-            return frontend_node
-
         if field_name == "input_type":
             # Switching type clears the operation; advertise the type's default.
             input_type = field_value if field_value in OPERATIONS_BY_TYPE else "Text"
             frontend_node["outputs"] = [self._default_output_for_type(input_type)]
             return frontend_node
 
-        # field_name == "operation"
-        operation = self._extract_operation_name(field_value)
-        input_type = frontend_node.get("template", {}).get("input_type", {}).get("value", "Text")
+        template = frontend_node.get("template", {})
+        input_type = template.get("input_type", {}).get("value", "Text")
+
+        if field_name == "operation":
+            operation = self._extract_operation_name(field_value)
+        else:
+            # Any other refresh (e.g. Path Selection's "JSON to Map" field)
+            # reaches here on a freshly rebuilt node whose outputs were reset
+            # to the class default (Message). Re-derive the output from the
+            # saved operation so the refresh doesn't swap the real output type.
+            operation = self._extract_operation_name(template.get("operation", {}).get("value", []))
 
         if not operation:
             # No operation selected: fall back to the input type's default output.
