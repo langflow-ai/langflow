@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from lfx.schema.workflow import (
     ComponentOutput,
@@ -41,7 +41,18 @@ from lfx.schema.workflow import (
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
 
-    from langflow.api.v1.schemas import RunResponse
+
+class RunResponseLike(Protocol):
+    """Structural type for a v1-style run response.
+
+    Defined here so this module never imports from langflow. The backend's
+    ``RunResponse`` (a list of ``outputs`` plus a ``session_id``) satisfies it
+    structurally, and lfx's own run path can supply any object with the same
+    shape.
+    """
+
+    outputs: list[Any] | None
+    session_id: str | None
 
 
 @dataclass(frozen=True)
@@ -469,7 +480,7 @@ def _resolve_output(outputs: dict[str, ComponentOutput], selected_ids: list[str]
 
 
 def run_response_to_workflow_response(
-    run_response: RunResponse,
+    run_response: RunResponseLike,
     flow_id: str,
     job_id: str,
     inputs: dict[str, Any],
