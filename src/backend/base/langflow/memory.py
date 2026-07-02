@@ -29,6 +29,7 @@ def _get_variable_query(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,
 ):
     stmt = select(MessageTable).where(MessageTable.error == False)  # noqa: E712
     if sender:
@@ -41,6 +42,19 @@ def _get_variable_query(
         stmt = stmt.where(MessageTable.context_id == context_id)
     if flow_id:
         stmt = stmt.where(MessageTable.flow_id == flow_id)
+    if user_id:
+        # Runtime callers (e.g. _safe_graph_user_id -> graph.user_id) supply user_id as a str,
+        # but MessageTable.user_id is UUID-typed: on SQLite the Uuid bind processor calls
+        # ``value.hex`` and raises ``'str' object has no attribute 'hex'`` for a raw string.
+        # Coerce to UUID so the owner predicate is built consistently with the write path
+        # (MessageTable.from_message), rather than crashing authenticated retrieval.
+        if isinstance(user_id, str):
+            try:
+                user_id = UUID(user_id)
+            except ValueError as exc:
+                msg = f"User ID {user_id} is not a valid UUID"
+                raise ValueError(msg) from exc
+        stmt = stmt.where(MessageTable.user_id == user_id)
     if order_by:
         if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
             msg = f"Invalid order_by field: {order_by}"
@@ -61,6 +75,7 @@ def get_messages(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """DEPRECATED - Retrieves messages from the monitor service based on the provided filters.
 
@@ -75,6 +90,7 @@ def get_messages(
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
+        user_id (Optional[str | UUID]): When provided, scope retrieval to this owning user.
 
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
@@ -89,6 +105,7 @@ def get_messages(
             order,
             flow_id,
             limit,
+            user_id=user_id,
         )
     )
 
@@ -102,6 +119,7 @@ async def aget_messages(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """Retrieves messages from the monitor service based on the provided filters.
 
@@ -114,12 +132,15 @@ async def aget_messages(
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
+        user_id (Optional[str | UUID]): When provided, scope retrieval to this owning user.
 
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
     async with session_scope() as session:
-        stmt = _get_variable_query(sender, sender_name, session_id, context_id, order_by, order, flow_id, limit)
+        stmt = _get_variable_query(
+            sender, sender_name, session_id, context_id, order_by, order, flow_id, limit, user_id=user_id
+        )
         messages = await session.exec(stmt)
         return [await Message.create(**d.model_dump()) for d in messages]
 
@@ -128,18 +149,20 @@ def add_messages(
     messages: Message | list[Message],
     flow_id: str | UUID | None = None,
     run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
 ):
     """DEPRECATED - Add a message to the monitor service.
 
     DEPRECATED: Use `aadd_messages` instead.
     """
-    return run_until_complete(aadd_messages(messages, flow_id=flow_id, run_id=run_id))
+    return run_until_complete(aadd_messages(messages, flow_id=flow_id, run_id=run_id, user_id=user_id))
 
 
 async def aadd_messages(
     messages: Message | list[Message],
     flow_id: str | UUID | None = None,
     run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
 ):
     """Add a message to the monitor service."""
     if not isinstance(messages, list):
@@ -157,7 +180,9 @@ async def aadd_messages(
             raise ValueError(msg)
 
     try:
-        messages_models = [MessageTable.from_message(msg, flow_id=flow_id, run_id=run_id) for msg in messages]
+        messages_models = [
+            MessageTable.from_message(msg, flow_id=flow_id, run_id=run_id, user_id=user_id) for msg in messages
+        ]
         async with session_scope() as session:
             messages_models = await aadd_messagetables(messages_models, session)
         return [await Message.create(**message.model_dump()) for message in messages_models]
@@ -295,6 +320,7 @@ def store_message(
     message: Message,
     flow_id: str | UUID | None = None,
     run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """DEPRECATED: Stores a message in the memory.
 
@@ -305,6 +331,7 @@ def store_message(
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
         run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
 
     Returns:
         List[Message]: A list of data containing the stored message.
@@ -312,13 +339,14 @@ def store_message(
     Raises:
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
     """
-    return run_until_complete(astore_message(message, flow_id=flow_id, run_id=run_id))
+    return run_until_complete(astore_message(message, flow_id=flow_id, run_id=run_id, user_id=user_id))
 
 
 async def astore_message(
     message: Message,
     flow_id: str | UUID | None = None,
     run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """Stores a message in the memory.
 
@@ -327,6 +355,7 @@ async def astore_message(
         flow_id (Optional[str]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
         run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
 
     Returns:
         List[Message]: A list of data containing the stored message.
@@ -353,7 +382,7 @@ async def astore_message(
             await logger.aerror(e)
     if flow_id and not isinstance(flow_id, UUID):
         flow_id = UUID(flow_id)
-    return await aadd_messages([message], flow_id=flow_id, run_id=run_id)
+    return await aadd_messages([message], flow_id=flow_id, run_id=run_id, user_id=user_id)
 
 
 class LCBuiltinChatMemory(BaseChatMessageHistory):
