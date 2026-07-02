@@ -6,6 +6,7 @@ import { dialogClass } from "@/customization/utils/dialog-class";
 import { cn } from "../../utils/utils";
 import ShadTooltip from "../common/shadTooltipComponent";
 import { useClosedTriggerAriaControls } from "./use-closed-trigger-aria-controls";
+import { useInertForAriaHiddenElements } from "./use-inert-for-aria-hidden";
 
 const Dialog = DialogPrimitive.Root;
 
@@ -103,6 +104,8 @@ const DialogContent = React.forwardRef<
     const hasDialogTitle = hasChildOfType(children, DialogTitle);
     const hasDialogDescription = hasChildOfType(children, DialogDescription);
 
+    useInertForAriaHiddenElements();
+
     return (
       <DialogPortal>
         <DialogOverlay className={overlayClassName} />
@@ -149,7 +152,7 @@ const DialogContent = React.forwardRef<
                   closeButtonClassName,
                 )}
               >
-                <Cross2Icon className="h-[18px] w-[18px]" />
+                <Cross2Icon className="h-[18px] w-[18px]" aria-hidden="true" />
                 <span className="sr-only">Close</span>
               </DialogPrimitive.Close>
             </ShadTooltip>
