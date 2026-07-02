@@ -342,6 +342,7 @@ module.exports = {
               type: "category",
               label: "Processing",
               items: [
+                "Components/operations",
                 "Components/data-operations",
                 "Components/dataframe-operations",
                 "Components/dynamic-create-data",
@@ -452,6 +453,7 @@ module.exports = {
             "Components/bundles-docling",
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
+            "Components/bundles-empiriolabs",
             "Components/bundles-exa",
             "Components/bundles-faiss",
             "Components/bundles-files-ingestion",
