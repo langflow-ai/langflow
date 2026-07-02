@@ -38,22 +38,40 @@ class LoopQuestComponent(LCToolComponent):
     inputs = [
         SecretStrInput(name="api_key", display_name="LoopQuest API Key", required=True, info="Workspaces → API keys."),
         MessageTextInput(
-            name="base_url", display_name="Base URL", value=DEFAULT_BASE_URL, advanced=True,
+            name="base_url",
+            display_name="Base URL",
+            value=DEFAULT_BASE_URL,
+            advanced=True,
             info="Only change this for a self-hosted LoopQuest deployment.",
         ),
-        DropdownInput(name="game", display_name="Game", options=GAMES, value="swiper", info="How the reviewer sees the item."),
         DropdownInput(
-            name="mode", display_name="Mode", options=["gate", "monitor"], value="gate",
+            name="game", display_name="Game", options=GAMES, value="swiper", info="How the reviewer sees the item."
+        ),
+        DropdownInput(
+            name="mode",
+            display_name="Mode",
+            options=["gate", "monitor"],
+            value="gate",
             info="Gate blocks until a human decides. Monitor creates the review and returns immediately.",
         ),
         MessageTextInput(name="content", display_name="Content", info="The item to review (used when run directly)."),
         MessageTextInput(name="title", display_name="Title", advanced=True),
         MessageTextInput(name="claim", display_name="Claim", advanced=True, info="Grounding only."),
         MessageTextInput(name="source", display_name="Source text", advanced=True, info="Grounding only."),
-        IntInput(name="timeout_seconds", display_name="Gate timeout (seconds)", value=3600, advanced=True,
-                 info="Server-side fail-closed timeout (30–2592000). On timeout it escalates."),
-        IntInput(name="max_wait_seconds", display_name="Max wait (seconds)", value=300, advanced=True,
-                 info="How long this component blocks polling for a verdict."),
+        IntInput(
+            name="timeout_seconds",
+            display_name="Gate timeout (seconds)",
+            value=3600,
+            advanced=True,
+            info="Server-side fail-closed timeout (30–2592000). On timeout it escalates.",
+        ),
+        IntInput(
+            name="max_wait_seconds",
+            display_name="Max wait (seconds)",
+            value=300,
+            advanced=True,
+            info="How long this component blocks polling for a verdict.",
+        ),
         IntInput(name="poll_seconds", display_name="Poll interval (seconds)", value=5, advanced=True),
     ]
 
@@ -63,7 +81,9 @@ class LoopQuestComponent(LCToolComponent):
     def _headers(self) -> dict:
         return {"authorization": f"Bearer {self.api_key}", "content-type": "application/json"}
 
-    def _review(self, content: str, title: str | None = None, claim: str | None = None, source: str | None = None) -> str:
+    def _review(
+        self, content: str, title: str | None = None, claim: str | None = None, source: str | None = None
+    ) -> str:
         if not self.api_key:
             msg = "LoopQuest API Key is missing. Please configure it on the component."
             raise ToolException(msg)
@@ -73,8 +93,15 @@ class LoopQuestComponent(LCToolComponent):
         poll = max(1, int(self.poll_seconds or 5))
         mode = self.mode or "gate"
         body = build_task_body(
-            content=content, module=self.game or "swiper", mode=mode, title=title, claim=claim,
-            source=source, timeout_seconds=timeout_seconds, on_timeout="escalate", review_source="langflow",
+            content=content,
+            module=self.game or "swiper",
+            mode=mode,
+            title=title,
+            claim=claim,
+            source=source,
+            timeout_seconds=timeout_seconds,
+            on_timeout="escalate",
+            review_source="langflow",
         )
         base = self._base_url()
         headers = self._headers()

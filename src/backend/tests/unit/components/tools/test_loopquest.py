@@ -22,11 +22,18 @@ def test_build_task_body_defaults():
 
 def test_build_task_body_grounding_and_gate():
     body = build_task_body(
-        content="x", module="grounding", mode="gate", timeout_seconds=3600,
-        claim="Flood is covered.", source="Policy excludes flood.",
+        content="x",
+        module="grounding",
+        mode="gate",
+        timeout_seconds=3600,
+        claim="Flood is covered.",
+        source="Policy excludes flood.",
     )
     assert body["payload"] == {
-        "content": "x", "body": "x", "claim": "Flood is covered.", "source": "Policy excludes flood.",
+        "content": "x",
+        "body": "x",
+        "claim": "Flood is covered.",
+        "source": "Policy excludes flood.",
     }
     assert body["timeout_seconds"] == 3600
     assert body["on_timeout"] == "escalate"

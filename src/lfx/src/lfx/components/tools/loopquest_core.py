@@ -1,5 +1,6 @@
 """Pure helpers for the LoopQuest Langflow component — no Langflow imports, so
-they can be unit-tested in isolation."""
+they can be unit-tested in isolation.
+"""
 
 from __future__ import annotations
 
