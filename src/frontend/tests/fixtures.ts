@@ -268,7 +268,7 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
               /AttributeError: .+/,
               /ImportError: .+/,
               /KeyError: .+/,
-              /An error occured .+/,
+              /An error occurred .+/,
             ];
 
             for (const pattern of exceptionPatterns) {
