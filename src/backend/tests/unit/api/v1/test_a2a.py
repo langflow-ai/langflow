@@ -7,6 +7,7 @@ object, the served card is revalidated against the a2a-sdk model, and message/se
 runs a real echo flow through the v2 surface.
 """
 
+import json
 import uuid
 from pathlib import Path
 
@@ -15,6 +16,7 @@ import orjson
 import pytest
 from a2a.compat.v0_3 import types as a2a_types
 from httpx import AsyncClient
+from langflow.api.v1 import a2a_utils
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.database.models import Folder
 from langflow.services.database.models.flow.model import Flow, FlowType
@@ -92,7 +94,9 @@ async def test_get_agent_card_returns_valid_card(client: AsyncClient, active_use
     assert response.status_code == 200
     body = response.json()
     assert body["url"].endswith(f"/api/v1/a2a/{flow_id}/jsonrpc")
-    assert body["protocolVersion"] == "0.3.0"
+    # protocolVersion is set explicitly from our constant (not the sdk default), so an sdk bump
+    # can't silently change it; it stays 0.3.0 while the server speaks the v0.3 compat protocol.
+    assert body["protocolVersion"] == a2a_utils.A2A_PROTOCOL_VERSION == "0.3.0"
     assert body["preferredTransport"] == "JSONRPC"
 
     # The card (minus the non-model inputSchema key) revalidates against the SDK model.
@@ -217,15 +221,26 @@ async def test_security_schemes_apikey(client: AsyncClient, active_user, flow_da
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_no_security_for_oauth_folder(client: AsyncClient, active_user, flow_data):
-    """OAuth is out of F2 scope, so no security is advertised."""
+async def test_security_schemes_oauth_folder(client: AsyncClient, active_user, flow_data):
+    """An oauth folder advertises the same x-api-key scheme as apikey.
+
+    The broker fronts the OAuth dance, but the A2A transport still takes an owner-scoped api
+    key (mirrors the MCP transport), so the card reflects that.
+    """
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "oauth"})
     flow_id = await _create_flow(active_user.id, data=flow_data, folder_id=folder_id)
 
     body = (await client.get(_card_url(flow_id))).json()
 
-    assert "securitySchemes" not in body
-    assert "security" not in body
+    assert body["securitySchemes"] == {
+        "apiKey": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "x-api-key",
+            "description": "API key passed in the x-api-key header.",
+        }
+    }
+    assert body["security"] == [{"apiKey": []}]
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -297,6 +312,32 @@ async def test_malformed_overrides_fall_back_to_defaults(client: AsyncClient, ac
     assert body["version"] == get_version_info()["version"]
     assert body["skills"][0]["tags"] == ["langflow"]
     assert "examples" not in body["skills"][0]
+
+
+# --- agent registry (owner-scoped listing) ---------------------------------
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_list_agents_is_owner_scoped(client: AsyncClient, active_user, logged_in_headers, flow_data):
+    """GET /a2a/agents lists only the caller's own agent + a2a_enabled flows, each with a card URL."""
+    enabled = await _create_flow(active_user.id, data=flow_data)  # agent + a2a_enabled: included
+    await _create_flow(active_user.id, data=flow_data, a2a_enabled=False)  # excluded: a2a disabled
+    await _create_flow(active_user.id, data=flow_data, flow_type=FlowType.WORKFLOW)  # excluded: not an agent
+    other = await _create_other_user()
+    await _create_flow(other, data=flow_data)  # excluded: another user's agent
+
+    resp = await client.get("api/v1/a2a/agents", headers=logged_in_headers)
+
+    assert resp.status_code == 200
+    agents = resp.json()
+    assert [a["id"] for a in agents] == [str(enabled)]
+    assert agents[0]["cardUrl"].endswith(f"/api/v1/a2a/{enabled}/.well-known/agent-card.json")
+
+
+async def test_list_agents_flag_off_returns_404(client: AsyncClient):
+    """The registry looks unmounted (404) when the flag is off, before auth runs (no 403 leak)."""
+    response = await client.get("api/v1/a2a/agents")
+    assert response.status_code == 404
 
 
 # --- JSON-RPC message/send + tasks/get -------------------------------------
@@ -372,6 +413,74 @@ async def test_message_send_runs_flow_and_returns_completed_task(client: AsyncCl
     assert result["kind"] == "task"
     assert result["status"]["state"] == "completed"
     assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"
+
+
+# --- DataPart (structured application/json I/O) ----------------------------
+
+
+def _data_message(data, message_id="m1"):
+    """A message whose sole part is a structured DataPart (no text)."""
+    return {"message": {"role": "user", "parts": [{"kind": "data", "data": data}], "messageId": message_id}}
+
+
+def test_answer_parts_emits_data_for_structured_output():
+    """A data-typed / non-string output emits an application/json data part, not an empty text answer."""
+    from a2a.helpers.proto_helpers import get_data_parts, get_text_parts
+    from langflow.api.v1.a2a_executor import _answer_parts
+    from lfx.schema.workflow import (
+        ComponentOutput,
+        JobStatus,
+        OutputReason,
+        WorkflowExecutionResponse,
+        WorkflowOutput,
+    )
+
+    response = WorkflowExecutionResponse(
+        flow_id="f",
+        status=JobStatus.COMPLETED,
+        output=WorkflowOutput(reason=OutputReason.NONE),
+        outputs={
+            "c1": ComponentOutput(type="text", status=JobStatus.COMPLETED, content="hi"),
+            "c2": ComponentOutput(type="data", status=JobStatus.COMPLETED, content={"answer": "42"}),
+        },
+    )
+
+    parts = _answer_parts(response)
+
+    # The string channel stays text; the structured channel round-trips as a data part.
+    assert get_text_parts(parts) == ["hi"]
+    assert get_data_parts(parts) == [{"answer": "42"}]
+
+
+def test_answer_parts_single_stays_text():
+    """The canonical single-answer shape stays a text part (no regression)."""
+    from a2a.helpers.proto_helpers import get_data_parts, get_text_parts
+    from langflow.api.v1.a2a_executor import _answer_parts
+    from lfx.schema.workflow import JobStatus, OutputReason, WorkflowExecutionResponse, WorkflowOutput
+
+    response = WorkflowExecutionResponse(
+        flow_id="f",
+        status=JobStatus.COMPLETED,
+        output=WorkflowOutput(reason=OutputReason.SINGLE, text="hello"),
+    )
+
+    parts = _answer_parts(response)
+
+    assert get_text_parts(parts) == ["hello"]
+    assert get_data_parts(parts) == []
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_message_send_consumes_data_part_input(client: AsyncClient, active_user, echo_flow_data):
+    """A DataPart-only message (no text) reaches the flow as JSON; the echo flow returns it verbatim."""
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+
+    response = await _jsonrpc(client, flow_id, "message/send", _data_message({"foo": "bar"}))
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["status"]["state"] == "completed"
+    assert result["artifacts"][0]["parts"][0]["text"] == json.dumps({"foo": "bar"})
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -716,14 +825,15 @@ async def test_unmatched_decision_re_parks_task(client: AsyncClient, active_user
 
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_user, human_input_flow_data):
-    """A task parked under one flow cannot be resumed through a different flow's endpoint."""
+    """A task parked under one flow can't be resumed or completed through a different flow's endpoint."""
     flow_a = await _create_flow(active_user.id, data=human_input_flow_data)
     flow_b = await _create_flow(active_user.id, data=human_input_flow_data)
 
     paused = (await _jsonrpc(client, flow_a, "message/send", _text_message("start"))).json()["result"]
     task_id, context_id = paused["id"], paused["contextId"]
 
-    # Same task id, but sent to flow B: must not run flow A's graph.
+    # Same task id, sent to flow B: the flow-scoped store means flow B can't address flow A's task,
+    # so it can't complete it (never runs flow A's graph as flow A's owner).
     via_b = (
         await _jsonrpc(
             client,
@@ -731,9 +841,22 @@ async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_use
             "message/send",
             _text_message("Approve", message_id="m2", context_id=context_id, task_id=task_id),
         )
-    ).json()["result"]
+    ).json()
+    # The flow-scoped store misses flow A's task, so the SDK returns a JSON-RPC error (not found),
+    # not a result. Assert the error envelope, not just "didn't complete" (which any state satisfies).
+    assert "error" in via_b
+    assert "result" not in via_b
 
-    assert via_b["status"]["state"] == "failed"
+    # Flow A's task is untouched and still resumable through flow A.
+    resumed = (
+        await _jsonrpc(
+            client,
+            flow_a,
+            "message/send",
+            _text_message("Approve", message_id="m3", context_id=context_id, task_id=task_id),
+        )
+    ).json()["result"]
+    assert resumed["status"]["state"] == "completed"
 
 
 # --- apikey auth enforcement ----------------------------------------------
@@ -802,12 +925,32 @@ async def test_none_folder_stays_public(client: AsyncClient, active_user, echo_f
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_oauth_folder_stays_public(client: AsyncClient, active_user, echo_flow_data):
-    """An oauth folder advertises no scheme yet, so the route stays public this slice."""
+async def test_oauth_folder_requires_owner_key(client: AsyncClient, active_user, echo_flow_data):
+    """An oauth folder is reachable with an owner-scoped x-api-key, and 401s without one.
+
+    The broker fronts OAuth; the transport still requires a key (mirrors MCP), so oauth enforces
+    like apikey here, never public and no longer a blanket 403 that makes the agent unreachable.
+    """
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "oauth"})
     flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
 
-    assert (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).status_code == 200
+    # No key -> 401, not public and not the old 403-dead.
+    assert (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).status_code == 401
+
+    # A valid owner key runs the flow.
+    key = await _create_api_key(active_user.id)
+    resp = await _jsonrpc(client, flow_id, "message/send", _text_message("hello oauth"), headers={"x-api-key": key})
+    assert resp.status_code == 200
+    assert resp.json()["result"]["status"]["state"] == "completed"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_unknown_folder_auth_type_fails_closed(client: AsyncClient, active_user, echo_flow_data):
+    """Any protected auth type A2A doesn't understand fails closed (403), never public."""
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "saml"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+
+    assert (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).status_code == 403
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -913,6 +1056,26 @@ async def test_push_config_public_url_accepted(client: AsyncClient, active_user,
     assert "result" in body
 
 
+# --- client component (consume a remote A2A agent) -------------------------
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_a2a_agent_component_calls_remote_agent(client: AsyncClient, active_user, echo_flow_data):
+    """The A2A Agent component sends a message to a remote agent and returns its reply.
+
+    Drives the real a2a-sdk client against this app's own A2A server (an echo agent flow),
+    so the full card-resolve + message/send round-trip runs in-process, no mocks.
+    """
+    from lfx.components.models_and_agents.a2a_agent import call_a2a_agent
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    agent_url = f"{str(client.base_url).rstrip('/')}/api/v1/a2a/{flow_id}"
+
+    answer = await call_a2a_agent(agent_url, "hello a2a", httpx_client=client)
+
+    assert answer == "hello a2a"
+
+
 @pytest.mark.usefixtures("client")
 async def test_push_dispatch_rejects_rebound_private_ip():
     """Dispatch re-validates the webhook, so a config now pointing at a private/metadata IP is dropped.
@@ -985,13 +1148,14 @@ def _response(*, output, outputs=None):
     return WorkflowExecutionResponse(flow_id="f", status=JobStatus.COMPLETED, output=output, outputs=outputs or {})
 
 
-def test_answer_texts_resolves_each_output_reason():
-    """SINGLE keeps its text (even ""); MULTIPLE recovers every text channel; NONE is empty."""
-    from langflow.api.v1.a2a_executor import _answer_texts
+def test_answer_parts_resolves_each_output_reason():
+    """SINGLE keeps its text (even ""); MULTIPLE recovers every text channel; NONE emits nothing."""
+    from a2a.helpers.proto_helpers import get_data_parts, get_text_parts
+    from langflow.api.v1.a2a_executor import _answer_parts
     from lfx.schema.workflow import ComponentOutput, JobStatus, OutputReason, WorkflowOutput
 
     single = _response(output=WorkflowOutput(reason=OutputReason.SINGLE, text=""))
-    assert _answer_texts(single) == [""]
+    assert get_text_parts(_answer_parts(single)) == [""]
 
     multi = _response(
         output=WorkflowOutput(reason=OutputReason.MULTIPLE),
@@ -1000,10 +1164,11 @@ def test_answer_texts_resolves_each_output_reason():
             "b": ComponentOutput(type="text", status=JobStatus.COMPLETED, content="y"),
         },
     )
-    assert _answer_texts(multi) == ["x", "y"]
+    assert get_text_parts(_answer_parts(multi)) == ["x", "y"]
+    assert get_data_parts(_answer_parts(multi)) == []
 
     none = _response(output=WorkflowOutput(reason=OutputReason.NONE))
-    assert _answer_texts(none) == []
+    assert _answer_parts(none) == []
 
 
 # --- durable task store ----------------------------------------------------
@@ -1181,3 +1346,170 @@ async def test_durable_store_roundtrips_on_real_migrated_db():
             return "other"
 
     assert await DurableTaskStore().get(task_id, ServerCallContext(user=_Other())) is None
+
+
+# --- tasks/cancel ----------------------------------------------------------
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_cancel_input_required_task(client: AsyncClient, active_user, human_input_flow_data):
+    """tasks/cancel transitions a parked input-required task to canceled, durably."""
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id = paused["id"]
+
+    canceled = (await _jsonrpc(client, flow_id, "tasks/cancel", {"id": task_id})).json()["result"]
+    assert canceled["status"]["state"] == "canceled"
+
+    # Durably persisted: tasks/get reads canceled back from the store.
+    got = (await _jsonrpc(client, flow_id, "tasks/get", {"id": task_id})).json()["result"]
+    assert got["status"]["state"] == "canceled"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_cancel_wont_flip_a_completed_task(client: AsyncClient, active_user, echo_flow_data):
+    """A run that already finished must not be rewritten to canceled by a racing tasks/cancel."""
+    from a2a.server.agent_execution.active_task import ActiveTask
+    from a2a.server.tasks.task_manager import TaskManager
+    from langflow.api.v1.a2a import _HANDLER
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    done = (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).json()["result"]
+    assert done["status"]["state"] == "completed"
+    task_id, context_id = done["id"], done["contextId"]
+
+    # Reproduce the race window: the finished task is still resident in the ActiveTaskRegistry
+    # (the async cleanup hasn't run, or a stream subscriber pins it), so tasks/cancel hits the
+    # registry-HIT path where ActiveTask.cancel returns the terminal task unchanged instead of the
+    # already-correct registry-miss path that raises. Seed a finished ActiveTask exactly as
+    # get_or_create builds one; it reads the completed task back through the request's context.
+    registry = _HANDLER._active_task_registry
+    task_manager = TaskManager(
+        task_store=registry._task_store, context=None, task_id=task_id, context_id=context_id, initial_message=None
+    )
+    active_task = ActiveTask(
+        agent_executor=registry._agent_executor,
+        task_id=task_id,
+        task_manager=task_manager,
+        push_sender=registry._push_sender,
+        on_cleanup=registry._on_active_task_cleanup,
+    )
+    active_task._is_finished.set()
+    active_task._task_created.set()
+    registry._active_tasks[task_id] = active_task
+    try:
+        # Not cancelable: expect a JSON-RPC error (TaskNotCancelableError), not a canceled result.
+        resp = (await _jsonrpc(client, flow_id, "tasks/cancel", {"id": task_id})).json()
+        assert "error" in resp
+        assert "result" not in resp
+
+        # The durable terminal state is untouched.
+        got = (await _jsonrpc(client, flow_id, "tasks/get", {"id": task_id})).json()["result"]
+        assert got["status"]["state"] == "completed"
+    finally:
+        registry._active_tasks.pop(task_id, None)
+
+
+@pytest.mark.usefixtures("client")
+async def test_durable_store_wont_clobber_terminal_cancel():
+    """A run completing on the same worker after a cancel must not overwrite terminal CANCELED."""
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import DurableTaskStore
+
+    store = DurableTaskStore()
+    ctx = ServerCallContext()
+    tid = uuid.uuid4().hex
+
+    await store.save(pb.Task(id=tid, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_CANCELED)), ctx)
+    # A late completion is ignored once the task is terminally canceled.
+    await store.save(
+        pb.Task(id=tid, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED)), ctx
+    )
+
+    got = await store.get(tid, ctx)
+    assert got.status.state == pb.TaskState.TASK_STATE_CANCELED
+
+
+async def test_task_scope_key_is_postgres_safe():
+    """The flow-scoped store key must fold in the flow but carry no NUL byte (Postgres rejects NUL)."""
+    from a2a.server.context import ServerCallContext
+    from langflow.api.v1.a2a import _task_scope
+
+    flow_id = uuid.uuid4().hex
+    key = _task_scope(ServerCallContext(state={"flow_id": flow_id}))
+    assert "\x00" not in key
+    assert flow_id in key
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_cancel_is_scoped_to_the_path_flow(client: AsyncClient, active_user, human_input_flow_data):
+    """A task can't be cancelled through a different flow's endpoint: the store is flow-scoped."""
+    flow_a = await _create_flow(active_user.id, data=human_input_flow_data)
+    flow_b = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    paused = (await _jsonrpc(client, flow_a, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id = paused["id"]
+
+    # Same task id, sent to flow B: the flow-scoped gate makes it "not found", so flow B gets a
+    # JSON-RPC error with no result. Assert that (not just "not canceled"), or a full disclosure of
+    # flow A's task through flow B's endpoint would still pass the check.
+    via_b = (await _jsonrpc(client, flow_b, "tasks/cancel", {"id": task_id})).json()
+    assert "error" in via_b
+    assert "result" not in via_b
+
+    # Flow A's task is untouched by the cross-flow attempt.
+    got = (await _jsonrpc(client, flow_a, "tasks/get", {"id": task_id})).json()["result"]
+    assert got["status"]["state"] == "input-required"
+
+
+async def test_execute_emits_canceled_when_run_is_cancelled():
+    """A cancelled live run emits a terminal CANCELED on its own queue, so the consumer can't hang."""
+    import asyncio
+    import contextlib
+    from uuid import uuid4
+
+    from a2a.server.agent_execution import RequestContext
+    from a2a.server.context import ServerCallContext
+    from a2a.server.events import EventQueue
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a_executor import FlowAgentExecutor
+
+    started = asyncio.Event()
+
+    async def blocking_run(*_args):
+        started.set()
+        await asyncio.Event().wait()  # runs until cancelled
+
+    async def _no_resume(*_args):
+        pytest.fail("resume must not be called")
+
+    executor = FlowAgentExecutor(blocking_run, _no_resume)
+    queue = EventQueue()
+    ctx = RequestContext(
+        call_context=ServerCallContext(state={"flow_id": str(uuid4())}),
+        task_id=uuid4().hex,
+        context_id="c",
+    )
+    run = asyncio.create_task(executor.execute(ctx, queue))
+    await asyncio.wait_for(started.wait(), timeout=5)
+    run.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await run
+    # The cancellation must propagate (the comment says never swallow it), so the task ends cancelled
+    # rather than returning normally. Without this, swallowing the CancelledError would still pass.
+    assert run.cancelled()
+
+    states = []
+    while True:
+        try:
+            event = await asyncio.wait_for(queue.dequeue_event(), timeout=0.5)
+        except TimeoutError:
+            break
+        state = getattr(getattr(event, "status", None), "state", None)
+        if state is not None:
+            states.append(state)
+    assert pb.TaskState.TASK_STATE_CANCELED in states

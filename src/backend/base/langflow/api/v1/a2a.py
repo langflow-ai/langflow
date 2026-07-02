@@ -26,6 +26,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import httpx
+from a2a.server.agent_execution.active_task import TERMINAL_TASK_STATES
 from a2a.server.context import ServerCallContext
 from a2a.server.owner_resolver import resolve_user_scope
 from a2a.server.request_handlers import DefaultRequestHandler
@@ -33,8 +34,8 @@ from a2a.server.routes.common import DefaultServerCallContextBuilder
 from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
 from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, TaskStore
 from a2a.types import a2a_pb2 as pb
-from a2a.utils.errors import InvalidParamsError
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
+from a2a.utils.errors import InvalidParamsError, TaskNotCancelableError, TaskNotFoundError
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
 from lfx.graph.checkpoint.schema import GraphCheckpoint
 from lfx.graph.checkpoint.store import CheckpointStore
@@ -52,7 +53,7 @@ from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
 from sqlmodel import select
 
-from langflow.api.utils import DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.v1.a2a_executor import FlowAgentExecutor
 from langflow.api.v1.a2a_utils import (
@@ -83,23 +84,36 @@ def _require_a2a_enabled() -> None:
 
 
 async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
-    """Enforce the apikey scheme the card advertises, before any dispatch.
+    """Enforce the folder's auth scheme before any dispatch, failing closed on the rest.
 
-    When the flow's folder requires apikey auth, the request must carry a valid
-    langflow API key in ``x-api-key`` whose owner is the flow owner. The flow always
-    runs as its owner (see ``_run_flow``), so accepting another user's valid key would
-    let them trigger a run under the owner's identity, so scope to ``flow.user_id``.
+    The flow always runs as its owner (see ``_run_flow``), so an unauthenticated run is a
+    run under the owner's identity. Gate by the folder's ``auth_type``:
+
+    - ``"none"`` / missing / no-folder -> public agent (the intended public A2A model).
+    - ``"apikey"`` / ``"oauth"`` -> require a valid langflow API key in ``x-api-key`` whose
+      owner is the flow owner. An oauth folder is fronted by an external OAuth broker (the dance
+      happens in front); the langflow transport itself still takes an owner-scoped api key,
+      exactly as the MCP transport does (``mcp_projects.verify_project_auth``), since credential
+      forwarding from the broker isn't available yet. Accepting another user's valid key would
+      let them trigger a run under the owner's identity, so scope to ``flow.user_id``.
+    - anything else (an auth type A2A doesn't understand) -> fail closed with 403: treating a
+      *protected* folder as public would expose an owner-identity run anonymously.
 
     Uses ``check_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
     returns the superuser for a *missing* key, which would silently bypass this gate.
-    ``"none"`` / missing / no-folder stay public; ``"oauth"`` stays public this slice
-    (the card advertises no scheme for it, so a discovery client sends no key).
     """
     # Short writable session (check_key flushes usage counters), closed before
     # dispatch so no lock is held across the up-to-300s run.
     async with session_scope() as session:
-        if await folder_auth_type(flow, session) != "apikey":
+        auth_type = await folder_auth_type(flow, session)
+        if auth_type == "none":
             return  # public agent
+        if auth_type not in ("apikey", "oauth"):
+            # Protected folder with a scheme A2A can't enforce: fail closed, never public.
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"A2A access is disabled for this agent: unsupported folder auth type {auth_type!r}.",
+            )
         api_key = request.headers.get(A2A_APIKEY_HEADER)
         if not api_key:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")
@@ -386,6 +400,27 @@ class A2ACheckpointStore(CheckpointStore):
         raise NotImplementedError
 
 
+def _is_terminal_cancel(blob: dict[str, Any] | None) -> bool:
+    """True when a stored task blob is in the terminal CANCELED state (MessageToDict enum name)."""
+    return bool(blob) and (blob.get("status") or {}).get("state") == "TASK_STATE_CANCELED"
+
+
+def _task_scope(context: ServerCallContext) -> str:
+    """Owner key for the durable task store, scoped to the flow.
+
+    ``resolve_user_scope`` returns '' for every anonymous public caller, so without the flow it
+    keys all public flows' tasks together and a caller could read or cancel another flow's task by
+    id through a different flow's endpoint. Folding the path ``flow_id`` into the key makes such a
+    cross-flow lookup miss. Falls back to the plain owner scope when no flow_id is on the context.
+
+    Delimited by ':' like ``_push_config_scope``: the flow_id prefix is a UUID (no ':'), so the key
+    is unambiguous, and it avoids a NUL byte that Postgres text columns reject at write time.
+    """
+    owner = resolve_user_scope(context)
+    flow_id = (getattr(context, "state", None) or {}).get("flow_id")
+    return f"{flow_id}:{owner}" if flow_id else owner
+
+
 class DurableTaskStore(TaskStore):
     """DB-backed A2A task store keyed by ``(task_id, owner)``.
 
@@ -396,17 +431,23 @@ class DurableTaskStore(TaskStore):
     """
 
     async def save(self, task: pb.Task, context: ServerCallContext) -> None:
-        owner = resolve_user_scope(context)
+        owner = _task_scope(context)
         blob: dict[str, Any] = MessageToDict(task)
         async with session_scope() as session:
-            row = await session.get(A2ATask, (task.id, owner))
+            # Lock the row so a completion racing a cancel can't read stale state and then clobber
+            # the terminal CANCELED (Postgres row lock; a no-op on SQLite, which serializes writers).
+            row = await session.get(A2ATask, (task.id, owner), with_for_update=True)
             if row is None:
                 session.add(A2ATask(id=task.id, owner=owner, task=blob))
+            elif _is_terminal_cancel(row.task) and not _is_terminal_cancel(blob):
+                # tasks/cancel already made this task terminal; a run that completes on this worker
+                # after the cancel must not clobber CANCELED with a non-cancel state. Terminal is final.
+                return
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
 
     async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
-        owner = resolve_user_scope(context)
+        owner = _task_scope(context)
         async with session_scope_readonly() as session:  # pure read, no commit
             row = await session.get(A2ATask, (task_id, owner))
             blob = row.task if row is not None else None
@@ -424,6 +465,47 @@ class DurableTaskStore(TaskStore):
     async def delete(self, task_id: str, context: ServerCallContext) -> None:
         # ponytail: no mounted path calls delete this slice.
         raise NotImplementedError
+
+
+# Shared durable task store: read/written by the SDK handler and by _DurableCancelHandler, which
+# forces a terminal CANCELED into it so tasks/cancel works for parked tasks and can't be lost to an
+# event-queue close.
+_TASK_STORE = DurableTaskStore()
+
+
+class _DurableCancelHandler(DefaultRequestHandler):
+    """Make tasks/cancel terminal, including for parked tasks the SDK won't touch.
+
+    The V2 handler only preempts a *live* producer (ActiveTask.cancel no-ops once the producer has
+    finished), so cancelling a parked input-required task returns it unchanged, and cancelling a live
+    run whose queue closed can leave it stuck 'working'. After delegating (which still preempts a live
+    producer same-worker), force CANCELED into the returned task and the durable store so the state is
+    terminal for both cases. A run on another worker still can't be preempted (LE-1699).
+    """
+
+    async def on_cancel_task(self, params, context: ServerCallContext):
+        # The in-memory ActiveTaskRegistry is keyed by task id only, not flow, so without this a
+        # cancel could reach a task created under a different flow's endpoint. Gate on the
+        # flow-scoped store: a task this flow can't see is "not found" here (and we never reveal
+        # that it exists under another flow).
+        if await _TASK_STORE.get(params.id, context) is None:
+            raise TaskNotFoundError
+        task = await super().on_cancel_task(params, context)
+        if task is None:
+            return None
+        if task.status.state in TERMINAL_TASK_STATES:
+            # Already terminal: done if it's CANCELED. Otherwise the run finished (a registry-resident
+            # task in the async-cleanup window, or one a stream subscriber still pins) and the SDK
+            # returned it terminal-but-uncanceled instead of raising. Match the SDK's cold path and
+            # refuse, rather than clobbering a real COMPLETED/FAILED with CANCELED in the store.
+            if task.status.state != pb.TaskState.TASK_STATE_CANCELED:
+                raise TaskNotCancelableError
+            return task
+        # Non-terminal: the SDK left a parked (input-required) task unchanged, so force terminal
+        # CANCELED into the returned task and the durable store.
+        task.status.state = pb.TaskState.TASK_STATE_CANCELED
+        await _TASK_STORE.save(task, context)
+        return task
 
 
 # One shared httpx client sends webhooks; a short timeout so a slow/hostile webhook
@@ -453,9 +535,9 @@ async def close_push_client() -> None:
 # default in-memory QueueManager); a terminal or cross-worker task returns a spec error
 # and tasks/get covers terminal reads. Push configs are in-memory per-worker; durable
 # cross-worker re-attach and push delivery are a later slice.
-_HANDLER = DefaultRequestHandler(
+_HANDLER = _DurableCancelHandler(
     agent_executor=FlowAgentExecutor(_run_flow, _resume_flow),
-    task_store=DurableTaskStore(),
+    task_store=_TASK_STORE,
     agent_card=pb.AgentCard(capabilities=pb.AgentCapabilities(streaming=True, push_notifications=True)),
     push_config_store=_PUSH_CONFIG_STORE,
     push_sender=_PUSH_SENDER,
@@ -463,10 +545,39 @@ _HANDLER = DefaultRequestHandler(
 _DISPATCHER = JsonRpcDispatcher(
     request_handler=_HANDLER,
     context_builder=_FlowContextBuilder(),
-    # routes spec method names: message/send, message/stream, tasks/get, tasks/resubscribe,
-    # tasks/pushNotificationConfig/{set,get,list,delete}
+    # routes spec method names: message/send, message/stream, tasks/get, tasks/cancel,
+    # tasks/resubscribe, tasks/pushNotificationConfig/{set,get,list,delete}
     enable_v0_3_compat=True,
 )
+
+
+# The flag guard is a route dependency so it runs BEFORE the CurrentActiveUser auth dependency
+# (FastAPI resolves decorator dependencies first): a disabled route must look unmounted (404) to an
+# anonymous caller, not leak a 403 from auth resolving ahead of an in-body flag check.
+@router.get("/agents", dependencies=[Depends(_require_a2a_enabled)])
+async def list_a2a_agents(request: Request, session: DbSession, current_user: CurrentActiveUser) -> list[dict]:
+    """List the caller's own A2A-published agent flows, each with its agent-card URL.
+
+    Authenticated and owner-scoped, mirroring the MCP-projects catalog: a public cross-user
+    directory would strip the per-flow card's unguessable-id obscurity and expose other users'
+    agents, so this enumerates only the calling user's agents. Each ``cardUrl`` is the public
+    discovery entry point an orchestrator fetches per agent.
+    """
+    base = str(request.base_url).rstrip("/")
+    flows = (
+        await session.exec(select(Flow).where(Flow.user_id == current_user.id, Flow.flow_type == FlowType.AGENT))
+    ).all()
+    # a2a_enabled is bool|None; filter truthiness in Python, matching the card route's gate.
+    return [
+        {
+            "id": str(flow.id),
+            "name": flow.name,
+            "description": flow.description,
+            "cardUrl": f"{base}/api/v1/a2a/{flow.id}/.well-known/agent-card.json",
+        }
+        for flow in flows
+        if flow.a2a_enabled
+    ]
 
 
 @router.get("/{flow_id}/.well-known/agent-card.json")
