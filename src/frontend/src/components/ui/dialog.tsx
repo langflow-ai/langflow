@@ -6,6 +6,7 @@ import { dialogClass } from "@/customization/utils/dialog-class";
 import { cn } from "../../utils/utils";
 import ShadTooltip from "../common/shadTooltipComponent";
 import { useClosedTriggerAriaControls } from "./use-closed-trigger-aria-controls";
+import { useInertForAriaHiddenElements } from "./use-inert-for-aria-hidden";
 
 const Dialog = DialogPrimitive.Root;
 
@@ -102,6 +103,8 @@ const DialogContent = React.forwardRef<
     // Check if DialogTitle is included in children
     const hasDialogTitle = hasChildOfType(children, DialogTitle);
     const hasDialogDescription = hasChildOfType(children, DialogDescription);
+
+    useInertForAriaHiddenElements();
 
     return (
       <DialogPortal>

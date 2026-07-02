@@ -13,6 +13,7 @@ import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
 import cloneDeep from "lodash";
 import { type ElementRef, forwardRef, useRef, useState } from "react";
 import TableOptions from "./components/TableOptions";
+import { useAgGridAccessibilityPatch } from "./hooks/use-ag-grid-accessibility-patch";
 import resetGrid from "./utils/reset-grid-columns";
 
 export interface TableComponentProps extends AgGridReactProps {
@@ -272,7 +273,10 @@ const TableComponent = forwardRef<
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
       useRef<AgGridReact | null>(null);
-    const tableContainerRef = useRef<HTMLDivElement | null>(null);
+    const {
+      containerRef: tableContainerRef,
+      schedulePatch: scheduleGridAccessibilityPatch,
+    } = useAgGridAccessibilityPatch(resolvedTableLabel);
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
@@ -282,22 +286,10 @@ const TableComponent = forwardRef<
       .map((e) => e.headerName)
       .join("_");
 
-    const setGridAriaLabel = () => {
-      const applyLabel = () => {
-        tableContainerRef.current
-          ?.querySelector('[role="treegrid"]')
-          ?.setAttribute("aria-label", resolvedTableLabel);
-      };
-
-      requestAnimationFrame(applyLabel);
-      setTimeout(applyLabel, 0);
-      setTimeout(applyLabel, 100);
-    };
-
     const onGridReady = (params) => {
       // @ts-ignore
       realRef.current = params;
-      setGridAriaLabel();
+      scheduleGridAccessibilityPatch();
       const updatedColumnDefs = [...colDef];
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       const customInit = localStorage.getItem(storeReference);
@@ -446,7 +438,7 @@ const TableComponent = forwardRef<
           }}
           onGridReady={onGridReady}
           onFirstDataRendered={(event) => {
-            setGridAriaLabel();
+            scheduleGridAccessibilityPatch();
             props.onFirstDataRendered?.(event);
           }}
           onColumnMoved={onColumnMoved}
