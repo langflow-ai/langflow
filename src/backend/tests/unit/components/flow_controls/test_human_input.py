@@ -24,7 +24,13 @@ def _wired(component, *, decision=None, run_id="job-1"):
     """
     component._id = "human"
     decisions = {f"human:{run_id}": decision} if decision is not None else {}
-    graph = SimpleNamespace(run_id=run_id, human_input_decisions=decisions, request_pause=MagicMock())
+    graph = SimpleNamespace(
+        run_id=run_id,
+        human_input_decisions=decisions,
+        request_pause=MagicMock(),
+        # Connected by default: the node feeds a downstream consumer, so it pauses.
+        successor_map={"human": ["downstream"]},
+    )
     component._vertex = SimpleNamespace(graph=graph)  # self.graph resolves to self._vertex.graph
     component.stop = MagicMock()
     return component
@@ -50,6 +56,18 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
         """A freshly created node must already carry branch outputs so handles render on drag."""
         component = component_class()
         assert [o.name for o in component.outputs] == ["branch_approve", "branch_reject"]
+
+    def test_decisions_has_no_options_so_outputs_rebuild_on_load(self, component_class):
+        """Decisions must serialize with empty options so the frontend rebuilds outputs on load.
+
+        useFetchDataOnMount fires for a real_time_refresh field only when its options are
+        empty-but-defined; re-adding options reintroduces the 'outputs revert to defaults
+        after page refresh' bug.
+        """
+        component = component_class()
+        decisions = next(i for i in component.inputs if i.name == "decisions")
+        assert decisions.options == []
+        assert decisions.real_time_refresh is True
 
     async def test_update_frontend_node_resyncs_branches_from_saved_decisions(self, component_class):
         """Loading a saved flow rebuilds the branch outputs from the persisted User Actions."""
@@ -191,3 +209,16 @@ class TestHumanInputComponent(ComponentTestBaseWithoutClient):
         _args, kwargs = component.graph.request_pause.call_args
         assert kwargs["reason"] == "human_input_required"
         assert kwargs["data"]["kind"] == "node_input"
+
+    def test_route_branch_disconnected_node_does_not_pause(self, component_class):
+        """A Human Input whose branches route nowhere must not pause the whole flow.
+
+        A node with no outgoing edges runs as an isolated start vertex; pausing it would
+        suspend the entire run for a decision that goes nowhere — and, when an Agent in the
+        same run has its own tool-approval pause, leave that pause unresolved on resume.
+        """
+        component = _wired(component_class(prompt="ok?", decisions=["Approve"]))
+        component.graph.successor_map = {}  # node feeds nothing downstream
+        result = component.route_branch()
+        component.graph.request_pause.assert_not_called()
+        assert isinstance(result, Message)

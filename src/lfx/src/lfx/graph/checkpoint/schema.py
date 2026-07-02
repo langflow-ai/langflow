@@ -45,9 +45,11 @@ class GraphCheckpoint(BaseModel):
     vertices_layers: list[list[str]] = Field(default_factory=list)
     first_layer: list[str] = Field(default_factory=list)
     inactivated_vertices: set[str] = Field(default_factory=set)
+    conditionally_excluded_vertices: set[str] = Field(default_factory=set)
     activated_vertices: list[str] = Field(default_factory=list)
     vertex_results: dict[str, VertexCheckpointData] = Field(default_factory=dict)
     pause_context: dict[str, Any] | None = None
+    human_input_decisions: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime | None = None
 

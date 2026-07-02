@@ -115,6 +115,12 @@ The pause probe is a no-op unless a component requests it, so normal flows are b
 - **Then** built vertices are restored, not re-executed (no LLM re-billing, no re-fired tools)
 - **And** branches killed before the pause stay dead
 
+### Scenario: Two HITL nodes in sequence
+- **Given** a flow with two HumanInput nodes where the first gates the path to the second
+- **When** the first is approved, the second pauses, and the second is then approved
+- **Then** the run finalizes once — no loop back to the first node
+- **And** only the chosen branch of each node runs (the first node's non-chosen branches stay dead across the second pause's resume, not just within the build that answered them)
+
 ### Scenario: Single-flight resume
 - **Given** two resume requests for the same `SUSPENDED` job
 - **When** both arrive
@@ -171,7 +177,7 @@ Claim the job with an atomic `SUSPENDED → IN_PROGRESS` transition (`claim_susp
 Re-executing completed vertices on resume would re-bill LLMs, re-fire tools, and could revive dead branches.
 
 #### Decision
-Restore built vertices from the checkpoint; only re-run the paused vertex's **non-input predecessors** (`_rerun_non_input_predecessors`) needed to complete the gated step. Inputs (e.g. Chat Input) are not re-executed.
+Restore built vertices from the checkpoint; re-run only the paused vertex's **non-input predecessors whose dropped output an unbuilt consumer will actually read** (`_rerun_non_input_predecessors` / `_unbuild_needed_dropped_producers`). A producer behind a still-built, round-tripped consumer is left alone — re-running it is wasted work and, for a side-effecting node (an Agent re-bills its LLM and re-emits its message), surfaces as duplicate outputs on every later resume. Inputs (e.g. Chat Input) are never re-executed.
 
 #### Consequences
 - **Benefits**: no double billing, no duplicate side effects, deterministic continuation.

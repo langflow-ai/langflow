@@ -22,6 +22,7 @@ from mcp import types
 from sqlmodel import select
 
 from langflow.api.v1.endpoints import simple_run_flow
+from langflow.api.v1.run_validation import HITL_UNSUPPORTED_DETAIL, flow_requires_hitl
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
@@ -286,6 +287,9 @@ async def handle_call_tool(
         if project_id and flow.folder_id != project_id:
             msg = f"Flow '{name}' not found in project {project_id}"
             raise ValueError(msg)
+
+        if flow_requires_hitl(flow.data or {}):
+            raise RuntimeError(HITL_UNSUPPORTED_DETAIL)
 
         # Process inputs
         processed_inputs = dict(arguments)

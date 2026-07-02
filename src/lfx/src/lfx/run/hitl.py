@@ -111,7 +111,10 @@ async def run_graph_with_human_input(
             graph.checkpoint_store = store
             request_id = request.get("request_id")
             decision = reroute_decision_on_timeout(request, decision)
-            graph.human_input_decisions = {request_id: decision}
+            graph.human_input_decisions = {
+                **(getattr(graph, "human_input_decisions", {}) or {}),
+                request_id: decision,
+            }
             for vertex in graph.vertices:
                 if f"{vertex.id}:{graph.run_id}" == request_id:
                     vertex.built = False

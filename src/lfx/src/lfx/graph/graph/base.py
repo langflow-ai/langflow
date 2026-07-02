@@ -715,6 +715,36 @@ class Graph:
 
         return build_checkpoint(self)
 
+    def _persist_resolved_branch_exclusions(self) -> None:
+        """Promote already-answered HumanInput decisions into the persistent exclusion channel.
+
+        A HumanInput stops its non-chosen branches with ``self.stop()`` (transient INACTIVE: reset
+        per build and never checkpointed). When a later HumanInput pauses, the earlier node's dead
+        branches would revive on resume and run — surfacing extra outputs and a re-paused first node.
+        Move each resolved decision into ``conditionally_excluded_vertices`` (the same durable channel
+        ConditionalRouter uses) so the dead branches stay dead across the resume. Derived from graph
+        edges plus the recorded decision, so it also covers saved flows whose frozen component code
+        predates any in-component exclusion call.
+        """
+        decisions = getattr(self, "human_input_decisions", {}) or {}
+        if not decisions:
+            return
+        for vertex in self.vertices:
+            if (getattr(vertex, "data", None) or {}).get("type") != "HumanInput":
+                continue
+            decision = decisions.get(f"{vertex.id}:{self.run_id}")
+            if not decision:
+                continue
+            chosen = decision.get("action_id")
+            branch_outputs = {
+                edge.source_handle.name
+                for edge in self.edges
+                if edge.source_id == vertex.id and edge.source_handle.name.startswith("branch_")
+            }
+            non_chosen = sorted(branch_outputs - {f"branch_{chosen}"})
+            if non_chosen:
+                self.exclude_branches_conditionally(vertex.id, non_chosen)
+
     async def _check_for_pause_signal(self) -> None:
         if self.pause_probe is None or self.job_id is None:
             return
@@ -734,6 +764,7 @@ class Graph:
         await self._check_for_pause_signal()
         if not (self.checkpointing_enabled and self.pause_requested):
             return
+        self._persist_resolved_branch_exclusions()
         checkpoint = self.build_checkpoint()
         store = self.checkpoint_store
         if store is None:
@@ -1131,6 +1162,21 @@ class Graph:
         self._exclude_branch_conditionally(vertex_id, visited, excluded, output_name, skip_first=True)
 
         # Track which vertices this source excluded
+        if excluded:
+            self.conditional_exclusion_sources[vertex_id] = excluded
+
+    def exclude_branches_conditionally(self, vertex_id: str, output_names: list[str]) -> None:
+        """Persistently exclude several branches from one source in a single call.
+
+        HumanInput stops every non-chosen branch at once (unlike ConditionalRouter, which excludes
+        one), so the per-source clearing must run once for the whole set, not once per branch.
+        """
+        if vertex_id in self.conditional_exclusion_sources:
+            self.conditionally_excluded_vertices -= self.conditional_exclusion_sources[vertex_id]
+            del self.conditional_exclusion_sources[vertex_id]
+        excluded: set[str] = set()
+        for output_name in output_names:
+            self._exclude_branch_conditionally(vertex_id, set(), excluded, output_name, skip_first=True)
         if excluded:
             self.conditional_exclusion_sources[vertex_id] = excluded
 
@@ -2392,6 +2438,23 @@ class Graph:
         """
         return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
 
+    def _orphaned_tool_vertex_ids(self) -> set[str]:
+        """Tool-mode components with no consumer, excluded from scheduling.
+
+        A tool-mode component's only output is the synthetic ``component_as_tool`` Tool, meaningful
+        only when wired into a consumer (an Agent). With no successor it is a leftover — typically a
+        tool left behind after its Agent was deleted — and building it standalone runs its underlying
+        logic with no inputs (e.g. a URL fetch with no URL), raising a ComponentBuildError that fails
+        the whole run. Skipping it keeps the rest of the flow runnable.
+        """
+        orphaned: set[str] = set()
+        for vertex in self.vertices:
+            data = getattr(vertex, "data", None)
+            node = data.get("node") if isinstance(data, dict) else None
+            if isinstance(node, dict) and node.get("tool_mode") and not self.successor_map.get(vertex.id):
+                orphaned.add(vertex.id)
+        return orphaned
+
     def sort_vertices(
         self,
         stop_component_id: str | None = None,
@@ -2414,6 +2477,13 @@ class Graph:
             get_vertex_successors=self.get_vertex_successors_ids,
             is_cyclic=self.is_cyclic,
         )
+
+        orphaned_tools = self._orphaned_tool_vertex_ids()
+        if orphaned_tools:
+            first_layer = [vertex_id for vertex_id in first_layer if vertex_id not in orphaned_tools]
+            remaining_layers = [
+                [vertex_id for vertex_id in layer if vertex_id not in orphaned_tools] for layer in remaining_layers
+            ]
 
         self.increment_run_count()
         self._sorted_vertices_layers = [first_layer, *remaining_layers]
