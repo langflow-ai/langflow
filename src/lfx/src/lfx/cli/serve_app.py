@@ -600,6 +600,29 @@ def create_multi_serve_app(
             logger.warning(warning)
             _startup_console.print(f"[bold yellow]WARNING:[/bold yellow] {warning}")
 
+    # Warm ONLY the flows this server actually hosts, in the background, so a freshly
+    # started worker reports ready on /readyz once its deployed flows are built — WITHOUT
+    # importing any component/dependency that no deployed flow uses. ``warm_from_store()``
+    # builds each stored flow, which imports exactly that flow's components. For a server
+    # started with no flows (the dynamic-upload model) it is a no-op: /readyz is ready
+    # immediately and each later ``POST /flows/upload/`` builds-and-warms exactly that
+    # flow's components on upload. A warm failure never blocks readiness (one bad flow must
+    # not take the worker out of service) — warm_from_store already skips per-flow failures;
+    # we still guard + mark ready so an unexpected error can't wedge the worker.
+    import threading
+
+    app.state.ready = False
+
+    def _warm() -> None:
+        try:
+            registry.warm_from_store()
+        except Exception:  # noqa: BLE001 - warming is best-effort; never block readiness on it
+            logger.exception("lfx serve flow warm-up failed; serving anyway")
+        finally:
+            app.state.ready = True
+
+    threading.Thread(target=_warm, name="lfx-serve-warm", daemon=True).start()
+
     def resolve_identity(request: Request, _api_key: str = Depends(verify_api_key)) -> str | None:
         """Resolve the verified caller identity for an authenticated request.
 
@@ -636,7 +659,17 @@ def create_multi_serve_app(
 
     @app.get("/health", tags=["info"], summary="Global health check")
     async def global_health():
+        # Liveness: flips healthy as soon as the app is up. Use as the k8s livenessProbe.
         return {"status": "healthy", "flow_count": len(registry)}
+
+    @app.get("/readyz", tags=["info"], summary="Readiness check (warm)")
+    async def global_ready():
+        # Readiness: stays 503 until background pre-warm has warmed the run machinery, so a
+        # warm-floor / surge rollout never routes traffic to a not-yet-warm worker. Use as
+        # the k8s readinessProbe (point traffic here, not at /health).
+        if not app.state.ready:
+            raise HTTPException(status_code=503, detail="warming up")
+        return {"status": "ready", "flow_count": len(registry)}
 
     # ------------------------------------------------------------------
     # Upload endpoint — registered BEFORE /{flow_id} to avoid shadowing
