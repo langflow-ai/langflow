@@ -621,6 +621,46 @@ def test_apply_overrides_drops_subsequent_static_groups_for_overridden_provider(
     assert seen.get("text-embedding-custom") == 1
 
 
+def test_apply_overrides_preserves_same_name_custom_entries_by_model_type():
+    """Custom chat and embedding entries with the same name are distinct.
+
+    OpenAI-compatible gateways can expose a user-defined model id behind both
+    chat and embeddings endpoints. If models.dev knows the provider but not
+    the custom id, both static entries must survive the override.
+    """
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    static_openai_llms = [
+        {"provider": "OpenAI", "name": "gpt-4o", "model_type": "llm"},
+        {"provider": "OpenAI", "name": "koni", "model_type": "llm"},
+    ]
+    static_openai_embeddings = [
+        {"provider": "OpenAI", "name": "text-embedding-3-large", "model_type": "embeddings"},
+        {"provider": "OpenAI", "name": "koni", "model_type": "embeddings"},
+    ]
+    snapshot = {
+        "openai": {
+            "id": "openai",
+            "models": {
+                "gpt-4o": {"id": "gpt-4o", "family": "gpt", "tool_call": True},
+                "text-embedding-3-large": {
+                    "id": "text-embedding-3-large",
+                    "family": "text-embedding",
+                },
+            },
+        }
+    }
+
+    fixed_now = datetime(2026, 5, 18, tzinfo=timezone.utc)
+    result = apply_models_dev_overrides([static_openai_llms, static_openai_embeddings], snapshot, now=fixed_now)
+    seen = [(entry["name"], entry.get("model_type", "llm")) for group in result for entry in group]
+
+    assert seen.count(("gpt-4o", "llm")) == 1
+    assert seen.count(("text-embedding-3-large", "embeddings")) == 1
+    assert seen.count(("koni", "llm")) == 1
+    assert seen.count(("koni", "embeddings")) == 1
+
+
 def test_apply_overrides_appends_new_provider_when_no_static_group():
     """Append override groups for covered providers with no static group.
 
