@@ -15,6 +15,7 @@ import orjson
 import pytest
 from a2a.compat.v0_3 import types as a2a_types
 from httpx import AsyncClient
+from langflow.api.v1 import a2a_utils
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.database.models import Folder
 from langflow.services.database.models.flow.model import Flow, FlowType
@@ -92,7 +93,9 @@ async def test_get_agent_card_returns_valid_card(client: AsyncClient, active_use
     assert response.status_code == 200
     body = response.json()
     assert body["url"].endswith(f"/api/v1/a2a/{flow_id}/jsonrpc")
-    assert body["protocolVersion"] == "0.3.0"
+    # protocolVersion is set explicitly from our constant (not the sdk default), so an sdk bump
+    # can't silently change it; it stays 0.3.0 while the server speaks the v0.3 compat protocol.
+    assert body["protocolVersion"] == a2a_utils.A2A_PROTOCOL_VERSION == "0.3.0"
     assert body["preferredTransport"] == "JSONRPC"
 
     # The card (minus the non-model inputSchema key) revalidates against the SDK model.
