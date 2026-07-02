@@ -27,6 +27,13 @@ from langflow.utils.version import get_version_info
 A2A_APIKEY_SCHEME_NAME = "apiKey"  # pragma: allowlist secret
 A2A_APIKEY_HEADER = "x-api-key"  # pragma: allowlist secret
 
+# The A2A protocol version the server actually speaks: the JSON-RPC v0.3 surface served via the
+# a2a-sdk compat layer (JsonRpcDispatcher(enable_v0_3_compat=True) in a2a.py). Set explicitly on
+# the card instead of relying on the sdk's default, so an sdk bump can't silently change what we
+# advertise. The latest spec is on the 1.x line, but we serve 0.3 today, so 0.3 is the truthful
+# value; bump this when the server actually moves onto the 1.x protocol.
+A2A_PROTOCOL_VERSION = "0.3.0"
+
 # Served when a flow's graph can't be built; the card stays valid, the input
 # contract is just empty rather than 500ing the public discovery endpoint.
 _EMPTY_INPUT_SCHEMA = {"type": "object", "properties": {}, "required": []}
@@ -206,6 +213,7 @@ async def build_agent_card(flow: Flow, *, rpc_url: str, session: AsyncSession) -
         description=description,
         url=rpc_url,
         version=version,
+        protocol_version=A2A_PROTOCOL_VERSION,
         capabilities=capabilities,
         default_input_modes=["application/json"],
         default_output_modes=["application/json"],
