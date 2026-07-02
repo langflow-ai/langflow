@@ -825,14 +825,15 @@ async def test_unmatched_decision_re_parks_task(client: AsyncClient, active_user
 
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_user, human_input_flow_data):
-    """A task parked under one flow cannot be resumed through a different flow's endpoint."""
+    """A task parked under one flow can't be resumed or completed through a different flow's endpoint."""
     flow_a = await _create_flow(active_user.id, data=human_input_flow_data)
     flow_b = await _create_flow(active_user.id, data=human_input_flow_data)
 
     paused = (await _jsonrpc(client, flow_a, "message/send", _text_message("start"))).json()["result"]
     task_id, context_id = paused["id"], paused["contextId"]
 
-    # Same task id, but sent to flow B: must not run flow A's graph.
+    # Same task id, sent to flow B: the flow-scoped store means flow B can't address flow A's task,
+    # so it can't complete it (never runs flow A's graph as flow A's owner).
     via_b = (
         await _jsonrpc(
             client,
@@ -840,9 +841,22 @@ async def test_resume_via_other_flow_is_rejected(client: AsyncClient, active_use
             "message/send",
             _text_message("Approve", message_id="m2", context_id=context_id, task_id=task_id),
         )
-    ).json()["result"]
+    ).json()
+    # The flow-scoped store misses flow A's task, so the SDK returns a JSON-RPC error (not found),
+    # not a result. Assert the error envelope, not just "didn't complete" (which any state satisfies).
+    assert "error" in via_b
+    assert "result" not in via_b
 
-    assert via_b["status"]["state"] == "failed"
+    # Flow A's task is untouched and still resumable through flow A.
+    resumed = (
+        await _jsonrpc(
+            client,
+            flow_a,
+            "message/send",
+            _text_message("Approve", message_id="m3", context_id=context_id, task_id=task_id),
+        )
+    ).json()["result"]
+    assert resumed["status"]["state"] == "completed"
 
 
 # --- apikey auth enforcement ----------------------------------------------
@@ -1332,3 +1346,170 @@ async def test_durable_store_roundtrips_on_real_migrated_db():
             return "other"
 
     assert await DurableTaskStore().get(task_id, ServerCallContext(user=_Other())) is None
+
+
+# --- tasks/cancel ----------------------------------------------------------
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_cancel_input_required_task(client: AsyncClient, active_user, human_input_flow_data):
+    """tasks/cancel transitions a parked input-required task to canceled, durably."""
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id = paused["id"]
+
+    canceled = (await _jsonrpc(client, flow_id, "tasks/cancel", {"id": task_id})).json()["result"]
+    assert canceled["status"]["state"] == "canceled"
+
+    # Durably persisted: tasks/get reads canceled back from the store.
+    got = (await _jsonrpc(client, flow_id, "tasks/get", {"id": task_id})).json()["result"]
+    assert got["status"]["state"] == "canceled"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_cancel_wont_flip_a_completed_task(client: AsyncClient, active_user, echo_flow_data):
+    """A run that already finished must not be rewritten to canceled by a racing tasks/cancel."""
+    from a2a.server.agent_execution.active_task import ActiveTask
+    from a2a.server.tasks.task_manager import TaskManager
+    from langflow.api.v1.a2a import _HANDLER
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    done = (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).json()["result"]
+    assert done["status"]["state"] == "completed"
+    task_id, context_id = done["id"], done["contextId"]
+
+    # Reproduce the race window: the finished task is still resident in the ActiveTaskRegistry
+    # (the async cleanup hasn't run, or a stream subscriber pins it), so tasks/cancel hits the
+    # registry-HIT path where ActiveTask.cancel returns the terminal task unchanged instead of the
+    # already-correct registry-miss path that raises. Seed a finished ActiveTask exactly as
+    # get_or_create builds one; it reads the completed task back through the request's context.
+    registry = _HANDLER._active_task_registry
+    task_manager = TaskManager(
+        task_store=registry._task_store, context=None, task_id=task_id, context_id=context_id, initial_message=None
+    )
+    active_task = ActiveTask(
+        agent_executor=registry._agent_executor,
+        task_id=task_id,
+        task_manager=task_manager,
+        push_sender=registry._push_sender,
+        on_cleanup=registry._on_active_task_cleanup,
+    )
+    active_task._is_finished.set()
+    active_task._task_created.set()
+    registry._active_tasks[task_id] = active_task
+    try:
+        # Not cancelable: expect a JSON-RPC error (TaskNotCancelableError), not a canceled result.
+        resp = (await _jsonrpc(client, flow_id, "tasks/cancel", {"id": task_id})).json()
+        assert "error" in resp
+        assert "result" not in resp
+
+        # The durable terminal state is untouched.
+        got = (await _jsonrpc(client, flow_id, "tasks/get", {"id": task_id})).json()["result"]
+        assert got["status"]["state"] == "completed"
+    finally:
+        registry._active_tasks.pop(task_id, None)
+
+
+@pytest.mark.usefixtures("client")
+async def test_durable_store_wont_clobber_terminal_cancel():
+    """A run completing on the same worker after a cancel must not overwrite terminal CANCELED."""
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import DurableTaskStore
+
+    store = DurableTaskStore()
+    ctx = ServerCallContext()
+    tid = uuid.uuid4().hex
+
+    await store.save(pb.Task(id=tid, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_CANCELED)), ctx)
+    # A late completion is ignored once the task is terminally canceled.
+    await store.save(
+        pb.Task(id=tid, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED)), ctx
+    )
+
+    got = await store.get(tid, ctx)
+    assert got.status.state == pb.TaskState.TASK_STATE_CANCELED
+
+
+async def test_task_scope_key_is_postgres_safe():
+    """The flow-scoped store key must fold in the flow but carry no NUL byte (Postgres rejects NUL)."""
+    from a2a.server.context import ServerCallContext
+    from langflow.api.v1.a2a import _task_scope
+
+    flow_id = uuid.uuid4().hex
+    key = _task_scope(ServerCallContext(state={"flow_id": flow_id}))
+    assert "\x00" not in key
+    assert flow_id in key
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_cancel_is_scoped_to_the_path_flow(client: AsyncClient, active_user, human_input_flow_data):
+    """A task can't be cancelled through a different flow's endpoint: the store is flow-scoped."""
+    flow_a = await _create_flow(active_user.id, data=human_input_flow_data)
+    flow_b = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    paused = (await _jsonrpc(client, flow_a, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id = paused["id"]
+
+    # Same task id, sent to flow B: the flow-scoped gate makes it "not found", so flow B gets a
+    # JSON-RPC error with no result. Assert that (not just "not canceled"), or a full disclosure of
+    # flow A's task through flow B's endpoint would still pass the check.
+    via_b = (await _jsonrpc(client, flow_b, "tasks/cancel", {"id": task_id})).json()
+    assert "error" in via_b
+    assert "result" not in via_b
+
+    # Flow A's task is untouched by the cross-flow attempt.
+    got = (await _jsonrpc(client, flow_a, "tasks/get", {"id": task_id})).json()["result"]
+    assert got["status"]["state"] == "input-required"
+
+
+async def test_execute_emits_canceled_when_run_is_cancelled():
+    """A cancelled live run emits a terminal CANCELED on its own queue, so the consumer can't hang."""
+    import asyncio
+    import contextlib
+    from uuid import uuid4
+
+    from a2a.server.agent_execution import RequestContext
+    from a2a.server.context import ServerCallContext
+    from a2a.server.events import EventQueue
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a_executor import FlowAgentExecutor
+
+    started = asyncio.Event()
+
+    async def blocking_run(*_args):
+        started.set()
+        await asyncio.Event().wait()  # runs until cancelled
+
+    async def _no_resume(*_args):
+        pytest.fail("resume must not be called")
+
+    executor = FlowAgentExecutor(blocking_run, _no_resume)
+    queue = EventQueue()
+    ctx = RequestContext(
+        call_context=ServerCallContext(state={"flow_id": str(uuid4())}),
+        task_id=uuid4().hex,
+        context_id="c",
+    )
+    run = asyncio.create_task(executor.execute(ctx, queue))
+    await asyncio.wait_for(started.wait(), timeout=5)
+    run.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await run
+    # The cancellation must propagate (the comment says never swallow it), so the task ends cancelled
+    # rather than returning normally. Without this, swallowing the CancelledError would still pass.
+    assert run.cancelled()
+
+    states = []
+    while True:
+        try:
+            event = await asyncio.wait_for(queue.dequeue_event(), timeout=0.5)
+        except TimeoutError:
+            break
+        state = getattr(getattr(event, "status", None), "state", None)
+        if state is not None:
+            states.append(state)
+    assert pb.TaskState.TASK_STATE_CANCELED in states

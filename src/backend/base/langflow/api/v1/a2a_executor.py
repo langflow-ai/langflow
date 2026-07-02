@@ -12,6 +12,8 @@ compat adapter wired up in ``a2a.py``.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 import logging
 from collections.abc import Awaitable, Callable
@@ -101,6 +103,15 @@ class FlowAgentExecutor(AgentExecutor):
                 response = await self._resume_flow(UUID(flow_id), context.task_id, text)
             else:
                 response = await self._run_flow(UUID(flow_id), context.task_id, text, context.context_id)
+        except asyncio.CancelledError:
+            # tasks/cancel preempted this live run (the SDK cancels the producer task). Emit a
+            # terminal CANCELED on this producer's OWN queue before it closes, so the original
+            # message/send / message/stream consumer gets a terminal event instead of hanging on the
+            # last 'working' state, then propagate the cancellation (never swallow it, or the task
+            # won't wind down). The durable store is set to CANCELED by the request handler.
+            with contextlib.suppress(Exception):
+                await updater.cancel()
+            raise
         except Exception:
             # Unexpected build/timeout/system failures become a failed Task, not a 500.
             # The endpoint is unauthenticated, so don't hand the caller raw exception
@@ -129,5 +140,10 @@ class FlowAgentExecutor(AgentExecutor):
         await updater.complete()
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
-        # ponytail: synchronous message/send runs aren't cancelable; tasks/cancel is out of scope.
-        raise NotImplementedError
+        # The durable terminal CANCELED is written by the request handler (see a2a.py); here we only
+        # emit the terminal cancel event so a live message/stream subscriber sees it. Must not raise:
+        # the SDK marks the task FAILED if agent cancel raises, so suppress a failed emit (e.g. an
+        # already-closed queue). Only invoked for a live producer; a parked (finished) task's cancel
+        # is handled entirely in the handler.
+        with contextlib.suppress(Exception):
+            await TaskUpdater(event_queue, context.task_id, context.context_id).cancel()
