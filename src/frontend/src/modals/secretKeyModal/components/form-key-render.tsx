@@ -52,11 +52,9 @@ export const FormKeyRender = ({
     <div className="flex flex-col gap-4">
       <Form.Field name="apikey">
         {modalProps?.inputLabel && (
-          <Form.Label asChild className="mb-2">
-            <Label className="relative bottom-1">
-              {modalProps?.inputLabel as React.ReactNode}
-            </Label>
-          </Form.Label>
+          <Label htmlFor="primary-input" className="relative bottom-1 mb-2">
+            {modalProps?.inputLabel as React.ReactNode}
+          </Label>
         )}
 
         <div className="flex items-center justify-between gap-2">
@@ -75,14 +73,12 @@ export const FormKeyRender = ({
       </Form.Field>
 
       <Form.Field name="expires_at">
-        <Form.Label asChild className="mb-2">
-          <Label className="relative bottom-1">
-            {t("apiKey.expirationDate", "Expiration date")}{" "}
-            <span className="text-muted-foreground">
-              ({t("common.optional", "optional")})
-            </span>
-          </Label>
-        </Form.Label>
+        <Label htmlFor="expires-at-input" className="relative bottom-1 mb-2">
+          {t("apiKey.expirationDate", "Expiration date")}{" "}
+          <span className="text-muted-foreground">
+            ({t("common.optional", "optional")})
+          </span>
+        </Label>
         <Form.Control asChild>
           <Input
             type="date"

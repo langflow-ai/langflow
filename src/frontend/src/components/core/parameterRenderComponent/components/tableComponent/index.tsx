@@ -37,6 +37,7 @@ export interface TableComponentProps extends AgGridReactProps {
   addRow?: () => void;
   tableOptions?: TableOptionsTypeAPI;
   paginationInfo?: string;
+  tableLabel?: string;
 }
 
 const TableComponent = forwardRef<
@@ -44,13 +45,20 @@ const TableComponent = forwardRef<
   TableComponentProps
 >(
   (
-    { alertTitle, alertDescription, displayEmptyAlert = true, ...props },
+    {
+      alertTitle,
+      alertDescription,
+      displayEmptyAlert = true,
+      tableLabel,
+      ...props
+    },
     ref,
   ) => {
     const { t } = useTranslation();
     const resolvedAlertTitle = alertTitle ?? t("table.noDataTitle");
     const resolvedAlertDescription =
       alertDescription ?? t("table.noDataMessage");
+    const resolvedTableLabel = tableLabel ?? t("table.dataTable", "Data table");
     const isSingleToggleRowEditable = (
       colField: string,
       // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -264,6 +272,7 @@ const TableComponent = forwardRef<
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
       useRef<AgGridReact | null>(null);
+    const tableContainerRef = useRef<HTMLDivElement | null>(null);
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
@@ -273,9 +282,22 @@ const TableComponent = forwardRef<
       .map((e) => e.headerName)
       .join("_");
 
+    const setGridAriaLabel = () => {
+      const applyLabel = () => {
+        tableContainerRef.current
+          ?.querySelector('[role="treegrid"]')
+          ?.setAttribute("aria-label", resolvedTableLabel);
+      };
+
+      requestAnimationFrame(applyLabel);
+      setTimeout(applyLabel, 0);
+      setTimeout(applyLabel, 100);
+    };
+
     const onGridReady = (params) => {
       // @ts-ignore
       realRef.current = params;
+      setGridAriaLabel();
       const updatedColumnDefs = [...colDef];
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       const customInit = localStorage.getItem(storeReference);
@@ -382,6 +404,7 @@ const TableComponent = forwardRef<
 
     return (
       <div
+        ref={tableContainerRef}
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
           "ag-theme-shadcn flex h-full flex-col",
@@ -422,6 +445,10 @@ const TableComponent = forwardRef<
             }
           }}
           onGridReady={onGridReady}
+          onFirstDataRendered={(event) => {
+            setGridAriaLabel();
+            props.onFirstDataRendered?.(event);
+          }}
           onColumnMoved={onColumnMoved}
           onCellEditingStarted={onCellEditingStarted}
           onCellValueChanged={

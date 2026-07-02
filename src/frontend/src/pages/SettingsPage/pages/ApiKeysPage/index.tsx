@@ -87,6 +87,7 @@ export default function ApiKeysPage() {
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
           key={"apiKeys"}
+          tableLabel={t("settings.apiKeysTitle")}
           onDelete={handleDeleteApi}
           overlayNoRowsTemplate={t("settings.noDataAvailable")}
           onSelectionChanged={(event: SelectionChangedEvent) => {

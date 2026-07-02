@@ -149,7 +149,7 @@ const DialogContent = React.forwardRef<
                   closeButtonClassName,
                 )}
               >
-                <Cross2Icon className="h-[18px] w-[18px]" />
+                <Cross2Icon className="h-[18px] w-[18px]" aria-hidden="true" />
                 <span className="sr-only">Close</span>
               </DialogPrimitive.Close>
             </ShadTooltip>
