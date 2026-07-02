@@ -274,7 +274,7 @@ class StoreService(Service):
             "page": page,
             "limit": limit,
             "fields": ",".join(fields) if fields is not None else ",".join(self.default_fields),
-            "meta": "filter_count",  # !This is DEPRECATED so we should remove it ASAP
+            "meta": "filter_count",  # Kept for Directus compatibility.
         }
         # ?aggregate[count]=likes
 

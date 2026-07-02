@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -11,6 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePermissions } from "@/contexts/permissionsContext";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
@@ -77,6 +78,10 @@ const ListComponent = ({
       });
   };
 
+  const { can } = usePermissions();
+  // Moving a flow into another folder mutates its folder_id → gate on write.
+  const canMove = can(flowData.id, "write");
+
   const { onDragStart } = useDragStart(flowData);
 
   const descriptionModal = useDescriptionModal(
@@ -111,7 +116,26 @@ const ListComponent = ({
     <>
       <Card
         key={flowData.id}
-        draggable
+        draggable={canMove}
+        // role/tabIndex instead of a native button: the card nests other
+        // interactive elements (checkbox, dropdown), which a <button>
+        // wrapper would make invalid markup. Component cards aren't
+        // activatable (click only selects with shift held), so they get no
+        // button semantics — exposing a no-op button would mislead AT users.
+        {...(!isComponent && {
+          role: "button",
+          tabIndex: 0,
+          "aria-label": t("flow.openFlow", { name: flowData.name }),
+          onKeyDown: (e: KeyboardEvent) => {
+            if (
+              (e.key === "Enter" || e.key === " ") &&
+              e.target === e.currentTarget
+            ) {
+              e.preventDefault();
+              handleClick();
+            }
+          },
+        })}
         onDragStart={onDragStart}
         onClick={handleClick}
         className={`flex flex-row bg-background ${
@@ -140,6 +164,7 @@ const ListComponent = ({
                   !selected && "opacity-0 group-hover/checkbox:opacity-100",
                 )}
                 data-testid={`checkbox-${flowData.id}`}
+                aria-label={t("flows.selectFlow", { name: flowData.name })}
               />
             </div>
             <div
@@ -191,6 +216,7 @@ const ListComponent = ({
                 size="iconMd"
                 data-testid="home-dropdown-menu"
                 className="group"
+                aria-label={t("flows.moreOptions", { name: flowData.name })}
               >
                 <ForwardedIconComponent
                   name="Ellipsis"

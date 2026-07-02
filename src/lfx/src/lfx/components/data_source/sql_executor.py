@@ -12,6 +12,8 @@ from lfx.services.cache.utils import CacheMiss
 if TYPE_CHECKING:
     from sqlalchemy.engine import Result
 
+SQL_DATABASE_ENGINE_ARGS = {"pool_pre_ping": True}
+
 
 class SQLComponent(ComponentWithCache):
     """A sql component."""
@@ -36,7 +38,7 @@ class SQLComponent(ComponentWithCache):
                     return
                 self.log("Connecting to database")
             try:
-                self.db = SQLDatabase.from_uri(self.database_url)
+                self.db = SQLDatabase.from_uri(self.database_url, engine_args=SQL_DATABASE_ENGINE_ARGS)
             except Exception as e:
                 msg = f"An error occurred while connecting to the database: {e}"
                 raise ValueError(msg) from e

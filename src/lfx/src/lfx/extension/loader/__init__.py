@@ -52,6 +52,10 @@ discovery layer.  Splitting the loader into small files now keeps each
 follow-on touching one banner-section at a time.
 """
 
+from lfx.extension.loader._bundles_root import (
+    LFX_BUNDLES_ENTRY_POINT_GROUP,
+    load_lfx_bundles_extensions,
+)
 from lfx.extension.loader._discovery import DEFAULT_MODULE_NAMESPACE
 from lfx.extension.loader._orchestrator import (
     discover_inline_bundles,
@@ -78,6 +82,7 @@ from lfx.extension.loader._types import (
 
 __all__ = [
     "DEFAULT_MODULE_NAMESPACE",
+    "LFX_BUNDLES_ENTRY_POINT_GROUP",
     "SLOT_EXTRA",
     "SLOT_OFFICIAL",
     "SLOT_VALUES",
@@ -90,6 +95,7 @@ __all__ = [
     "load_extension",
     "load_inline_bundle",
     "load_installed_extensions",
+    "load_lfx_bundles_extensions",
     "load_seed_extensions",
     "manifest_owning_distributions",
 ]

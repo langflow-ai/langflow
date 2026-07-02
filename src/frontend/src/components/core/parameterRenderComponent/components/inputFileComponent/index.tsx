@@ -316,6 +316,7 @@ export default function InputFileComponent({
                   readOnly
                   disabled={isDisabled}
                   onClick={handleButtonClick}
+                  aria-label={t("fileManager.selectFile")}
                 />
               </div>
               <div>
@@ -332,6 +333,7 @@ export default function InputFileComponent({
                   disabled={isDisabled}
                   size="icon"
                   data-testid="button_upload_file"
+                  aria-label={value ? t("files.remove") : t("files.uploadFile")}
                 >
                   <IconComponent
                     name={value ? "CircleCheckBig" : "Upload"}

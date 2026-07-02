@@ -369,39 +369,52 @@ Sidebar.displayName = "Sidebar";
 const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
->(({ className, onClick, ...props }, ref) => {
-  const { t } = useTranslation();
-  const { toggleSidebar } = useSidebar();
-
-  const handleClick = React.useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
-      onClick?.(event);
-      toggleSidebar();
+>(
+  (
+    {
+      className,
+      onClick,
+      children,
+      "aria-label": ariaLabel,
+      "aria-labelledby": ariaLabelledBy,
+      title,
+      ...props
     },
-    [onClick, toggleSidebar],
-  );
+    ref,
+  ) => {
+    const { t } = useTranslation();
+    const { toggleSidebar } = useSidebar();
+    const hasAccessibleName = Boolean(ariaLabel || ariaLabelledBy || title);
 
-  return (
-    <Button
-      ref={ref}
-      data-sidebar="trigger"
-      variant="ghost"
-      size="icon"
-      className={cn("h-7 w-7 text-muted-foreground", className)}
-      onClick={handleClick}
-      {...props}
-    >
-      {props.children ? (
-        props.children
-      ) : (
-        <>
-          <PanelLeft />
+    const handleClick = React.useCallback(
+      (event: React.MouseEvent<HTMLButtonElement>) => {
+        onClick?.(event);
+        toggleSidebar();
+      },
+      [onClick, toggleSidebar],
+    );
+
+    return (
+      <Button
+        ref={ref}
+        data-sidebar="trigger"
+        variant="ghost"
+        size="icon"
+        className={cn("h-7 w-7 text-muted-foreground", className)}
+        onClick={handleClick}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        title={title}
+        {...props}
+      >
+        {children ? children : <PanelLeft aria-hidden="true" />}
+        {!hasAccessibleName && (
           <span className="sr-only">{t("ui.toggleSidebar")}</span>
-        </>
-      )}
-    </Button>
-  );
-});
+        )}
+      </Button>
+    );
+  },
+);
 SidebarTrigger.displayName = "SidebarTrigger";
 
 const SidebarRail = React.forwardRef<

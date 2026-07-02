@@ -1,0 +1,984 @@
+"""Unit tests for the AG-UI translator.
+
+The translator consumes Langflow ``EventManager`` events and emits AG-UI
+protocol events. These tests feed real ``EventManager`` event payloads and
+assert on the emitted AG-UI event objects. No mocks: the translator is a pure,
+stateful transformation with no I/O.
+"""
+
+from __future__ import annotations
+
+from ag_ui.core import (
+    CustomEvent,
+    RunErrorEvent,
+    RunFinishedEvent,
+    RunStartedEvent,
+    StateDeltaEvent,
+    StateSnapshotEvent,
+    StepFinishedEvent,
+    StepStartedEvent,
+    TextMessageContentEvent,
+    TextMessageEndEvent,
+    TextMessageStartEvent,
+    ToolCallArgsEvent,
+    ToolCallEndEvent,
+    ToolCallResultEvent,
+    ToolCallStartEvent,
+)
+from lfx.workflow.agui_translator import AGUITranslator
+
+
+def test_run_lifecycle_emits_started_and_finished():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+
+    started = t.start()
+    ended = t.translate("end", {})
+
+    assert isinstance(started[0], RunStartedEvent)
+    assert started[0].run_id == "r1"
+    assert started[0].thread_id == "t1"
+    assert isinstance(ended[0], RunFinishedEvent)
+    assert ended[0].run_id == "r1"
+    assert ended[0].thread_id == "t1"
+
+
+def test_error_emits_run_error():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("error", {"error": "boom"})
+
+    assert isinstance(out[0], RunErrorEvent)
+    assert "boom" in out[0].message
+
+
+def test_error_reads_text_from_error_message_payload():
+    """``error`` can carry a full ErrorMessage dump whose reason is in ``text``."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("error", {"text": "component blew up", "category": "error"})
+
+    assert isinstance(out[0], RunErrorEvent)
+    assert "component blew up" in out[0].message
+
+
+def test_token_sequence_emits_start_contents_then_end_on_boundary():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    first = t.translate("token", {"chunk": "Hel", "id": "m1"})
+    second = t.translate("token", {"chunk": "lo", "id": "m1"})
+    ended = t.translate("end", {})
+
+    # First token opens the message and carries its delta.
+    assert isinstance(first[0], TextMessageStartEvent)
+    assert first[0].message_id == "m1"
+    assert isinstance(first[1], TextMessageContentEvent)
+    assert first[1].message_id == "m1"
+    assert first[1].delta == "Hel"
+
+    # Subsequent tokens are content only, same message id.
+    assert len(second) == 1
+    assert isinstance(second[0], TextMessageContentEvent)
+    assert second[0].message_id == "m1"
+    assert second[0].delta == "lo"
+
+    # The end boundary closes the open message before finishing the run.
+    assert isinstance(ended[0], TextMessageEndEvent)
+    assert ended[0].message_id == "m1"
+    assert isinstance(ended[1], RunFinishedEvent)
+
+
+def test_token_for_second_message_is_buffered_until_first_closes():
+    """A token for a different message id must not close the streaming one.
+
+    Parallel components stream tokens for different message ids interleaved.
+    Closing the open message on the first foreign token burned its id, so all
+    its later tokens were dropped. Instead the foreign message buffers until
+    the open one genuinely ends (its ``add_message`` finalizer), then flushes.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "a", "id": "m1"})
+    buffered = t.translate("token", {"chunk": "b", "id": "m2"})
+
+    # m2 buffers silently; m1 stays open.
+    assert buffered == []
+
+    # m1 keeps streaming: its tokens still flow.
+    more = t.translate("token", {"chunk": "a2", "id": "m1"})
+    assert len(more) == 1
+    assert isinstance(more[0], TextMessageContentEvent)
+    assert more[0].message_id == "m1"
+
+    # m1's finalizer closes it and promotes m2 with its buffered content.
+    out = t.translate("add_message", {"id": "m1", "text": "aa2"})
+    assert isinstance(out[0], TextMessageEndEvent)
+    assert out[0].message_id == "m1"
+    assert isinstance(out[1], TextMessageStartEvent)
+    assert out[1].message_id == "m2"
+    assert isinstance(out[2], TextMessageContentEvent)
+    assert out[2].message_id == "m2"
+    assert out[2].delta == "b"
+
+
+def test_error_boundary_closes_open_text_message():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "partial", "id": "m1"})
+    out = t.translate("error", {"error": "boom"})
+
+    assert isinstance(out[0], TextMessageEndEvent)
+    assert out[0].message_id == "m1"
+    assert isinstance(out[1], RunErrorEvent)
+
+
+def test_interleaved_non_terminal_event_does_not_split_open_message():
+    """A non-terminal event between tokens must not close the streamed message.
+
+    Langflow's agent streams one message id for its whole response while other
+    events (build_start, add_message for other messages, log) interleave. Closing
+    the message on those would split it into two START/END pairs reusing an
+    already-ended id, which is malformed AG-UI.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "Hel", "id": "m1"})
+    interleaved = t.translate("build_start", {"id": "node-x"})
+    more = t.translate("token", {"chunk": "lo", "id": "m1"})
+
+    # The interleaved non-terminal event must not close the open message.
+    assert all(not isinstance(e, TextMessageEndEvent) for e in interleaved)
+    # The continuing token must not re-open an already-open message.
+    assert all(not isinstance(e, TextMessageStartEvent) for e in more)
+    assert isinstance(more[0], TextMessageContentEvent)
+    assert more[0].message_id == "m1"
+    assert more[0].delta == "lo"
+
+
+def test_token_for_already_ended_message_id_is_dropped():
+    """A ``token`` arriving after ``add_message`` ended that id must not re-open it.
+
+    Some Langflow agents fire ``add_message`` with the final text first, which
+    emits START/CONTENT/END for the id and records it in
+    ``_emitted_text_message_ids``. Late tokens for the same id used to emit a
+    fresh ``TextMessageStartEvent`` for an already-ended message id, which is
+    malformed AG-UI. The translator must drop those tokens silently.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    # add_message emits START/CONTENT/END for m1 and records m1 as emitted.
+    add_message_events = t.translate("add_message", {"id": "m1", "text": "hello", "sender": "AI"})
+    assert any(isinstance(e, TextMessageEndEvent) for e in add_message_events)
+
+    # A late token for the same id must not re-open the ended message.
+    late = t.translate("token", {"chunk": "x", "id": "m1"})
+
+    assert all(not isinstance(e, TextMessageStartEvent) for e in late), (
+        f"Late token re-opened an already-ended message id; emitted: {late}"
+    )
+
+
+def test_parallel_interleaved_tokens_preserve_all_content():
+    """Two components streaming in parallel must not lose either stream.
+
+    Reproduces the reported parallel-components drop: with a single-slot
+    tracker, START(m2), CONTENT(m2), START(m3) burned m2, so CONTENT(m2)
+    was dropped and m2's remaining text never reached the client. With
+    buffering, m2 holds the wire until it genuinely ends; m3's tokens
+    buffer and flush afterwards. Nothing is dropped, and the wire carries
+    at most one open text message at a time.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    sequence = [
+        ("token", {"chunk": "Result ", "id": "m2"}),
+        ("token", {"chunk": "Side ", "id": "m3"}),
+        ("token", {"chunk": "for X", "id": "m2"}),
+        ("token", {"chunk": "for Y", "id": "m3"}),
+        ("add_message", {"id": "m2", "text": "Result for X"}),
+        ("add_message", {"id": "m3", "text": "Side for Y"}),
+        ("end", {}),
+    ]
+
+    out = _run_sequence(t, sequence)
+
+    _assert_well_formed(out)
+    text_by_message: dict[str, str] = {}
+    for event in out:
+        if isinstance(event, TextMessageContentEvent):
+            text_by_message[event.message_id] = text_by_message.get(event.message_id, "") + event.delta
+    assert text_by_message["m2"] == "Result for X"
+    assert text_by_message["m3"] == "Side for Y"
+
+
+def test_add_message_for_other_message_while_streaming_is_buffered():
+    """A complete message landing mid-stream must not interleave its trio.
+
+    A parallel non-streaming component can finish (add_message with full
+    text) while another component holds the wire with an open streamed
+    message. Emitting START/CONTENT/END for the finished one immediately
+    would open a second text message mid-stream; instead it buffers and
+    flushes when the open message closes.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "streaming...", "id": "m1"})
+    parallel_done = t.translate("add_message", {"id": "m9", "text": "finished early"})
+    assert all(
+        not isinstance(e, (TextMessageStartEvent, TextMessageContentEvent, TextMessageEndEvent)) for e in parallel_done
+    ), f"buffered message leaked text events mid-stream: {parallel_done}"
+
+    out = t.translate("add_message", {"id": "m1", "text": "streaming..."})
+    assert [type(e) for e in out] == [
+        TextMessageEndEvent,
+        TextMessageStartEvent,
+        TextMessageContentEvent,
+        TextMessageEndEvent,
+    ]
+    assert out[0].message_id == "m1"
+    assert out[1].message_id == "m9"
+    assert out[2].delta == "finished early"
+
+
+def test_end_drains_buffered_messages_before_run_finished():
+    """A run ending while messages are still buffered must flush them all."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "open", "id": "m1"})
+    t.translate("token", {"chunk": "waiting", "id": "m2"})
+    out = t.translate("end", {})
+
+    assert isinstance(out[-1], RunFinishedEvent)
+    m2_content = [e for e in out if isinstance(e, TextMessageContentEvent) and e.message_id == "m2"]
+    assert len(m2_content) == 1
+    assert m2_content[0].delta == "waiting"
+    ends = [e.message_id for e in out if isinstance(e, TextMessageEndEvent)]
+    assert ends == ["m1", "m2"]
+
+
+def test_error_drains_buffered_messages_before_run_error():
+    """A run erroring while messages are still buffered must flush them all."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    sequence = [
+        ("token", {"chunk": "open", "id": "m1"}),
+        ("token", {"chunk": "first waiting", "id": "m2"}),
+        ("token", {"chunk": "second waiting", "id": "m3"}),
+        ("error", {"error": "boom"}),
+    ]
+
+    out = _run_sequence(t, sequence)
+
+    _assert_well_formed(out)
+    assert isinstance(out[-1], RunErrorEvent)
+    ends = [e.message_id for e in out if isinstance(e, TextMessageEndEvent)]
+    assert ends == ["m1", "m2", "m3"]
+    deltas = {e.message_id: e.delta for e in out if isinstance(e, TextMessageContentEvent)}
+    assert deltas["m2"] == "first waiting"
+    assert deltas["m3"] == "second waiting"
+
+
+def test_partial_add_message_before_token_does_not_burn_streamed_text_id():
+    """A partial snapshot before token streaming must not complete the id."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    partial = t.translate("add_message", {"id": "m1", "text": "Hel", "properties": {"state": "partial"}})
+    first = t.translate("token", {"id": "m1", "chunk": "Hel"})
+    second = t.translate("token", {"id": "m1", "chunk": "lo"})
+    finalizer = t.translate("add_message", {"id": "m1", "text": "Hello", "properties": {"state": "complete"}})
+
+    text_lifecycle_types = (TextMessageStartEvent, TextMessageContentEvent, TextMessageEndEvent)
+    assert all(not isinstance(e, text_lifecycle_types) for e in partial)
+    assert [type(e) for e in first] == [TextMessageStartEvent, TextMessageContentEvent]
+    assert first[1].delta == "Hel"
+    assert len(second) == 1
+    assert isinstance(second[0], TextMessageContentEvent)
+    assert second[0].delta == "lo"
+    assert [type(e) for e in finalizer] == [TextMessageEndEvent]
+
+
+def test_partial_add_message_does_not_finalize_open_message():
+    """A partial ``add_message`` re-fire must not close the streaming message.
+
+    The agent path re-fires ``add_message`` with ``properties.state ==
+    "partial"`` mid-run (tool start/end updates) for the message it is still
+    streaming. Treating that as the finalizer closed and tombstoned the id,
+    so the post-tool answer tokens were dropped.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "pre-tool ", "id": "m1"})
+    partial = t.translate("add_message", {"id": "m1", "text": "pre-tool ", "properties": {"state": "partial"}})
+    assert all(not isinstance(e, TextMessageEndEvent) for e in partial), (
+        f"partial add_message closed the open message: {partial}"
+    )
+
+    post_tool = t.translate("token", {"chunk": "answer", "id": "m1"})
+    assert len(post_tool) == 1
+    assert isinstance(post_tool[0], TextMessageContentEvent)
+    assert post_tool[0].delta == "answer"
+
+    out = t.translate("add_message", {"id": "m1", "text": "pre-tool answer", "properties": {"state": "complete"}})
+    assert any(isinstance(e, TextMessageEndEvent) and e.message_id == "m1" for e in out)
+
+
+def test_partial_add_message_does_not_finalize_buffered_message():
+    """A partial re-fire for a buffered parallel message must not complete it.
+
+    A parallel tool-using agent streams pre-tool text (buffered while another
+    message holds the wire), then re-fires a partial ``add_message`` at the
+    tool boundary. Finalizing the buffer there froze it: the post-tool tokens
+    were ignored and the promoted message lost everything after the tool call.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "wire-holder", "id": "m1"})
+    t.translate("token", {"chunk": "pre-tool ", "id": "m2"})
+    t.translate("add_message", {"id": "m2", "text": "pre-tool ", "properties": {"state": "partial"}})
+    t.translate("token", {"chunk": "post-tool", "id": "m2"})
+    t.translate("add_message", {"id": "m1", "text": "wire-holder", "properties": {"state": "complete"}})
+    t.translate("add_message", {"id": "m2", "text": "pre-tool post-tool", "properties": {"state": "complete"}})
+    out = t.translate("end", {})
+
+    events: list = []
+    t2 = AGUITranslator(run_id="r2", thread_id="t2")
+    # Re-run the same sequence through _run_sequence for a full-stream check.
+    events = _run_sequence(
+        t2,
+        [
+            ("token", {"chunk": "wire-holder", "id": "m1"}),
+            ("token", {"chunk": "pre-tool ", "id": "m2"}),
+            ("add_message", {"id": "m2", "text": "pre-tool ", "properties": {"state": "partial"}}),
+            ("token", {"chunk": "post-tool", "id": "m2"}),
+            ("add_message", {"id": "m1", "text": "wire-holder", "properties": {"state": "complete"}}),
+            ("add_message", {"id": "m2", "text": "pre-tool post-tool", "properties": {"state": "complete"}}),
+            ("end", {}),
+        ],
+    )
+    _assert_well_formed(events)
+    m2_text = "".join(e.delta for e in events if isinstance(e, TextMessageContentEvent) and e.message_id == "m2")
+    assert m2_text == "pre-tool post-tool"
+    assert isinstance(out[-1], RunFinishedEvent)
+
+
+def test_remove_message_purges_buffered_message():
+    """A removed message must not flush its buffered text later.
+
+    The agent error path fires ``remove_message`` for its partial message.
+    If that message was buffered (a parallel component held the wire), the
+    buffer must be discarded — flushing it later would deliver text the
+    backend explicitly retracted.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "wire-holder", "id": "m1"})
+    t.translate("token", {"chunk": "doomed text", "id": "m2"})
+    removed = t.translate("remove_message", {"id": "m2"})
+    assert any(isinstance(e, CustomEvent) and e.name == "langflow.message.removed" for e in removed)
+
+    out = t.translate("add_message", {"id": "m1", "text": "wire-holder"})
+    out.extend(t.translate("end", {}))
+
+    m2_events = [
+        e
+        for e in out
+        if isinstance(e, (TextMessageStartEvent, TextMessageContentEvent, TextMessageEndEvent)) and e.message_id == "m2"
+    ]
+    assert m2_events == [], f"removed message's buffered text leaked: {m2_events}"
+
+
+def test_vertices_sorted_emits_state_snapshot_of_all_nodes():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("vertices_sorted", {"ids": ["a"], "to_run": ["a", "b", "c"]})
+
+    assert len(out) == 1
+    assert isinstance(out[0], StateSnapshotEvent)
+    nodes = out[0].snapshot["nodes"]
+    # The snapshot covers the full run set (to_run), not just the first layer.
+    assert set(nodes) == {"a", "b", "c"}
+    for node in nodes.values():
+        assert node["status"] == "pending"
+        assert node["output"] is None
+
+
+def test_vertices_sorted_falls_back_to_ids_when_to_run_absent():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("vertices_sorted", {"ids": ["a", "b"]})
+
+    assert isinstance(out[0], StateSnapshotEvent)
+    assert set(out[0].snapshot["nodes"]) == {"a", "b"}
+
+
+def test_start_establishes_empty_node_state():
+    """start() must seed the state container so later node deltas always apply."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+
+    started = t.start()
+
+    assert isinstance(started[0], RunStartedEvent)
+    snapshots = [e for e in started if isinstance(e, StateSnapshotEvent)]
+    assert snapshots
+    assert snapshots[0].snapshot == {"nodes": {}}
+
+
+def test_build_start_for_node_emits_step_started_and_running_delta():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("build_start", {"id": "node-x"})
+
+    assert isinstance(out[0], StepStartedEvent)
+    assert out[0].step_name == "node-x"
+    assert isinstance(out[1], StateDeltaEvent)
+    op = out[1].delta[0]
+    assert op["op"] == "add"
+    assert op["path"] == "/nodes/node-x"
+    assert op["value"] == {"status": "running", "output": None}
+
+
+def test_graph_level_build_start_with_no_id_is_noop():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    # The graph-level build_start (the /build path) carries no node id;
+    # RUN_STARTED already signals the run beginning.
+    assert t.translate("build_start", {}) == []
+
+
+def test_end_vertex_success_emits_step_finished_and_state_delta():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "node-x", "valid": True, "data": {"outputs": {"out": "hello"}}}},
+    )
+
+    assert isinstance(out[0], StepFinishedEvent)
+    assert out[0].step_name == "node-x"
+    assert isinstance(out[1], StateDeltaEvent)
+    op = out[1].delta[0]
+    assert op["op"] == "add"
+    assert op["path"] == "/nodes/node-x"
+    assert op["value"] == {"status": "success", "output": {"outputs": {"out": "hello"}}}
+
+
+def test_end_vertex_failure_sets_error_status():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("end_vertex", {"build_data": {"id": "node-x", "valid": False, "data": None}})
+
+    op = out[1].delta[0]
+    assert op["value"]["status"] == "error"
+
+
+def test_end_vertex_marks_inactivated_vertices_inactive():
+    """A branch component's not-taken vertices must be marked ``inactive``.
+
+    Without this the canvas leaves them on the ``pending`` status seeded by
+    ``vertices_sorted`` (they are skipped, so no build_start/end_vertex follows),
+    and the frontend never renders the inactive/skipped state for conditional
+    routing (If-Else, Conditional Router).
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "end_vertex",
+        {
+            "build_data": {
+                "id": "branch",
+                "valid": True,
+                "data": None,
+                "inactivated_vertices": ["node-a", "node-b"],
+            }
+        },
+    )
+
+    ops = out[1].delta
+    assert ops[0]["path"] == "/nodes/branch"
+    assert ops[0]["value"]["status"] == "success"
+    inactive = {op["path"]: op["value"]["status"] for op in ops[1:]}
+    assert inactive == {
+        "/nodes/node-a": "inactive",
+        "/nodes/node-b": "inactive",
+    }
+
+
+def test_inactivated_vertex_is_emitted_once_across_end_vertices():
+    """``build.py`` keeps reporting the persisted excluded set on later end_vertex.
+
+    The translator must emit each node's ``inactive`` delta only once so the first
+    run of the feature doesn't put the same redundant op on the wire repeatedly.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    first = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    # The next vertex still carries node-b in the persisted excluded set.
+    second = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "node-a", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+
+    def inactive_paths(out):
+        return [op["path"] for op in out[1].delta if op["value"]["status"] == "inactive"]
+
+    assert inactive_paths(first) == ["/nodes/node-b"]
+    assert inactive_paths(second) == []  # already emitted, not repeated
+
+
+def test_reactivated_vertex_can_emit_inactive_again():
+    """A vertex that runs after being excluded (loop re-activation) may go inactive again."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    excluded = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    assert [op["path"] for op in excluded[1].delta if op["value"]["status"] == "inactive"] == ["/nodes/node-b"]
+
+    # node-b actually runs on a later pass, then gets excluded again.
+    t.translate("build_start", {"id": "node-b"})
+    again = t.translate(
+        "end_vertex",
+        {"build_data": {"id": "router", "valid": True, "data": None, "inactivated_vertices": ["node-b"]}},
+    )
+    assert [op["path"] for op in again[1].delta if op["value"]["status"] == "inactive"] == ["/nodes/node-b"]
+
+
+def test_node_state_deltas_use_add_so_they_apply_without_vertices_sorted():
+    """build_start/end_vertex must not depend on vertices_sorted seeding the node.
+
+    Per-node build events and vertices_sorted come from different Langflow
+    execution paths that do not co-occur. start() establishes ``/nodes`` and node
+    deltas use ``add`` on ``/nodes/{id}`` (create-or-replace), so the JSON Patch
+    applies cleanly whether or not a STATE_SNAPSHOT seeded the node first.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()  # no vertices_sorted in this path
+
+    build = t.translate("build_start", {"id": "node-x"})
+    end = t.translate("end_vertex", {"build_data": {"id": "node-x", "valid": True, "data": "ok"}})
+
+    for events in (build, end):
+        delta = next(e for e in events if isinstance(e, StateDeltaEvent))
+        op = delta.delta[0]
+        assert op["op"] == "add"
+        assert op["path"] == "/nodes/node-x"
+
+
+def test_end_vertex_does_not_close_open_text_message():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "Hel", "id": "m1"})
+    t.translate("end_vertex", {"build_data": {"id": "node-x", "valid": True, "data": {}}})
+    more = t.translate("token", {"chunk": "lo", "id": "m1"})
+
+    assert all(not isinstance(e, TextMessageStartEvent) for e in more)
+    assert isinstance(more[0], TextMessageContentEvent)
+    assert more[0].message_id == "m1"
+
+
+def test_token_without_message_id_is_dropped():
+    """Token events with missing ``id`` cannot drive the AG-UI lifecycle.
+
+    A TextMessageStart/Content/End triple requires a stable id to correlate
+    chunks. Emitting events with ``message_id=""`` produces malformed
+    streams that some AG-UI clients reject; drop the event instead.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    no_id = t.translate("token", {"chunk": "hello"})
+    none_id = t.translate("token", {"chunk": "hello", "id": None})
+    empty_id = t.translate("token", {"chunk": "hello", "id": ""})
+
+    assert no_id == []
+    assert none_id == []
+    assert empty_id == []
+
+
+def test_add_message_without_message_id_skips_text_lifecycle():
+    """``add_message`` without an id must not emit TextMessage* events.
+
+    Tool-call sub-events can still ride a missing id (they namespace by
+    block/content index), but the text lifecycle needs a stable id.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("add_message", {"text": "hello"})
+
+    assert all(not isinstance(e, TextMessageStartEvent) for e in out)
+    assert all(not isinstance(e, TextMessageContentEvent) for e in out)
+    assert all(not isinstance(e, TextMessageEndEvent) for e in out)
+
+
+def test_add_message_plain_text_emits_a_text_message():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("add_message", {"id": "m1", "text": "The weather is sunny."})
+
+    assert isinstance(out[0], TextMessageStartEvent)
+    assert out[0].message_id == "m1"
+    assert isinstance(out[1], TextMessageContentEvent)
+    assert out[1].delta == "The weather is sunny."
+    assert isinstance(out[2], TextMessageEndEvent)
+    assert out[2].message_id == "m1"
+
+
+def test_add_message_finalizing_a_streamed_message_does_not_duplicate_text():
+    """A streamed message's add_message finalizer only closes it, never re-emits text."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "The weather ", "id": "m1"})
+    t.translate("token", {"chunk": "is sunny.", "id": "m1"})
+    out = t.translate("add_message", {"id": "m1", "text": "The weather is sunny."})
+
+    assert all(not isinstance(e, TextMessageStartEvent) for e in out)
+    assert all(not isinstance(e, TextMessageContentEvent) for e in out)
+    assert isinstance(out[0], TextMessageEndEvent)
+    assert out[0].message_id == "m1"
+
+
+def test_add_message_tool_use_emits_tool_call_lifecycle():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "text": "",
+            "content_blocks": [
+                {
+                    "title": "Agent Steps",
+                    "contents": [
+                        {
+                            "type": "tool_use",
+                            "name": "search",
+                            "tool_input": {"query": "weather"},
+                            "output": "sunny",
+                            "error": None,
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+
+    starts = [e for e in out if isinstance(e, ToolCallStartEvent)]
+    args = [e for e in out if isinstance(e, ToolCallArgsEvent)]
+    ends = [e for e in out if isinstance(e, ToolCallEndEvent)]
+    results = [e for e in out if isinstance(e, ToolCallResultEvent)]
+    assert len(starts) == 1
+    assert starts[0].tool_call_name == "search"
+    assert starts[0].parent_message_id == "m1"
+    assert len(args) == 1
+    assert "weather" in args[0].delta
+    assert len(ends) == 1
+    assert len(results) == 1
+    assert "sunny" in results[0].content
+    # The four events share one tool_call_id.
+    assert {starts[0].tool_call_id, args[0].tool_call_id, ends[0].tool_call_id, results[0].tool_call_id} == {
+        starts[0].tool_call_id
+    }
+
+
+def test_tool_use_error_is_reported_via_tool_call_result():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "content_blocks": [
+                {
+                    "title": "Agent Steps",
+                    "contents": [
+                        {
+                            "type": "tool_use",
+                            "name": "search",
+                            "tool_input": {},
+                            "output": None,
+                            "error": "rate limited",
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+
+    results = [e for e in out if isinstance(e, ToolCallResultEvent)]
+    assert len(results) == 1
+    assert "rate limited" in results[0].content
+
+
+def test_repeated_add_message_does_not_re_emit_the_same_tool_call():
+    """A tool call already emitted is not re-emitted when add_message re-fires."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    payload = {
+        "id": "m1",
+        "content_blocks": [
+            {
+                "title": "Agent Steps",
+                "contents": [
+                    {"type": "tool_use", "name": "search", "tool_input": {"q": "x"}, "output": "done", "error": None}
+                ],
+            }
+        ],
+    }
+    first = t.translate("add_message", payload)
+    second = t.translate("add_message", payload)
+
+    assert len([e for e in first if isinstance(e, ToolCallStartEvent)]) == 1
+    assert second == []
+
+
+def test_repeated_add_message_after_streamed_finalizer_does_not_duplicate_text():
+    """A streamed message finalized once must not re-emit text on a later add_message."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "Hello", "id": "m1"})
+    t.translate("add_message", {"id": "m1", "text": "Hello"})  # finalizes the streamed message
+    again = t.translate("add_message", {"id": "m1", "text": "Hello"})  # re-fire
+
+    assert again == []
+
+
+def test_malformed_content_block_is_skipped_not_crashed():
+    """A null or non-dict entry in content_blocks is skipped, not fatal."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("add_message", {"id": "m1", "text": "hi", "content_blocks": [None, "garbage"]})
+
+    assert any(isinstance(e, TextMessageStartEvent) for e in out)
+
+
+def test_custom_content_types_emit_langflow_custom_events():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "content_blocks": [
+                {
+                    "title": "Steps",
+                    "contents": [
+                        {"type": "json", "data": {"k": "v"}},
+                        {"type": "code", "code": "print(1)", "language": "python"},
+                        {"type": "media", "urls": ["http://x/img.png"], "caption": "pic"},
+                        {"type": "error", "reason": "boom", "traceback": "trace"},
+                    ],
+                }
+            ],
+        },
+    )
+
+    customs = {e.name: e for e in out if isinstance(e, CustomEvent)}
+    assert set(customs) == {
+        "langflow.content.json",
+        "langflow.content.code",
+        "langflow.content.media",
+        "langflow.content.error",
+    }
+    assert customs["langflow.content.json"].value["message_id"] == "m1"
+    assert customs["langflow.content.json"].value["block_title"] == "Steps"
+    assert customs["langflow.content.code"].value["content"]["code"] == "print(1)"
+
+
+def test_log_event_emits_langflow_log_custom_event():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("log", {"message": "hi", "type": "text", "name": "Log 1", "component_id": "c1"})
+
+    assert len(out) == 1
+    assert isinstance(out[0], CustomEvent)
+    assert out[0].name == "langflow.log"
+    assert out[0].value["component_id"] == "c1"
+
+
+def test_remove_message_emits_langflow_removed_custom_event():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate("remove_message", {"id": "m9"})
+
+    assert len(out) == 1
+    assert isinstance(out[0], CustomEvent)
+    assert out[0].name == "langflow.message.removed"
+    assert out[0].value["message_id"] == "m9"
+
+
+def test_repeated_custom_content_block_is_not_re_emitted():
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+    payload = {
+        "id": "m1",
+        "content_blocks": [{"title": "Steps", "contents": [{"type": "json", "data": {"k": "v"}}]}],
+    }
+
+    first = t.translate("add_message", payload)
+    second = t.translate("add_message", payload)
+
+    assert len([e for e in first if isinstance(e, CustomEvent)]) == 1
+    assert second == []
+
+
+def test_updated_custom_content_block_is_re_emitted():
+    """If a content block's payload changes on a later add_message, the update is emitted."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate(
+        "add_message",
+        {"id": "m1", "content_blocks": [{"title": "S", "contents": [{"type": "json", "data": {}}]}]},
+    )
+    out = t.translate(
+        "add_message",
+        {"id": "m1", "content_blocks": [{"title": "S", "contents": [{"type": "json", "data": {"k": "v"}}]}]},
+    )
+
+    customs = [e for e in out if isinstance(e, CustomEvent)]
+    assert len(customs) == 1
+    assert customs[0].value["content"]["data"] == {"k": "v"}
+
+
+# --- Full-sequence integration coverage ---------------------------------------
+
+
+def _run_sequence(translator: AGUITranslator, events: list[tuple[str, dict]]) -> list:
+    """Feed start() then a list of (event_type, data) pairs, collecting all output."""
+    out = list(translator.start())
+    for event_type, data in events:
+        out.extend(translator.translate(event_type, data))
+    return out
+
+
+def _assert_well_formed(events: list) -> None:
+    """Assert an emitted AG-UI stream is structurally valid."""
+    assert events, "expected a non-empty event stream"
+    assert isinstance(events[0], RunStartedEvent)
+    assert isinstance(events[-1], (RunFinishedEvent, RunErrorEvent))
+
+    open_message: str | None = None
+    seen_messages: set[str] = set()
+    for event in events:
+        if isinstance(event, TextMessageStartEvent):
+            # AG-UI's reference verifier allows at most one open text message;
+            # interleaved STARTs are rejected by conforming clients.
+            assert open_message is None, f"text message {event.message_id} started while {open_message} is open"
+            assert event.message_id not in seen_messages, "text message id reused after it ended"
+            open_message = event.message_id
+            seen_messages.add(event.message_id)
+        elif isinstance(event, TextMessageContentEvent):
+            assert event.message_id == open_message, "text content for a message that is not open"
+        elif isinstance(event, TextMessageEndEvent):
+            assert event.message_id == open_message, "text message ended without being open"
+            open_message = None
+    assert open_message is None, "text message left unclosed"
+
+    started_tools: set[str] = set()
+    ended_tools: set[str] = set()
+    for event in events:
+        if isinstance(event, ToolCallStartEvent):
+            assert event.tool_call_id not in started_tools, "tool call started twice"
+            started_tools.add(event.tool_call_id)
+        elif isinstance(event, ToolCallArgsEvent):
+            assert event.tool_call_id in started_tools, "tool args before tool start"
+        elif isinstance(event, ToolCallEndEvent):
+            ended_tools.add(event.tool_call_id)
+    assert started_tools == ended_tools, "every tool call needs a matching START and END"
+
+
+_AGENT_STEPS = [
+    {
+        "title": "Agent Steps",
+        "contents": [
+            {"type": "tool_use", "name": "search", "tool_input": {"q": "weather"}, "output": "sunny", "error": None}
+        ],
+    }
+]
+
+
+def test_full_agent_flow_sequence_is_well_formed():
+    """A realistic ChatInput -> Agent -> ChatOutput run yields a well-formed stream."""
+    t = AGUITranslator(run_id="run-1", thread_id="sess-1")
+    sequence = [
+        ("vertices_sorted", {"ids": ["ChatInput-a"], "to_run": ["ChatInput-a", "Agent-b", "ChatOutput-c"]}),
+        ("build_start", {}),
+        ("end_vertex", {"build_data": {"id": "ChatInput-a", "valid": True, "data": {"outputs": {}}}}),
+        # The agent surfaces its tool step on a partial message update.
+        ("add_message", {"id": "m1", "text": "", "properties": {"state": "partial"}, "content_blocks": _AGENT_STEPS}),
+        # The agent streams its final answer token by token.
+        ("token", {"chunk": "It is ", "id": "m1"}),
+        ("token", {"chunk": "sunny.", "id": "m1"}),
+        # The complete message finalizes the streamed answer.
+        (
+            "add_message",
+            {"id": "m1", "text": "It is sunny.", "properties": {"state": "complete"}, "content_blocks": _AGENT_STEPS},
+        ),
+        ("end_vertex", {"build_data": {"id": "Agent-b", "valid": True, "data": {"outputs": {}}}}),
+        ("end_vertex", {"build_data": {"id": "ChatOutput-c", "valid": True, "data": {"outputs": {}}}}),
+        ("end", {"build_duration": 1.23}),
+    ]
+
+    out = _run_sequence(t, sequence)
+
+    _assert_well_formed(out)
+    assert isinstance(out[-1], RunFinishedEvent)
+    # The tool call appears in two add_message events but is emitted exactly once.
+    assert len([e for e in out if isinstance(e, ToolCallStartEvent)]) == 1
+    assert len([e for e in out if isinstance(e, ToolCallResultEvent)]) == 1
+    # The streamed message has exactly one START/END pair.
+    assert len([e for e in out if isinstance(e, TextMessageStartEvent)]) == 1
+    assert len([e for e in out if isinstance(e, TextMessageEndEvent)]) == 1
+    # Every node ran: three STEP_FINISHED events.
+    assert len([e for e in out if isinstance(e, StepFinishedEvent)]) == 3
+
+
+def test_full_sequence_ending_in_error_is_well_formed():
+    """A run that errors mid-stream still closes the open message and ends in RUN_ERROR."""
+    t = AGUITranslator(run_id="run-2", thread_id="sess-2")
+    sequence = [
+        ("vertices_sorted", {"ids": ["ChatInput-a"], "to_run": ["ChatInput-a", "Agent-b"]}),
+        ("token", {"chunk": "partial answer", "id": "m1"}),
+        ("error", {"text": "the agent crashed"}),
+    ]
+
+    out = _run_sequence(t, sequence)
+
+    _assert_well_formed(out)
+    assert isinstance(out[-1], RunErrorEvent)
+    assert "the agent crashed" in out[-1].message

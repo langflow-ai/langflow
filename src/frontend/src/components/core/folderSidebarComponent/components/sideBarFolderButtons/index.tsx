@@ -14,6 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { PermissionsProvider } from "@/contexts/permissionsContext";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   usePatchFolders,
@@ -399,96 +400,107 @@ const SideBarFoldersButtonsComponent = ({
       <SidebarContent>
         <SidebarGroup className="p-4 py-2">
           <SidebarGroupContent>
-            <SidebarMenu>
-              {!loading ? (
-                folders.length === 0 ? (
-                  <div className="px-2 py-5 text-center text-sm text-muted-foreground">
-                    {t("sidebar.emptyMessage")}
-                  </div>
-                ) : (
-                  folders.map((item, index) => {
-                    const editFolderName = editFolders?.filter(
-                      (folder) => folder.name === item.name,
-                    )[0];
-                    return (
-                      <SidebarMenuItem
-                        key={index}
-                        className="group/menu-button"
-                        onMouseEnter={() => setHoveredFolderId(item.id!)}
-                        onMouseLeave={() => setHoveredFolderId(null)}
-                      >
-                        <div className="relative flex w-full">
-                          <SidebarMenuButton
-                            size="md"
-                            onDragOver={(e) => dragOver(e, item.id!)}
-                            onDragEnter={(e) => dragEnter(e, item.id!)}
-                            onDragLeave={dragLeave}
-                            onDrop={(e) => onDrop(e, item.id!)}
-                            key={item.id}
-                            data-testid={`sidebar-nav-${item.name}`}
-                            id={`sidebar-nav-${item.name}`}
-                            isActive={checkPathName(item.id!)}
-                            onClick={() => handleChangeFolder!(item.id!)}
-                            className={cn(
-                              "flex-grow pr-8",
-                              hoveredFolderId === item.id && "bg-accent",
-                              checkHoveringFolder(item.id!),
-                            )}
-                          >
-                            <div
-                              onDoubleClick={(event) => {
-                                handleDoubleClick(event, item);
-                              }}
-                              className="flex w-full items-center justify-between gap-2"
+            <PermissionsProvider
+              resourceType="project"
+              resourceIds={folders
+                .map((folder) => folder.id ?? "")
+                .filter(Boolean)}
+            >
+              <SidebarMenu>
+                {!loading ? (
+                  folders.length === 0 ? (
+                    <div className="px-2 py-5 text-center text-sm text-muted-foreground">
+                      {t("sidebar.emptyMessage")}
+                    </div>
+                  ) : (
+                    folders.map((item, index) => {
+                      const editFolderName = editFolders?.filter(
+                        (folder) => folder.name === item.name,
+                      )[0];
+                      return (
+                        <SidebarMenuItem
+                          key={index}
+                          className="group/menu-button"
+                          onMouseEnter={() => setHoveredFolderId(item.id!)}
+                          onMouseLeave={() => setHoveredFolderId(null)}
+                        >
+                          <div className="relative flex w-full">
+                            <SidebarMenuButton
+                              size="md"
+                              onDragOver={(e) => dragOver(e, item.id!)}
+                              onDragEnter={(e) => dragEnter(e, item.id!)}
+                              onDragLeave={dragLeave}
+                              onDrop={(e) => onDrop(e, item.id!)}
+                              key={item.id}
+                              data-testid={`sidebar-nav-${item.name}`}
+                              id={`sidebar-nav-${item.name}`}
+                              isActive={checkPathName(item.id!)}
+                              onClick={() => handleChangeFolder!(item.id!)}
+                              className={cn(
+                                "flex-grow pr-8",
+                                hoveredFolderId === item.id && "bg-accent",
+                                checkHoveringFolder(item.id!),
+                              )}
                             >
-                              <div className="flex flex-1 items-center gap-2">
-                                {editFolderName?.edit && !isUpdatingFolder ? (
-                                  <InputEditFolderName
-                                    handleEditFolderName={handleEditFolderName}
-                                    item={item}
-                                    refInput={refInput}
-                                    handleKeyDownFn={handleKeyDownFn}
-                                    handleEditNameFolder={handleEditNameFolder}
-                                    editFolderName={editFolderName}
-                                    foldersNames={foldersNames}
-                                    handleKeyDown={handleKeyDown}
-                                  />
-                                ) : (
-                                  <span className="block w-0 grow truncate text-sm opacity-100">
-                                    {item.name}
-                                  </span>
-                                )}
+                              <div
+                                onDoubleClick={(event) => {
+                                  handleDoubleClick(event, item);
+                                }}
+                                className="flex w-full items-center justify-between gap-2"
+                              >
+                                <div className="flex flex-1 items-center gap-2">
+                                  {editFolderName?.edit && !isUpdatingFolder ? (
+                                    <InputEditFolderName
+                                      handleEditFolderName={
+                                        handleEditFolderName
+                                      }
+                                      item={item}
+                                      refInput={refInput}
+                                      handleKeyDownFn={handleKeyDownFn}
+                                      handleEditNameFolder={
+                                        handleEditNameFolder
+                                      }
+                                      editFolderName={editFolderName}
+                                      foldersNames={foldersNames}
+                                      handleKeyDown={handleKeyDown}
+                                    />
+                                  ) : (
+                                    <span className="block w-0 grow truncate text-sm opacity-100">
+                                      {item.name}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
+                            </SidebarMenuButton>
+                            <div
+                              className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <SelectOptions
+                                item={item}
+                                handleDeleteFolder={handleDeleteFolder}
+                                handleDownloadFolder={() =>
+                                  handleDownloadFolder(item.id!, item.name)
+                                }
+                                handleSelectFolderToRename={
+                                  handleSelectFolderToRename
+                                }
+                                checkPathName={checkPathName}
+                              />
                             </div>
-                          </SidebarMenuButton>
-                          <div
-                            className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <SelectOptions
-                              item={item}
-                              handleDeleteFolder={handleDeleteFolder}
-                              handleDownloadFolder={() =>
-                                handleDownloadFolder(item.id!, item.name)
-                              }
-                              handleSelectFolderToRename={
-                                handleSelectFolderToRename
-                              }
-                              checkPathName={checkPathName}
-                            />
                           </div>
-                        </div>
-                      </SidebarMenuItem>
-                    );
-                  })
-                )
-              ) : (
-                <>
-                  <SidebarFolderSkeleton />
-                  <SidebarFolderSkeleton />
-                </>
-              )}
-            </SidebarMenu>
+                        </SidebarMenuItem>
+                      );
+                    })
+                  )
+                ) : (
+                  <>
+                    <SidebarFolderSkeleton />
+                    <SidebarFolderSkeleton />
+                  </>
+                )}
+              </SidebarMenu>
+            </PermissionsProvider>
           </SidebarGroupContent>
         </SidebarGroup>
         <div className="flex-1" />

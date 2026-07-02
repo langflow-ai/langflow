@@ -10,10 +10,10 @@ on:
   workflow_dispatch:
     inputs:
       nightly_tag:
-        description: "Nightly tag to test migration to (e.g., langflowai/langflow-nightly:latest)"
+        description: "Nightly tag to test migration to (e.g., langflowai/langflow:latest)"
         required: false
         type: string
-        default: "langflowai/langflow-nightly:latest"
+        default: "langflowai/langflow:latest"
   # Note: This workflow is called by nightly_build.yml after Docker images are built
 
 env:
@@ -155,10 +155,12 @@ jobs:
 
       - name: Upgrade to nightly version
         working-directory: migration-test
+        env:
+          INPUT_NIGHTLY_TAG: ${{ inputs.nightly_tag }}
         run: |
           source .venv/bin/activate
 
-          NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
+          NIGHTLY_TAG="${INPUT_NIGHTLY_TAG:-langflowai/langflow:latest}"
           echo "Upgrading to nightly version: $NIGHTLY_TAG"
 
           # Remove the stable install first. The nightly now publishes as a `.devN` pre-release of
@@ -169,7 +171,7 @@ jobs:
           echo "Removing stable langflow to force a clean install of the nightly dev version..."
           uv pip uninstall -y langflow langflow-base || true
 
-          # Extract version from Docker tag (format: langflowai/langflow-nightly:v1.10.0.dev20260522)
+          # Extract version from Docker tag (format: langflowai/langflow:v1.10.0.dev20260522)
           if [[ "$NIGHTLY_TAG" == *":"* ]]; then
             VERSION="${NIGHTLY_TAG##*:}"
             echo "Extracted version from tag: $VERSION"
@@ -320,6 +322,15 @@ jobs:
                 - "7860:7860"
               environment:  # pragma: allowlist secret
                 - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow  # pragma: allowlist secret
+                # The published Docker image ships secure-by-default: its Dockerfile bakes
+                # LANGFLOW_AUTO_LOGIN=false and there is no built-in superuser password (#13822).
+                # This migration test authenticates via GET /api/v1/auto_login, which requires
+                # AUTO_LOGIN=true, so pin it here (overriding the image ENV) to keep that token
+                # flow working and ensure boot never lands in the "Username and password must be
+                # set" branch. The explicit superuser credentials are a fallback for that branch.
+                - LANGFLOW_AUTO_LOGIN=true
+                - LANGFLOW_SUPERUSER=langflow  # pragma: allowlist secret
+                - LANGFLOW_SUPERUSER_PASSWORD=langflow  # pragma: allowlist secret
               depends_on:
                 postgres:
                   condition: service_healthy
@@ -412,10 +423,12 @@ jobs:
 
       - name: Update to nightly image
         working-directory: docker-migration-test
+        env:
+          INPUT_NIGHTLY_TAG: ${{ inputs.nightly_tag }}
         run: |
-          NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
+          NIGHTLY_TAG="${INPUT_NIGHTLY_TAG:-langflowai/langflow:latest}"
           # Strip 'v' prefix from version part — Docker images are published without it
-          # e.g. langflowai/langflow-nightly:v1.10.0.dev20260522 → langflowai/langflow-nightly:1.10.0.dev20260522
+          # e.g. langflowai/langflow:v1.10.0.dev20260522 → langflowai/langflow:1.10.0.dev20260522
           VERSION_PART="${NIGHTLY_TAG##*:}"
           IMAGE_NAME="${NIGHTLY_TAG%%:*}"
           DOCKER_TAG="${IMAGE_NAME}:${VERSION_PART#v}"
