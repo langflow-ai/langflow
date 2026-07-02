@@ -757,13 +757,13 @@ class TelemetryWriterService(Service):
             return
         async with self._session_maker() as session:
             if tx_batch:
-                await session.execute(TransactionTable.__table__.insert(), tx_batch)
+                await session.execute(TransactionTable.__table__.insert(), params=tx_batch)
                 for row in tx_batch:
                     flow_id = row.get("flow_id")
                     if flow_id is not None:
                         self._dirty_tx_flows.add(str(flow_id))
             if vb_batch:
-                await session.execute(VertexBuildTable.__table__.insert(), vb_batch)
+                await session.execute(VertexBuildTable.__table__.insert(), params=vb_batch)
                 for row in vb_batch:
                     flow_id = row.get("flow_id")
                     if flow_id is not None:

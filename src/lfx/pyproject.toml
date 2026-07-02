@@ -68,7 +68,8 @@ opendsstar = [
 # Relocated out of langflow-base[complete], where they were the de-facto provider
 # for these lfx-core components after the bundle split.
 cassandra = ["cassio>=0.1.7"]  # Cassandra vector-store / chat-memory components
-toolguard = ["toolguard>=0.2.20,<1.0.0"]  # ToolGuard Policies component
+# Gated off 3.14 because ToolGuard depends on litellm.
+toolguard = ["toolguard>=0.2.20,<1.0.0; python_version < '3.14'"]  # ToolGuard Policies component
 # Engine-only by default: ``pip install lfx`` ships NO bundles.  This optional
 # extra pulls the long-tail metapackage for users who want the provider
 # components without the full ``langflow`` server install:
