@@ -12,7 +12,7 @@ class ExtractDataKeyComponent(Component):
     icon = "key"
     name = "ExtractaKey"
     legacy = True
-    replacement = ["processing.DataOperations"]
+    replacement = ["processing.Operations"]
 
     inputs = [
         DataInput(
