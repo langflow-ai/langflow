@@ -27,6 +27,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from lfx.log.logger import logger
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -34,7 +35,7 @@ from langflow.lothal import prototype as prototype_engine
 from langflow.lothal.d2_compile import D2CompilerUnavailableError, render_d2
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError, call_llm
 from langflow.lothal.od_client import ODConfigError, ODError
-from langflow.lothal.pm_client import PMClient, PMConfigError, PMError
+from langflow.lothal.pm_client import PMClient, PMConfigError, PMConnectionError, PMError, pm_client
 from langflow.lothal.router import available_phases, process_turn
 from langflow.lothal.schemas import (
     ArtifactsResponse,
@@ -60,6 +61,7 @@ from langflow.services.auth.utils import get_current_active_superuser, get_curre
 from langflow.services.database.models.lothal_project.model import (
     Message,
     MessageRole,
+    PMProjectLink,
     Project,
     ProjectPhase,
     PrototypeArtifact,
@@ -1173,24 +1175,72 @@ def _require_plan_active(project: Project) -> None:
         )
 
 
+async def _ensure_pm_project(session: DbSession, project: Project, pm: PMClient) -> str:
+    """Return the project's PM-tree id, creating + persisting the mapping on first use.
+
+    The PM service issues its own project ids and has no lookup-by-external-key, so
+    the Langflow-id → PM-id mapping is persisted in ``lothal_pm_project_link``. This
+    is create-on-first-use and race-safe:
+
+    1. If a link row exists, return its ``pm_project_id``.
+    2. Otherwise create a PM project (named after the LF project id, for
+       debuggability) and try to persist the link inside a savepoint.
+    3. If a concurrent request won the race, the insert hits the primary-key
+       conflict; re-read the winning row and delete the orphan PM project we just
+       created, so exactly one PM tree survives per Langflow project.
+
+    Called by every plan route *after* the owner check, so the mapping is only ever
+    created for a project the caller owns.
+    """
+    existing = await session.get(PMProjectLink, project.id)
+    if existing is not None:
+        return str(existing.pm_project_id)
+
+    created = await pm.create_project(str(project.id))
+    # The pm project id is a UUID column; table models skip pydantic coercion, so
+    # convert the (string) id from the PM response before persisting it.
+    try:
+        pm_id = UUID(str(created["id"]))
+    except (ValueError, KeyError, TypeError) as exc:
+        msg = "The planning service returned an invalid project id."
+        raise PMConnectionError(msg) from exc
+    try:
+        async with session.begin_nested():
+            session.add(PMProjectLink(lf_project_id=project.id, pm_project_id=pm_id))
+            await session.flush()
+    except IntegrityError:
+        # Another request/replica won the create race. Adopt its PM project and
+        # clean up the one we just orphaned (best-effort — a stray empty PM tree
+        # must never fail the user's request).
+        winner = await session.get(PMProjectLink, project.id)
+        if winner is None:  # pragma: no cover — the PK conflict guarantees a row
+            raise
+        try:
+            await pm.delete_project(str(pm_id))
+        except PMError as exc:
+            await logger.awarning(f"failed to delete orphan pm project {pm_id}: {exc}")
+        return str(winner.pm_project_id)
+    return str(pm_id)
+
+
 @router.get(
     "/projects/{project_id}/plan",
     summary="Get the planning tree (nodes + links) for the project",
 )
-async def get_plan(*, project: OwnedProject) -> dict[str, Any]:
+async def get_plan(*, session: DbSession, project: OwnedProject) -> dict[str, Any]:
     """Return a snapshot of the project's PM tree: its `plan_id`, nodes, and links.
 
     Phase-gated to `PLAN` and later (a read before then 403s — the plan does not
     exist yet); ownership is checked first by `OwnedProject`. The PM tree is created
-    on first access (`ensure_plan`), so opening the stage always yields an (initially
+    on first access (`_ensure_pm_project`), so opening the stage always yields an (initially
     empty) tree rather than a 404.
     """
     _require_plan_visible(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            nodes = await pm.list_nodes(plan_id)
-            links = await pm.list_links(plan_id)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        nodes = await pm.list_nodes(plan_id)
+        links = await pm.list_links(plan_id)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
     return {"plan_id": plan_id, "nodes": nodes, "links": links}
@@ -1200,13 +1250,13 @@ async def get_plan(*, project: OwnedProject) -> dict[str, Any]:
     "/projects/{project_id}/plan/nodes",
     summary="Add a node to the planning tree",
 )
-async def create_plan_node(*, project: OwnedProject, body: dict[str, Any]) -> dict[str, Any]:
+async def create_plan_node(*, session: DbSession, project: OwnedProject, body: dict[str, Any]) -> dict[str, Any]:
     """Create a node in the PM tree (PM `NodeCreate` shape). Editable only in `PLAN`."""
     _require_plan_active(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.create_node(plan_id, body)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.create_node(plan_id, body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1215,12 +1265,12 @@ async def create_plan_node(*, project: OwnedProject, body: dict[str, Any]) -> di
     "/projects/{project_id}/plan/nodes/{node_id}",
     summary="Get a planning-tree node with its contract",
 )
-async def get_plan_node(*, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
+async def get_plan_node(*, session: DbSession, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
     _require_plan_visible(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.get_node(plan_id, str(node_id))
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.get_node(plan_id, str(node_id))
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1229,12 +1279,14 @@ async def get_plan_node(*, project: OwnedProject, node_id: UUID) -> dict[str, An
     "/projects/{project_id}/plan/nodes/{node_id}/contract",
     summary="Edit a node's assume-guarantee contract (draft only)",
 )
-async def update_plan_contract(*, project: OwnedProject, node_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+async def update_plan_contract(
+    *, session: DbSession, project: OwnedProject, node_id: UUID, body: dict[str, Any]
+) -> dict[str, Any]:
     _require_plan_active(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.update_contract(plan_id, str(node_id), body)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.update_contract(plan_id, str(node_id), body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1243,12 +1295,12 @@ async def update_plan_contract(*, project: OwnedProject, node_id: UUID, body: di
     "/projects/{project_id}/plan/nodes/{node_id}/ratify",
     summary="Run the roll-up ratify gate for a node",
 )
-async def ratify_plan_node(*, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
+async def ratify_plan_node(*, session: DbSession, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
     _require_plan_active(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.ratify(plan_id, str(node_id))
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.ratify(plan_id, str(node_id))
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1257,12 +1309,12 @@ async def ratify_plan_node(*, project: OwnedProject, node_id: UUID) -> dict[str,
     "/projects/{project_id}/plan/links",
     summary="List the planning tree's dependency links",
 )
-async def list_plan_links(*, project: OwnedProject) -> list[dict[str, Any]]:
+async def list_plan_links(*, session: DbSession, project: OwnedProject) -> list[dict[str, Any]]:
     _require_plan_visible(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.list_links(plan_id)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.list_links(plan_id)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1271,12 +1323,12 @@ async def list_plan_links(*, project: OwnedProject) -> list[dict[str, Any]]:
     "/projects/{project_id}/plan/links",
     summary="Add a dependency link between two nodes",
 )
-async def create_plan_link(*, project: OwnedProject, body: dict[str, Any]) -> dict[str, Any]:
+async def create_plan_link(*, session: DbSession, project: OwnedProject, body: dict[str, Any]) -> dict[str, Any]:
     _require_plan_active(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.create_link(plan_id, body)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.create_link(plan_id, body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1286,13 +1338,13 @@ async def create_plan_link(*, project: OwnedProject, body: dict[str, Any]) -> di
     summary="Get the planning tree's decision/provenance ledger",
 )
 async def plan_activity(
-    *, project: OwnedProject, limit: Annotated[int, Query(ge=1, le=500)] = 200
+    *, session: DbSession, project: OwnedProject, limit: Annotated[int, Query(ge=1, le=500)] = 200
 ) -> list[dict[str, Any]]:
     _require_plan_visible(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.activity(plan_id, limit=limit)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.activity(plan_id, limit=limit)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1301,12 +1353,14 @@ async def plan_activity(
     "/projects/{project_id}/plan/nodes/{node_id}/move",
     summary="Reparent a node (and its subtree) within the planning tree",
 )
-async def move_plan_node(*, project: OwnedProject, node_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+async def move_plan_node(
+    *, session: DbSession, project: OwnedProject, node_id: UUID, body: dict[str, Any]
+) -> dict[str, Any]:
     _require_plan_active(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.move_node(plan_id, str(node_id), body)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.move_node(plan_id, str(node_id), body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1315,12 +1369,14 @@ async def move_plan_node(*, project: OwnedProject, node_id: UUID, body: dict[str
     "/projects/{project_id}/plan/nodes/{node_id}/criteria",
     summary="Edit a node's verification criteria (draft only)",
 )
-async def update_plan_criteria(*, project: OwnedProject, node_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+async def update_plan_criteria(
+    *, session: DbSession, project: OwnedProject, node_id: UUID, body: dict[str, Any]
+) -> dict[str, Any]:
     _require_plan_active(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.update_criteria(plan_id, str(node_id), body)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.update_criteria(plan_id, str(node_id), body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1329,12 +1385,14 @@ async def update_plan_criteria(*, project: OwnedProject, node_id: UUID, body: di
     "/projects/{project_id}/plan/nodes/{node_id}/transition",
     summary="Drive the node state machine (e.g. reopen a verified node to draft)",
 )
-async def transition_plan_node(*, project: OwnedProject, node_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+async def transition_plan_node(
+    *, session: DbSession, project: OwnedProject, node_id: UUID, body: dict[str, Any]
+) -> dict[str, Any]:
     _require_plan_active(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.transition(plan_id, str(node_id), body)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.transition(plan_id, str(node_id), body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1343,12 +1401,12 @@ async def transition_plan_node(*, project: OwnedProject, node_id: UUID, body: di
     "/projects/{project_id}/plan/nodes/{node_id}/events",
     summary="A node's ledger events (its history)",
 )
-async def plan_node_events(*, project: OwnedProject, node_id: UUID) -> list[dict[str, Any]]:
+async def plan_node_events(*, session: DbSession, project: OwnedProject, node_id: UUID) -> list[dict[str, Any]]:
     _require_plan_visible(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.node_events(plan_id, str(node_id))
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.node_events(plan_id, str(node_id))
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1357,12 +1415,12 @@ async def plan_node_events(*, project: OwnedProject, node_id: UUID) -> list[dict
     "/projects/{project_id}/plan/nodes/{node_id}/dependencies",
     summary="A node's upstream/downstream derives-from dependency sets",
 )
-async def plan_node_dependencies(*, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
+async def plan_node_dependencies(*, session: DbSession, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
     _require_plan_visible(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.node_dependencies(plan_id, str(node_id))
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.node_dependencies(plan_id, str(node_id))
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1371,12 +1429,12 @@ async def plan_node_dependencies(*, project: OwnedProject, node_id: UUID) -> dic
     "/projects/{project_id}/plan/nodes/{node_id}/tests",
     summary="A node's tests",
 )
-async def list_plan_tests(*, project: OwnedProject, node_id: UUID) -> list[dict[str, Any]]:
+async def list_plan_tests(*, session: DbSession, project: OwnedProject, node_id: UUID) -> list[dict[str, Any]]:
     _require_plan_visible(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.list_tests(plan_id, str(node_id))
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.list_tests(plan_id, str(node_id))
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1385,12 +1443,14 @@ async def list_plan_tests(*, project: OwnedProject, node_id: UUID) -> list[dict[
     "/projects/{project_id}/plan/nodes/{node_id}/tests",
     summary="Author a test on a node",
 )
-async def create_plan_test(*, project: OwnedProject, node_id: UUID, body: dict[str, Any]) -> dict[str, Any]:
+async def create_plan_test(
+    *, session: DbSession, project: OwnedProject, node_id: UUID, body: dict[str, Any]
+) -> dict[str, Any]:
     _require_plan_active(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.create_test(plan_id, str(node_id), body)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.create_test(plan_id, str(node_id), body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1400,13 +1460,13 @@ async def create_plan_test(*, project: OwnedProject, node_id: UUID, body: dict[s
     summary="Record a test run result (node must be in progress)",
 )
 async def record_plan_test_run(
-    *, project: OwnedProject, node_id: UUID, test_id: UUID, body: dict[str, Any]
+    *, session: DbSession, project: OwnedProject, node_id: UUID, test_id: UUID, body: dict[str, Any]
 ) -> dict[str, Any]:
     _require_plan_active(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            return await pm.record_test_run(plan_id, str(node_id), str(test_id), body)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.record_test_run(plan_id, str(node_id), str(test_id), body)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
 
@@ -1415,12 +1475,12 @@ async def record_plan_test_run(
     "/projects/{project_id}/plan/dag.svg",
     summary="Server-rendered dependency-graph SVG for the planning tree",
 )
-async def plan_dag_svg(*, project: OwnedProject) -> Response:
+async def plan_dag_svg(*, session: DbSession, project: OwnedProject) -> Response:
     _require_plan_visible(project)
     try:
-        async with PMClient.from_env() as pm:
-            plan_id = await pm.ensure_plan(str(project.id))
-            svg = await pm.dag_svg(plan_id)
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        svg = await pm.dag_svg(plan_id)
     except PMError as exc:
         raise _pm_error_to_http(exc) from exc
     return Response(content=svg, media_type="image/svg+xml")

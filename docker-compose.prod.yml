@@ -101,6 +101,12 @@ services:
       # service name (not .env-overridable) like the OD base URL — the PM service
       # is unpublished, reachable only on this network.
       LOTHAL_PM_BASE_URL: http://pm:8000
+      # Bridge service-account credentials — must match the pm service's seeded
+      # LOTHAL_DEV_USER/LOTHAL_DEV_PASS above (both read PM_BRIDGE_*). The backend
+      # logs in with these to obtain the pm JWT; per-user authorization is enforced
+      # in the /plan routes (the owner check), not by the pm service.
+      LOTHAL_PM_USER: ${PM_BRIDGE_USER:-langflow-bridge}
+      LOTHAL_PM_PASSWORD: ${PM_BRIDGE_PASSWORD:?PM_BRIDGE_PASSWORD required}
     volumes:
       - lothal-langflow-data:/app/langflow  # secret_key, profile pics, etc. — must persist
     healthcheck:
@@ -224,6 +230,12 @@ services:
       LOTHAL_DATABASE_URL: postgresql+asyncpg://${PM_DB_USER:-lothal_pm}:${PM_DB_PASSWORD:?PM_DB_PASSWORD required}@db:5432/${PM_DB_NAME:-lothal_pm}
       LOTHAL_SECRET_KEY: ${PM_SECRET_KEY:?PM_SECRET_KEY required}
       LOTHAL_AUTO_CREATE: "${PM_AUTO_CREATE:-true}"
+      # The bridge's service account. The pm app seeds this user on startup and
+      # treats the env as the source of truth (rotate = edit .env + restart pm).
+      # REQUIRED: without these the seeder falls back to admin/admin — a
+      # well-known superuser credential that must never ship.
+      LOTHAL_DEV_USER: ${PM_BRIDGE_USER:-langflow-bridge}
+      LOTHAL_DEV_PASS: ${PM_BRIDGE_PASSWORD:?PM_BRIDGE_PASSWORD required}
       # The backend bridges server-side, so no browser calls this directly → no CORS.
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]

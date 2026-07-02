@@ -183,6 +183,49 @@ To intentionally open the site later (e.g. enable self-serve signup), flip the r
   deploy ends with `docker logout ghcr.io`, so a standing PAT login on the box does **not** survive a
   CI deploy — granting package access to the workflow token is the durable fix, not a box-side login.
 
+## Lothal PM service (planning stage) — one-time setup
+
+The `pm` service (the verification-driven planning tree) ships from the separate
+`realbytecode/lothal_project` repo as `ghcr.io/realbytecode/lothal` and runs
+internal-only, consumed by the backend at `http://pm:8000`. Two one-time steps
+on a new box (full detail in `lothal_project/deploy/langflow-integration.md`):
+
+1. **GHCR access (cross-repo, same footgun as OD).** The `lothal` package is
+   owned by `realbytecode/lothal_project`, so the deploy's `GITHUB_TOKEN` can't
+   pull it by default. GitHub → the `lothal` package → **Package settings →
+   Manage Actions access → add `realbytecode/langflow` (role: Read)** (or make
+   the package public). Without this, `docker compose pull` → `denied`.
+
+2. **Dedicated `lothal_pm` role + database** on the shared Postgres (distinct
+   from the langflow `lothal` DB). Fill the `PM_*` block (incl. `PM_BRIDGE_*`)
+   into `/opt/lothal/.env` **first** — the script refuses to run without
+   `PM_DB_PASSWORD`. The pm app builds its own schema on first boot
+   (`LOTHAL_AUTO_CREATE=true`):
+
+   ```bash
+   cd /opt/lothal
+   envval() {
+     sed -n "s/^[[:space:]]*$1[[:space:]]*=//p" .env | tail -n1 |
+       sed -E "s/^[[:space:]]+//; s/[[:space:]]+$//; s/^\"(.*)\"$/\\1/; s/^'(.*)'$/\\1/"
+   }
+   PM_DB_PASSWORD="$(envval PM_DB_PASSWORD)"
+   : "${PM_DB_PASSWORD:?fill the PM_* block into /opt/lothal/.env first}"
+   docker compose -f docker-compose.prod.yml exec -T db \
+     psql -v ON_ERROR_STOP=1 -U "$(envval POSTGRES_USER)" -d "$(envval POSTGRES_DB)" \
+          -v pm_password="$PM_DB_PASSWORD" <<'SQL'
+   SELECT 'CREATE ROLE lothal_pm LOGIN'
+    WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'lothal_pm')\gexec
+   ALTER ROLE lothal_pm WITH LOGIN PASSWORD :'pm_password';
+   SELECT 'CREATE DATABASE lothal_pm OWNER lothal_pm'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'lothal_pm')\gexec
+   SQL
+   ```
+
+   The unconditional `ALTER ROLE` makes re-runs *repair* the password (rotation =
+   edit `.env`, re-run). The bridge's service account (`PM_BRIDGE_USER` /
+   `PM_BRIDGE_PASSWORD`) is seeded by the pm app itself on boot — no SQL needed —
+   and **must** be set, or the pm seeder falls back to `admin`/`admin`.
+
 ## Deploy / redeploy (manual)
 
 ```bash

@@ -120,6 +120,28 @@ class Project(SQLModel, table=True):  # type: ignore[call-arg]
     )
 
 
+class PMProjectLink(SQLModel, table=True):  # type: ignore[call-arg]
+    """The persisted Langflow-project → PM-project mapping (Story P.4).
+
+    The standalone PM service issues its own project ids and has no
+    lookup-by-external-key, so the mapping lives here. One row per Langflow
+    project, written on first use of the plan stage (``_ensure_pm_project`` in
+    ``api/v1/lothal.py``); the primary key on ``lf_project_id`` is what makes
+    concurrent first use race-safe (losers hit the conflict, re-read the winner,
+    and delete their orphan PM project).
+    """
+
+    __tablename__ = "lothal_pm_project_link"
+
+    # DB-level CASCADE, matching the other lothal child tables: deleting a
+    # project drops its link row (the PM-side tree is left to the PM service).
+    lf_project_id: UUIDstr = Field(
+        sa_column=Column(Uuid(), ForeignKey("lothal_project.id", ondelete="CASCADE"), primary_key=True)
+    )
+    pm_project_id: UUIDstr = Field(sa_column=Column(Uuid(), nullable=False))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class Message(SQLModel, table=True):  # type: ignore[call-arg]
     """A single conversation turn. Used for session restore, audit, and clarification-chip replay."""
 

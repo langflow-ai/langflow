@@ -264,6 +264,28 @@ jobs:
               exit 1
             fi
 
+            # Health-check the internal PM service (the planning stage). It has no
+            # host port, so probe it from inside the compose network. Poll, don't
+            # one-shot: first boot builds the schema (LOTHAL_AUTO_CREATE), and
+            # `docker compose exec` itself errors while the container is still
+            # starting — the loop absorbs both. Up to 30 × 5s = 150s.
+            pm_ok=
+            for i in $(seq 1 30); do
+              if docker compose -f docker-compose.prod.yml exec -T pm \
+                   curl -fsS http://localhost:8000/health >/dev/null 2>&1; then
+                pm_ok=1; echo "pm /health OK after ${i} attempt(s)"; break
+              fi
+              echo "waiting for pm /health (attempt ${i}/30)"
+              sleep 5
+            done
+            if [ -z "$pm_ok" ]; then
+              echo "::error::pm health check failed after 150s"
+              docker compose -f docker-compose.prod.yml ps
+              docker compose -f docker-compose.prod.yml logs --tail=120 pm
+              docker logout ghcr.io || true
+              exit 1
+            fi
+
             # Reclaim disk: remove ALL images not used by a running container
             # (-a), not just dangling ones. Runs only after `up -d` + a passing
             # health check, so the new backend/frontend/db images are live and

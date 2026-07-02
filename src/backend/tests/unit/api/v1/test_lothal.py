@@ -27,6 +27,7 @@ from langflow.lothal.llm import LLMConfigError, LLMConnectionError
 from langflow.services.database.models.lothal_project.model import (
     CodeFile,
     Message,
+    PMProjectLink,
     Project,
     PrototypeArtifact,
     PrototypeStatus,
@@ -2510,6 +2511,26 @@ async def test_prototype_routes_404_for_unowned_project(client: AsyncClient, log
 # Lothal API; the PM service is never called by the browser, only by the bridge.
 
 PM_BASE = "http://pm:8000"
+# Fixed PM-issued ids for the tests (the pm_project_id column is a UUID, so these
+# must be real UUIDs, not placeholder strings).
+PM_ID_CREATED = "11111111-1111-1111-1111-111111111111"
+PM_ID_EXISTING = "22222222-2222-2222-2222-222222222222"
+
+
+@pytest.fixture(autouse=True)
+async def _reset_pm_singleton():
+    """Reset the process-wide PM client around every test.
+
+    ``pm_client()`` caches one client for the process (pool + JWT reuse in prod),
+    so without this a client built under one test's env + respx mock would leak
+    into the next — notably breaking the blank-base-URL 503 case, which needs
+    ``from_env()`` to re-run.
+    """
+    from langflow.lothal.pm_client import aclose_pm_client
+
+    await aclose_pm_client()
+    yield
+    await aclose_pm_client()
 
 
 @pytest.fixture
@@ -2542,64 +2563,71 @@ async def test_get_plan_403_before_plan_phase(client: AsyncClient, logged_in_hea
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+async def _link_pm_project(project_id: str, pm_id: str) -> None:
+    """Pre-persist the LF→PM mapping so a route reuses it instead of creating one."""
+    async with session_scope() as session:
+        session.add(PMProjectLink(lf_project_id=UUID(project_id), pm_project_id=UUID(pm_id)))
+
+
 @pytest.mark.usefixtures("_pm_env")
 async def test_get_plan_creates_and_returns_tree(client: AsyncClient, logged_in_headers: dict):
-    """In PLAN, GET /plan ensures a PM tree (create-on-first-use) and returns its nodes + links."""
+    """In PLAN, GET /plan creates a PM tree on first use, persists the link, and returns nodes + links."""
     project_id = await _make_plan_project(client, logged_in_headers)
     with respx.mock:
         _mock_pm_login()
-        # ensure_plan: no PM tree named after the LF project id yet → create one.
-        respx.get(f"{PM_BASE}/api/projects").mock(return_value=httpx.Response(200, json=[]))
-        respx.post(f"{PM_BASE}/api/projects").mock(
-            return_value=httpx.Response(201, json={"id": "pm-1", "name": project_id})
+        # No link row yet → the bridge creates a PM project (server-assigned id).
+        create = respx.post(f"{PM_BASE}/api/projects").mock(
+            return_value=httpx.Response(201, json={"id": PM_ID_CREATED, "name": project_id})
         )
-        respx.get(f"{PM_BASE}/api/projects/pm-1/nodes").mock(
+        respx.get(f"{PM_BASE}/api/projects/{PM_ID_CREATED}/nodes").mock(
             return_value=httpx.Response(
                 200,
                 json=[{"id": "n1", "parent_id": None, "kind": "app", "state": "draft", "name": "Root", "depth": 0}],
             )
         )
-        respx.get(f"{PM_BASE}/api/projects/pm-1/links").mock(return_value=httpx.Response(200, json=[]))
+        respx.get(f"{PM_BASE}/api/projects/{PM_ID_CREATED}/links").mock(return_value=httpx.Response(200, json=[]))
         response = await client.get(f"api/v1/lothal/projects/{project_id}/plan", headers=logged_in_headers)
 
     assert response.status_code == status.HTTP_200_OK
     body = response.json()
-    assert body["plan_id"] == "pm-1"
+    assert body["plan_id"] == PM_ID_CREATED
     assert [n["id"] for n in body["nodes"]] == ["n1"]
     assert body["links"] == []
+    assert create.called
+    # The mapping was persisted, so a later call reuses it (create-on-first-use).
+    async with session_scope() as session:
+        link = await session.get(PMProjectLink, UUID(project_id))
+        assert link is not None
+        assert str(link.pm_project_id) == PM_ID_CREATED
 
 
 @pytest.mark.usefixtures("_pm_env")
 async def test_get_plan_reuses_existing_tree(client: AsyncClient, logged_in_headers: dict):
-    """ensure_plan is idempotent: a PM tree already named after the LF id is reused, not recreated."""
+    """A persisted link is reused: the bridge resolves the PM id from it, never re-creating."""
     project_id = await _make_plan_project(client, logged_in_headers)
+    await _link_pm_project(project_id, PM_ID_EXISTING)
     with respx.mock:
         _mock_pm_login()
         create = respx.post(f"{PM_BASE}/api/projects").mock(
             return_value=httpx.Response(201, json={"id": "should-not-be-used", "name": "x"})
         )
-        respx.get(f"{PM_BASE}/api/projects").mock(
-            return_value=httpx.Response(200, json=[{"id": "pm-existing", "name": project_id}])
-        )
-        respx.get(f"{PM_BASE}/api/projects/pm-existing/nodes").mock(return_value=httpx.Response(200, json=[]))
-        respx.get(f"{PM_BASE}/api/projects/pm-existing/links").mock(return_value=httpx.Response(200, json=[]))
+        respx.get(f"{PM_BASE}/api/projects/{PM_ID_EXISTING}/nodes").mock(return_value=httpx.Response(200, json=[]))
+        respx.get(f"{PM_BASE}/api/projects/{PM_ID_EXISTING}/links").mock(return_value=httpx.Response(200, json=[]))
         response = await client.get(f"api/v1/lothal/projects/{project_id}/plan", headers=logged_in_headers)
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["plan_id"] == "pm-existing"
-    assert not create.called  # the existing tree was reused
+    assert response.json()["plan_id"] == PM_ID_EXISTING
+    assert not create.called  # the persisted link was reused
 
 
 @pytest.mark.usefixtures("_pm_env")
 async def test_create_plan_node_bridges_to_pm(client: AsyncClient, logged_in_headers: dict):
     """POST /plan/nodes forwards the body to the PM service and returns its node."""
     project_id = await _make_plan_project(client, logged_in_headers)
+    await _link_pm_project(project_id, PM_ID_EXISTING)
     with respx.mock:
         _mock_pm_login()
-        respx.get(f"{PM_BASE}/api/projects").mock(
-            return_value=httpx.Response(200, json=[{"id": "pm-1", "name": project_id}])
-        )
-        create = respx.post(f"{PM_BASE}/api/projects/pm-1/nodes").mock(
+        create = respx.post(f"{PM_BASE}/api/projects/{PM_ID_EXISTING}/nodes").mock(
             return_value=httpx.Response(201, json={"id": "n2", "kind": "component", "state": "draft", "name": "Auth"})
         )
         response = await client.post(
@@ -2652,9 +2680,58 @@ async def test_plan_maps_pm_failure_to_502(client: AsyncClient, logged_in_header
     project_id = await _make_plan_project(client, logged_in_headers)
     with respx.mock:
         _mock_pm_login()
-        respx.get(f"{PM_BASE}/api/projects").mock(return_value=httpx.Response(500, json={"detail": "boom"}))
+        # First PM call on a fresh project is the create (no link row yet).
+        respx.post(f"{PM_BASE}/api/projects").mock(return_value=httpx.Response(500, json={"detail": "boom"}))
         response = await client.get(f"api/v1/lothal/projects/{project_id}/plan", headers=logged_in_headers)
     assert response.status_code == status.HTTP_502_BAD_GATEWAY
+
+
+@pytest.mark.usefixtures("_pm_env")
+async def test_ensure_pm_project_race_adopts_winner_and_deletes_orphan(client: AsyncClient, logged_in_headers: dict):
+    """A lost create race: `_ensure_pm_project` adopts the winner's link and deletes its orphan PM project.
+
+    Simulates the race deterministically — the fake client's ``create_project``
+    commits a competing link row (as a concurrent replica would) *between* the
+    initial lookup miss and our own insert, so the insert hits the primary-key
+    conflict and the recovery path runs.
+    """
+    from langflow.api.v1.lothal import _ensure_pm_project
+
+    project_id = await _make_plan_project(client, logged_in_headers)
+    winner_pm_id = "33333333-3333-3333-3333-333333333333"
+    loser_pm_id = "44444444-4444-4444-4444-444444444444"
+
+    async with session_scope() as session:
+        project = await session.get(Project, UUID(project_id))
+
+        class _RacingPM:
+            """A PM client whose `create_project` lands a competing link first.
+
+            Flushing the winner on the *same* session before our own insert is the
+            deterministic, dialect-agnostic stand-in for a concurrent replica whose
+            link committed between our lookup miss and our insert — it forces the
+            primary-key conflict the recovery path is written for.
+            """
+
+            def __init__(self) -> None:
+                self.deleted: list[str] = []
+
+            async def create_project(self, name: str) -> dict:
+                session.add(PMProjectLink(lf_project_id=project.id, pm_project_id=UUID(winner_pm_id)))
+                await session.flush()
+                return {"id": loser_pm_id, "name": name}
+
+            async def delete_project(self, pm_id: str) -> None:
+                self.deleted.append(pm_id)
+
+        pm = _RacingPM()
+        resolved = await _ensure_pm_project(session, project, pm)
+
+    assert resolved == winner_pm_id  # the winner's link is adopted
+    assert pm.deleted == [loser_pm_id]  # our orphan PM project is cleaned up
+    async with session_scope() as session:
+        link = await session.get(PMProjectLink, UUID(project_id))
+        assert str(link.pm_project_id) == winner_pm_id
 
 
 async def test_plan_503_when_pm_base_url_blank(client: AsyncClient, logged_in_headers: dict, monkeypatch):
@@ -2665,8 +2742,51 @@ async def test_plan_503_when_pm_base_url_blank(client: AsyncClient, logged_in_he
     assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
 
-async def test_plan_routes_404_for_unowned_project(client: AsyncClient, logged_in_headers: dict, user_two):
-    """Ownership is checked first on every plan route: another user's project 404s, never 403/409."""
+# Every plan route, with a representative body. `{nid}` / `{tid}` are random UUIDs:
+# they never matter because the ownership check fails first (before any PM call),
+# which is exactly the IDOR invariant under test. Keep this in lockstep with the
+# `…/plan/*` routers in `api/v1/lothal.py`.
+def _all_plan_routes(project_id: str) -> list[tuple[str, str, dict | None]]:
+    base = f"api/v1/lothal/projects/{project_id}/plan"
+    nid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    tid = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+    return [
+        ("GET", base, None),
+        ("POST", f"{base}/nodes", {"kind": "component", "name": "x"}),
+        ("GET", f"{base}/nodes/{nid}", None),
+        ("PATCH", f"{base}/nodes/{nid}/contract", {"assumptions": [], "guarantees": []}),
+        ("POST", f"{base}/nodes/{nid}/ratify", None),
+        ("GET", f"{base}/links", None),
+        ("POST", f"{base}/links", {"source_id": nid, "target_id": tid, "link_type": "derives_from"}),
+        ("GET", f"{base}/activity", None),
+        ("POST", f"{base}/nodes/{nid}/move", {"new_parent_id": None}),
+        ("PATCH", f"{base}/nodes/{nid}/criteria", {"criteria": []}),
+        ("POST", f"{base}/nodes/{nid}/transition", {"target": "draft"}),
+        ("GET", f"{base}/nodes/{nid}/events", None),
+        ("GET", f"{base}/nodes/{nid}/dependencies", None),
+        ("GET", f"{base}/nodes/{nid}/tests", None),
+        ("POST", f"{base}/nodes/{nid}/tests", {"scope": "unit", "spec": "x"}),
+        ("POST", f"{base}/nodes/{nid}/tests/{tid}/runs", {"status": "pass"}),
+        ("GET", f"{base}/dag.svg", None),
+        ("POST", f"{base}/approve", None),
+    ]
+
+
+@pytest.mark.security
+@pytest.mark.usefixtures("_pm_env")
+async def test_every_plan_route_404s_for_unowned_project_without_touching_pm(
+    client: AsyncClient, logged_in_headers: dict, user_two
+):
+    """IDOR guard, exhaustive: EVERY plan route 404s another user's project *before* the bridge.
+
+    All Langflow users' PM trees live under the one bridge service account, so the
+    Langflow-side ownership check is the *only* thing separating users on the plan
+    tree — a single unguarded route is a full cross-user read/write IDOR. This
+    hits all 18 routes against a project owned by `user_two` and asserts (a) each
+    is a 404 (never 403/409, which would confirm the project exists) and (b) the PM
+    service was never contacted — respx has no routes registered, so any bridge
+    call would raise instead of returning, and `respx.calls` must stay empty.
+    """
     async with session_scope() as session:
         foreign = Project(name="Theirs", user_id=user_two.id, phase="PLAN")
         session.add(foreign)
@@ -2674,17 +2794,24 @@ async def test_plan_routes_404_for_unowned_project(client: AsyncClient, logged_i
         foreign_pk = foreign.id
 
     try:
-        calls = [
-            ("GET", f"api/v1/lothal/projects/{foreign_pk}/plan", None),
-            ("POST", f"api/v1/lothal/projects/{foreign_pk}/plan/nodes", {"kind": "component", "name": "x"}),
-            ("POST", f"api/v1/lothal/projects/{foreign_pk}/plan/approve", None),
-            ("GET", f"api/v1/lothal/projects/{foreign_pk}/plan/activity", None),
-        ]
-        for method, path, body in calls:
-            response = await client.request(method, path, json=body, headers=logged_in_headers)
-            assert response.status_code == status.HTTP_404_NOT_FOUND, (method, path)
+        with respx.mock:  # no routes registered → any PM call raises, and calls stay empty
+            for method, path, body in _all_plan_routes(str(foreign_pk)):
+                response = await client.request(method, path, json=body, headers=logged_in_headers)
+                assert response.status_code == status.HTTP_404_NOT_FOUND, (method, path, response.status_code)
+            assert respx.calls.call_count == 0, "ownership must be checked before the PM bridge is touched"
     finally:
         async with session_scope() as session:
             leftover = await session.get(Project, foreign_pk)
             if leftover:
                 await session.delete(leftover)
+
+
+@pytest.mark.security
+async def test_every_plan_route_requires_auth(client: AsyncClient):
+    """No plan route is reachable without authentication (401/403, never 2xx)."""
+    for method, path, body in _all_plan_routes(PROJECT_ID):
+        response = await client.request(method, path, json=body)
+        assert response.status_code in (
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+        ), (method, path, response.status_code)
