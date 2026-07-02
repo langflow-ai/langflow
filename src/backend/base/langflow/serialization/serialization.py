@@ -67,8 +67,14 @@ def _serialize_bytes(obj: bytes, max_length: int | None, _) -> str:
 
 
 def _serialize_datetime(obj: datetime, *_) -> str:
-    """Convert datetime to UTC ISO format."""
-    return obj.replace(tzinfo=timezone.utc).isoformat()
+    """Convert datetime to UTC ISO format.
+
+    Naive datetimes are assumed to already be in UTC; timezone-aware datetimes
+    are converted to UTC so the encoded instant is preserved rather than
+    relabeled with a different offset.
+    """
+    obj = obj.replace(tzinfo=timezone.utc) if obj.tzinfo is None else obj.astimezone(timezone.utc)
+    return obj.isoformat()
 
 
 def _serialize_decimal(obj: Decimal, *_) -> float:
