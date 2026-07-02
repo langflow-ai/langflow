@@ -89,12 +89,14 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
     run under the owner's identity. Gate by the folder's ``auth_type``:
 
     - ``"none"`` / missing / no-folder -> public agent (the intended public A2A model).
-    - ``"apikey"`` -> require a valid langflow API key in ``x-api-key`` whose owner is the
-      flow owner. Accepting another user's valid key would let them trigger a run under the
-      owner's identity, so scope to ``flow.user_id``.
-    - anything else (e.g. ``"oauth"``, which A2A can't enforce yet) -> fail closed with 403.
-      The card advertises no scheme for it, but treating a *protected* folder as public would
-      expose an owner-identity run anonymously, so deny until that scheme lands.
+    - ``"apikey"`` / ``"oauth"`` -> require a valid langflow API key in ``x-api-key`` whose
+      owner is the flow owner. An oauth folder is fronted by an external OAuth broker (the dance
+      happens in front); the langflow transport itself still takes an owner-scoped api key,
+      exactly as the MCP transport does (``mcp_projects.verify_project_auth``), since credential
+      forwarding from the broker isn't available yet. Accepting another user's valid key would
+      let them trigger a run under the owner's identity, so scope to ``flow.user_id``.
+    - anything else (an auth type A2A doesn't understand) -> fail closed with 403: treating a
+      *protected* folder as public would expose an owner-identity run anonymously.
 
     Uses ``check_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
     returns the superuser for a *missing* key, which would silently bypass this gate.
@@ -105,8 +107,8 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
         auth_type = await folder_auth_type(flow, session)
         if auth_type == "none":
             return  # public agent
-        if auth_type != "apikey":
-            # Protected folder with a scheme A2A can't enforce yet: fail closed, never public.
+        if auth_type not in ("apikey", "oauth"):
+            # Protected folder with a scheme A2A can't enforce: fail closed, never public.
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"A2A access is disabled for this agent: unsupported folder auth type {auth_type!r}.",

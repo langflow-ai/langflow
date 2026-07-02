@@ -147,7 +147,10 @@ async def resolve_card_security(
     Reflects what the JSON-RPC route enforces. Returns ``(None, None)`` when there
     is no API-key requirement.
     """
-    if await folder_auth_type(flow, session) == "apikey":
+    # apikey and oauth both require an owner-scoped x-api-key at the A2A transport: oauth is
+    # fronted by an external broker, but the transport itself still takes an api key (mirrors
+    # mcp_projects.verify_project_auth), so both advertise the same apiKey scheme.
+    if await folder_auth_type(flow, session) in ("apikey", "oauth"):
         scheme = a2a_types.SecurityScheme(
             a2a_types.APIKeySecurityScheme(
                 in_=a2a_types.In.header,
@@ -157,8 +160,7 @@ async def resolve_card_security(
         )
         return {A2A_APIKEY_SCHEME_NAME: scheme}, [{A2A_APIKEY_SCHEME_NAME: []}]
 
-    # "none" / missing / "oauth" -> advertise no security. oauth has no advertised
-    # scheme yet, so the route leaves it public until that scheme lands.
+    # "none" / missing -> advertise no security (public agent).
     return None, None
 
 
