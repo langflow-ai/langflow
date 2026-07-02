@@ -1,5 +1,5 @@
-import { fireEvent, render } from "@testing-library/react";
-import { SidebarProvider, useSidebar } from "../sidebar";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "../sidebar";
 
 // Mock component to test useSidebar hook
 const TestComponent = ({ onToggle }: { onToggle?: () => void }) => {
@@ -118,5 +118,46 @@ describe("Sidebar", () => {
 
     fireEvent.click(getByTestId("toggle-btn")); // -> true
     expect(cookieStore["sidebar:state"]).toBe("true");
+  });
+
+  it("should name the default sidebar trigger", () => {
+    render(
+      <SidebarProvider>
+        <SidebarTrigger />
+      </SidebarProvider>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /toggle sidebar|ui\.toggleSidebar/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("should keep a fallback name when custom children replace the default icon", () => {
+    render(
+      <SidebarProvider>
+        <SidebarTrigger>
+          <span data-testid="custom-sidebar-icon" aria-hidden="true" />
+        </SidebarTrigger>
+      </SidebarProvider>,
+    );
+
+    expect(screen.getByTestId("custom-sidebar-icon")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /toggle sidebar|ui\.toggleSidebar/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("should use an explicit accessible name when provided", () => {
+    render(
+      <SidebarProvider>
+        <SidebarTrigger aria-label="Open workspace navigation">
+          <span aria-hidden="true" />
+        </SidebarTrigger>
+      </SidebarProvider>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Open workspace navigation" }),
+    ).toBeInTheDocument();
   });
 });

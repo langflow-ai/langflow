@@ -16,6 +16,10 @@ import {
   PopoverContent,
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
+import {
+  getSuppressedAutoComplete,
+  PASSWORD_MANAGER_IGNORE_PROPS,
+} from "@/utils/inputAutofill";
 import { cn } from "@/utils/utils";
 import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
@@ -301,7 +305,8 @@ const CustomInputPopover = ({
 
           {(!selectedOption?.length && !selectedOptions?.length) || disabled ? (
             <input
-              autoComplete="off"
+              autoComplete={getSuppressedAutoComplete(!!password)}
+              {...PASSWORD_MANAGER_IGNORE_PROPS}
               onFocus={() => setIsFocused(true)}
               autoFocus={autoFocus}
               id={id}

@@ -54,6 +54,7 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
                     variant={showConfig ? "ghostActive" : "ghost"}
                     size="iconMd"
                     data-testid="sidebar-options-trigger"
+                    aria-label={t("sidebar.componentSettings")}
                   >
                     <ForwardedIconComponent
                       name="SlidersHorizontal"

@@ -13,7 +13,7 @@
     --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --background: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --muted: 240 5% 96%; /* hsl(240, 5%, 96%) */
-    --muted-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
+    --muted-foreground: 240 4% 43%; /* hsl(240, 4%, 43%) — darkened from 46% to meet WCAG AA 4.5:1 */
     --card: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --card-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --popover: 0 0% 100%; /* hsl(0, 0%, 100%) */
@@ -26,14 +26,14 @@
     --secondary-foreground: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --accent: 240 5% 96%; /* hsl(240, 5%, 96%) */
     --accent-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
-    --destructive: 0 72% 51%; /* hsl(0, 72%, 51%) */
+    --destructive: 0 72% 45%; /* hsl(0, 72%, 45%) */
     --destructive-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --accent-amber: 26 90% 37%; /* hsl(26, 90%, 37%) */
     --accent-amber-foreground: 26 90% 37%; /* hsl(26, 90%, 37%) */
     --ring: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --primary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --secondary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
-    --placeholder-foreground: 240 5% 65%; /* hsl(240, 5%, 65%) */
+    --placeholder-foreground: 240 5% 40%; /* hsl(240, 5%, 40%) — darkened for WCAG 1.4.3 contrast ≥4.5:1 on white */
     --canvas: 240 5% 96%; /* hsl(240, 5%, 96%) */
     --canvas-dot: 240 5% 65%; /* hsl(240, 5%, 65%) */
     --accent-emerald: 149 80% 90%; /* hsl(149, 80%, 90%) */
@@ -240,7 +240,7 @@
     --ring: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --primary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
     --secondary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
-    --placeholder-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
+    --placeholder-foreground: 240 4% 63%; /* hsl(240, 4%, 63%) — lightened for WCAG 1.4.3 ≥4.5:1 on dark bg */
     --canvas: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --canvas-dot: 240 5.3% 26.1%; /* hsl(240, 5.3%, 26.1%) */
 
@@ -492,4 +492,12 @@
     --red-foreground: 0 72.2% 50.6%;
     --indigo-foreground: 234.5 89.5% 73.9%;
   }
+}
+
+/* WCAG 2.4.7 — visible focus indicator fallback for any element not covered
+   by component-level Tailwind ring classes. Component ring classes (box-shadow)
+   take precedence over this outline via the cascade. */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
 }
