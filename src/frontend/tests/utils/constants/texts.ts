@@ -56,7 +56,7 @@ export const TEXTS = {
 
   // ─── Toasts / status messages ───────────────────────────────────────
   toastProjectDeleted: "Project deleted successfully",
-  toastApiKeySaved: "Success! Your API Key has been saved.",
+  toastApiKeySaved: "Success! Your API Key has been saved.", // pragma: allowlist secret
   /** Sub-string emitted by the build-flow log when a build finishes
    *  successfully — used as `text=built successfully` in 36 specs. */
   toastBuiltSuccessfully: "built successfully",
@@ -64,15 +64,17 @@ export const TEXTS = {
   // ─── Auth / login screen ────────────────────────────────────────────
   /** Visible on the sign-in route when LANGFLOW_AUTO_LOGIN=false. */
   authSignInHeader: "sign in to langflow",
-  /** Default seeded username/password ("langflow"/"langflow"). */
+  /** Default seeded username. */
   authDefaultCredential: "langflow",
+  /** Explicit Playwright-only superuser password seeded in playwright.config.ts. */
+  authDefaultPassword: "test-superuser-password", // pragma: allowlist secret
 
   // ─── Form placeholders (getByPlaceholder) ───────────────────────────
   placeholderUsername: "Username",
-  placeholderPassword: "Password",
+  placeholderPassword: "Password", // pragma: allowlist secret
   placeholderMessage: "Message",
   placeholderEmpty: "Empty",
-  placeholderApiKey: "Insert your API Key",
+  placeholderApiKey: "Insert your API Key", // pragma: allowlist secret
   placeholderSendMessage: "Send a message...",
   placeholderVariableName: "Enter a name for the variable...",
 

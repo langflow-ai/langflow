@@ -4,6 +4,7 @@ from pathlib import Path
 from langchain_chroma import Chroma
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from lfx.base.vectorstores.user_scoping import runtime_user_id, scoped_collection_name
 from lfx.base.vectorstores.utils import chroma_collection_to_data
 from lfx.inputs.inputs import MultilineInput
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
@@ -221,11 +222,18 @@ class LocalDBComponent(LCVectorStoreComponent):
             persist_directory = self.get_default_persist_dir()
             logger.debug(f"Using default persist directory: {persist_directory}")
 
+        # Local DB is always an on-disk Chroma store (client=None). Two users that
+        # pick the same collection_name resolve to the same persist_directory, so
+        # scope the Chroma collection name by runtime user to keep their documents
+        # isolated within the shared store. Falls back to the raw name when there
+        # is no runtime user.
+        collection_name = scoped_collection_name(self.collection_name, runtime_user_id(self))
+
         chroma = Chroma(
             persist_directory=persist_directory,
             client=None,
             embedding_function=self.embedding,
-            collection_name=self.collection_name,
+            collection_name=collection_name,
             **chroma_langchain_collection_kwargs(),
         )
 

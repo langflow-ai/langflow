@@ -8,7 +8,8 @@ and exercise the *real* flow routes over HTTP, validating that:
 
 * the per-route guards (``ensure_flow_permission`` via the ``Authorized*Flow``
   dependencies) actually gate read/write/delete/create/execute by role,
-* cross-user denials are masked as 404 (not 403) on fetch routes,
+* cross-user denials are masked as 404 (not 403) on fetch routes, while
+  write denials on readable flows return an explicit 403,
 * the share-aware fetch + ``authz_share`` rows grant cross-user access, and
 * domain resolution (``_resolve_authz_domain``) scopes a domain-bound grant.
 
@@ -110,9 +111,10 @@ async def test_viewer_can_read_and_execute_but_not_write_delete_or_create(client
         # execute (build) -> allowed (viewer has flow:execute)
         build = await client.post(f"api/v1/build/{flow_id}/flow", headers=headers, json={})
         assert build.status_code == 200, build.text
-        # write -> denied, masked as 404 (NOT 403) on a fetch route
+        # write -> denied, but the flow is readable so return an edit-permission 403.
         patch = await client.patch(f"api/v1/flows/{flow_id}", headers=headers, json={"name": f"x_{uuid4().hex}"})
-        assert patch.status_code == 404
+        assert patch.status_code == 403
+        assert patch.json()["detail"] == "You don't have permission to edit this flow."
         # delete -> denied, masked as 404
         assert (await client.delete(f"api/v1/flows/{flow_id}", headers=headers)).status_code == 404
         # create -> denied; 403 is correct here (no existing resource UUID to protect)
@@ -224,9 +226,11 @@ async def test_read_only_share_allows_get_but_denies_write_and_execute(client):
 
     with install_policy_authz(settings):
         assert (await client.get(f"api/v1/flows/{flow_id}", headers=bob_headers)).status_code == 200
-        # write is not granted by a read-level share -> deny -> 404
+        # write is not granted by a read-level share, but the flow is readable
+        # so return an edit-permission 403 instead of a "not found" mask.
         patch = await client.patch(f"api/v1/flows/{flow_id}", headers=bob_headers, json={"name": "nope"})
-        assert patch.status_code == 404
+        assert patch.status_code == 403
+        assert patch.json()["detail"] == "You don't have permission to edit this flow."
         # execute is modeled independently from write — a read-level share must
         # not grant build either -> deny -> 404
         build = await client.post(f"api/v1/build/{flow_id}/flow", headers=bob_headers, json={})

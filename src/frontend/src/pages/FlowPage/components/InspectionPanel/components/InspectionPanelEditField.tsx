@@ -87,6 +87,7 @@ export default function InspectionPanelEditField({
           data-testid={`show${name}`}
           id={`show${name}`}
           aria-checked={isOnCanvas}
+          aria-label={`${isOnCanvas ? t("common.hide") : t("common.show")} ${title}`}
           role="checkbox"
         >
           <IconComponent

@@ -22,12 +22,12 @@ This guide demonstrates several ways to run Langflow with [Docker](https://docs.
 With Docker installed and running on your system, run the following command:
 
 ```shell
-docker run -p 7860:7860 langflowai/langflow:latest
+docker run -p 7860:7860 -e LANGFLOW_AUTO_LOGIN=true langflowai/langflow:latest
 ```
 
 Then, access Langflow at `http://localhost:7860/`.
 
-This container runs a pre-built Docker image with default settings.
+This starts a pre-built Docker image with automatic login enabled for local development.
 For more control over the configuration, see [Use Docker Compose](#docker-compose).
 
 ## Use Docker Compose {#docker-compose}
@@ -75,6 +75,7 @@ Configure a container's database credentials using a `.env` file.
     # Langflow configuration
     LANGFLOW_DATABASE_URL=postgresql://myuser:mypassword@postgres:5432/langflow
     LANGFLOW_CONFIG_DIR=/app/langflow
+    LANGFLOW_SUPERUSER_PASSWORD=replace-with-a-strong-password
     ```
 
 2. Edit `docker-compose.yml` to replace the hardcoded values with variable references for both the `langflow` and `postgres` services:
@@ -85,6 +86,7 @@ Configure a container's database credentials using a `.env` file.
         environment:
           - LANGFLOW_DATABASE_URL=${LANGFLOW_DATABASE_URL}
           - LANGFLOW_CONFIG_DIR=${LANGFLOW_CONFIG_DIR}
+          - LANGFLOW_SUPERUSER_PASSWORD=${LANGFLOW_SUPERUSER_PASSWORD}
       postgres:
         environment:
           - POSTGRES_USER=${POSTGRES_USER}
@@ -130,7 +132,7 @@ This is useful for distributing a specific flow as a standalone container or dep
 
     ```bash
     docker build -t myuser/langflow-custom:1.0.0 .
-    docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    docker run -p 7860:7860 -e LANGFLOW_AUTO_LOGIN=true myuser/langflow-custom:1.0.0
     docker push myuser/langflow-custom:1.0.0  # optional
     ```
 
@@ -184,7 +186,7 @@ This example replaces the built-in **Message History** component, but the same p
 
     ```bash
     docker build -t myuser/langflow-custom:1.0.0 .
-    docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    docker run -p 7860:7860 -e LANGFLOW_AUTO_LOGIN=true myuser/langflow-custom:1.0.0
     ```
 
 
@@ -305,6 +307,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
         image: langflowai/langflow:1.11.0
         environment:
           - LANGFLOW_CONFIG_DIR=/app/langflow
+          - LANGFLOW_SUPERUSER_PASSWORD=${LANGFLOW_SUPERUSER_PASSWORD}
         volumes:
           - ./langflow-data:/app/langflow
       postgres:
@@ -346,7 +349,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
     With `docker run`, use the same volume mount and the new image tag:
 
     ```bash
-    docker run -p 7860:7860 -v langflow-data:/app/langflow langflowai/langflow:1.11.0
+    docker run -p 7860:7860 -v langflow-data:/app/langflow -e LANGFLOW_SUPERUSER_PASSWORD=replace-with-a-strong-password langflowai/langflow:1.11.0
     ```
 
 This approach keeps the persistent volumes separate from the Langflow container, so you can upgrade the Langflow application without losing data.
