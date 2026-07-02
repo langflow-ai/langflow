@@ -130,7 +130,7 @@ export default function EditableHeaderContent({
   };
 
   const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       e.preventDefault();
       // Save and exit edit mode
       handleSave();
