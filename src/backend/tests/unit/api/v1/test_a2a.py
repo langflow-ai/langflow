@@ -220,15 +220,26 @@ async def test_security_schemes_apikey(client: AsyncClient, active_user, flow_da
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_no_security_for_oauth_folder(client: AsyncClient, active_user, flow_data):
-    """OAuth is out of F2 scope, so no security is advertised."""
+async def test_security_schemes_oauth_folder(client: AsyncClient, active_user, flow_data):
+    """An oauth folder advertises the same x-api-key scheme as apikey.
+
+    The broker fronts the OAuth dance, but the A2A transport still takes an owner-scoped api
+    key (mirrors the MCP transport), so the card reflects that.
+    """
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "oauth"})
     flow_id = await _create_flow(active_user.id, data=flow_data, folder_id=folder_id)
 
     body = (await client.get(_card_url(flow_id))).json()
 
-    assert "securitySchemes" not in body
-    assert "security" not in body
+    assert body["securitySchemes"] == {
+        "apiKey": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "x-api-key",
+            "description": "API key passed in the x-api-key header.",
+        }
+    }
+    assert body["security"] == [{"apiKey": []}]
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -831,15 +842,23 @@ async def test_none_folder_stays_public(client: AsyncClient, active_user, echo_f
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_oauth_folder_fails_closed(client: AsyncClient, active_user, echo_flow_data):
-    """A2A can't enforce oauth yet, so an oauth folder fails closed (403), never public.
+async def test_oauth_folder_requires_owner_key(client: AsyncClient, active_user, echo_flow_data):
+    """An oauth folder is reachable with an owner-scoped x-api-key, and 401s without one.
 
-    Otherwise a protected flow would run anonymously as its owner.
+    The broker fronts OAuth; the transport still requires a key (mirrors MCP), so oauth enforces
+    like apikey here, never public and no longer a blanket 403 that makes the agent unreachable.
     """
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "oauth"})
     flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
 
-    assert (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).status_code == 403
+    # No key -> 401, not public and not the old 403-dead.
+    assert (await _jsonrpc(client, flow_id, "message/send", _text_message("hi"))).status_code == 401
+
+    # A valid owner key runs the flow.
+    key = await _create_api_key(active_user.id)
+    resp = await _jsonrpc(client, flow_id, "message/send", _text_message("hello oauth"), headers={"x-api-key": key})
+    assert resp.status_code == 200
+    assert resp.json()["result"]["status"]["state"] == "completed"
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
