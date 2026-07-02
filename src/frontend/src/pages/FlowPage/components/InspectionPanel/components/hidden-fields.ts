@@ -1,5 +1,8 @@
-// Fields to hide per component type in the InspectionPanel.
-// Add entries here to hide fields without removing backend functionality.
+// Fields hidden from the default InspectionPanel view per component type.
+// These are removed from the streamlined advanced-settings list, but they
+// stay reachable through the panel's edit-fields mode (the visibility toggle),
+// so users still have a path to surface and edit them. Listing a field here
+// must never be the only thing keeping it editable.
 export const HIDDEN_FIELDS: Record<string, string[]> = {
   ChatInput: ["should_store_message", "sender"],
   ChatOutput: ["should_store_message", "sender", "data_template", "clean_data"],
@@ -14,7 +17,10 @@ export const HIDDEN_FIELDS: Record<string, string[]> = {
     "autoset_encoding",
   ],
   UnifiedWebSearch: ["ceid"],
-  Agent: ["verbose"],
+  // `verbose` was dropped from the Agent component's inputs (drop = {"verbose"}),
+  // so it is intentionally absent here; format_instructions and output_schema
+  // are still advanced inputs and stay hidden from the default view.
+  Agent: ["format_instructions", "output_schema"],
   EmbeddingModel: ["show_progress_bar", "chunk_size"],
   Memory: ["sender_type"],
   StructuredOutput: ["system_prompt", "schema_name"],

@@ -40,7 +40,7 @@ function isoDateToday(): string {
 // ---------------------------------------------------------------------------
 test(
   "Agent component shows the 7-section default template when dropped on canvas",
-  { tag: ["@release", "@workspace", "@agents"] },
+  { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
@@ -90,7 +90,7 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "Tool Calling Agent component shows the 7-section default template when dropped on canvas",
-  { tag: ["@release", "@workspace", "@agents"] },
+  { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
@@ -144,7 +144,7 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "runtime substitution injects today's date into the agent's effective prompt",
-  { tag: ["@release", "@agents", "@api"] },
+  { tag: ["@release", "@api"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -210,7 +210,7 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "custom prompt without placeholders passes through untouched",
-  { tag: ["@release", "@agents", "@api"] },
+  { tag: ["@release", "@api"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -273,7 +273,7 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "custom prompt with placeholder opts in to runtime substitution",
-  { tag: ["@release", "@agents", "@api"] },
+  { tag: ["@release", "@api"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

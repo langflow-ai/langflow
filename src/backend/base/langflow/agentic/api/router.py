@@ -33,6 +33,7 @@ from langflow.agentic.services.provider_service import (
     PREFERRED_PROVIDERS,
     get_default_model,
     get_enabled_providers_for_user,
+    list_installed_tool_calling_models,
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession
 
@@ -89,7 +90,7 @@ async def _resolve_assistant_context(
     if not api_key_name:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
 
-    model_name = request.model_name or get_default_model(provider) or ""
+    model_name = request.model_name or get_default_model(provider, user_id=user_id) or ""
 
     # Get all configured variables for the provider
     provider_vars = get_all_variables_for_provider(user_id, provider)
@@ -208,9 +209,13 @@ async def check_assistant_config(
             include_deprecated=False,
             model_type="llm",
         )
-
         for provider_dict in models_by_provider:
             provider_name = provider_dict.get("provider")
+            if not provider_name:
+                continue
+            installed = list_installed_tool_calling_models(provider_name, user_id)
+            if installed:
+                provider_dict["models"] = [{"model_name": name, "metadata": {}} for name in installed]
             models = provider_dict.get("models", [])
 
             model_list = []
@@ -231,7 +236,7 @@ async def check_assistant_config(
                     )
 
             default_model = get_default_model(provider_name)
-            if not default_model and model_list:
+            if model_list and default_model not in {m["name"] for m in model_list}:
                 default_model = model_list[0]["name"]
 
             if model_list:

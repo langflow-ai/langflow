@@ -4,7 +4,7 @@ import { openTemplatesModal } from "../../utils/flow/new-project-flow";
 
 test.describe(
   "Auto_login tests",
-  { tag: ["@release", "@api", "@database", "@mainpage"] },
+  { tag: ["@release", "@api", "@database"] },
 
   () => {
     test(
