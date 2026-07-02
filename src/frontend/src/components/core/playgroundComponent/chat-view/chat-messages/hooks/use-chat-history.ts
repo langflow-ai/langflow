@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
@@ -18,9 +18,14 @@ export const useChatHistory = (visibleSession: string | null) => {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+  // Pagination offset anchored to fetched count — the cache length drifts
+  // as live messages are appended.
+  const offsetRef = useRef(0);
+
   // Reset pagination when session or flow changes
   useEffect(() => {
     setHasMore(true);
+    offsetRef.current = 0;
   }, [visibleSession, currentFlowId]);
 
   // Fetch messages from backend only when playground is visible and cap at 20
@@ -75,42 +80,60 @@ export const useChatHistory = (visibleSession: string | null) => {
         // Only initialize if cache is empty and we have backend messages for this session
         if (existingCache.length === 0 && backendMessages.length > 0) {
           queryClient.setQueryData(sessionCacheKey, backendMessages);
+          offsetRef.current = backendMessages.length;
         }
       }
     }
   }, [queryData, queryClient, sessionCacheKey, currentFlowId, visibleSession]);
 
-  // Load older messages (scroll-up pagination)
-  const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore || !currentFlowId) return;
+  // Load older messages (scroll-up pagination). Returns how many messages
+  // were actually prepended.
+  const loadMore = useCallback(async (): Promise<number> => {
+    if (isLoadingMore || !hasMore || !currentFlowId) return 0;
     setIsLoadingMore(true);
     try {
-      const existing =
-        queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
-      const response = await api.get(`${getURL("MESSAGES")}`, {
-        params: {
-          flow_id: currentFlowId,
-          ...(visibleSession ? { session_id: visibleSession } : {}),
-          limit: 20,
-          offset: existing.length,
-        },
-      });
-      const olderMessages: Message[] = response.data || [];
+      // Loop until at least one new message lands or pages run out: after a
+      // remount offsetRef restarts at 0 while the cache may already hold the
+      // early pages, and dedup would otherwise swallow them and stall.
+      let prepended = 0;
+      while (prepended === 0) {
+        const response = await api.get(`${getURL("MESSAGES")}`, {
+          params: {
+            flow_id: currentFlowId,
+            ...(visibleSession ? { session_id: visibleSession } : {}),
+            limit: 20,
+            offset: offsetRef.current,
+          },
+        });
+        const olderMessages: Message[] = response.data || [];
+        offsetRef.current += olderMessages.length;
 
-      if (olderMessages.length < 20) {
-        setHasMore(false);
-      }
+        const exhausted = olderMessages.length < 20;
+        if (exhausted) {
+          setHasMore(false);
+        }
 
-      if (olderMessages.length > 0) {
-        queryClient.setQueryData(sessionCacheKey, [
-          ...olderMessages,
-          ...existing,
-        ]);
-      } else {
-        setHasMore(false);
+        if (olderMessages.length > 0) {
+          const existing =
+            queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
+          // The flow-level seed fetch and session-scoped pages can overlap.
+          const existingIds = new Set(existing.map((m) => m.id));
+          const deduped = olderMessages.filter((m) => !existingIds.has(m.id));
+          if (deduped.length > 0) {
+            queryClient.setQueryData(sessionCacheKey, [
+              ...deduped,
+              ...existing,
+            ]);
+            prepended = deduped.length;
+          }
+        }
+
+        if (exhausted) break;
       }
+      return prepended;
     } catch (e) {
       console.error("Failed to load more messages:", e);
+      return 0;
     } finally {
       setIsLoadingMore(false);
     }
