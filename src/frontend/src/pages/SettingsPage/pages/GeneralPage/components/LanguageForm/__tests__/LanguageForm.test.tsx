@@ -107,6 +107,15 @@ describe("LanguageFormComponent", () => {
     expect(localStorage.getItem("languagePreference")).toBe("ja");
   });
 
+  it("loads, switches to, and persists Korean (ko) when selected", async () => {
+    const user = userEvent.setup();
+    render(<LanguageFormComponent />);
+    await user.selectOptions(screen.getByRole("combobox"), "ko");
+    expect(mockLoadLanguage).toHaveBeenCalledWith("ko");
+    expect(mockChangeLanguage).toHaveBeenCalledWith("ko");
+    expect(localStorage.getItem("languagePreference")).toBe("ko");
+  });
+
   it("calls setTypes with empty object on language change", async () => {
     const user = userEvent.setup();
     render(<LanguageFormComponent />);
