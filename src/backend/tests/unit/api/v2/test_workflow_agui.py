@@ -399,8 +399,8 @@ class TestAGUIStreaming:
     async def test_stream_event_handoff_overflow_emits_error(self, monkeypatch: pytest.MonkeyPatch):
         """EventManager put_nowait must not silently drop frames when the stream buffer fills."""
         from langflow.api.v2 import workflow_execution as wf_exec
-        from langflow.api.v2.adapters import StreamEvent
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.adapters import StreamEvent
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         seen_maxsize: list[int] = []
 
@@ -451,8 +451,8 @@ class TestAGUIStreaming:
     ):
         """A run that exceeds the wall-clock ceiling ends in a sanitized terminal error, not a hang."""
         from langflow.api.v2 import workflow_execution as wf_exec
-        from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         async def hanging_generate_flow_events(**_kwargs):
             await asyncio.sleep(5)
@@ -490,8 +490,8 @@ class TestAGUIStreaming:
     ):
         """A producer that reports on_error then raises must not triple-emit terminal errors."""
         from langflow.api.v2 import workflow_execution as wf_exec
-        from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         async def fake_generate_flow_events(**kwargs):
             kwargs["event_manager"].on_error(data={"error": "inner"})
@@ -528,8 +528,8 @@ class TestAGUIStreaming:
     ):
         """A producer that raises before on_error still emits one terminal error."""
         from langflow.api.v2 import workflow_execution as wf_exec
-        from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         async def fake_generate_flow_events(**_kwargs):
             message = "early boom"
@@ -562,7 +562,7 @@ class TestAGUIStreaming:
     async def test_agui_stream_emits_end_side_channel_for_build_duration(self, monkeypatch: pytest.MonkeyPatch):
         """The AG-UI stream must preserve v1 end payloads for chat build-duration persistence."""
         from langflow.api.v2 import workflow_execution as wf_exec
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         async def fake_generate_flow_events(**kwargs):
             event_queue = kwargs["event_manager"].queue
@@ -1008,7 +1008,7 @@ class TestAGUIBackgroundJobStatus:
     async def test_background_buffer_binds_build_rows_to_returned_job_id(self, monkeypatch: pytest.MonkeyPatch):
         """Status reconstruction needs vertex_build rows logged under the public background job id."""
         from langflow.api.v2 import workflow_background as wf_bg
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         job_id = uuid4()
         captured: dict = {}
@@ -1044,7 +1044,7 @@ class TestAGUIBackgroundJobStatus:
         """A background job should leave QUEUED once its buffer task starts executing."""
         from langflow.api.v2 import workflow as workflow_module
         from langflow.api.v2 import workflow_background as wf_bg
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         job_id = uuid4()
         updates: list[tuple[object, object, bool]] = []
@@ -1086,7 +1086,7 @@ class TestAGUIBackgroundJobStatus:
         """The owner task must append cancellation before marking replay done."""
         from langflow.api.v2 import workflow_background as wf_bg
         from langflow.api.v2 import workflow_execution as wf_exec
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         started = asyncio.Event()
 
@@ -1151,7 +1151,7 @@ class TestAGUIBackgroundJobStatus:
         """Cancellation framing must stay protocol-native outside AG-UI too."""
         from langflow.api.v2 import workflow_background as wf_bg
         from langflow.api.v2 import workflow_execution as wf_exec
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         started = asyncio.Event()
 
@@ -1209,7 +1209,7 @@ class TestAGUIBackgroundJobStatus:
         """The stop fallback must not wake replay readers before cancellation is buffered."""
         from langflow.api.v2 import workflow_background as wf_bg
         from langflow.api.v2 import workflow_execution as wf_exec
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         job_id = str(uuid4())
         started = asyncio.Event()
@@ -2256,13 +2256,13 @@ class TestBufferBackgroundRunUnknownProtocolGuard:
         from uuid import uuid4 as _uuid4
 
         from langflow.api.v2 import workflow_background as wf_bg
-        from langflow.api.v2.adapters import STREAM_ADAPTERS as _REGISTRY
-        from langflow.api.v2.converters import ParsedWorkflowRun
         from langflow.services.database.models.flow.model import Flow, FlowRead
         from langflow.services.database.models.jobs.model import Job, JobStatus
         from langflow.services.database.models.user.model import User as _User
         from langflow.services.database.models.user.model import UserRead
         from langflow.services.deps import get_job_service
+        from lfx.workflow.adapters import STREAM_ADAPTERS as _REGISTRY
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         # Real Job row so update_job_status can flip it.
         job_id = _uuid4()
@@ -2311,12 +2311,12 @@ class TestBufferBackgroundRunUnknownProtocolGuard:
         from uuid import uuid4 as _uuid4
 
         from langflow.api.v2 import workflow_background as wf_bg
-        from langflow.api.v2.adapters import STREAM_ADAPTERS as _REGISTRY
-        from langflow.api.v2.converters import ParsedWorkflowRun
         from langflow.services.database.models.flow.model import Flow, FlowRead
         from langflow.services.database.models.user.model import User as _User
         from langflow.services.database.models.user.model import UserRead
         from langflow.services.deps import get_job_service
+        from lfx.workflow.adapters import STREAM_ADAPTERS as _REGISTRY
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         job_id = _uuid4()
         await get_job_service().create_job(
@@ -2360,7 +2360,7 @@ class TestExecuteWorkflowBackgroundQueueOwnership:
         so registering them would let the polling watchdog reclaim long runs.
         """
         from langflow.api.v2 import workflow_background as wf_bg
-        from langflow.api.v2.converters import ParsedWorkflowRun
+        from lfx.workflow.converters import ParsedWorkflowRun
 
         job_id = uuid4()
         current_user_id = uuid4()
