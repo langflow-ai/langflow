@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   oneDark,
@@ -19,6 +20,7 @@ export default function SimplifiedCodeTabComponent({
   language,
   maxHeight,
 }: SimplifiedCodeTabProps) {
+  const { t } = useTranslation();
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const dark = useDarkStore((state) => state.dark);
 
@@ -51,6 +53,7 @@ export default function SimplifiedCodeTabComponent({
           className="text-muted-foreground hover:bg-card"
           data-testid="copy-code-button"
           onClick={copyToClipboard}
+          aria-label={isCopied ? t("chat.copiedCode") : t("chat.copyCode")}
         >
           {isCopied ? (
             <IconComponent name="Check" className="h-4 w-4" />
