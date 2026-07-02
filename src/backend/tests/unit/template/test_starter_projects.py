@@ -14,6 +14,7 @@ from importlib import import_module
 from pathlib import Path
 
 import pytest
+from langflow import components
 
 # Import langflow validation utilities
 from langflow.utils.template_validation import (
@@ -22,16 +23,31 @@ from langflow.utils.template_validation import (
     validate_template_structure,
 )
 
-# Component modules that ship in bundle distributions which can be temporarily
-# unpublished (see the re-enable note in pyproject.toml). A template that wires
-# one of these cannot be built while its bundle is absent, so the build/execute
-# tests skip it instead of failing. The check imports the live distribution, so
-# it turns back into a no-op the moment the bundle is restored -- no revert.
+# Component modules that ship in optional bundle distributions. A template that
+# wires one of these cannot be built while its bundle is absent, so the
+# build/execute tests skip it instead of failing. The check imports the live
+# distribution, so it turns back into a no-op whenever the bundle is installed.
 _OPTIONAL_BUNDLE_MODULES = {
     "lfx.components.datastax": "lfx_datastax",
     "lfx.components.openai": "lfx_openai",
     "lfx.components.oracle": "lfx_oracle",
 }
+
+
+def _lfx_bundles_shim_categories() -> tuple[str, ...]:
+    components_dir = Path(components.__file__).parent
+    return tuple(
+        sorted(
+            init_file.parent.name
+            for init_file in components_dir.glob("*/__init__.py")
+            if 'importlib.import_module("lfx_bundles.' in init_file.read_text(encoding="utf-8")
+        )
+    )
+
+
+_OPTIONAL_BUNDLE_MODULES.update(
+    {f"lfx.components.{category}": "lfx_bundles" for category in _lfx_bundles_shim_categories()}
+)
 
 
 def _template_unavailable_bundle(template_data: dict) -> str | None:
@@ -109,7 +125,7 @@ class TestStarterProjects:
 
         unavailable = _template_unavailable_bundle(template_data)
         if unavailable:
-            pytest.skip(f"{template_file.name} needs the temporarily-unavailable {unavailable} bundle")
+            pytest.skip(f"{template_file.name} needs the optional {unavailable} bundle")
 
         errors = validate_flow_can_build(template_data, template_file.name)
         if errors:
@@ -125,7 +141,7 @@ class TestStarterProjects:
 
         unavailable = _template_unavailable_bundle(template_data)
         if unavailable:
-            pytest.skip(f"{template_file.name} needs the temporarily-unavailable {unavailable} bundle")
+            pytest.skip(f"{template_file.name} needs the optional {unavailable} bundle")
 
         errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
         if errors:
@@ -142,7 +158,7 @@ class TestStarterProjects:
 
             unavailable = _template_unavailable_bundle(template_data)
             if unavailable:
-                pytest.skip(f"{template_file.name} needs the temporarily-unavailable {unavailable} bundle")
+                pytest.skip(f"{template_file.name} needs the optional {unavailable} bundle")
 
             errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
             if errors:
@@ -160,7 +176,7 @@ class TestStarterProjects:
 
         unavailable = _template_unavailable_bundle(template_data)
         if unavailable:
-            pytest.skip(f"{template_file.name} needs the temporarily-unavailable {unavailable} bundle")
+            pytest.skip(f"{template_file.name} needs the optional {unavailable} bundle")
 
         errors = []
         for node in template_data.get("data", {}).get("nodes", []):

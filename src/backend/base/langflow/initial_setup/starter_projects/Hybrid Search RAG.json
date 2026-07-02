@@ -277,7 +277,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
@@ -4370,10 +4370,10 @@
             "description": "# 🔍 Hybrid Search RAG\n\nRetrieve passages from **Astra DB** using **hybrid search** - semantic (vector) and keyword (lexical) ranking combined and reranked. This flow has two parts:\n\n1. **Ingestion** (top row) - load your documents into the collection. Run once.\n2. **Search** (bottom row) - ask questions and get the most relevant passages.\n\n## One-time setup\nUse the **same Application Token, Database, and Collection on BOTH Astra DB nodes**. The collection should have Vectorize (server-side embeddings) + hybrid search enabled.\n\nAdd your LLM key on the **Agent** (it only extracts keywords for the lexical search).",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.hybrid_search_rag.f8268601",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.hybrid_search_rag.f8268601"
+            }
           },
           "type": "note"
         },
@@ -4404,10 +4404,10 @@
             "description": "# 📥 1) Ingestion - run once\n\nPopulate the collection so Search has data.\n\n1. **File** - upload your document (e.g. the sample `.md`).\n2. **Split Text** - chunks it (size 1000, overlap 100).\n3. **Astra DB** - set Token + Database + Collection, then press ▶ on this Astra DB node to write the chunks (Vectorize embeds + lexically indexes on write).",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.hybrid_search_rag.bc1f15c7",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.hybrid_search_rag.bc1f15c7"
+            }
           },
           "type": "note"
         },
@@ -4438,10 +4438,10 @@
             "description": "# 🔎 2) Search\n\n1. **Chat Input** - your question goes to Astra DB as the semantic query.\n2. **Agent** - extracts keywords from the question for the lexical search.\n3. **Astra DB** - combines + reranks semantic and lexical, returns the top passages.\n4. **Parser -> Chat Output** - the passages as text.\n\nRun from the Playground (or ▶ on Chat Output) after the collection is populated.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.hybrid_search_rag.9e93986f",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.hybrid_search_rag.9e93986f"
+            }
           },
           "type": "note"
         },

@@ -16,18 +16,16 @@ test(
     });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("ollama");
-    await page.waitForSelector('[data-testid="ollamaOllama Embeddings"]', {
+    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("ollamaOllama Embeddings")
+      .getByTestId("data_sourceURL")
       .hover()
       .then(async () => {
-        await page
-          .getByTestId("add-component-button-ollama-embeddings")
-          .click();
+        await page.getByTestId("add-component-button-url").click();
       });
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
@@ -43,38 +41,25 @@ test(
     await page.waitForTimeout(500);
 
     // Wait for the modal inputs to be visible
-    await expect(
-      page.getByTestId(/^popover-anchor-input-base_url.*/).nth(0),
-    ).toBeVisible({ timeout: 5000 });
+    const urlInput = page.getByTestId("inputlist_str_urls_0");
+    await expect(urlInput).toBeVisible({ timeout: 5000 });
 
-    // Fill the first input (base_url field)
-    await page
-      .getByTestId(/^popover-anchor-input-base_url.*/)
-      .nth(0)
-      .fill("ollama_test_ctrl_a_first_input");
-    let value = await page
-      .getByTestId(/^popover-anchor-input-base_url.*/)
-      .nth(0)
-      .inputValue();
-    expect(value).toBe("ollama_test_ctrl_a_first_input");
+    // Fill the first input.
+    await urlInput.fill("url_test_ctrl_a_first_input");
+    let value = await urlInput.inputValue();
+    expect(value).toBe("url_test_ctrl_a_first_input");
 
     await page.keyboard.press("ControlOrMeta+a");
 
     await page.keyboard.press("ControlOrMeta+c");
 
     await page.keyboard.press("Backspace");
-    value = await page
-      .getByTestId(/^popover-anchor-input-base_url.*/)
-      .nth(0)
-      .inputValue();
+    value = await urlInput.inputValue();
     expect(value).toBe("");
 
     await page.keyboard.press("ControlOrMeta+v");
 
-    value = await page
-      .getByTestId(/^popover-anchor-input-base_url.*/)
-      .nth(0)
-      .inputValue();
-    expect(value).toBe("ollama_test_ctrl_a_first_input");
+    value = await urlInput.inputValue();
+    expect(value).toBe("url_test_ctrl_a_first_input");
   },
 );

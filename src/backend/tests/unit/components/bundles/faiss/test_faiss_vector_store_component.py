@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 
+pytest.importorskip("lfx_bundles")
 pytest.importorskip("langchain_community")
 
 import lfx_bundles.faiss.faiss as faiss_module

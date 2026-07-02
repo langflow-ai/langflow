@@ -9,6 +9,7 @@ import {
   enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 // TODO: This component doesn't have slider needs updating
 test(
@@ -25,6 +26,10 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
+    await skipIfComponentUnavailable(
+      page.getByTestId("ollamaOllama"),
+      "Ollama",
+    );
 
     await page.waitForSelector('[data-testid="ollamaOllama"]', {
       timeout: 3000,

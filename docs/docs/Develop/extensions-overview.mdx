@@ -10,7 +10,7 @@ Instead of every integration being built into `langflow`, bundles ship as pip-in
 
 There are two install stories:
 
-* **`uv pip install langflow`** — everything, same as today. The `langflow` metapackage pins the component packages below as regular pip dependencies, so a flat install is functionally identical to earlier releases.
+* **`uv pip install langflow`** — the Langflow server plus the default curated component packages below as regular pip dependencies.
 * **`uv pip install lfx`** — the engine only, with no component bundles. Bring your own bundles: install `lfx-bundles`, individual `lfx-<provider>` packages, or your own extensions alongside it.
 
 A component's identity is its **bundle name**, never the package it ships in.
@@ -22,12 +22,13 @@ The following component packages are included with `uv pip install langflow`:
 
 | Package | Contents |
 |---------|----------|
-| `lfx-bundles` | The long tail of provider bundles (vector stores, model providers, search and tool integrations) as a single package. Each provider is one bundle, for example `tavily`, `qdrant`, or `ollama`. Per-provider pip extras carry the third-party SDKs, and the generated `lfx-bundles[all]` extra pulls all of them. |
 | `lfx-openai`, `lfx-anthropic`, `lfx-amazon`, `lfx-datastax`, `lfx-cohere` | Partner providers as standalone packages, each on its own release cadence. |
 | `lfx-arxiv` | [arXiv](/bundles-arxiv) search |
 | `lfx-docling` | [Docling](/bundles-docling) document parsing and chunking |
 | `lfx-duckduckgo` | [DuckDuckGo](/bundles-duckduckgo) web search |
 | `lfx-ibm` | [IBM](/bundles-ibm) watsonx.ai LLM and embeddings, IBM Db2 Vector Store |
+
+The long-tail `lfx-bundles` metapackage remains available for explicit installation, but is not installed by default with `langflow`. Install it when you need providers that still live there, such as `tavily`, `qdrant`, or `ollama`.
 
 The internal identifier for each component changes.
 For example, a DuckDuckGo component previously referenced as a `DuckDuckGoSearchComponent` class is now `ext:duckduckgo:DuckDuckGoSearchComponent@official`.
@@ -75,14 +76,14 @@ Manifest-less packages such as `lfx-bundles` are discovered and loaded at server
 
 ## Legacy import paths and the shim error
 
-Code that imports components by their old in-tree path, such as `from lfx.components.qdrant import QdrantVectorStoreComponent`, keeps working as long as the bundle that now ships the provider is installed — which `pip install langflow` always guarantees.
+Code that imports components by their old in-tree path, such as `from lfx.components.qdrant import QdrantVectorStoreComponent`, keeps working as long as the bundle that now ships the provider is installed.
 A small import shim at the old location forwards to the bundle package.
 
 On an engine-only install with no bundles, the same import raises an actionable error that names exactly what to install:
 
 ```text
 ModuleNotFoundError: The 'qdrant' components moved to the 'lfx-bundles' distribution.
-Install it with:  pip install lfx-bundles   (or 'pip install langflow', which bundles it).
+Install it with:  pip install lfx-bundles.
 ```
 
 If you `pip install lfx` directly and your code depends on components, either switch to `lfx[bundles]` (see [LFX and Langflow version compatibility](/lfx-compatibility)) or pin the specific `lfx-<provider>` packages you use.

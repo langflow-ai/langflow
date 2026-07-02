@@ -1,14 +1,14 @@
 """Extras-drift guard for the ``lfx-bundles`` metapackage.
 
 ``src/bundles/lfx-bundles/pyproject.toml`` carries one optional-dependency
-extra per provider plus a *generated* ``all`` aggregate (what ``langflow``
-depends on via ``lfx-bundles[all]``). These invariants are maintained by
+extra per provider plus a *generated* ``all`` aggregate for explicit opt-in
+installs such as ``lfx[bundles]``. These invariants are maintained by
 ``scripts/migrate/consolidate_bundles.py`` and must never drift by hand-edit:
 
     1. every provider directory has exactly one extra (PEP 685-normalized key),
     2. ``all`` is exactly the set of per-provider self-refs -- a provider
-       missing from ``all`` silently drops its deps from ``pip install
-       langflow`` (the epic's headline dep-parity risk),
+       missing from ``all`` silently drops its deps from explicit all-bundle
+       installs,
     3. normalized extra keys are collision-free,
     4. the metapackage provider set stays disjoint from the graduated
        partner distributions (no double-ship; manifest would shadow).

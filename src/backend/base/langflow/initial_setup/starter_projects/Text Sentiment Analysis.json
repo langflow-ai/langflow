@@ -993,7 +993,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
@@ -3877,10 +3877,10 @@
             "description": "# 📊 Text Sentiment Analysis\n\nUpload a text file (a review, an email, feedback, an article) and the flow analyzes its sentiment **two complementary ways** — a quick direct classification and a deeper summarize-then-analyze pass. Each result comes back as a clean JSON object.\n\n## Setup\n1. **File** — upload the text to analyze (PDF, TXT, MD, DOCX, …).\n2. **Agents** — add your LLM key on each of the three Agents (Model dropdown). No other keys needed.\n\n## What you get (two outputs)\n**1) Direct classification** — File → Agent → Chat Output\nReads the text in one pass and returns:\n- `message_category` — e.g. *Positive Feedback*, *Complaint*, *Question*\n- `message_sentiment` — *Positive* / *Negative* / *Neutral*\n\n**2) Summary & insights** — File → Agent (summarize) → Agent (analyze) → Chat Output\nFirst condenses the text, then analyzes the summary, returning:\n- `summary` — a short recap of the text\n- `action_item` — a concrete next step suggested by the content\n- `sentiment` — overall sentiment of the summarized view\n\nThe two can differ on nuanced text — a glowing review with a few complaints may read *Positive* directly but *Neutral* once distilled. Comparing them is the point.\n\n## Run\nUpload a file, open the **Playground**, and run. Swap the file to analyze different texts.\n\n## Tips\n- Clear, well-formatted text gives better results.\n- Each Agent's behavior is set in its **Agent Instructions** / the **Prompt** feeding it — edit those to change the categories, fields, or tone.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.text_sentiment_analysis.87f5729f",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.text_sentiment_analysis.87f5729f"
+            }
           },
           "type": "note"
         },
