@@ -26,6 +26,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import httpx
+from a2a.server.agent_execution.active_task import TERMINAL_TASK_STATES
 from a2a.server.context import ServerCallContext
 from a2a.server.owner_resolver import resolve_user_scope
 from a2a.server.request_handlers import DefaultRequestHandler
@@ -33,7 +34,7 @@ from a2a.server.routes.common import DefaultServerCallContextBuilder
 from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
 from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, TaskStore
 from a2a.types import a2a_pb2 as pb
-from a2a.utils.errors import InvalidParamsError, TaskNotFoundError
+from a2a.utils.errors import InvalidParamsError, TaskNotCancelableError, TaskNotFoundError
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
 from lfx.graph.checkpoint.schema import GraphCheckpoint
@@ -490,9 +491,20 @@ class _DurableCancelHandler(DefaultRequestHandler):
         if await _TASK_STORE.get(params.id, context) is None:
             raise TaskNotFoundError
         task = await super().on_cancel_task(params, context)
-        if task is not None and task.status.state != pb.TaskState.TASK_STATE_CANCELED:
-            task.status.state = pb.TaskState.TASK_STATE_CANCELED
-            await _TASK_STORE.save(task, context)
+        if task is None:
+            return None
+        if task.status.state in TERMINAL_TASK_STATES:
+            # Already terminal: done if it's CANCELED. Otherwise the run finished (a registry-resident
+            # task in the async-cleanup window, or one a stream subscriber still pins) and the SDK
+            # returned it terminal-but-uncanceled instead of raising. Match the SDK's cold path and
+            # refuse, rather than clobbering a real COMPLETED/FAILED with CANCELED in the store.
+            if task.status.state != pb.TaskState.TASK_STATE_CANCELED:
+                raise TaskNotCancelableError
+            return task
+        # Non-terminal: the SDK left a parked (input-required) task unchanged, so force terminal
+        # CANCELED into the returned task and the durable store.
+        task.status.state = pb.TaskState.TASK_STATE_CANCELED
+        await _TASK_STORE.save(task, context)
         return task
 
 
