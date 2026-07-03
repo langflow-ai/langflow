@@ -535,10 +535,10 @@ async def test_resubscribe_to_terminal_task_errors_without_hanging(client: Async
 
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_resubscribe_is_scoped_to_the_path_flow(client: AsyncClient, active_user, human_input_flow_data):
-    """A caller can't re-attach to another flow's live task via tasks/resubscribe (store is flow-scoped).
+    """A caller can't re-attach to another flow's task via tasks/resubscribe.
 
-    Without the flow gate, flow B's resubscribe finds flow A's task by id in the shared, task-id-keyed
-    ActiveTaskRegistry and streams (or hangs on) it. The gate turns it into a not-found error frame.
+    resubscribe is rejected uniformly (no live producer to tail in the sync model), so flow B's
+    attempt on flow A's task by id ends in an error frame and never streams A's task or its events.
     """
     flow_a = await _create_flow(active_user.id, data=human_input_flow_data)
     flow_b = await _create_flow(active_user.id, data=human_input_flow_data)
@@ -558,6 +558,50 @@ async def test_resubscribe_is_scoped_to_the_path_flow(client: AsyncClient, activ
     assert any("error" in f for f in frames)
     # Flow B never receives flow A's task or its lifecycle events.
     assert not any(f.get("result", {}).get("kind") in {"task", "status-update", "artifact-update"} for f in frames)
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_resubscribe_to_same_flow_input_required_task_does_not_hang(
+    client: AsyncClient, active_user, human_input_flow_data
+):
+    """tasks/resubscribe to the OWNING flow's paused task must end with an error frame, not hang.
+
+    A paused task has no live producer to tail, so tapping its event queue would block forever.
+    resubscribe returns a spec error instead. wait_for makes a hang a failure, not a suite stall.
+    """
+    import asyncio
+
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id = paused["id"]
+
+    async def _resub():
+        async with client.stream(
+            "POST",
+            f"api/v1/a2a/{flow_id}/jsonrpc",
+            json={"jsonrpc": "2.0", "id": 1, "method": "tasks/resubscribe", "params": {"id": task_id}},
+        ) as resp:
+            return [orjson.loads(line[len("data:") :]) async for line in resp.aiter_lines() if line.startswith("data:")]
+
+    frames = await asyncio.wait_for(_resub(), timeout=10)
+    assert any("error" in f for f in frames)
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_task_scope_is_canonical_across_uuid_encodings(client: AsyncClient, active_user, echo_flow_data):
+    """A task created via a non-canonical flow-id URL is readable via the canonical one.
+
+    The UUID route converter accepts an uppercase flow id, so the raw path segment must be
+    canonicalized before it becomes the store scope key, or the two encodings address two scopes.
+    """
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    sent = (await _jsonrpc(client, str(flow_id).upper(), "message/send", _text_message("hi"))).json()["result"]
+    task_id = sent["id"]
+
+    got = (await _jsonrpc(client, str(flow_id), "tasks/get", {"id": task_id})).json()
+    assert "result" in got, got
+    assert got["result"]["id"] == task_id
 
 
 @pytest.mark.usefixtures("a2a_flag_on")

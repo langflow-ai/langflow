@@ -34,7 +34,12 @@ from a2a.server.routes.common import DefaultServerCallContextBuilder
 from a2a.server.routes.jsonrpc_dispatcher import JsonRpcDispatcher
 from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, TaskStore
 from a2a.types import a2a_pb2 as pb
-from a2a.utils.errors import InvalidParamsError, TaskNotCancelableError, TaskNotFoundError
+from a2a.utils.errors import (
+    InvalidParamsError,
+    TaskNotCancelableError,
+    TaskNotFoundError,
+    UnsupportedOperationError,
+)
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
 from lfx.graph.checkpoint.resume import resume_graph_with_decision
@@ -128,7 +133,11 @@ class _FlowContextBuilder(DefaultServerCallContextBuilder):
 
     def build(self, request: Request) -> ServerCallContext:
         context = super().build(request)
-        context.state["flow_id"] = request.path_params["flow_id"]
+        # Canonicalize to the same string form the resume guard uses (str(UUID(...))), so the durable
+        # store scope (_task_scope / _push_config_scope) and the checkpoint/resume guard agree even for
+        # a non-canonical UUID in the path (uppercase or hyphenless, both valid to the UUID route
+        # converter). Without this, the same task addressed via two encodings lands in two scopes.
+        context.state["flow_id"] = str(UUID(request.path_params["flow_id"]))
         return context
 
 
@@ -512,15 +521,17 @@ class _DurableCancelHandler(DefaultRequestHandler):
         await A2ACheckpointStore().delete_by_run_id(params.id)
         return task
 
-    async def on_subscribe_to_task(self, params, context: ServerCallContext):
-        # tasks/resubscribe re-attaches via the task-id-only ActiveTaskRegistry, bypassing the store's
-        # flow scoping, so without this gate a caller could re-attach to (and stream) another flow's
-        # live task by id. Scope it like on_cancel_task / tasks-get: a task this flow can't see is
-        # "not found" (and we don't reveal it exists under another flow).
-        if await _TASK_STORE.get(params.id, context) is None:
-            raise TaskNotFoundError
-        async for event in super().on_subscribe_to_task(params, context):
-            yield event
+    async def on_subscribe_to_task(self, params, _context):
+        # tasks/resubscribe re-attaches to the live event queue of an in-flight message/stream request.
+        # Our runs are synchronous: by the time a client could resubscribe, that request has returned,
+        # so there is never a live producer to tail. The SDK's on_subscribe_to_task taps the task's
+        # event queue and waits, so for a parked (input-required) or idle-registry task it blocks
+        # forever. Don't inspect task state or liveness: unconditionally return a spec error and let
+        # tasks/get cover reading a paused/terminal task back. The uniform error also means resubscribe
+        # never reaches the store, so it can't reveal another flow's task by id.
+        msg = f"Task {params.id} has no active stream to resubscribe to"
+        raise UnsupportedOperationError(message=msg)
+        yield  # unreachable: the raise always fires, but the yield makes this an async generator
 
 
 # One shared httpx client sends webhooks; a short timeout so a slow/hostile webhook
