@@ -4,7 +4,10 @@ import Scavio from "./Scavio";
 
 export const ScavioIcon = forwardRef<
   SVGSVGElement,
-  React.PropsWithChildren<{}>
+  React.PropsWithChildren<{ isDark?: boolean }>
 >((props, ref) => {
-  return <Scavio ref={ref} {...props} />;
+  const { isDark, ...rest } = props;
+  return <Scavio ref={ref} isdark={isDark?.toString()} {...rest} />;
 });
+
+ScavioIcon.displayName = "ScavioIcon";
