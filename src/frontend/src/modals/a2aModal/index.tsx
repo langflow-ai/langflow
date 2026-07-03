@@ -11,6 +11,7 @@ import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-up
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { cn } from "@/utils/utils";
 import BaseModal from "../baseModal";
 import {
   type A2ACardForm,
@@ -55,6 +56,11 @@ export default function A2AModal({
   );
   const [testInput, setTestInput] = useState("");
   const [testReply, setTestReply] = useState("");
+  const [testFailed, setTestFailed] = useState(false);
+
+  // The live endpoint only serves once publishing is SAVED, so testing gates on the saved
+  // flag, not the local switch. Used for both the Send button and the Enter shortcut.
+  const canTest = !!testInput.trim() && !!currentFlow?.a2a_enabled;
 
   // Re-seed from the flow whenever the modal opens, so it reflects the saved state.
   useEffect(() => {
@@ -62,6 +68,7 @@ export default function A2AModal({
       setEnabled(!!currentFlow?.a2a_enabled);
       setForm(overridesToForm(currentFlow?.a2a_card_overrides));
       setTestReply("");
+      setTestFailed(false);
     }
   }, [open, currentFlow]);
 
@@ -89,16 +96,20 @@ export default function A2AModal({
   };
 
   const handleTest = async () => {
+    if (!canTest) return;
     setTestReply("");
+    setTestFailed(false);
     try {
       const data = await sendMessage({ flowId, message: testInput });
       if (data?.error) {
-        setTestReply(`Error: ${data.error.message ?? "request failed"}`);
+        setTestFailed(true);
+        setTestReply(data.error.message ?? t("a2aModal.testRequestFailed"));
         return;
       }
-      setTestReply(parseA2AReply(data?.result) || "(no text in reply)");
+      setTestReply(parseA2AReply(data?.result) || t("a2aModal.testNoText"));
     } catch (e) {
-      setTestReply(`Error: ${errorDetail(e, "request failed")}`);
+      setTestFailed(true);
+      setTestReply(errorDetail(e, t("a2aModal.testRequestFailed")));
     }
   };
 
@@ -147,9 +158,14 @@ export default function A2AModal({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => {
-                  navigator.clipboard.writeText(cardUrl);
-                  setSuccessData({ title: t("a2aModal.copied") });
+                aria-label={t("a2aModal.copyUrlAria")}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(cardUrl);
+                    setSuccessData({ title: t("a2aModal.copied") });
+                  } catch {
+                    setErrorData({ title: t("a2aModal.copyError") });
+                  }
                 }}
               >
                 <ForwardedIconComponent name="Copy" className="h-4 w-4" />
@@ -222,7 +238,9 @@ export default function A2AModal({
             </Label>
             {!currentFlow?.a2a_enabled && (
               <span className="text-mmd text-muted-foreground">
-                {t("a2aModal.testPublishFirst")}
+                {enabled
+                  ? t("a2aModal.testSaveFirst")
+                  : t("a2aModal.testPublishFirst")}
               </span>
             )}
             <div className="flex items-center gap-2">
@@ -230,13 +248,15 @@ export default function A2AModal({
                 placeholder={t("a2aModal.testPlaceholder")}
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleTest()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && canTest) handleTest();
+                }}
                 data-testid="a2a-test-input"
               />
               <Button
                 onClick={handleTest}
                 loading={isSending}
-                disabled={!testInput.trim() || !currentFlow?.a2a_enabled}
+                disabled={!canTest}
                 data-testid="a2a-test-send"
               >
                 {t("a2aModal.testSend")}
@@ -244,7 +264,12 @@ export default function A2AModal({
             </div>
             {testReply && (
               <div
-                className="whitespace-pre-wrap rounded-md bg-muted p-3 text-mmd"
+                className={cn(
+                  "whitespace-pre-wrap rounded-md p-3 text-mmd",
+                  testFailed
+                    ? "bg-error-background text-error-foreground"
+                    : "bg-muted",
+                )}
                 data-testid="a2a-test-reply"
               >
                 {testReply}
