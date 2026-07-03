@@ -156,44 +156,74 @@ def build_brief(prd: str | None, diagram_d2: str | None, artifacts: dict[str, st
 # --- OD agent wiring ---------------------------------------------------------
 
 
-async def _configure_od_agent(od: ODClient, agent: str | None) -> None:
-    """Point OD's agent at Lothal's LLM gateway and pre-complete onboarding (`PUT /api/app-config`).
+def _agent_cli_env(agent: str, byok_token: str | None) -> dict[str, str]:
+    """The per-agent launch env for OD's `agentCliEnv` — model-agnostic BYOK injection.
 
-    Story U.3 stands up the gateway; this is U.4's live application of it — OD's
-    OpenAI-compatible agent gets `OPENAI_BASE_URL`/`OPENAI_API_KEY` pointing back
-    at Lothal so every LLM call OD makes transits the gateway. Best-effort: a
-    config failure is logged but does not abort generation (OD may already be
-    configured this way, or run on a metered key set directly).
+    OD runs the coding agent as a local CLI and merges `agentCliEnv.<agent>` over the
+    process env when it spawns it, so this is where the user's own key reaches the
+    agent — the prototype-stage mirror of how the code sandbox injects the key. Each
+    agent takes the credential in its own env var:
 
-    It also flips the daemon's `onboardingCompleted` flag and pins `agentId` to the
-    same agent. OD's web UI bounces to its onboarding/"Sign in to Open Design Cloud"
-    chooser whenever the daemon config reports `onboardingCompleted !== true`; since
-    the daemon is authoritative across browsers (the web app merges it over
-    localStorage on boot), setting it here means a Lothal deep-link to
-    `/projects/<id>` lands straight on the project page with no prompts — the user
-    drives OD's own UI headlessly through Lothal's local agent.
+    - ``claude`` (Claude Code): the token is a Claude Code *subscription* token, so
+      hand it straight to the CLI as ``CLAUDE_CODE_OAUTH_TOKEN``. The CLI runs the
+      subscription natively — it adds the ``oauth-2025-04-20`` beta and calls
+      Anthropic directly — so no gateway/translation is involved.
+    - OpenAI-format agents (``codex``, …): route their OpenAI calls through Lothal's
+      gateway (which translates to the subscription) with the key as
+      ``OPENAI_API_KEY``.
 
-    `agent` is the resolved agent id (the caller reads it once and shares it, so the
-    agent that is *configured* here can't drift from the one the run is *started*
-    with). A blank/None agent skips the call (OD picks its own default agent).
+    More agents slot in here as they are onboarded (Gemini, etc.). A missing token
+    yields no credential entry, so OD falls back to whatever it is configured with
+    (e.g. a token baked into the OD container env) — generation is never blocked on
+    the user not having set their own key.
+    """
+    if agent == "claude":
+        return {"CLAUDE_CODE_OAUTH_TOKEN": byok_token} if byok_token else {}
+    # OpenAI-compatible agents transit Lothal's gateway so every model call is
+    # observable/centrally controlled; OpenAI clients reject an empty key, so fall
+    # back to the inbound gateway token (or a placeholder when inbound auth is off).
+    gateway_url = _env("LOTHAL_GATEWAY_PUBLIC_URL", _DEFAULT_GATEWAY_URL)
+    gateway_key = _env("LOTHAL_GATEWAY_TOKEN") or "lothal"
+    return {"OPENAI_BASE_URL": gateway_url, "OPENAI_API_KEY": byok_token or gateway_key}
+
+
+async def _configure_od_agent(od: ODClient, agent: str | None, byok_token: str | None = None) -> None:
+    """Configure OD's agent — inject the user's key + pre-complete onboarding (`PUT /api/app-config`).
+
+    Two jobs. (1) Hand OD's coding agent the credential to run on, in the env var
+    that agent expects (`_agent_cli_env`): for `claude` this is the user's own
+    `CLAUDE_CODE_OAUTH_TOKEN`, so the prototype stage runs on the *same* key the code
+    stage does — update it once (in langflow's secret manager) and both follow. The
+    token is never logged (only the failure is) and never leaves this internal call.
+    (2) Flip the daemon's `onboardingCompleted` flag and pin `agentId`: OD's web UI
+    bounces to its onboarding/"Sign in to Open Design Cloud" chooser whenever the
+    daemon config reports `onboardingCompleted !== true`; since the daemon is
+    authoritative across browsers (the web app merges it over localStorage on boot),
+    setting it here means a Lothal deep-link to `/projects/<id>` lands straight on the
+    project page — the user drives OD's own UI headlessly through Lothal.
+
+    Best-effort: a config failure is logged but does not abort generation (OD may
+    already be configured, or run on a token baked into its container env). `agent`
+    is the resolved agent id (the caller reads it once and shares it, so the agent
+    *configured* here can't drift from the one the run is *started* with); a
+    blank/None agent skips the call (OD picks its own default agent).
     """
     if not agent:
         return
-    gateway_url = _env("LOTHAL_GATEWAY_PUBLIC_URL", _DEFAULT_GATEWAY_URL)
-    # OpenAI clients reject an empty key; reuse the inbound gateway token when set,
-    # else any non-empty placeholder (gateway inbound auth is off when unset).
-    gateway_key = _env("LOTHAL_GATEWAY_TOKEN") or "lothal"
-    body = {
-        "agentCliEnv": {agent: {"OPENAI_BASE_URL": gateway_url, "OPENAI_API_KEY": gateway_key}},
+    body: dict[str, Any] = {
         # Skip OD's first-run onboarding / cloud sign-in chooser and select our agent,
         # so the embedded/deep-linked project page renders directly.
         "onboardingCompleted": True,
         "agentId": agent,
     }
+    cli_env = _agent_cli_env(agent, byok_token)
+    if cli_env:
+        body["agentCliEnv"] = {agent: cli_env}
     try:
         await od.update_app_config(body)
     except ODError as exc:
-        logger.warning(f"could not point OD agent {agent!r} at the Lothal gateway: {exc}")
+        # Never interpolate the body/token — only the agent id and the error.
+        logger.warning(f"could not configure OD agent {agent!r}: {exc}")
 
 
 # --- generate ----------------------------------------------------------------
@@ -217,7 +247,7 @@ async def _find_od_project(od: ODClient, lothal_project_id: str) -> dict[str, An
     return None
 
 
-async def seed_and_generate(project: Project) -> GenerateResult:
+async def seed_and_generate(project: Project, byok_token: str | None = None) -> GenerateResult:
     """Seed an OD project from the brief and start a run (Story U.4).
 
     Idempotent at two levels: (1) if the Lothal project is already linked to an OD
@@ -227,6 +257,11 @@ async def seed_and_generate(project: Project) -> GenerateResult:
     one only if none exists; then it ensures a run is in flight (starting one only
     when the reused project has none). Returns the linkage for the endpoint to
     persist (with `prototype_status=GENERATING`).
+
+    `byok_token` is the user's own model credential (their `CLAUDE_CODE_OAUTH_TOKEN`
+    from langflow's secret manager, resolved by the endpoint); it is injected into
+    OD's agent so the prototype runs on the user's key. `None` falls back to whatever
+    OD is already configured with.
     """
     if project.od_project_id:
         return GenerateResult(
@@ -240,7 +275,7 @@ async def seed_and_generate(project: Project) -> GenerateResult:
     skill_id = _env("LOTHAL_OD_SKILL_ID")
 
     async with ODClient.from_env() as od:
-        await _configure_od_agent(od, agent_id)
+        await _configure_od_agent(od, agent_id, byok_token)
 
         existing = await _find_od_project(od, str(project.id))
         if existing is not None:
@@ -287,24 +322,29 @@ async def seed_and_generate(project: Project) -> GenerateResult:
 # --- refine ------------------------------------------------------------------
 
 
-async def refine(project: Project, instruction: str) -> GenerateResult:
+async def refine(project: Project, instruction: str, byok_token: str | None = None) -> GenerateResult:
     """Start a new OD run in the project's conversation from a Lothal-side instruction (Story U.6).
 
     The primary refine path is inside OD itself; this is the secondary path — a
     chat-driven instruction becomes a new run on the stored `od_conversation_id`,
     so OD resumes the same session. The endpoint guarantees the project is already
     seeded (else it 409s), so a missing linkage here is a programming error.
+
+    Re-applies the agent config first, so a refine picks up the user's *current*
+    `byok_token` (they may have updated their key since the initial generate).
     """
     if not project.od_project_id:
         msg = "Cannot refine a prototype before it has been generated."
         raise ValueError(msg)
 
+    agent_id = _env("LOTHAL_OD_AGENT_ID", _DEFAULT_OD_AGENT_ID)
     async with ODClient.from_env() as od:
+        await _configure_od_agent(od, agent_id, byok_token)
         run = await od.start_run(
             project_id=project.od_project_id,
             message=instruction,
             conversation_id=project.od_conversation_id,
-            agent_id=_env("LOTHAL_OD_AGENT_ID", _DEFAULT_OD_AGENT_ID),
+            agent_id=agent_id,
         )
 
     conversation_id = run.get("conversationId") or project.od_conversation_id

@@ -73,6 +73,32 @@ def test_build_brief_handles_missing_context():
     assert brief.strip()  # the intro is always present
 
 
+# --- _agent_cli_env (model-agnostic BYOK injection) --------------------------
+
+
+def test_agent_cli_env_claude_uses_subscription_token():
+    # Claude Code runs the subscription natively → hand it the token directly, no
+    # gateway/OPENAI_* plumbing.
+    env = prototype._agent_cli_env("claude", "sk-ant-oat-user")
+    assert env == {"CLAUDE_CODE_OAUTH_TOKEN": "sk-ant-oat-user"}
+
+
+def test_agent_cli_env_claude_without_token_is_empty():
+    # No key → no credential entry, so OD falls back to whatever it is configured
+    # with (e.g. a token baked into its container env). Generation is never blocked.
+    assert prototype._agent_cli_env("claude", None) == {}
+
+
+def test_agent_cli_env_openai_agent_routes_through_gateway(monkeypatch):
+    monkeypatch.setenv("LOTHAL_GATEWAY_PUBLIC_URL", "http://backend:7860/api/v1/lothal/gateway/v1")
+    monkeypatch.setenv("LOTHAL_GATEWAY_TOKEN", "gw-token")
+    # A BYOK key rides as OPENAI_API_KEY; without one, the gateway placeholder/token.
+    with_key = prototype._agent_cli_env("codex", "sk-user-openai")
+    assert with_key["OPENAI_BASE_URL"] == "http://backend:7860/api/v1/lothal/gateway/v1"
+    assert with_key["OPENAI_API_KEY"] == "sk-user-openai"
+    assert prototype._agent_cli_env("codex", None)["OPENAI_API_KEY"] == "gw-token"
+
+
 # --- seed_and_generate -------------------------------------------------------
 
 

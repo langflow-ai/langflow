@@ -1982,6 +1982,11 @@ def _od_env(monkeypatch):
     monkeypatch.delenv("LOTHAL_OD_PUBLIC_BASE_URL", raising=False)
     monkeypatch.setenv("LOTHAL_OD_AGENT_ID", "")
     monkeypatch.setenv("LOTHAL_OD_SKILL_ID", "")
+    # Default the prototype tests to "no BYOK": the endpoints resolve the user's
+    # subscription token (falling back to the server CLAUDE_CODE_OAUTH_TOKEN) and
+    # inject it into OD's agent, so clear the env token to keep the no-key path
+    # deterministic. The BYOK-injection case has its own test that sets it.
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
 
 
 async def _make_prototype_project(
@@ -2127,6 +2132,39 @@ async def test_generate_points_od_agent_at_gateway(client: AsyncClient, logged_i
     # project page renders directly instead of bouncing to the sign-in chooser.
     assert patched["onboardingCompleted"] is True
     assert patched["agentId"] == "codex"
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_generate_injects_byok_token_for_claude_agent(client: AsyncClient, logged_in_headers, monkeypatch):
+    """The claude agent runs the subscription natively: generation hands it the user's
+    token as CLAUDE_CODE_OAUTH_TOKEN via agentCliEnv — no gateway/OPENAI_* — so the
+    prototype stage runs on the same key the code stage does."""
+    monkeypatch.setenv("LOTHAL_OD_AGENT_ID", "claude")
+    # No per-user variable in the test DB, so _resolve_user_byok falls back to the
+    # server subscription token — enough to prove the injection wiring.
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-ant-oat-user-key")
+    project_id = await _make_prototype_project(client, logged_in_headers)
+
+    with respx.mock:
+        _mock_od_discovery()
+        cfg = respx.put(f"{OD_BASE}/api/app-config").mock(return_value=httpx.Response(200, json={}))
+        respx.post(f"{OD_BASE}/api/projects").mock(return_value=httpx.Response(200, json={"id": "od-proj-1"}))
+        respx.post(f"{OD_BASE}/api/runs").mock(return_value=httpx.Response(200, json={"runId": "run-1"}))
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert cfg.call_count == 1
+    patched = json.loads(cfg.calls.last.request.content)
+    # The user's key reaches the claude CLI natively; no OpenAI/gateway plumbing.
+    assert patched["agentCliEnv"]["claude"]["CLAUDE_CODE_OAUTH_TOKEN"] == "sk-ant-oat-user-key"
+    assert "OPENAI_BASE_URL" not in patched["agentCliEnv"]["claude"]
+    assert "OPENAI_API_KEY" not in patched["agentCliEnv"]["claude"]
+    assert patched["agentId"] == "claude"
+    assert patched["onboardingCompleted"] is True
+    # The response body never carries the token back to the browser.
+    assert "sk-ant-oat-user-key" not in response.text
 
 
 @pytest.mark.usefixtures("_od_env")
