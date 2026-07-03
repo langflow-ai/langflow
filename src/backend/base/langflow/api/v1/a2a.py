@@ -37,10 +37,10 @@ from a2a.types import a2a_pb2 as pb
 from a2a.utils.errors import InvalidParamsError, TaskNotCancelableError, TaskNotFoundError
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from google.protobuf.json_format import MessageToDict, ParseDict
+from lfx.graph.checkpoint.resume import resume_graph_with_decision
 from lfx.graph.checkpoint.schema import GraphCheckpoint
 from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
-from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 from lfx.schema.workflow import (
     GLOBAL_KEY_MAX_LEN,
@@ -251,15 +251,9 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
         return _suspended_response(flow_id, task_id, checkpoint.session_id, pending)
 
     decision = {"action_id": action_id or text.strip().lower().replace(" ", "_"), "values": {}}
-    graph = Graph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
-    graph.checkpointing_enabled = True
-    graph.checkpoint_store = store
-    request_id = pending.get("request_id")
-    graph.human_input_decisions = {request_id: decision}
-    # Un-build the paused node so it re-runs and reads the injected decision.
-    for vertex in graph.vertices:
-        if f"{vertex.id}:{graph.run_id}" == request_id:
-            vertex.built = False
+    # Shared HITL resume seam (restore + inject decision + un-build the paused vertex), so this path
+    # can't drift from the CLI resume loop; see lfx.run.hitl.resume_graph_with_decision.
+    graph = resume_graph_with_decision(checkpoint, store, pending.get("request_id"), decision)
 
     from langflow.api.v2.workflow import EXECUTION_TIMEOUT
     from langflow.processing.process import run_graph_internal
@@ -493,18 +487,22 @@ class _DurableCancelHandler(DefaultRequestHandler):
         task = await super().on_cancel_task(params, context)
         if task is None:
             return None
-        if task.status.state in TERMINAL_TASK_STATES:
-            # Already terminal: done if it's CANCELED. Otherwise the run finished (a registry-resident
-            # task in the async-cleanup window, or one a stream subscriber still pins) and the SDK
-            # returned it terminal-but-uncanceled instead of raising. Match the SDK's cold path and
-            # refuse, rather than clobbering a real COMPLETED/FAILED with CANCELED in the store.
-            if task.status.state != pb.TaskState.TASK_STATE_CANCELED:
-                raise TaskNotCancelableError
-            return task
-        # Non-terminal: the SDK left a parked (input-required) task unchanged, so force terminal
-        # CANCELED into the returned task and the durable store.
-        task.status.state = pb.TaskState.TASK_STATE_CANCELED
-        await _TASK_STORE.save(task, context)
+        # Terminal but not CANCELED: the run actually finished (a registry-resident task in the
+        # async-cleanup window, or one a stream subscriber still pins) and the SDK returned it
+        # terminal-but-uncanceled instead of raising. Match the SDK's cold path and refuse, rather
+        # than clobbering a real COMPLETED/FAILED with CANCELED in the store.
+        if task.status.state in TERMINAL_TASK_STATES and task.status.state != pb.TaskState.TASK_STATE_CANCELED:
+            raise TaskNotCancelableError
+        # Not yet CANCELED (the SDK left a parked task unchanged): force terminal CANCELED into the
+        # returned task and the durable store.
+        if task.status.state != pb.TaskState.TASK_STATE_CANCELED:
+            task.status.state = pb.TaskState.TASK_STATE_CANCELED
+            await _TASK_STORE.save(task, context)
+        # The task is now CANCELED (whether the SDK cancelled a live/parked producer or we forced it).
+        # Drop any HITL checkpoint: it is keyed by task id and is the cross-worker resume gate, so
+        # without this a follow-up message routed to a worker whose in-memory task still looks parked
+        # would reload it and resume a cancelled run. delete_by_run_id is a no-op with no checkpoint.
+        await A2ACheckpointStore().delete_by_run_id(params.id)
         return task
 
 

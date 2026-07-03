@@ -36,6 +36,22 @@ RunFlow = Callable[[UUID, str, str, str | None], Awaitable[WorkflowExecutionResp
 ResumeFlow = Callable[[UUID, str, str], Awaitable[WorkflowExecutionResponse]]
 
 
+def _json_safe(content: object) -> object:
+    """Coerce a data-output payload to a JSON-native value for ``new_data_part``.
+
+    ``new_data_part`` serializes via ``ParseDict`` into a protobuf ``Value``, which rejects
+    non-JSON-native values (datetime, UUID, a pydantic model such as lfx ``OutputValue``). Round-trip
+    through json, dumping pydantic models and str-ifying anything else, so a data-typed flow output
+    can't raise a ParseError mid-artifact and leave the task with no terminal event.
+    """
+
+    def _default(obj: object) -> object:
+        dump = getattr(obj, "model_dump", None)
+        return dump(mode="json") if callable(dump) else str(obj)
+
+    return json.loads(json.dumps(content, default=_default))
+
+
 def _answer_parts(response: WorkflowExecutionResponse) -> list[pb.Part]:
     """The run's answer as A2A artifact parts: text for string channels, data for the rest.
 
@@ -55,7 +71,7 @@ def _answer_parts(response: WorkflowExecutionResponse) -> list[pb.Part]:
         if output.type in {"message", "text"} and isinstance(output.content, str):
             parts.append(new_text_part(output.content))
         else:
-            parts.append(new_data_part(output.content, media_type="application/json"))
+            parts.append(new_data_part(_json_safe(output.content), media_type="application/json"))
     return parts
 
 
@@ -135,9 +151,17 @@ class FlowAgentExecutor(AgentExecutor):
             await updater.failed(updater.new_agent_message([new_text_part(detail)]))
             return
 
-        parts = _answer_parts(response)
-        await updater.add_artifact(parts or [new_text_part("")], name="result")
-        await updater.complete()
+        # Emit the answer artifact and complete. This runs OUTSIDE the try above, and _answer_parts
+        # serializes arbitrary flow output, so guard it: an unexpected serialization failure here
+        # would escape execute() and leave the task with no terminal event (stuck 'working'). Downgrade
+        # any such failure to a terminal 'failed' instead.
+        try:
+            parts = _answer_parts(response)
+            await updater.add_artifact(parts or [new_text_part("")], name="result")
+            await updater.complete()
+        except Exception:
+            logger.exception("A2A artifact emission failed for task %s", context.task_id)
+            await updater.failed(updater.new_agent_message([new_text_part("Flow execution failed")]))
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         # The durable terminal CANCELED is written by the request handler (see a2a.py); here we only

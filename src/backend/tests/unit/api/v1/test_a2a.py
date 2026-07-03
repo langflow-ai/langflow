@@ -1078,22 +1078,35 @@ async def test_a2a_agent_component_calls_remote_agent(client: AsyncClient, activ
 
 @pytest.mark.usefixtures("client")
 async def test_push_dispatch_rejects_rebound_private_ip():
-    """Dispatch re-validates the webhook, so a config now pointing at a private/metadata IP is dropped.
+    """Dispatch re-validates the webhook and never CONNECTS to a private/metadata IP (DNS rebinding).
 
-    Registration validation can't stop a host that re-resolves to an internal IP after it
-    was registered (DNS rebinding). Calling the live sender's dispatch path directly with a
-    config whose URL targets the cloud metadata IP (bypassing registration, as a rebind
-    would) must return False (not sent) rather than POST to the internal address.
+    Registration validation can't stop a host that re-resolves to an internal IP after it was
+    registered. A bare ``sent is False`` is vacuous here (a failed/None send also returns False), so
+    point the webhook at a REAL local listener on a private IP (which the SSRF floor blocks) with a
+    valid event, and assert the listener is never contacted. This fails if the dispatch guard is
+    removed, because ``super()._dispatch_notification`` would then POST to it via the plain client.
     """
+    import asyncio
+
     from a2a.types import a2a_pb2 as pb
     from langflow.api.v1.a2a import _PUSH_SENDER
 
-    push_info = pb.TaskPushNotificationConfig(url="http://169.254.169.254/hook")
+    connected = asyncio.Event()
 
-    # event is irrelevant: the SSRF check fires before any payload is built or sent.
-    sent = await _PUSH_SENDER._dispatch_notification(None, push_info, "task-rebind")
+    async def _on_connect(_reader, writer):
+        connected.set()
+        writer.close()
+
+    server = await asyncio.start_server(_on_connect, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    async with server:
+        push_info = pb.TaskPushNotificationConfig(url=f"http://127.0.0.1:{port}/hook")
+        event = pb.Task(id="t", context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED))
+        sent = await _PUSH_SENDER._dispatch_notification(event, push_info, "task-rebind")
 
     assert sent is False
+    # The SSRF guard blocked before any connection; without it super() would POST to the listener.
+    assert not connected.is_set()
 
 
 def test_webhook_pin_host_matches_httpx_connect_host_for_idn():
@@ -1169,6 +1182,34 @@ def test_answer_parts_resolves_each_output_reason():
 
     none = _response(output=WorkflowOutput(reason=OutputReason.NONE))
     assert _answer_parts(none) == []
+
+
+def test_answer_parts_serializes_non_json_native_output():
+    """A data output carrying non-JSON-native values (datetime/UUID) serializes instead of ParseError.
+
+    new_data_part -> ParseDict rejects datetime/UUID/pydantic models; without coercion _answer_parts
+    raises, and since it runs after execute()'s try/except that escaped and hung the task.
+    """
+    from datetime import datetime, timezone
+
+    from a2a.helpers.proto_helpers import get_data_parts
+    from langflow.api.v1.a2a_executor import _answer_parts
+    from lfx.schema.workflow import ComponentOutput, JobStatus, OutputReason, WorkflowOutput
+
+    resp = _response(
+        output=WorkflowOutput(reason=OutputReason.MULTIPLE),
+        outputs={
+            "a": ComponentOutput(
+                type="data",
+                status=JobStatus.COMPLETED,
+                content={"when": datetime(2026, 1, 1, tzinfo=timezone.utc), "id": uuid.uuid4()},
+            ),
+        },
+    )
+    data = get_data_parts(_answer_parts(resp))  # must not raise ParseError
+    assert len(data) == 1
+    assert isinstance(data[0]["when"], str)
+    assert isinstance(data[0]["id"], str)
 
 
 # --- durable task store ----------------------------------------------------
@@ -1366,6 +1407,26 @@ async def test_cancel_input_required_task(client: AsyncClient, active_user, huma
     # Durably persisted: tasks/get reads canceled back from the store.
     got = (await _jsonrpc(client, flow_id, "tasks/get", {"id": task_id})).json()["result"]
     assert got["status"]["state"] == "canceled"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_cancel_deletes_hitl_checkpoint(client: AsyncClient, active_user, human_input_flow_data):
+    """Cancelling a parked HITL task drops its checkpoint, so no (stale) worker can reload and resume it."""
+    from langflow.api.v1.a2a import A2ACheckpointStore
+
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id = paused["id"]
+
+    # The pause saved a resumable checkpoint keyed by the task id.
+    assert await A2ACheckpointStore().load_by_run_id(task_id) is not None
+
+    canceled = (await _jsonrpc(client, flow_id, "tasks/cancel", {"id": task_id})).json()["result"]
+    assert canceled["status"]["state"] == "canceled"
+
+    # Cancel dropped the checkpoint: the cross-worker resume gate is gone.
+    assert await A2ACheckpointStore().load_by_run_id(task_id) is None
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
