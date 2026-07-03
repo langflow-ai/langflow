@@ -51,6 +51,7 @@
   "alerts.noTemplateVariables": "您的模板中没有变量。",
   "alerts.notificationsTitle": "通知",
   "apiKey.expirationDate": "到期日期",
+  "apiKey.expirationPlaceholder": "永不过期",
   "apiKey.expiry.1month": "从今天起1个月后",
   "apiKey.expiry.1week": "从今天起1周后",
   "apiKey.expiry.1year": "从今天起1年",
