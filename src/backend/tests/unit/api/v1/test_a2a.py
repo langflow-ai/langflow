@@ -534,6 +534,33 @@ async def test_resubscribe_to_terminal_task_errors_without_hanging(client: Async
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
+async def test_resubscribe_is_scoped_to_the_path_flow(client: AsyncClient, active_user, human_input_flow_data):
+    """A caller can't re-attach to another flow's live task via tasks/resubscribe (store is flow-scoped).
+
+    Without the flow gate, flow B's resubscribe finds flow A's task by id in the shared, task-id-keyed
+    ActiveTaskRegistry and streams (or hangs on) it. The gate turns it into a not-found error frame.
+    """
+    flow_a = await _create_flow(active_user.id, data=human_input_flow_data)
+    flow_b = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    paused = (await _jsonrpc(client, flow_a, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    task_id = paused["id"]
+
+    async with client.stream(
+        "POST",
+        f"api/v1/a2a/{flow_b}/jsonrpc",
+        json={"jsonrpc": "2.0", "id": 1, "method": "tasks/resubscribe", "params": {"id": task_id}},
+    ) as resp:
+        assert resp.status_code == 200
+        frames = [orjson.loads(line[len("data:") :]) async for line in resp.aiter_lines() if line.startswith("data:")]
+
+    assert any("error" in f for f in frames)
+    # Flow B never receives flow A's task or its lifecycle events.
+    assert not any(f.get("result", {}).get("kind") in {"task", "status-update", "artifact-update"} for f in frames)
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
 async def test_tasks_get_returns_prior_task(client: AsyncClient, active_user, echo_flow_data):
     """tasks/get reads back the Task a prior message/send created (durable DB-backed store)."""
     flow_id = await _create_flow(active_user.id, data=echo_flow_data)
@@ -1210,6 +1237,35 @@ def test_answer_parts_serializes_non_json_native_output():
     assert len(data) == 1
     assert isinstance(data[0]["when"], str)
     assert isinstance(data[0]["id"], str)
+
+
+async def test_a2a_client_raises_on_non_completed_remote_task():
+    """The A2A client component surfaces a failed remote task instead of returning its text as a reply."""
+    from a2a.helpers.proto_helpers import new_text_part
+    from a2a.types import a2a_pb2 as pb
+    from lfx.components.models_and_agents.a2a_agent import _reply_or_raise
+
+    async def _stream(items):
+        for item in items:
+            yield item
+
+    def _task_response(state, text):
+        return pb.StreamResponse(
+            task=pb.Task(
+                id="t",
+                context_id="c",
+                status=pb.TaskStatus(state=state),
+                artifacts=[pb.Artifact(parts=[new_text_part(text)])],
+            )
+        )
+
+    # A completed task returns its text.
+    completed = _stream([_task_response(pb.TaskState.TASK_STATE_COMPLETED, "the answer")])
+    assert await _reply_or_raise(completed) == "the answer"
+
+    # A failed task raises rather than passing its status text off as a successful reply.
+    with pytest.raises(ValueError, match="did not complete"):
+        await _reply_or_raise(_stream([_task_response(pb.TaskState.TASK_STATE_FAILED, "boom")]))
 
 
 # --- durable task store ----------------------------------------------------

@@ -133,6 +133,39 @@ def build_a2a_client(
     )
 
 
+async def _reply_or_raise(responses) -> str:
+    """Join the text parts of an A2A send-message response stream into the reply.
+
+    Surfaces a non-successful remote task instead of passing its status text off as a reply: a task
+    that ended failed/rejected/canceled (or was returned still non-terminal by a server that ignored
+    the blocking send) is not a successful answer. A message-only reply carries no task state.
+    """
+    from a2a.helpers.proto_helpers import get_text_parts
+    from a2a.types import a2a_pb2 as pb
+
+    texts: list[str] = []
+    total_chars = 0
+    final_state: int | None = None
+    async for response in responses:
+        before = len(texts)
+        if response.HasField("task"):
+            final_state = response.task.status.state
+            for artifact in response.task.artifacts:
+                texts.extend(get_text_parts(artifact.parts))
+            if not texts and response.task.status.HasField("message"):
+                texts.extend(get_text_parts(response.task.status.message.parts))
+        elif response.HasField("message"):
+            texts.extend(get_text_parts(response.message.parts))
+        total_chars += sum(len(text) for text in texts[before:])
+        if total_chars >= MAX_A2A_RESPONSE_CHARS:
+            break
+    reply = "\n".join(text for text in texts if text)[:MAX_A2A_RESPONSE_CHARS]
+    if final_state is not None and final_state != pb.TaskState.TASK_STATE_COMPLETED:
+        msg = f"Remote A2A agent task did not complete ({pb.TaskState.Name(final_state)}): {reply or 'no detail'}"
+        raise ValueError(msg)
+    return reply
+
+
 async def call_a2a_agent(
     agent_url: str,
     message: str,
@@ -150,7 +183,7 @@ async def call_a2a_agent(
     """
     from a2a.client.client import ClientConfig
     from a2a.client.client_factory import create_client
-    from a2a.helpers.proto_helpers import get_text_parts, new_text_part
+    from a2a.helpers.proto_helpers import new_text_part
     from a2a.types import a2a_pb2 as pb
 
     client = await create_client(
@@ -168,21 +201,7 @@ async def call_a2a_agent(
             parts=[new_text_part(message)],
         )
     )
-    texts: list[str] = []
-    total_chars = 0
-    async for response in client.send_message(request):
-        before = len(texts)
-        if response.HasField("task"):
-            for artifact in response.task.artifacts:
-                texts.extend(get_text_parts(artifact.parts))
-            if not texts and response.task.status.HasField("message"):
-                texts.extend(get_text_parts(response.task.status.message.parts))
-        elif response.HasField("message"):
-            texts.extend(get_text_parts(response.message.parts))
-        total_chars += sum(len(text) for text in texts[before:])
-        if total_chars >= MAX_A2A_RESPONSE_CHARS:
-            break
-    return "\n".join(text for text in texts if text)[:MAX_A2A_RESPONSE_CHARS]
+    return await _reply_or_raise(client.send_message(request))
 
 
 class A2AAgentComponent(Component):

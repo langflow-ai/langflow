@@ -505,6 +505,16 @@ class _DurableCancelHandler(DefaultRequestHandler):
         await A2ACheckpointStore().delete_by_run_id(params.id)
         return task
 
+    async def on_subscribe_to_task(self, params, context: ServerCallContext):
+        # tasks/resubscribe re-attaches via the task-id-only ActiveTaskRegistry, bypassing the store's
+        # flow scoping, so without this gate a caller could re-attach to (and stream) another flow's
+        # live task by id. Scope it like on_cancel_task / tasks-get: a task this flow can't see is
+        # "not found" (and we don't reveal it exists under another flow).
+        if await _TASK_STORE.get(params.id, context) is None:
+            raise TaskNotFoundError
+        async for event in super().on_subscribe_to_task(params, context):
+            yield event
+
 
 # One shared httpx client sends webhooks; a short timeout so a slow/hostile webhook
 # can't tie up the run. Created at import (no I/O) and reused across requests; closed
