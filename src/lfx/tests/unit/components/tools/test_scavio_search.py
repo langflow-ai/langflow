@@ -35,9 +35,7 @@ def _mock_post(status_code=200, json_data=None, text=""):
     if status_code >= 400:
         import httpx
 
-        response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "error", request=MagicMock(), response=response
-        )
+        response.raise_for_status.side_effect = httpx.HTTPStatusError("error", request=MagicMock(), response=response)
     else:
         response.raise_for_status.return_value = None
     client = MagicMock()
