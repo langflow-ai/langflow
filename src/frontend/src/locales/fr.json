@@ -2060,5 +2060,21 @@
   "voiceAssistant.apiKeyError": "Vérifiez votre clé API et réessayez",
   "voiceAssistant.connected": "Connecté",
   "voiceAssistant.connectionError": "Erreur de connexion",
-  "voiceAssistant.connectionFailed": "Echec de la connexion"
+  "voiceAssistant.connectionFailed": "Echec de la connexion",
+  "humanInput.waitingForInput": "En attente d'une saisie",
+  "humanInput.waitingFallback": "Le flux est en pause et attend votre décision avant de continuer.",
+  "humanInput.cannotResumeMissingJobId": "Impossible de reprendre : identifiant de tâche manquant",
+  "humanInput.resumeFailed": "Échec de la reprise",
+  "humanInput.awaitingInput": "En attente d'une saisie",
+  "actionPicker.namePlaceholder": "Nommer cette action…",
+  "actionPicker.nameAction": "Nommer cette action",
+  "actionPicker.rename": "Renommer {{action}}",
+  "actionPicker.remove": "Supprimer {{action}}",
+  "actionPicker.noActionsSelected": "Aucune action sélectionnée",
+  "actionPicker.alreadyExists": "« {{action}} » est déjà une action utilisateur.",
+  "actionPicker.renamedConnectionRemoved": "« {{previous}} » renommé — sa connexion précédente a été supprimée.",
+  "actionPicker.addAction": "Ajouter une action utilisateur",
+  "duration.minutes": "Minutes",
+  "duration.hours": "Heures",
+  "duration.days": "Jours"
 }

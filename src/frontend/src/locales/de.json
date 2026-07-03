@@ -2060,5 +2060,21 @@
   "voiceAssistant.apiKeyError": "Bitte überprüfen Sie Ihren API-Schlüssel und versuchen Sie es erneut",
   "voiceAssistant.connected": "Verbunden",
   "voiceAssistant.connectionError": "Verbindungsfehler",
-  "voiceAssistant.connectionFailed": "Verbindung fehlgeschlagen"
+  "voiceAssistant.connectionFailed": "Verbindung fehlgeschlagen",
+  "humanInput.waitingForInput": "Warte auf Eingabe",
+  "humanInput.waitingFallback": "Der Flow wurde angehalten und wartet auf Ihre Entscheidung, bevor er fortfährt.",
+  "humanInput.cannotResumeMissingJobId": "Fortsetzen nicht möglich: Job-ID fehlt",
+  "humanInput.resumeFailed": "Fortsetzen fehlgeschlagen",
+  "humanInput.awaitingInput": "Warte auf Eingabe",
+  "actionPicker.namePlaceholder": "Diese Aktion benennen…",
+  "actionPicker.nameAction": "Diese Aktion benennen",
+  "actionPicker.rename": "{{action}} umbenennen",
+  "actionPicker.remove": "{{action}} entfernen",
+  "actionPicker.noActionsSelected": "Keine Aktionen ausgewählt",
+  "actionPicker.alreadyExists": "„{{action}}“ ist bereits eine Benutzeraktion.",
+  "actionPicker.renamedConnectionRemoved": "„{{previous}}“ umbenannt – die vorherige Verbindung wurde entfernt.",
+  "actionPicker.addAction": "Benutzeraktion hinzufügen",
+  "duration.minutes": "Minuten",
+  "duration.hours": "Stunden",
+  "duration.days": "Tage"
 }

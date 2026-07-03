@@ -2060,5 +2060,21 @@
   "voiceAssistant.apiKeyError": "Verifique sua chave de API e tente novamente",
   "voiceAssistant.connected": "Conectado",
   "voiceAssistant.connectionError": "Erro de conexão",
-  "voiceAssistant.connectionFailed": "Conexão com falha"
+  "voiceAssistant.connectionFailed": "Conexão com falha",
+  "humanInput.waitingForInput": "Aguardando entrada",
+  "humanInput.waitingFallback": "O fluxo foi pausado e está aguardando sua decisão antes de continuar.",
+  "humanInput.cannotResumeMissingJobId": "Não é possível retomar: job id ausente",
+  "humanInput.resumeFailed": "Falha ao retomar",
+  "humanInput.awaitingInput": "Aguardando entrada",
+  "actionPicker.namePlaceholder": "Nomeie esta ação…",
+  "actionPicker.nameAction": "Nomeie esta ação",
+  "actionPicker.rename": "Renomear {{action}}",
+  "actionPicker.remove": "Remover {{action}}",
+  "actionPicker.noActionsSelected": "Nenhuma ação selecionada",
+  "actionPicker.alreadyExists": "\"{{action}}\" já é uma ação do usuário.",
+  "actionPicker.renamedConnectionRemoved": "\"{{previous}}\" renomeado — sua conexão anterior foi removida.",
+  "actionPicker.addAction": "Adicionar ação do usuário",
+  "duration.minutes": "Minutos",
+  "duration.hours": "Horas",
+  "duration.days": "Dias"
 }

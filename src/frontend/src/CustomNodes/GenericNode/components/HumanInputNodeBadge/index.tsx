@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import HumanInputCard from "@/components/core/chatComponents/HumanInputCard";
 import {
   Popover,
@@ -16,6 +17,7 @@ import { cn } from "@/utils/utils";
  * canvas. Only the node whose id matches the pending request renders anything.
  */
 export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
+  const { t } = useTranslation();
   const pending = useHitlStore((state) =>
     state.pending?.nodeId === nodeId ? state.pending : null,
   );
@@ -38,8 +40,8 @@ export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
           type="button"
           data-testid="human-input-node-badge"
           onClick={() => setOpen(true)}
-          title="Awaiting input"
-          aria-label="Awaiting input"
+          title={t("humanInput.awaitingInput")}
+          aria-label={t("humanInput.awaitingInput")}
           className={cn(
             "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
             "border-2 border-accent-indigo-foreground text-accent-indigo-foreground",

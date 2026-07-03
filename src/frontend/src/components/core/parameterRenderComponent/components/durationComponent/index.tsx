@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { testIdCase } from "@/utils/utils";
@@ -12,7 +13,15 @@ export default function DurationComponent({
   handleOnNewValue,
   disabled,
 }: InputProps<DurationValue, TabComponentType>): JSX.Element {
+  const { t } = useTranslation();
   const units = options.length > 0 ? options : ["Minutes", "Hours", "Days"];
+  // The tab value stays the backend unit (state key); only the visible label is localized.
+  const unitLabel = (unit: string): string =>
+    ({
+      Minutes: t("duration.minutes"),
+      Hours: t("duration.hours"),
+      Days: t("duration.days"),
+    })[unit] ?? unit;
   const current: DurationValue =
     value && typeof value === "object"
       ? value
@@ -46,7 +55,7 @@ export default function DurationComponent({
               disabled={disabled}
               data-testid={`duration-unit-${index}_${testIdCase(unit)}`}
             >
-              {unit}
+              {unitLabel(unit)}
             </TabsTrigger>
           ))}
         </TabsList>

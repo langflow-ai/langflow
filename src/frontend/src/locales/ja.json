@@ -2060,5 +2060,21 @@
   "voiceAssistant.apiKeyError": "APIキーを確認の上、もう一度お試しください",
   "voiceAssistant.connected": "接続済み",
   "voiceAssistant.connectionError": "接続エラー",
-  "voiceAssistant.connectionFailed": "接続失敗"
+  "voiceAssistant.connectionFailed": "接続失敗",
+  "humanInput.waitingForInput": "入力待ち",
+  "humanInput.waitingFallback": "フローは一時停止し、続行する前にあなたの判断を待っています。",
+  "humanInput.cannotResumeMissingJobId": "再開できません: ジョブ ID がありません",
+  "humanInput.resumeFailed": "再開に失敗しました",
+  "humanInput.awaitingInput": "入力待ち",
+  "actionPicker.namePlaceholder": "このアクションに名前を付ける…",
+  "actionPicker.nameAction": "このアクションに名前を付ける",
+  "actionPicker.rename": "{{action}} の名前を変更",
+  "actionPicker.remove": "{{action}} を削除",
+  "actionPicker.noActionsSelected": "アクションが選択されていません",
+  "actionPicker.alreadyExists": "「{{action}}」は既にユーザーアクションです。",
+  "actionPicker.renamedConnectionRemoved": "「{{previous}}」の名前を変更しました。以前の接続は削除されました。",
+  "actionPicker.addAction": "ユーザーアクションを追加",
+  "duration.minutes": "分",
+  "duration.hours": "時間",
+  "duration.days": "日"
 }

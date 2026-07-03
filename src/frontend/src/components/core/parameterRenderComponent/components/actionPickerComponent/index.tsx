@@ -1,4 +1,5 @@
 import { useContext, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import useAlertStore from "@/stores/alertStore";
@@ -20,6 +21,7 @@ export default function ActionPickerComponent({
   disabled,
   nodeId,
 }: InputProps<string[], MultiselectComponentType>): JSX.Element {
+  const { t } = useTranslation();
   const selected = Array.isArray(value) ? value : value ? [value] : [];
   const edges = useFlowStore((state) => state.edges);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -66,7 +68,9 @@ export default function ActionPickerComponent({
       return;
     }
     if (isDuplicate(next, index)) {
-      setErrorData({ title: `"${next}" is already a user action.` });
+      setErrorData({
+        title: t("actionPicker.alreadyExists", { action: next }),
+      });
       return;
     }
     const wasConnected = isConnected(previous);
@@ -75,7 +79,7 @@ export default function ActionPickerComponent({
     });
     if (wasConnected) {
       setNoticeData({
-        title: `Renamed "${previous}" — its previous connection was removed.`,
+        title: t("actionPicker.renamedConnectionRemoved", { previous }),
       });
     }
     cancelEdit();
@@ -93,7 +97,9 @@ export default function ActionPickerComponent({
       return;
     }
     if (isDuplicate(next)) {
-      setErrorData({ title: `"${next}" is already a user action.` });
+      setErrorData({
+        title: t("actionPicker.alreadyExists", { action: next }),
+      });
       cancelAdd();
       return;
     }
@@ -103,7 +109,9 @@ export default function ActionPickerComponent({
 
   if (selected.length === 0 && !isAdding) {
     return (
-      <span className="text-sm text-muted-foreground">No actions selected</span>
+      <span className="text-sm text-muted-foreground">
+        {t("actionPicker.noActionsSelected")}
+      </span>
     );
   }
 
@@ -117,7 +125,7 @@ export default function ActionPickerComponent({
             value={draft}
             disabled={disabled}
             data-testid={`action-edit-input-${action}`}
-            aria-label={`Rename ${action}`}
+            aria-label={t("actionPicker.rename", { action })}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={() => commitEdit(index)}
             onKeyDown={(e) => {
@@ -145,7 +153,7 @@ export default function ActionPickerComponent({
             <button
               type="button"
               disabled={disabled}
-              aria-label={`Remove ${action}`}
+              aria-label={t("actionPicker.remove", { action })}
               data-testid={`action-remove-${action}`}
               onClick={() => remove(action)}
               className="text-muted-foreground hover:text-foreground"
@@ -160,9 +168,9 @@ export default function ActionPickerComponent({
           autoFocus
           value={newDraft}
           disabled={disabled}
-          placeholder="Name this action…"
+          placeholder={t("actionPicker.namePlaceholder")}
           data-testid="action-add-input"
-          aria-label="Name this action"
+          aria-label={t("actionPicker.nameAction")}
           onChange={(e) => setNewDraft(e.target.value)}
           onBlur={commitAdd}
           onKeyDown={(e) => {
