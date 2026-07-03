@@ -109,11 +109,12 @@ async def validate_webhook_url(url: str) -> list[str]:
         raise ValueError(msg)
     if get_settings_service().settings.a2a_allow_private_webhooks:
         return []
-    # Resolve/validate the SAME host httpx connects to (IDNA/punycode raw_host), not the
-    # unicode urlparse hostname, so an IDN webhook is pinned/resolved by the exact ASCII
-    # host the connection uses (else the pin silently misses: TOCTOU rebind for IDN hosts).
-    host = webhook_pin_host(url)
     try:
+        # Resolve/validate the SAME host httpx connects to (IDNA/punycode raw_host), not the
+        # unicode urlparse hostname, so an IDN webhook is pinned/resolved by the exact ASCII host
+        # the connection uses (else the pin silently misses: TOCTOU rebind for IDN hosts). httpx.URL
+        # raises InvalidURL (not ValueError) for an IDNA-invalid host, so keep it inside the try.
+        host = webhook_pin_host(url)
         # Hard floor: reject private/metadata IPs even when global SSRF protection is off
         # (validate_and_resolve_url returns [] with NO enforcement in that case).
         # resolve_hostname handles IP-literal hosts too; the blocking resolve runs off-loop.
@@ -124,6 +125,11 @@ async def validate_webhook_url(url: str) -> list[str]:
             raise ValueError(msg)
         # Then the framework check for allowlist / CGNAT / is_global extras + pinned IPs.
         _url, validated_ips = await asyncio.to_thread(validate_and_resolve_url, url)
+    except httpx.InvalidURL as exc:
+        # Callers only guard ValueError; without translating this an IDNA-invalid host would 500 the
+        # caller (or escape dispatch) instead of failing closed as an unsafe webhook.
+        msg = f"webhook url has an invalid host: {exc}"
+        raise ValueError(msg) from exc
     except SSRFProtectionError as exc:
         msg = f"webhook url is not allowed: {exc}"
         raise ValueError(msg) from exc

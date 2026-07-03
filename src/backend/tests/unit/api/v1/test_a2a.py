@@ -1036,6 +1036,16 @@ async def test_validate_webhook_url_blocks_internal_targets():
 
 
 @pytest.mark.usefixtures("client")
+async def test_validate_webhook_url_translates_idna_invalid_host():
+    """An IDNA-invalid host raises ValueError, not httpx.InvalidURL (callers only guard ValueError)."""
+    from langflow.api.v1.a2a_utils import validate_webhook_url
+
+    # urlparse accepts this host but httpx.URL (the pin/connect host) rejects it with InvalidURL.
+    with pytest.raises(ValueError, match="invalid host"):
+        await validate_webhook_url("http://\u200b.com/hook")
+
+
+@pytest.mark.usefixtures("client")
 async def test_validate_webhook_url_floor_holds_with_global_ssrf_off(monkeypatch):
     """A2A webhook safety must not depend on the global SSRF toggle.
 
