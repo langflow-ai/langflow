@@ -7,6 +7,7 @@ import { ArizeIcon } from "@/icons/Arize";
 import { ArXivIcon } from "@/icons/ArXiv";
 import { AssemblyAIIcon } from "@/icons/AssemblyAI";
 import { AstraDBIcon } from "@/icons/AstraDB";
+import { AtomicChatIcon } from "@/icons/AtomicChat";
 import { AWSIcon } from "@/icons/AWS";
 import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { AzureIcon } from "@/icons/Azure";
@@ -122,6 +123,7 @@ export const eagerIconsMapping = {
   AgentQL: AgentQLIcon,
   Airbyte: AirbyteIcon,
   Anthropic: AnthropicIcon,
+  AtomicChat: AtomicChatIcon,
   Apify: ApifyIcon,
   ApifyWhite: ApifyWhiteIcon,
   ArXiv: ArXivIcon,
