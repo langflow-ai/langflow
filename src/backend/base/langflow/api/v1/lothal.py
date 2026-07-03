@@ -949,7 +949,9 @@ async def get_prototype(*, session: DbSession, project: OwnedProject) -> Prototy
     "/projects/{project_id}/prototype/generate",
     summary="Start (or restart) prototype generation",
 )
-async def generate_prototype(*, session: DbSession, project: OwnedProject) -> PrototypeStateResponse:
+async def generate_prototype(
+    *, session: DbSession, project: OwnedProject, current_user: CurrentActiveUser
+) -> PrototypeStateResponse:
     """Seed an OD project from the brief and start a generation run (Story U.4).
 
     Only valid in the `PROTOTYPE` phase (a `409` otherwise — a no-op the UI
@@ -969,8 +971,12 @@ async def generate_prototype(*, session: DbSession, project: OwnedProject) -> Pr
             detail="Prototype generation is only available during the prototype stage.",
         )
 
+    # The user's OWN Claude subscription token (from their langflow secret manager),
+    # so the prototype agent runs on the same key the code stage uses — decrypted
+    # in-process, handed to OD over the internal call, never logged or returned.
+    byok_token = await _resolve_user_byok(session, current_user)
     try:
-        result = await prototype_engine.seed_and_generate(project)
+        result = await prototype_engine.seed_and_generate(project, byok_token=byok_token)
     except ODError as exc:
         raise _od_error_to_http(exc) from exc
 
@@ -1011,7 +1017,7 @@ async def generate_prototype(*, session: DbSession, project: OwnedProject) -> Pr
     summary="Refine the prototype with a Lothal-side instruction",
 )
 async def refine_prototype(
-    *, session: DbSession, project: OwnedProject, body: PrototypeRefineRequest
+    *, session: DbSession, project: OwnedProject, current_user: CurrentActiveUser, body: PrototypeRefineRequest
 ) -> PrototypeStateResponse:
     """Start a new OD run in the project's conversation carrying a refine instruction (Story U.6).
 
@@ -1039,8 +1045,9 @@ async def refine_prototype(
             detail="Generate a prototype before refining it.",
         )
 
+    byok_token = await _resolve_user_byok(session, current_user)
     try:
-        result = await prototype_engine.refine(project, content)
+        result = await prototype_engine.refine(project, content, byok_token=byok_token)
     except ODError as exc:
         raise _od_error_to_http(exc) from exc
 
@@ -1508,6 +1515,94 @@ async def approve_plan(*, session: DbSession, project: OwnedProject) -> dict[str
 
 
 # --- Code --------------------------------------------------------------------
+
+# The langflow Global Variable (type Credential) that holds the user's own Claude
+# subscription token. The bridge reads it in-process for THIS user and hands it to
+# the PM service, which stores it encrypted at rest — the "bring your own key" path.
+_BYOK_VARIABLE_NAME = "CLAUDE_CODE_OAUTH_TOKEN"
+
+
+def _require_code_active(project: Project) -> None:
+    """409 unless the project is in CODE_GENERATION — code-gen launches only then."""
+    if project.phase != ProjectPhase.CODE_GENERATION.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Code generation can only be launched during the code-generation stage.",
+        )
+
+
+async def _resolve_user_byok(session: DbSession, current_user: CurrentActiveUser) -> str | None:
+    """The user's OWN Claude subscription token for code generation.
+
+    Decrypted IN-PROCESS from *this* user's langflow secret manager (a Credential
+    global variable named ``CLAUDE_CODE_OAUTH_TOKEN``) — never the operator's, never
+    logged, never returned to the browser. Falls back to the server-level
+    subscription token only if the user has not set their own.
+    """
+    from langflow.services.deps import get_variable_service
+
+    variable_service = get_variable_service()
+    try:
+        token = await variable_service.get_variable(
+            user_id=current_user.id, name=_BYOK_VARIABLE_NAME, field="byok", session=session
+        )
+    except Exception:  # noqa: BLE001 - ValueError when the variable is absent/empty → fall back
+        token = None
+    if token and token.strip():
+        return token.strip()
+    from langflow.lothal.subscription_gateway import resolve_subscription_token
+
+    return resolve_subscription_token()
+
+
+@router.post(
+    "/projects/{project_id}/plan/nodes/{node_id}/codegen/launch",
+    summary="Launch code generation for a node using the user's BYOK Claude subscription token",
+)
+async def launch_codegen(
+    *, session: DbSession, project: OwnedProject, current_user: CurrentActiveUser, node_id: UUID
+) -> dict[str, Any]:
+    """Attach the user's own subscription token to the PM node, then launch code generation.
+
+    The token comes from langflow's secret manager and is encrypted at rest on the PM
+    side; launching drives ``ratified → in_progress`` which enqueues the job. The token
+    is decrypted in-process here and sent to the PM service over the internal network;
+    the browser never sees it and it is never logged.
+    """
+    _require_code_active(project)
+    token = await _resolve_user_byok(session, current_user)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"No Claude subscription token found. Add a Credential global variable named "
+                f"{_BYOK_VARIABLE_NAME} (your `claude setup-token` value)."
+            ),
+        )
+    try:
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        await pm.attach_byok(plan_id, str(node_id), token=token, key_kind="claude_oauth")
+        await pm.transition(plan_id, str(node_id), {"target": "in_progress"})
+        return await pm.get_codegen(plan_id, str(node_id))
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/plan/nodes/{node_id}/codegen",
+    summary="The node's current code-generation run (status)",
+)
+async def get_codegen_status(
+    *, session: DbSession, project: OwnedProject, node_id: UUID
+) -> dict[str, Any]:
+    _require_plan_visible(project)
+    try:
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        return await pm.get_codegen(plan_id, str(node_id))
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
 
 
 @router.get(

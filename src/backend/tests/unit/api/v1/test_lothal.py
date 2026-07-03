@@ -1982,6 +1982,11 @@ def _od_env(monkeypatch):
     monkeypatch.delenv("LOTHAL_OD_PUBLIC_BASE_URL", raising=False)
     monkeypatch.setenv("LOTHAL_OD_AGENT_ID", "")
     monkeypatch.setenv("LOTHAL_OD_SKILL_ID", "")
+    # Default the prototype tests to "no BYOK": the endpoints resolve the user's
+    # subscription token (falling back to the server CLAUDE_CODE_OAUTH_TOKEN) and
+    # inject it into OD's agent, so clear the env token to keep the no-key path
+    # deterministic. The BYOK-injection case has its own test that sets it.
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
 
 
 async def _make_prototype_project(
@@ -2127,6 +2132,41 @@ async def test_generate_points_od_agent_at_gateway(client: AsyncClient, logged_i
     # project page renders directly instead of bouncing to the sign-in chooser.
     assert patched["onboardingCompleted"] is True
     assert patched["agentId"] == "codex"
+
+
+@pytest.mark.usefixtures("_od_env")
+async def test_generate_injects_byok_token_for_claude_agent(client: AsyncClient, logged_in_headers, monkeypatch):
+    """Generation hands the claude agent the user's token as CLAUDE_CODE_OAUTH_TOKEN.
+
+    It runs the subscription natively via agentCliEnv — no gateway/OPENAI_* — so the
+    prototype stage runs on the same key the code stage does.
+    """
+    monkeypatch.setenv("LOTHAL_OD_AGENT_ID", "claude")
+    # No per-user variable in the test DB, so _resolve_user_byok falls back to the
+    # server subscription token — enough to prove the injection wiring.
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-ant-oat-user-key")
+    project_id = await _make_prototype_project(client, logged_in_headers)
+
+    with respx.mock:
+        _mock_od_discovery()
+        cfg = respx.put(f"{OD_BASE}/api/app-config").mock(return_value=httpx.Response(200, json={}))
+        respx.post(f"{OD_BASE}/api/projects").mock(return_value=httpx.Response(200, json={"id": "od-proj-1"}))
+        respx.post(f"{OD_BASE}/api/runs").mock(return_value=httpx.Response(200, json={"runId": "run-1"}))
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/prototype/generate", headers=logged_in_headers
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert cfg.call_count == 1
+    patched = json.loads(cfg.calls.last.request.content)
+    # The user's key reaches the claude CLI natively; no OpenAI/gateway plumbing.
+    assert patched["agentCliEnv"]["claude"]["CLAUDE_CODE_OAUTH_TOKEN"] == "sk-ant-oat-user-key"  # noqa: S105
+    assert "OPENAI_BASE_URL" not in patched["agentCliEnv"]["claude"]
+    assert "OPENAI_API_KEY" not in patched["agentCliEnv"]["claude"]
+    assert patched["agentId"] == "claude"
+    assert patched["onboardingCompleted"] is True
+    # The response body never carries the token back to the browser.
+    assert "sk-ant-oat-user-key" not in response.text
 
 
 @pytest.mark.usefixtures("_od_env")
@@ -2815,3 +2855,117 @@ async def test_every_plan_route_requires_auth(client: AsyncClient):
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_403_FORBIDDEN,
         ), (method, path, response.status_code)
+
+
+# --- code-generation bridge (BYOK launch + status) ---------------------------
+# The launch flow attaches the user's OWN subscription token to the PM node, then
+# drives ratified→in_progress. It also exercises PMClient.attach_byok / transition /
+# get_codegen through the bridge.
+
+_CODEGEN_NODE_ID = "33333333-3333-3333-3333-333333333333"
+
+
+@pytest.mark.usefixtures("_pm_env")
+async def test_launch_codegen_attaches_byok_transitions_and_returns_job(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Launch attaches the user's token to the PM node, transitions to in_progress, and returns the job."""
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-ant-oat-user-key")
+    project_id = await _make_plan_project(client, logged_in_headers, phase="CODE_GENERATION")
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    base = f"{PM_BASE}/api/projects/{PM_ID_EXISTING}/nodes/{_CODEGEN_NODE_ID}"
+    with respx.mock:
+        _mock_pm_login()
+        byok = respx.post(f"{base}/byok").mock(
+            return_value=httpx.Response(
+                200, json={"node_id": _CODEGEN_NODE_ID, "key_kind": "claude_oauth", "stored": True}
+            )
+        )
+        transition = respx.post(f"{base}/transition").mock(
+            return_value=httpx.Response(200, json={"state": "in_progress"})
+        )
+        codegen = respx.get(f"{base}/codegen").mock(return_value=httpx.Response(200, json={"state": "queued"}))
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/plan/nodes/{_CODEGEN_NODE_ID}/codegen/launch",
+            headers=logged_in_headers,
+        )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["state"] == "queued"
+    assert byok.called
+    assert transition.called
+    assert codegen.called
+    # The resolved token is forwarded to PM's byok endpoint (encrypted at rest there)...
+    sent = json.loads(byok.calls.last.request.content)
+    assert sent["token"] == "sk-ant-oat-user-key"  # noqa: S105
+    assert sent["key_kind"] == "claude_oauth"
+    # ...and the launch drives ratified→in_progress, but the token never returns to the browser.
+    assert json.loads(transition.calls.last.request.content)["target"] == "in_progress"
+    assert "sk-ant-oat-user-key" not in response.text
+
+
+async def test_launch_codegen_400_without_token(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """No per-user variable and no server token → 400, and the PM bridge is never touched."""
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    project_id = await _make_plan_project(client, logged_in_headers, phase="CODE_GENERATION")
+    with respx.mock:  # no routes registered → any PM call would raise
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/plan/nodes/{_CODEGEN_NODE_ID}/codegen/launch",
+            headers=logged_in_headers,
+        )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "CLAUDE_CODE_OAUTH_TOKEN" in response.json()["detail"]
+    assert respx.calls.call_count == 0
+
+
+@pytest.mark.parametrize("phase", ["PROTOTYPE", "PLAN", "DONE"])
+async def test_launch_codegen_409_outside_code_phase(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch, phase: str
+):
+    """Launch is only valid in CODE_GENERATION; any other phase is a 409 before any token/PM work."""
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-ant-oat-user-key")
+    project_id = await _make_plan_project(client, logged_in_headers, phase=phase)
+    with respx.mock:
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/plan/nodes/{_CODEGEN_NODE_ID}/codegen/launch",
+            headers=logged_in_headers,
+        )
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert respx.calls.call_count == 0
+
+
+@pytest.mark.usefixtures("_pm_env")
+async def test_launch_codegen_maps_pm_failure_to_502(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """A PM failure while attaching the key surfaces as a 502 (bridge error mapping)."""
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-ant-oat-user-key")
+    project_id = await _make_plan_project(client, logged_in_headers, phase="CODE_GENERATION")
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    with respx.mock:
+        _mock_pm_login()
+        respx.post(f"{PM_BASE}/api/projects/{PM_ID_EXISTING}/nodes/{_CODEGEN_NODE_ID}/byok").mock(
+            return_value=httpx.Response(500, json={"detail": "boom"})
+        )
+        response = await client.post(
+            f"api/v1/lothal/projects/{project_id}/plan/nodes/{_CODEGEN_NODE_ID}/codegen/launch",
+            headers=logged_in_headers,
+        )
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+
+
+@pytest.mark.usefixtures("_pm_env")
+async def test_get_codegen_status_bridges_to_pm(client: AsyncClient, logged_in_headers: dict):
+    """GET /codegen returns the node's current code-gen run from PM (visible in PLAN and later)."""
+    project_id = await _make_plan_project(client, logged_in_headers, phase="CODE_GENERATION")
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    with respx.mock:
+        _mock_pm_login()
+        codegen = respx.get(f"{PM_BASE}/api/projects/{PM_ID_EXISTING}/nodes/{_CODEGEN_NODE_ID}/codegen").mock(
+            return_value=httpx.Response(200, json={"state": "running", "attempt": 1})
+        )
+        response = await client.get(
+            f"api/v1/lothal/projects/{project_id}/plan/nodes/{_CODEGEN_NODE_ID}/codegen",
+            headers=logged_in_headers,
+        )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["state"] == "running"
+    assert codegen.called

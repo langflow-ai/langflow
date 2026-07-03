@@ -260,6 +260,36 @@ class PMClient:
         """`POST /api/projects/:id/nodes/:nid/ratify` — run the roll-up gate for a node."""
         return await self._request_json("POST", f"/api/projects/{plan_id}/nodes/{node_id}/ratify")
 
+    # --- code generation (BYOK) ---------------------------------------------
+
+    async def attach_byok(
+        self,
+        plan_id: str,
+        node_id: str,
+        *,
+        token: str,
+        key_kind: str = "claude_oauth",
+        key_env: str | None = None,
+        base_url: str | None = None,
+    ) -> dict[str, Any]:
+        """`POST /api/projects/:id/nodes/:nid/byok` — attach a bring-your-own-key credential.
+
+        The PM service encrypts the token at rest immediately (it is never returned or
+        logged). We send the plaintext once over the internal network; the caller
+        (the langflow bridge) decrypted it from *this user's* langflow secret store, so
+        it is the user's own key — not the operator's.
+        """
+        body: dict[str, Any] = {"token": token, "key_kind": key_kind}
+        if key_env:
+            body["key_env"] = key_env
+        if base_url:
+            body["base_url"] = base_url
+        return await self._request_json("POST", f"/api/projects/{plan_id}/nodes/{node_id}/byok", json=body)
+
+    async def get_codegen(self, plan_id: str, node_id: str) -> dict[str, Any]:
+        """`GET /api/projects/:id/nodes/:nid/codegen` — the node's current code-gen run."""
+        return await self._request_json("GET", f"/api/projects/{plan_id}/nodes/{node_id}/codegen")
+
     # --- links + ledger ------------------------------------------------------
 
     async def list_links(self, plan_id: str) -> list[dict[str, Any]]:
