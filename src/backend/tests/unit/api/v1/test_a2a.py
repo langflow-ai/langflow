@@ -605,6 +605,28 @@ async def test_task_scope_is_canonical_across_uuid_encodings(client: AsyncClient
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
+async def test_tasks_get_is_scoped_to_the_owning_flow(client: AsyncClient, active_user, echo_flow_data):
+    """tasks/get for a task created under one flow is not-found via another flow's endpoint.
+
+    The store is keyed by (id, owner) with owner folding the path flow_id, so a task id known to flow A
+    can't be read back through flow B (mirrors the cancel/resubscribe flow-scoping at the get route).
+    """
+    flow_a = await _create_flow(active_user.id, data=echo_flow_data)
+    flow_b = await _create_flow(active_user.id, data=echo_flow_data)
+
+    sent = (await _jsonrpc(client, flow_a, "message/send", _text_message("hi"))).json()["result"]
+    task_id = sent["id"]
+
+    via_b = (await _jsonrpc(client, flow_b, "tasks/get", {"id": task_id})).json()
+    assert "error" in via_b
+    assert "result" not in via_b
+
+    # Positive control: flow A still reads it, so the not-found above is the flow scope, not a bad id.
+    via_a = (await _jsonrpc(client, flow_a, "tasks/get", {"id": task_id})).json()
+    assert via_a["result"]["id"] == task_id
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
 async def test_tasks_get_returns_prior_task(client: AsyncClient, active_user, echo_flow_data):
     """tasks/get reads back the Task a prior message/send created (durable DB-backed store)."""
     flow_id = await _create_flow(active_user.id, data=echo_flow_data)
