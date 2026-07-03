@@ -6,7 +6,10 @@ and registers ``DakeraMemoryComponent`` under the namespaced ID
 ``ext:dakera:DakeraMemoryComponent@official``.
 
 Quick-start:
-    docker run -p 3300:3300 -e DAKERA_API_KEY=demo ghcr.io/dakera-ai/dakera:latest
+    # Dakera server (self-hosting bundles a MinIO object store):
+    git clone https://github.com/dakera-ai/dakera-deploy && cd dakera-deploy
+    docker compose -f docker/docker-compose.yml up -d   # server on :3000
+
     pip install lfx-dakera
     langflow run
 """

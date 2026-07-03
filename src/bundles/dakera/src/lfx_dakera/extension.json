@@ -3,7 +3,7 @@
   "id": "lfx-dakera",
   "version": "0.1.0",
   "name": "Dakera Memory",
-  "description": "Store and semantically search memories using a self-hosted Dakera server.",
+  "description": "Store, recall, search, get, update and forget memories on a self-hosted Dakera server.",
   "lfx": {
     "compat": ["1"]
   },
