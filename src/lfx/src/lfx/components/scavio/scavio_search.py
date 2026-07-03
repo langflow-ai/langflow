@@ -116,7 +116,7 @@ class ScavioSearchComponent(Component):
 
             data_results = []
             results = search_results.get("organic_results", [])
-            max_results = self.max_results or len(results)
+            max_results = self.max_results if self.max_results is not None else len(results)
             for result in results[:max_results]:
                 content = result.get("snippet", "")
                 result_data = {
