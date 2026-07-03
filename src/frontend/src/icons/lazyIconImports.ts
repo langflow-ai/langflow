@@ -14,7 +14,9 @@ export const lazyIconsMapping = {
   Anthropic: () =>
     import("@/icons/Anthropic").then((mod) => ({ default: mod.AnthropicIcon })),
   AtomicChat: () =>
-    import("@/icons/AtomicChat").then((mod) => ({ default: mod.AtomicChatIcon })),
+    import("@/icons/AtomicChat").then((mod) => ({
+      default: mod.AtomicChatIcon,
+    })),
   Apify: () =>
     import("@/icons/Apify").then((mod) => ({ default: mod.ApifyIcon })),
   ApifyWhite: () =>

@@ -3,9 +3,21 @@ const SvgAtomicChat = ({ isDark = false, ...props }) => {
   const accent = "#6366F1";
 
   return (
-    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <svg
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
       <circle cx="32" cy="32" r="28" stroke={accent} strokeWidth="3" />
-      <ellipse cx="32" cy="32" rx="28" ry="10" stroke={accent} strokeWidth="2.5" />
+      <ellipse
+        cx="32"
+        cy="32"
+        rx="28"
+        ry="10"
+        stroke={accent}
+        strokeWidth="2.5"
+      />
       <ellipse
         cx="32"
         cy="32"
