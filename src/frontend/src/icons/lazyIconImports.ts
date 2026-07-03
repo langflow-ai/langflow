@@ -401,6 +401,8 @@ export const lazyIconsMapping = {
     import("@/icons/reddit").then((mod) => ({ default: mod.RedditIcon })),
   SambaNova: () =>
     import("@/icons/SambaNova").then((mod) => ({ default: mod.SambaNovaIcon })),
+  Scavio: () =>
+    import("@/icons/Scavio").then((mod) => ({ default: mod.ScavioIcon })),
   ScrapeGraph: () =>
     import("@/icons/ScrapeGraphAI").then((mod) => ({
       default: mod.ScrapeGraph,
