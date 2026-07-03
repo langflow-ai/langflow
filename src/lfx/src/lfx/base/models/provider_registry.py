@@ -35,6 +35,7 @@ test seam.
 
 from __future__ import annotations
 
+import contextlib
 import importlib
 import threading
 from dataclasses import dataclass, field
@@ -105,6 +106,13 @@ class ProviderSpec:
     #   validator(provider, variables, model_name) -> None  (raises ValueError on failure)
     live_discovery: str | None = None
     validator: str | None = None
+    # Optional static seed catalog injected into _STATIC_MODELS_DETAILED so the
+    # provider's models appear in the UI before any live fetch. Each entry is a
+    # ModelMetadata dict (same shape as create_model_metadata produces). Providers
+    # with live=True can still supply seeds as a fallback shown before credentials
+    # are configured; providers with live=False (e.g. deployment-specific clouds
+    # like Azure AI Foundry) rely entirely on this list.
+    models: list[dict] = field(default_factory=list)
 
     def model_class_name(self) -> str | None:
         """Class name this provider's metadata references for its LLM."""
@@ -133,6 +141,7 @@ class _Undo:
     embedding_param_keys: set[str] = field(default_factory=set)
     live_names: set[str] = field(default_factory=set)
     conditional_live_names: set[str] = field(default_factory=set)
+    static_model_groups: list[list[dict]] = field(default_factory=list)
 
 
 _undo = _Undo()
@@ -252,6 +261,13 @@ def register_provider(spec: ProviderSpec) -> bool:
         if spec.conditional_live and spec.name not in CONDITIONAL_LIVE_MODEL_PROVIDERS:
             CONDITIONAL_LIVE_MODEL_PROVIDERS.append(spec.name)
             _undo.conditional_live_names.add(spec.name)
+
+        # --- static model catalog (C5) ------------------------------------
+        if spec.models:
+            from lfx.base.models.unified_models.provider_queries import _STATIC_MODELS_DETAILED
+
+            _STATIC_MODELS_DETAILED.append(spec.models)
+            _undo.static_model_groups.append(spec.models)
 
         _registered[spec.name] = spec
         _live_discovery_cache.pop(spec.name, None)
@@ -374,6 +390,12 @@ def clear() -> None:
         for name in _undo.conditional_live_names:
             if name in CONDITIONAL_LIVE_MODEL_PROVIDERS:
                 CONDITIONAL_LIVE_MODEL_PROVIDERS.remove(name)
+        if _undo.static_model_groups:
+            from lfx.base.models.unified_models.provider_queries import _STATIC_MODELS_DETAILED
+
+            for group in _undo.static_model_groups:
+                with contextlib.suppress(ValueError):
+                    _STATIC_MODELS_DETAILED.remove(group)
         _registered.clear()
         _live_discovery_cache.clear()
         _validator_cache.clear()
@@ -384,4 +406,5 @@ def clear() -> None:
         _undo.embedding_param_keys.clear()
         _undo.live_names.clear()
         _undo.conditional_live_names.clear()
+        _undo.static_model_groups.clear()
         _clear_derived_caches()
