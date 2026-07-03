@@ -1560,6 +1560,50 @@ async def test_durable_store_wont_clobber_terminal_cancel():
     assert got.status.state == pb.TaskState.TASK_STATE_CANCELED
 
 
+@pytest.mark.usefixtures("client")
+async def test_durable_store_wont_flip_a_completed_task_to_canceled():
+    """A forced cancel racing a completion must not clobber a durable COMPLETED: any terminal is final."""
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import DurableTaskStore
+
+    store = DurableTaskStore()
+    ctx = ServerCallContext()
+    tid = uuid.uuid4().hex
+
+    await store.save(
+        pb.Task(id=tid, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED)), ctx
+    )
+    # tasks/cancel forces CANCELED into the store; once the run has terminally completed it must lose.
+    await store.save(pb.Task(id=tid, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_CANCELED)), ctx)
+
+    got = await store.get(tid, ctx)
+    assert got.status.state == pb.TaskState.TASK_STATE_COMPLETED
+
+
+@pytest.mark.usefixtures("client")
+async def test_durable_store_stamps_timestamps():
+    """Rows carry created_at/updated_at so a retention reaper (or an operator) can prune by age.
+
+    Without a timestamp the table grows unbounded with no safe way to tell an old row's age.
+    """
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import DurableTaskStore
+    from langflow.services.database.models import A2ATask
+    from langflow.services.deps import session_scope
+
+    ctx = ServerCallContext()
+    tid = uuid.uuid4().hex
+    await DurableTaskStore().save(pb.Task(id=tid, status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_SUBMITTED)), ctx)
+
+    async with session_scope() as session:
+        row = await session.get(A2ATask, (tid, ""))
+        assert row is not None
+        assert row.created_at is not None
+        assert row.updated_at is not None
+
+
 async def test_task_scope_key_is_postgres_safe():
     """The flow-scoped store key must fold in the flow but carry no NUL byte (Postgres rejects NUL)."""
     from a2a.server.context import ServerCallContext

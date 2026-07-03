@@ -394,9 +394,13 @@ class A2ACheckpointStore(CheckpointStore):
         raise NotImplementedError
 
 
-def _is_terminal_cancel(blob: dict[str, Any] | None) -> bool:
-    """True when a stored task blob is in the terminal CANCELED state (MessageToDict enum name)."""
-    return bool(blob) and (blob.get("status") or {}).get("state") == "TASK_STATE_CANCELED"
+# MessageToDict serializes the enum by name, so a stored blob's state is e.g. "TASK_STATE_CANCELED".
+_TERMINAL_STATE_NAMES = {pb.TaskState.Name(state) for state in TERMINAL_TASK_STATES}
+
+
+def _task_state(blob: dict[str, Any] | None) -> str | None:
+    """The stored task blob's state (MessageToDict enum name, e.g. ``TASK_STATE_CANCELED``), or None."""
+    return (blob.get("status") or {}).get("state") if blob else None
 
 
 def _task_scope(context: ServerCallContext) -> str:
@@ -429,13 +433,16 @@ class DurableTaskStore(TaskStore):
         blob: dict[str, Any] = MessageToDict(task)
         async with session_scope() as session:
             # Lock the row so a completion racing a cancel can't read stale state and then clobber
-            # the terminal CANCELED (Postgres row lock; a no-op on SQLite, which serializes writers).
+            # the terminal state (Postgres row lock; a no-op on SQLite, which serializes writers).
             row = await session.get(A2ATask, (task.id, owner), with_for_update=True)
+            existing_state = _task_state(row.task) if row is not None else None
             if row is None:
                 session.add(A2ATask(id=task.id, owner=owner, task=blob))
-            elif _is_terminal_cancel(row.task) and not _is_terminal_cancel(blob):
-                # tasks/cancel already made this task terminal; a run that completes on this worker
-                # after the cancel must not clobber CANCELED with a non-cancel state. Terminal is final.
+            elif existing_state in _TERMINAL_STATE_NAMES and _task_state(blob) != existing_state:
+                # Terminal is final: once a task reaches a terminal state, a later save carrying a
+                # different state must not transition it. Covers both race orders of a cancel against
+                # a completion (a forced CANCELED arriving after COMPLETED persisted, or a late
+                # completion arriving after CANCELED). The state that landed first wins.
                 return
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
