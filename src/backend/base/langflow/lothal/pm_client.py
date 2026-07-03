@@ -277,7 +277,8 @@ class PMClient:
         The PM service encrypts the token at rest immediately (it is never returned or
         logged). We send the plaintext once over the internal network; the caller
         (the langflow bridge) decrypted it from *this user's* langflow secret store, so
-        it is the user's own key — not the operator's."""
+        it is the user's own key — not the operator's.
+        """
         body: dict[str, Any] = {"token": token, "key_kind": key_kind}
         if key_env:
             body["key_env"] = key_env

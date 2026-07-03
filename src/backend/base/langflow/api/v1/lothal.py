@@ -1537,7 +1537,8 @@ async def _resolve_user_byok(session: DbSession, current_user: CurrentActiveUser
     Decrypted IN-PROCESS from *this* user's langflow secret manager (a Credential
     global variable named ``CLAUDE_CODE_OAUTH_TOKEN``) — never the operator's, never
     logged, never returned to the browser. Falls back to the server-level
-    subscription token only if the user has not set their own."""
+    subscription token only if the user has not set their own.
+    """
     from langflow.services.deps import get_variable_service
 
     variable_service = get_variable_service()
@@ -1561,11 +1562,13 @@ async def _resolve_user_byok(session: DbSession, current_user: CurrentActiveUser
 async def launch_codegen(
     *, session: DbSession, project: OwnedProject, current_user: CurrentActiveUser, node_id: UUID
 ) -> dict[str, Any]:
-    """Attach the user's own subscription token (from langflow's secret manager) to the
-    PM node — encrypted at rest on the PM side — then launch code generation
-    (``ratified → in_progress`` enqueues the job). The token is decrypted in-process
-    here and sent to the PM service over the internal network; the browser never sees
-    it and it is never logged."""
+    """Attach the user's own subscription token to the PM node, then launch code generation.
+
+    The token comes from langflow's secret manager and is encrypted at rest on the PM
+    side; launching drives ``ratified → in_progress`` which enqueues the job. The token
+    is decrypted in-process here and sent to the PM service over the internal network;
+    the browser never sees it and it is never logged.
+    """
     _require_code_active(project)
     token = await _resolve_user_byok(session, current_user)
     if not token:

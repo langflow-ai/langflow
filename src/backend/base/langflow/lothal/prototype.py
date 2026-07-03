@@ -25,6 +25,7 @@ config failure must not sink a run, since OD may already be configured).
 
 from __future__ import annotations
 
+import asyncio
 import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -187,6 +188,15 @@ def _agent_cli_env(agent: str, byok_token: str | None) -> dict[str, str]:
     return {"OPENAI_BASE_URL": gateway_url, "OPENAI_API_KEY": byok_token or gateway_key}
 
 
+# Serializes the "write the token into OD's global agentCliEnv → start the run" window
+# (in seed_and_generate/refine) against concurrent prototype launches in THIS process.
+# `agentCliEnv` is OD's *daemon-global* config, so a second launch's config write could
+# otherwise land between our write and our start_run and run our prototype under the
+# wrong user's token. See `_configure_od_agent` for the residual (cross-process /
+# multi-tenant) limitation this lock does NOT cover.
+_od_agent_config_lock = asyncio.Lock()
+
+
 async def _configure_od_agent(od: ODClient, agent: str | None, byok_token: str | None = None) -> None:
     """Configure OD's agent — inject the user's key + pre-complete onboarding (`PUT /api/app-config`).
 
@@ -207,6 +217,17 @@ async def _configure_od_agent(od: ODClient, agent: str | None, byok_token: str |
     is the resolved agent id (the caller reads it once and shares it, so the agent
     *configured* here can't drift from the one the run is *started* with); a
     blank/None agent skips the call (OD picks its own default agent).
+
+    Tenancy caveat: `agentCliEnv` is OD's *daemon-global* config (it persists and is
+    shared by every project on that OD instance), so this design assumes a **single
+    tenant per OD instance** — the token written here is the caller's own key. Callers
+    hold `_od_agent_config_lock` across write→start_run so concurrent launches in this
+    process can't interleave (one user's token can't be used for another's run); that
+    covers the common single-langflow-process case. It does NOT cover multiple langflow
+    replicas sharing one OD, and the token still persists in OD's config until the next
+    write overwrites it. True multi-tenant isolation needs a per-user/session OD or a
+    run-scoped credential channel — OD's `POST /api/runs` has no per-run agentCliEnv
+    today, so that is a follow-up, not something this call can achieve alone.
     """
     if not agent:
         return
@@ -274,7 +295,10 @@ async def seed_and_generate(project: Project, byok_token: str | None = None) -> 
     agent_id = _env("LOTHAL_OD_AGENT_ID", _DEFAULT_OD_AGENT_ID)
     skill_id = _env("LOTHAL_OD_SKILL_ID")
 
-    async with ODClient.from_env() as od:
+    # Hold the lock across configure→start_run so the per-user token we write into OD's
+    # daemon-global agentCliEnv stays ours until our run is enqueued (see the tenancy
+    # caveat on `_configure_od_agent`).
+    async with _od_agent_config_lock, ODClient.from_env() as od:
         await _configure_od_agent(od, agent_id, byok_token)
 
         existing = await _find_od_project(od, str(project.id))
@@ -338,7 +362,9 @@ async def refine(project: Project, instruction: str, byok_token: str | None = No
         raise ValueError(msg)
 
     agent_id = _env("LOTHAL_OD_AGENT_ID", _DEFAULT_OD_AGENT_ID)
-    async with ODClient.from_env() as od:
+    # Same lock as seed_and_generate: keep our token in OD's global config from write
+    # to start_run (see the tenancy caveat on `_configure_od_agent`).
+    async with _od_agent_config_lock, ODClient.from_env() as od:
         await _configure_od_agent(od, agent_id, byok_token)
         run = await od.start_run(
             project_id=project.od_project_id,
