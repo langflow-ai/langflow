@@ -461,6 +461,9 @@ class ConfigResponse(BaseConfigResponse):
     hide_starter_projects: bool
     mcp_servers_locked: bool
     custom_component_admin_only: bool
+    # Whether the server serves the A2A surface at all (LANGFLOW_A2A_ENABLED, default off). The
+    # publish-as-agent UI reads this to explain, rather than 404, when A2A is disabled server-side.
+    a2a_enabled: bool = False
 
     @classmethod
     def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
@@ -503,6 +506,7 @@ class ConfigResponse(BaseConfigResponse):
             hide_starter_projects=settings.hide_starter_projects or settings.embedded_mode,
             mcp_servers_locked=settings.mcp_servers_locked,
             custom_component_admin_only=settings.custom_component_admin_only,
+            a2a_enabled=settings.a2a_enabled,
         )
 
 

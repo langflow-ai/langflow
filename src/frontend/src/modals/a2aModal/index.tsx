@@ -11,6 +11,7 @@ import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-up
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import BaseModal from "../baseModal";
 import {
@@ -42,6 +43,9 @@ export default function A2AModal({
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  // Server-wide A2A flag (LANGFLOW_A2A_ENABLED). When off, the whole A2A surface 404s, so
+  // explain that here rather than letting publish/test hit a dead endpoint.
+  const serverA2aEnabled = useUtilityStore((state) => state.a2aEnabled);
   const { mutateAsync, isPending } = usePatchUpdateFlow();
   const { mutateAsync: sendMessage, isPending: isSending } =
     usePostA2AMessage();
@@ -60,7 +64,8 @@ export default function A2AModal({
 
   // The live endpoint only serves once publishing is SAVED, so testing gates on the saved
   // flag, not the local switch. Used for both the Send button and the Enter shortcut.
-  const canTest = !!testInput.trim() && !!currentFlow?.a2a_enabled;
+  const canTest =
+    !!testInput.trim() && !!currentFlow?.a2a_enabled && serverA2aEnabled;
 
   // Re-seed from the flow whenever the modal opens, so it reflects the saved state.
   useEffect(() => {
@@ -123,6 +128,15 @@ export default function A2AModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <div className="flex flex-col gap-5">
+          {!serverA2aEnabled && (
+            <div className="flex items-center gap-2 rounded-md bg-accent-amber/10 p-2 text-mmd text-accent-amber-foreground">
+              <ForwardedIconComponent
+                name="AlertTriangle"
+                className="h-4 w-4 shrink-0"
+              />
+              {t("a2aModal.serverDisabled")}
+            </div>
+          )}
           {!isAgent && (
             <div className="flex items-center gap-2 rounded-md bg-accent-amber/10 p-2 text-mmd text-accent-amber-foreground">
               <ForwardedIconComponent

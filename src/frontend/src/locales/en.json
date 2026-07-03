@@ -615,6 +615,7 @@
   "a2aModal.title": "Publish as A2A Agent",
   "a2aModal.description": "Expose this agent flow over the Agent-to-Agent protocol so other agents can call it.",
   "a2aModal.notAgent": "Only agent flows can be published as A2A agents. Change the flow type to agent first.",
+  "a2aModal.serverDisabled": "A2A is turned off on this server. Set LANGFLOW_A2A_ENABLED=true to publish and test agents.",
   "a2aModal.publishLabel": "Publish over A2A",
   "a2aModal.publishHint": "Serve the agent card and JSON-RPC endpoint for this flow.",
   "a2aModal.cardUrlLabel": "Agent card URL",
