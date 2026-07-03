@@ -562,6 +562,11 @@ async def execute_sync_workflow(
         # HITL: a pausing node suspended the run for human input. The checkpoint is already
         # persisted in checkpoint_store; surface a suspended response carrying the request so
         # the caller can resume. Only reachable when a checkpoint_store was supplied.
+        # execute_with_status left the Job row IN_PROGRESS on the pause (it re-raises without a
+        # terminal write). Flip it to SUSPENDED like the background runner does, or the orphan sweep
+        # reaps this parked run to FAILED (worker_lost) once its heartbeat goes stale, and resume
+        # (WHERE status=SUSPENDED) could never re-claim it.
+        await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
         return WorkflowExecutionResponse(
             flow_id=parsed.flow_id,
             session_id=session_id,

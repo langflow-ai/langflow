@@ -1476,6 +1476,25 @@ async def test_cancel_input_required_task(client: AsyncClient, active_user, huma
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
+async def test_sync_hitl_pause_marks_job_suspended(client: AsyncClient, active_user, human_input_flow_data):
+    """The sync execute path leaves a HITL-paused Job row SUSPENDED, not IN_PROGRESS.
+
+    An IN_PROGRESS row with no live heartbeat is reaped to FAILED by the orphan sweep.
+    """
+    from langflow.services.database.models.jobs.model import Job, JobStatus
+    from sqlmodel import select
+
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+
+    async with session_scope() as session:
+        job = (await session.exec(select(Job).where(Job.flow_id == flow_id))).first()
+    assert job is not None
+    assert job.status == JobStatus.SUSPENDED
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
 async def test_cancel_deletes_hitl_checkpoint(client: AsyncClient, active_user, human_input_flow_data):
     """Cancelling a parked HITL task drops its checkpoint, so no (stale) worker can reload and resume it."""
     from langflow.api.v1.a2a import A2ACheckpointStore
