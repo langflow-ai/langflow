@@ -1,13 +1,13 @@
 from unittest.mock import patch
 
 import pytest
+from lfx.components.atomicchat.atomicchatmodel import AtomicChatModelComponent
 from lfx.components.deepseek.deepseek import DEEPSEEK_MODELS, DeepSeekModelComponent
 from lfx.components.glean.glean_search_api import GleanAPIWrapper
 from lfx.components.homeassistant.home_assistant_control import HomeAssistantControl
 from lfx.components.homeassistant.list_home_assistant_states import ListHomeAssistantStates
 from lfx.components.huggingface.huggingface_inference_api import HuggingFaceInferenceAPIEmbeddingsComponent
 from lfx.components.litellm.litellm_proxy import LiteLLMProxyComponent
-from lfx.components.atomicchat.atomicchatmodel import AtomicChatModelComponent
 from lfx.components.lmstudio.lmstudioembeddings import LMStudioEmbeddingsComponent
 from lfx.components.lmstudio.lmstudiomodel import LMStudioModelComponent
 from lfx.components.ollama.ollama import ChatOllamaComponent
