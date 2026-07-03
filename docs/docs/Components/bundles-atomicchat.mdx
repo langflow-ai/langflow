@@ -1,0 +1,41 @@
+---
+title: Atomic Chat
+slug: /bundles-atomicchat
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+The components in the **Atomic Chat** bundle let you use models from a local [Atomic Chat](https://atomic.chat) instance. Atomic Chat runs local LLMs behind an OpenAI-compatible API (default `http://127.0.0.1:1337/v1`). For setup and model management, see the [Atomic Chat documentation](https://github.com/AtomicBot-ai/Atomic-Chat).
+
+## Atomic Chat text generation
+
+The **Atomic Chat** component generates text using locally loaded models via Atomic Chat's OpenAI-compatible server.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use an Atomic Chat model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+
+For more information, see [Language model components](/components-models).
+
+### Atomic Chat text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| base_url | String | Input parameter. Atomic Chat API endpoint. Default: `"http://127.0.0.1:1337/v1"`. |
+| api_key | SecretString | Input parameter. Optional API key. Local Atomic Chat typically does not require one. |
+| model_name | String | Input parameter. Model id from `GET /v1/models` (refresh the dropdown after starting Atomic Chat). |
+| max_tokens | Integer | Input parameter. Maximum number of tokens to generate. Set to `0` for unlimited tokens. |
+| temperature | Float | Input parameter. Controls randomness in the output. Default: `0.1`. |
+| seed | Integer | Input parameter. Controls reproducibility of generation. |
+
+### Setup
+
+1. Install and launch Atomic Chat.
+2. Load a model in the app.
+3. Confirm the API is reachable: `curl http://127.0.0.1:1337/v1/models`
+4. Add the **Atomic Chat** component to a flow, keep the default Base URL, and refresh the model list.

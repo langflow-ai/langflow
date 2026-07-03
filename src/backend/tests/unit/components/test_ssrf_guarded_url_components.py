@@ -7,6 +7,7 @@ from lfx.components.homeassistant.home_assistant_control import HomeAssistantCon
 from lfx.components.homeassistant.list_home_assistant_states import ListHomeAssistantStates
 from lfx.components.huggingface.huggingface_inference_api import HuggingFaceInferenceAPIEmbeddingsComponent
 from lfx.components.litellm.litellm_proxy import LiteLLMProxyComponent
+from lfx.components.atomicchat.atomicchatmodel import AtomicChatModelComponent
 from lfx.components.lmstudio.lmstudioembeddings import LMStudioEmbeddingsComponent
 from lfx.components.lmstudio.lmstudiomodel import LMStudioModelComponent
 from lfx.components.ollama.ollama import ChatOllamaComponent
@@ -39,6 +40,29 @@ def test_lmstudio_model_build_blocks_metadata_url_before_openai_client():
 
     with (
         patch("lfx.components.lmstudio.lmstudiomodel.ChatOpenAI") as mock_chat_openai,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
+        component.build_model()
+
+    mock_chat_openai.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_atomicchat_model_update_blocks_metadata_url_before_httpx():
+    component = AtomicChatModelComponent()
+    build_config = {"base_url": {"load_from_db": False, "value": BLOCKED_URL}, "model_name": {"options": []}}
+
+    with patch("httpx.AsyncClient.get") as mock_get, pytest.raises(ValueError, match="SSRF Protection"):
+        await component.update_build_config(build_config, None, "model_name")
+
+    mock_get.assert_not_called()
+
+
+def test_atomicchat_model_build_blocks_metadata_url_before_openai_client():
+    component = AtomicChatModelComponent(base_url=BLOCKED_URL, model_name="model", api_key="test")
+
+    with (
+        patch("lfx.components.atomicchat.atomicchatmodel.ChatOpenAI") as mock_chat_openai,
         pytest.raises(ValueError, match="SSRF Protection"),
     ):
         component.build_model()
