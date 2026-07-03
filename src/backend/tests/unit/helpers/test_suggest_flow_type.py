@@ -53,3 +53,15 @@ def test_suggest_workflow_for_empty_or_missing_data():
 def test_suggest_never_raises_on_malformed_nodes():
     bad = {"nodes": [{"data": {"node": {"template": {"code": {"value": "this is not python ("}}}}}]}
     assert suggest_flow_type(bad) == FlowType.WORKFLOW
+
+
+def test_suggest_agent_for_pre_split_flow_whose_code_no_longer_evaluates():
+    """A pre-split flow's agent code no longer evaluates; the stable component name still classifies it."""
+    agent_graph = _load_agent_starter()
+    for node in agent_graph.get("nodes") or []:
+        node_data = node.get("data") or {}
+        if node_data.get("type") == "Agent":
+            # Break the stored code the way a pre-lfx-split flow would: imports to a module gone today.
+            node_data["node"]["template"]["code"]["value"] = "from langflow_gone.agents import Agent\n"
+            break
+    assert suggest_flow_type(agent_graph) == FlowType.AGENT

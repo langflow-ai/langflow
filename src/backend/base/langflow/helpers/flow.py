@@ -589,24 +589,37 @@ def json_schema_from_flow(flow: Flow) -> dict:
     return {"type": "object", "properties": properties, "required": required}
 
 
+# Built-in agents matched by their component ``name`` (stored as ``node.data.type``). The name is the
+# stable flow-matching identifier and never changes, so this classifies an agent flow even when the
+# node's stored source was saved by an older build and no longer evaluates. Custom agent components
+# (an unknown name) still fall through to the eval-based check below.
+_AGENT_TYPE_NAMES = frozenset({"Agent"})
+
+
 def suggest_flow_type(flow_data: dict | None) -> FlowType:
     """Suggest ``agent`` vs ``workflow`` for a flow based on its graph contents.
 
-    Returns ``FlowType.AGENT`` if any node's component is (a subclass of)
-    ``LCAgentComponent``, else ``FlowType.WORKFLOW``. This is a UI default
-    suggestion only, never the stored source of truth, so it never raises:
-    any node it cannot resolve is skipped and the flow falls back to
-    ``WORKFLOW``. The node's class is recovered from its own stored source
-    (``node.data.node.template.code.value``) via ``eval_custom_component_code``,
-    which evaluates the class definition without instantiating or running it.
+    Returns ``FlowType.AGENT`` if any node is a known agent component (matched by its stable
+    ``node.data.type`` name) or resolves to a subclass of ``LCAgentComponent``, else
+    ``FlowType.WORKFLOW``. This is a UI default suggestion only, never the stored source of truth, so
+    it never raises: any node it cannot resolve is skipped and the flow falls back to ``WORKFLOW``.
+    A custom component's class is recovered from its own stored source
+    (``node.data.node.template.code.value``) via ``eval_custom_component_code``, which evaluates the
+    class definition without instantiating or running it; the name fast-path handles flows whose
+    stored code predates the lfx module split and no longer evaluates.
     """
     from lfx.base.agents.agent import LCAgentComponent
     from lfx.custom.eval import eval_custom_component_code
 
     nodes = (flow_data or {}).get("nodes") or []
     for node in nodes:
+        node_data = node.get("data") or {}
+        # Version-stable fast path before the fragile eval: a built-in agent classifies by name even
+        # if its stored code can't be evaluated in this build.
+        if node_data.get("type") in _AGENT_TYPE_NAMES:
+            return FlowType.AGENT
         try:
-            code = node["data"]["node"]["template"]["code"]["value"]
+            code = node_data["node"]["template"]["code"]["value"]
         except (KeyError, TypeError):
             continue
         if not code:
