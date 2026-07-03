@@ -1,13 +1,13 @@
 import { AgentQLIcon } from "@/icons/AgentQL";
 import { AIMLIcon } from "@/icons/AIML";
 import { AirbyteIcon } from "@/icons/Airbyte";
-import { AtomicChatIcon } from "@/icons/AtomicChat";
-import { ApifyIcon, ApifyWhiteIcon } from "@/icons/Apify";
 import { AnthropicIcon } from "@/icons/Anthropic";
+import { ApifyIcon, ApifyWhiteIcon } from "@/icons/Apify";
 import { ArizeIcon } from "@/icons/Arize";
 import { ArXivIcon } from "@/icons/ArXiv";
 import { AssemblyAIIcon } from "@/icons/AssemblyAI";
 import { AstraDBIcon } from "@/icons/AstraDB";
+import { AtomicChatIcon } from "@/icons/AtomicChat";
 import { AWSIcon } from "@/icons/AWS";
 import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { AzureIcon } from "@/icons/Azure";

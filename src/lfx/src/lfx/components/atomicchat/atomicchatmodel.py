@@ -32,7 +32,10 @@ class AtomicChatModelComponent(LCModelComponent):
                 msg = f"SSRF Protection: {e}"
                 raise ValueError(msg) from e
             except httpx.HTTPError:
-                msg = "Could not access the Atomic Chat API. Please verify the Base URL and ensure Atomic Chat is running."
+                msg = (
+                    "Could not access the Atomic Chat API. "
+                    "Please verify the Base URL and ensure Atomic Chat is running."
+                )
                 self.log(msg)
                 return build_config
             build_config["model_name"]["options"] = await self.get_model(base_url_value)
