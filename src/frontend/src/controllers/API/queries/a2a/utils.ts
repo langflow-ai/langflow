@@ -39,7 +39,13 @@ export const formToOverrides = (form: A2ACardForm): A2ACardOverrides => {
   return overrides;
 };
 
-export const buildSendMessageBody = (text: string, messageId: string) => ({
+// contextId threads a multi-turn conversation (echo back what the server returns);
+// taskId resumes an input-required (HITL) task. Both are omitted on a fresh send.
+export const buildSendMessageBody = (
+  text: string,
+  messageId: string,
+  opts?: { contextId?: string; taskId?: string },
+) => ({
   jsonrpc: "2.0",
   id: 1,
   method: "message/send",
@@ -48,17 +54,34 @@ export const buildSendMessageBody = (text: string, messageId: string) => ({
       role: "user",
       parts: [{ kind: "text", text }],
       messageId,
+      ...(opts?.contextId ? { contextId: opts.contextId } : {}),
+      ...(opts?.taskId ? { taskId: opts.taskId } : {}),
     },
   },
 });
 
 type A2APart = { kind?: string; text?: string };
 
+// Task lifecycle state, serialized as A2A spec strings (verified in test_a2a.py).
+export type A2ATaskState =
+  | "submitted"
+  | "working"
+  | "input-required"
+  | "completed"
+  | "failed"
+  | "canceled";
+
 type A2AResult = {
+  // Task id (echo back as taskId to resume an input-required task) and the
+  // conversation id (echo back as contextId to keep multi-turn memory).
+  id?: string;
+  contextId?: string;
   artifacts?: { parts?: A2APart[] }[];
-  status?: { message?: { parts?: A2APart[] } };
+  status?: { state?: A2ATaskState; message?: { parts?: A2APart[] } };
   parts?: A2APart[];
 };
+
+export type { A2AResult };
 
 // JSON-RPC 2.0 response envelope returned by the A2A endpoint.
 export type A2AEnvelope = {

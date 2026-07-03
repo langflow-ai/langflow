@@ -9,6 +9,7 @@ import {
   type SidebarSection,
   useSidebar,
 } from "@/components/ui/sidebar";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
@@ -16,6 +17,16 @@ import { NAV_ITEMS } from "./sidebar-nav-items";
 
 export type { SidebarSection };
 export { NAV_ITEMS };
+
+// The feature-view tabs (per-flow surfaces) sit below the separator. "agent" is
+// the first of them, but it only shows for agent flows, so the separator is
+// drawn before whichever one survives the flow_type filter — never a stray
+// divider or a double one.
+const FEATURE_SECTION_IDS = new Set<SidebarSection>([
+  "agent",
+  "memories",
+  "traces",
+]);
 
 const SidebarSegmentedNav = () => {
   const { t } = useTranslation();
@@ -25,13 +36,24 @@ const SidebarSegmentedNav = () => {
   const setPlaygroundFullscreen = usePlaygroundStore(
     (state) => state.setIsFullscreen,
   );
+  // The Agent tab is only meaningful for flows classified as agents. Gate it
+  // here at the render site (not in the shared NAV_ITEMS, which the welcome
+  // faux-rail maps unconditionally and whose test can't take store imports).
+  const isAgent = useFlowsManagerStore(
+    (state) => state.currentFlow?.flow_type === "agent",
+  );
+
+  const items = NAV_ITEMS.filter((item) => item.id !== "agent" || isAgent);
+  const firstFeatureIndex = items.findIndex((item) =>
+    FEATURE_SECTION_IDS.has(item.id),
+  );
 
   return (
     <div className="flex h-full flex-col border-r border-border bg-background">
       <SidebarMenu className="gap-2 py-1">
-        {NAV_ITEMS.map((item) => (
+        {items.map((item, index) => (
           <div key={item.id}>
-            {item.id === "memories" && (
+            {index === firstFeatureIndex && (
               <Separator className="mx-auto my-1 w-5" />
             )}
             <SidebarMenuItem className="px-1 pt-1">
@@ -46,7 +68,7 @@ const SidebarSegmentedNav = () => {
 
                     setSearch?.("");
                     if (activeSection === item.id && open) {
-                      if (item.id === "traces" || item.id === "memories") {
+                      if (FEATURE_SECTION_IDS.has(item.id)) {
                         setActiveSection("components");
                       } else {
                         toggleSidebar();

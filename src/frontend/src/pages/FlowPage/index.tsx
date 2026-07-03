@@ -29,6 +29,7 @@ import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import AgentMainContent from "./components/AgentMainContent";
 import {
   FlowSearchProvider,
   FlowSidebarComponent,
@@ -45,8 +46,19 @@ function FlowPageMainContent({
   setIsLoading: (isLoading: boolean) => void;
 }): JSX.Element {
   const { activeSection } = useSidebar();
+  const isAgent = useFlowsManagerStore(
+    (state) => state.currentFlow?.flow_type === "agent",
+  );
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
   const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
+  // Gate on flow_type too: if the flow stops being an agent while the tab is
+  // open, the rail icon disappears, so fall back to the canvas instead of
+  // stranding the user on a section with no visible tab.
+  const showAgent = ENABLE_NEW_SIDEBAR && activeSection === "agent" && isAgent;
+
+  if (showAgent) {
+    return <AgentMainContent />;
+  }
 
   if (showTraces) {
     return (

@@ -619,8 +619,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
   const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
+  const showAgent =
+    ENABLE_NEW_SIDEBAR &&
+    activeSection === "agent" &&
+    currentFlowForVersions?.flow_type === "agent";
 
-  const isFeatureSection = showTraces || showMemories;
+  const isFeatureSection = showTraces || showMemories || showAgent;
 
   const SIDEBAR_EXPAND_ANIMATION_MS = 300;
   const [isFullSidebarPanelMounted, setIsFullSidebarPanelMounted] = useState(

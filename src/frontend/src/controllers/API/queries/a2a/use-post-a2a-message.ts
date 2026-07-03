@@ -1,20 +1,23 @@
-import {
-  type A2AEnvelope,
-  buildSendMessageBody,
-} from "@/modals/a2aModal/utils";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { type A2AEnvelope, buildSendMessageBody } from "./utils";
 
 interface IPostA2AMessage {
   flowId: string;
   message: string;
+  // Echo the server's contextId to continue a conversation; send a paused task's
+  // id to resume it (HITL). apiKey is required only for apikey-folder agents.
+  contextId?: string;
+  taskId?: string;
+  apiKey?: string;
 }
 
 // Sends one A2A message/send to the flow's public JSON-RPC endpoint and returns the
-// raw JSON-RPC envelope (result or error). Used by the A2A modal's test panel to
-// exercise the published agent end to end.
+// raw JSON-RPC envelope (result or error). Drives the Agent tab's test conversation:
+// contextId/taskId thread multi-turn and input-required resume; apiKey satisfies the
+// x-api-key gate on apikey-folder agents.
 export const usePostA2AMessage: useMutationFunctionType<
   undefined,
   IPostA2AMessage
@@ -24,9 +27,19 @@ export const usePostA2AMessage: useMutationFunctionType<
   const postA2AMessageFn = async ({
     flowId,
     message,
+    contextId,
+    taskId,
+    apiKey,
   }: IPostA2AMessage): Promise<A2AEnvelope> => {
-    const body = buildSendMessageBody(message, crypto.randomUUID());
-    const response = await api.post(`${getURL("A2A")}/${flowId}/jsonrpc`, body);
+    const body = buildSendMessageBody(message, crypto.randomUUID(), {
+      contextId,
+      taskId,
+    });
+    const response = await api.post(
+      `${getURL("A2A")}/${flowId}/jsonrpc`,
+      body,
+      apiKey ? { headers: { "x-api-key": apiKey } } : undefined,
+    );
     return response.data;
   };
 

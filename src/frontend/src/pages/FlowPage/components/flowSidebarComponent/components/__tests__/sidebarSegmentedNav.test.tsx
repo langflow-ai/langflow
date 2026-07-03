@@ -122,6 +122,19 @@ jest.mock("@/stores/playgroundStore", () => ({
     selector(mockPlaygroundStore),
 }));
 
+// The agent tab is gated on the saved flow's flow_type; default to an agent flow
+// so every NAV_ITEM renders, and flip flow_type per test to check the gate.
+const mockFlowsManagerStore: { currentFlow: { flow_type: string } } = {
+  currentFlow: { flow_type: "agent" },
+};
+
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
+  default: (selector: (state: typeof mockFlowsManagerStore) => any) =>
+    selector(mockFlowsManagerStore),
+}));
+
 describe("SidebarSegmentedNav", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -129,6 +142,7 @@ describe("SidebarSegmentedNav", () => {
     mockUseSidebar.activeSection = "components" as SidebarSection;
     mockUseSidebar.open = true;
     mockUseSearchContext.isSearchFocused = false;
+    mockFlowsManagerStore.currentFlow = { flow_type: "agent" };
     jest.useFakeTimers();
     jest.clearAllTimers();
   });
@@ -356,7 +370,7 @@ describe("SidebarSegmentedNav", () => {
   });
 
   it("exports NAV_ITEMS correctly", () => {
-    expect(NAV_ITEMS).toHaveLength(6);
+    expect(NAV_ITEMS).toHaveLength(7);
     expect(NAV_ITEMS[0]).toEqual({
       id: "components",
       icon: "component",
@@ -382,17 +396,40 @@ describe("SidebarSegmentedNav", () => {
       tooltip: "sidebar.nav.versionHistory",
     });
     expect(NAV_ITEMS[4]).toEqual({
+      id: "agent",
+      icon: "Bot",
+      label: "sidebar.nav.agent",
+      tooltip: "sidebar.nav.agent",
+    });
+    expect(NAV_ITEMS[5]).toEqual({
       id: "memories",
       icon: "BrainCog",
       label: "memory.sidebarTitle",
       tooltip: "memory.sidebarTitle",
     });
-    expect(NAV_ITEMS[5]).toEqual({
+    expect(NAV_ITEMS[6]).toEqual({
       id: "traces",
       icon: "Activity",
       label: "sidebar.nav.traces",
       tooltip: "sidebar.nav.traces",
     });
+  });
+
+  it("hides the agent tab for non-agent flows", () => {
+    mockFlowsManagerStore.currentFlow = { flow_type: "workflow" };
+    render(<SidebarSegmentedNav />);
+
+    expect(screen.queryByTestId("sidebar-nav-agent")).not.toBeInTheDocument();
+    // The always-present sections still render.
+    expect(screen.getByTestId("sidebar-nav-components")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-nav-memories")).toBeInTheDocument();
+  });
+
+  it("shows the agent tab for agent flows", () => {
+    mockFlowsManagerStore.currentFlow = { flow_type: "agent" };
+    render(<SidebarSegmentedNav />);
+
+    expect(screen.getByTestId("sidebar-nav-agent")).toBeInTheDocument();
   });
 
   it("sets active section to traces when clicking traces", () => {

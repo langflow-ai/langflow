@@ -43,6 +43,27 @@ describe("buildSendMessageBody", () => {
       },
     });
   });
+
+  it("omits contextId/taskId when not provided", () => {
+    const message = buildSendMessageBody("hi", "abc", {}).params.message;
+    expect(message).not.toHaveProperty("contextId");
+    expect(message).not.toHaveProperty("taskId");
+  });
+
+  it("threads contextId and taskId when resuming a conversation", () => {
+    expect(
+      buildSendMessageBody("go on", "m2", {
+        contextId: "c-1",
+        taskId: "t-1",
+      }).params.message,
+    ).toEqual({
+      role: "user",
+      parts: [{ kind: "text", text: "go on" }],
+      messageId: "m2",
+      contextId: "c-1",
+      taskId: "t-1",
+    });
+  });
 });
 
 describe("parseA2AReply", () => {
