@@ -178,27 +178,21 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
         else:
             setup_mode = SetupMode.ASYNC
 
+        table = Cassandra(
+            embedding=self.embedding,
+            table_name=self.table_name,
+            keyspace=self.keyspace,
+            ttl_seconds=self.ttl_seconds or None,
+            body_index_options=body_index_options,
+            setup_mode=setup_mode,
+        )
         if documents:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
-            table = Cassandra.from_documents(
-                documents=documents,
-                embedding=self.embedding,
-                table_name=self.table_name,
-                keyspace=self.keyspace,
-                ttl_seconds=self.ttl_seconds or None,
-                batch_size=self.batch_size,
-                body_index_options=body_index_options,
-            )
+            # batch_size controls per-call ingestion throughput and belongs on
+            # add_documents, not on Cassandra.__init__ (which does not accept it).
+            table.add_documents(documents, batch_size=self.batch_size or None)
         else:
             self.log("No documents to add to the Vector Store.")
-            table = Cassandra(
-                embedding=self.embedding,
-                table_name=self.table_name,
-                keyspace=self.keyspace,
-                ttl_seconds=self.ttl_seconds or None,
-                body_index_options=body_index_options,
-                setup_mode=setup_mode,
-            )
         return table
 
     def _map_search_type(self) -> str:
