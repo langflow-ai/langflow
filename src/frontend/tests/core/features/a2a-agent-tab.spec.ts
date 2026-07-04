@@ -14,6 +14,19 @@ const readFlow = (name: string) =>
 const ECHO_FLOW = readFlow("echo-agent.json");
 const HUMAN_INPUT_FLOW = readFlow("human-input-agent.json");
 
+// Ineligible: a chat input but no chat output, so A2A has no reply channel.
+// Derive it from the echo flow (drop the ChatOutput + edges) instead of
+// carrying a second big asset.
+const INELIGIBLE_FLOW = (() => {
+  const flow = readFlow("echo-agent.json");
+  flow.name = "A2A Ineligible (no chat output)";
+  flow.data.edges = [];
+  flow.data.nodes = flow.data.nodes.filter(
+    (n: { data?: { type?: string } }) => n.data?.type !== "ChatOutput",
+  );
+  return flow;
+})();
+
 // Seed a flow straight through the API using the page's auto-login session, so
 // we don't have to build a runnable agent by hand on the canvas.
 async function seedFlow(
@@ -41,7 +54,7 @@ async function seedFlow(
 
 async function openAgentTab(page: Page, flowId: string) {
   await page.goto(`/flow/${flowId}`);
-  // The tab only mounts once the saved flow (flow_type=agent) is in the store.
+  // The tab is available for every flow; it renders its own three states.
   await expect(page.getByTestId("sidebar-nav-agent")).toBeVisible({
     timeout: 30000,
   });
@@ -73,26 +86,30 @@ async function sendMessage(page: Page, text: string) {
 
 test.describe("A2A Agent tab", () => {
   test(
-    "shows the Agent tab only for agent flows",
+    "shows the tab for every flow and gates serving on chat I/O",
     { tag: ["@release", "@api"] },
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
 
-      const agentId = await seedFlow(page, ECHO_FLOW, { flowType: "agent" });
-      const workflowId = await seedFlow(page, ECHO_FLOW, {
+      // Ineligible flow (chat input, no chat output): tab is there, but serving
+      // is blocked with guidance to add the missing half.
+      const ineligibleId = await seedFlow(page, INELIGIBLE_FLOW, {
         flowType: "workflow",
       });
+      await openAgentTab(page, ineligibleId);
+      await expect(page.getByTestId("agent-status")).toHaveText("Unavailable");
+      await expect(page.getByTestId("agent-publish-switch")).toBeDisabled();
+      await expect(
+        page.getByText("Add a chat output", { exact: false }),
+      ).toBeVisible();
 
-      await page.goto(`/flow/${agentId}`);
-      await expect(page.getByTestId("sidebar-nav-agent")).toBeVisible({
-        timeout: 30000,
+      // Eligible flow (chat in + out): the serve toggle is live.
+      const eligibleId = await seedFlow(page, ECHO_FLOW, {
+        flowType: "workflow",
       });
-
-      await page.goto(`/flow/${workflowId}`);
-      await expect(page.getByTestId("sidebar-nav-components")).toBeVisible({
-        timeout: 30000,
-      });
-      await expect(page.getByTestId("sidebar-nav-agent")).toHaveCount(0);
+      await openAgentTab(page, eligibleId);
+      await expect(page.getByTestId("agent-status")).toHaveText("Draft");
+      await expect(page.getByTestId("agent-publish-switch")).toBeEnabled();
     },
   );
 

@@ -9,7 +9,6 @@ import {
   type SidebarSection,
   useSidebar,
 } from "@/components/ui/sidebar";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
@@ -19,8 +18,7 @@ export type { SidebarSection };
 export { NAV_ITEMS };
 
 // The feature-view tabs (per-flow surfaces) sit below the separator. "agent" is
-// the first of them, but it only shows for agent flows, so the separator is
-// drawn before whichever one survives the flow_type filter — never a stray
+// the first of them; the separator is drawn before it so there's never a stray
 // divider or a double one.
 const FEATURE_SECTION_IDS = new Set<SidebarSection>([
   "agent",
@@ -36,14 +34,8 @@ const SidebarSegmentedNav = () => {
   const setPlaygroundFullscreen = usePlaygroundStore(
     (state) => state.setIsFullscreen,
   );
-  // The Agent tab is only meaningful for flows classified as agents. Gate it
-  // here at the render site (not in the shared NAV_ITEMS, which the welcome
-  // faux-rail maps unconditionally and whose test can't take store imports).
-  const isAgent = useFlowsManagerStore(
-    (state) => state.currentFlow?.flow_type === "agent",
-  );
-
-  const items = NAV_ITEMS.filter((item) => item.id !== "agent" || isAgent);
+  // The Agent tab is always available; it handles eligibility inside the tab.
+  const items = NAV_ITEMS;
   const firstFeatureIndex = items.findIndex((item) =>
     FEATURE_SECTION_IDS.has(item.id),
   );

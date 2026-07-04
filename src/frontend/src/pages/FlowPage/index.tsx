@@ -46,15 +46,12 @@ function FlowPageMainContent({
   setIsLoading: (isLoading: boolean) => void;
 }): JSX.Element {
   const { activeSection } = useSidebar();
-  const isAgent = useFlowsManagerStore(
-    (state) => state.currentFlow?.flow_type === "agent",
-  );
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
   const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
-  // Gate on flow_type too: if the flow stops being an agent while the tab is
-  // open, the rail icon disappears, so fall back to the canvas instead of
-  // stranding the user on a section with no visible tab.
-  const showAgent = ENABLE_NEW_SIDEBAR && activeSection === "agent" && isAgent;
+  // The Agent tab is always available. It handles its own three states
+  // (ineligible / eligible-not-serving / serving) inside AgentMainContent, so
+  // there's nothing to fall back to the canvas for.
+  const showAgent = ENABLE_NEW_SIDEBAR && activeSection === "agent";
 
   if (showAgent) {
     return <AgentMainContent />;

@@ -122,19 +122,6 @@ jest.mock("@/stores/playgroundStore", () => ({
     selector(mockPlaygroundStore),
 }));
 
-// The agent tab is gated on the saved flow's flow_type; default to an agent flow
-// so every NAV_ITEM renders, and flip flow_type per test to check the gate.
-const mockFlowsManagerStore: { currentFlow: { flow_type: string } } = {
-  currentFlow: { flow_type: "agent" },
-};
-
-jest.mock("@/stores/flowsManagerStore", () => ({
-  __esModule: true,
-  // biome-ignore lint/suspicious/noExplicitAny: legacy
-  default: (selector: (state: typeof mockFlowsManagerStore) => any) =>
-    selector(mockFlowsManagerStore),
-}));
-
 describe("SidebarSegmentedNav", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -142,7 +129,6 @@ describe("SidebarSegmentedNav", () => {
     mockUseSidebar.activeSection = "components" as SidebarSection;
     mockUseSidebar.open = true;
     mockUseSearchContext.isSearchFocused = false;
-    mockFlowsManagerStore.currentFlow = { flow_type: "agent" };
     jest.useFakeTimers();
     jest.clearAllTimers();
   });
@@ -415,21 +401,13 @@ describe("SidebarSegmentedNav", () => {
     });
   });
 
-  it("hides the agent tab for non-agent flows", () => {
-    mockFlowsManagerStore.currentFlow = { flow_type: "workflow" };
+  it("always shows the agent tab", () => {
     render(<SidebarSegmentedNav />);
 
-    expect(screen.queryByTestId("sidebar-nav-agent")).not.toBeInTheDocument();
-    // The always-present sections still render.
+    // The tab renders for every flow; eligibility is handled inside the tab.
+    expect(screen.getByTestId("sidebar-nav-agent")).toBeInTheDocument();
     expect(screen.getByTestId("sidebar-nav-components")).toBeInTheDocument();
     expect(screen.getByTestId("sidebar-nav-memories")).toBeInTheDocument();
-  });
-
-  it("shows the agent tab for agent flows", () => {
-    mockFlowsManagerStore.currentFlow = { flow_type: "agent" };
-    render(<SidebarSegmentedNav />);
-
-    expect(screen.getByTestId("sidebar-nav-agent")).toBeInTheDocument();
   });
 
   it("sets active section to traces when clicking traces", () => {

@@ -14,6 +14,7 @@ interface IPatchUpdateFlow {
   endpoint_name?: string | null | undefined;
   locked?: boolean | null | undefined;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
+  flow_type?: "agent" | "workflow";
   a2a_enabled?: boolean;
   a2a_card_overrides?: Record<string, unknown> | null;
 }

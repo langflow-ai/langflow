@@ -111,10 +111,8 @@ export function FlowBuilderWelcome({
         className="absolute left-1.5 top-1.5 z-10 flex w-10 animate-in flex-col items-center gap-1.5 rounded-lg border border-border bg-background p-1 duration-300 fade-in slide-in-from-left-2"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* The Agent tab is conditional on flow_type, so it isn't part of the
-            default rail this decorative preview mirrors — leave it out here and
-            let the real SidebarSegmentedNav add it for agent flows. */}
-        {NAV_ITEMS.filter((item) => item.id !== "agent").map((item) => {
+        {/* Mirror the real always-visible nav, Agent tab included. */}
+        {NAV_ITEMS.map((item) => {
           const tooltip = t(item.tooltip);
           return (
             <ShadTooltip key={item.id} content={tooltip} side="right">

@@ -48,11 +48,17 @@ const curlSnippet = (rpcUrl: string, requiresApiKey: boolean): string => {
 export default function AgentCardPanel({
   currentFlow,
   serverEnabled,
+  eligible,
+  hasInput,
+  hasOutput,
   card,
   cardLoading,
 }: {
   currentFlow?: FlowType | null;
   serverEnabled: boolean;
+  eligible: boolean;
+  hasInput: boolean;
+  hasOutput: boolean;
   card: A2AAgentCard | null;
   cardLoading: boolean;
 }) {
@@ -92,7 +98,12 @@ export default function AgentCardPanel({
     try {
       const updatedFlow = await mutateAsync({
         id: flowId,
-        a2a_enabled: enabled,
+        // flow_type is derived from the graph (has chat I/O = agent). Write it
+        // here so the langflow A2A serve guard passes; an ineligible flow can
+        // never be served, so force it off. (Backend derive-on-save is a
+        // follow-up; today the tab is the only place that recomputes it.)
+        flow_type: eligible ? "agent" : "workflow",
+        a2a_enabled: eligible ? enabled : false,
         a2a_card_overrides: formToOverrides(form),
       });
       if (flows) {
@@ -129,22 +140,42 @@ export default function AgentCardPanel({
 
   const status = !serverEnabled
     ? { label: t("agentTab.statusOff"), variant: "secondaryStatic" as const }
-    : isPublished
-      ? { label: t("agentTab.statusLive"), variant: "successStatic" as const }
-      : {
-          label: t("agentTab.statusDraft"),
+    : !eligible
+      ? {
+          label: t("agentTab.statusUnavailable"),
           variant: "secondaryStatic" as const,
-        };
+        }
+      : isPublished
+        ? { label: t("agentTab.statusLive"), variant: "successStatic" as const }
+        : {
+            label: t("agentTab.statusDraft"),
+            variant: "secondaryStatic" as const,
+          };
+
+  // What to tell the user when the flow can't serve: the server switch wins,
+  // then eligibility (a published flow that lost its chat I/O needs turning
+  // off; a draft one just needs the missing half added).
+  const banner = !serverEnabled
+    ? t("agentTab.serverDisabled")
+    : !eligible
+      ? isPublished
+        ? t("agentTab.ineligibleServing")
+        : !hasInput && !hasOutput
+          ? t("agentTab.ineligible")
+          : !hasInput
+            ? t("agentTab.ineligibleNoInput")
+            : t("agentTab.ineligibleNoOutput")
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
-      {!serverEnabled && (
+      {banner && (
         <div className="flex items-center gap-2 rounded-md bg-accent-amber/10 p-2 text-mmd text-accent-amber-foreground">
           <ForwardedIconComponent
             name="AlertTriangle"
             className="h-4 w-4 shrink-0"
           />
-          {t("agentTab.serverDisabled")}
+          {banner}
         </div>
       )}
 
@@ -155,11 +186,13 @@ export default function AgentCardPanel({
             {t("agentTab.publishLabel")}
           </span>
           <span className="text-mmd text-muted-foreground">
-            {isPublished
-              ? t("agentTab.publishLive")
-              : enabled
-                ? t("agentTab.publishPending")
-                : t("agentTab.publishOff")}
+            {!eligible
+              ? t("agentTab.publishIneligible")
+              : isPublished
+                ? t("agentTab.publishLive")
+                : enabled
+                  ? t("agentTab.publishPending")
+                  : t("agentTab.publishOff")}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -169,7 +202,9 @@ export default function AgentCardPanel({
           <Switch
             data-testid="agent-publish-switch"
             checked={enabled}
-            disabled={!serverEnabled}
+            // Block turning ON an ineligible flow, but leave it operable when
+            // it's already serving so the user can honestly turn it off.
+            disabled={!serverEnabled || (!eligible && !enabled)}
             onCheckedChange={setEnabled}
           />
         </div>
