@@ -222,7 +222,11 @@ export default function AgentTestConversation({
       </div>
 
       {/* Transcript */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
+      <div
+        ref={scrollRef}
+        data-testid="agent-transcript"
+        className="flex-1 overflow-y-auto px-6 py-4"
+      >
         {!serverEnabled ? (
           <p className="text-mmd text-muted-foreground">
             {t("agentTab.testServerOff")}

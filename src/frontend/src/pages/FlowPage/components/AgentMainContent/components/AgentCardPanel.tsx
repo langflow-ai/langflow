@@ -163,7 +163,7 @@ export default function AgentCardPanel({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={status.variant} size="sm">
+          <Badge variant={status.variant} size="sm" data-testid="agent-status">
             {status.label}
           </Badge>
           <Switch
