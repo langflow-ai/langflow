@@ -294,9 +294,9 @@ def test_handler_deepcopy_returns_self(monkeypatch):
     with patch("langflow.services.tracing.langfuse._get_or_create_shared_client") as mock_client:
         mock_client.return_value.auth_check.return_value = True
         mock_client.return_value.start_span.return_value.__enter__ = lambda s: s
-        mock_client.return_value.start_span.return_value.__exit__ = lambda *a: None
+        mock_client.return_value.start_span.return_value.__exit__ = lambda *_: None
         mock_client.return_value.start_span.return_value.id = "root-span-id"
-        mock_client.return_value.start_span.return_value.update_trace = lambda **kw: None
+        mock_client.return_value.start_span.return_value.update_trace = lambda **_: None
 
         tracer = LangFuseTracer(
             trace_name="test-flow - abc",
