@@ -13,7 +13,16 @@ from typing import TYPE_CHECKING, Any
 import httpx
 
 from lfx.custom import Component
-from lfx.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TabInput
+from lfx.io import (
+    DataDisplayInput,
+    DropdownInput,
+    IntInput,
+    MessageTextInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    TabInput,
+)
 from lfx.schema.message import Message
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
@@ -24,6 +33,18 @@ if TYPE_CHECKING:
 DEFAULT_TIMEOUT = 60.0
 # Cap aggregated reply size so a chatty/streaming agent can't make us buffer unbounded text.
 MAX_A2A_RESPONSE_CHARS = 100_000
+_CARD_SUFFIX = "/.well-known/agent-card.json"
+
+
+def _agent_base_url(url: str | None) -> str:
+    """Normalize a pasted URL to the agent's base.
+
+    The card URL (``<base>/.well-known/agent-card.json``) is exactly what the UI hands the user
+    to copy, so accept it: strip the well-known suffix so every A2A call resolves the card once
+    instead of double-appending it.
+    """
+    base = (url or "").strip().rstrip("/").removesuffix(_CARD_SUFFIX)
+    return base.rstrip("/")
 
 
 def _origin(url: httpx.URL | str) -> tuple[str | None, str | None, int | None]:
@@ -165,9 +186,19 @@ class A2AAgentComponent(Component):
         MessageTextInput(
             name="agent_url",
             display_name="Agent URL",
-            info="Base URL of the remote A2A agent. Its card is fetched from <url>/.well-known/agent-card.json.",
+            info="The remote A2A agent's URL. Paste either its base URL or its "
+            "/.well-known/agent-card.json card URL; both resolve the same agent.",
             required=False,
             real_time_refresh=True,
+        ),
+        # External: read-only view of the remote agent's card. Hidden until a URL yields a card.
+        DataDisplayInput(
+            name="agent_card",
+            display_name="Agent card",
+            info="The remote agent's advertised card. Appears when you enter a URL that returns one.",
+            button_text="View agent card",
+            button_icon="id-card",
+            show=False,
         ),
         MultilineInput(
             name="input_value",
@@ -208,7 +239,11 @@ class A2AAgentComponent(Component):
             build_config["api_key"]["show"] = not internal
             build_config["timeout"]["show"] = not internal
             if internal:
+                build_config["agent_card"]["show"] = False
                 await self._populate_internal_agents(build_config)
+            else:
+                # Only surface the card display if the URL already set still resolves a card.
+                await self._apply_external_card(build_config, build_config["agent_url"].get("value"))
         elif field_name == "agent_name_selected" and (build_config.get("is_refresh") or field_value is None):
             await self._populate_internal_agents(build_config)
         elif field_name == "agent_url":
@@ -224,9 +259,10 @@ class A2AAgentComponent(Component):
         ]
 
     async def _apply_external_card(self, build_config: dotdict, url: str | None) -> None:
-        """On URL change, fetch the remote agent's card and show a summary under the field."""
+        """On URL change, fetch the remote agent's card; show the display only if one comes back."""
         card = await self._fetch_card(url) if url and str(url).startswith("http") else None
-        build_config["agent_url"]["helper_text"] = self._card_html(card) if card else ""
+        build_config["agent_card"]["value"] = self._card_payload(card) if card else {}
+        build_config["agent_card"]["show"] = bool(card)
 
     async def _fetch_card(self, url: str) -> dict | None:
         """Fetch the remote agent card, SSRF-validated.
@@ -234,40 +270,75 @@ class A2AAgentComponent(Component):
         Returns None on any failure so a bad URL shows no preview instead of erroring the editor
         (mirrors AstraDB's degrade-in-config style).
         """
+        base = _agent_base_url(url)
         try:
-            _validated_url, validated_ips = validate_and_resolve_url(url)
+            _validated_url, validated_ips = validate_and_resolve_url(base)
         except SSRFProtectionError:
             return None
         try:
-            client = build_a2a_client(url, validated_ips, api_key=self.api_key, timeout=15)
+            client = build_a2a_client(base, validated_ips, api_key=self.api_key, timeout=15)
             async with client:
-                response = await client.get(f"{url.rstrip('/')}/.well-known/agent-card.json")
+                response = await client.get(f"{base}{_CARD_SUFFIX}")
                 if response.status_code != httpx.codes.OK:
                     return None
-                return response.json()
+                data = response.json()
+                # A spec-compliant card is a JSON object; anything else degrades to no preview.
+                return data if isinstance(data, dict) else None
         except Exception:  # noqa: BLE001 - a bad/unreachable url degrades to no preview
             return None
 
     @staticmethod
-    def _card_html(card: dict) -> str:
-        """Render the fetched card as the read-only HTML summary shown under the URL field."""
-        from html import escape
+    def _card_payload(card: dict) -> dict:
+        """Build the structured data-display payload (identity + chips + sections) from an agent card."""
+        name = str(card.get("name") or "Agent")
+        version = str(card.get("version") or "")
 
-        name = escape(str(card.get("name") or "Agent"))
-        version = escape(str(card.get("version") or ""))
-        lines = [f"<b>{name}</b>" + (f" &middot; v{version}" if version else "")]
-        if description := card.get("description"):
-            lines.append(escape(str(description)))
-        skills = card.get("skills") or []
-        schema = (skills[0].get("inputSchema") if skills else {}) or {}
-        required = set(schema.get("required") or [])
-        properties = schema.get("properties") or {}
-        if properties:
-            fields = ", ".join(escape(str(key)) + ("*" if key in required else "") for key in properties)
-            lines.append(f"Sends: {fields}")
+        # Quick-facts chips under the header. Auth leads (accent + icon) since it's decision-critical;
+        # capabilities and transport/protocol follow as muted context.
+        chips: list[dict] = []
         if card.get("security"):
-            lines.append("Requires an API key")
-        return "<br>".join(lines)
+            chips.append({"label": "Requires an API key", "icon": "key-round", "tone": "accent"})
+        capabilities = card.get("capabilities")
+        capabilities = capabilities if isinstance(capabilities, dict) else {}
+        if capabilities.get("streaming"):
+            chips.append({"label": "Streaming", "tone": "muted"})
+        if capabilities.get("pushNotifications"):
+            chips.append({"label": "Push notifications", "tone": "muted"})
+        if transport := card.get("preferredTransport"):
+            chips.append({"label": str(transport), "tone": "muted"})
+        if protocol := card.get("protocolVersion"):
+            chips.append({"label": f"A2A {protocol}", "tone": "muted"})
+
+        sections: list[dict] = []
+        if description := card.get("description"):
+            sections.append({"heading": "Description", "text": str(description)})
+
+        # The card comes from a remote server, so tolerate malformed skill/schema shapes.
+        skills = [skill for skill in (card.get("skills") or []) if isinstance(skill, dict)]
+        schema = skills[0].get("inputSchema") if skills else {}
+        schema = schema if isinstance(schema, dict) else {}
+        required_raw = schema.get("required")
+        required = set(required_raw) if isinstance(required_raw, list) else set()
+        properties = schema.get("properties")
+        properties = properties if isinstance(properties, dict) else {}
+        if properties:
+            fields = [
+                {"name": str(key), "type": str((spec or {}).get("type") or ""), "required": key in required}
+                for key, spec in properties.items()
+            ]
+            sections.append({"heading": "Sends", "fields": fields})
+
+        skill_cards = [
+            {
+                "title": str(skill.get("name") or skill.get("id") or "skill"),
+                "description": str(skill.get("description") or ""),
+            }
+            for skill in skills
+        ]
+        if skill_cards:
+            sections.append({"heading": "Skills", "cards": skill_cards})
+
+        return {"title": name, "version": version, "chips": chips, "sections": sections}
 
     async def send_to_agent(self) -> Message:
         if self.mode == "Internal":
@@ -337,23 +408,27 @@ class A2AAgentComponent(Component):
         except (TypeError, ValueError):
             timeout = DEFAULT_TIMEOUT
 
+        # Accept either the base URL or the card URL the UI hands out; the SDK resolves the card
+        # from <base>/.well-known/agent-card.json, so normalize first to avoid double-appending.
+        agent_url = _agent_base_url(self.agent_url)
+
         # Validate + DNS-pin the agent URL before any outbound call (blocks loopback, RFC1918,
         # link-local / cloud metadata, etc.); mirrors the API Request component.
         try:
-            _validated_url, validated_ips = validate_and_resolve_url(self.agent_url)
+            _validated_url, validated_ips = validate_and_resolve_url(agent_url)
         except SSRFProtectionError as e:
             msg = f"SSRF Protection: {e}"
             raise ValueError(msg) from e
 
-        client = build_a2a_client(self.agent_url, validated_ips, api_key=self.api_key, timeout=timeout)
+        client = build_a2a_client(agent_url, validated_ips, api_key=self.api_key, timeout=timeout)
         try:
             async with client:
-                answer = await call_a2a_agent(self.agent_url, self.input_value, httpx_client=client)
+                answer = await call_a2a_agent(agent_url, self.input_value, httpx_client=client)
         except SSRFProtectionError as e:
             msg = f"SSRF Protection: {e}"
             raise ValueError(msg) from e
         except Exception as e:
-            msg = f"Failed to call A2A agent at {self.agent_url}: {e}"
+            msg = f"Failed to call A2A agent at {agent_url}: {e}"
             raise ValueError(msg) from e
 
         message = Message(text=answer or "No response received from the A2A agent.")

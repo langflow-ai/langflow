@@ -12,11 +12,12 @@ SDK, so these tests drive that client directly against real localhost servers:
 - an internal/loopback ``agent_url`` is rejected by SSRF protection before any call.
 """
 
+import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
-from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent, build_a2a_client
+from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent, _agent_base_url, build_a2a_client
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
 
 
@@ -142,6 +143,12 @@ class _CardHandler(BaseHTTPRequestHandler):
     )
 
     def do_GET(self):
+        # Strict path: only the real well-known URL serves the card, so a double-appended
+        # ".../.well-known/agent-card.json/.well-known/agent-card.json" 404s and is caught.
+        if self.path != "/.well-known/agent-card.json":
+            self.send_response(404)
+            self.end_headers()
+            return
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(self._CARD)))
@@ -170,47 +177,98 @@ class _CardServer:
         return self.httpd.server_address[1]
 
 
-def test_card_html_renders_summary():
-    """The card summary shows identity, the input contract (required marked), and the auth hint."""
+def test_card_payload_renders_sections():
+    """The card payload carries identity, the input contract (required marked), and the auth badge."""
     card = {
         "name": "Billing Agent",
         "version": "1.2.0",
         "description": "Handles refunds.",
-        "skills": [{"inputSchema": {"properties": {"input_value": {}, "session_id": {}}, "required": ["input_value"]}}],
+        "skills": [
+            {
+                "name": "refund",
+                "inputSchema": {"properties": {"input_value": {}, "session_id": {}}, "required": ["input_value"]},
+            }
+        ],
         "security": [{"apiKey": []}],
     }
-    html = A2AAgentComponent._card_html(card)
-    assert "<b>Billing Agent</b>" in html
-    assert "v1.2.0" in html
-    assert "Handles refunds." in html
-    assert "input_value*" in html
-    assert "session_id" in html
-    assert "Requires an API key" in html
+    payload = A2AAgentComponent._card_payload(card)
+    assert payload["title"] == "Billing Agent"
+    assert payload["version"] == "1.2.0"
+    blob = json.dumps(payload)
+    assert "Handles refunds." in blob
+    # input_value is a field marked required; session_id is a field that isn't.
+    assert "input_value" in blob
+    assert '"required": true' in blob
+    assert "session_id" in blob
+    # skill name renders as a card title; auth leads the quick-facts chips.
+    assert "refund" in blob
+    assert "Requires an API key" in blob
+
+
+def test_card_payload_tolerates_malformed_card():
+    """A card from a remote server may be malformed; the payload must degrade, not raise."""
+    card = {
+        "name": "Weird Agent",
+        "capabilities": ["not-a-dict"],
+        "skills": [1, 2, {"name": "ok", "inputSchema": {"properties": ["x"], "required": "nope"}}],
+    }
+    payload = A2AAgentComponent._card_payload(card)
+    assert payload["title"] == "Weird Agent"
+    assert isinstance(payload["sections"], list)
+    # Garbage skill entries are dropped; the one valid skill still surfaces.
+    assert "ok" in json.dumps(payload)
 
 
 async def test_external_card_preview_fetches_and_renders(monkeypatch):
-    """Entering a reachable agent URL fetches its card and renders the summary under the field."""
+    """Entering a reachable agent URL fetches its card and loads the payload into agent_card."""
     monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
     monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
 
     with _CardServer() as server:
         url = f"http://127.0.0.1:{server.port}"
         component = A2AAgentComponent(mode="External", agent_url=url, input_value="hi")
-        build_config = {"agent_url": {}}
+        build_config = {"agent_card": {}}
         await component._apply_external_card(build_config, url)
 
-    helper_text = build_config["agent_url"]["helper_text"]
-    assert "<b>Echo</b>" in helper_text
-    assert "v1.0.0" in helper_text
-    assert "Requires an API key" in helper_text
+    blob = json.dumps(build_config["agent_card"]["value"])
+    assert "Echo" in blob
+    assert "1.0.0" in blob
+    assert "Requires an API key" in blob
+    # A resolved card reveals the display field.
+    assert build_config["agent_card"]["show"] is True
+
+
+def test_agent_base_url_strips_card_suffix():
+    """The card URL the UI hands out normalizes back to the agent base (no double-append)."""
+    base = "http://host:7860/api/v1/a2a/abc"
+    assert _agent_base_url(base) == base
+    assert _agent_base_url(base + "/") == base
+    assert _agent_base_url(base + "/.well-known/agent-card.json") == base
+    assert _agent_base_url(base + "/.well-known/agent-card.json/") == base
+
+
+async def test_external_card_preview_accepts_card_url(monkeypatch):
+    """Pasting the /.well-known/agent-card.json URL (what the UI surfaces) still renders the card."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    with _CardServer() as server:
+        card_url = f"http://127.0.0.1:{server.port}/.well-known/agent-card.json"
+        component = A2AAgentComponent(mode="External", agent_url=card_url, input_value="hi")
+        build_config = {"agent_card": {}}
+        await component._apply_external_card(build_config, card_url)
+
+    assert "Echo" in json.dumps(build_config["agent_card"]["value"])
 
 
 async def test_external_card_preview_bad_url_no_crash(monkeypatch):
-    """A blocked/unreachable URL degrades to no preview instead of raising in the editor."""
+    """A blocked/unreachable URL degrades to an empty card instead of raising in the editor."""
     monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
     monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
 
     component = A2AAgentComponent(mode="External", agent_url="http://127.0.0.1:1/x", input_value="hi")
-    build_config = {"agent_url": {}}
+    build_config = {"agent_card": {}}
     await component._apply_external_card(build_config, "http://127.0.0.1:1/x")
-    assert build_config["agent_url"]["helper_text"] == ""
+    assert build_config["agent_card"]["value"] == {}
+    # No card, so the display field stays hidden.
+    assert build_config["agent_card"]["show"] is False
