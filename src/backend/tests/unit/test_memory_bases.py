@@ -255,10 +255,29 @@ class TestKBIngestionHelperBuildEmbeddings:
                 "lfx.base.models.unified_models.get_all_variables_for_provider",
                 return_value={"OLLAMA_BASE_URL": "http://ollama-server:11434"},
             ),
+            patch("httpx.AsyncClient.post") as mock_post,
         ):
+            mock_post.return_value = MagicMock(
+                status_code=200,
+                json=lambda: {"embedding": [[0.1, 0.2, 0.3]]},
+            )
             embeddings = await KBIngestionHelper.build_embeddings("Ollama", "nomic-embed-text", user)
 
-        assert str(embeddings.base_url).rstrip("/") == "http://ollama-server:11434"
+            # Verify the base_url attribute is set correctly
+            assert str(embeddings.base_url).rstrip("/") == "http://ollama-server:11434"
+
+            # Verify that actual embedding requests would use the configured URL
+            # If the actual embedding call fails for other reasons, that's okay
+            # We only care about verifying the base_url is correct
+            with contextlib.suppress(Exception):
+                await embeddings.aembed_query("test query")
+
+            # Check that the HTTP client was called with the correct URL
+            assert mock_post.called, "HTTP client should be called for embedding requests"
+            call_url = str(mock_post.call_args[0][0])
+            assert call_url.startswith("http://ollama-server:11434"), (
+                f"Expected requests to http://ollama-server:11434, but got {call_url}"
+            )
 
     @pytest.mark.asyncio
     async def test_ollama_embeddings_fall_back_to_localhost_when_unconfigured(self, monkeypatch):
