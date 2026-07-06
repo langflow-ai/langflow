@@ -57,6 +57,18 @@ Some actions allow you to provide fixed values for their inputs.
 Typically, you want to leave these blank so the agent can provide its own values.
 However, you might use a fixed value if you're trying to debug an agent's behavior or your use case requires a fixed input for an action.
 
+## Require approval for agent tools {#require-approval-for-agent-tools}
+
+The **Agent** component can pause before calling a gated tool, create a stateful checkpoint, and then resume after a human decision. This is one way to add [Human-in-the-Loop](/human-in-the-loop) to a flow.
+
+For example, if your agent drafts Python code and one of its tools commits to Git, enable **Requires approval** on the commit tool only. The flow run will pause when the agent tries to call the commit tool, without adding a branch node on the canvas.
+
+1. Connect a tool component to the **Agent** component's **Tools** port with **Tool Mode** enabled.
+2. Open the agent's tools menu, and then enable **Requires approval** for the Git commit tool.
+3. When the agent attempts to call that tool, the run pauses until a human selects **Approve** or **Reject** in the **Playground**.
+
+The decision is stored in chat history, so reloading the session shows the resolved decision instead of prompting again.
+
 ## Use an agent as a tool
 
 To create multi-agent flows, you can set another **Agent** component to **Tool Mode**, and then attach that agent as a tool for your primary **Agent** component.
@@ -214,6 +226,7 @@ The connected flow returns an answer based on your question.
 
 ## See also
 
+* [Human-in-the-Loop](/human-in-the-loop)
 * [Agent components](/components-agents)
 * [Use Langflow as an MCP client](/mcp-client)
 * [Use Langflow as an MCP server](/mcp-server)
