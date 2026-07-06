@@ -127,3 +127,90 @@ async def test_loopback_agent_url_rejected_by_ssrf(monkeypatch):
     )
     with pytest.raises(ValueError, match="SSRF"):
         await component.send_to_agent()
+
+
+# --- External mode: agent card preview -------------------------------------
+
+
+class _CardHandler(BaseHTTPRequestHandler):
+    """Serves a fixed agent card for any GET (the preview fetches /.well-known/agent-card.json)."""
+
+    _CARD = (
+        b'{"name":"Echo","version":"1.0.0","description":"Echoes messages.",'
+        b'"skills":[{"inputSchema":{"properties":{"input_value":{},"session_id":{}},"required":["input_value"]}}],'
+        b'"security":[{"apiKey":[]}]}'
+    )
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(self._CARD)))
+        self.end_headers()
+        self.wfile.write(self._CARD)
+
+    def log_message(self, *args):
+        pass
+
+
+class _CardServer:
+    def __init__(self):
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), _CardHandler)
+        self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+    @property
+    def port(self):
+        return self.httpd.server_address[1]
+
+
+def test_card_html_renders_summary():
+    """The card summary shows identity, the input contract (required marked), and the auth hint."""
+    card = {
+        "name": "Billing Agent",
+        "version": "1.2.0",
+        "description": "Handles refunds.",
+        "skills": [{"inputSchema": {"properties": {"input_value": {}, "session_id": {}}, "required": ["input_value"]}}],
+        "security": [{"apiKey": []}],
+    }
+    html = A2AAgentComponent._card_html(card)
+    assert "<b>Billing Agent</b>" in html
+    assert "v1.2.0" in html
+    assert "Handles refunds." in html
+    assert "input_value*" in html
+    assert "session_id" in html
+    assert "Requires an API key" in html
+
+
+async def test_external_card_preview_fetches_and_renders(monkeypatch):
+    """Entering a reachable agent URL fetches its card and renders the summary under the field."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    with _CardServer() as server:
+        url = f"http://127.0.0.1:{server.port}"
+        component = A2AAgentComponent(mode="External", agent_url=url, input_value="hi")
+        build_config = {"agent_url": {}}
+        await component._apply_external_card(build_config, url)
+
+    helper_text = build_config["agent_url"]["helper_text"]
+    assert "<b>Echo</b>" in helper_text
+    assert "v1.0.0" in helper_text
+    assert "Requires an API key" in helper_text
+
+
+async def test_external_card_preview_bad_url_no_crash(monkeypatch):
+    """A blocked/unreachable URL degrades to no preview instead of raising in the editor."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    component = A2AAgentComponent(mode="External", agent_url="http://127.0.0.1:1/x", input_value="hi")
+    build_config = {"agent_url": {}}
+    await component._apply_external_card(build_config, "http://127.0.0.1:1/x")
+    assert build_config["agent_url"]["helper_text"] == ""

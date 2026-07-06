@@ -211,6 +211,8 @@ class A2AAgentComponent(Component):
                 await self._populate_internal_agents(build_config)
         elif field_name == "agent_name_selected" and (build_config.get("is_refresh") or field_value is None):
             await self._populate_internal_agents(build_config)
+        elif field_name == "agent_url":
+            await self._apply_external_card(build_config, field_value)
         return build_config
 
     async def _populate_internal_agents(self, build_config: dotdict) -> None:
@@ -220,6 +222,52 @@ class A2AAgentComponent(Component):
         build_config["agent_name_selected"]["options_metadata"] = [
             {"id": str(agent.data["id"]), "updated_at": agent.data.get("updated_at")} for agent in agents
         ]
+
+    async def _apply_external_card(self, build_config: dotdict, url: str | None) -> None:
+        """On URL change, fetch the remote agent's card and show a summary under the field."""
+        card = await self._fetch_card(url) if url and str(url).startswith("http") else None
+        build_config["agent_url"]["helper_text"] = self._card_html(card) if card else ""
+
+    async def _fetch_card(self, url: str) -> dict | None:
+        """Fetch the remote agent card, SSRF-validated.
+
+        Returns None on any failure so a bad URL shows no preview instead of erroring the editor
+        (mirrors AstraDB's degrade-in-config style).
+        """
+        try:
+            _validated_url, validated_ips = validate_and_resolve_url(url)
+        except SSRFProtectionError:
+            return None
+        try:
+            client = build_a2a_client(url, validated_ips, api_key=self.api_key, timeout=15)
+            async with client:
+                response = await client.get(f"{url.rstrip('/')}/.well-known/agent-card.json")
+                if response.status_code != httpx.codes.OK:
+                    return None
+                return response.json()
+        except Exception:  # noqa: BLE001 - a bad/unreachable url degrades to no preview
+            return None
+
+    @staticmethod
+    def _card_html(card: dict) -> str:
+        """Render the fetched card as the read-only HTML summary shown under the URL field."""
+        from html import escape
+
+        name = escape(str(card.get("name") or "Agent"))
+        version = escape(str(card.get("version") or ""))
+        lines = [f"<b>{name}</b>" + (f" &middot; v{version}" if version else "")]
+        if description := card.get("description"):
+            lines.append(escape(str(description)))
+        skills = card.get("skills") or []
+        schema = (skills[0].get("inputSchema") if skills else {}) or {}
+        required = set(schema.get("required") or [])
+        properties = schema.get("properties") or {}
+        if properties:
+            fields = ", ".join(escape(str(key)) + ("*" if key in required else "") for key in properties)
+            lines.append(f"Sends: {fields}")
+        if card.get("security"):
+            lines.append("Requires an API key")
+        return "<br>".join(lines)
 
     async def send_to_agent(self) -> Message:
         if self.mode == "Internal":
