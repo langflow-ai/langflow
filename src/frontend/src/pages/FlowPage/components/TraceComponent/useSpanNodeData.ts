@@ -1,13 +1,13 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import useFlowStore from "@/stores/flowStore";
+import { INDENT_BASE_REM, INDENT_PER_DEPTH_REM } from "./spanNode.constants";
 import {
   formatTokens,
   formatTotalLatency,
   getSpanIcon,
   getStatusIconProps,
 } from "./traceViewHelpers";
-import { INDENT_BASE_REM, INDENT_PER_DEPTH_REM } from "./spanNode.constants";
 import type { Span } from "./types";
 
 function buildSpanAriaLabel(span: Span, tokenStr: string | null): string {
