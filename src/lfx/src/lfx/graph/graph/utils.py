@@ -3,8 +3,6 @@ from collections import defaultdict, deque
 from collections.abc import Callable
 from typing import Any
 
-import networkx as nx
-
 from lfx.log.logger import logger
 
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
@@ -522,15 +520,72 @@ def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) 
 
 
 def find_cycle_vertices(edges):
-    graph = nx.DiGraph(edges)
+    """Return the sorted list of vertices that participate in any cycle.
 
-    # Initialize a set to collect vertices part of any cycle
-    cycle_vertices = set()
+    A vertex is part of a cycle if it belongs to a strongly connected component
+    of size > 1, or it has a self-loop. Uses an iterative Tarjan's SCC so it does
+    not recurse (large flows would otherwise risk a RecursionError) and avoids
+    pulling in the heavy ``networkx`` dependency for two calls.
+    """
+    # Build adjacency from the edge list of (source, target) tuples, tracking all
+    # nodes and any self-loops.
+    adjacency: dict[Any, list[Any]] = {}
+    nodes: set[Any] = set()
+    cycle_vertices: set[Any] = set()  # seeded with self-loops below
+    for source, target in edges:
+        nodes.add(source)
+        nodes.add(target)
+        adjacency.setdefault(source, []).append(target)
+        adjacency.setdefault(target, [])
+        if source == target:
+            cycle_vertices.add(source)
 
-    # Utilize the strong component feature in NetworkX to find cycles
-    for component in nx.strongly_connected_components(graph):
-        if len(component) > 1 or graph.has_edge(tuple(component)[0], tuple(component)[0]):  # noqa: RUF015
-            cycle_vertices.update(component)
+    # Iterative Tarjan's strongly connected components.
+    index_counter = 0
+    indices: dict[Any, int] = {}
+    lowlink: dict[Any, int] = {}
+    on_stack: set[Any] = set()
+    stack: list[Any] = []
+
+    for start in nodes:
+        if start in indices:
+            continue
+        indices[start] = lowlink[start] = index_counter
+        index_counter += 1
+        stack.append(start)
+        on_stack.add(start)
+        work = [(start, iter(adjacency[start]))]
+        while work:
+            node, successors = work[-1]
+            descended = False
+            for succ in successors:
+                if succ not in indices:
+                    indices[succ] = lowlink[succ] = index_counter
+                    index_counter += 1
+                    stack.append(succ)
+                    on_stack.add(succ)
+                    work.append((succ, iter(adjacency[succ])))
+                    descended = True
+                    break
+                if succ in on_stack:
+                    lowlink[node] = min(lowlink[node], indices[succ])
+            if descended:
+                continue
+            # All successors of `node` processed; if it is an SCC root, pop the SCC.
+            if lowlink[node] == indices[node]:
+                component = []
+                while True:
+                    member = stack.pop()
+                    on_stack.discard(member)
+                    component.append(member)
+                    if member == node:
+                        break
+                if len(component) > 1:
+                    cycle_vertices.update(component)
+            work.pop()
+            if work:
+                parent = work[-1][0]
+                lowlink[parent] = min(lowlink[parent], lowlink[node])
 
     return sorted(cycle_vertices)
 
