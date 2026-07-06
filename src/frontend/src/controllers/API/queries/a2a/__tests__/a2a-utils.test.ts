@@ -11,8 +11,8 @@ describe("formToOverrides", () => {
       name: "  Support Agent  ",
       description: "",
       version: "1.2.0",
-      tags: "billing\n  refunds  \n\n",
-      examples: "How do I get a refund?\n",
+      tags: ["billing", "  refunds  ", ""],
+      examples: ["How do I get a refund?"],
     });
     expect(overrides).toEqual({
       name: "Support Agent",

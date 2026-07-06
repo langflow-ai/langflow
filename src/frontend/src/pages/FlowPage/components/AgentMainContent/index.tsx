@@ -45,8 +45,8 @@ export default function AgentMainContent() {
   const card = cardQuery.data ?? null;
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden lg:flex-row">
-      <div className="flex w-full flex-col overflow-y-auto border-b p-6 lg:max-w-md lg:border-b-0 lg:border-r">
+    <div className="flex h-full w-full flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+      <div className="flex w-full flex-col border-b p-6 lg:max-w-md lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <AgentCardPanel
           currentFlow={currentFlow}
           serverEnabled={serverEnabled}
@@ -57,7 +57,7 @@ export default function AgentMainContent() {
           cardLoading={cardQuery.isFetching}
         />
       </div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-[28rem] flex-1 flex-col overflow-hidden lg:min-h-0">
         <AgentTestConversation
           flowId={flowId}
           isPublished={isPublished}

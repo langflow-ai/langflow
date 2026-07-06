@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,7 +92,9 @@ export default function AgentCardPanel({
     enabled !== isPublished ||
     JSON.stringify(form) !== JSON.stringify(savedForm);
 
-  const setField = (field: keyof A2ACardForm, value: string) =>
+  const setField = (field: "name" | "description" | "version", value: string) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+  const setList = (field: "tags" | "examples", value: string[]) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSave = async () => {
@@ -336,9 +339,14 @@ export default function AgentCardPanel({
 
       {/* Customize card */}
       <div className="flex flex-col gap-3 border-t pt-4">
-        <span className="text-mmd font-medium">
-          {t("agentTab.customizeTitle")}
-        </span>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-mmd font-medium">
+            {t("agentTab.customizeTitle")}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {t("agentTab.customizeHint")}
+          </span>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <Label className="text-mmd font-medium">
@@ -371,29 +379,43 @@ export default function AgentCardPanel({
             onChange={(e) => setField("description", e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-mmd font-medium">
-              {t("agentTab.tagsLabel")}
-            </Label>
-            <Textarea
-              className="min-h-16"
-              placeholder={t("agentTab.onePerLine")}
-              value={form.tags}
-              onChange={(e) => setField("tags", e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-mmd font-medium">
-              {t("agentTab.examplesLabel")}
-            </Label>
-            <Textarea
-              className="min-h-16"
-              placeholder={t("agentTab.onePerLine")}
-              value={form.examples}
-              onChange={(e) => setField("examples", e.target.value)}
-            />
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-mmd font-medium">
+            {t("agentTab.tagsLabel")}
+          </Label>
+          <span className="text-xs text-muted-foreground">
+            {t("agentTab.tagsHint")}
+          </span>
+          <InputListComponent
+            id="agent-tags"
+            editNode={false}
+            disabled={false}
+            value={form.tags.length ? form.tags : [""]}
+            handleOnNewValue={({ value }) =>
+              setList("tags", (value ?? []) as string[])
+            }
+            placeholder={t("agentTab.tagPlaceholder")}
+            listAddLabel={t("agentTab.addTag")}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-mmd font-medium">
+            {t("agentTab.examplesLabel")}
+          </Label>
+          <span className="text-xs text-muted-foreground">
+            {t("agentTab.examplesHint")}
+          </span>
+          <InputListComponent
+            id="agent-examples"
+            editNode={false}
+            disabled={false}
+            value={form.examples.length ? form.examples : [""]}
+            handleOnNewValue={({ value }) =>
+              setList("examples", (value ?? []) as string[])
+            }
+            placeholder={t("agentTab.examplePlaceholder")}
+            listAddLabel={t("agentTab.addExample")}
+          />
         </div>
       </div>
 

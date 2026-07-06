@@ -1,21 +1,18 @@
 import type { A2ACardOverrides } from "@/types/flow";
 
-// The form mirrors a2a_card_overrides but keeps list fields as raw text the user
-// types (one entry per line). Conversion to/from the stored dict lives here so it
-// can be unit-tested without rendering the modal.
+// The form mirrors a2a_card_overrides. List fields stay as string arrays (one
+// entry per row) so they drive InputListComponent directly. Conversion to/from
+// the stored dict lives here so it can be unit-tested without rendering the tab.
 export type A2ACardForm = {
   name: string;
   description: string;
   version: string;
-  tags: string;
-  examples: string;
+  tags: string[];
+  examples: string[];
 };
 
-const linesToList = (value: string): string[] =>
-  value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+const cleanList = (value: string[]): string[] =>
+  value.map((entry) => entry.trim()).filter(Boolean);
 
 export const overridesToForm = (
   overrides?: A2ACardOverrides | null,
@@ -23,8 +20,8 @@ export const overridesToForm = (
   name: overrides?.name ?? "",
   description: overrides?.description ?? "",
   version: overrides?.version ?? "",
-  tags: (overrides?.tags ?? []).join("\n"),
-  examples: (overrides?.examples ?? []).join("\n"),
+  tags: overrides?.tags ?? [],
+  examples: overrides?.examples ?? [],
 });
 
 export const formToOverrides = (form: A2ACardForm): A2ACardOverrides => {
@@ -32,9 +29,9 @@ export const formToOverrides = (form: A2ACardForm): A2ACardOverrides => {
   if (form.name.trim()) overrides.name = form.name.trim();
   if (form.description.trim()) overrides.description = form.description.trim();
   if (form.version.trim()) overrides.version = form.version.trim();
-  const tags = linesToList(form.tags);
+  const tags = cleanList(form.tags);
   if (tags.length) overrides.tags = tags;
-  const examples = linesToList(form.examples);
+  const examples = cleanList(form.examples);
   if (examples.length) overrides.examples = examples;
   return overrides;
 };
