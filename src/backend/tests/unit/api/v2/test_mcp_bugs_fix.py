@@ -1,12 +1,11 @@
 """Tests for MCP bugs b0, b1: concurrent updates and cache key mismatch on invalidation."""
+
 import asyncio
 import uuid
-from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 from langflow.api.v2.mcp import update_server
 
 
@@ -104,9 +103,7 @@ def session():
 
 
 @pytest.mark.asyncio
-async def test_b1_cache_invalidation_clears_hashed_keys(
-    session, storage_service, settings_service, current_user
-):
+async def test_b1_cache_invalidation_clears_hashed_keys(session, storage_service, settings_service, current_user):
     """Cache invalidation must clear all cache entries, including those with hashed keys.
 
     Bug b1: Cache invalidation deletes using bare server_name, but actual cache key
@@ -179,9 +176,7 @@ async def test_b1_cache_invalidation_clears_hashed_keys(
 
     assert servers_update is not None, "Cache should have been updated for servers"
     # Hashed key should be cleared
-    assert "my_server:abc123def" not in servers_update, (
-        "Hashed cache key 'my_server:abc123def' should be cleared"
-    )
+    assert "my_server:abc123def" not in servers_update, "Hashed cache key 'my_server:abc123def' should be cleared"
     # Bare key should be cleared
     assert "my_server" not in servers_update, "Bare server key should be cleared"
     # Other servers untouched
