@@ -366,6 +366,14 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
 
+      - name: Debug TLS
+        run: |
+          uv --version
+          python --version
+          openssl version
+          curl -Iv https://download-r2.pytorch.org/whl/cpu/
+          uv sync --extra audio
+
       - name: Install Python Dependencies
         run: uv sync --extra audio
 
