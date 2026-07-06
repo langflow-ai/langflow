@@ -1101,7 +1101,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": "2.198.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -2101,7 +2101,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.137.2"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -2560,7 +2560,7 @@
                   },
                   {
                     "name": "typing_extensions",
-                    "version": "4.15.0"
+                    "version": "4.16.0"
                   },
                   {
                     "name": "lfx",
@@ -3021,7 +3021,7 @@
                   },
                   {
                     "name": "typing_extensions",
-                    "version": "4.15.0"
+                    "version": "4.16.0"
                   },
                   {
                     "name": "lfx",
@@ -5231,7 +5231,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.137.2"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -5247,7 +5247,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": "2.198.0"
                   }
                 ],
                 "total_dependencies": 7
