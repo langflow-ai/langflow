@@ -322,6 +322,15 @@ jobs:
                 - "7860:7860"
               environment:  # pragma: allowlist secret
                 - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow  # pragma: allowlist secret
+                # The published Docker image ships secure-by-default: its Dockerfile bakes
+                # LANGFLOW_AUTO_LOGIN=false and there is no built-in superuser password (#13822).
+                # This migration test authenticates via GET /api/v1/auto_login, which requires
+                # AUTO_LOGIN=true, so pin it here (overriding the image ENV) to keep that token
+                # flow working and ensure boot never lands in the "Username and password must be
+                # set" branch. The explicit superuser credentials are a fallback for that branch.
+                - LANGFLOW_AUTO_LOGIN=true
+                - LANGFLOW_SUPERUSER=langflow  # pragma: allowlist secret
+                - LANGFLOW_SUPERUSER_PASSWORD=langflow  # pragma: allowlist secret
               depends_on:
                 postgres:
                   condition: service_healthy

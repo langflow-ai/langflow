@@ -10,9 +10,13 @@ extras -- get the same exact dev pin.
 """
 
 import re
+import sys
 from pathlib import Path
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 import update_lf_base_dependency as mod
 
 
@@ -27,7 +31,7 @@ def pyproject(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "\n"
         "[project.optional-dependencies]\n"
         'cassandra = ["lfx[cassandra]~=1.11.0"]\n'
-        'toolguard = ["lfx[toolguard]~=1.11.0"]\n'
+        "toolguard = [\"lfx[toolguard]~=1.11.0; python_version < '3.14'\"]\n"
         'beautifulsoup = ["lfx~=1.11.0"]\n'
     )
     path = tmp_path / "pyproject.toml"
@@ -44,7 +48,7 @@ def test_pins_bare_and_extras_lfx_to_exact_dev(pyproject: Path) -> None:
     # Every lfx reference -- bare and with extras -- is pinned to the exact dev version.
     assert '"lfx==1.11.0.dev26"' in result
     assert '"lfx[cassandra]==1.11.0.dev26"' in result
-    assert '"lfx[toolguard]==1.11.0.dev26"' in result
+    assert "\"lfx[toolguard]==1.11.0.dev26; python_version < '3.14'\"" in result
 
     # No `~=` floor survives -- a surviving floor is exactly what makes the nightly
     # resolve unsatisfiable.
