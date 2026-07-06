@@ -342,11 +342,27 @@ async def test_concurrent_update_server_should_not_lose_servers(
         server_list = kwargs.get("server_list", {})
         return server_list.get("mcpServers", {}).get(name)
 
+    # Mock the lock context with proper synchronization to prevent lost updates
+    lock = asyncio.Lock()
+
+    class MockLockContext:
+        def __init__(self, *args, **kwargs):
+            self.lock = lock
+
+        async def __aenter__(self):
+            await self.lock.acquire()
+            return self
+
+        async def __aexit__(self, *args):
+            self.lock.release()
+            return False
+
     with patch.multiple(
         "langflow.api.v2.mcp",
         get_server_list=mock_get_server_list,
         upload_server_config=mock_upload_server_config,
         get_server=mock_get_server,
+        _MCPLockContext=MockLockContext,
         get_shared_component_cache_service=MagicMock(return_value=SimpleNamespace()),
         safe_cache_get=MagicMock(return_value={}),
         safe_cache_set=MagicMock(),

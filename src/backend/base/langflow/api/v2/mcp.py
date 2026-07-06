@@ -1,10 +1,11 @@
 import asyncio
 import json
-from collections import defaultdict
 from io import BytesIO
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile
+from filelock import FileLock
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import update_tools
 
@@ -25,9 +26,48 @@ from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
 
-# Per-user locks to serialize update_server() calls and prevent lost updates
-# from the non-atomic read-modify-write cycle on the MCP config file.
-_update_server_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+
+def _get_mcp_lock_path(user_id: str) -> str:
+    """Get the lock file path for cross-process MCP update synchronization.
+
+    Uses a temporary directory that persists across process boundaries,
+    allowing Gunicorn workers and other replicas to coordinate.
+    """
+    # Use a stable, temp-friendly location for lock files
+    lock_dir = Path("/tmp/langflow-mcp-locks")
+    lock_dir.mkdir(exist_ok=True, parents=True)
+    return str(lock_dir / f"mcp_server_update_{user_id}.lock")
+
+
+class _MCPLockContext:
+    """Context manager for MCP server update synchronization.
+
+    Uses FileLock internally to coordinate across processes.
+    Can be mocked in tests.
+    """
+
+    def __init__(self, user_id: str):
+        self.user_id = user_id
+        self.lock = None
+
+    async def __aenter__(self):
+        lock_path = _get_mcp_lock_path(self.user_id)
+        self.lock = FileLock(lock_path, timeout=30)
+
+        def _acquire():
+            return self.lock.acquire()
+
+        await asyncio.to_thread(_acquire)
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.lock:
+
+            def _release():
+                self.lock.release()
+
+            await asyncio.to_thread(_release)
+        return False
 
 
 def is_mcp_servers_locked(settings: object) -> bool:
@@ -332,7 +372,9 @@ async def update_server(
     delete: bool = False,
     merge_existing: bool = False,
 ):
-    async with _update_server_locks[str(current_user.id)]:
+    # Use a cross-process file lock to coordinate updates across Gunicorn workers
+    # (fixes b0: in-process asyncio.Lock doesn't protect across separate processes)
+    async with _MCPLockContext(str(current_user.id)):
         server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
         # Validate server name
@@ -358,11 +400,14 @@ async def update_server(
         )
 
         shared_component_cache_service = get_shared_component_cache_service()
-        # Clear the servers cache
+        # Clear ALL cache entries for this server, including those with hashed keys
+        # (fixes b1: cache keys include SHA256 hash of headers+timeout, so bare name lookup fails)
         servers = safe_cache_get(shared_component_cache_service, "servers", {})
         if isinstance(servers, dict):
-            if server_name in servers:
-                del servers[server_name]
+            # Remove all entries that match this server (bare name or hashed variants)
+            keys_to_delete = [k for k in servers.keys() if k == server_name or k.startswith(f"{server_name}:")]
+            for key in keys_to_delete:
+                del servers[key]
             safe_cache_set(shared_component_cache_service, "servers", servers)
 
         return await get_server(
