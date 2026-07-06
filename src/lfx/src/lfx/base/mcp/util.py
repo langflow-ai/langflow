@@ -573,6 +573,23 @@ def _convert_mcp_result(result: Any) -> Any:
     return blocks
 
 
+def _raise_if_tool_result_is_error(tool_name: str, result: Any) -> None:
+    """A CallToolResult with isError=True is a FAILED call; returning it as data hides the failure.
+
+    Enforced here (package code, shared by the component build and the agent tool path) rather
+    than only in the component, because saved flows freeze component code and a pre-fix
+    ``build_output`` would keep swallowing failures.
+    """
+    if not getattr(result, "isError", False):
+        return
+    content = getattr(result, "content", None) or []
+    error_text = " ".join(
+        getattr(block, "text", "") for block in content if getattr(block, "type", None) == "text"
+    ).strip()
+    msg = f"MCP tool '{tool_name}' failed: {error_text or 'no error detail provided'}"
+    raise ValueError(msg)
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -597,12 +614,14 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
-            return await client.run_tool(tool_name, arguments=arguments)
+            result = await client.run_tool(tool_name, arguments=arguments)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
             msg = f"Tool '{tool_name}' execution failed: {e}"
             raise ValueError(msg) from e
+        _raise_if_tool_result_is_error(tool_name, result)
+        return result
 
     return tool_coroutine
 
@@ -627,12 +646,14 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
-            return run_until_complete(client.run_tool(tool_name, arguments=arguments))
+            result = run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
             msg = f"Tool '{tool_name}' execution failed: {e}"
             raise ValueError(msg) from e
+        _raise_if_tool_result_is_error(tool_name, result)
+        return result
 
     return tool_func
 

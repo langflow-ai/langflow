@@ -3580,6 +3580,7 @@ class TestMCPStructuredToolToolCallId:
             content.append(img_block)
 
         result = MagicMock()
+        result.isError = False
         result.content = content
         result.structuredContent = None
         return result
