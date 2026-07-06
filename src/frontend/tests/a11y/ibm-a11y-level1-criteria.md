@@ -8,7 +8,7 @@
 
 ## What is IBM Level 1?
 
-IBM divides its accessibility requirements into three progressive levels:
+IBM divides its accessibility requirements into three progressive levels of *pace of completion*. IBM assigns individual tasks within each requirement (across the Design, Develop, and Test disciplines) to a level, so teams can adopt accessibility incrementally rather than mapping each success criterion to a single level:
 
 | Level | Purpose |
 |-------|---------|
@@ -17,6 +17,12 @@ IBM divides its accessibility requirements into three progressive levels:
 | Level 3 | Full WCAG 2.2 A/AA compliance — all three levels must be completed together. |
 
 > **Important:** Completing only Level 1 does NOT achieve full WCAG compliance. It represents the first-priority phase in a release planning cycle. However, products completing only Level 1 can still achieve valuable accessibility and many requirements will "Support" conformance.
+
+### Scope of this guide
+
+This guide covers **only the requirements within IBM's Level 1 pace** — the foundational WCAG 2.0 Level A/AA criteria plus **1.4.10 Reflow** (the single WCAG 2.1/2.2 addition IBM paces at Level 1, per the [v7.3 release notes](https://www.ibm.com/able/requirements/release-notes/)). A handful of the kept requirements also carry Level 2/3 tasks for *full* conformance (for example, data tables under 1.3.1, or media alternatives); those follow-on tasks are out of scope here.
+
+Every requirement IBM paces entirely at **Level 2 or Level 3** — all WCAG 2.1/2.2 additions and the media audio-description criteria — is listed in [Deferred to Level 2 & Level 3](#deferred-to-level-2--level-3) with its authoritative IBM pace level. Those are **not** part of a Level 1 release.
 
 ---
 
@@ -27,25 +33,15 @@ IBM divides its accessibility requirements into three progressive levels:
 | # | Requirement | Key Rule | Level 1 Tasks |
 |---|-------------|----------|--------------|
 | 1.1.1 | Non-text Content | All non-text content must have a text alternative | Alt text for images, icons, graphics, CAPTCHA |
-| 1.2.1 | Audio-only / Video-only (Prerecorded) | Provide transcript or audio alternative | Transcripts for audio-only media |
-| 1.2.2 | Captions (Prerecorded) | All prerecorded audio in video must have captions | Captions on all synchronized video |
-| 1.2.3 | Audio Description or Media Alt | Visual content in video must be described | Audio description or full text transcript |
-| 1.2.4 | Captions (Live) | Live audio must have real-time captions | CART or equivalent live captioning |
-| 1.2.5 | Audio Description (Prerecorded) | Audio description for all prerecorded video | Separate audio track describing visual events |
 | 1.3.1 | Info and Relationships | Structure conveyed visually must be programmatic | Semantic HTML: headings, lists, tables, forms |
 | 1.3.2 | Meaningful Sequence | Reading order must be programmatically correct | DOM order matches visual reading order |
 | 1.3.3 | Sensory Characteristics | Instructions must not rely only on shape/location | Include text labels alongside shape/position references |
-| 1.3.4 | Orientation | Do not lock content to a single orientation | Support both portrait and landscape |
-| 1.3.5 | Identify Input Purpose | Common input fields must expose their purpose | Use `autocomplete` attributes on personal data fields |
 | 1.4.1 | Use of Color | Color must not be the only visual cue | Add icons, patterns, or text alongside color indicators |
 | 1.4.2 | Audio Control | Auto-playing audio >3s needs a stop/pause control | Provide volume or mute control independent of system |
 | 1.4.3 | Contrast (Minimum) | Text must meet contrast ratios | **4.5:1** for body text · **3:1** for large text (18pt / 14pt bold) |
 | 1.4.4 | Resize Text | Text must scale to 200% without loss | Do not clip, overlap, or hide text at 200% zoom |
 | 1.4.5 | Images of Text | Use real text instead of images of text | Replace image-based text with HTML/CSS text |
 | 1.4.10 | Reflow | Content must reflow without horizontal scroll | Layout must work at 320px wide (400% zoom on desktop) |
-| 1.4.11 | Non-text Contrast | UI components and graphics must have 3:1 contrast | Focus rings, icons, form borders: **3:1** against background |
-| 1.4.12 | Text Spacing | Content must tolerate user-defined text spacing | No content loss when line height ≥1.5×, letter spacing ≥0.12×, word spacing ≥0.16× |
-| 1.4.13 | Content on Hover or Focus | Tooltip/hover content must be dismissible, hoverable, persistent | Allow pointer to move to hover content without it disappearing |
 
 ---
 
@@ -55,7 +51,6 @@ IBM divides its accessibility requirements into three progressive levels:
 |---|-------------|----------|--------------|
 | 2.1.1 | Keyboard | All functionality must be keyboard-operable | Every interactive element reachable and usable by keyboard |
 | 2.1.2 | No Keyboard Trap | Focus must never get stuck | Users can always tab away; Escape closes modals/overlays |
-| 2.1.4 | Character Key Shortcuts | Single-character shortcuts must be overridable | Allow shortcut remapping or provide modifier-key alternatives |
 | 2.2.1 | Timing Adjustable | Time limits must be adjustable | Allow 10× extension or turn-off for session timeouts |
 | 2.2.2 | Pause, Stop, Hide | Moving/auto-updating content must be pausable | Controls to pause carousels, tickers, auto-advancing slides |
 | 2.3.1 | Three Flashes | No content flashes more than 3× per second | Eliminate or threshold-test all flashing content |
@@ -66,13 +61,6 @@ IBM divides its accessibility requirements into three progressive levels:
 | 2.4.5 | Multiple Ways | Multiple ways to navigate a set of pages | Provide search + navigation menus |
 | 2.4.6 | Headings and Labels | Headings and labels must be descriptive | Each heading uniquely describes the section it heads |
 | 2.4.7 | Focus Visible | Keyboard focus indicator must be visible | Never suppress `outline` without a visible replacement |
-| 2.4.11 | Focus Not Obscured *(WCAG 2.2)* | Focused element must not be fully hidden | Sticky headers/banners must not completely cover focused elements |
-| 2.5.1 | Pointer Gestures | Multi-point/path gestures need a single-pointer alternative | Provide tap/click alternative to pinch, swipe, etc. |
-| 2.5.2 | Pointer Cancellation | Actions complete on pointer-up, not pointer-down | Use `click` (up-event); allow drag-away to cancel |
-| 2.5.3 | Label in Name | Accessible name must contain the visible label text | `aria-label` must include the button's visible text |
-| 2.5.4 | Motion Actuation | Motion-triggered functions need a UI alternative | Provide Undo button if shake-to-undo is used; allow disabling |
-| 2.5.7 | Dragging Movements *(WCAG 2.2)* | Draggable interfaces need a non-drag alternative | Every drag operation should have a click/menu equivalent |
-| 2.5.8 | Target Size (Minimum) *(WCAG 2.2)* | Touch/click targets must be at least 24×24 CSS px | All interactive controls ≥ 24×24px or have sufficient spacing |
 
 ---
 
@@ -86,13 +74,10 @@ IBM divides its accessibility requirements into three progressive levels:
 | 3.2.2 | On Input | Changing a UI setting must not auto-change context | Warn users if changing a dropdown navigates them away |
 | 3.2.3 | Consistent Navigation | Repeated navigation must appear in the same order | Nav menus, headers, footers stay consistent across pages |
 | 3.2.4 | Consistent Identification | Same-function components must be identified the same way | Icon and alt text for "Search" must be identical across pages |
-| 3.2.6 | Consistent Help *(WCAG 2.2)* | Help mechanisms must appear in same relative location | Chat, FAQ, support links in same position on all relevant pages |
 | 3.3.1 | Error Identification | Errors must identify the field and describe the issue | Red border alone is insufficient — add text error message |
 | 3.3.2 | Labels or Instructions | All inputs must have labels or instructions | Visible `<label>` or `aria-label` on every input field |
 | 3.3.3 | Error Suggestion | Correction suggestions must be provided where known | "Enter a valid email address (e.g., user@example.com)" |
 | 3.3.4 | Error Prevention | Legal/financial/data actions must be reversible or confirmable | Confirmation step or undo option for destructive actions |
-| 3.3.7 | Redundant Entry *(WCAG 2.2)* | Do not ask for info that was already entered in the same session | Auto-populate or offer to reuse previously entered data |
-| 3.3.8 | Accessible Authentication *(WCAG 2.2)* | Logins must not rely solely on cognitive function tests | Allow paste in password fields; support password managers |
 
 ---
 
@@ -101,11 +86,40 @@ IBM divides its accessibility requirements into three progressive levels:
 | # | Requirement | Key Rule | Level 1 Tasks |
 |---|-------------|----------|--------------|
 | 4.1.2 | Name, Role, Value | All UI components must expose name, role, and state to AT | Use semantic HTML or proper ARIA roles/states/properties |
-| 4.1.3 | Status Messages | Status messages must be announced without taking focus | Use `role="status"` or `aria-live` regions for toasts/alerts |
+
+---
+
+### Deferred to Level 2 & Level 3
+
+The following criteria are **not** part of Level 1 and are excluded from the checklist above. Pace levels are taken from the IBM v7.3 [release notes](https://www.ibm.com/able/requirements/release-notes/) (WCAG 2.1 criteria were added in v7.1, WCAG 2.2 in v7.3). Address these in later release phases.
+
+| # | Requirement | IBM Pace Level |
+|---|-------------|:--------------:|
+| 1.3.4 | Orientation | 2 |
+| 1.4.11 | Non-text Contrast | 2 |
+| 1.4.13 | Content on Hover or Focus | 2 |
+| 2.4.11 | Focus Not Obscured (Minimum) *(WCAG 2.2)* | 2 |
+| 2.5.1 | Pointer Gestures | 2 |
+| 2.5.3 | Label in Name | 2 |
+| 2.5.4 | Motion Actuation | 2 |
+| 2.5.7 | Dragging Movements *(WCAG 2.2)* | 2 |
+| 2.5.8 | Target Size (Minimum) *(WCAG 2.2)* | 2 |
+| 4.1.3 | Status Messages | 2 |
+| 1.3.5 | Identify Input Purpose | 3 |
+| 1.4.12 | Text Spacing | 3 |
+| 2.1.4 | Character Key Shortcuts | 3 |
+| 2.5.2 | Pointer Cancellation | 3 |
+| 3.2.6 | Consistent Help *(WCAG 2.2)* | 3 |
+| 3.3.7 | Redundant Entry *(WCAG 2.2)* | 3 |
+| 3.3.8 | Accessible Authentication (Minimum) *(WCAG 2.2)* | 3 |
+
+> **Media (1.2.x)** applies only to prerecorded/live audio and video, which this UI does not currently ship. For completeness: captions (1.2.2 Prerecorded, 1.2.4 Live) are IBM Level 1, while audio-only/video-only alternatives and audio descriptions (1.2.1, 1.2.3, 1.2.5) are Level 3.
 
 ---
 
 ### Section 508 (Software-specific)
+
+> **Note:** These Section 508 software requirements target non-web software and are tracked separately from the WCAG pace levels above (they are not assigned a Level 1/2/3 pace). For a web UI they are largely satisfied by **4.1.2 Name, Role, Value**.
 
 These apply to non-web software and desktop/mobile applications:
 
@@ -122,6 +136,8 @@ These apply to non-web software and desktop/mobile applications:
 ---
 
 ## Engineering Implementation Guidance
+
+> These are practical implementation patterns. Most support Level 1 criteria; a few support criteria that IBM paces at Level 2/3 (tagged inline) and are included so the patterns stay in one place.
 
 ### HTML/Semantic Structure
 
@@ -145,9 +161,9 @@ These apply to non-web software and desktop/mobile applications:
 ### Color Contrast
 
 ```
-Body text:        contrast ≥ 4.5:1
-Large text:       contrast ≥ 3:1  (≥18pt regular or ≥14pt bold)
-UI components:    contrast ≥ 3:1  (borders, icons, focus rings)
+Body text:        contrast ≥ 4.5:1   (1.4.3 — Level 1)
+Large text:       contrast ≥ 3:1    (1.4.3 — Level 1; ≥18pt regular or ≥14pt bold)
+UI components:    contrast ≥ 3:1    (1.4.11 — Level 2; borders, icons, focus rings)
 Disabled states:  exempt
 Logos/brand:      exempt
 ```
@@ -230,7 +246,7 @@ All custom interactive components must support standard key interactions:
 </figure>
 ```
 
-### Touch / Pointer Targets
+### Touch / Pointer Targets *(supports 2.5.8 Target Size — IBM Level 2)*
 
 ```css
 /* Ensure all interactive elements meet 24×24px minimum */
@@ -250,7 +266,7 @@ input[type="radio"] {
 }
 ```
 
-### Text Spacing Resilience
+### Text Spacing Resilience *(supports 1.4.12 Text Spacing — IBM Level 3)*
 
 Your layouts must not break when users apply these overrides via browser/OS:
 
@@ -312,7 +328,7 @@ test('Home page has no accessibility violations', async () => {
 
 ## New in WCAG 2.2 (IBM v7.3)
 
-Six new criteria added — all required as of October 2024:
+Six new criteria added — all required as of October 2024. None are Level 1; they appear in [Deferred to Level 2 & Level 3](#deferred-to-level-2--level-3) above:
 
 | Criterion | Summary | IBM Pace Level |
 |-----------|---------|----------------|
