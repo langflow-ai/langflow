@@ -1026,31 +1026,42 @@ class TestFlowRegistry:
         assert meta.id == json_uuid
 
 
+def _fake_request(expected_api_key=None):
+    """Minimal stand-in for a Starlette Request exposing ``app.state.expected_api_key``.
+
+    ``None`` mimics an app whose key was not snapshotted at startup, so verify_api_key falls
+    back to the one-time live read; a value mimics the startup-snapshotted (cached) key.
+    """
+    from types import SimpleNamespace
+
+    return SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(expected_api_key=expected_api_key)))
+
+
 class TestSecurityFunctions:
     """Test security-related functions."""
 
     def test_verify_api_key_with_query_param(self):
         """Test API key verification with query parameter."""
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key-123"}):  # pragma: allowlist secret
-            result = verify_api_key("test-key-123", None)
+            result = verify_api_key(_fake_request(), "test-key-123", None)
             assert result == "test-key-123"
 
     def test_verify_api_key_with_header_param(self):
         """Test API key verification with header parameter."""
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key-123"}):  # pragma: allowlist secret
-            result = verify_api_key(None, "test-key-123")
+            result = verify_api_key(_fake_request(), None, "test-key-123")
             assert result == "test-key-123"
 
     def test_verify_api_key_query_param_takes_precedence(self):
         """Query param is checked first; when both are provided the query param value is used."""
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key-123"}):  # pragma: allowlist secret
-            result = verify_api_key("test-key-123", "wrong-key")
+            result = verify_api_key(_fake_request(), "test-key-123", "wrong-key")
             assert result == "test-key-123"
 
     def test_verify_api_key_missing(self):
         """Test error when no API key is provided."""
         with pytest.raises(HTTPException) as exc_info:
-            verify_api_key(None, None)
+            verify_api_key(_fake_request(), None, None)
         assert exc_info.value.status_code == 401
         assert exc_info.value.detail == "API key required"
 
@@ -1058,7 +1069,7 @@ class TestSecurityFunctions:
         """Test error when API key is invalid."""
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "correct-key"}):  # pragma: allowlist secret
             with pytest.raises(HTTPException) as exc_info:
-                verify_api_key("wrong-key", None)
+                verify_api_key(_fake_request(), "wrong-key", None)
             assert exc_info.value.status_code == 401
             assert exc_info.value.detail == "Invalid API key"
 
@@ -1066,9 +1077,26 @@ class TestSecurityFunctions:
         """Test error when environment variable is not set."""
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(HTTPException) as exc_info:
-                verify_api_key("any-key", None)
+                verify_api_key(_fake_request(), "any-key", None)
             assert exc_info.value.status_code == 500
             assert "LANGFLOW_API_KEY environment variable is not set" in exc_info.value.detail
+
+    def test_verify_api_key_uses_cached_startup_key_not_live_env(self):
+        """When the key was snapshotted at startup, auth uses it and never reads live os.environ.
+
+        This is the hardening for the --reset-environ race: even a flow that overwrites the auth
+        key in os.environ cannot flip the auth decision, because verify_api_key reads the cached
+        value, not the live environment.
+        """
+        req = _fake_request(expected_api_key="cached-key")  # pragma: allowlist secret
+        # Empty env would 500 if the check read live; the cached key makes it succeed.
+        with patch.dict(os.environ, {}, clear=True):
+            assert verify_api_key(req, "cached-key", None) == "cached-key"
+        # A live env value cannot override the cached key.
+        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "tampered"}):  # pragma: allowlist secret
+            with pytest.raises(HTTPException) as exc_info:
+                verify_api_key(req, "tampered", None)
+            assert exc_info.value.status_code == 401
 
 
 class TestCreateServeApp:

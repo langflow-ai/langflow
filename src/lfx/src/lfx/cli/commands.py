@@ -27,7 +27,12 @@ from lfx.cli.common import (
     is_port_in_use,
 )
 from lfx.cli.script_loader import find_graph_variable, load_graph_from_script
-from lfx.cli.serve_app import FlowAlreadyRegisteredError, FlowMeta, FlowRegistry, create_multi_serve_app
+from lfx.cli.serve_app import (
+    FlowAlreadyRegisteredError,
+    FlowMeta,
+    FlowRegistry,
+    create_multi_serve_app,
+)
 from lfx.load import load_flow_from_json
 from lfx.utils.flow_envelope import merge_flow_envelope, split_flow_envelope
 
@@ -154,7 +159,11 @@ async def _build_serve_registry(
         if upgrade_flow:
             # --upgrade-flow with a path supports exactly one .json flow file: directories,
             # multiple files, and .py scripts can't be safely upgraded in place here.
-            if len(resolved) != 1 or resolved[0].is_dir() or resolved[0].suffix.lower() != ".json":
+            if (
+                len(resolved) != 1
+                or resolved[0].is_dir()
+                or resolved[0].suffix.lower() != ".json"
+            ):
                 typer.echo(
                     "Error: --upgrade-flow with a path supports exactly one .json flow file "
                     "(not directories, multiple files, or .py scripts).",
@@ -164,10 +173,15 @@ async def _build_serve_registry(
             try:
                 payload = json.loads(resolved[0].read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError) as e:
-                typer.echo(f"Error: --upgrade-flow: could not read flow file '{resolved[0]}': {e}", err=True)
+                typer.echo(
+                    f"Error: --upgrade-flow: could not read flow file '{resolved[0]}': {e}",
+                    err=True,
+                )
                 raise typer.Exit(1) from e
             gated = _gate_flow_for_serve(payload, upgrade_flow, verbose=verbose)
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as tmp:
                 json.dump(gated, tmp, indent=2)
                 temp_file_to_cleanup = tmp.name
             try:
@@ -236,15 +250,20 @@ def serve_command(
             "Optional when using --flow-json or --stdin."
         ),
     ),
-    host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind the server to"),
+    host: str = typer.Option(
+        "127.0.0.1", "--host", "-h", help="Host to bind the server to"
+    ),
     port: int = typer.Option(8000, "--port", "-p", help="Port to bind the server to"),
     workers: int = typer.Option(
         1,
         "--workers",
         "-w",
-        help="Number of uvicorn worker processes. Use with --flow-dir for multi-worker flow sharing.",
+        help="Number of worker processes (gunicorn on Unix, uvicorn on Windows). "
+        "Use with --flow-dir for multi-worker flow sharing.",
     ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),  # noqa: FBT001, FBT003
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show diagnostic output and execution details"
+    ),  # noqa: FBT001, FBT003
     env_file: Path | None = typer.Option(
         None,
         "--env-file",
@@ -329,12 +348,17 @@ def serve_command(
     has_paths = bool(script_paths)
     input_sources = [has_paths, flow_json is not None, stdin]
     if sum(input_sources) > 1:
-        typer.echo("Error: Cannot combine path(s), --flow-json, and --stdin. Choose exactly one.", err=True)
+        typer.echo(
+            "Error: Cannot combine path(s), --flow-json, and --stdin. Choose exactly one.",
+            err=True,
+        )
         raise typer.Exit(1)
 
     if env_file:
         if not env_file.exists():
-            typer.echo(f"Error: Environment file '{env_file}' does not exist.", err=True)
+            typer.echo(
+                f"Error: Environment file '{env_file}' does not exist.", err=True
+            )
             raise typer.Exit(1)
         verbose_print(f"Loading environment variables from: {env_file}")
         load_dotenv(env_file)
@@ -344,7 +368,9 @@ def serve_command(
         verbose_print("LANGFLOW_API_KEY is configured")
     except ValueError as e:
         typer.echo(str(e), err=True)
-        typer.echo("Set the LANGFLOW_API_KEY environment variable before serving.", err=True)
+        typer.echo(
+            "Set the LANGFLOW_API_KEY environment variable before serving.", err=True
+        )
         raise typer.Exit(1) from e
 
     valid_log_levels = {"debug", "info", "warning", "error", "critical"}
@@ -402,6 +428,20 @@ def serve_command(
             "in-memory registry. Flows uploaded to one worker will not be visible to others "
             "(and with --max-requests recycling, uploaded flows do not survive worker recycling "
             "at all). Pass --flow-dir to enable shared flow storage across workers.",
+            err=True,
+        )
+
+    # Strict per-request isolation comes from --reset-environ (any platform) or from
+    # --use-sync-workers with --max-requests 1 (fresh process per request). Without one of
+    # those, warm workers reuse a single os.environ across requests, so a component that does
+    # os.environ[name] = value leaks to later requests on the same worker.
+    if workers > 1 and not reset_environ and not (sync_workers and max_requests == 1):
+        typer.echo(
+            "Warning: --workers > 1 without --reset-environ (or --use-sync-workers with "
+            "--max-requests 1) provides NO per-request isolation. Warm workers share one "
+            "os.environ across many requests, so a flow's environment mutations or "
+            "request-scoped credentials can leak into later requests on the same worker. "
+            "Add --reset-environ for cross-request isolation.",
             err=True,
         )
 
@@ -468,7 +508,11 @@ def serve_command(
 
         protocol = "http"
         access_host = get_best_access_host(host)
-        masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
+        masked_key = (
+            f"{api_key[:API_KEY_MASK_LENGTH]}..."
+            if len(api_key) > API_KEY_MASK_LENGTH
+            else "***"
+        )
         server_line = f"{protocol}://{access_host}:{port}"
         if access_host != host:
             server_line += f"  [dim](bound to {host}:{port})[/dim]"
@@ -529,8 +573,12 @@ def serve_command(
                 # multi-worker routing concern and has no effect with one worker.
                 os.environ[_SERVE_RESET_ENVIRON_ENV] = "1" if reset_environ else "0"
                 try:
-                    serve_app = create_multi_serve_app(registry=registry, identity_config=identity_config)
-                    uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
+                    serve_app = create_multi_serve_app(
+                        registry=registry, identity_config=identity_config
+                    )
+                    uvicorn.run(
+                        serve_app, host=host, port=port, workers=1, log_level=log_level
+                    )
                 finally:
                     # Symmetry with _launch_workers: don't leave our key in the parent env.
                     os.environ.pop(_SERVE_RESET_ENVIRON_ENV, None)
@@ -688,7 +736,18 @@ def _launch_workers(
                 factory=True,
             )
         else:
-            from lfx.cli.serve_gunicorn import LFXGunicornApp
+            # gunicorn ships with lfx on Linux/macOS; a missing import means a trimmed/broken
+            # environment. Fail with the same friendly message as the a2wsgi check below rather
+            # than a raw ModuleNotFoundError.
+            try:
+                from lfx.cli.serve_gunicorn import LFXGunicornApp
+            except ImportError as exc:
+                typer.echo(
+                    "Error: multi-worker serving needs 'gunicorn', which ships with lfx on "
+                    "Linux/macOS; it is missing, so reinstall lfx to restore your environment.",
+                    err=True,
+                )
+                raise typer.Exit(1) from exc
 
             if sync_workers:
                 # Fail fast in the parent rather than per-worker on first request. a2wsgi
@@ -714,7 +773,9 @@ def _launch_workers(
 
             # Unset (None) -> DEFAULT_MAX_REQUESTS so warm workers recycle periodically and
             # shed accumulated memory. Explicit 0 disables recycling; explicit N overrides.
-            effective_max_requests = max_requests if max_requests is not None else DEFAULT_MAX_REQUESTS
+            effective_max_requests = (
+                max_requests if max_requests is not None else DEFAULT_MAX_REQUESTS
+            )
             # Unset (None) -> DEFAULT_TIMEOUT; explicit --timeout N overrides.
             effective_timeout = timeout if timeout is not None else DEFAULT_TIMEOUT
 
@@ -795,7 +856,9 @@ async def _populate_registry(
     errors: list[str] = []
     for path in paths:
         try:
-            graph, meta, raw_json = await _load_graph_and_meta(path, root_dir, check_variables=check_variables)
+            graph, meta, raw_json = await _load_graph_and_meta(
+                path, root_dir, check_variables=check_variables
+            )
             registry.add(graph, meta, raw_json=raw_json)
             verbose_print(f"Loaded flow '{meta.title}' (id={meta.id})")
         except FlowAlreadyRegisteredError:
@@ -829,8 +892,12 @@ async def build_registry_from_directory(
         msg = f"No .json files found in directory: {dir_path}"
         raise ValueError(msg)
 
-    registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
-    await _populate_registry(json_files, dir_path, registry, verbose_print, check_variables=check_variables)
+    registry = FlowRegistry(
+        no_env_fallback=no_env_fallback, store=store or NullFlowStore()
+    )
+    await _populate_registry(
+        json_files, dir_path, registry, verbose_print, check_variables=check_variables
+    )
     return registry
 
 
@@ -852,8 +919,14 @@ async def build_registry_from_paths(
 
     # Use a shared root so same-named files in different directories get distinct IDs.
     common_root = (
-        Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent if paths else Path()
+        Path(os.path.commonpath([str(p) for p in paths]))
+        if len(paths) > 1
+        else paths[0].parent if paths else Path()
     )
-    registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
-    await _populate_registry(paths, common_root, registry, verbose_print, check_variables=check_variables)
+    registry = FlowRegistry(
+        no_env_fallback=no_env_fallback, store=store or NullFlowStore()
+    )
+    await _populate_registry(
+        paths, common_root, registry, verbose_print, check_variables=check_variables
+    )
     return registry

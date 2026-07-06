@@ -176,7 +176,10 @@ def test_no_env_leak_single_worker(tmp_path):
 
 
 @pytest.mark.xfail(
-    strict=True,
+    # Non-strict: the leak is timing-dependent (the async worker's deferred-exit window is a
+    # race), so on some setups all 12 requests happen to land 'clean' and the test XPASSes.
+    # strict=True would turn that XPASS into a hard failure for anyone running the module.
+    strict=False,
     reason=(
         "KNOWN LIMITATION: async --max-requests recycling does NOT give per-request isolation. "
         "uvicorn honors limit_max_requests (logs 'Maximum request limit exceeded. Terminating "

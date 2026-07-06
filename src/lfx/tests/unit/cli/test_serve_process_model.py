@@ -468,6 +468,49 @@ async def test_guarded_execute_restores_environ_when_enabled(monkeypatch):
     assert "LEAKED_BY_FLOW" not in os.environ
 
 
+async def test_guarded_execute_restore_never_clears_environ(monkeypatch):
+    """The reset-environ restore is diff-based and must never call os.environ.clear().
+
+    verify_api_key is a sync dependency FastAPI runs on a threadpool thread, so if the
+    restore emptied os.environ key-by-key a concurrent auth check could see the API key
+    transiently gone and 401. This locks the fix in CI (the integration harness is
+    CI-skipped): keys the run never touched stay put, and clear() is never used.
+    """
+    from lfx.cli import serve_app
+
+    monkeypatch.setenv(serve_app._SERVE_RESET_ENVIRON_ENV, "1")
+    monkeypatch.setenv("GUARD_UNTOUCHED", "keep")  # a key the flow never mutates (e.g. the API key)
+    monkeypatch.setenv("GUARD_CHANGED", "original")
+    monkeypatch.setenv("GUARD_DELETED", "present")
+    monkeypatch.delenv("GUARD_ADDED", raising=False)
+
+    cleared = False
+    real_clear = os.environ.clear
+
+    def _tracking_clear():
+        nonlocal cleared
+        cleared = True
+        real_clear()
+
+    monkeypatch.setattr(os.environ, "clear", _tracking_clear)
+
+    async def fake_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
+        # A custom component can add, change, or delete env vars mid-run — all three roll back.
+        os.environ["GUARD_ADDED"] = "leak"
+        os.environ["GUARD_CHANGED"] = "mutated"
+        del os.environ["GUARD_DELETED"]
+        return ([], "")
+
+    monkeypatch.setattr(serve_app, "execute_graph_with_capture", fake_capture)
+    await serve_app.guarded_execute(object(), "a", None)
+
+    assert cleared is False, "restore must not use os.environ.clear() (races with threadpool auth)"
+    assert os.environ["GUARD_UNTOUCHED"] == "keep"  # untouched key never removed
+    assert os.environ["GUARD_CHANGED"] == "original"  # changed key reverted
+    assert os.environ["GUARD_DELETED"] == "present"  # deleted key restored
+    assert "GUARD_ADDED" not in os.environ  # added key removed
+
+
 async def test_guarded_execute_does_not_reset_environ_by_default(monkeypatch):
     """Default (flag off): os.environ mutations persist — committed behavior is unchanged."""
     from lfx.cli import serve_app

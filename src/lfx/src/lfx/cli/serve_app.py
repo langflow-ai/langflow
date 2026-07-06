@@ -99,25 +99,60 @@ async def guarded_execute(graph_copy, input_value, session_id=None, user_id=None
             return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id, user_id=user_id)
         finally:
             if env_snapshot is not None and os.environ != env_snapshot:
-                os.environ.clear()
-                os.environ.update(env_snapshot)
+                # Restore by diff — never os.environ.clear(). clear() empties the mapping key
+                # by key (MutableMapping.clear loops popitem with no lock), and verify_api_key
+                # is a sync dependency FastAPI runs on a threadpool thread, so a concurrent auth
+                # check could observe LANGFLOW_API_KEY transiently gone and 401. Touch only the
+                # keys this run actually changed; keys it never mutated are left in place.
+                current = os.environ
+                for key in [k for k in current if k not in env_snapshot]:
+                    del current[key]
+                for key, value in env_snapshot.items():
+                    if current.get(key) != value:
+                        current[key] = value
+
+
+def _snapshot_expected_api_key() -> str | None:
+    """Read the configured server API key once (at app startup).
+
+    Cached on ``app.state`` so :func:`verify_api_key` need not read live ``os.environ`` per
+    request. Returns ``None`` when the key is unset at creation time, so verify_api_key falls
+    back to a one-time lazy read for callers that configure it afterward (e.g. tests).
+    """
+    try:
+        return get_api_key()
+    except ValueError:
+        return None
 
 
 def verify_api_key(
+    request: Request,
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
 ) -> str:
-    """Verify API key from query parameter or header."""
+    """Verify API key from query parameter or header.
+
+    The expected key is snapshotted at app startup (``app.state.expected_api_key``) so this
+    check does not read live ``os.environ`` on each request. That matters under
+    ``--reset-environ``: verify_api_key is a sync dependency FastAPI runs on a threadpool
+    thread, so a live read could race with ``guarded_execute``'s env restore on the loop
+    thread even for a flow that overwrites the auth key. If the key was not configured at
+    startup it is read once here and cached, preserving prior behavior.
+    """
     provided_key = query_param or header_param
     if not provided_key:
         raise HTTPException(status_code=401, detail="API key required")
 
-    try:
-        expected_key = get_api_key()
-        if provided_key != expected_key:
-            raise HTTPException(status_code=401, detail="Invalid API key")
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    expected_key = getattr(request.app.state, "expected_api_key", None)
+    if expected_key is None:
+        try:
+            expected_key = get_api_key()
+        except ValueError as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
+        request.app.state.expected_api_key = expected_key
+
+    if provided_key != expected_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
     return provided_key
 
@@ -635,6 +670,10 @@ def create_multi_serve_app(
         version="1.0.0",
     )
     app.state.registry = registry
+    # Snapshot the API key once so per-request auth (verify_api_key, run on a threadpool
+    # thread) never reads live os.environ — see verify_api_key. Stays None until first use
+    # when the key is configured after app creation.
+    app.state.expected_api_key = _snapshot_expected_api_key()
 
     # Register the minimal in-memory VariableService so the unified-model credential
     # resolver can see request-scoped ``global_vars``. Standalone lfx ships no

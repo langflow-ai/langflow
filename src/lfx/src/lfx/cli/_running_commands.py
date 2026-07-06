@@ -127,7 +127,8 @@ def register(app: typer.Typer) -> None:
             1,
             "--workers",
             "-w",
-            help="Number of uvicorn worker processes. Use with --flow-dir for multi-worker flow sharing.",
+            help="Number of worker processes (gunicorn on Unix, uvicorn on Windows). "
+            "Use with --flow-dir for multi-worker flow sharing.",
         ),
         verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),
         env_file: str | None = typer.Option(

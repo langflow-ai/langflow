@@ -1069,6 +1069,54 @@ def test_serve_command_no_warning_when_workers_gt1_with_flow_dir(tmp_path):
     assert not any("--flow-dir" in msg for msg in stderr_output)
 
 
+def test_serve_command_warns_when_multiworker_has_no_isolation(tmp_path):
+    """--workers > 1 without an isolation mechanism must warn; --reset-environ silences it."""
+    import json
+    import tempfile
+    from pathlib import Path
+    from unittest.mock import MagicMock, patch
+
+    from lfx.cli.commands import serve_command
+
+    flow_data = {"name": "Test", "description": "", "data": {"nodes": [], "edges": []}}
+    mock_graph = MagicMock()
+    mock_graph.context = {}
+
+    def _run(*, reset_environ):
+        stderr_output = []
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "flow.json"
+            p.write_text(json.dumps(flow_data))
+            with (
+                patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+                patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
+                patch("lfx.cli.serve_gunicorn.LFXGunicornApp", _make_fake_gunicorn_app()),
+                patch("typer.echo", side_effect=lambda msg, **kw: stderr_output.append(msg) if kw.get("err") else None),
+            ):
+                serve_command(
+                    script_paths=[str(p)],
+                    host="127.0.0.1",
+                    port=9999,
+                    workers=2,
+                    verbose=False,
+                    env_file=None,
+                    log_level="warning",
+                    flow_json=None,
+                    flow_dir=tmp_path / "flows",  # avoids the separate missing-store warning
+                    stdin=False,
+                    check_variables=False,
+                    no_env_fallback=False,
+                    reset_environ=reset_environ,
+                    sync_workers=False,
+                )
+        return stderr_output
+
+    # No isolation flag -> warn loudly.
+    assert any("per-request isolation" in msg for msg in _run(reset_environ=False))
+    # --reset-environ provides isolation -> no warning.
+    assert not any("per-request isolation" in msg for msg in _run(reset_environ=True))
+
+
 # ---------------------------------------------------------------------------
 # --upgrade-flow gate parity with `lfx run`
 #
