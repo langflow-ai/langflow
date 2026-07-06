@@ -66,6 +66,11 @@ module.exports = {
               id: "Flows/webhook",
               label: "Trigger flows with webhooks"
             },
+            {
+              type: "doc",
+              id: "Flows/human-in-the-loop",
+              label: "Human-in-the-Loop"
+            },
           ],
         },
         {
@@ -377,6 +382,7 @@ module.exports = {
               label: "Flow Controls",
               items: [
                 "Components/if-else",
+                "Components/human-input",
                 "Components/loop",
                 "Components/notify-and-listen",
                 "Components/run-flow",
