@@ -4,7 +4,7 @@ import HumanInputCard from "@/components/core/chatComponents/HumanInputCard";
 import {
   Popover,
   PopoverAnchor,
-  PopoverContent,
+  PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { useHitlStore } from "@/stores/hitlStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
@@ -53,14 +53,16 @@ export default function HumanInputNodeBadge({ nodeId }: { nodeId: string }) {
           </span>
         </button>
       </PopoverAnchor>
-      <PopoverContent
+      {/* Non-portaled so the card lives inside the node subtree and inherits the canvas
+          transform — a body portal repositions late on zoom and visibly lags the node. */}
+      <PopoverContentWithoutPortal
         side="bottom"
         align="start"
         className="w-96 overflow-hidden rounded-xl border-0 p-0 shadow-md"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <HumanInputCard content={pending.content} />
-      </PopoverContent>
+      </PopoverContentWithoutPortal>
     </Popover>
   );
 }

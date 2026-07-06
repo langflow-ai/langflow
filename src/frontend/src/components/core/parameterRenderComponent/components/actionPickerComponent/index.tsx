@@ -12,8 +12,9 @@ import { ActionPickerAddingContext } from "./addingContext";
 const toActionId = (label: string) =>
   label.trim().toLowerCase().replace(/ /g, "_");
 
-const inputClass =
-  "h-6 w-32 rounded-full border border-border bg-background px-2.5 text-sm outline-none focus:border-ring";
+const baseInputClass =
+  "h-6 rounded-full border border-border bg-background px-2.5 text-sm outline-none focus:border-ring";
+const inputClass = `${baseInputClass} w-32`;
 
 export default function ActionPickerComponent({
   value,
@@ -169,6 +170,8 @@ export default function ActionPickerComponent({
           value={newDraft}
           disabled={disabled}
           placeholder={t("actionPicker.namePlaceholder")}
+          // Width follows the placeholder (locale-proof) instead of a fixed w-* that truncates it.
+          size={t("actionPicker.namePlaceholder").length}
           data-testid="action-add-input"
           aria-label={t("actionPicker.nameAction")}
           onChange={(e) => setNewDraft(e.target.value)}
@@ -177,7 +180,7 @@ export default function ActionPickerComponent({
             if (e.key === "Enter") commitAdd();
             if (e.key === "Escape") cancelAdd();
           }}
-          className={inputClass}
+          className={baseInputClass}
         />
       )}
     </div>
