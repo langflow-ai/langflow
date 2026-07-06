@@ -506,3 +506,16 @@ the deserialize half is covered by
   ``content``, and ``hint`` fields are unchanged; only the docs link shape
   changed.  Callers that deep-linked on ``ref_url`` suffix should read
   ``code`` directly instead.
+- **`duplicate-distribution` detection resolves symlinks first.**
+  `load_installed_extensions` collapses manifest paths that are merely
+  different spellings of the same physical file (compared via
+  `Path.resolve()`; an `OSError` during resolution falls back to the raw
+  path) before the duplicate check.  RHEL-family (ubi) venvs symlink
+  `lib64 -> lib` and put both spellings on `sys.path`, so
+  `importlib.metadata.distributions()` yields every installed distribution
+  twice — previously each manifest-shipping bundle logged a false
+  `duplicate-distribution` error at Docker startup.  The
+  lexicographically-first unresolved spelling remains the winner, so error
+  messages and winner selection are unchanged, and two physically distinct
+  manifests for one canonical name still error.  No public symbol's name or
+  signature changed.
