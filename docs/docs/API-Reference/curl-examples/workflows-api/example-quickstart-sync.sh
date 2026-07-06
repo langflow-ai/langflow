@@ -5,5 +5,6 @@ curl -X POST \
   -d '{
     "flow_id": "'"${FLOW_ID}"'",
     "input_value": "what is 2+2",
-    "session_id": "session-123"
+    "session_id": "session-123",
+    "mode": "sync"
   }'

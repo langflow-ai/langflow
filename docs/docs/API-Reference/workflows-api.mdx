@@ -22,9 +22,6 @@ import exampleWorkflowsApiExampleStreamAguiRequest from '!!raw-loader!@site/docs
 import examplePythonWorkflowsApiExampleStreamAguiRequest from '!!raw-loader!@site/docs/API-Reference/python-examples/workflows-api/example-stream-agui-request.py';
 import exampleJavascriptWorkflowsApiExampleStreamAguiRequest from '!!raw-loader!@site/docs/API-Reference/javascript-examples/workflows-api/example-stream-agui-request.js';
 
-
-
-
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialAPISetup from '@site/docs/_partial-api-setup.mdx';
@@ -63,15 +60,15 @@ POST /api/v2/workflows
 | `flow_id` | `string` | Yes | - | UUID of the flow to execute. |
 | `input_value` | `string` | No | `""` | Chat-style input for the run. |
 | `mode` | `string` | No | `sync` | Execution mode: `sync`, `stream`, or `background`. |
-| `stream_protocol` | `string` | No | `langflow` | Wire protocol for `stream` and `background` modes: `langflow` or `agui`. Unknown values return `422`. Ignored when `mode` is `sync`. |
+| `stream_protocol` | `string` | No | `langflow` | Stream adapter name used for `stream` responses and background event re-attachment. Unknown values return a `422` code for any request mode because the API validates the field against the registered adapters before execution starts. |
 | `session_id` | `string` | No | - | Scopes message memory and chat history to this session. |
 | `tweaks` | `object` | No | `{}` | Per-component parameter overrides keyed by component id. See [Component tweaks](#component-tweaks). |
 | `globals` | `object` | No | `{}` | Request-level global variables (sync mode only). Keys are limited to 256 characters and values to 64 KB. See [Request-level global variables](#request-level-global-variables).
 | `output_ids` | `array` | No | - | Output component ids to use when resolving sync-mode answers (sync mode only). |
-| `data` | `object` | No | - | Live-canvas override of nodes and edges (background mode only). |
-| `files` | `array` | No | - | Pre-uploaded file paths to attach to the run (background mode only). |
-| `start_component_id` | `string` | No | - | Partial-run start component id (background mode only). |
-| `stop_component_id` | `string` | No | - | Partial-run stop component id (background mode only). |
+| `data` | `object` | No | - | Live-canvas override of nodes and edges (stream and background modes only). |
+| `files` | `array` | No | - | Pre-uploaded file paths to attach to the run (stream and background modes only). |
+| `start_component_id` | `string` | No | - | Partial-run start component id (stream and background modes only). |
+| `stop_component_id` | `string` | No | - | Partial-run stop component id (stream and background modes only). |
 
 ### Execute flow in `sync` mode
 

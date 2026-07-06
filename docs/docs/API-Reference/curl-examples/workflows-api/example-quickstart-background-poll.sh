@@ -2,7 +2,7 @@
 set -euo pipefail
 
 JOB_ID="$(
-  curl -s -X POST \
+  curl --fail-with-body -sS -X POST \
     "$LANGFLOW_SERVER_URL/api/v2/workflows" \
     -H "Content-Type: application/json" \
     -H "x-api-key: $LANGFLOW_API_KEY" \
@@ -17,7 +17,7 @@ JOB_ID="$(
 echo "Queued job $JOB_ID"
 
 while true; do
-  BODY="$(curl -s \
+  BODY="$(curl --fail-with-body -sS \
     "$LANGFLOW_SERVER_URL/api/v2/workflows?job_id=$JOB_ID" \
     -H "x-api-key: $LANGFLOW_API_KEY")"
   STATUS="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))' <<<"$BODY")"

@@ -5,7 +5,7 @@ import re
 import requests
 
 base = os.environ.get("LANGFLOW_URL") or os.environ.get("LANGFLOW_SERVER_URL", "")
-flow_id = os.environ.get("FLOW_ID", "")
+flow_id = os.environ.get("FLOW_ID", "67ccd2be-17f0-8190-81ff-3bb2cf6508e6")
 api_key = os.environ.get("LANGFLOW_API_KEY", "")
 session_id = os.environ.get("AGUI_SESSION_ID", "thread-123")
 number = re.compile(r"-?\d+(?:\.\d+)?")

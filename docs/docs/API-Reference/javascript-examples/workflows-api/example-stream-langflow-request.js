@@ -14,18 +14,21 @@ const options = {
   }),
 };
 
-const response = await fetch(url, options);
-if (!response.ok) {
-  throw new Error(`HTTP ${response.status}`);
-}
-
-const reader = response.body.getReader();
-const decoder = new TextDecoder();
-
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) {
-    break;
+(async () => {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
   }
-  process.stdout.write(decoder.decode(value));
-}
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    process.stdout.write(decoder.decode(value, { stream: true }));
+  }
+  process.stdout.write(decoder.decode());
+})().catch((error) => console.error(error));

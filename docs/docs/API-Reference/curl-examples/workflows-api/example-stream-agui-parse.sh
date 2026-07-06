@@ -17,8 +17,9 @@ extract_number() {
   local text last=""
   text="$(cat "$TEXT_FILE")"
   while IFS= read -r line; do
-    if [[ "$line" =~ (-?[0-9]+(\.[0-9]+)?) ]]; then
-      echo "${BASH_REMATCH[1]}"
+    match="$(grep -oE -- '-?[0-9]+(\.[0-9]+)?' <<< "$line" | tail -n1 || true)"
+    if [[ -n "$match" ]]; then
+      echo "$match"
       return 0
     fi
   done < <(tac "$TOOLS_FILE" 2>/dev/null || tail -r "$TOOLS_FILE")
@@ -34,7 +35,7 @@ ask() {
   local prompt="$1"
   : > "$TEXT_FILE"
   : > "$TOOLS_FILE"
-  curl -N -s -X POST "${BASE}/api/v2/workflows" \
+  curl --fail-with-body -N -sS -X POST "${BASE}/api/v2/workflows" \
     -H "Content-Type: application/json" \
     -H "x-api-key: ${API_KEY}" \
     -d "$(jq -n \
