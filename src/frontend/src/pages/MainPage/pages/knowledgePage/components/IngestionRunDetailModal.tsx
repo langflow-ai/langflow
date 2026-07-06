@@ -37,6 +37,7 @@ const IngestionRunDetailModal = ({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="ingestion-run-detail-title"
       onClick={onClose}
     >
       <div
@@ -45,7 +46,10 @@ const IngestionRunDetailModal = ({
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
-            <div className="text-sm font-semibold">
+            <div
+              id="ingestion-run-detail-title"
+              className="text-sm font-semibold"
+            >
               {t("knowledge.ingestionRunDetail")}
             </div>
             {data && (
@@ -55,7 +59,12 @@ const IngestionRunDetailModal = ({
               </div>
             )}
           </div>
-          <Button variant="ghost" size="iconSm" onClick={onClose}>
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={onClose}
+            aria-label={t("knowledge.closeRunDetail")}
+          >
             <ForwardedIconComponent name="X" className="h-4 w-4" />
           </Button>
         </div>

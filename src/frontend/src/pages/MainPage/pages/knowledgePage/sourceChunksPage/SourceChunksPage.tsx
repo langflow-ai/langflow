@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { RadixAriaControlsFix } from "@/components/common/radixAriaControlsFix";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
@@ -129,6 +130,7 @@ export const SourceChunksPage = () => {
       className="flex h-full w-full flex-col"
       data-testid="source-chunks-wrapper"
     >
+      <RadixAriaControlsFix />
       <div className="flex h-full w-full flex-col overflow-hidden pt-10 px-5">
         <div
           className="flex shrink-0 items-center pb-4 text-base h-[44px] font-semibold"
@@ -150,6 +152,7 @@ export const SourceChunksPage = () => {
               size="icon"
               onClick={handleBack}
               className="mr-2 h-8 w-8"
+              aria-label={t("knowledge.backToKnowledgeBases")}
             >
               <ForwardedIconComponent name="ArrowLeft" className="h-4 w-4" />
             </Button>
@@ -183,7 +186,9 @@ export const SourceChunksPage = () => {
                 >
                   <SelectValue placeholder={t("knowledge.allSources")} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent
+                  aria-label={t("knowledge.sourceTypeFilterLabel")}
+                >
                   <SelectItem value="all">
                     {t("knowledge.allSources")}
                   </SelectItem>
@@ -318,6 +323,7 @@ export const SourceChunksPage = () => {
                             setPageInput("1");
                           }}
                           disabled={currentPage === 1}
+                          aria-label={t("knowledge.firstPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronsLeft"
@@ -334,6 +340,7 @@ export const SourceChunksPage = () => {
                             setPageInput(String(newPage));
                           }}
                           disabled={currentPage === 1}
+                          aria-label={t("knowledge.previousPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronLeft"
@@ -352,6 +359,7 @@ export const SourceChunksPage = () => {
                             }
                             onBlur={handlePageInputBlur}
                             onKeyDown={handlePageInputKeyDown}
+                            aria-label={t("knowledge.pageNumberInput")}
                             className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-inner-spin-button]:[filter:invert(1)] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:[filter:invert(1)]"
                           />
                           <span>
@@ -371,6 +379,7 @@ export const SourceChunksPage = () => {
                             setPageInput(String(newPage));
                           }}
                           disabled={currentPage === totalPages}
+                          aria-label={t("knowledge.nextPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronRight"
@@ -386,6 +395,7 @@ export const SourceChunksPage = () => {
                             setPageInput(String(totalPages));
                           }}
                           disabled={currentPage === totalPages}
+                          aria-label={t("knowledge.lastPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronsRight"

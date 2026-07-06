@@ -119,6 +119,7 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
               isCopied && "text-accent-emerald-foreground",
             )}
             onClick={handleCopy}
+            aria-label={t("knowledge.copyChunk", { index })}
           >
             <ForwardedIconComponent
               name={isCopied ? "Check" : "Copy"}

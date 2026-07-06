@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { RadixAriaControlsFix } from "@/components/common/radixAriaControlsFix";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -103,6 +104,7 @@ export const KnowledgePage = () => {
 
   return (
     <div className="flex h-full w-full" data-testid="cards-wrapper">
+      <RadixAriaControlsFix />
       <div
         className={`flex h-full w-full flex-col overflow-y-auto transition-all duration-200 ${
           isDrawerOpen ? "mr-80" : ""

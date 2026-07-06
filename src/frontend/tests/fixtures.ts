@@ -107,8 +107,15 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
       );
 
       if (RUN_A11Y_ASSERT) {
-        const newViolationCount = countNewA11yViolations(result.report);
-        const failureMessage = formatA11yFailure(scanLabel, result.report);
+        const newViolationCount = countNewA11yViolations(
+          result.report,
+          options?.ignoreRules,
+        );
+        const failureMessage = formatA11yFailure(
+          scanLabel,
+          result.report,
+          options?.ignoreRules,
+        );
 
         expect(newViolationCount, failureMessage).toBe(0);
       }

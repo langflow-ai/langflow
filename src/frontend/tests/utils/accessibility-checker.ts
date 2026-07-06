@@ -64,6 +64,7 @@ export function buildA11ySummaryAttachment(
 export function formatA11yFailure(
   scanLabel: string,
   report: ICheckerReport,
+  ignoreRules?: string[],
 ): string {
   const counts = report.summary.counts;
   const reportPath = path.posix.join(
@@ -75,7 +76,8 @@ export function formatA11yFailure(
   const failingIssues = report.results.filter(
     (issue) =>
       !issue.ignored &&
-      (issue.level === "violation" || issue.level === "potentialviolation"),
+      (issue.level === "violation" || issue.level === "potentialviolation") &&
+      !ignoreRules?.includes(issue.ruleId),
   );
 
   const groupedIssues = new Map<
@@ -132,8 +134,14 @@ export function formatA11yFailure(
   return lines.join("\n");
 }
 
-export function countNewA11yViolations(report: ICheckerReport): number {
+export function countNewA11yViolations(
+  report: ICheckerReport,
+  ignoreRules?: string[],
+): number {
   return report.results.filter(
-    (issue) => issue.level === "violation" && !issue.ignored,
+    (issue) =>
+      issue.level === "violation" &&
+      !issue.ignored &&
+      !ignoreRules?.includes(issue.ruleId),
   ).length;
 }

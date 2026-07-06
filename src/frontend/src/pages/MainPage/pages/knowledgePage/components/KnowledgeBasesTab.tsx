@@ -364,15 +364,20 @@ const KnowledgeBasesTab = ({
         </div>
       </div>
 
+      {/*
+        No children are passed here: these dialogs are fully controlled via
+        `open`/`setOpen` (triggered from the row-actions menu and the bulk
+        selection bar), so there is no on-screen trigger to render. Passing
+        an empty fragment would make Radix's DialogTrigger fall back to
+        rendering its own bare `<button>` wrapper with no accessible name.
+      */}
       <DeleteConfirmationModal
         open={actions.isDeleteModalOpen}
         setOpen={actions.setIsDeleteModalOpen}
         onConfirm={actions.confirmDelete}
         description={`knowledge base "${actions.knowledgeBaseToDelete?.name || ""}"`}
         note={t("knowledge.thisActionCannotBeUndone")}
-      >
-        <></>
-      </DeleteConfirmationModal>
+      />
 
       <DeleteConfirmationModal
         open={actions.isBulkDeleteModalOpen}
@@ -384,9 +389,7 @@ const KnowledgeBasesTab = ({
             ? `${selectedFiles.length - actions.deletableSelected.length} ingesting knowledge base(s) will be skipped. ${t("knowledge.thisActionCannotBeUndone")}`
             : t("knowledge.thisActionCannotBeUndone")
         }
-      >
-        <></>
-      </DeleteConfirmationModal>
+      />
 
       <KnowledgeBaseUploadModal
         open={isUploadModalOpen}

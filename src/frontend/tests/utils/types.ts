@@ -3,6 +3,13 @@ import type { ICheckerResult } from "accessibility-checker";
 
 export type A11yScanOptions = {
   colorScheme?: "light" | "dark";
+  /**
+   * Rule IDs to exclude from violation counts and failure messages.
+   * Useful for suppressing known issues in shared chrome (header, nav)
+   * that are not owned by the feature under test.
+   * Example: ["aria_content_in_landmark", "label_name_visible"]
+   */
+  ignoreRules?: string[];
 };
 
 /**

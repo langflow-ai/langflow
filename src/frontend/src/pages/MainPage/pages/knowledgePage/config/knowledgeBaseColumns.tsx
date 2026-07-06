@@ -35,8 +35,18 @@ export interface KnowledgeBaseColumnsCallbacks {
 
 export const createKnowledgeBaseColumns = (
   callbacks?: KnowledgeBaseColumnsCallbacks,
-  t: (key: string) => string = (key) =>
-    enTranslations[key as keyof typeof enTranslations] ?? key,
+  t: (key: string, options?: Record<string, unknown>) => string = (
+    key,
+    options,
+  ) => {
+    const template = enTranslations[key as keyof typeof enTranslations] ?? key;
+    if (!options) return template;
+    return Object.entries(options).reduce(
+      (acc, [optionKey, optionValue]) =>
+        acc.replaceAll(`{{${optionKey}}}`, String(optionValue)),
+      template,
+    );
+  },
 ): ColDef[] => {
   const baseCellClass =
     "text-muted-foreground cursor-pointer select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none";
@@ -235,6 +245,9 @@ export const createKnowledgeBaseColumns = (
                   size="icon"
                   data-testid="kb-row-actions-trigger"
                   onClick={(e) => e.stopPropagation()}
+                  aria-label={t("knowledge.action.moreActionsFor", {
+                    name: params.data?.name,
+                  })}
                 >
                   <ForwardedIconComponent
                     name="EllipsisVertical"

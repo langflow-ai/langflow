@@ -35,7 +35,12 @@ const KnowledgeBaseDrawer = ({
     <div className="flex h-full w-80 flex-col border-l bg-background">
       <div className="flex items-center justify-between pt-4 px-4">
         <h3 className="font-semibold">{knowledgeBase.name}</h3>
-        <Button variant="ghost" size="iconSm" onClick={onClose}>
+        <Button
+          variant="ghost"
+          size="iconSm"
+          onClick={onClose}
+          aria-label={t("knowledge.closeDetailsPanel")}
+        >
           <ForwardedIconComponent name="X" className="h-4 w-4" />
         </Button>
       </div>
