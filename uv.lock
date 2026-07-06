@@ -50,7 +50,6 @@ overrides = [
     { name = "pypdf", specifier = ">=6.10.0" },
     { name = "python-liquid", specifier = ">=2.2.0,<3.0.0" },
     { name = "python-pptx", specifier = ">=1.0.2" },
-    { name = "torchvision", specifier = "<0.27.1", index = "https://download.pytorch.org/whl/cpu" },
     { name = "urllib3", specifier = ">=2.7.0,<3.0.0" },
     { name = "z3-solver", specifier = "<4.15.7" },
 ]
