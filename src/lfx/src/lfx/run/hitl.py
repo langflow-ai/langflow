@@ -160,6 +160,10 @@ NESTED_HITL_UNSUPPORTED = (
 )
 
 
+class NestedHITLUnsupportedError(ValueError):
+    """Deliberate user guidance — wrappers must surface it verbatim, not genericize it."""
+
+
 def flow_has_blocking_pausing_node(graph: Graph) -> bool:
     """True when a non-pausable run of this graph would need to pause.
 
@@ -181,7 +185,7 @@ def flow_has_blocking_pausing_node(graph: Graph) -> bool:
 def raise_if_nested_hitl_unsupported(graph: Graph) -> None:
     """Reject a nested run of a pausing flow with a clear error instead of a silent non-pause."""
     if flow_has_blocking_pausing_node(graph):
-        raise ValueError(NESTED_HITL_UNSUPPORTED)
+        raise NestedHITLUnsupportedError(NESTED_HITL_UNSUPPORTED)
 
 
 def _collect_results(graph: Graph) -> list[VertexBuildResult]:
