@@ -85,7 +85,9 @@ def register(app: typer.Typer) -> None:
             help=(
                 "Interactive human-in-the-loop. Default auto-enables it when the flow has a "
                 "pausing node (e.g. HumanInput) and the terminal is interactive; the run then "
-                "prompts at each pause. Use --no-human-input to disable."
+                "prompts at each pause. Use --no-human-input to disable. Interactive-session "
+                "only: checkpoints are in-memory, so a paused run cannot be resumed later or "
+                "from another process. Non-interactive runs do not pause (a warning is printed)."
             ),
         ),
     ) -> None:

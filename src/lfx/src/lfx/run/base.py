@@ -470,6 +470,14 @@ async def run_flow(
                     sys.stderr = captured_stderr
             result_count = len(results)
         else:
+            if flow_has_pausing_node(graph):
+                # Real stderr: the captured one is swallowed at default verbosity, and this must be loud.
+                original_stderr.write(
+                    "Warning: this flow has a Human Input (pausing) node, but the run is "
+                    "non-interactive, so it will NOT pause for a decision. CLI HITL is "
+                    "interactive-session only (in-memory, no durable resume). Run in a "
+                    "terminal or pass --human-input to enable the interactive prompts.\n"
+                )
             async for result in graph.async_start(
                 inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars
             ):
