@@ -8,14 +8,18 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
 from lfx.custom import Component
-from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
+from lfx.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TabInput
 from lfx.schema.message import Message
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
+
+if TYPE_CHECKING:
+    from lfx.schema.dotdict import dotdict
 
 DEFAULT_TIMEOUT = 60.0
 # Cap aggregated reply size so a chatty/streaming agent can't make us buffer unbounded text.
@@ -129,17 +133,41 @@ async def call_a2a_agent(
 
 class A2AAgentComponent(Component):
     display_name = "A2A Agent"
-    description = "Send a message to a remote A2A (Agent-to-Agent) agent and return its reply."
+    description = (
+        "Call an A2A (Agent-to-Agent) agent and return its reply. Pick an agent flow in this "
+        "project, or point at a remote agent by its URL."
+    )
     documentation: str = "https://a2a-protocol.org/"
     icon = "bot"
     name = "A2AAgent"
 
     inputs = [
+        TabInput(
+            name="mode",
+            display_name="Mode",
+            options=["Internal", "External"],
+            value="External",
+            info=("Internal calls another agent flow in this project. External calls a remote A2A agent by its URL."),
+            real_time_refresh=True,
+        ),
+        # Internal: an agent flow in the caller's project/folder. Populated in update_build_config.
+        DropdownInput(
+            name="agent_name_selected",
+            display_name="Agent",
+            info="An agent flow in this project (one with a chat input and a chat output).",
+            options=[],
+            options_metadata=[],
+            real_time_refresh=True,
+            required=False,
+            show=False,
+        ),
+        # External: a remote A2A agent by URL.
         MessageTextInput(
             name="agent_url",
             display_name="Agent URL",
             info="Base URL of the remote A2A agent. Its card is fetched from <url>/.well-known/agent-card.json.",
-            required=True,
+            required=False,
+            real_time_refresh=True,
         ),
         MultilineInput(
             name="input_value",
@@ -164,7 +192,98 @@ class A2AAgentComponent(Component):
     ]
     outputs = [Output(display_name="Response", name="response", method="send_to_agent")]
 
+    async def update_build_config(
+        self,
+        build_config: dotdict,
+        field_value: Any,
+        field_name: str | None = None,
+    ) -> dotdict:
+        # The Mode tab reveals only the fields that apply. External fields carry the api key and
+        # timeout for the HTTP call; Internal reveals the in-project agent picker.
+        if field_name == "mode":
+            internal = field_value == "Internal"
+            build_config["agent_name_selected"]["show"] = internal
+            build_config["agent_url"]["show"] = not internal
+            build_config["agent_url"]["required"] = not internal
+            build_config["api_key"]["show"] = not internal
+            build_config["timeout"]["show"] = not internal
+            if internal:
+                await self._populate_internal_agents(build_config)
+        elif field_name == "agent_name_selected" and (build_config.get("is_refresh") or field_value is None):
+            await self._populate_internal_agents(build_config)
+        return build_config
+
+    async def _populate_internal_agents(self, build_config: dotdict) -> None:
+        """Fill the Internal dropdown with A2A agents published in the caller's folder."""
+        agents = await self.alist_a2a_agents_by_flow_folder()
+        build_config["agent_name_selected"]["options"] = [agent.data["name"] for agent in agents]
+        build_config["agent_name_selected"]["options_metadata"] = [
+            {"id": str(agent.data["id"]), "updated_at": agent.data.get("updated_at")} for agent in agents
+        ]
+
     async def send_to_agent(self) -> Message:
+        if self.mode == "Internal":
+            return await self._run_internal_agent()
+        return await self._call_external_agent()
+
+    async def _run_internal_agent(self) -> Message:
+        # An in-project A2A agent is just a flow with chat I/O, so run it in-process (no HTTP, no
+        # SSRF, no api key) and read its chat reply. Same three primitives Run Flow uses.
+        from lfx.graph.graph.base import Graph
+        from lfx.helpers import get_flow_by_id_or_name, run_flow
+
+        agent_name = self.agent_name_selected or None
+        if not agent_name:
+            msg = "Select an A2A agent to call."
+            raise ValueError(msg)
+
+        # The dropdown only offers a2a_enabled agents from the caller's folder; we resolve the
+        # pick by name here. A same-named flow elsewhere is a rare ambiguity we accept for now.
+        flow = await get_flow_by_id_or_name(user_id=self.user_id, flow_name=agent_name)
+        if not flow or not flow.data:
+            msg = f"Agent flow '{agent_name}' could not be found."
+            raise ValueError(msg)
+
+        graph = Graph.from_payload(
+            flow.data.get("data", {}),
+            flow_id=str(flow.data.get("id", "")),
+            flow_name=flow.data.get("name"),
+        )
+        session_id = getattr(getattr(self, "graph", None), "session_id", None)
+        run_outputs = await run_flow(
+            inputs={"input_value": self.input_value, "type": "chat"},
+            graph=graph,
+            user_id=str(self.user_id),
+            session_id=session_id,
+            output_type="chat",
+        )
+        answer = self._reply_from_run(run_outputs)
+        message = Message(text=answer or "No response received from the agent.")
+        self.status = message
+        return message
+
+    @staticmethod
+    def _reply_from_run(run_outputs: list) -> str:
+        """Pull the chat reply text out of run_flow's outputs, tolerant of the result shape."""
+        texts: list[str] = []
+        for run in run_outputs or []:
+            for result in getattr(run, "outputs", None) or []:
+                if result is None:
+                    continue
+                data = getattr(result, "results", None)
+                candidates = list(data.values()) if isinstance(data, dict) else ([data] if data is not None else [])
+                message = getattr(result, "message", None)
+                if message is not None:
+                    candidates.append(message)
+                for candidate in candidates:
+                    text = getattr(candidate, "text", None)
+                    if isinstance(text, str) and text:
+                        texts.append(text)
+                    elif isinstance(candidate, str) and candidate:
+                        texts.append(candidate)
+        return "\n".join(texts)
+
+    async def _call_external_agent(self) -> Message:
         try:
             timeout = float(self.timeout)
         except (TypeError, ValueError):

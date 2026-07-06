@@ -131,6 +131,27 @@ async def list_flows_by_flow_folder(
     return []
 
 
+async def list_a2a_agents_by_flow_folder(
+    *,
+    user_id: str | None = None,
+    flow_id: str | None = None,
+    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006, ARG001
+) -> list[Data]:
+    """Stub: lfx has no database backend, so there are no A2A agents to list.
+
+    The real implementation lives in ``langflow.helpers.flow`` and filters flows on
+    ``a2a_enabled``. See :func:`list_flows_by_flow_folder` for the same lfx/langflow split.
+    """
+    if not user_id:
+        msg = "Session is invalid"
+        raise ValueError(msg)
+    if not flow_id:
+        msg = "Flow ID is required"
+        raise ValueError(msg)
+    logger.warning("list_a2a_agents_by_flow_folder called but lfx doesn't have database backend by default")
+    return []
+
+
 async def list_flows_by_folder_id(
     *,
     user_id: str | None = None,

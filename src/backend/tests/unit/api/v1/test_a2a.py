@@ -1201,3 +1201,50 @@ async def test_durable_store_roundtrips_on_real_migrated_db():
             return "other"
 
     assert await DurableTaskStore().get(task_id, ServerCallContext(user=_Other())) is None
+
+
+# --- A2A Agent component: Internal mode (in-process) -------------------------
+
+
+async def test_a2a_component_internal_mode_runs_selected_agent(client: AsyncClient, active_user, echo_flow_data):  # noqa: ARG001 - client boots the app/services
+    """The A2A component in Internal mode runs a published in-project agent in-process and returns its reply.
+
+    This is the single-process integration test for internal mode: the agent flow and the run share
+    the test DB, so there is no cross-connection staleness. Mirrors what Run Flow does under the hood.
+    """
+    from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent
+
+    async with session_scope() as session:
+        agent = Flow(
+            name="Internal Echo Target",
+            data=echo_flow_data,
+            user_id=active_user.id,
+            flow_type=FlowType.AGENT,
+            a2a_enabled=True,
+        )
+        session.add(agent)
+        await session.commit()
+
+    component = A2AAgentComponent(
+        mode="Internal",
+        agent_name_selected="Internal Echo Target",
+        input_value="ping from internal mode",
+    )
+    component._user_id = active_user.id
+
+    message = await component.send_to_agent()
+    assert "ping from internal mode" in message.text
+
+
+async def test_list_a2a_agents_by_flow_folder_only_returns_enabled(client: AsyncClient, active_user, echo_flow_data):  # noqa: ARG001 - client boots the app/services
+    """The Internal dropdown source lists only a2a_enabled agents in the caller's folder, excluding the caller."""
+    from langflow.helpers.flow import list_a2a_agents_by_flow_folder
+
+    folder_id = await _create_folder(active_user.id, auth_settings=None)
+    caller_id = await _create_flow(active_user.id, data=echo_flow_data, a2a_enabled=False, folder_id=folder_id)
+    agent_id = await _create_flow(active_user.id, data=echo_flow_data, a2a_enabled=True, folder_id=folder_id)
+    # A plain (non-A2A) flow in the same folder must not show up.
+    await _create_flow(active_user.id, data=echo_flow_data, a2a_enabled=False, folder_id=folder_id)
+
+    agents = await list_a2a_agents_by_flow_folder(user_id=str(active_user.id), flow_id=str(caller_id))
+    assert {str(a.data["id"]) for a in agents} == {str(agent_id)}
