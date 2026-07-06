@@ -299,6 +299,7 @@
   "settings.apiKeys.columnTotalUses": "Total Uses",
   "settings.apiKeys.never": "Never",
   "apiKey.expirationDate": "Expiration date",
+  "apiKey.expirationPlaceholder": "No expiration",
   "apiKey.neverExpires": "This key never expires",
   "apiKey.expiry.1week": "1 week from today",
   "apiKey.expiry.1month": "1 month from today",

@@ -51,6 +51,7 @@
   "alerts.noTemplateVariables": "Seu modelo não contém nenhuma variável.",
   "alerts.notificationsTitle": "Notificações",
   "apiKey.expirationDate": "data de expiração",
+  "apiKey.expirationPlaceholder": "Sem expiração",
   "apiKey.expiry.1month": "Daqui a um mês",
   "apiKey.expiry.1week": "Daqui a uma semana",
   "apiKey.expiry.1year": "Daqui a um ano",
