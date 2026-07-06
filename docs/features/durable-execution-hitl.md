@@ -115,6 +115,12 @@ The pause probe is a no-op unless a component requests it, so normal flows are b
 - **Then** built vertices are restored, not re-executed (no LLM re-billing, no re-fired tools)
 - **And** branches killed before the pause stay dead
 
+### Scenario: HITL inside a nested flow is rejected
+- **Given** a flow whose Run Flow / Sub Flow / flow-as-tool target contains a connected Human Input node (or an approval-gated agent tool)
+- **When** the nested flow is executed
+- **Then** the run fails with a clear error ("cannot run as a nested flow… move the approval to the parent flow") instead of silently not pausing
+- **And** a target flow with an unwired Human Input (no downstream consumer) still runs — it is skipped at runtime, not blocking
+
 ### Scenario: Two HITL nodes in sequence
 - **Given** a flow with two HumanInput nodes where the first gates the path to the second
 - **When** the first is approved, the second pauses, and the second is then approved
