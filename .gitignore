@@ -299,3 +299,5 @@ tmp_toolguard/
 #whitesource
 whitesource/
 /.codex
+
+.agents
