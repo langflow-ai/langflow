@@ -186,6 +186,7 @@ audio = [
 postgresql = [
     "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
     "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+    "psycopg[binary]>=3.2,<4.0",
 ]
 
 local = [
