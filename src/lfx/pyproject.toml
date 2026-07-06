@@ -70,9 +70,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lfx"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/lfx/_assets" = "lfx/_assets"
+artifacts = [
+  "src/lfx/_assets/*.json",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
