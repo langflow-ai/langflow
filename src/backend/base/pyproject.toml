@@ -295,7 +295,9 @@ lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
 huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
-metaphor = ["metaphor-python==0.1.23"]
+# Backwards-compatible alias: the Exa Search component moved to the lfx-exa
+# bundle and now uses exa-py; metaphor-python is deprecated and unused.
+metaphor = ["exa-py>=1.14,<3"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
 # Deliberately retained after the lfx-amazon graduation: boto3 also backs
