@@ -672,7 +672,6 @@ test(
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await openAddMcpServerModal(page);
 
