@@ -10,14 +10,14 @@ function setAttributeIfChanged(
   }
 }
 
-type AgGridAccessibilityLabels = {
+export type AgGridAccessibilityLabels = {
   endFocusBoundary: string;
   rows: string;
   startFocusBoundary: string;
   table: string;
 };
 
-function patchGridAccessibility(
+export function patchGridAccessibility(
   container: HTMLDivElement,
   labels: AgGridAccessibilityLabels,
 ) {
@@ -78,28 +78,46 @@ function patchGridAccessibility(
   container
     .querySelectorAll<HTMLElement>(".ag-paging-button")
     .forEach((button) => {
-      if (
-        button.classList.contains("ag-disabled") ||
-        button.getAttribute("aria-disabled") === "true"
-      ) {
-        setAttributeIfChanged(button, "aria-disabled", "true");
-        setAttributeIfChanged(button, "tabindex", "-1");
-        return;
-      }
-
-      setAttributeIfChanged(button, "tabindex", "0");
+      // Only use the class as input signal to avoid self-latching
+      const isDisabled = button.classList.contains("ag-disabled");
+      setAttributeIfChanged(
+        button,
+        "aria-disabled",
+        isDisabled ? "true" : "false",
+      );
+      setAttributeIfChanged(button, "tabindex", isDisabled ? "-1" : "0");
     });
 
   treeGrid?.querySelectorAll<HTMLElement>('[role="row"]').forEach((row) => {
     setAttributeIfChanged(row, "tabindex", "-1");
 
-    if (row.closest('[aria-hidden="true"], .ag-hidden')) {
+    const isHidden = !!row.closest('[aria-hidden="true"], .ag-hidden');
+    const focusableSelector =
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+    if (isHidden) {
+      // Mark and demote focusable elements in hidden rows
+      row.querySelectorAll<HTMLElement>(focusableSelector).forEach((el) => {
+        if (!el.hasAttribute("data-langflow-a11y-demoted")) {
+          el.setAttribute(
+            "data-langflow-a11y-demoted",
+            el.getAttribute("tabindex") ?? "",
+          );
+        }
+        setAttributeIfChanged(el, "tabindex", "-1");
+      });
+    } else {
+      // Restore previously demoted elements in visible rows
       row
-        .querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        )
-        .forEach((focusable) => {
-          setAttributeIfChanged(focusable, "tabindex", "-1");
+        .querySelectorAll<HTMLElement>("[data-langflow-a11y-demoted]")
+        .forEach((el) => {
+          const original = el.getAttribute("data-langflow-a11y-demoted");
+          if (original) {
+            el.setAttribute("tabindex", original);
+          } else {
+            el.removeAttribute("tabindex");
+          }
+          el.removeAttribute("data-langflow-a11y-demoted");
         });
     }
   });
