@@ -30,6 +30,7 @@ from lfx.cli.common import execute_graph_with_capture
 from lfx.cli.runtime_variables import apply_global_vars_to_graph, build_request_variables_from_global_vars
 from lfx.events.event_manager import create_stream_tokens_event_manager
 from lfx.processing.process import run_graph_internal
+from lfx.run._defaults import apply_run_defaults
 from lfx.schema.schema import InputValueRequest
 
 # WorkflowRunRequest stays a runtime import: FastAPI resolves the route's body
@@ -202,7 +203,9 @@ def _terminal_node_ids(graph: Graph) -> list[str]:
     return [vertex.id for vertex in graph.vertices if not graph.successor_map.get(vertex.id, [])]
 
 
-async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: str) -> WorkflowExecutionResponse:
+async def run_workflow_sync(
+    graph: Graph, parsed: ParsedWorkflowRun, flow_id: str, *, user_id: str | None = None
+) -> WorkflowExecutionResponse:
     """Run a flow to completion and build a v2 ``WorkflowExecutionResponse``.
 
     Uses ``run_graph_internal`` (the same primitive the langflow backend sync
@@ -214,6 +217,11 @@ async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: st
     job_id = str(uuid4())
     terminal_ids = _terminal_node_ids(graph)
     _validate_output_ids(parsed.output_ids, terminal_ids)
+
+    # Pin the verified caller identity onto the graph (and Memory vertices) the same
+    # way execute_graph_with_capture does for the stream path. run_graph_internal
+    # does not touch user_id, so without this the sync path would drop it.
+    apply_run_defaults(graph, session_id=parsed.session_id, user_id=user_id, overwrite_user_id=user_id is not None)
 
     # Activate request-scoped variables (the route applied request-level globals
     # to graph.context) so components resolving through VariableService.get_variable
@@ -262,7 +270,7 @@ def _format_sse(data_json: str, seq: int) -> bytes:
 
 
 async def stream_workflow_frames(
-    graph: Graph, parsed: ParsedWorkflowRun, adapter: StreamAdapter
+    graph: Graph, parsed: ParsedWorkflowRun, adapter: StreamAdapter, *, user_id: str | None = None
 ) -> AsyncIterator[bytes]:
     """Run a flow and stream its events through ``adapter`` as SSE frames.
 
@@ -279,7 +287,11 @@ async def stream_workflow_frames(
         nonlocal drive_error
         try:
             await execute_graph_with_capture(
-                graph, parsed.input_value or None, session_id=parsed.session_id, event_manager=event_manager
+                graph,
+                parsed.input_value or None,
+                session_id=parsed.session_id,
+                user_id=user_id,
+                event_manager=event_manager,
             )
             # lfx's async_start does not emit a terminal ``end`` event (the
             # langflow build loop does). Emit one so the adapter closes the run
@@ -324,13 +336,18 @@ async def stream_workflow_frames(
         await queue.aclose()
 
 
-def add_v2_workflow_routes(app: FastAPI, registry, *, api_key_dependency) -> None:
+def add_v2_workflow_routes(app: FastAPI, registry, *, api_key_dependency, identity_dependency) -> None:
     """Register ``POST /workflows`` (v2 sync + stream) on the serve app.
 
     Mirrors the langflow backend ``POST /api/v2/workflows`` contract: same
     ``WorkflowRunRequest`` body (``flow_id`` included) and
     ``WorkflowExecutionResponse`` / SSE responses, so a client integrates
     identically against lfx serve.
+
+    ``identity_dependency`` is serve's ``resolve_identity`` (sub-depends on the
+    api-key floor), so the route enforces the configured identity mode
+    (jwt/header) exactly like ``/flows/{id}/run`` and threads the verified
+    ``user_id`` into execution instead of accepting a bare api key.
     """
 
     @app.post(
@@ -340,7 +357,12 @@ def add_v2_workflow_routes(app: FastAPI, registry, *, api_key_dependency) -> Non
         summary="Execute Workflow (v2 sync or stream)",
         dependencies=[Depends(api_key_dependency)],
     )
-    async def execute_workflow(request: WorkflowRunRequest):
+    async def execute_workflow(
+        request: WorkflowRunRequest,
+        # Depends() in the default (not Annotated) so FastAPI reads the live closure-local
+        # resolver; see the run_flow note. resolve_identity enforces jwt/header identity here.
+        user_id: str | None = Depends(identity_dependency),  # noqa: FAST002
+    ):
         result = registry.get(request.flow_id)
         if result is None:
             raise HTTPException(
@@ -391,9 +413,9 @@ def add_v2_workflow_routes(app: FastAPI, registry, *, api_key_dependency) -> Non
                 StreamAdapterContext(run_id=str(uuid4()), thread_id=parsed.session_id or request.flow_id),
             )
             return StreamingResponse(
-                stream_workflow_frames(graph_copy, parsed, adapter),
+                stream_workflow_frames(graph_copy, parsed, adapter, user_id=user_id),
                 media_type="text/event-stream",
                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
             )
 
-        return await run_workflow_sync(graph_copy, parsed, request.flow_id)
+        return await run_workflow_sync(graph_copy, parsed, request.flow_id, user_id=user_id)

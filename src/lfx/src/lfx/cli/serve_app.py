@@ -857,7 +857,7 @@ def create_multi_serve_app(
             return StreamingResponse(error_stream(), media_type="text/event-stream")
 
     # V2 workflow contract endpoints (sync + stream), shared with the langflow backend.
-    add_v2_workflow_routes(app, registry, api_key_dependency=verify_api_key)
+    add_v2_workflow_routes(app, registry, api_key_dependency=verify_api_key, identity_dependency=resolve_identity)
 
     return app
 
