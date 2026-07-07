@@ -435,21 +435,29 @@ async def update_server(
     try:
         await session.commit()
     except IntegrityError:
-        # A concurrent request created the same (user, name) first. Fold our write
-        # into an update of the winning row instead of failing. (No cross-server
-        # loss: different servers are different rows and never reach this path.)
+        # A concurrent request created the same (user, name) first (we came in with
+        # existing=None). Re-apply the create/merge rules against the winning row
+        # instead of overwriting it with our pre-race config.
         await session.rollback()
         result = await session.exec(
             select(MCPServer).where(MCPServer.user_id == current_user.id, MCPServer.name == server_name)
         )
         existing = result.first()
-        if existing is not None:
+        if existing is None:
+            raise
+        if check_existing:
+            raise HTTPException(status_code=500, detail="Server already exists.") from None
+        if merge_existing:
+            merged = {**decrypt_mcp_config(existing.config or {}), **server_config}
+            existing.config = encrypt_mcp_config(merged)
+            existing.transport = _derive_transport(merged)
+        else:
             existing.config = encrypted_config
             existing.transport = transport
-            existing.version += 1
-            existing.updated_at = datetime.now(timezone.utc)
-            session.add(existing)
-            await session.commit()
+        existing.version += 1
+        existing.updated_at = datetime.now(timezone.utc)
+        session.add(existing)
+        await session.commit()
 
     _clear_server_cache(server_name)
     return await get_server(server_name, current_user, session, storage_service, settings_service)
