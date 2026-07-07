@@ -306,3 +306,26 @@ async def test_concurrent_check_existing_create_does_not_overwrite_winner(tmp_pa
     successes = [r for r in results if not isinstance(r, Exception)]
     assert len(rows) == 1, f"expected exactly one row, got {len(rows)}"
     assert len(successes) == 1, f"expected exactly one create to win, got {len(successes)}"
+
+
+@pytest.mark.asyncio
+async def test_get_server_list_preserves_insertion_order():
+    """get_server_list orders by created_at so the starter project stays first, not sorted by name."""
+    from datetime import datetime, timedelta, timezone
+
+    engine = await _memory_engine()
+    user_id = uuid.uuid4()
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    # Insert out of alphabetical order, with increasing created_at.
+    names = ["lf-starter_project", "aaa_added_later", "zzz_added_last"]
+    async with AsyncSession(engine, expire_on_commit=False) as session:
+        for i, name in enumerate(names):
+            session.add(MCPServer(user_id=user_id, name=name, config={}, created_at=base + timedelta(seconds=i)))
+        await session.commit()
+
+    with patch.multiple("langflow.api.v2.mcp", **CACHE_PATCH):
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            servers = (await get_server_list(SimpleNamespace(id=user_id), session, None, None))["mcpServers"]
+
+    await engine.dispose()
+    assert list(servers.keys()) == names, f"expected insertion order {names}, got {list(servers.keys())}"

@@ -115,7 +115,12 @@ async def get_server_list(
     stays a runnable ``mcpServers`` map. ``storage_service`` / ``settings_service``
     are retained for signature compatibility with every caller.
     """
-    result = await session.exec(select(MCPServer).where(MCPServer.user_id == current_user.id))
+    # Order by created_at so the list is stable and preserves insertion order, matching
+    # the legacy file (a dict) that callers and the UI relied on (e.g. the starter
+    # project server stays first).
+    result = await session.exec(
+        select(MCPServer).where(MCPServer.user_id == current_user.id).order_by(MCPServer.created_at)
+    )
     servers = {row.name: decrypt_mcp_config(row.config or {}) for row in result.all()}
     return {"mcpServers": servers}
 
