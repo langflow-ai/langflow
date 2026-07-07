@@ -79,6 +79,44 @@ export const gradients = [
   "bg-gradient-to-br from-lime-600 via-yellow-300 to-red-600",
 ];
 
+// Parallel to `gradients` — true when the gradient is visually bright
+// enough that dark text reads better than white text. Classifications are
+// hand-tuned per gradient; keep this array in sync with `gradients` if you
+// edit either one.
+export const gradientIsLight: boolean[] = [
+  false, // 0  gray-800→violet-900
+  true, // 1  green-200→blue-500
+  true, // 2  yellow-200→yellow-700
+  true, // 3  green-200→purple-700
+  true, // 4  blue-100→blue-500
+  true, // 5  purple-400→yellow-400
+  false, // 6  red-800→yellow-500
+  true, // 7  blue-300→yellow-300
+  false, // 8  blue-700→gray-900
+  true, // 9  green-300→purple-400
+  true, // 10 yellow-200→pink-400
+  false, // 11 green-500→green-700
+  false, // 12 rose-400→indigo-500
+  false, // 13 sky-400→blue-500
+  true, // 14 green-200→green-500
+  true, // 15 red-400→blue-500
+  false, // 16 gray-900→gray-600
+  false, // 17 rose-500→red-500
+  false, // 18 fuchsia-600→pink-600
+  true, // 19 emerald-500→lime-600
+  false, // 20 rose-500→indigo-700
+  true, // 21 violet-500→orange-300
+  false, // 22 gray-900→violet-600
+  true, // 23 yellow-200→fuchsia-500
+  false, // 24 sky-400→indigo-900
+  false, // 25 amber-200→sky-900
+  false, // 26 amber-700→rose-800
+  true, // 27 gray-300→orange-600
+  false, // 28 fuchsia-500→orange-400
+  true, // 29 sky-400→lime-400
+  true, // 30 lime-600→red-600
+];
+
 /*
 Specifications
 #FF3276 -> #F480FF

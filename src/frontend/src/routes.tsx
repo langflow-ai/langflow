@@ -41,6 +41,8 @@ import McpClientPage from "./pages/SettingsPage/pages/McpClientPage";
 import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+import TritonServersPage from "./pages/SettingsPage/pages/TritonServersPage";
+import TritonServerDetailPage from "./pages/SettingsPage/pages/TritonServersPage/detail";
 import ViewPage from "./pages/ViewPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
@@ -159,6 +161,14 @@ const router = createBrowserRouter(
                   <Route path="db-providers" element={<DBProvidersPage />} />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
                   <Route path="mcp-client" element={<McpClientPage />} />
+                  <Route
+                    path="triton-servers"
+                    element={<TritonServersPage />}
+                  />
+                  <Route
+                    path="triton-servers/:serverId"
+                    element={<TritonServerDetailPage />}
+                  />
 
                   <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route

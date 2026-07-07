@@ -323,7 +323,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     data &&
                     data.pagination.total > 0 ? (
                     view === "grid" ? (
-                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="mt-4 grid grid-cols-2 gap-1 md:grid-cols-4 lg:grid-cols-6">
                         {data.flows.map((flow, index) => (
                           <ListComponent
                             key={flow.id}
@@ -333,6 +333,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                               setSelectedFlow(selected, flow.id, index)
                             }
                             shiftPressed={isShiftPressed || isCtrlPressed}
+                            view={view}
                           />
                         ))}
                       </div>
@@ -347,6 +348,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                               setSelectedFlow(selected, flow.id, index)
                             }
                             shiftPressed={isShiftPressed || isCtrlPressed}
+                            view={view}
                           />
                         ))}
                       </div>

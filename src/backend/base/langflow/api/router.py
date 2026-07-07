@@ -31,6 +31,7 @@ from langflow.api.v1 import (
     starter_projects_router,
     store_router,
     traces_router,
+    triton_servers_router,
     users_router,
     validate_router,
     variables_router,
@@ -83,6 +84,7 @@ router_v1.include_router(mcp_projects_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
+router_v1.include_router(triton_servers_router)
 router_v1.include_router(authz_shares_router)
 router_v1.include_router(authz_audit_router)
 router_v1.include_router(authz_roles_router)
