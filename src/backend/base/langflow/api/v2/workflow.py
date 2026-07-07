@@ -176,6 +176,31 @@ async def authorize_flow_action(
         if privacy.status_code == status.HTTP_404_NOT_FOUND:
             raise _flow_not_found_http_exception(echo_id) from exc
         raise privacy from exc
+    # ensure_flow_permission's audit write + owner-override lookup touch the DB, so a
+    # transient lock raises a non-HTTPException. Map it the same way the fetch path does
+    # (503 DATABASE_ERROR, retryable) instead of leaking a bare 500.
+    except OperationalError as e:
+        await logger.aexception("Database error enforcing flow permission for workflow execution")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable, Please try again.",
+                "code": "DATABASE_ERROR",
+                "message": "Failed to enforce flow permission. Please try again.",
+                "flow_id": echo_id,
+            },
+        ) from e
+    except Exception as err:
+        await logger.aexception("Unexpected error during workflow execution")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Internal server error",
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred.",
+                "flow_id": echo_id,
+            },
+        ) from err
 
 
 def _apply_execution_gates(parsed, flow, current_user: UserRead) -> None:

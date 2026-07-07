@@ -37,7 +37,12 @@ from lfx.schema.schema import InputValueRequest
 # TYPE_CHECKING.
 from lfx.schema.workflow import WorkflowRunRequest, WorkflowStopRequest  # noqa: TC001
 from lfx.services.deps import get_settings_service
-from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables
+from lfx.services.variable.request_scope import (
+    activate_no_env_fallback,
+    activate_request_variables,
+    reset_no_env_fallback,
+    reset_request_variables,
+)
 from lfx.workflow.actions import WorkflowAction
 from lfx.workflow.adapters import (
     STREAM_ADAPTERS,
@@ -237,6 +242,10 @@ async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: st
     apply_global_vars_to_graph(graph, parsed.globals)
     scope_vars = build_request_variables_from_global_vars(graph.context.get("request_variables"))
     scope_token = activate_request_variables(scope_vars or None)
+    # Honor the serve env-isolation policy on the sync path too. The stream path
+    # gets this via execute_graph_with_capture; without it a sync run leaks
+    # os.environ credentials the operator disabled with LFX_SERVE_NO_ENV_FALLBACK.
+    no_env_fallback_token = activate_no_env_fallback(disabled=bool(graph.context.get("no_env_fallback")))
     try:
         run_outputs, session_id = await run_graph_internal(
             graph,
@@ -255,6 +264,7 @@ async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: st
             effective_globals=parsed.globals,
         )
     finally:
+        reset_no_env_fallback(no_env_fallback_token)
         reset_request_variables(scope_token)
     run_response = _RunResponse(outputs=run_outputs, session_id=session_id)
     return run_response_to_workflow_response(

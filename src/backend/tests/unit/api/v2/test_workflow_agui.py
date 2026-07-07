@@ -362,6 +362,30 @@ class TestV2WorkflowAdmission:
         assert exc_info.value.detail["flow_id"] == "my-endpoint"
         assert str(resolved_uuid) not in str(exc_info.value.detail)
 
+    async def test_db_lock_during_authorize_yields_503_contract(self, monkeypatch: pytest.MonkeyPatch):
+        """A transient DB lock during permission enforcement must surface as 503 DATABASE_ERROR."""
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2.workflow_host import LangflowWorkflowHost
+        from lfx.workflow.actions import WorkflowAction
+        from lfx.workflow.host import ResolvedFlow
+        from sqlalchemy.exc import OperationalError
+
+        flow = SimpleNamespace(id=uuid4(), user_id=uuid4(), workspace_id=None, folder_id=None)
+        resolved = ResolvedFlow(flow_id="my-endpoint", graph=flow)
+
+        async def _lock(*_args, **_kwargs):
+            statement = "SELECT 1"
+            raise OperationalError(statement, {}, Exception())
+
+        monkeypatch.setattr(workflow_module, "ensure_flow_permission", _lock)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await LangflowWorkflowHost().authorize(SimpleNamespace(id=uuid4()), resolved, WorkflowAction.EXECUTE)
+
+        assert exc_info.value.status_code == 503
+        assert exc_info.value.detail["code"] == "DATABASE_ERROR"
+        assert exc_info.value.detail["flow_id"] == "my-endpoint"
+
     def test_private_route_applies_component_policy_gate(self, monkeypatch: pytest.MonkeyPatch):
         """The authenticated v2 route must run server-side component policy validation."""
         from langflow.api.v2 import workflow as workflow_module
