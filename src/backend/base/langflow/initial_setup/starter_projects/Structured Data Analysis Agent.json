@@ -465,7 +465,7 @@
                   },
                   {
                     "name": "OpenDsStar",
-                    "version": "1.0.26"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4

@@ -11,10 +11,6 @@
       "reason": "Header GitHub button (aria-label \"GitHub 151k\" vs visible \"151k\") — shared header chrome."
     },
     {
-      "ruleId": "text_contrast_sufficient",
-      "reason": "Global theme tokens (text-muted-foreground ~4.40:1, text-accent-emerald-foreground ~3.86:1) used app-wide. Real, tracked Level-1 gap to resolve at the theme level, not per feature."
-    },
-    {
       "ruleId": "element_tabbable_role_valid",
       "reason": "AG-Grid tab-guard divs (tabindex=0 role=presentation) and Radix focus guards — framework-owned, not fixable from application code."
     },
