@@ -720,6 +720,7 @@
   "flows.viewList": "List view",
   "flows.viewGrid": "Grid view",
   "flows.downloadSelected": "Download selected flows",
+  "flows.openFlow": "Open flow",
   "flows.selectFlow": "Select {{name}}",
   "flows.moreOptions": "More options for {{name}}",
   "folder.options": "Options",

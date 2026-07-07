@@ -79,11 +79,9 @@ export const FormKeyRender = ({
     <div className="flex flex-col gap-4">
       <Form.Field name="apikey">
         {modalProps?.inputLabel && (
-          <Form.Label asChild className="mb-2">
-            <Label className="relative bottom-1">
-              {modalProps?.inputLabel as React.ReactNode}
-            </Label>
-          </Form.Label>
+          <Label htmlFor="primary-input" className="relative bottom-1 mb-2">
+            {modalProps?.inputLabel as React.ReactNode}
+          </Label>
         )}
 
         <div className="flex items-center justify-between gap-2">

@@ -456,7 +456,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -2160,7 +2160,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "lfx",
@@ -2478,10 +2478,10 @@
             "description": "# 📈 Market Research\n\nResearch a company and get a structured profile - pricing, plans, market, features, and more.\n\n## Setup\n1. **Agent** - add your LLM key (any provider in the Model dropdown).\n2. **Web Search** - needs no key.\n\n## How it works\n1. **Chat Input** - the company or domain to research.\n2. **Agent (Web Search)** - searches the web and gathers detailed information.\n3. **Structured Output** - extracts a structured company profile (domain, pricing tiers, free trial, enterprise, API, market, key features, target industries).\n4. **Parser - Chat Output** - the profile, formatted as a clean report.\n\n## Run\nType a company name (e.g. \"Amazon\") and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.market_research.ce13af36",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.market_research.ce13af36"
+            }
           },
           "type": "note"
         },
