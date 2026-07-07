@@ -1180,7 +1180,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "lfx",
@@ -1531,7 +1531,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -1778,10 +1778,10 @@
             "description": "# 📸 Instagram Copywriter\n\nTurn a topic into a ready-to-post **Instagram caption + image prompt** with a simple two-Agent chain - no prompt templates, no bundles.\n\n## Setup\nAdd your LLM key on **both Agents** (Model dropdown). **Web Search** needs no key (DuckDuckGo).\n\n## How it works\n1. **Chat Input -> Caption Agent** - your topic.\n2. **Caption Agent (+ Web Search tool)** - researches the topic live, then writes the caption (brand guidelines live in its System Prompt - edit there).\n3. **Caption Agent -> Image Agent** - reproduces the caption and appends a matching image-generation prompt.\n4. **Image Agent -> Chat Output** - final caption + image prompt.\n\n## Run\nOpen **Playground**, type a topic, and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.instagram_copywriter.b9b90e6b",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.instagram_copywriter.b9b90e6b"
+            }
           },
           "type": "note"
         },

@@ -5100,7 +5100,7 @@
                 },
                 {
                   "name": "bs4",
-                  "version": "4.12.3"
+                  "version": "4.15.0"
                 },
                 {
                   "name": "lfx",
@@ -5346,7 +5346,7 @@
                 },
                 {
                   "name": "bs4",
-                  "version": "4.12.3"
+                  "version": "4.15.0"
                 },
                 {
                   "name": "lfx",
@@ -5668,7 +5668,7 @@
                 },
                 {
                   "name": "bs4",
-                  "version": "4.12.3"
+                  "version": "4.15.0"
                 },
                 {
                   "name": "markitdown",
@@ -6070,7 +6070,7 @@
                 },
                 {
                   "name": "bs4",
-                  "version": "4.12.3"
+                  "version": "4.15.0"
                 },
                 {
                   "name": "lfx",
@@ -6901,7 +6901,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": "2.197.0"
+                  "version": "2.198.0"
                 }
               ],
               "total_dependencies": 4
@@ -9286,7 +9286,7 @@
                 },
                 {
                   "name": "sqlmodel",
-                  "version": "0.0.38"
+                  "version": "0.0.39"
                 },
                 {
                   "name": "lfx",
@@ -9495,7 +9495,7 @@
                 },
                 {
                   "name": "fastapi",
-                  "version": "0.138.0"
+                  "version": "0.139.0"
                 },
                 {
                   "name": "lfx",
@@ -9511,7 +9511,7 @@
                 },
                 {
                   "name": "googleapiclient",
-                  "version": "2.197.0"
+                  "version": "2.198.0"
                 }
               ],
               "total_dependencies": 7
@@ -10931,7 +10931,7 @@
               "dependencies": [
                 {
                   "name": "typing_extensions",
-                  "version": "4.15.0"
+                  "version": "4.16.0"
                 },
                 {
                   "name": "lfx",
@@ -12118,7 +12118,7 @@
                 },
                 {
                   "name": "fastapi",
-                  "version": "0.138.0"
+                  "version": "0.139.0"
                 },
                 {
                   "name": "lfx",
@@ -22229,7 +22229,7 @@
                 },
                 {
                   "name": "toolguard",
-                  "version": "0.2.20"
+                  "version": "0.2.21"
                 }
               ],
               "total_dependencies": 2
@@ -30966,7 +30966,7 @@
               "dependencies": [
                 {
                   "name": "typing_extensions",
-                  "version": "4.15.0"
+                  "version": "4.16.0"
                 },
                 {
                   "name": "lfx",
@@ -31179,6 +31179,6 @@
     "num_components": 129,
     "num_modules": 17
   },
-  "sha256": "4ef39d9e06ccfbff9f793328a982f7692d5d265e9bbf5e6a4ee87275066b5f4e",
+  "sha256": "6e864f4ebcf3176bf646faf3fee8d2eb66f8b4e2a49afdb4877ee2846cc0db96",
   "version": "1.11.0"
 }
