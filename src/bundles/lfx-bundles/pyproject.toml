@@ -189,7 +189,6 @@ all-no-torch = [
     "lfx-bundles[couchbase]",
     "lfx-bundles[deepseek]",
     "lfx-bundles[elastic]",
-    "lfx-bundles[exa]",
     "lfx-bundles[faiss]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
