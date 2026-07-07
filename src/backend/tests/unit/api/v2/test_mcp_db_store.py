@@ -249,3 +249,29 @@ async def test_backfill_from_legacy_file(client, active_user):  # noqa: ARG001  
         async with session_scope() as session:
             again = await backfill_mcp_servers_from_files(session)
         assert again["imported"] == 0, f"backfill not idempotent: {again}"
+
+
+# ---------------------------------------------------------------------------
+# Cache invalidation — updating a server must drop its hashed cache variants
+# ---------------------------------------------------------------------------
+def test_clear_server_cache_removes_hashed_variants():
+    """Updating a server clears the bare name AND every ``{name}:{hash}`` cache variant (else stale config)."""
+    from langflow.api.v2.mcp import _clear_server_cache
+
+    cache = {"servers": {"weather": 1, "weather:abc123": 2, "weather:def456": 3, "other": 4, "other:xyz": 5}}
+
+    def fake_get(_svc, key, default=None):
+        return cache.get(key, default)
+
+    def fake_set(_svc, key, value):
+        cache[key] = value
+
+    with patch.multiple(
+        "langflow.api.v2.mcp",
+        get_shared_component_cache_service=MagicMock(return_value=SimpleNamespace()),
+        safe_cache_get=fake_get,
+        safe_cache_set=fake_set,
+    ):
+        _clear_server_cache("weather")
+
+    assert cache["servers"] == {"other": 4, "other:xyz": 5}

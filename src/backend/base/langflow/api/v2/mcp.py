@@ -360,12 +360,19 @@ def _derive_transport(config: dict) -> str | None:
 
 
 def _clear_server_cache(server_name: str) -> None:
-    """Drop a server from the shared tool cache after it changes (best-effort)."""
+    """Drop a server from the shared tool cache after it changes (best-effort).
+
+    Cache keys are ``{server_name}:{hash of headers+timeout}`` (see
+    ``MCPComponent._mcp_servers_cache_key``), so a bare-name delete misses the
+    hashed variants and leaves servers with custom headers/timeouts serving stale
+    config. Clear the bare name and every ``{server_name}:`` variant.
+    """
     shared_component_cache_service = get_shared_component_cache_service()
     servers = safe_cache_get(shared_component_cache_service, "servers", {})
     if isinstance(servers, dict):
-        if server_name in servers:
-            del servers[server_name]
+        stale = [key for key in servers if key == server_name or key.startswith(f"{server_name}:")]
+        for key in stale:
+            del servers[key]
         safe_cache_set(shared_component_cache_service, "servers", servers)
 
 
