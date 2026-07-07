@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "description": "IBM Equal Access rule IDs owned by shared app chrome (header, folder sidebar) or third-party widgets (Radix, AG Grid, cmdk) that individual feature markup cannot fix. Single source of truth: a11y specs import this to build their runA11yScan ignoreRules, and build-a11y-html-report.mjs reads it to mark these findings as suppressed (greyed, not dropped) so real feature-owned issues stand out. Removing a rule here re-surfaces it everywhere.",
+  "suppressed": [
+    {
+      "ruleId": "aria_content_in_landmark",
+      "reason": "Left folder sidebar (MainPage chrome) and Radix portal menus rendered on document.body — shared chrome/framework portals, not feature markup."
+    },
+    {
+      "ruleId": "label_name_visible",
+      "reason": "Header GitHub button (aria-label \"GitHub 151k\" vs visible \"151k\") — shared header chrome."
+    },
+    {
+      "ruleId": "text_contrast_sufficient",
+      "reason": "Global theme tokens (text-muted-foreground ~4.40:1, text-accent-emerald-foreground ~3.86:1) used app-wide. Real, tracked Level-1 gap to resolve at the theme level, not per feature."
+    },
+    {
+      "ruleId": "element_tabbable_role_valid",
+      "reason": "AG-Grid tab-guard divs (tabindex=0 role=presentation) and Radix focus guards — framework-owned, not fixable from application code."
+    },
+    {
+      "ruleId": "aria_widget_labelled",
+      "reason": "AG-Grid exposes no gridOptions/GridApi to set an aria-label on its role=treegrid root."
+    },
+    {
+      "ruleId": "aria_child_tabbable",
+      "reason": "AG-Grid rowgroups and cmdk's role=listbox drive selection via aria-activedescendant (the correct composite-widget pattern), so they have no individually tabbable descendants."
+    },
+    {
+      "ruleId": "aria_hidden_nontabbable",
+      "reason": "Radix sets aria-hidden on the entire background subtree without `inert` when an overlay opens, so focusable descendants behind it stay tabbable. Flags app-wide chrome, not per-element defects."
+    },
+    {
+      "ruleId": "label_content_exists",
+      "reason": "cmdk's <Command> root always renders an empty visually-hidden <label>; with no label prop it has no content — framework-owned."
+    },
+    {
+      "ruleId": "label_ref_valid",
+      "reason": "cmdk's hidden label htmlFor targets the CommandInput that only mounts while the popup is open — framework-owned."
+    },
+    {
+      "ruleId": "combobox_autocomplete_valid",
+      "reason": "cmdk's CommandInput hardcodes aria-autocomplete=list role=combobox on the input inside the popup, which the checker treats as misplaced relative to the trigger — framework-owned."
+    }
+  ]
+}

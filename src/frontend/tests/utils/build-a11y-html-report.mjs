@@ -48,6 +48,42 @@ function readRouteManifest() {
 
 const routeLabelMap = readRouteManifest();
 
+function resolveIgnoreRulesPath() {
+  const candidates = [
+    path.resolve(process.cwd(), "tests/a11y/a11y-ignore-rules.json"),
+    path.resolve(
+      process.cwd(),
+      "src/frontend/tests/a11y/a11y-ignore-rules.json",
+    ),
+  ];
+  return candidates.find((candidate) => existsSync(candidate));
+}
+
+// Rules owned by shared chrome / third-party widgets (see a11y-ignore-rules.json).
+// The report keeps these findings visible but marks them suppressed so real,
+// feature-owned issues stand out. Missing file = nothing suppressed.
+function readSuppressedRules() {
+  const ignorePath = resolveIgnoreRulesPath();
+  if (!ignorePath) return new Map();
+  const parsed = JSON.parse(readFileSync(ignorePath, "utf8"));
+  return new Map(
+    (parsed.suppressed ?? []).map((entry) => [
+      entry.ruleId,
+      entry.reason ?? "",
+    ]),
+  );
+}
+
+const suppressedRules = readSuppressedRules();
+
+function isSuppressed(ruleId) {
+  return suppressedRules.has(ruleId);
+}
+
+function suppressionReason(ruleId) {
+  return suppressedRules.get(ruleId) ?? "";
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -56,13 +92,30 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+// Scan labels are built as `project__label[__scanIndex]` (buildA11yScanLabel);
+// the numeric scanIndex is only appended for the 2nd+ scan within a test.
+// Strip the leading project segment and any trailing numeric index so the
+// developer-chosen label survives — otherwise a greedy strip collapses every
+// multi-scan test's later scans into meaningless "1"/"2" routes.
+function shortLabelFromLabel(label) {
+  const parts = String(label).split("__");
+  const withoutProject = parts.length > 1 ? parts.slice(1) : parts;
+  if (
+    withoutProject.length > 1 &&
+    /^\d+$/.test(withoutProject[withoutProject.length - 1])
+  ) {
+    withoutProject.pop();
+  }
+  return withoutProject.join("__");
+}
+
 function routeFromLabel(label) {
-  const shortLabel = label.replace(/^.*__/, "");
+  const shortLabel = shortLabelFromLabel(label);
   return routeLabelMap.get(shortLabel)?.path ?? shortLabel;
 }
 
 function surfaceFromLabel(label) {
-  const shortLabel = label.replace(/^.*__/, "");
+  const shortLabel = shortLabelFromLabel(label);
   return routeLabelMap.get(shortLabel)?.surface ?? "";
 }
 
@@ -128,6 +181,10 @@ function readReports() {
         rules.set(issue.ruleId, (rules.get(issue.ruleId) ?? 0) + 1);
       }
 
+      const actionableIssueCount = issues.filter(
+        (issue) => !isSuppressed(issue.ruleId),
+      ).length;
+
       return {
         file,
         htmlFile: file.replace(/\.json$/, ".html"),
@@ -135,14 +192,28 @@ function readReports() {
         route: routeFromLabel(label),
         surface: surfaceFromLabel(label),
         issues,
+        issueCount: issues.length,
+        actionableIssueCount,
+        suppressedIssueCount: issues.length - actionableIssueCount,
         rules: [...rules.entries()]
-          .map(([ruleId, count]) => ({ ruleId, count }))
+          .map(([ruleId, count]) => ({
+            ruleId,
+            count,
+            suppressed: isSuppressed(ruleId),
+          }))
           .sort(
-            (a, b) => b.count - a.count || a.ruleId.localeCompare(b.ruleId),
+            (a, b) =>
+              Number(a.suppressed) - Number(b.suppressed) ||
+              b.count - a.count ||
+              a.ruleId.localeCompare(b.ruleId),
           ),
       };
     })
-    .sort((a, b) => a.route.localeCompare(b.route));
+    .sort(
+      (a, b) =>
+        b.actionableIssueCount - a.actionableIssueCount ||
+        a.route.localeCompare(b.route),
+    );
 }
 
 function groupByRule(routes) {
@@ -171,13 +242,20 @@ function groupByRule(routes) {
     .map((rule) => ({
       ruleId: rule.ruleId,
       count: rule.count,
+      suppressed: isSuppressed(rule.ruleId),
+      suppressionReason: suppressionReason(rule.ruleId),
       routes: [...rule.routes.entries()]
         .map(([route, count]) => ({ route, count }))
         .sort((a, b) => b.count - a.count || a.route.localeCompare(b.route)),
       messages: [...rule.messages],
       help: rule.help,
     }))
-    .sort((a, b) => b.count - a.count || a.ruleId.localeCompare(b.ruleId));
+    .sort(
+      (a, b) =>
+        Number(a.suppressed) - Number(b.suppressed) ||
+        b.count - a.count ||
+        a.ruleId.localeCompare(b.ruleId),
+    );
 }
 
 function renderRoute(route) {
@@ -189,27 +267,41 @@ function renderRoute(route) {
   }
 
   const ruleGroups = [...issuesByRule.entries()]
-    .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
-    .map(
-      ([ruleId, issues]) => `
-        <details class="rule">
+    .sort(
+      (a, b) =>
+        Number(isSuppressed(a[0])) - Number(isSuppressed(b[0])) ||
+        b[1].length - a[1].length ||
+        a[0].localeCompare(b[0]),
+    )
+    .map(([ruleId, issues]) => {
+      const suppressed = isSuppressed(ruleId);
+      const badge = suppressed
+        ? `<span class="tag" title="${escapeHtml(suppressionReason(ruleId))}">suppressed</span>`
+        : "";
+      return `
+        <details class="rule${suppressed ? " suppressed" : ""}">
           <summary>
-            <span class="rule-name">${escapeHtml(ruleId)}</span>
-            <span class="count">${issues.length}</span>
+            <span class="rule-name">${escapeHtml(ruleId)}${badge}</span>
+            <span class="count${suppressed ? " muted-count" : ""}">${issues.length}</span>
           </summary>
           <div class="issue-list">
             ${issues.map(renderIssue).join("")}
           </div>
         </details>
-      `,
-    )
+      `;
+    })
     .join("");
 
+  const countLabel =
+    route.suppressedIssueCount > 0
+      ? `${route.actionableIssueCount} <span class="count-sub">(+${route.suppressedIssueCount} suppressed)</span>`
+      : `${route.actionableIssueCount}`;
+
   return `
-    <details class="route" open>
+    <details class="route${route.actionableIssueCount === 0 ? " clean" : ""}"${route.actionableIssueCount > 0 ? " open" : ""}>
       <summary>
         <span class="route-name">${escapeHtml(route.route)}${route.surface ? ` <span class="surface">${escapeHtml(route.surface)}</span>` : ""}</span>
-        <span class="count">${route.issues.length}</span>
+        <span class="count${route.actionableIssueCount === 0 ? " muted-count" : ""}">${countLabel}</span>
       </summary>
       <div class="route-meta">
         <a href="${escapeHtml(route.htmlFile)}">Open IBM HTML</a>
@@ -246,9 +338,12 @@ function renderIssue(issue) {
 }
 
 function renderRuleSummary(rule) {
+  const badge = rule.suppressed
+    ? `<span class="tag" title="${escapeHtml(rule.suppressionReason)}">suppressed</span>`
+    : "";
   return `
-    <tr>
-      <td><a href="${escapeHtml(rule.help)}">${escapeHtml(rule.ruleId)}</a></td>
+    <tr${rule.suppressed ? ' class="suppressed"' : ""}>
+      <td><a href="${escapeHtml(rule.help)}">${escapeHtml(rule.ruleId)}</a>${badge}</td>
       <td>${rule.count}</td>
       <td>${rule.routes
         .map((route) => `${escapeHtml(route.route)} (${route.count})`)
@@ -258,10 +353,13 @@ function renderRuleSummary(rule) {
 }
 
 function renderHtml(routes, rules) {
-  const totalIssues = routes.reduce(
-    (sum, route) => sum + route.issues.length,
+  const totalIssues = routes.reduce((sum, route) => sum + route.issueCount, 0);
+  const actionableIssues = routes.reduce(
+    (sum, route) => sum + route.actionableIssueCount,
     0,
   );
+  const suppressedIssues = totalIssues - actionableIssues;
+  const actionableRuleCount = rules.filter((rule) => !rule.suppressed).length;
   const generatedAt = new Date().toISOString();
 
   return `<!doctype html>
@@ -399,6 +497,28 @@ function renderHtml(routes, rules) {
       word-break: break-word;
     }
     .empty { padding: 0 16px 16px; color: var(--muted); }
+    .note { margin-top: 12px; font-size: 13px; }
+    .stat.actionable strong { color: var(--danger); }
+    .tag {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--code);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      vertical-align: middle;
+      cursor: help;
+    }
+    .muted-count { background: var(--muted) !important; }
+    .count-sub { font-weight: 400; font-size: 11px; opacity: .85; }
+    tr.suppressed td, .rule.suppressed > summary .rule-name { color: var(--muted); }
+    tr.suppressed td a { color: var(--muted); }
+    .route.clean > summary .route-name { color: var(--muted); }
   </style>
 </head>
 <body>
@@ -407,9 +527,11 @@ function renderHtml(routes, rules) {
     <p class="muted">Generated ${escapeHtml(generatedAt)} from IBM accessibility-checker JSON reports.</p>
     <div class="stats">
       <div class="stat"><strong>${routes.length}</strong> routes scanned</div>
-      <div class="stat"><strong>${totalIssues}</strong> issues</div>
-      <div class="stat"><strong>${rules.length}</strong> rules</div>
+      <div class="stat actionable"><strong>${actionableIssues}</strong> actionable issues</div>
+      <div class="stat"><strong>${suppressedIssues}</strong> suppressed (chrome/framework)</div>
+      <div class="stat"><strong>${actionableRuleCount}</strong> actionable rules <span class="muted">/ ${rules.length} total</span></div>
     </div>
+    <p class="muted note">Suppressed findings come from shared app chrome or third-party widgets (see <code>tests/a11y/a11y-ignore-rules.json</code>). They are kept visible but greyed so feature-owned issues stand out.</p>
   </header>
   <main>
     <h2>Rules Summary</h2>
@@ -430,16 +552,26 @@ function renderHtml(routes, rules) {
 
 const routes = readReports();
 const rules = groupByRule(routes);
+const issueCount = routes.reduce((sum, route) => sum + route.issueCount, 0);
+const actionableIssueCount = routes.reduce(
+  (sum, route) => sum + route.actionableIssueCount,
+  0,
+);
 const summary = {
   generatedAt: new Date().toISOString(),
   routeCount: routes.length,
-  issueCount: routes.reduce((sum, route) => sum + route.issues.length, 0),
+  issueCount,
+  actionableIssueCount,
+  suppressedIssueCount: issueCount - actionableIssueCount,
   ruleCount: rules.length,
+  actionableRuleCount: rules.filter((rule) => !rule.suppressed).length,
   routes: routes.map((route) => ({
     route: route.route,
     surface: route.surface,
     label: route.label,
-    issueCount: route.issues.length,
+    issueCount: route.issueCount,
+    actionableIssueCount: route.actionableIssueCount,
+    suppressedIssueCount: route.suppressedIssueCount,
     rules: route.rules,
     htmlFile: route.htmlFile,
     jsonFile: route.file,

@@ -1,6 +1,7 @@
 import { expect, type LangflowPage, test } from "../fixtures";
 import { awaitBootstrapTest } from "../utils/await-bootstrap-test";
 import { TIMEOUTS } from "../utils/constants/timeouts";
+import a11yIgnoreRules from "./a11y-ignore-rules.json";
 import {
   attachFiles,
   disableAnimations,
@@ -35,61 +36,11 @@ import {
 // into data-driven scenarios and serial journeys to cut bootstrap overhead.
 
 // Rules triggered by shared app chrome, the global theme, or third-party
-// widgets that the knowledge-base feature does not own. Each entry was
-// validated against the report DOM (coverage/accessibility-reports) and, where
-// relevant, the dependency source. Suppressed so scans reflect KB-specific
-// issues rather than app-wide concerns tracked elsewhere.
-const KB_IGNORE_RULES = [
-  // aria_content_in_landmark: the flagged nodes are the LEFT folder sidebar
-  // (SideBarFoldersButtonsComponent — upload-project-button, sidebar-nav-*,
-  // "Options for …") and Radix portal menus rendered on document.body. Both are
-  // shared MainPage chrome / framework portals, not KB markup.
-  "aria_content_in_landmark",
-  // label_name_visible: only the header GitHub button (aria-label="GitHub 151k"
-  // vs visible "151k"). Shared header chrome.
-  "label_name_visible",
-  // text_contrast_sufficient (WCAG 1.4.3, IBM Level 1): every occurrence comes
-  // from GLOBAL theme tokens — `text-muted-foreground` (~4.40:1 vs the 4.5:1
-  // minimum) and `text-accent-emerald-foreground` (~3.86:1) — used app-wide, not
-  // KB-specific colors. Fixing means adjusting the design tokens (all surfaces),
-  // which is out of scope for KB markup. NOTE: this is a real, tracked Level-1
-  // gap; it should be resolved at the theme level, not permanently ignored.
-  "text_contrast_sufficient",
-  // AG Grid 32 + framework focus guards — not fixable from application code:
-  // • element_tabbable_role_valid: AG-Grid tab-guard divs (tabindex="0"
-  //   role="presentation") and Radix focus guards (data-radix-focus-guard).
-  // • aria_widget_labelled: AG-Grid exposes no gridOptions/GridApi to set an
-  //   aria-label on its role="treegrid" root.
-  // • aria_child_tabbable: AG-Grid rowgroups and cmdk's role="listbox" have no
-  //   individually tabbable descendants (both drive selection via
-  //   aria-activedescendant — the correct composite-widget pattern).
-  "element_tabbable_role_valid",
-  "aria_widget_labelled",
-  "aria_child_tabbable",
-  // Radix / cmdk framework limitations — validated against the report DOM and the
-  // dependency source; none are fixable from KB markup:
-  // • aria_hidden_nontabbable: whenever a Radix overlay (Dialog/Select/Popover/
-  //   DropdownMenu) opens, Radix sets aria-hidden="true" on the ENTIRE background
-  //   subtree but does not set `inert`, so every focusable descendant behind the
-  //   overlay stays tabbable. The report flags the whole background — app header,
-  //   folder sidebar, AND KB content (search-kb-input, AG-Grid, chunk buttons)
-  //   alike. It is not a per-element defect; only an app-wide `inert` treatment
-  //   of the background would resolve it, which is outside the KB feature.
-  "aria_hidden_nontabbable",
-  // • label_content_exists / label_ref_valid: cmdk's <Command> root always renders
-  //   `<label cmdk-label htmlFor={inputId} style={visuallyHidden}>{label}</label>`
-  //   (see node_modules/cmdk/dist/index.js, style var `rt` — the exact
-  //   clip:rect(0,0,0,0) label the checker flags). With no `label` prop it is empty
-  //   (label_content_exists) and its `htmlFor` targets the CommandInput that only
-  //   mounts while the popup is open (label_ref_valid). Every combobox built on
-  //   Popover+Command (metadata filter, model + db-provider dropdowns) inherits it.
-  "label_content_exists",
-  "label_ref_valid",
-  // • combobox_autocomplete_valid: cmdk's CommandInput hardcodes
-  //   aria-autocomplete="list" role="combobox" on the input inside the popup, which
-  //   the checker treats as misplaced relative to the trigger. Framework-owned.
-  "combobox_autocomplete_valid",
-];
+// widgets that the knowledge-base feature does not own. The list (with a
+// per-rule justification for each entry) is the single source of truth in
+// a11y-ignore-rules.json — shared with build-a11y-html-report.mjs so the
+// report greys these out instead of counting them as KB-owned issues.
+const KB_IGNORE_RULES = a11yIgnoreRules.suppressed.map((rule) => rule.ruleId);
 
 type A11yScenario = {
   name: string;
@@ -293,11 +244,17 @@ test.describe("knowledge bases route accessibility", () => {
         ignoreRules: KB_IGNORE_RULES,
       });
 
+      // The a11y scan drops the open menu, so it must be reopened to reach the
+      // Delete item. Reopening a Radix menu is a toggle click, which can race
+      // the previous close, so poll: click the trigger until Delete renders.
       await page.keyboard.press("Escape");
       await expect(viewChunksItem).toBeHidden({ timeout: TIMEOUTS.standard });
-      await rowActionsTrigger.click();
+
       const deleteItem = page.getByRole("menuitem", { name: /^Delete$/ });
-      await expect(deleteItem).toBeVisible({ timeout: TIMEOUTS.standard });
+      await expect(async () => {
+        await rowActionsTrigger.click();
+        await expect(deleteItem).toBeVisible({ timeout: TIMEOUTS.short });
+      }).toPass({ timeout: TIMEOUTS.standard });
 
       await deleteItem.click();
       await expect(

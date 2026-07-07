@@ -69,7 +69,10 @@ async function expectReadyCheck(page: LangflowPage, check: ReadyCheck) {
     const locator = check.oneOf
       .map((candidate) => locatorForReadyCheck(page, candidate))
       .reduce((combined, candidate) => combined.or(candidate));
-    await expect(locator).toBeVisible({ timeout: TIMEOUTS.standard });
+    // A oneOf check passes when at least one candidate renders. Multiple can
+    // match (e.g. the KB page shows both the "Add knowledge" button and the
+    // search input), so scope to .first() to avoid a strict-mode violation.
+    await expect(locator.first()).toBeVisible({ timeout: TIMEOUTS.standard });
     return;
   }
 
