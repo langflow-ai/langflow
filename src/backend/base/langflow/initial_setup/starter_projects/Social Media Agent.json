@@ -432,7 +432,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -1348,7 +1348,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "lfx",
@@ -1703,7 +1703,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "markitdown",
@@ -2128,10 +2128,10 @@
             "description": "# 📱 Social Media Agent\n\nAn **Agent** that researches topics across the web and pulls content from pages, then answers your social-media tasks (draft posts, summarize trends, gather references).\n\n## Setup\n1. **Agent** - add your LLM key (any provider in the Model dropdown).\n2. **Web Search** - no key needed (DuckDuckGo / Google News).\n3. **URL** - no key needed; fetches the content of a page you point the Agent at.\n\n## How it works\n1. **Chat Input → Agent** - your task (e.g. \"summarize the latest on <topic> and draft a post\").\n2. The Agent uses its tools - **Web Search** to find current info and **URL** to read specific pages - then composes the answer.\n3. **Agent → Chat Output** - the result.\n\n## Run\nOpen **Playground**, describe what you want, and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.social_media_agent.efae982f",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.social_media_agent.efae982f"
+            }
           },
           "type": "note"
         },

@@ -274,7 +274,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": "2.198.0"
                   },
                   {
                     "name": "lfx",
@@ -1444,7 +1444,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -1963,10 +1963,10 @@
             "description": "# 📺 YouTube Analysis\n\nAnalyze a YouTube video using its comments and transcript — the sentiment of\nthe comments plus the transcript content, combined into one analysis.\n\n## Setup\n1. Agent — add your LLM key (any provider in the Model dropdown).\n2. YouTube components — add your YouTube Data API v3 key (free, Google Cloud Console).\n3. Chat Input — paste a valid YouTube video URL (a sample is already provided).\n\n## How it works\n1. Chat Input → YouTube Comments — fetches the video's comments.\n2. Batch Run → Parser — runs the comments through the model in batches and formats the result.\n3. Prompt → Agent — the Agent (with YouTube Transcripts tool) combines comment analysis + transcript.\n4. Agent → Chat Output — the comprehensive video analysis.\n\n## Run\nPaste a YouTube URL in the chat and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.youtube_analysis.c8787173",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.youtube_analysis.c8787173"
+            }
           },
           "type": "note"
         },

@@ -373,7 +373,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -1115,10 +1115,10 @@
             "description": "# 🖼️ Image Sentiment Analysis\n\nUpload an image and a **Language Model** (vision) classifies its sentiment (**positive / negative / neutral**) and describes it in a single `Sentiment: ..., Description: ...` line.\n\n## Setup\n1. **Language Model** - pick a **vision-capable** model (e.g. a GPT-4o / multimodal model) and add your API key. The classification instruction lives in its **System Message** (edit there).\n2. **Chat Input** - attach the image (paperclip 📎) you want analyzed.\n\n## How it works\n1. **Chat Input -> Language Model** - the image is sent straight to the vision model as content (unlike an Agent, the Language Model passes images natively, so the model truly sees them).\n2. **Language Model -> Chat Output** - the model returns the sentiment + description in that single-line format.\n\n## Run\nOpen **Playground**, attach an image, and run. You can send the image on its own - no extra text needed.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.image_sentiment_analysis.7126745f",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.image_sentiment_analysis.7126745f"
+            }
           },
           "type": "note"
         },

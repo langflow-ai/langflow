@@ -410,7 +410,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -1762,10 +1762,10 @@
             "description": "# 🐦 Twitter Thread Generator\n\nTurn a project brief into an engaging multi-tweet **thread**. Rebuilt on the new **Agent** core component.\n\n## Setup\n1. **Agent** - add your LLM key (any provider in the Model dropdown).\n2. **Prompt Template** - tune the thread rules: PROFILE_TYPE, PROFILE_DETAILS, CONTENT_GUIDELINES, TONE_AND_STYLE, OUTPUT_FORMAT, OUTPUT_LANGUAGE.\n\n## How it works\n1. **Prompt → Agent (System Prompt)** - the instructions + style guidelines steer the Agent.\n2. **Chat Input → Agent (Input)** - your project context / what the thread is about.\n3. **Agent → Chat Output** - the finished tweet or numbered thread.\n\n## Run\nOpen **Playground**, type (or keep) the context in Chat Input, and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.twitter_thread_generator.7e45a5a9",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.twitter_thread_generator.7e45a5a9"
+            }
           },
           "type": "note"
         },
