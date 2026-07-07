@@ -937,7 +937,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -3461,7 +3461,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "lfx",
@@ -3779,10 +3779,10 @@
             "description": "# 🔎 Deeply Research Agent\n\nAsk a research question and get a thorough, synthesized answer. Three Agents work together: one plans, one researches the web, and one writes up the findings.\n\n## Setup\n1. Add your LLM key on each of the three **Agents**.\n2. **Web Search** - no key needed (DuckDuckGo / Google News).\n\n## How it works\n1. **Chat Input → Planner Agent** - drafts a plan / initial take on the question.\n2. **Search Agent (+ Web Search)** - researches the topic on the web.\n3. **Synthesizer Agent** - combines the question, plan, and search results into a final answer.\n4. **→ Chat Output** - the researched answer.\n\n## Run\nOpen **Playground**, ask a research question, and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.deep_research_agent.195c6a9d",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.deep_research_agent.195c6a9d"
+            }
           },
           "type": "note"
         },

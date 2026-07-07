@@ -429,10 +429,11 @@ complete = [
     # langflow-base's OWN code imports -- service backends (cache, knowledge
     # base), the tracing/observability backends in langflow.services.tracing.*,
     # MCP, and deployment adapters. Provider *component* dependencies now live in
-    # the lfx-* bundles (installed via langflow's "lfx-bundles[all]" dependency),
-    # so they are intentionally NOT re-declared here -- doing so re-pulled large,
-    # already-bundled stacks (and torch) into every install. When adding a base
-    # extra, only list it here if langflow-base itself imports it.
+    # the lfx-* bundles (installed via langflow's "lfx-bundles[all-no-torch]"
+    # default plus explicit bundle deps), so they are intentionally NOT
+    # re-declared here -- doing so re-pulled large, already-bundled stacks (and
+    # torch) into every install. When adding a base extra, only list it here if
+    # langflow-base itself imports it.
 
     # Cache / state
     "langflow-base[redis]",
@@ -447,6 +448,11 @@ complete = [
     "langflow-base[opik]",
     "langflow-base[traceloop]",
     "langflow-base[openlayer]",
+    # Document processing / OCR: docling and easyocr are now OPT-IN -- both pull
+    # torch, which is no longer shipped by default. The File component's docling
+    # path degrades gracefully and is enabled with: pip install "langflow[docling]".
+    # Both extra definitions remain, so langflow-base[docling] / [easyocr] still
+    # install on demand.
     # MCP
     "langflow-base[mcp]",
     # Orchestration / deployment adapters
@@ -462,10 +468,7 @@ complete = [
     #   litellm -- langfuse logging via litellm.proxy.proxy_server (#12228);
     #              the lfx-bundles litellm component uses the langchain-openai
     #              client and does not import the litellm package.
-    #   docling -- the File component's optional docling path; this also gates
-    #              torch and is made opt-in by the separate torch change.
     "langflow-base[litellm]",
-    "langflow-base[docling]",
 ]
 
 all = [
