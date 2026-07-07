@@ -103,7 +103,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -415,7 +415,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": "2.198.0"
                   }
                 ],
                 "total_dependencies": 4

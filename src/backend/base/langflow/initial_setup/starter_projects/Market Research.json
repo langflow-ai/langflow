@@ -456,7 +456,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -2160,7 +2160,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "lfx",

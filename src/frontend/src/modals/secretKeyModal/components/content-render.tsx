@@ -29,6 +29,7 @@ export const ContentRenderKey = ({
 
           <Input
             data-testid="api-key-input"
+            aria-label="Generated API key"
             ref={inputRef}
             readOnly={true}
             value={apiKeyValue}
@@ -41,12 +42,17 @@ export const ContentRenderKey = ({
             e.stopPropagation();
           }}
           data-testid="btn-copy-api-key"
+          aria-label="Copy API key"
           unstyled
         >
           {textCopied ? (
-            <IconComponent name="Copy" className="h-4 w-4" />
+            <IconComponent name="Copy" className="h-4 w-4" aria-hidden="true" />
           ) : (
-            <IconComponent name="Check" className="h-4 w-4" />
+            <IconComponent
+              name="Check"
+              className="h-4 w-4"
+              aria-hidden="true"
+            />
           )}
         </Button>
       </div>

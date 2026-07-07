@@ -1081,7 +1081,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "markitdown",
@@ -1535,7 +1535,7 @@
                   },
                   {
                     "name": "numpy",
-                    "version": "2.4.6"
+                    "version": "2.5.1"
                   },
                   {
                     "name": "langchain_chroma",
@@ -1547,7 +1547,7 @@
                   },
                   {
                     "name": "sqlmodel",
-                    "version": "0.0.38"
+                    "version": "0.0.39"
                   },
                   {
                     "name": "lfx",
@@ -1847,7 +1847,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
