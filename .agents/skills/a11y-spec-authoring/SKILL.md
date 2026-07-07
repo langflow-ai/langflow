@@ -27,7 +27,7 @@ route with the IBM Equal Access checker and drives its findings to zero.
 | `src/frontend/tests/a11y/README.md` | The 5-step a11y coverage workflow this skill implements. |
 | `src/frontend/tests/a11y/ibm-a11y-level1-criteria.md` | Maps each flagged rule to a WCAG/IBM criterion + fix patterns. |
 | `src/frontend/tests/a11y/ibm-a11y-level1-tracker.md` | Route checklist. Pick/add the surface you are covering; tick it when clean. |
-| `src/frontend/tests/a11y/a11y-ignore-rules.json` | Single source of truth for chrome/framework-owned rules (see Suppressing rules). |
+| `src/frontend/tests/a11y/<feature>-ignore-rules.json` | Feature-specific suppress list (KB example: `knowledge-bases-ignore-rules.json`). |
 | `src/frontend/tests/a11y/knowledge-bases.a11y.spec.ts` | Best full example: many states, modals, drawers, shared ignore rules, a fixtures helper. |
 | `src/frontend/tests/a11y/auth-pages.a11y.spec.ts` | Gated routes, validation, error toasts, light/dark scans. |
 | `src/frontend/tests/a11y/core-pages.a11y.spec.ts` | Serial journey across canvas → config panel → playground. |
@@ -125,27 +125,29 @@ Fix application markup first. Only suppress a rule when it is provably owned by
 shared chrome (app header, folder sidebar) or a third-party widget (Radix, AG
 Grid, cmdk) and cannot be fixed from the feature's markup.
 
-**Suppressions are centralized in `tests/a11y/a11y-ignore-rules.json`** — one
-entry per rule with a `ruleId` and a `reason` grounded in the report DOM. This is
-the single source of truth:
+**Suppressions are feature-specific.** Each feature owns its own
+`tests/a11y/<feature>-ignore-rules.json` — one entry per rule with a `ruleId`
+and a `reason` grounded in the report DOM. The KB example is
+`knowledge-bases-ignore-rules.json`.
 
-- Specs build their `ignoreRules` from it, e.g.:
+- The spec imports it to build the `ignoreRules` array:
 
   ```ts
-  import a11yIgnoreRules from "./a11y-ignore-rules.json";
+  import a11yIgnoreRules from "./rules/knowledge-bases-ignore-rules.json";
   const KB_IGNORE_RULES = a11yIgnoreRules.suppressed.map((rule) => rule.ruleId);
   ```
 
-- `build-a11y-html-report.mjs` reads the same file and, instead of hiding these
-  findings, **marks them "suppressed" (greyed) and reports actionable vs
-  suppressed counts** so feature-owned issues stand out. The job summary
-  (`a11y:job-summary`) sorts routes by *actionable* issues and lists only
-  actionable rules.
+- `build-a11y-html-report.mjs` reads the file and **greys findings out only on
+  routes whose label starts with `kb`** — other feature scans see all their
+  findings as actionable. The report shows *actionable* vs *suppressed* counts;
+  the job summary sorts routes by actionable issues and lists only actionable
+  rules.
 
-To suppress a new rule, add it to the JSON with a clear reason. Keep real,
-tracked gaps that must be fixed elsewhere (e.g. theme-level
-`text_contrast_sufficient`) in the list with a reason noting they are a real
-Level 1 gap — they show as suppressed but stay visible for tracking.
+Other features should create their own `<feature>-ignore-rules.json` and scope
+the report-level suppression to their route prefix (update
+`isSuppressedForRoute` in `build-a11y-html-report.mjs` if/when needed). Keep
+real tracked gaps (e.g. theme-level `text_contrast_sufficient`) in the list with
+a reason — they show as suppressed but stay visible for tracking.
 
 ## Starter template
 
@@ -153,7 +155,7 @@ Level 1 gap — they show as suppressed but stay visible for tracking.
 import { expect, type LangflowPage, test } from "../fixtures";
 import { awaitBootstrapTest } from "../utils/await-bootstrap-test";
 import { TIMEOUTS } from "../utils/constants/timeouts";
-import a11yIgnoreRules from "./a11y-ignore-rules.json";
+import a11yIgnoreRules from "./<feature>-ignore-rules.json";
 
 const RELEASE = { tag: ["@release", "@workspace"] };
 const IGNORE_RULES = a11yIgnoreRules.suppressed.map((rule) => rule.ruleId);
@@ -223,7 +225,7 @@ for a new spec.
   (the label is the report's route name).
 - Always gate on a visible `data-testid`/role before scanning a state.
 - Re-open overlays after a scan (resiliently) — the scan dismisses them.
-- Fix app markup before suppressing; add suppressions to `a11y-ignore-rules.json`
+- Fix app markup before suppressing; add suppressions to `<feature>-ignore-rules.json`
   with a DOM-grounded reason.
 - Don't invent routes — read `src/frontend/src/routes.tsx` and the tracker.
 - Prefer real integrations; when mocking, put route mocks in `helpers/*.fixtures.ts`.

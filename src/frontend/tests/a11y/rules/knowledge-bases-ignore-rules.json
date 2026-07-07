@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "IBM Equal Access rule IDs owned by shared app chrome (header, folder sidebar) or third-party widgets (Radix, AG Grid, cmdk) that individual feature markup cannot fix. Single source of truth: a11y specs import this to build their runA11yScan ignoreRules, and build-a11y-html-report.mjs reads it to mark these findings as suppressed (greyed, not dropped) so real feature-owned issues stand out. Removing a rule here re-surfaces it everywhere.",
+  "description": "IBM Equal Access rule IDs suppressed specifically for the Knowledge Bases feature — owned by shared app chrome (header, folder sidebar) or third-party widgets (Radix, AG Grid, cmdk) that KB feature markup cannot fix. knowledge-bases.a11y.spec.ts imports this for its runA11yScan ignoreRules; build-a11y-html-report.mjs reads it to grey-out these findings only on KB-labeled routes. Other feature specs are unaffected and should create their own ignore lists if needed.",
   "suppressed": [
     {
       "ruleId": "aria_content_in_landmark",

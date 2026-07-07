@@ -139,19 +139,21 @@ step 3 until the scan is clean.
 
 Sometimes a finding is genuinely owned by shared app chrome or a third-party
 widget (Radix, AG Grid, cmdk) and can't be fixed from the feature's markup. Those
-suppressions live in one place — [`a11y-ignore-rules.json`](a11y-ignore-rules.json) —
-the single source of truth, with one `{ "ruleId", "reason" }` entry per rule:
+suppressions are **feature-specific**. Knowledge Bases centralizes its own in
+[`knowledge-bases-ignore-rules.json`](knowledge-bases-ignore-rules.json) — one
+`{ "ruleId", "reason" }` entry per rule:
 
-- Specs build their `ignoreRules` from it, e.g. `knowledge-bases.a11y.spec.ts`
-  does `a11yIgnoreRules.suppressed.map((rule) => rule.ruleId)`.
-- The HTML report and job summary read the same file and **grey these findings
-  out instead of hiding them**, then report *actionable* vs *suppressed* counts so
-  real, feature-owned issues stand out. Focus on the actionable numbers.
+- `knowledge-bases.a11y.spec.ts` imports it to build `KB_IGNORE_RULES` for every
+  `runA11yScan(...)` call (only relevant under `RUN_A11Y_ASSERT=true`).
+- `build-a11y-html-report.mjs` reads the same file and **greys these findings out
+  on KB-labeled routes only** — other feature scans are unaffected and show all
+  their findings as actionable. The report then shows *actionable* vs *suppressed*
+  counts; focus on the actionable numbers.
 
-To suppress a new rule, add an entry with a DOM-grounded reason. Keep real,
-tracked gaps that must be fixed elsewhere (for example, theme-level
-`text_contrast_sufficient`) in the list with a reason — they stay visible as
-suppressed for tracking, never silently dropped.
+Other feature specs should create their own `<feature>-ignore-rules.json` if they
+need to suppress framework-owned rules. Keep real tracked gaps (for example,
+theme-level `text_contrast_sufficient`) in the list with a reason — they stay
+visible as suppressed for tracking, never silently dropped.
 
 > The scan itself dismisses open overlays (it injects the IBM ACE engine, which
 > closes Radix menus/dropdowns/popovers). To scan a state and then interact with

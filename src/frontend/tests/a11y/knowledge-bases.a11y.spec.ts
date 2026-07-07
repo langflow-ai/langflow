@@ -1,7 +1,6 @@
 import { expect, type LangflowPage, test } from "../fixtures";
 import { awaitBootstrapTest } from "../utils/await-bootstrap-test";
 import { TIMEOUTS } from "../utils/constants/timeouts";
-import a11yIgnoreRules from "./a11y-ignore-rules.json";
 import {
   attachFiles,
   disableAnimations,
@@ -30,6 +29,7 @@ import {
   SEEDED_STATUS_KNOWLEDGE_BASES,
   settleNetwork,
 } from "./helpers/knowledge-bases.fixtures";
+import a11yIgnoreRules from "./rules/knowledge-bases-ignore-rules.json";
 
 // Accessibility scans for /assets/knowledge-bases and its chunks child route.
 // Each distinct UI surface gets its own runA11yScan label; tests are grouped
@@ -38,7 +38,7 @@ import {
 // Rules triggered by shared app chrome, the global theme, or third-party
 // widgets that the knowledge-base feature does not own. The list (with a
 // per-rule justification for each entry) is the single source of truth in
-// a11y-ignore-rules.json — shared with build-a11y-html-report.mjs so the
+// knowledge-bases-ignore-rules.json — shared with build-a11y-html-report.mjs so the
 // report greys these out instead of counting them as KB-owned issues.
 const KB_IGNORE_RULES = a11yIgnoreRules.suppressed.map((rule) => rule.ruleId);
 

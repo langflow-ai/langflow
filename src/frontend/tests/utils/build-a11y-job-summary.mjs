@@ -97,7 +97,7 @@ const lines = [
   `| ${summary.routeCount} | ${actionableIssues} | ${suppressedIssues} | ${totalIssues} | ${summary.ruleCount} |`,
   "",
   "> Suppressed = findings owned by shared app chrome or third-party widgets",
-  "> (see `tests/a11y/a11y-ignore-rules.json`). Focus on actionable issues.",
+  "> (see `tests/a11y/rules/knowledge-bases-ignore-rules.json` for KB rules). Focus on actionable issues.",
   "",
   "### Worst Routes (by actionable issues)",
   "",
