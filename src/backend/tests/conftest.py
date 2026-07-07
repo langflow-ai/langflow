@@ -26,7 +26,13 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id_unchecked
-from langflow.services.deps import get_auth_service, get_db_service, session_scope
+from langflow.services.deps import (
+    get_auth_service,
+    get_db_service,
+    get_settings_service,
+    is_settings_service_initialized,
+    session_scope,
+)
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
 from lfx.log.logger import logger
@@ -76,9 +82,23 @@ def disable_mcp_auto_init():
     inflating every app-fixture test by ~130s and pushing the heaviest test split past the
     CI step timeout. Skipping it keeps the boot local and deterministic.
     """
+    previous_env_value = os.environ.get("LANGFLOW_SKIP_MCP_AUTO_INIT")
+    previous_setting = (
+        get_settings_service().settings.skip_mcp_auto_init
+        if is_settings_service_initialized()
+        else (previous_env_value or "").lower() in {"1", "true", "yes", "on"}
+    )
+
     os.environ["LANGFLOW_SKIP_MCP_AUTO_INIT"] = "true"
+    if is_settings_service_initialized():
+        get_settings_service().set("skip_mcp_auto_init", value=True)
     yield
-    os.environ.pop("LANGFLOW_SKIP_MCP_AUTO_INIT", None)
+    if previous_env_value is None:
+        os.environ.pop("LANGFLOW_SKIP_MCP_AUTO_INIT", None)
+    else:
+        os.environ["LANGFLOW_SKIP_MCP_AUTO_INIT"] = previous_env_value
+    if is_settings_service_initialized():
+        get_settings_service().set("skip_mcp_auto_init", previous_setting)
 
 
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed

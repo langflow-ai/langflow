@@ -48,7 +48,6 @@ couchbase = ["couchbase>=4.2.1", "langchain-community>=0.4.1,<1.0.0"]
 cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
-exa = ["metaphor-python==0.1.23"]
 faiss = ["faiss-cpu==1.9.0.post1; python_version < '3.14'", "faiss-cpu>=1.13.2; python_version >= '3.14'", "langchain-community>=0.4.1,<1.0.0"]
 git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
@@ -120,7 +119,6 @@ all = [
     "lfx-bundles[cuga]",
     "lfx-bundles[deepseek]",
     "lfx-bundles[elastic]",
-    "lfx-bundles[exa]",
     "lfx-bundles[faiss]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
