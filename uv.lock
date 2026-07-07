@@ -4176,7 +4176,7 @@ pydantic = [
 
 [[package]]
 name = "fastapi"
-version = "0.138.0"
+version = "0.139.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -4185,9 +4185,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5b/58/ff455d9fe47c60abadb34b9e05a304b1f05f5ab8000ac01565156b6f5e43/fastapi-0.138.0.tar.gz", hash = "sha256:d445a4877636ad191e7053e08c9bf98cb921a6756776848400bb773d1740c061", size = 419240, upload-time = "2026-06-20T01:18:05.259Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/af/a5f50ccfa659ec1802cb4ca842c23f06d906a8cc9aef6016a2caeea3d4ed/fastapi-0.139.0.tar.gz", hash = "sha256:99ab7b2d92223c76d6cf10757ab3f89d45b38267fc20b2a136cf02f6beac3145", size = 423016, upload-time = "2026-07-01T16:35:33.436Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/ff/8496d9847a5fedae775eb49460722d3efaa80487854273e9647ae876218c/fastapi-0.138.0-py3-none-any.whl", hash = "sha256:b6f54fd1bd72c80b0f899f172c61a600f6f7af9b43d4d772a018f35624048cb0", size = 126779, upload-time = "2026-06-20T01:18:03.483Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/7c/8e3c6ad324ea5cb36604fc3f968554887891c316d9dfde57761611d907ad/fastapi-0.139.0-py3-none-any.whl", hash = "sha256:cf15e1e9e667ddb0ad63811e60bd11390d1aac838ca4a7a23f421807b2308189", size = 130339, upload-time = "2026-07-01T16:35:32.190Z" },
 ]
 
 [package.optional-dependencies]
@@ -8799,7 +8799,7 @@ requires-dist = [
     { name = "faiss-cpu", marker = "python_full_version >= '3.14' and extra == 'faiss'", specifier = ">=1.13.2" },
     { name = "faiss-cpu", marker = "python_full_version < '3.14' and extra == 'faiss'", specifier = "==1.9.0.post1" },
     { name = "fake-useragent", marker = "extra == 'fake-useragent'", specifier = ">=2.0.0" },
-    { name = "fastapi", specifier = ">=0.135.0,<1.0.0" },
+    { name = "fastapi", specifier = ">=0.139.0,<1.0.0" },
     { name = "fastapi-pagination", specifier = ">=0.13.1,<1.0.0" },
     { name = "fastavro", marker = "python_full_version >= '3.13' and extra == 'fastavro'", specifier = ">=1.9.8,<2.0.0" },
     { name = "fastavro", marker = "python_full_version < '3.13' and extra == 'fastavro'", specifier = "==1.9.7" },
