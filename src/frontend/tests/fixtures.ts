@@ -10,6 +10,7 @@ import {
   countNewA11yViolations,
   formatA11yFailure,
   isCheckerReport,
+  writeA11yIgnoreSidecar,
 } from "./utils/accessibility-checker";
 import type { A11yScanOptions, LangflowPage } from "./utils/types";
 
@@ -107,6 +108,10 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
       testInfo.attachments.push(
         buildA11ySummaryAttachment(scanIndex, scanLabel, result.report),
       );
+
+      // Record exactly which rules this scan suppressed so the report builder
+      // greys them out for this scan alone (no label-prefix inference).
+      writeA11yIgnoreSidecar(scanLabel, options?.ignoreRules);
 
       if (RUN_A11Y_ASSERT) {
         const newViolationCount = countNewA11yViolations(

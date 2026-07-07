@@ -139,21 +139,105 @@ step 3 until the scan is clean.
 
 Sometimes a finding is genuinely owned by shared app chrome or a third-party
 widget (Radix, AG Grid, cmdk) and can't be fixed from the feature's markup. Those
-suppressions are **feature-specific**. Knowledge Bases centralizes its own in
-[`knowledge-bases-ignore-rules.json`](rules/knowledge-bases-ignore-rules.json) — one
-`{ "ruleId", "reason" }` entry per rule:
+get **suppressed** — dropped from the assertion violation count and greyed (not
+hidden) in the HTML report, so feature-owned issues stand out. The rest of this
+section explains how suppression rules are managed and shows the common
+scenarios.
 
-- `knowledge-bases.a11y.spec.ts` imports it to build `KB_IGNORE_RULES` for every
-  `runA11yScan(...)` call (only relevant under `RUN_A11Y_ASSERT=true`).
-- `build-a11y-html-report.mjs` reads the same file and **greys these findings out
-  on KB-labeled routes only** — other feature scans are unaffected and show all
-  their findings as actionable. The report then shows *actionable* vs *suppressed*
-  counts; focus on the actionable numbers.
+#### How rule management works
 
-Other feature specs should create their own `<feature>-ignore-rules.json` if they
-need to suppress framework-owned rules. Keep real tracked gaps (for example,
-theme-level `text_contrast_sufficient`) in the list with a reason — they stay
-visible as suppressed for tracking, never silently dropped.
+Suppression is decided **per scan**, by the exact `ignoreRules` array you pass to
+that `runA11yScan(...)` call. Nothing is inferred from the scan label or route.
+Three pieces cooperate:
+
+| Piece | Role |
+| --- | --- |
+| `runA11yScan(label, { ignoreRules })` in the spec | **Source of truth for _which_ rules a scan suppresses.** Drops them from the assertion count (under `RUN_A11Y_ASSERT=true`). |
+| `{scanLabel}.ignore.json` sidecar (auto-written) | `runA11yScan` records the applied `ignoreRules` next to the IBM report so the detached report builder knows what this scan suppressed. Ephemeral — regenerated every run, never committed. |
+| `rules/<feature>-ignore-rules.json` | **Human-authored catalog of _why_.** One `{ "ruleId", "reason" }` entry per rule. `build-a11y-html-report.mjs` unions the `reason` text from every such file purely for the suppressed badge's tooltip. |
+
+Data flow: spec declares `ignoreRules` → sidecar persists them → report reads each
+scan's sidecar and greys exactly those rules (with the reason as a tooltip),
+showing *actionable* vs *suppressed* counts. Focus on the actionable numbers.
+
+Key properties:
+
+- **Label-agnostic.** A scan is affected only by its own `ignoreRules`, so a scan
+  named `keyboard-…` can never accidentally inherit KB's suppressions.
+- **Scan-scoped.** The same rule can be suppressed on one scan and stay actionable
+  on another — a rule is only *globally* greyed in the report when every scan that
+  hit it suppressed it.
+- **No builder wiring.** A new feature just declares `ignoreRules` (and optionally a
+  reasons file). The report builder needs no per-feature changes.
+- **The reasons file is optional for suppression.** Suppression works from the ids
+  you pass; the JSON only supplies tooltip text and a reusable, documented list.
+
+#### Scenario 1 — suppress a set of rules across a whole feature (the KB pattern)
+
+Create `rules/<feature>-ignore-rules.json` with one entry per rule and a reason:
+
+```json
+{
+  "version": 1,
+  "description": "IBM rules suppressed for Widgets — shared chrome / third-party widgets Widgets markup cannot fix.",
+  "suppressed": [
+    {
+      "ruleId": "aria_hidden_nontabbable",
+      "reason": "Radix overlay sets aria-hidden on the background subtree — app-wide chrome, not feature markup."
+    }
+  ]
+}
+```
+
+Import it once in the spec and reuse the id list on every scan:
+
+```ts
+import widgetsIgnoreRules from "./rules/widgets-ignore-rules.json";
+
+const WIDGETS_IGNORE_RULES = widgetsIgnoreRules.suppressed.map((r) => r.ruleId);
+
+test("scans the widgets panel", async ({ page }) => {
+  // ...drive the UI to the state...
+  await page.runA11yScan("widgets-panel", { ignoreRules: WIDGETS_IGNORE_RULES });
+});
+```
+
+#### Scenario 2 — suppress one extra rule for a single scan only
+
+Because `ignoreRules` is per call, you can extend the feature list for exactly one
+scan without touching any other:
+
+```ts
+await page.runA11yScan("widgets-legacy-modal", {
+  ignoreRules: [...WIDGETS_IGNORE_RULES, "label_name_visible"],
+});
+```
+
+`label_name_visible` is suppressed **only** on `widgets-legacy-modal`; every other
+scan still reports it as actionable. Add its `{ ruleId, reason }` to the reasons
+file so the tooltip explains why.
+
+#### Scenario 3 — quick one-off suppression without a reasons file
+
+For a throwaway or exploratory scan you can inline the ids — suppression still
+works, you just won't get a "why" tooltip in the report:
+
+```ts
+await page.runA11yScan("widgets-experiment", {
+  ignoreRules: ["combobox_autocomplete_valid"],
+});
+```
+
+Prefer promoting these into the reasons file before merging so the suppression is
+documented.
+
+#### Scenario 4 — keep a real, tracked gap visible
+
+A known-but-unfixed defect (for example theme-level `text_contrast_sufficient`)
+belongs in the reasons file **with an honest reason**, and its id passed in
+`ignoreRules`. It then shows as *suppressed* for tracking rather than failing the
+assertion — visible, never silently dropped. Remove the entry once the underlying
+issue is fixed so the rule becomes actionable again.
 
 > The scan itself dismisses open overlays (it injects the IBM ACE engine, which
 > closes Radix menus/dropdowns/popovers). To scan a state and then interact with

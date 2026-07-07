@@ -48,45 +48,57 @@ function readRouteManifest() {
 
 const routeLabelMap = readRouteManifest();
 
-function resolveIgnoreRulesPath() {
+function resolveRulesDir() {
   const candidates = [
-    path.resolve(
-      process.cwd(),
-      "tests/a11y/rules/knowledge-bases-ignore-rules.json",
-    ),
-    path.resolve(
-      process.cwd(),
-      "src/frontend/tests/a11y/rules/knowledge-bases-ignore-rules.json",
-    ),
+    path.resolve(process.cwd(), "tests/a11y/rules"),
+    path.resolve(process.cwd(), "src/frontend/tests/a11y/rules"),
   ];
   return candidates.find((candidate) => existsSync(candidate));
 }
 
-// Rules suppressed specifically for KB routes (knowledge-bases-ignore-rules.json).
-// Only applied when a scan's short label starts with "kb" — other feature scans
-// are unaffected and show all their findings as actionable.
-// Missing file = nothing suppressed.
-function readSuppressedRules() {
-  const ignorePath = resolveIgnoreRulesPath();
-  if (!ignorePath) return new Map();
-  const parsed = JSON.parse(readFileSync(ignorePath, "utf8"));
-  return new Map(
-    (parsed.suppressed ?? []).map((entry) => [
-      entry.ruleId,
-      entry.reason ?? "",
-    ]),
-  );
+// Human-readable justifications for suppressed rules, unioned across every
+// feature's `<feature>-ignore-rules.json`. Used ONLY for tooltip text — the
+// decision of whether a finding is suppressed comes from each scan's sidecar
+// (see readReports), never from membership here. Any feature that adds a rules
+// file contributes its reasons automatically.
+function readSuppressionReasons() {
+  const rulesDir = resolveRulesDir();
+  if (!rulesDir) return new Map();
+  const reasons = new Map();
+  for (const file of readdirSync(rulesDir)) {
+    if (!file.endsWith("-ignore-rules.json")) continue;
+    const parsed = JSON.parse(readFileSync(path.join(rulesDir, file), "utf8"));
+    for (const entry of parsed.suppressed ?? []) {
+      if (!reasons.has(entry.ruleId)) {
+        reasons.set(entry.ruleId, entry.reason ?? "");
+      }
+    }
+  }
+  return reasons;
 }
 
-const suppressedRules = readSuppressedRules();
+const suppressionReasons = readSuppressionReasons();
 
-// Only suppress a rule when the scan label starts with "kb" — KB-specific list.
-function isSuppressedForRoute(ruleId, shortLabel) {
-  return shortLabel.startsWith("kb") && suppressedRules.has(ruleId);
+// A finding is suppressed iff the scan that produced it declared the rule in
+// its ignore list (persisted to {label}.ignore.json by runA11yScan).
+function isSuppressedForRoute(ruleId, ignoredRules) {
+  return ignoredRules.has(ruleId);
 }
 
 function suppressionReason(ruleId) {
-  return suppressedRules.get(ruleId) ?? "";
+  return suppressionReasons.get(ruleId) ?? "";
+}
+
+// Read a report's ignore sidecar into a Set of rule ids. Missing file → empty
+// set (older report dirs / scans that passed no ignore rules).
+function readIgnoredRules(reportFile) {
+  const sidecarPath = path.join(
+    REPORTS_DIR,
+    reportFile.replace(/\.json$/, ".ignore.json"),
+  );
+  if (!existsSync(sidecarPath)) return new Set();
+  const parsed = JSON.parse(readFileSync(sidecarPath, "utf8"));
+  return new Set(parsed.ignoreRules ?? []);
 }
 
 function escapeHtml(value) {
@@ -148,6 +160,7 @@ function readReports() {
     files = readdirSync(REPORTS_DIR).filter(
       (file) =>
         file.endsWith(".json") &&
+        !file.endsWith(".ignore.json") &&
         file !== "summary.json" &&
         file !== "route-summary.json",
     );
@@ -162,6 +175,7 @@ function readReports() {
       );
       const label = report.label ?? file.replace(/\.json$/, "");
       const shortLabel = shortLabelFromLabel(label);
+      const ignoredRules = readIgnoredRules(file);
       const issues = (report.results ?? [])
         .filter(
           (issue) =>
@@ -188,7 +202,7 @@ function readReports() {
       }
 
       const actionableIssueCount = issues.filter(
-        (issue) => !isSuppressedForRoute(issue.ruleId, shortLabel),
+        (issue) => !isSuppressedForRoute(issue.ruleId, ignoredRules),
       ).length;
 
       return {
@@ -196,6 +210,7 @@ function readReports() {
         htmlFile: file.replace(/\.json$/, ".html"),
         label,
         shortLabel,
+        ignoredRules,
         route: routeFromLabel(label),
         surface: surfaceFromLabel(label),
         issues,
@@ -206,7 +221,7 @@ function readReports() {
           .map(([ruleId, count]) => ({
             ruleId,
             count,
-            suppressed: isSuppressedForRoute(ruleId, shortLabel),
+            suppressed: isSuppressedForRoute(ruleId, ignoredRules),
           }))
           .sort(
             (a, b) =>
@@ -227,7 +242,6 @@ function groupByRule(routes) {
   const rules = new Map();
 
   for (const route of routes) {
-    const isKb = route.shortLabel.startsWith("kb");
     for (const issue of route.issues) {
       let rule = rules.get(issue.ruleId);
       if (!rule) {
@@ -237,24 +251,25 @@ function groupByRule(routes) {
           routes: new Map(),
           messages: new Set(),
           help: issue.help,
-          hasNonKbOccurrence: false,
+          hasUnsuppressedOccurrence: false,
         };
         rules.set(issue.ruleId, rule);
       }
       rule.count += 1;
       rule.routes.set(route.route, (rule.routes.get(route.route) ?? 0) + 1);
       rule.messages.add(issue.message);
-      if (!isKb) rule.hasNonKbOccurrence = true;
+      if (!isSuppressedForRoute(issue.ruleId, route.ignoredRules)) {
+        rule.hasUnsuppressedOccurrence = true;
+      }
     }
   }
 
   return [...rules.values()]
     .map((rule) => {
-      // A rule is globally suppressed only if every occurrence is from a KB
-      // route AND it is in the KB ignore list. If it also fires on non-KB
-      // routes those are real, actionable findings for those features.
-      const suppressed =
-        !rule.hasNonKbOccurrence && suppressedRules.has(rule.ruleId);
+      // A rule is globally suppressed only if every scan that saw it chose to
+      // suppress it. If any occurrence was left actionable by its own scan,
+      // that's a real finding for that feature and the rule stays actionable.
+      const suppressed = !rule.hasUnsuppressedOccurrence;
       return {
         ruleId: rule.ruleId,
         count: rule.count,
@@ -286,13 +301,13 @@ function renderRoute(route) {
   const ruleGroups = [...issuesByRule.entries()]
     .sort(
       (a, b) =>
-        Number(isSuppressedForRoute(a[0], route.shortLabel)) -
-          Number(isSuppressedForRoute(b[0], route.shortLabel)) ||
+        Number(isSuppressedForRoute(a[0], route.ignoredRules)) -
+          Number(isSuppressedForRoute(b[0], route.ignoredRules)) ||
         b[1].length - a[1].length ||
         a[0].localeCompare(b[0]),
     )
     .map(([ruleId, issues]) => {
-      const suppressed = isSuppressedForRoute(ruleId, route.shortLabel);
+      const suppressed = isSuppressedForRoute(ruleId, route.ignoredRules);
       const badge = suppressed
         ? `<span class="tag" title="${escapeHtml(suppressionReason(ruleId))}">suppressed</span>`
         : "";
@@ -549,7 +564,7 @@ function renderHtml(routes, rules) {
       <div class="stat"><strong>${suppressedIssues}</strong> suppressed (chrome/framework)</div>
       <div class="stat"><strong>${actionableRuleCount}</strong> actionable rules <span class="muted">/ ${rules.length} total</span></div>
     </div>
-    <p class="muted note">Suppressed findings are KB-specific — shared app chrome or third-party widgets that KB feature markup cannot fix (see <code>tests/a11y/rules/knowledge-bases-ignore-rules.json</code>). They are kept visible but greyed so feature-owned issues stand out. Other feature scans are unaffected.</p>
+    <p class="muted note">Suppressed findings are the rules each scan explicitly ignored via <code>runA11yScan({ ignoreRules })</code> — shared app chrome or third-party widgets the feature under test cannot fix (reasons live in <code>tests/a11y/rules/&lt;feature&gt;-ignore-rules.json</code>). They are kept visible but greyed so feature-owned issues stand out. Suppression is per-scan, so no other scan is affected.</p>
   </header>
   <main>
     <h2>Rules Summary</h2>

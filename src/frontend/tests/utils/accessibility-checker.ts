@@ -1,5 +1,25 @@
+import { writeFileSync } from "node:fs";
 import type { ICheckerReport, ICheckerResult } from "accessibility-checker";
 import path from "path";
+
+// Keep in sync with .achecker.yml `outputFolder`.
+const A11Y_REPORTS_DIR = "coverage/accessibility-reports";
+
+// Persist the ignore rules a scan actually applied as a sidecar next to its IBM
+// report ({scanLabel}.json). The report builder reads this to grey out the
+// suppressed rules for exactly that scan — no label-prefix guessing. Always
+// written (even []) so "this scan suppressed nothing" is explicit and
+// distinguishable from a missing/legacy report.
+export function writeA11yIgnoreSidecar(
+  scanLabel: string,
+  ignoreRules?: string[],
+): void {
+  const file = path.join(A11Y_REPORTS_DIR, `${scanLabel}.ignore.json`);
+  writeFileSync(
+    file,
+    `${JSON.stringify({ label: scanLabel, ignoreRules: ignoreRules ?? [] }, null, 2)}\n`,
+  );
+}
 
 function compactWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
