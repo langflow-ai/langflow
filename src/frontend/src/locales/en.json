@@ -1493,6 +1493,7 @@
   "knowledge.chunkLabel": "Chunk {{index}}",
   "knowledge.charsSuffix": "chars",
   "knowledge.copyChunk": "Copy chunk {{index}}",
+  "knowledge.toggleChunk": "Expand or collapse chunk {{index}}",
   "deleteAccount.logoTitle": "Langflow logo",
   "deleteAccount.heading": "Delete your account",
   "deleteAccount.irreversibleDescription": "This action is irreversible and will permanently erase all your data and information associated with the account.",

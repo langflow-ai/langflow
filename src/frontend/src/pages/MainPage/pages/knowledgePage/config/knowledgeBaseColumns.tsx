@@ -206,6 +206,26 @@ export const createKnowledgeBaseColumns = (
       editable: false,
       resizable: false,
       suppressMovable: true,
+      // The actions cell holds multiple buttons (ingest + row-actions menu).
+      // AG-Grid normally hijacks Tab to move between cells; once focus is on a
+      // control inside this cell, let the browser's native Tab move between the
+      // cell's controls instead, so every action button is keyboard-reachable.
+      // (Focus enters the cell via Enter — see handleCellKeyDown.)
+      suppressKeyboardEvent: (params) => {
+        if (params.event.key !== "Tab") return false;
+        const active = document.activeElement as HTMLElement | null;
+        const cell = active?.closest(".ag-cell");
+        if (!cell) return false;
+        const focusables = Array.from(
+          cell.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]"),
+        );
+        const index = focusables.indexOf(active as HTMLElement);
+        if (index === -1) return false; // focus is on the cell itself
+        const nextIndex = params.event.shiftKey ? index - 1 : index + 1;
+        // Suppress AG-Grid (let native Tab run) only while another in-cell
+        // control remains in that direction; otherwise let AG-Grid exit the cell.
+        return nextIndex >= 0 && nextIndex < focusables.length;
+      },
       cellClass: "flex items-center justify-center text-primary",
       cellRenderer: (params: { data: KnowledgeBaseInfo }) => {
         const status = params.data?.status;

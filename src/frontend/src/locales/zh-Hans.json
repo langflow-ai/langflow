@@ -1012,6 +1012,7 @@
   "knowledge.configureSources": "导入内容",
   "knowledge.configureSourcesMaxSize": "（最大上传容量为 1 GB）",
   "knowledge.copyChunk": "复制分块 {{index}}",
+  "knowledge.toggleChunk": "展开或折叠分块 {{index}}",
   "knowledge.couldNotGeneratePreview": "无法生成预览。 请尝试调整您的设置。",
   "knowledge.createDescription": "为知识库命名，上传数据源，并选择嵌入模型",
   "knowledge.createTitle": "创建知识库",

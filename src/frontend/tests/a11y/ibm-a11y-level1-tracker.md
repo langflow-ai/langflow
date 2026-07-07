@@ -22,7 +22,7 @@ This is a **manual validation tracker**. Each route below owns one checkbox. Tic
 - [ ] `/mcp` — Home / MCP list
 - [ ] `/mcp/folder/:folderId` — MCP (folder)
 - [ ] `/assets/files` — Files page
-- [ ] `/assets/knowledge-bases` — Knowledge bases page
+- [x] `/assets/knowledge-bases` — Knowledge bases page
 - [ ] `/settings` — Settings shell
 - [ ] `/settings/general` — General settings
 - [ ] `/settings/global-variables` — Global variables

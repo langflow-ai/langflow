@@ -38,6 +38,30 @@ export function RadixAriaControlsFix() {
         node.setAttribute("tabindex", "-1");
         node.setAttribute("aria-hidden", "true");
       });
+
+      // cmdk renders its option list as role="listbox" with role="option"
+      // children that carry no tabindex. When the Command has a search input
+      // (cmdk-input), focus stays on the input and aria-activedescendant marks
+      // the active option — a pattern the checker accepts. But the model and
+      // db-provider dropdowns use cmdk WITHOUT an input, so the listbox has no
+      // tabbable descendant and the checker flags aria_child_tabbable. For those
+      // input-less lists only, make the first enabled option tabbable so the
+      // listbox is keyboard-reachable.
+      document.querySelectorAll("[cmdk-list]").forEach((list) => {
+        const root = list.closest("[cmdk-root]");
+        if (root?.querySelector("[cmdk-input]")) return;
+
+        const options = Array.from(
+          list.querySelectorAll<HTMLElement>(
+            '[role="option"]:not([aria-disabled="true"])',
+          ),
+        );
+        if (options.length === 0) return;
+        if (options.some((option) => option.getAttribute("tabindex") === "0")) {
+          return;
+        }
+        options[0].setAttribute("tabindex", "0");
+      });
     };
 
     fixClosedTriggers();

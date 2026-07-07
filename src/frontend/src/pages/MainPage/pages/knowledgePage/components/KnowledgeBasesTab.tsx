@@ -1,4 +1,8 @@
-import type { RowClickedEvent, SelectionChangedEvent } from "ag-grid-community";
+import type {
+  CellKeyDownEvent,
+  RowClickedEvent,
+  SelectionChangedEvent,
+} from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -228,6 +232,47 @@ const KnowledgeBasesTab = ({
     }
   };
 
+  // Keyboard activation for the composite grid. AG-Grid already handles arrow
+  // navigation between cells and Space to toggle row selection; this adds Enter
+  // so keyboard users can operate a focused row without a mouse. The row-action
+  // buttons live in the "actions" cell and are not individually tabbable (grid
+  // focus model), so Enter there moves focus onto the cell's first enabled
+  // control (the ingest button); Tab/Shift+Tab then move between the cell's
+  // controls (see the actions column's suppressKeyboardEvent). Enter on any
+  // other cell mirrors a row click and opens the drawer.
+  const handleCellKeyDown = (event: CellKeyDownEvent) => {
+    const keyboardEvent = event.event as KeyboardEvent | undefined;
+    if (!keyboardEvent || keyboardEvent.key !== "Enter") return;
+
+    // If focus is already on an interactive control inside the cell, let it
+    // handle Enter itself (e.g. an open menu trigger).
+    const target = keyboardEvent.target as HTMLElement | null;
+    if (target?.closest("button, a, input, [role='menuitem']")) return;
+
+    if (event.column?.getColId() === "actions") {
+      const cellEl = (event.event?.target as HTMLElement | null)?.closest(
+        ".ag-cell",
+      );
+      // Land on the first enabled control (ingest button when available, else
+      // the menu trigger). Tab then reaches the remaining controls in the cell.
+      const control = cellEl?.querySelector<HTMLElement>(
+        "button:not([disabled]), a[href]",
+      );
+      if (control) {
+        keyboardEvent.preventDefault();
+        // AG-Grid re-asserts cell focus synchronously after this handler, so
+        // defer a frame to win the focus race and land on the control.
+        requestAnimationFrame(() => control.focus());
+      }
+      return;
+    }
+
+    if (onRowClick && event.data) {
+      keyboardEvent.preventDefault();
+      onRowClick(event.data);
+    }
+  };
+
   const handleAddSources = (
     knowledgeBase: Parameters<typeof actions.handleAddSources>[0],
   ) => {
@@ -315,7 +360,7 @@ const KnowledgeBasesTab = ({
         {quantitySelected > 0 ? (
           <Button
             variant="destructive"
-            className="flex items-center gap-2 font-semibold"
+            className="flex items-center gap-2 font-semibold ml-4"
             onClick={() => actions.setIsBulkDeleteModalOpen(true)}
           >
             <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
@@ -323,7 +368,7 @@ const KnowledgeBasesTab = ({
           </Button>
         ) : (
           <Button
-            className="flex items-center gap-2 font-semibold"
+            className="flex items-center gap-2 font-semibold ml-4"
             onClick={() => setIsUploadModalOpen(true)}
           >
             <ForwardedIconComponent name="Plus" className="h-4 w-4" />
@@ -343,6 +388,7 @@ const KnowledgeBasesTab = ({
             rowSelection="multiple"
             onSelectionChanged={handleSelectionChange}
             onRowClicked={handleRowClick}
+            onCellKeyDown={handleCellKeyDown}
             columnDefs={columnDefs}
             rowData={sortedKnowledgeBases}
             className={cn(

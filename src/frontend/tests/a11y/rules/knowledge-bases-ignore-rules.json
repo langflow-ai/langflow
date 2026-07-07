@@ -11,18 +11,6 @@
       "reason": "Header GitHub button (aria-label \"GitHub 151k\" vs visible \"151k\") — shared header chrome."
     },
     {
-      "ruleId": "element_tabbable_role_valid",
-      "reason": "AG-Grid tab-guard divs (tabindex=0 role=presentation) and Radix focus guards — framework-owned, not fixable from application code."
-    },
-    {
-      "ruleId": "aria_widget_labelled",
-      "reason": "AG-Grid exposes no gridOptions/GridApi to set an aria-label on its role=treegrid root."
-    },
-    {
-      "ruleId": "aria_child_tabbable",
-      "reason": "AG-Grid rowgroups and cmdk's role=listbox drive selection via aria-activedescendant (the correct composite-widget pattern), so they have no individually tabbable descendants."
-    },
-    {
       "ruleId": "aria_hidden_nontabbable",
       "reason": "Radix sets aria-hidden on the entire background subtree without `inert` when an overlay opens, so focusable descendants behind it stay tabbable. Flags app-wide chrome, not per-element defects."
     },

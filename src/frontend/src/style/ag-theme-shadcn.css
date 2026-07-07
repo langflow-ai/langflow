@@ -114,6 +114,16 @@
   box-shadow: none !important;
   outline: none !important;
 }
+/* The ag-no-border variant above hides the cell-focus indicator, which leaves
+   keyboard users with no visible focus while arrow-navigating the Knowledge
+   Bases grid. Restore a visible ring for keyboard focus only (:focus-visible),
+   scoped to that grid so mouse clicks and other tables are unaffected. */
+.ag-knowledge-table .ag-cell:focus-visible,
+.ag-knowledge-table .ag-header-cell:focus-visible {
+  outline: 2px solid hsl(var(--ring)) !important;
+  outline-offset: -2px !important;
+  border-radius: 0.375rem;
+}
 .ag-no-border .ag-selection-checkbox {
   margin-right: 0px !important;
 }

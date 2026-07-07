@@ -20,6 +20,7 @@ import {
   PopoverContentWithoutPortal,
 } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
+import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
 import { recoverModelOption } from "./helpers/recover-model-option";
@@ -634,7 +635,7 @@ export default function ModelInputComponent({
     testId?: string,
   ) => (
     <Button
-      className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group"
+      className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       unstyled
       data-testid={testId}
       onClick={onClick}
@@ -669,18 +670,26 @@ export default function ModelInputComponent({
       <PopoverContentInput
         side="bottom"
         avoidCollisions
+        onOpenAutoFocus={focusCommandListOnOpen}
         collisionPadding={{
           bottom: showingBuildPanel ? BUILD_PANEL_COLLISION_PADDING_PX : 0,
         }}
         className="noflow nowheel nopan nodelete nodrag z-[70] p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
+        {/* Section 1 — the option list (a self-contained listbox). Keeping the
+            footer actions out of <Command> stops them from being swept into the
+            listbox's composite keyboard/focus model. */}
         <Command className="flex flex-col">
           <ModelList
             groupedOptions={groupedOptions}
             selectedModel={selectedModel}
             onSelect={handleModelSelect}
           />
+        </Command>
+        {/* Section 2 — footer actions, a plain group of buttons reachable by Tab
+            after the list. */}
+        <div className="flex flex-col border-t border-border bg-background">
           {renderFooterButton(
             t("modelInput.refreshList"),
             "RotateCw",
@@ -698,7 +707,7 @@ export default function ModelInputComponent({
               )}
             </div>
           )}
-        </Command>
+        </div>
       </PopoverContentInput>
     );
   };

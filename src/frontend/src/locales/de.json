@@ -1012,6 +1012,7 @@
   "knowledge.configureSources": "Inhalt einlesen",
   "knowledge.configureSourcesMaxSize": "(maximal 1 GB Upload)",
   "knowledge.copyChunk": "Chunk {{index}} kopieren",
+  "knowledge.toggleChunk": "Chunk {{index}} ein- oder ausklappen",
   "knowledge.couldNotGeneratePreview": "Die Vorschau konnte nicht erstellt werden. Versuchen Sie, Ihre Einstellungen anzupassen.",
   "knowledge.createDescription": "Geben Sie Ihrer Wissensdatenbank einen Namen, laden Sie Quellen hoch und wählen Sie ein Einbettungsmodell aus",
   "knowledge.createTitle": "Wissensdatenbank erstellen",

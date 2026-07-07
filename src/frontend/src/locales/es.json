@@ -1012,6 +1012,7 @@
   "knowledge.configureSources": "Importar contenido",
   "knowledge.configureSourcesMaxSize": "(1 GB como máximo de subida)",
   "knowledge.copyChunk": "Copiar fragmento {{index}}",
+  "knowledge.toggleChunk": "Expandir o contraer fragmento {{index}}",
   "knowledge.couldNotGeneratePreview": "No se ha podido generar la vista previa. Prueba a modificar la configuración.",
   "knowledge.createDescription": "Asigna un nombre a tu base de conocimientos, sube las fuentes y selecciona un modelo de integración",
   "knowledge.createTitle": "Crear una base de conocimientos",

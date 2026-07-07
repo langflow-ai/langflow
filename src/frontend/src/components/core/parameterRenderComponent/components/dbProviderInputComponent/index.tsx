@@ -26,6 +26,7 @@ import {
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
+import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
 
 export type DBProviderSelection = {
   // Wire keys stay snake_case to match the backend payload format.
@@ -191,9 +192,13 @@ export function DBProviderInput({
       <PopoverContentWithoutPortal
         side="bottom"
         avoidCollisions={true}
+        onOpenAutoFocus={focusCommandListOnOpen}
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "240px" }}
       >
+        {/* Section 1 — the provider list (a self-contained listbox). Keeping the
+            manage action out of <Command> stops it from being swept into the
+            listbox's composite keyboard/focus model. */}
         <Command className="flex flex-col">
           <CommandList className="max-h-[300px] overflow-y-auto">
             {selectableOptions.map(({ provider, configured }) => (
@@ -206,8 +211,11 @@ export function DBProviderInput({
               />
             ))}
           </CommandList>
+        </Command>
+        {/* Section 2 — footer action, reachable by Tab after the list. */}
+        <div className="flex flex-col border-t border-border bg-background">
           <Button
-            className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group"
+            className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
             unstyled
             data-testid="manage-db-providers"
             onClick={handleManageProviders}
@@ -220,7 +228,7 @@ export function DBProviderInput({
               />
             </div>
           </Button>
-        </Command>
+        </div>
       </PopoverContentWithoutPortal>
     </Popover>
   );

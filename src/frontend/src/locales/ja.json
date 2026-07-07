@@ -1012,6 +1012,7 @@
   "knowledge.configureSources": "コンテンツを取り込む",
   "knowledge.configureSourcesMaxSize": "（アップロード上限：1 GB）",
   "knowledge.copyChunk": "チャンク {{index}} をコピー",
+  "knowledge.toggleChunk": "チャンク {{index}} を展開または折りたたむ",
   "knowledge.couldNotGeneratePreview": "プレビューを生成できませんでした。 設定を変更してみてください。",
   "knowledge.createDescription": "ナレッジベースに名前を付け、ソースをアップロードし、埋め込みモデルを選択してください",
   "knowledge.createTitle": "ナレッジベースを作成する",
