@@ -2476,6 +2476,619 @@
     [
       "crewai",
       {
+        "CrewAIAgentComponent": {
+          "base_classes": [
+            "NoneType"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Represents an agent of CrewAI.",
+          "display_name": "CrewAI Agent",
+          "documentation": "https://docs.crewai.com/how-to/LLM-Connections/",
+          "edited": false,
+          "field_order": [
+            "role",
+            "goal",
+            "backstory",
+            "tools",
+            "llm",
+            "memory",
+            "verbose",
+            "allow_delegation",
+            "allow_code_execution",
+            "kwargs"
+          ],
+          "frozen": false,
+          "icon": "CrewAI",
+          "legacy": true,
+          "metadata": {
+            "code_hash": "a23f0923049d",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "lfx",
+                  "version": null
+                },
+                {
+                  "name": "crewai",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.crewai.crewai.CrewAIAgentComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Agent",
+              "group_outputs": false,
+              "method": "build_output",
+              "name": "output",
+              "selected": "NoneType",
+              "tool_mode": true,
+              "types": [
+                "NoneType"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "replacement": [],
+          "template": {
+            "_type": "Component",
+            "allow_code_execution": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "display_name": "Allow Code Execution",
+              "dynamic": false,
+              "info": "Whether the agent is allowed to execute code.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "allow_code_execution",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            },
+            "allow_delegation": {
+              "_input_type": "BoolInput",
+              "advanced": false,
+              "display_name": "Allow Delegation",
+              "dynamic": false,
+              "info": "Whether the agent is allowed to delegate tasks to other agents.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "allow_delegation",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": true
+            },
+            "backstory": {
+              "_input_type": "MultilineInput",
+              "advanced": false,
+              "ai_enabled": false,
+              "copy_field": false,
+              "display_name": "Backstory",
+              "dynamic": false,
+              "info": "The backstory of the agent.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "backstory",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "from lfx.base.agents.crewai.crew import convert_llm, convert_tools\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import BoolInput, DictInput, HandleInput, MultilineInput, Output\n\n\nclass CrewAIAgentComponent(Component):\n    \"\"\"Component for creating a CrewAI agent.\n\n    This component allows you to create a CrewAI agent with the specified role, goal, backstory, tools,\n    and language model.\n\n    Args:\n        Component (Component): Base class for all components.\n\n    Returns:\n        Agent: CrewAI agent.\n    \"\"\"\n\n    display_name = \"CrewAI Agent\"\n    description = \"Represents an agent of CrewAI.\"\n    documentation: str = \"https://docs.crewai.com/how-to/LLM-Connections/\"\n    icon = \"CrewAI\"\n    legacy = True\n    replacement = \"agents.Agent\"\n\n    inputs = [\n        MultilineInput(name=\"role\", display_name=\"Role\", info=\"The role of the agent.\"),\n        MultilineInput(name=\"goal\", display_name=\"Goal\", info=\"The objective of the agent.\"),\n        MultilineInput(name=\"backstory\", display_name=\"Backstory\", info=\"The backstory of the agent.\"),\n        HandleInput(\n            name=\"tools\",\n            display_name=\"Tools\",\n            input_types=[\"Tool\"],\n            is_list=True,\n            info=\"Tools at agents disposal\",\n            value=[],\n        ),\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            info=\"Language model that will run the agent.\",\n            input_types=[\"LanguageModel\"],\n        ),\n        BoolInput(\n            name=\"memory\",\n            display_name=\"Memory\",\n            info=\"Whether the agent should have memory or not\",\n            advanced=True,\n            value=True,\n        ),\n        BoolInput(\n            name=\"verbose\",\n            display_name=\"Verbose\",\n            advanced=True,\n            value=False,\n        ),\n        BoolInput(\n            name=\"allow_delegation\",\n            display_name=\"Allow Delegation\",\n            info=\"Whether the agent is allowed to delegate tasks to other agents.\",\n            value=True,\n        ),\n        BoolInput(\n            name=\"allow_code_execution\",\n            display_name=\"Allow Code Execution\",\n            info=\"Whether the agent is allowed to execute code.\",\n            value=False,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"kwargs\",\n            display_name=\"kwargs\",\n            info=\"kwargs of agent.\",\n            is_list=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self):\n        try:\n            from crewai import Agent\n        except ImportError as e:\n            msg = \"CrewAI is not installed. Please install it with `uv pip install crewai`.\"\n            raise ImportError(msg) from e\n\n        kwargs = self.kwargs or {}\n\n        # Define the Agent\n        agent = Agent(\n            role=self.role,\n            goal=self.goal,\n            backstory=self.backstory,\n            llm=convert_llm(self.llm),\n            verbose=self.verbose,\n            memory=self.memory,\n            tools=convert_tools(self.tools),\n            allow_delegation=self.allow_delegation,\n            allow_code_execution=self.allow_code_execution,\n            **kwargs,\n        )\n\n        self.status = repr(agent)\n\n        return agent\n"
+            },
+            "goal": {
+              "_input_type": "MultilineInput",
+              "advanced": false,
+              "ai_enabled": false,
+              "copy_field": false,
+              "display_name": "Goal",
+              "dynamic": false,
+              "info": "The objective of the agent.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "goal",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "kwargs": {
+              "_input_type": "DictInput",
+              "advanced": true,
+              "display_name": "kwargs",
+              "dynamic": false,
+              "info": "kwargs of agent.",
+              "list": true,
+              "list_add_label": "Add More",
+              "name": "kwargs",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "track_in_telemetry": false,
+              "type": "dict",
+              "value": {}
+            },
+            "llm": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "display_name": "Language Model",
+              "dynamic": false,
+              "info": "Language model that will run the agent.",
+              "input_types": [
+                "LanguageModel"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "llm",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "memory": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "display_name": "Memory",
+              "dynamic": false,
+              "info": "Whether the agent should have memory or not",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "memory",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": true
+            },
+            "role": {
+              "_input_type": "MultilineInput",
+              "advanced": false,
+              "ai_enabled": false,
+              "copy_field": false,
+              "display_name": "Role",
+              "dynamic": false,
+              "info": "The role of the agent.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "role",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "tools": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "display_name": "Tools",
+              "dynamic": false,
+              "info": "Tools at agents disposal",
+              "input_types": [
+                "Tool"
+              ],
+              "list": true,
+              "list_add_label": "Add More",
+              "name": "tools",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": []
+            },
+            "verbose": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "display_name": "Verbose",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "verbose",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            }
+          },
+          "tool_mode": false
+        },
+        "HierarchicalCrewComponent": {
+          "base_classes": [
+            "Message"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Represents a group of agents, defining how they should collaborate and the tasks they should perform.",
+          "display_name": "Hierarchical Crew",
+          "documentation": "https://docs.crewai.com/how-to/Hierarchical/",
+          "edited": false,
+          "field_order": [
+            "verbose",
+            "memory",
+            "use_cache",
+            "max_rpm",
+            "share_crew",
+            "function_calling_llm",
+            "agents",
+            "tasks",
+            "manager_llm",
+            "manager_agent"
+          ],
+          "frozen": false,
+          "icon": "CrewAI",
+          "legacy": true,
+          "metadata": {
+            "code_hash": "144be482cfb0",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "lfx",
+                  "version": null
+                },
+                {
+                  "name": "crewai",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.crewai.hierarchical_crew.HierarchicalCrewComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Output",
+              "group_outputs": false,
+              "method": "build_output",
+              "name": "output",
+              "selected": "Message",
+              "tool_mode": true,
+              "types": [
+                "Message"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "replacement": [],
+          "template": {
+            "_type": "Component",
+            "agents": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "display_name": "Agents",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "Agent"
+              ],
+              "list": true,
+              "list_add_label": "Add More",
+              "name": "agents",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "from lfx.base.agents.crewai.crew import BaseCrewComponent\nfrom lfx.io import HandleInput\n\n\nclass HierarchicalCrewComponent(BaseCrewComponent):\n    display_name: str = \"Hierarchical Crew\"\n    description: str = (\n        \"Represents a group of agents, defining how they should collaborate and the tasks they should perform.\"\n    )\n    documentation: str = \"https://docs.crewai.com/how-to/Hierarchical/\"\n    icon = \"CrewAI\"\n    legacy = True\n    replacement = \"agents.Agent\"\n\n    inputs = [\n        *BaseCrewComponent.get_base_inputs(),\n        HandleInput(name=\"agents\", display_name=\"Agents\", input_types=[\"Agent\"], is_list=True),\n        HandleInput(name=\"tasks\", display_name=\"Tasks\", input_types=[\"HierarchicalTask\"], is_list=True),\n        HandleInput(name=\"manager_llm\", display_name=\"Manager LLM\", input_types=[\"LanguageModel\"], required=False),\n        HandleInput(name=\"manager_agent\", display_name=\"Manager Agent\", input_types=[\"Agent\"], required=False),\n    ]\n\n    def build_crew(self):\n        try:\n            from crewai import Crew, Process\n        except ImportError as e:\n            msg = \"CrewAI is not installed. Please install it with `uv pip install crewai`.\"\n            raise ImportError(msg) from e\n\n        tasks, agents = self.get_tasks_and_agents()\n        manager_llm = self.get_manager_llm()\n\n        return Crew(\n            agents=agents,\n            tasks=tasks,\n            process=Process.hierarchical,\n            verbose=self.verbose,\n            memory=self.memory,\n            cache=self.use_cache,\n            max_rpm=self.max_rpm,\n            share_crew=self.share_crew,\n            function_calling_llm=self.function_calling_llm,\n            manager_agent=self.manager_agent,\n            manager_llm=manager_llm,\n            step_callback=self.get_step_callback(),\n            task_callback=self.get_task_callback(),\n        )\n"
+            },
+            "function_calling_llm": {
+              "_input_type": "HandleInput",
+              "advanced": true,
+              "display_name": "Function Calling LLM",
+              "dynamic": false,
+              "info": "Turns the ReAct CrewAI agent into a function-calling agent",
+              "input_types": [
+                "LanguageModel"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "function_calling_llm",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "manager_agent": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "display_name": "Manager Agent",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "Agent"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "manager_agent",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "manager_llm": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "display_name": "Manager LLM",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "LanguageModel"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "manager_llm",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "max_rpm": {
+              "_input_type": "IntInput",
+              "advanced": true,
+              "display_name": "Max RPM",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "max_rpm",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 100
+            },
+            "memory": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "display_name": "Memory",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "memory",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            },
+            "share_crew": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "display_name": "Share Crew",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "share_crew",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            },
+            "tasks": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "display_name": "Tasks",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "HierarchicalTask"
+              ],
+              "list": true,
+              "list_add_label": "Add More",
+              "name": "tasks",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "use_cache": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "display_name": "Cache",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "use_cache",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": true
+            },
+            "verbose": {
+              "_input_type": "IntInput",
+              "advanced": true,
+              "display_name": "Verbose",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "verbose",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 0
+            }
+          },
+          "tool_mode": false
+        },
         "HierarchicalTaskComponent": {
           "base_classes": [
             "HierarchicalTask"
@@ -2627,6 +3240,233 @@
               "track_in_telemetry": false,
               "type": "other",
               "value": ""
+            }
+          },
+          "tool_mode": false
+        },
+        "SequentialCrewComponent": {
+          "base_classes": [
+            "Message"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Represents a group of agents with tasks that are executed sequentially.",
+          "display_name": "Sequential Crew",
+          "documentation": "https://docs.crewai.com/how-to/Sequential/",
+          "edited": false,
+          "field_order": [
+            "verbose",
+            "memory",
+            "use_cache",
+            "max_rpm",
+            "share_crew",
+            "function_calling_llm",
+            "tasks"
+          ],
+          "frozen": false,
+          "icon": "CrewAI",
+          "legacy": true,
+          "metadata": {
+            "code_hash": "42e59f6d6572",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "lfx",
+                  "version": null
+                },
+                {
+                  "name": "crewai",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.crewai.sequential_crew.SequentialCrewComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Output",
+              "group_outputs": false,
+              "method": "build_output",
+              "name": "output",
+              "selected": "Message",
+              "tool_mode": true,
+              "types": [
+                "Message"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "replacement": [],
+          "template": {
+            "_type": "Component",
+            "code": {
+              "advanced": true,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "from lfx.base.agents.crewai.crew import BaseCrewComponent\nfrom lfx.io import HandleInput\nfrom lfx.schema.message import Message\n\n\nclass SequentialCrewComponent(BaseCrewComponent):\n    display_name: str = \"Sequential Crew\"\n    description: str = \"Represents a group of agents with tasks that are executed sequentially.\"\n    documentation: str = \"https://docs.crewai.com/how-to/Sequential/\"\n    icon = \"CrewAI\"\n    legacy = True\n    replacement = \"agents.Agent\"\n\n    inputs = [\n        *BaseCrewComponent.get_base_inputs(),\n        HandleInput(name=\"tasks\", display_name=\"Tasks\", input_types=[\"SequentialTask\"], is_list=True),\n    ]\n\n    @property\n    def agents(self: \"SequentialCrewComponent\") -> list:\n        # Derive agents directly from linked tasks\n        return [task.agent for task in self.tasks if hasattr(task, \"agent\")]\n\n    def get_tasks_and_agents(self, agents_list=None) -> tuple[list, list]:\n        # Use the agents property to derive agents\n        if not agents_list:\n            existing_agents = self.agents\n            agents_list = existing_agents + (agents_list or [])\n\n        return super().get_tasks_and_agents(agents_list=agents_list)\n\n    def build_crew(self) -> Message:\n        try:\n            from crewai import Crew, Process\n        except ImportError as e:\n            msg = \"CrewAI is not installed. Please install it with `uv pip install crewai`.\"\n            raise ImportError(msg) from e\n\n        tasks, agents = self.get_tasks_and_agents()\n\n        return Crew(\n            agents=agents,\n            tasks=tasks,\n            process=Process.sequential,\n            verbose=self.verbose,\n            memory=self.memory,\n            cache=self.use_cache,\n            max_rpm=self.max_rpm,\n            share_crew=self.share_crew,\n            function_calling_llm=self.function_calling_llm,\n            step_callback=self.get_step_callback(),\n            task_callback=self.get_task_callback(),\n        )\n"
+            },
+            "function_calling_llm": {
+              "_input_type": "HandleInput",
+              "advanced": true,
+              "display_name": "Function Calling LLM",
+              "dynamic": false,
+              "info": "Turns the ReAct CrewAI agent into a function-calling agent",
+              "input_types": [
+                "LanguageModel"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "function_calling_llm",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "max_rpm": {
+              "_input_type": "IntInput",
+              "advanced": true,
+              "display_name": "Max RPM",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "max_rpm",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 100
+            },
+            "memory": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "display_name": "Memory",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "memory",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            },
+            "share_crew": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "display_name": "Share Crew",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "share_crew",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            },
+            "tasks": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "display_name": "Tasks",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "SequentialTask"
+              ],
+              "list": true,
+              "list_add_label": "Add More",
+              "name": "tasks",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "use_cache": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "display_name": "Cache",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "use_cache",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": true
+            },
+            "verbose": {
+              "_input_type": "IntInput",
+              "advanced": true,
+              "display_name": "Verbose",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "verbose",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 0
             }
           },
           "tool_mode": false
@@ -5496,7 +6336,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "lfx",
@@ -6895,7 +7735,7 @@
                 },
                 {
                   "name": "cryptography",
-                  "version": "49.0.0"
+                  "version": "48.0.1"
                 },
                 {
                   "name": "langchain_chroma",
@@ -6911,7 +7751,7 @@
                 },
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "chromadb",
@@ -8434,7 +9274,7 @@
                 },
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "langchain_chroma",
@@ -21477,7 +22317,7 @@
                 },
                 {
                   "name": "toolguard",
-                  "version": null
+                  "version": "0.2.21"
                 }
               ],
               "total_dependencies": 2
@@ -30424,9 +31264,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 126,
+    "num_components": 129,
     "num_modules": 17
   },
-  "sha256": "63fb096427530603b4bd6d07fdb0da7177c0897fb6356eeb16154b9890b511a7",
+  "sha256": "134e6b60dc25bb3f631871c410deb82ddd24b9730e0de60dbaccd9bea108f678",
   "version": "1.11.0"
 }
