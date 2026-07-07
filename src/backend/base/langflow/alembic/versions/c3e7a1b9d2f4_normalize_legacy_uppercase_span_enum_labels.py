@@ -1,7 +1,7 @@
 """Normalize legacy uppercase spanstatus/spantype enum labels to lowercase
 
 Revision ID: c3e7a1b9d2f4
-Revises: 4f0d2c9a8b7e
+Revises: 844cad9a53fa
 Create Date: 2026-06-30
 
 Phase: MIGRATE
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 # revision identifiers, used by Alembic.
 revision: str = "c3e7a1b9d2f4"  # pragma: allowlist secret
-down_revision: str | None = "4f0d2c9a8b7e"  # pragma: allowlist secret
+down_revision: str | None = "844cad9a53fa"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

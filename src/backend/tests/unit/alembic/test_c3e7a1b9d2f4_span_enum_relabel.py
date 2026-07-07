@@ -27,9 +27,9 @@ _MIGRATION = importlib.import_module(
 
 
 def test_revision_chain_follows_current_head():
-    """Migration chains directly on top of the flow:create backfill head."""
+    """Migration chains directly on top of the 844cad9a53fa merge head."""
     assert _MIGRATION.revision == "c3e7a1b9d2f4"  # pragma: allowlist secret
-    assert _MIGRATION.down_revision == "4f0d2c9a8b7e"  # pragma: allowlist secret
+    assert _MIGRATION.down_revision == "844cad9a53fa"  # pragma: allowlist secret
 
 
 def test_relabel_map_matches_span_status_enum():
