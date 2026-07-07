@@ -1,4 +1,5 @@
 import copy
+import random
 
 import pytest
 from lfx.graph.graph import utils
@@ -977,3 +978,73 @@ def test_filter_vertices_from_vertex():
         get_vertex_successors=get_successors,
     )
     assert result == {"A", "B", "C"}
+
+
+def _cycle_vertices_by_reachability(edges):
+    """Independent oracle for ``find_cycle_vertices``.
+
+    A vertex participates in a cycle iff it can reach itself in one or more steps.
+    This computes that directly via forward reachability -- a completely different
+    algorithm from the production iterative Tarjan SCC -- so agreement between the
+    two is strong evidence the SCC implementation is correct. This is the check that
+    previously relied on ``networkx.strongly_connected_components``.
+    """
+    successors = {}
+    nodes = set()
+    for source, target in edges:
+        nodes.add(source)
+        nodes.add(target)
+        successors.setdefault(source, set()).add(target)
+        successors.setdefault(target, set())
+
+    cycle_vertices = set()
+    for start in nodes:
+        # Walk >=1-step reachability from start; returning to start means it is on a cycle.
+        seen = set()
+        stack = list(successors[start])
+        while stack:
+            node = stack.pop()
+            if node == start:
+                cycle_vertices.add(start)
+                break
+            if node in seen:
+                continue
+            seen.add(node)
+            stack.extend(successors[node])
+    return sorted(cycle_vertices)
+
+
+class TestFindCycleVerticesDifferential:
+    """Property/differential coverage for the iterative Tarjan SCC in find_cycle_vertices.
+
+    The fixed-example tests above pin specific shapes; these guard the SCC algorithm
+    itself against subtle regressions (the iterative work-stack and lowlink handling)
+    by comparing it to an independent reachability oracle over many random graphs.
+    """
+
+    def test_figure_eight_two_cycles_sharing_a_vertex(self):
+        # A<->B and A<->C share vertex A; all three are on cycles.
+        edges = [("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]
+        assert sorted(utils.find_cycle_vertices(edges)) == ["A", "B", "C"]
+
+    def test_cycle_with_acyclic_tail(self):
+        # 1->2->3->1 is a cycle; 3->4->5 is a tail that is NOT on any cycle.
+        edges = [(1, 2), (2, 3), (3, 1), (3, 4), (4, 5)]
+        assert sorted(utils.find_cycle_vertices(edges)) == [1, 2, 3]
+
+    def test_two_node_mutual_cycle(self):
+        assert sorted(utils.find_cycle_vertices([("A", "B"), ("B", "A")])) == ["A", "B"]
+
+    def test_self_loop_is_a_cycle_of_one(self):
+        assert sorted(utils.find_cycle_vertices([("A", "A"), ("A", "B")])) == ["A"]
+
+    @pytest.mark.parametrize("seed", range(100))
+    def test_matches_reachability_oracle_on_random_graphs(self, seed):
+        rng = random.Random(seed)  # noqa: S311 - deterministic test-data generation, not cryptographic
+        n = rng.randint(1, 15)
+        # Dense enough to create SCCs, and deliberately allows self-loops and parallel edges.
+        num_edges = rng.randint(0, n * 3)
+        edges = [(rng.randrange(n), rng.randrange(n)) for _ in range(num_edges)]
+        expected = _cycle_vertices_by_reachability(edges)
+        result = sorted(utils.find_cycle_vertices(edges))
+        assert result == expected, f"mismatch seed={seed} edges={edges}"
