@@ -579,6 +579,24 @@ class TestMCPCommandInjectionSecurity:
         error_msg = str(exc_info.value)
         assert "not allowed" in error_msg.lower()
 
+    def test_shellopts_ps4_trace_env_rejected(self):
+        """Test that SHELLOPTS/PS4 env vars are rejected (bash xtrace prompt command substitution)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="python3",
+                args=["-V"],
+                env={"SHELLOPTS": "xtrace", "PS4": "$(id)"},
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    @pytest.mark.parametrize("env_var", ["SHELLOPTS", "BASHOPTS", "PS4"])
+    def test_bash_trace_control_env_rejected(self, env_var):
+        """Test that bash option and trace-prompt env vars are rejected."""
+        with pytest.raises(ValidationError):
+            MCPServerConfig(command="node", args=["server.js"], env={env_var: "malicious_value"})
+
     def test_ifs_env_rejected(self):
         """Test that IFS env var is rejected (shell word-splitting manipulation).
 

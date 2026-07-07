@@ -17,7 +17,13 @@ import { NAV_ITEMS } from "./sidebar-nav-items";
 export type { SidebarSection };
 export { NAV_ITEMS };
 
-const SidebarSegmentedNav = () => {
+type SidebarSegmentedNavProps = {
+  hiddenFromTabOrder?: boolean;
+};
+
+const SidebarSegmentedNav = ({
+  hiddenFromTabOrder = false,
+}: SidebarSegmentedNavProps) => {
   const { t } = useTranslation();
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
   const { setSearch } = useSearchContext();
@@ -27,7 +33,10 @@ const SidebarSegmentedNav = () => {
   );
 
   return (
-    <div className="flex h-full flex-col border-r border-border bg-background">
+    <div
+      className="flex h-full flex-col border-r border-border bg-background"
+      aria-hidden={hiddenFromTabOrder || undefined}
+    >
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
           <Fragment key={item.id}>
@@ -70,6 +79,8 @@ const SidebarSegmentedNav = () => {
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
                   data-testid={`sidebar-nav-${item.id}`}
+                  data-sidebar-nav-item={item.id}
+                  tabIndex={hiddenFromTabOrder ? -1 : undefined}
                 >
                   <ForwardedIconComponent
                     name={item.icon}

@@ -59,7 +59,8 @@ _LC_COMMUNITY = "langchain-community>=0.4.1,<1.0.0"
 PROVIDER_DEPS: dict[str, list[str]] = {
     # --- tranche 1: search/tools ---
     "tavily": [],  # talks to the Tavily API via httpx (an lfx core dep)
-    "exa": ["metaphor-python==0.1.23"],
+    # "exa" graduated to the standalone lfx-exa bundle (src/bundles/exa) when
+    # the component moved off the deprecated metaphor-python SDK onto exa-py.
     "wikipedia": ["wikipedia==1.4.0", _LC_COMMUNITY],
     "yahoosearch": ["yfinance==0.2.50"],
     "wolframalpha": ["wolframalpha==5.1.3", _LC_COMMUNITY],
@@ -112,7 +113,6 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "lmstudio": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"],
     "novita": ["langchain-openai>=1.1.6", "requests>=2.32.0"],
     "openrouter": ["langchain-openai>=1.1.6"],
-    "vllm": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"],
     "xai": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"],
     # --- tranche 4: remaining single-SDK providers (post core-tail audit) ---
     "cleanlab": ["cleanlab-tlm>=1.1.2,<2.0.0"],
@@ -132,7 +132,15 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "olivya": [],  # httpx REST only (lfx core)
     "agentql": [],  # httpx REST only (lfx core)
     # --- tranche 7: google family + agent SDKs (markers preserved from base) ---
-    "google": ["langchain-google-genai~=4.1.2", "langchain-google-community~=3.0.2", "google-api-python-client~=2.161"],
+    # google-auth-oauthlib: imported directly by the google_oauth_token component
+    # (from google_auth_oauthlib.flow import InstalledAppFlow). langchain-google-community
+    # only pulls it behind its [gmail,drive,calendar] extras, so declare it explicitly.
+    "google": [
+        "langchain-google-genai~=4.1.2",
+        "langchain-google-community~=3.0.2",
+        "google-api-python-client~=2.161",
+        "google-auth-oauthlib>=1.2.0,<2.0.0",
+    ],
     "vertexai": ["langchain-google-vertexai>=3.2.0"],
     "altk": ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"],
     "codeagents": [
@@ -169,11 +177,18 @@ PROVIDER_DEPS: dict[str, list[str]] = {
 }
 
 _OPTIONAL_DEPS_HEADER = (
-    "# Per-provider extras + the generated ``all`` aggregate. Extra keys are\n"
-    "# PEP 685-normalized (lowercase, hyphen-separated). ``all`` is GENERATED\n"
-    "# from the per-provider keys -- never hand-edit it. Managed by\n"
-    "# scripts/migrate/consolidate_bundles.py."
+    "# Per-provider extras + the generated ``all`` / ``all-no-torch`` aggregates.\n"
+    "# Extra keys are PEP 685-normalized (lowercase, hyphen-separated). ``all``\n"
+    "# and ``all-no-torch`` are GENERATED from the per-provider keys -- never\n"
+    "# hand-edit them. ``all`` pulls every provider; ``all-no-torch`` is ``all``\n"
+    "# minus the torch-pulling providers (see TORCH_EXTRAS), giving a torch-free\n"
+    "# superset for slim/CPU images. Managed by scripts/migrate/consolidate_bundles.py."
 )
+
+# Providers whose SDKs pull torch (directly or transitively). Excluded from the
+# generated ``all-no-torch`` aggregate so it resolves torch-free. Keep in sync with
+# the per-provider extras above: cuga -> cuga, codeagents -> smolagents.
+TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 
 
 def normalize_extra(name: str) -> str:
@@ -300,7 +315,7 @@ def move_provider(provider: str, *, apply: bool) -> list[tuple[str, str]]:
 
 
 def _render_optional_deps(extras: dict[str, list[str]]) -> str:
-    keys = sorted(k for k in extras if k != "all")
+    keys = sorted(k for k in extras if k not in ("all", "all-no-torch"))
     lines = ["[project.optional-dependencies]", _OPTIONAL_DEPS_HEADER]
     for key in keys:
         deps = extras[key]
@@ -311,6 +326,9 @@ def _render_optional_deps(extras: dict[str, list[str]]) -> str:
             lines.append(f"{key} = []")
     lines.append("all = [")
     lines.extend(f'    "lfx-bundles[{key}]",' for key in keys)
+    lines.append("]")
+    lines.append("all-no-torch = [")
+    lines.extend(f'    "lfx-bundles[{key}]",' for key in keys if key not in TORCH_EXTRAS)
     lines.append("]")
     return "\n".join(lines) + "\n"
 
@@ -323,6 +341,7 @@ def update_bundles_pyproject(new_extras: dict[str, list[str]], *, apply: bool) -
     parsed = tomllib.loads(text)
     extras = {k: list(v) for k, v in parsed.get("project", {}).get("optional-dependencies", {}).items()}
     extras.pop("all", None)
+    extras.pop("all-no-torch", None)
     extras.update(new_extras)
 
     section = _render_optional_deps(extras)

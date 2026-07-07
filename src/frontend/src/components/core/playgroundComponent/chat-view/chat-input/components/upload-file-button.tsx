@@ -48,6 +48,7 @@ const UploadFileButton = ({
           }`}
           onClick={handleClick}
           unstyled
+          aria-label={t("chat.attachFileTooltip")}
         >
           <ForwardedIconComponent className="h-[18px] w-[18px]" name="File" />
         </Button>

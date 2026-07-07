@@ -388,6 +388,7 @@ const SideBarFoldersButtonsComponent = ({
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
       data-testid="project-sidebar"
+      aria-labelledby="project-sidebar-title"
     >
       <SidebarHeader className="px-4 py-1">
         <HeaderButtons

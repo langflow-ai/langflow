@@ -9,7 +9,11 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
+FROM ghcr.io/astral-sh/uv:latest AS uv_installer
+FROM registry.access.redhat.com/ubi10/python-314-minimal AS builder
+USER root
+COPY --from=uv_installer /uv /usr/local/bin/uv
+COPY --from=uv_installer /uvx /usr/local/bin/uvx
 
 # Install the project into `/app`
 WORKDIR /app
@@ -23,25 +27,22 @@ ENV UV_LINK_MODE=copy
 # Set RUSTFLAGS for reqwest unstable features needed by apify-client v2.0.0
 ENV RUSTFLAGS='--cfg reqwest_unstable'
 
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y \
+RUN microdnf install -y tar xz python3.14-devel \
     # deps for building python deps
-    build-essential \
+    gcc gcc-c++ make \
     git \
     # gcc
     gcc \
     curl \
-   && ARCH=$(dpkg --print-architecture) \
-    && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
-       elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
+   && ARCH=$(uname -m) \
+    && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
+       elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION="22.14.0" \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
     && npm install -g npm@latest \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && microdnf clean all
 
 # Copy files first to avoid permission issues with bind mounts
 COPY ./uv.lock /app/uv.lock
@@ -89,19 +90,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.14-slim-trixie AS runtime
-
-
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y curl git libpq5 gnupg xz-utils \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+FROM registry.access.redhat.com/ubi10/python-314-minimal AS runtime
+USER root
+RUN microdnf update -y \
+    && microdnf install -y curl git libpq gnupg xz tar shadow-utils \
+    && microdnf clean all
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
-RUN ARCH=$(dpkg --print-architecture) \
-    && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
-       elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
+RUN ARCH=$(uname -m) \
+    && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
+       elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
                     | sed -nE "s/.*node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-${NODE_ARCH}\.tar\.xz.*/\1/p" \
@@ -114,6 +112,9 @@ RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV BASH_ENV="" \
+    ENV="" \
+    PROMPT_COMMAND=""
 
 # Pre-create LANGFLOW_CONFIG_DIR (the default location used by the docker_example
 # compose file) with the non-root user as owner. When the official compose mounts
@@ -135,5 +136,6 @@ WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
+ENV LANGFLOW_AUTO_LOGIN=false
 
 CMD ["langflow", "run"]

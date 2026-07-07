@@ -66,7 +66,7 @@ export default function AppHeader(): JSX.Element {
           data-testid="icon-ChevronLeft"
           aria-label={t("header.home")}
         >
-          <LangflowLogo className="h-5 w-5" />
+          <LangflowLogo className="h-5 w-5" aria-hidden="true" />
         </Button>
         <CustomOrgSelector />
       </div>
