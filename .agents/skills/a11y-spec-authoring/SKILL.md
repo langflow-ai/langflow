@@ -87,6 +87,25 @@ state rendered, then scan. Enumerate:
   error text and previously-hidden inputs are actually in the DOM.
 - **Color schemes:** scan light and dark where the feature themes differently.
 
+Patterns from the examples:
+
+```ts
+// Gate, then scan an opened menu (knowledge-bases.a11y.spec.ts)
+await page.getByTestId("kb-row-actions-trigger").first().click();
+await expect(page.getByRole("menuitem", { name: /view chunks/i })).toBeVisible({
+  timeout: TIMEOUTS.standard,
+});
+await page.runA11yScan("kb-row-actions-open", { ignoreRules: KB_IGNORE_RULES });
+
+// Reveal a hidden field before scanning
+await page.getByTestId("kb-run-metadata-add").click();
+await expect(page.getByTestId("kb-run-metadata-key-0")).toBeVisible();
+await page.runA11yScan("kb-upload-metadata-add", { ignoreRules: KB_IGNORE_RULES });
+
+// Loading/error states via a gated route or forced error
+page.allowFlowErrors(); // when intentionally driving a 4xx/5xx
+```
+
 For loading states, gate the network response so the spinner stays on screen
 during the scan (see `gateRoute` in `helpers/knowledge-bases.fixtures.ts`). For
 error states, mock a 4xx and call `page.allowFlowErrors()` so the fixture's

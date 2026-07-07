@@ -140,7 +140,7 @@ step 3 until the scan is clean.
 Sometimes a finding is genuinely owned by shared app chrome or a third-party
 widget (Radix, AG Grid, cmdk) and can't be fixed from the feature's markup. Those
 suppressions are **feature-specific**. Knowledge Bases centralizes its own in
-[`knowledge-bases-ignore-rules.json`](knowledge-bases-ignore-rules.json) — one
+[`knowledge-bases-ignore-rules.json`](rules/knowledge-bases-ignore-rules.json) — one
 `{ "ruleId", "reason" }` entry per rule:
 
 - `knowledge-bases.a11y.spec.ts` imports it to build `KB_IGNORE_RULES` for every
