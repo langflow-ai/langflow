@@ -858,9 +858,13 @@ def create_multi_serve_app(
             return StreamingResponse(error_stream(), media_type="text/event-stream")
 
     # V2 workflow contract endpoints (sync + stream), shared with the langflow backend.
-    # serve passes developer_api_guard=False to keep its public surface unchanged
-    # (no /api prefix, no developer-API gate, no background job endpoints).
-    app.include_router(create_workflow_router(ServeWorkflowHost(registry, verify_api_key), developer_api_guard=False))
+    # Mounted under /api/v2 so the path matches the backend (/api/v2/workflows): a client
+    # switches runtimes by changing the host, not the URL. developer_api_guard=False keeps
+    # serve's surface ungated, and no background job endpoints are registered.
+    app.include_router(
+        create_workflow_router(ServeWorkflowHost(registry, verify_api_key), developer_api_guard=False),
+        prefix="/api/v2",
+    )
 
     return app
 

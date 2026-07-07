@@ -1,4 +1,4 @@
-"""Tests for the v2 workflow endpoints on ``lfx serve`` (POST /workflows).
+"""Tests for the v2 workflow endpoints on ``lfx serve`` (POST /api/v2/workflows).
 
 Real graph, no mocks: a ChatInput -> ChatOutput echo flow is registered and
 exercised through the FastAPI app, asserting the v2 ``WorkflowExecutionResponse``
@@ -46,7 +46,7 @@ def client(monkeypatch):
 
 def test_sync_returns_workflow_execution_response(client):
     resp = client.post(
-        "/workflows",
+        "/api/v2/workflows",
         json={"flow_id": _FLOW_ID, "input_value": "hello", "mode": "sync"},
         headers=_HEADERS,
     )
@@ -61,7 +61,7 @@ def test_sync_returns_workflow_execution_response(client):
 
 def test_stream_agui_emits_run_lifecycle_and_content(client):
     resp = client.post(
-        "/workflows",
+        "/api/v2/workflows",
         json={"flow_id": _FLOW_ID, "input_value": "hello", "mode": "stream", "stream_protocol": "agui"},
         headers=_HEADERS,
     )
@@ -75,7 +75,7 @@ def test_stream_agui_emits_run_lifecycle_and_content(client):
 
 def test_stream_langflow_protocol_passes_through_frames(client):
     resp = client.post(
-        "/workflows",
+        "/api/v2/workflows",
         json={"flow_id": _FLOW_ID, "input_value": "hello", "mode": "stream", "stream_protocol": "langflow"},
         headers=_HEADERS,
     )
@@ -88,7 +88,7 @@ def test_stream_langflow_protocol_passes_through_frames(client):
 
 def test_unknown_stream_protocol_422(client):
     resp = client.post(
-        "/workflows",
+        "/api/v2/workflows",
         json={"flow_id": _FLOW_ID, "mode": "stream", "stream_protocol": "bogus"},
         headers=_HEADERS,
     )
@@ -98,7 +98,7 @@ def test_unknown_stream_protocol_422(client):
 
 def test_unsupported_fields_rejected_422(client):
     resp = client.post(
-        "/workflows",
+        "/api/v2/workflows",
         json={"flow_id": _FLOW_ID, "input_value": "x", "tweaks": {"ChatOutput-x": {"foo": 1}}},
         headers=_HEADERS,
     )
@@ -110,7 +110,7 @@ def test_unsupported_fields_rejected_422(client):
 
 def test_background_mode_rejected_422(client):
     resp = client.post(
-        "/workflows",
+        "/api/v2/workflows",
         json={"flow_id": _FLOW_ID, "input_value": "x", "mode": "background"},
         headers=_HEADERS,
     )
@@ -120,7 +120,7 @@ def test_background_mode_rejected_422(client):
 
 def test_unknown_flow_404(client):
     resp = client.post(
-        "/workflows",
+        "/api/v2/workflows",
         json={"flow_id": _MISSING_FLOW_ID, "input_value": "x"},
         headers=_HEADERS,
     )
@@ -129,14 +129,14 @@ def test_unknown_flow_404(client):
 
 
 def test_missing_api_key_401(client):
-    resp = client.post("/workflows", json={"flow_id": _FLOW_ID, "input_value": "x"})
+    resp = client.post("/api/v2/workflows", json={"flow_id": _FLOW_ID, "input_value": "x"})
     assert resp.status_code == 401
 
 
 def test_globals_accepted(client):
     """Request-level globals are applied, not rejected (backend v2 parity)."""
     resp = client.post(
-        "/workflows",
+        "/api/v2/workflows",
         json={"flow_id": _FLOW_ID, "input_value": "hello", "mode": "sync", "globals": {"MY_VAR": "v"}},
         headers=_HEADERS,
     )
@@ -147,7 +147,7 @@ def test_globals_accepted(client):
 def test_unknown_output_ids_rejected_422(client):
     """Unknown output_ids are a 422 up front, before running (backend v2 parity)."""
     resp = client.post(
-        "/workflows",
+        "/api/v2/workflows",
         json={"flow_id": _FLOW_ID, "input_value": "x", "mode": "sync", "output_ids": ["does-not-exist"]},
         headers=_HEADERS,
     )
@@ -161,7 +161,7 @@ def test_valid_output_ids_accepted(client):
     """A real terminal node id is accepted and runs to completion."""
     terminal_ids = _terminal_node_ids(_echo_graph())
     resp = client.post(
-        "/workflows",
+        "/api/v2/workflows",
         json={"flow_id": _FLOW_ID, "input_value": "hello", "mode": "sync", "output_ids": terminal_ids},
         headers=_HEADERS,
     )

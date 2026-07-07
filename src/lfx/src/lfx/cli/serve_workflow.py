@@ -2,8 +2,9 @@
 
 Gives the standalone lfx runtime the same request/response contract as the
 langflow backend ``POST /api/v2/workflows`` for the ``sync`` and ``stream``
-execution modes, so a client integrates against one contract regardless of which
-runtime serves it.
+execution modes. serve mounts the shared router under the same ``/api/v2`` path
+(see ``create_multi_serve_app``), so a client switches runtimes by changing the
+host, not the URL.
 
 Background and public modes stay backend-only: they need a database, job queue,
 and auth model that stateless ``lfx serve`` does not have. ``ServeWorkflowHost``
