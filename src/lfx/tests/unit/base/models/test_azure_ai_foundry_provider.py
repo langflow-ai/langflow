@@ -176,3 +176,16 @@ def test_get_llm_azure_ai_foundry_requires_endpoint():
         pytest.raises(ValueError, match="Azure AI Foundry endpoint is required"),
     ):
         get_llm(_build_azure_ai_foundry_model_selection(), user_id="user-1", stream=False)
+
+
+def test_shared_deployment_aliases_resolve_to_openai_for_backwards_compat():
+    """Seed Foundry deployment names overlap OpenAI; legacy lookup must prefer OpenAI.
+
+    ``get_provider_for_model_name`` scans the static catalog in list order. Flows
+    exported from 1.8.x only stored the model id (e.g. ``gpt-4o``) without a
+    provider, so ambiguous aliases must keep resolving to OpenAI.
+    """
+    from lfx.base.models.unified_models import get_provider_for_model_name
+
+    assert get_provider_for_model_name("gpt-4o") == "OpenAI"
+    assert get_provider_for_model_name("Mistral-Large-3") == "Azure AI Foundry"

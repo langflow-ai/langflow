@@ -38,7 +38,6 @@ model_provider_metadata = get_model_provider_metadata()
 
 _STATIC_MODELS_DETAILED: list[list[dict]] = [
     ANTHROPIC_MODELS_DETAILED,
-    AZURE_AI_FOUNDRY_MODELS_DETAILED,
     OPENAI_MODELS_DETAILED,
     OPENAI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
@@ -47,6 +46,10 @@ _STATIC_MODELS_DETAILED: list[list[dict]] = [
     OLLAMA_EMBEDDING_MODELS_DETAILED,
     OPENROUTER_MODELS_DETAILED,
     WATSONX_MODELS_DETAILED,
+    # Last: seed deployment aliases (gpt-4o, gpt-4.1, …) overlap OpenAI rows.
+    # ``get_provider_for_model_name`` returns the first catalog hit, so keep
+    # Foundry after established providers for 1.8.x backwards compat.
+    AZURE_AI_FOUNDRY_MODELS_DETAILED,
 ]
 
 
