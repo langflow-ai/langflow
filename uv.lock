@@ -40,6 +40,7 @@ members = [
     "lfx-docling",
     "lfx-duckduckgo",
     "lfx-empiriolabs",
+    "lfx-exa",
     "lfx-firecrawl",
     "lfx-ibm",
     "lfx-nextplaid",
@@ -3999,6 +4000,24 @@ wheels = [
 ]
 
 [[package]]
+name = "exa-py"
+version = "2.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpcore" },
+    { name = "httpx" },
+    { name = "openai" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/68/a3/dabad8d3dbdb50d2ad49f426cc3e1fb47a0d0fd6ba10fbb27219c9bef684/exa_py-2.16.0.tar.gz", hash = "sha256:dce0db698720b1b7b39b58a1a17ad65fcc5969ee47f810cff5bcc836aeb0f777", size = 63530, upload-time = "2026-07-02T01:04:38.797Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3c/c8/69d100ed12f8493ab8b9d03bf20cd0080a3a60dec4abadb1782cc4f91969/exa_py-2.16.0-py3-none-any.whl", hash = "sha256:cf726f801d6e4be25f38275a6318b536445a92077450a11cb3d7e493ea77ecc2", size = 86866, upload-time = "2026-07-02T01:04:37.451Z" },
+]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -7902,6 +7921,7 @@ dependencies = [
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
     { name = "lfx-empiriolabs" },
+    { name = "lfx-exa" },
     { name = "lfx-firecrawl" },
     { name = "lfx-ibm" },
     { name = "lfx-nextplaid" },
@@ -8008,6 +8028,7 @@ requires-dist = [
     { name = "lfx-docling", extras = ["local"], marker = "extra == 'docling'", editable = "src/bundles/docling" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
     { name = "lfx-empiriolabs", editable = "src/bundles/empiriolabs" },
+    { name = "lfx-exa", editable = "src/bundles/exa" },
     { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", editable = "src/bundles/nextplaid" },
@@ -8432,7 +8453,7 @@ metal = [
     { name = "metal-sdk" },
 ]
 metaphor = [
-    { name = "metaphor-python" },
+    { name = "exa-py" },
 ]
 milvus = [
     { name = "langchain-milvus" },
@@ -8650,6 +8671,7 @@ requires-dist = [
     { name = "elevenlabs", marker = "python_full_version == '3.12.*'", specifier = "==1.58.1" },
     { name = "email-validator", specifier = ">=2.0.0" },
     { name = "emoji", specifier = ">=2.12.0,<3.0.0" },
+    { name = "exa-py", marker = "extra == 'metaphor'", specifier = ">=1.14,<3" },
     { name = "faiss-cpu", marker = "python_full_version >= '3.14' and extra == 'faiss'", specifier = ">=1.13.2" },
     { name = "faiss-cpu", marker = "python_full_version < '3.14' and extra == 'faiss'", specifier = "==1.9.0.post1" },
     { name = "fake-useragent", marker = "extra == 'fake-useragent'", specifier = ">=2.0.0" },
@@ -8749,7 +8771,6 @@ requires-dist = [
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.17.0,<2.0.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
     { name = "metal-sdk", marker = "extra == 'metal'", specifier = "==2.5.1" },
-    { name = "metaphor-python", marker = "extra == 'metaphor'", specifier = "==0.1.23" },
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'mlx'", specifier = ">=0.29.0" },
     { name = "mlx-vlm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'mlx'", specifier = "~=0.3.9" },
     { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
@@ -9417,7 +9438,6 @@ all = [
     { name = "langchain-weaviate" },
     { name = "markdown" },
     { name = "mem0ai" },
-    { name = "metaphor-python" },
     { name = "needle-python" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
     { name = "openai" },
@@ -9513,9 +9533,6 @@ elastic = [
     { name = "elasticsearch" },
     { name = "langchain-elasticsearch" },
     { name = "opensearch-py" },
-]
-exa = [
-    { name = "metaphor-python" },
 ]
 faiss = [
     { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
@@ -9780,7 +9797,6 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["cuga"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["deepseek"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["elastic"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
-    { name = "lfx-bundles", extras = ["exa"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["faiss"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["git"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["glean"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9833,7 +9849,6 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["zep"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
-    { name = "metaphor-python", marker = "extra == 'exa'", specifier = "==0.1.23" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nvidia'", specifier = ">=26.1.0,<27.0.0" },
     { name = "openai", marker = "extra == 'aiml'", specifier = ">=1.68.2,<3.0.0" },
@@ -9870,7 +9885,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "exa", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all"]
 
 [[package]]
 name = "lfx-cohere"
@@ -10017,6 +10032,23 @@ requires-dist = [
     { name = "langchain-openai", specifier = ">=1.1.6" },
     { name = "lfx", editable = "src/lfx" },
     { name = "requests", specifier = ">=2.32.0" },
+]
+
+[[package]]
+name = "lfx-exa"
+version = "0.1.0"
+source = { editable = "src/bundles/exa" }
+dependencies = [
+    { name = "exa-py" },
+    { name = "langchain-core" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "exa-py", specifier = ">=1.14,<3" },
+    { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
@@ -11059,18 +11091,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f2/dc/d51166c151501716906bb21a1563298d5abd6abe6fbf3a6dba5d4800d6ee/metal_sdk-2.5.1.tar.gz", hash = "sha256:97ac85e16669f256d2502b7c9606a5f0d4aa4cecc3938834b6064867ee47a34a", size = 15476, upload-time = "2023-11-10T13:33:28.922Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/22/6d/1c1b181328cdae858797ccbcad7a74be6e3d81f06041fde9a25c698cb5db/metal_sdk-2.5.1-py3-none-any.whl", hash = "sha256:22eb44609d789d772664fe6eb502bb07b5f645a370c7d7fb993ffb28ecb59bbd", size = 14043, upload-time = "2023-11-10T13:33:24.666Z" },
-]
-
-[[package]]
-name = "metaphor-python"
-version = "0.1.23"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/39/f4/458fbd9c8624aab58deca73468df107201cadc5ca8ea449511d318140de3/metaphor-python-0.1.23.tar.gz", hash = "sha256:ce3a8f9d81b2ee7201dac225095cdf2da34b003fe889c5b4629a8b480e8de7ba", size = 5563, upload-time = "2023-11-30T16:49:45.831Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/ef/44b06a7269a596fb23ce0a318c1b2e6e67012624c9122d5a73883c23f9f9/metaphor_python-0.1.23-py3-none-any.whl", hash = "sha256:993b594373efdd5223631f8997dfd68801241db112a214d7c56aeac03fc74b4f", size = 6138, upload-time = "2023-11-30T16:49:43.946Z" },
 ]
 
 [[package]]
