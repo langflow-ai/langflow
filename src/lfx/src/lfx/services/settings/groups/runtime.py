@@ -98,6 +98,32 @@ class RuntimeSettings(BaseModel):
     via the `lfx.executors` entry-point group can be selected by setting this to their kind.
     """
 
+    deployment_list_sync_batch_size: int = Field(default=500, ge=1)
+    """Max local deployment rows checked against the provider in one list request.
+
+    The deployment list endpoint in Langflow, GET /api/v1/deployments,
+    prunes any local DB rows representing deployments that have been deleted
+    in the provider. This can involve multiple provider API calls before
+    filling the page size requested to Langflow, because deployments might
+    have been pruned. If each provider API call only uses the
+    page-size-requested-to-langflow many deployments, then the number of
+    provider requests (bounded by deployment_list_sync_max_rounds) can be high
+    and result in a slow API response from Langflow to the requestor. Thus, it
+    is recommended to make the batch size larger than the requested page size
+    to Langflow to reduce the number of provider API calls.
+    """
+
+    deployment_list_sync_max_rounds: int = Field(default=2, ge=1)
+    """Max provider validation rounds used to fill one deployment-list response.
+
+    When GET /api/v1/deployments checks local deployment rows against a provider,
+    some rows might be pruned before they can be returned to the requestor.
+    If enough rows are pruned, Langflow can make another provider API call
+    using the next local DB rows after the last checked deployment.
+    This setting limits how many of those provider API calls Langflow can make
+    while trying to fill a single requested page.
+    """
+
     @field_validator("event_delivery", mode="before")
     @classmethod
     def set_event_delivery(cls, value, info):

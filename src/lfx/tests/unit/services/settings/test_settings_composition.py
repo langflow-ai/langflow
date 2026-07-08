@@ -181,6 +181,8 @@ EXPECTED_FIELDS = {
     "redis_queue_polling_watchdog_interval_s",
     "max_ingestion_timeout_secs",
     "executor_kind",
+    "deployment_list_sync_batch_size",
+    "deployment_list_sync_max_rounds",
     # UiSettings
     "embedded_mode",
     "hide_getting_started_progress",
