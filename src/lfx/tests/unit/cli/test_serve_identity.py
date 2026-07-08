@@ -915,10 +915,10 @@ class TestServeAppIdentityEndpoints:
         client = _client_with_verifier(real_graph, verifier)
         with (
             patch.dict(os.environ, {"LANGFLOW_API_KEY": API_KEY}),
-            patch("lfx.cli.serve_workflow.run_graph_internal", run),
+            patch("lfx.workflow.router.run_graph_internal", run),
         ):
             resp = client.post(
-                "/workflows",
+                "/api/v2/workflows",
                 json={"flow_id": FLOW_ID, "input_value": "hi", "mode": "sync"},
                 headers={"x-api-key": API_KEY, "Authorization": "Bearer garbage.token.here"},
             )
@@ -936,10 +936,10 @@ class TestServeAppIdentityEndpoints:
         client = _client_with_verifier(real_graph, verifier)
         with (
             patch.dict(os.environ, {"LANGFLOW_API_KEY": API_KEY}),
-            patch("lfx.cli.serve_workflow.run_graph_internal", mock_run),
+            patch("lfx.workflow.router.run_graph_internal", mock_run),
         ):
             resp = client.post(
-                "/workflows",
+                "/api/v2/workflows",
                 json={"flow_id": FLOW_ID, "input_value": "hi", "mode": "sync"},
                 headers={"x-api-key": API_KEY, "Authorization": f"Bearer {token}"},
             )
@@ -957,10 +957,10 @@ class TestServeAppIdentityEndpoints:
         client = _client_with_verifier(real_graph, verifier)
         with (
             patch.dict(os.environ, {"LANGFLOW_API_KEY": API_KEY}),
-            patch("lfx.cli.serve_workflow.execute_graph_with_capture", mock_execute),
+            patch("lfx.workflow.router.execute_graph_with_capture", mock_execute),
             client.stream(
                 "POST",
-                "/workflows",
+                "/api/v2/workflows",
                 json={"flow_id": FLOW_ID, "input_value": "hi", "mode": "stream"},
                 headers={"x-api-key": API_KEY, "Authorization": f"Bearer {token}"},
             ) as resp,
