@@ -115,28 +115,48 @@ def strip_secret_field_values(flow_data: dict | None) -> dict | None:
     ``flow_data`` is the flow's ``data`` mapping (``{"nodes": [...], ...}``). The
     input is not mutated: a deep copy is returned so the caller never persists the
     nulled values back onto the ORM object.
+
+    This function recursively processes group nodes, which contain nested flows at
+    ``node.data.node.flow.data.nodes[...]``, ensuring secrets are stripped at all
+    nesting levels.
     """
     if not flow_data:
         return flow_data
 
     scrubbed = copy.deepcopy(flow_data)
-    for node in scrubbed.get("nodes", []):
-        if not isinstance(node, dict):
-            continue
-        node_data = node.get("data")
-        if not isinstance(node_data, dict):
-            continue
-        node_inner = node_data.get("node")
-        if not isinstance(node_inner, dict):
-            continue
-        template = node_inner.get("template")
-        if not isinstance(template, dict):
-            continue
-        for value in template.values():
-            if isinstance(value, dict) and value.get("password"):
-                value["value"] = None
-
+    _strip_secrets_from_nodes(scrubbed.get("nodes", []))
     return scrubbed
+
+
+def _strip_secrets_from_nodes(nodes: list) -> None:
+    """Recursively strip secret field values from a list of nodes.
+
+    This helper processes both regular nodes and group nodes (which contain nested
+    flows). Group nodes have their nested flows recursively processed to ensure
+    secrets are stripped at all nesting levels.
+
+    Args:
+        nodes: A list of node dictionaries to process in-place.
+    """
+    for node in nodes:
+        if isinstance(node, dict):
+            node_data = node.get("data")
+            if isinstance(node_data, dict):
+                node_inner = node_data.get("node")
+                if isinstance(node_inner, dict):
+                    template = node_inner.get("template")
+                    if isinstance(template, dict):
+                        for value in template.values():
+                            if isinstance(value, dict) and value.get("password"):
+                                value["value"] = None
+
+                    flow = node_inner.get("flow")
+                    if isinstance(flow, dict):
+                        flow_data = flow.get("data")
+                        if isinstance(flow_data, dict):
+                            nested_nodes = flow_data.get("nodes")
+                            if isinstance(nested_nodes, list):
+                                _strip_secrets_from_nodes(nested_nodes)
 
 
 # ---------------------------------------------------------------------------
