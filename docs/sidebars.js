@@ -529,6 +529,7 @@ module.exports = {
             "Lfx/extensions-bundle-list",
             "Lfx/extensions-quickstart",
             "Lfx/extensions-manifest",
+            "Lfx/extensions-errors",
           ],
         },
         "Components/components-custom-components",

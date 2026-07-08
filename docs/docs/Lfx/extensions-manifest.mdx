@@ -116,7 +116,7 @@ The loader prefers an `extension.json` when both exist. The Pydantic validator i
 
 ## Error codes raised against this manifest
 
-The loader and validator both emit typed errors keyed by the manifest field that triggered them. The full code list is at [`lfx.extension.errors.ERROR_CODES`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/extension/errors.py); the codes most relevant when authoring a manifest are:
+The loader and validator both emit typed errors keyed by the manifest field that triggered them. The full reference is on the [Extension error codes](./extensions/errors) page; the codes most relevant when authoring a manifest are:
 
 | Code | Cause |
 | --- | --- |
@@ -135,3 +135,4 @@ Run `lfx extension validate <path>` to see every error as a structured object wi
 - [Extensions overview](./extensions-overview)
 - [Build your first extension](./extensions-quickstart)
 - [About LFX](./lfx-overview)
+- [Extension error codes](./extensions/errors)
