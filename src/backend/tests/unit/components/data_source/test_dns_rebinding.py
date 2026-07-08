@@ -750,6 +750,220 @@ class TestURLComponentDNSRebindingProtection:
             with pytest.raises(ValueError, match="SSRF Protection"):
                 await component.fetch_url_contents()
 
+    @pytest.mark.asyncio
+    async def test_url_component_follows_redirects_with_per_hop_pinning(self):
+        """Test that the URL component follows redirects and re-validates/pins every hop.
+
+        Regression test: the component previously sent every request with
+        follow_redirects=False, so a site that 301s to its canonical URL (http->https or
+        www normalization - extremely common) returned the redirect stub instead of the
+        page. Redirects are now followed, and each hop is independently DNS-pinned so a
+        rebinding attacker who flips the redirect target after validation can never cause
+        a connection to an unvalidated address.
+        """
+        resolved = []
+
+        def mock_getaddrinfo(host, *_args, **_kwargs):
+            """Every host resolves to the same public IP at validation time."""
+            resolved.append(host)
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 0))]
+
+        connect_hosts = []
+        redirect_response = [
+            b"HTTP/1.1 301 Moved Permanently\r\n",
+            b"Location: https://final.test/\r\n",
+            b"Content-Length: 0\r\n",
+            b"\r\n",
+        ]
+        final_response = [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: text/html\r\n",
+            b"Content-Length: 39\r\n",
+            b"\r\n",
+            b"<html><body>Final content</body></html>",
+        ]
+
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """Capture every IP connected to; first hop redirects, second succeeds."""
+            connect_hosts.append(host)
+            stream = redirect_response if len(connect_hosts) == 1 else final_response
+            return httpcore.AsyncMockStream(list(stream))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
+        ):
+            component = URLComponent()
+            component.urls = ["http://redirect.test/"]
+            component.max_depth = 1
+            component.format = "Text"
+            component.headers = [{"key": "User-Agent", "value": "Test"}]
+            component.timeout = 30
+            component.prevent_outside = True
+            component.use_async = True
+            component.follow_redirects = True
+            component.filter_text_html = False
+            component.continue_on_failure = False
+            component.check_response_status = False
+            component.autoset_encoding = True
+
+            result = await component.fetch_url_contents()
+
+        # The redirect was followed through to the final page's content.
+        assert len(result) == 1
+        assert "Final content" in result[0]["text"]
+        # Both the initial request and the redirect hop connected to the pinned public IP.
+        assert connect_hosts == ["8.8.8.8", "8.8.8.8"], connect_hosts
+        # The redirect target was resolved exactly once (validation only); httpx never
+        # re-resolved it, so a rebinding flip after validation has no effect.
+        assert resolved.count("final.test") == 1, resolved
+
+    @pytest.mark.asyncio
+    async def test_url_component_blocks_redirect_to_internal_ip(self):
+        """Test that a redirect pointing at an internal address is blocked before connecting.
+
+        A validated public host redirects to a host that resolves to localhost. The hop
+        is re-validated with the SSRF denylist, so the component raises rather than
+        fetching the internal resource, and never opens a connection to it.
+        """
+        resolved = []
+
+        def mock_getaddrinfo(host, *_args, **_kwargs):
+            """The public redirector resolves to a public IP; the target to localhost."""
+            resolved.append(host)
+            if host == "internal.test":
+                return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))]
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 0))]
+
+        connect_hosts = []
+        redirect_response = [
+            b"HTTP/1.1 302 Found\r\n",
+            b"Location: http://internal.test/secret\r\n",
+            b"Content-Length: 0\r\n",
+            b"\r\n",
+        ]
+
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """First (and only) connection returns a redirect to the internal host."""
+            connect_hosts.append(host)
+            return httpcore.AsyncMockStream(list(redirect_response))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
+        ):
+            component = URLComponent()
+            component.urls = ["http://safe-redirector.test/"]
+            component.max_depth = 1
+            component.format = "Text"
+            component.headers = [{"key": "User-Agent", "value": "Test"}]
+            component.timeout = 30
+            component.prevent_outside = True
+            component.use_async = True
+            component.follow_redirects = True
+            component.filter_text_html = False
+            component.continue_on_failure = False
+            component.check_response_status = False
+            component.autoset_encoding = True
+
+            # The redirect to a localhost-resolving host must be blocked by SSRF protection.
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                await component.fetch_url_contents()
+
+        # Only the first (public) hop ever connected; the internal target was never reached.
+        assert connect_hosts == ["8.8.8.8"], connect_hosts
+        assert "internal.test" in resolved, resolved
+
+    @pytest.mark.asyncio
+    async def test_url_component_crawls_links_from_redirected_base(self):
+        """Test that depth>1 crawls resolve links against the final post-redirect URL.
+
+        Regression test: after following http://redirect.test/ -> https://final.test/,
+        relative links were still resolved against the original URL (sending /about to
+        http://redirect.test/about) and prevent_outside compared link domains against
+        the pre-redirect host, skipping same-site absolute links. Links must be resolved
+        against the URL the content actually came from, and the canonical URL itself is
+        marked visited so links back to it are not re-crawled.
+        """
+        resolved = []
+
+        def mock_getaddrinfo(host, *_args, **_kwargs):
+            """Every host resolves to the same public IP at validation time."""
+            resolved.append(host)
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 0))]
+
+        def http_ok(body: bytes) -> list[bytes]:
+            return [
+                b"HTTP/1.1 200 OK\r\n",
+                b"Content-Type: text/html\r\n",
+                b"Content-Length: " + str(len(body)).encode() + b"\r\n",
+                b"\r\n",
+                body,
+            ]
+
+        responses = [
+            [
+                b"HTTP/1.1 301 Moved Permanently\r\n",
+                b"Location: https://final.test/\r\n",
+                b"Content-Length: 0\r\n",
+                b"\r\n",
+            ],
+            http_ok(
+                b"<html><body>Final page"
+                b'<a href="/about">About</a>'
+                b'<a href="https://final.test/contact">Contact</a>'
+                b'<a href="https://final.test/">Home</a>'
+                b"</body></html>"
+            ),
+            http_ok(b"<html><body>About page</body></html>"),
+            http_ok(b"<html><body>Contact page</body></html>"),
+        ]
+
+        connect_hosts = []
+
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """Serve the redirect, the final page, then one page per crawled link."""
+            connect_hosts.append(host)
+            return httpcore.AsyncMockStream(list(responses[len(connect_hosts) - 1]))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
+        ):
+            component = URLComponent()
+            component.urls = ["http://redirect.test/"]
+            component.max_depth = 2
+            component.format = "Text"
+            component.headers = [{"key": "User-Agent", "value": "Test"}]
+            component.timeout = 30
+            component.prevent_outside = True
+            component.use_async = True
+            component.follow_redirects = True
+            component.filter_text_html = False
+            component.continue_on_failure = False
+            component.check_response_status = False
+            component.autoset_encoding = True
+
+            result = await component.fetch_url_contents()
+
+        # The final page and both same-site links (relative and absolute) were crawled.
+        assert [doc["url"] for doc in result] == [
+            "https://final.test/",
+            "https://final.test/about",
+            "https://final.test/contact",
+        ]
+        assert "About page" in result[1]["text"]
+        # The back-link to the canonical URL was already visited - exactly 4 connections
+        # (initial + redirect hop + 2 links), all to the pinned public IP.
+        assert connect_hosts == ["8.8.8.8"] * 4, connect_hosts
+        # Links validated against the post-redirect host; the pre-redirect host was only
+        # resolved once, for the initial URL validation.
+        assert resolved.count("redirect.test") == 1, resolved
+        assert resolved.count("final.test") == 3, resolved
+
 
 class TestAPIRequestDNSRebindingEdgeCases:
     """Additional edge case tests for API Request component DNS rebinding protection."""

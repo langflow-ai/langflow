@@ -1,0 +1,56 @@
+[project]
+name = "lfx-vllm"
+version = "0.1.0"
+description = "vLLM as a first-class Langflow model provider, packaged as a standalone Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "vllm", "model-provider", "openai-compatible"]
+
+# Runtime deps: lfx supplies both the BUNDLE_API surface and the
+# provider-registry seam this bundle plugs its ``providers[]`` block into. vLLM
+# is OpenAI-compatible, so its model/embedding classes (``ChatOpenAI`` /
+# ``OpenAIEmbeddings``) are the langchain-openai classes lfx already ships and
+# resolves lazily -- the bundle does not import them directly, so it is not
+# re-declared here. ``requests`` backs the live ``/v1/models`` discovery and the
+# credential-validation probe in ``discovery.py``.
+# The lfx floor is the current major.minor line (the seam ships in 1.11) and is
+# re-synced on ``make patch`` via scripts/ci/sync_bundle_lfx_pin.py; fine-grained
+# BUNDLE_API compatibility is enforced via extension.json's lfx.compat list.
+dependencies = [
+    "lfx>=1.11.0.dev0,<2.0.0",
+    "requests>=2.31.0,<3.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the ``langflow.extensions``
+# entry-point; editable installs whose ``dist.files`` only surfaces dist-info
+# entries fall back to this entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-vllm = "lfx_vllm"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + the discovery module live inside the lfx_vllm package so
+# ``importlib.metadata.files(dist)`` finds the manifest and the registry can
+# import the live-discovery / validator callables by dotted path.
+packages = ["src/lfx_vllm"]
+include = ["src/lfx_vllm/extension.json", "src/lfx_vllm/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_vllm",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

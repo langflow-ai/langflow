@@ -111,6 +111,12 @@ test.describe("Token Usage Tracking", () => {
         .getByTestId("chat-message-token-usage")
         .textContent();
       expect(tokenText?.trim()).toMatch(/^\d/);
+
+      // Run duration is shown alongside the token usage (folds in the
+      // regular-playground regression that lived in shareable-playground-token-display).
+      await expect(page.getByText("Finished in")).toBeVisible({
+        timeout: 30000,
+      });
     },
   );
 });

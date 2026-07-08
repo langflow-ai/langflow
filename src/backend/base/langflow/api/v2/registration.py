@@ -94,7 +94,7 @@ def save_registration(email: str) -> bool:
         return True
 
 
-@router.post("/", response_model=RegisterResponse)
+@router.post("/", response_model=RegisterResponse, dependencies=[Depends(get_current_active_user)])
 async def register_user(request: RegisterRequest):
     """Register the single user with email.
 

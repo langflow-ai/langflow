@@ -37,8 +37,22 @@ const openModelDropdown = async (page: Page, model: Locator) => {
   await page.waitForSelector('[role="listbox"]', { timeout: 10000 });
 };
 
+// The model dropdown footer buttons ("Manage providers", "Refresh list") render
+// inside the in-canvas popover, which is drawn without a portal
+// (PopoverContentWithoutPortal). When the language-model node sits low on the
+// canvas the footer can be clipped, or shift while the model list settles, so a
+// plain click() fails Playwright's "visible, enabled and stable" actionability
+// check and times out. Nudge the button into view and dispatch the click
+// directly — the same workaround already used for the model option below.
+const clickModelDropdownFooter = async (page: Page, testId: string) => {
+  const button = page.getByTestId(testId);
+  await button.waitFor({ state: "attached", timeout: 10000 });
+  await button.scrollIntoViewIfNeeded().catch(() => {});
+  await button.dispatchEvent("click");
+};
+
 const enablePreferredOpenAiModel = async (page: Page) => {
-  await page.getByTestId("manage-model-providers").click();
+  await clickModelDropdownFooter(page, "manage-model-providers");
   await page.waitForSelector("text=Model providers", { timeout: 30000 });
 
   await page.getByTestId("provider-item-OpenAI").click();
@@ -73,9 +87,21 @@ const enablePreferredOpenAiModel = async (page: Page) => {
   return modelName;
 };
 
+const languageModelNodes = (page: Page) =>
+  page.locator(".react-flow__node", {
+    has: page.locator(
+      [
+        '[data-testid="title-language model"]',
+        '[data-testid="title-agent"]',
+        '[data-testid="title-batch run"]',
+        '[data-testid="title-structured output"]',
+      ].join(", "),
+    ),
+  });
+
 export const selectGptModel = async (page: Page) => {
-  const nodes = page.locator(".react-flow__node", {
-    has: page.getByTestId("title-language model"),
+  const nodes = languageModelNodes(page).filter({
+    has: page.getByTestId("model_model"),
   });
 
   const gptModelDropdownCount = await nodes.count();
@@ -101,7 +127,7 @@ export const selectGptModel = async (page: Page) => {
       modelName = await enablePreferredOpenAiModel(page);
       await openModelDropdown(page, model);
       if ((await page.getByTestId(`${modelName}-option`).count()) === 0) {
-        await page.getByTestId("refresh-model-list").click();
+        await clickModelDropdownFooter(page, "refresh-model-list");
         await openModelDropdown(page, model);
       }
     }

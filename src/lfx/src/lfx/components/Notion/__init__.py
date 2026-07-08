@@ -1,19 +1,22 @@
-from .add_content_to_page import AddContentToPage
-from .create_page import NotionPageCreator
-from .list_database_properties import NotionDatabaseProperties
-from .list_pages import NotionListPages
-from .list_users import NotionUserList
-from .page_content_viewer import NotionPageContent
-from .search import NotionSearch
-from .update_page_property import NotionPageUpdate
+# lfx-bundles-shim
+"""Compatibility shim: lfx.components.Notion moved to lfx-bundles.
 
-__all__ = [
-    "AddContentToPage",
-    "NotionDatabaseProperties",
-    "NotionListPages",
-    "NotionPageContent",
-    "NotionPageCreator",
-    "NotionPageUpdate",
-    "NotionSearch",
-    "NotionUserList",
-]
+This module re-points to the installed bundle distribution. It contains
+no component implementations and no third-party dependencies, and is
+removed once the deprecation window closes (M4).
+"""
+
+import importlib
+import sys
+
+try:
+    sys.modules[__name__] = importlib.import_module("lfx_bundles.notion")
+except ModuleNotFoundError as exc:
+    if exc.name is not None and (exc.name == "lfx_bundles" or exc.name.startswith("lfx_bundles.")):
+        msg = (
+            "The 'Notion' components moved to the 'lfx-bundles' distribution. "
+            "Install it with:  pip install lfx-bundles   "
+            "(or 'pip install langflow', which bundles it)."
+        )
+        raise ModuleNotFoundError(msg, name="lfx_bundles") from exc
+    raise

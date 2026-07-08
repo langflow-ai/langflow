@@ -101,8 +101,15 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         component.base_url = "https://api.x.ai/v1"
         component.seed = 1
 
+        http_client = MagicMock()
+        http_async_client = MagicMock()
+        mock_client_kwargs = mocker.patch(
+            "lfx.components.xai.xai.ssrf_protected_openai_clients_for_url",
+            return_value={"http_client": http_client, "http_async_client": http_async_client},
+        )
         mock_chat_openai = mocker.patch("lfx.components.xai.xai.ChatOpenAI", return_value=MagicMock())
         model = component.build_model()
+        mock_client_kwargs.assert_called_once_with("https://api.x.ai/v1")
         mock_chat_openai.assert_called_once_with(
             max_tokens=100,
             model_kwargs={},
@@ -111,12 +118,14 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
             api_key="test-key",
             temperature=0.7,
             seed=1,
+            http_client=http_client,
+            http_async_client=http_async_client,
         )
         assert model == mock_chat_openai.return_value
 
     def test_get_models(self):
         component = XAIModelComponent()
-        with patch("requests.get") as mock_get:
+        with patch("lfx.components.xai.xai.ssrf_safe_httpx_get") as mock_get:
             mock_response = MagicMock()
             mock_response.json.return_value = {
                 "models": [
@@ -191,8 +200,11 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         component = XAIModelComponent()
         build_config = {"model_name": {"options": []}}
 
-        updated_config = component.update_build_config(build_config, "test-key", "api_key")
-        assert "model_name" in updated_config
+        with patch.object(component, "get_models", return_value=["grok-2-latest"]) as mock_get_models:
+            updated_config = component.update_build_config(build_config, "test-key", "api_key")
+            assert "model_name" in updated_config
 
-        updated_config = component.update_build_config(build_config, "grok-2-latest", "model_name")
-        assert "model_name" in updated_config
+            updated_config = component.update_build_config(build_config, "grok-2-latest", "model_name")
+            assert "model_name" in updated_config
+
+        assert mock_get_models.call_count == 2

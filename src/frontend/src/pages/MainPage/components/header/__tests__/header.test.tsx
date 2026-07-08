@@ -119,7 +119,6 @@ jest.mock("@/modals/deleteConfirmationModal", () => ({
     children,
     onConfirm,
     description,
-    note,
     "data-testid": testId,
   }: DeleteModalProps) => (
     <div
@@ -219,6 +218,58 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
       const downloadBtn = screen.getByTestId("download-bulk-btn");
       expect(downloadBtn).toBeInTheDocument();
       expect(downloadBtn).toHaveAttribute("tabindex", "0");
+    });
+  });
+
+  describe("Accessibility - aria-label on icon-only buttons", () => {
+    it("download button has a non-empty aria-label when flows are selected", () => {
+      const { container } = render(
+        <HeaderComponent {...defaultProps} selectedFlows={["flow1"]} />,
+      );
+      const downloadBtn = container.querySelector(
+        '[data-testid="download-bulk-btn"]',
+      );
+      expect(downloadBtn).toHaveAttribute("aria-label");
+      expect(downloadBtn?.getAttribute("aria-label")).toBeTruthy();
+    });
+
+    it("view toggle buttons have aria-label attributes", () => {
+      const { container } = render(<HeaderComponent {...defaultProps} />);
+      const viewBtns = container.querySelectorAll("button[aria-pressed]");
+      expect(viewBtns.length).toBe(2);
+      viewBtns.forEach((btn) => {
+        expect(btn.getAttribute("aria-label")).toBeTruthy();
+      });
+    });
+
+    it("view toggle buttons expose aria-pressed reflecting active view", () => {
+      const { container } = render(
+        <HeaderComponent {...defaultProps} view="list" />,
+      );
+      // Find the two view toggle buttons by aria-pressed attribute presence
+      const pressedTrue = container.querySelector(
+        'button[aria-pressed="true"]',
+      );
+      const pressedFalse = container.querySelector(
+        'button[aria-pressed="false"]',
+      );
+      expect(pressedTrue).toBeInTheDocument();
+      expect(pressedFalse).toBeInTheDocument();
+    });
+
+    it("exactly one view toggle is aria-pressed=true and one is false", () => {
+      const { container } = render(
+        <HeaderComponent {...defaultProps} view="grid" />,
+      );
+      const allPressed = container.querySelectorAll("button[aria-pressed]");
+      const trueCount = Array.from(allPressed).filter(
+        (b) => b.getAttribute("aria-pressed") === "true",
+      ).length;
+      const falseCount = Array.from(allPressed).filter(
+        (b) => b.getAttribute("aria-pressed") === "false",
+      ).length;
+      expect(trueCount).toBe(1);
+      expect(falseCount).toBe(1);
     });
   });
 

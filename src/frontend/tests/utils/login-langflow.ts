@@ -8,6 +8,6 @@ export const loginLangflow = async (page: Page) => {
     .fill(TEXTS.authDefaultCredential);
   await page
     .getByPlaceholder(TEXTS.placeholderPassword)
-    .fill(TEXTS.authDefaultCredential);
+    .fill(TEXTS.authDefaultPassword);
   await page.getByRole("button", { name: TEXTS.signIn }).click();
 };

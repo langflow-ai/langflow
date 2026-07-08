@@ -2,7 +2,7 @@
 title: Logs endpoints
 slug: /api-logs
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleApiLogsStreamLogs from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-logs/stream-logs.sh';
 import resultApiLogsResultStreamLogs from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-logs/result-stream-logs.txt';
 import exampleApiLogsRetrieveLogsWithOptionalParameters from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-logs/retrieve-logs-with-optional-parameters.sh';
@@ -37,17 +37,17 @@ Stream logs in real-time using Server Sent Events (SSE):
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiLogsStreamLogs} language="python" />
+<CodeBlock language="python">{examplePythonApiLogsStreamLogs}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiLogsStreamLogs} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiLogsStreamLogs}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiLogsStreamLogs} language="bash" />
+<CodeBlock language="bash">{exampleApiLogsStreamLogs}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -55,7 +55,7 @@ Stream logs in real-time using Server Sent Events (SSE):
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiLogsResultStreamLogs} language="text" />
+<CodeBlock language="text">{resultApiLogsResultStreamLogs}</CodeBlock>
 
 </details>
 
@@ -73,17 +73,17 @@ With default values, the endpoint returns the last 10 lines of logs.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiLogsRetrieveLogsWithOptionalParameters} language="python" />
+<CodeBlock language="python">{examplePythonApiLogsRetrieveLogsWithOptionalParameters}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiLogsRetrieveLogsWithOptionalParameters} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiLogsRetrieveLogsWithOptionalParameters}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiLogsRetrieveLogsWithOptionalParameters} language="bash" />
+<CodeBlock language="bash">{exampleApiLogsRetrieveLogsWithOptionalParameters}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -91,6 +91,6 @@ With default values, the endpoint returns the last 10 lines of logs.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiLogsResultRetrieveLogsWithOptionalParameters} language="text" />
+<CodeBlock language="text">{resultApiLogsResultRetrieveLogsWithOptionalParameters}</CodeBlock>
 
 </details>

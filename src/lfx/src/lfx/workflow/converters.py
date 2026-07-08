@@ -78,6 +78,8 @@ class ParsedWorkflowRun:
     files: list[str] | None = None
     # Request-level global variables from the JSON body (v2 body-globals).
     globals: dict[str, str] = field(default_factory=dict)
+    # Client-supplied dedupe key for background submits (ignored by sync/stream).
+    idempotency_key: str | None = None
 
 
 def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun:
@@ -106,6 +108,7 @@ def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun
         data=request.data,
         files=request.files,
         globals=dict(request.globals or {}),
+        idempotency_key=getattr(request, "idempotency_key", None),
     )
 
 

@@ -16,6 +16,11 @@ on:
         required: true
         type: string
         description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
+      version_override:
+        required: false
+        type: string
+        default: ""
+        description: "Resolved version to use for image tags. When omitted, the workflow computes the version from the checked-out ref and registry history."
       push_to_registry:
         required: false
         type: boolean
@@ -44,6 +49,11 @@ on:
         required: true
         type: string
         description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
+      version_override:
+        description: "Resolved version to use for image tags. Leave blank to compute from the checked-out ref and registry history."
+        required: false
+        type: string
+        default: ""
       push_to_registry:
         description: "Whether to push images to registries. Set to false for testing builds without publishing."
         required: false
@@ -81,10 +91,16 @@ jobs:
           version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           echo "Base version from pyproject.toml: $version"
 
-          if [ ${{inputs.pre_release}} == "true" ]; then
-            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '^base-.*\.rc[0-9]+' | grep -vE '\-(amd64|arm64)$' | sed 's/^base-//' | sort -V | tail -n 1)
-            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
-            echo "Latest base pre-release version: $last_released_version"
+          if [ -n "${{ inputs.version_override }}" ]; then
+            version="${{ inputs.version_override }}"
+            echo "Using version override: $version"
+            if [ ${{inputs.pre_release}} != "true" ]; then
+              last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '^base-' | grep -vE '\-(amd64|arm64)$' | grep -v 'latest' | sed 's/^base-//' | sort -V | tail -n 1)
+              echo "Latest base release version: $last_released_version"
+            fi
+          elif [ ${{inputs.pre_release}} == "true" ]; then
+            released_versions=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '^base-' | grep -vE '\-(amd64|arm64)$' | sed 's/^base-//' || true)
+            version="$(printf '%s\n' "$released_versions" | uv run ./scripts/ci/langflow_pre_release_tag.py "$version" -)"
             echo "Base pre-release version to be released: $version"
           else
             last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '^base-' | grep -vE '\-(amd64|arm64)$' | grep -v 'latest' | sed 's/^base-//' | sort -V | tail -n 1)
@@ -127,10 +143,16 @@ jobs:
           version=$(uv tree 2>/dev/null | grep -E '^langflow(-nightly)?[[:space:]]' | cut -d' ' -f2 | sed 's/^v//')
           echo "Main version from pyproject.toml: $version"
 
-          if [ ${{inputs.pre_release}} == "true" ]; then
-            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '\.rc[0-9]+' | grep -v '^base-' | grep -vE '\-(amd64|arm64)$' | sort -V | tail -n 1)
-            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
-            echo "Latest main pre-release version: $last_released_version"
+          if [ -n "${{ inputs.version_override }}" ]; then
+            version="${{ inputs.version_override }}"
+            echo "Using version override: $version"
+            if [ ${{inputs.pre_release}} != "true" ]; then
+              last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -v '^base-' | grep -vE '\-(amd64|arm64)$' | grep -v 'latest' | sort -V | tail -n 1)
+              echo "Latest main release version: $last_released_version"
+            fi
+          elif [ ${{inputs.pre_release}} == "true" ]; then
+            released_versions=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -v '^base-' | grep -vE '\-(amd64|arm64)$' || true)
+            version="$(printf '%s\n' "$released_versions" | uv run ./scripts/ci/langflow_pre_release_tag.py "$version" -)"
             echo "Main pre-release version to be released: $version"
           else
             last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -v '^base-' | grep -vE '\-(amd64|arm64)$' | grep -v 'latest' | sort -V | tail -n 1)
@@ -335,7 +357,7 @@ jobs:
           context: .
           push: ${{ inputs.push_to_registry }}
           build-args: |
-            LANGFLOW_IMAGE=langflowai/langflow:${{ steps.version.outputs.version }}-${{ matrix.arch }}
+            LANGFLOW_IMAGE=langflowai/langflow:${{ needs.determine-main-version.outputs.version }}-${{ matrix.arch }}
           file: ./docker/build_and_push_backend.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -356,7 +378,7 @@ jobs:
           context: .
           push: ${{ inputs.push_to_registry }}
           build-args: |
-            LANGFLOW_IMAGE=ghcr.io/langflow-ai/langflow:${{ steps.version.outputs.version }}-${{ matrix.arch }}
+            LANGFLOW_IMAGE=ghcr.io/langflow-ai/langflow:${{ needs.determine-main-version.outputs.version }}-${{ matrix.arch }}
           file: ./docker/build_and_push_backend.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}

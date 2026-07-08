@@ -40,6 +40,8 @@ export const MemoizedSidebarTrigger = memo(() => {
   const { t } = useTranslation();
   const { open, toggleSidebar, setActiveSection } = useSidebar();
   if (ENABLE_NEW_SIDEBAR) {
+    if (open) return null;
+
     return (
       <Panel
         className={cn(
@@ -54,7 +56,8 @@ export const MemoizedSidebarTrigger = memo(() => {
             iconName={item.icon}
             iconClasses={item.id === "mcp" ? "h-8 w-8" : ""}
             key={item.id}
-            tooltipText={item.tooltip}
+            navItemId={item.id}
+            tooltipText={t(item.tooltip)}
             onClick={() => {
               setActiveSection(item.id);
               if (!open) {

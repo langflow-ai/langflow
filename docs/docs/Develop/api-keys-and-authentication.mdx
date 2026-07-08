@@ -157,9 +157,9 @@ For JWT authentication configuration, including algorithm selection and key mana
 This variable controls whether authentication is required to access your Langflow server, including the visual editor, API, and Langflow CLI:
 
 * If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key for Langflow API requests.
-If `false`, the Langflow team recommends that you also explicitly set [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) to avoid using the insecure default values.
+If `false`, you must explicitly set [`LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) before startup. Set [`LANGFLOW_SUPERUSER`](#langflow-superuser) only if you want to override the default superuser username.
 
-* If `LANGFLOW_AUTO_LOGIN=True` (default), all API requests require authentication with a Langflow API key, but the visual editor automatically signs in all users as superusers, and Langflow uses _only_ the default [superuser credentials](/api-keys-and-authentication#langflow-superuser).
+* If `LANGFLOW_AUTO_LOGIN=True` (default), all API requests require authentication with a Langflow API key, but the visual editor automatically signs in all users as superusers, and Langflow uses the configured superuser username with a configured or generated bootstrap password.
 All users access the same visual editor environment without password protection, they can run all Langflow CLI commands as superusers, and Langflow automatically authenticates internal requests between the backend and frontend based on the users' superuser privileges.
 If you also want to bypass authentication for Langflow API requests in addition to other bypassed authentication, see [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](/api-keys-and-authentication#langflow-skip-auth-auto-login).
 
@@ -201,10 +201,11 @@ LANGFLOW_SUPERUSER=administrator
 LANGFLOW_SUPERUSER_PASSWORD=securepassword
 ```
 
-They are required if `LANGFLOW_AUTO_LOGIN=False`.
-Otherwise, they aren't relevant.
+`LANGFLOW_SUPERUSER_PASSWORD` is required if `LANGFLOW_AUTO_LOGIN=False`. `LANGFLOW_SUPERUSER` is optional and defaults to `langflow`.
+`LANGFLOW_SUPERUSER_PASSWORD` can't use the legacy default value `langflow`; startup fails closed instead.
+When `LANGFLOW_AUTO_LOGIN=True`, `LANGFLOW_SUPERUSER` selects the auto-login account username and `LANGFLOW_SUPERUSER_PASSWORD` is optional. If the password isn't set, Langflow generates an unknown bootstrap password for the auto-login account.
 
-When you [start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled), if these variables are required but _not_ set, then Langflow uses the default values of `langflow` and `langflow`.
+When you [start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled), if the required password is _not_ set, then startup fails instead of creating a default password.
 These defaults don't apply when using the Langflow CLI command [`langflow superuser`](/configuration-cli#langflow-superuser).
 
 ### LANGFLOW_SECRET_KEY {#langflow-secret-key}
@@ -510,7 +511,7 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
     Your `.env` file can have other environment variables.
     This example focuses on authentication variables.
 
-2. Set `LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD` to your desired superuser credentials.
+2. Set `LANGFLOW_SUPERUSER_PASSWORD` to your desired superuser password. Optionally set `LANGFLOW_SUPERUSER` to override the default `langflow` username.
 
     For a one-time test, you can use basic credentials like `administrator` and `password`.
     Strong, securely-stored credentials are recommended in genuine development and production environments.
@@ -538,8 +539,8 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
     uv run langflow run --env-file .env
     ```
 
-    Starting Langflow with a `.env` file automatically authenticates you as the superuser set in `LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`.
-    If you don't explicitly set these variables, the default values are `langflow` and `langflow` for system auto-login.
+    Starting Langflow with this `.env` file creates or uses the configured superuser.
+    If `LANGFLOW_SUPERUSER_PASSWORD` isn't set, startup fails instead of creating a default password.
 
 6. Verify the server is running. The default location is `http://localhost:7860`.
 
@@ -551,7 +552,7 @@ Next, you can add users to your Langflow server to collaborate with others on fl
 
     If you aren't using the default location, replace `localhost:7860` with your server's address.
 
-2. Log in with the superuser credentials you set in your `.env` (`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`).
+2. Log in with the superuser credentials from your `.env`: the `LANGFLOW_SUPERUSER` username, or `langflow` if unset, and the `LANGFLOW_SUPERUSER_PASSWORD` password.
 
 3. To manage users on your server, navigate to `/admin`, such as `http://localhost:7860/admin`, click your profile icon, and then click **Admin Page**.
 

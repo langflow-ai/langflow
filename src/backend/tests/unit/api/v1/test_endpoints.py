@@ -651,3 +651,162 @@ async def test_deprecated_upload_enforces_max_file_size(
     assert response.status_code == status.HTTP_413_CONTENT_TOO_LARGE, (
         f"Expected 413 for oversized upload, got {response.status_code}: {response.text}"
     )
+
+
+async def test_custom_component_runs_trusted_copy_on_hash_collision(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+    tmp_path,
+):
+    """Restricted mode must run the trusted copy, not colliding attacker bytes.
+
+    Security (#13496): the truncated code-hash is the only gate in front of
+    exec(). A second-preimage collision must NOT run attacker code — the server
+    substitutes its own trusted copy keyed by the same hash. Proven end-to-end
+    with a forced collision and a module-level side-effect sentinel: the attacker
+    payload writes a file at import time, so if it ever executed the sentinel
+    would exist. It must not.
+    """
+    import lfx.utils.flow_validation as fv
+    from langflow.services.deps import get_settings_service
+    from lfx.interface.components import component_cache
+
+    # The server's trusted copy for the (collided) hash: a benign, buildable component.
+    trusted_path = Path(__file__).parent.parent.parent.parent / "data" / "dynamic_output_component.py"
+    trusted_code = await trusted_path.read_text(encoding="utf-8")
+
+    # Attacker payload: valid component whose MODULE-LEVEL code drops a sentinel.
+    # prepare_global_scope() exec's module-level assignments, so this WOULD fire
+    # at build time if the client bytes were executed.
+    sentinel = tmp_path / "pwned.txt"
+    malicious_code = (
+        "from lfx.custom import Component\n"
+        "from lfx.inputs import MessageTextInput\n"
+        "from lfx.template.field.base import Output\n"
+        f"_pwn = open({str(sentinel)!r}, 'w').write('pwned')\n"
+        "class EvilComponent(Component):\n"
+        '    display_name = "Evil Component"\n'
+        "    inputs = [MessageTextInput(display_name='Input', name='input_value')]\n"
+        "    outputs = [Output(display_name='Output', name='output', method='process_input')]\n"
+        "    def process_input(self) -> str:\n"
+        "        return 'evil'\n"
+    )
+
+    settings_service = get_settings_service()
+    # Restricted mode — the hash gate is the only thing in front of exec().
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", False)
+
+    # Force a 48-bit collision: every blob maps to the same known hash.
+    collision_hash = "c0ffeec0ffee"  # pragma: allowlist secret
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: collision_hash)
+
+    # Seed the cache so the collided hash resolves to the trusted copy. A non-None
+    # type_to_current_hash stops the endpoint's lazy builder from rebuilding over the seed.
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"EvilComponent": {collision_hash}})
+    monkeypatch.setattr(component_cache, "all_known_hashes", {collision_hash})
+    monkeypatch.setattr(component_cache, "code_by_hash", {collision_hash: trusted_code})
+
+    request = CustomComponentRequest(code=malicious_code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    # The trusted copy built successfully (gate passed via the collided hash)...
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    # ...and the attacker's module-level code NEVER executed.
+    assert not sentinel.exists(), "Attacker module-level code executed — trusted-copy substitution failed"
+
+
+async def test_custom_component_update_runs_trusted_copy_on_hash_collision(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+    tmp_path,
+):
+    """The /update endpoint must also run the trusted copy on a hash collision.
+
+    Mirror of ``test_custom_component_runs_trusted_copy_on_hash_collision`` for
+    the update path (#13496). In addition to proving the attacker payload never
+    executes, this asserts the returned node template carries the trusted code —
+    not the colliding client bytes — so the substitution can't be undone by
+    persisting the response into a saved flow and re-building it.
+    """
+    import lfx.utils.flow_validation as fv
+    from langflow.services.deps import get_settings_service
+    from lfx.interface.components import component_cache
+
+    trusted_path = Path(__file__).parent.parent.parent.parent / "data" / "dynamic_output_component.py"
+    trusted_code = await trusted_path.read_text(encoding="utf-8")
+
+    sentinel = tmp_path / "pwned_update.txt"
+    malicious_code = (
+        "from lfx.custom import Component\n"
+        "from lfx.inputs import MessageTextInput\n"
+        "from lfx.template.field.base import Output\n"
+        f"_pwn = open({str(sentinel)!r}, 'w').write('pwned')\n"
+        "class EvilComponent(Component):\n"
+        '    display_name = "Evil Component"\n'
+        "    inputs = [MessageTextInput(display_name='Input', name='input_value')]\n"
+        "    outputs = [Output(display_name='Output', name='output', method='process_input')]\n"
+        "    def process_input(self) -> str:\n"
+        "        return 'evil'\n"
+    )
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", False)
+
+    collision_hash = "c0ffeec0ffee"  # pragma: allowlist secret
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: collision_hash)
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"EvilComponent": {collision_hash}})
+    monkeypatch.setattr(component_cache, "all_known_hashes", {collision_hash})
+    monkeypatch.setattr(component_cache, "code_by_hash", {collision_hash: trusted_code})
+
+    request = UpdateCustomComponentRequest(
+        code=malicious_code,
+        frontend_node={"outputs": []},
+        field="",
+        field_value="",
+        template={},
+    )
+    response = await client.post("api/v1/custom_component/update", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    # The attacker's module-level code NEVER executed...
+    assert not sentinel.exists(), "Attacker module-level code executed — trusted-copy substitution failed"
+    # ...and the returned node carries the trusted code, not the colliding bytes.
+    returned_code = response.json().get("template", {}).get("code", {}).get("value")
+    assert returned_code != malicious_code
+    assert returned_code == trusted_code
+
+
+async def test_custom_component_fails_closed_when_no_trusted_copy(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Restricted mode must 403 when the hash gate passes but no trusted copy exists.
+
+    Security (#13496): if a submitted blob clears the truncated-hash gate but
+    ``code_by_hash`` has no entry for that hash (e.g. a poisoned/incomplete
+    index, or a collision against a hash whose source failed the integrity
+    check), the endpoint must fail closed rather than fall back to client bytes.
+    """
+    import lfx.utils.flow_validation as fv
+    from langflow.services.deps import get_settings_service
+    from lfx.interface.components import component_cache
+
+    code = 'from lfx.custom import Component\nclass Anything(Component):\n    display_name = "Anything"\n'
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", False)
+
+    collision_hash = "c0ffeec0ffee"  # pragma: allowlist secret
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: collision_hash)
+    # Gate passes (hash is "known"), but there is no trusted source for it.
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"Anything": {collision_hash}})
+    monkeypatch.setattr(component_cache, "all_known_hashes", {collision_hash})
+    monkeypatch.setattr(component_cache, "code_by_hash", {})
+
+    request = CustomComponentRequest(code=code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()

@@ -1,3 +1,4 @@
+# lfx-compat-shim
 """Knowledge bases module - backwards compatibility alias for files_and_knowledge.
 
 This module provides backwards compatibility by forwarding all imports

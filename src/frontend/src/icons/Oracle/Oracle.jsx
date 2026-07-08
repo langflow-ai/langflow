@@ -1,0 +1,19 @@
+const SvgOracle = (props) => (
+  <svg
+    width="1.1em"
+    height="1.1em"
+    viewBox="0 0 36 36"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path d="M0 0h36v36H0V0z" fill="#C74634" />
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M21.541 22.139c2.277 0 4.126-1.855 4.126-4.143a4.134 4.134 0 00-4.126-4.139H14.46a4.134 4.134 0 00-4.128 4.139 4.135 4.135 0 004.128 4.143h7.082zm-7.245 2.257c-3.52 0-6.376-2.865-6.376-6.4 0-3.534 2.855-6.393 6.376-6.393h7.408c3.52 0 6.373 2.86 6.373 6.393 0 3.54-2.853 6.403-6.373 6.403l-7.409-.003z"
+      fill="#fff"
+    />
+  </svg>
+);
+export default SvgOracle;

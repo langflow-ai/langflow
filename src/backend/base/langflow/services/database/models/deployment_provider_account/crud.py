@@ -71,6 +71,28 @@ async def get_provider_account_by_id(
     return (await db.exec(stmt)).first()
 
 
+async def get_provider_account_by_id_unscoped(
+    db: AsyncSession,
+    *,
+    provider_id: UUID | str,
+) -> DeploymentProviderAccount | None:
+    """Load a provider account by id without an owner scope.
+
+    Reserved for the deployment-list authz prefilter path: a caller granted READ
+    on a *shared* deployment under another user's provider account needs that
+    account's ``provider_key`` (to resolve the adapter/mapper) even though they do
+    not own the account. Row-level access is still decided by the
+    ``(owner ⊕ visible)`` SQL union in ``list_deployments_synced`` plus
+    ``ensure_deployment_permission`` — this only widens which ``provider_key`` may
+    be read, never which deployment rows surface. The list response carries no
+    provider secrets (only ``provider_key`` is used). Do NOT use on owner-scoped
+    paths; prefer ``get_provider_account_by_id`` there.
+    """
+    provider_uuid = parse_uuid(provider_id, field_name="provider_id")
+    stmt = select(DeploymentProviderAccount).where(DeploymentProviderAccount.id == provider_uuid)
+    return (await db.exec(stmt)).first()
+
+
 async def list_provider_accounts(
     db: AsyncSession,
     *,

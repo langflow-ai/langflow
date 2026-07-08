@@ -1523,6 +1523,27 @@ The agent resolves these tokens with the **existing** MCP tools `get_flow_compon
 
 ---
 
+### ADR-032: Live-Only Providers (IBM WatsonX) Usable in the Assistant
+
+**Status**: Accepted
+
+#### Context
+With WatsonX configured (9 live models visible in the model-providers modal), the assistant still showed "No Model Provider Configured", and after that was fixed, selecting any WatsonX model failed with `400 "model <id> not found"`. Two distinct defects compounded, both specific to a *live-only* provider whose entire static catalog is deprecated (only WatsonX today):
+
+1. **Listing**: `list_models` computed each provider's `is_enabled`/`is_configured` *before* `replace_with_live_models`. WatsonX is absent from the non-deprecated static catalog, so it is only **appended** by the live replacement — after the status loop had already run. The appended entry carried no `is_enabled`, and the assistant panel (`useEnabledModels` → `.filter(p => p.is_enabled)`) dropped it.
+2. **Routing**: `build_model_config` (and `TranslationFlow._build_model_config`) read the non-existent metadata key `model_name_param` from `get_provider_param_mapping`, which only emits `model_param`. It silently defaulted to `"model"`. For WatsonX this set `ChatWatsonx.model` instead of `.model_id`, which routes through the OpenAI-compatible **AI Gateway** (foundation-model ids not provisioned → `400 "model not found"`) instead of the native `ModelInference` foundation-models API. OpenAI/Anthropic were unaffected because their `model_param` is already `"model"`.
+
+#### Decision
+1. Run `replace_with_live_models` **before** computing `is_configured`/`is_enabled` so live-appended providers receive status like any other.
+2. Read `model_param` (not `model_name_param`) when building the assistant/translation model config, matching the canonical `unified_models/model_catalog.py` path, so WatsonX is instantiated with `model_id` and routes through `ModelInference`.
+
+#### Key Files
+- `src/backend/.../api/v1/models.py` — `list_models` ordering (status after live replacement)
+- `src/backend/.../agentic/flows/model_config.py` — `build_model_config` reads `model_param`
+- `src/backend/.../agentic/flows/translation_flow.py` — `_build_model_config` reads `model_param`
+
+---
+
 ## 6. Technical Specification
 
 ### 6.1 Dependencies

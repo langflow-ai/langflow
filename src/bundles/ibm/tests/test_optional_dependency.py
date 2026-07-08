@@ -17,22 +17,38 @@ import sys
 
 import pytest
 
-# Bundle modules whose module-level code must re-run under the simulated
-# absence; dropping them from the cache forces a fresh import.
-_BUNDLE_MODULES = (
-    "lfx_ibm.components.ibm",
-    "lfx_ibm.components.ibm.db2vs",
-    "lfx_ibm.components.ibm.db2_vector",
-)
+
+def _bundle_module_names() -> list[str]:
+    return [name for name in sys.modules if name == "lfx_ibm" or name.startswith("lfx_ibm.")]
 
 
 @pytest.fixture
-def without_ibm_db(monkeypatch):
-    """Make the ibm-db driver look uninstalled (as on linux/aarch64)."""
-    monkeypatch.setitem(sys.modules, "ibm_db", None)
-    monkeypatch.setitem(sys.modules, "ibm_db_dbi", None)
-    for name in _BUNDLE_MODULES:
-        monkeypatch.delitem(sys.modules, name, raising=False)
+def without_ibm_db():
+    """Make the ibm-db driver look uninstalled (as on linux/aarch64).
+
+    The whole ``lfx_ibm`` module tree is snapshotted, dropped, and restored
+    wholesale. A partial delete-and-reimport (the previous monkeypatch
+    approach) leaves ``sys.modules`` and the parent packages' submodule
+    attribute bindings incoherent for the *next* test: entries created
+    during the test survive teardown, and a re-imported parent never regains
+    the submodule attributes that ``mock.patch`` target resolution walks on
+    Python 3.10 (3.11+ mock resolves via ``sys.modules`` and tolerates it).
+    """
+    saved = {name: sys.modules[name] for name in _bundle_module_names()}
+    for name in saved:
+        del sys.modules[name]
+    sys.modules["ibm_db"] = None
+    sys.modules["ibm_db_dbi"] = None
+    try:
+        yield
+    finally:
+        for name in ("ibm_db", "ibm_db_dbi"):
+            sys.modules.pop(name, None)
+        # Drop everything imported under the simulated absence, then put the
+        # original, mutually-consistent module tree back.
+        for name in _bundle_module_names():
+            del sys.modules[name]
+        sys.modules.update(saved)
 
 
 @pytest.mark.usefixtures("without_ibm_db")

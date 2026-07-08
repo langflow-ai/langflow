@@ -92,8 +92,8 @@ jobs:
         id: tags
         run: |
           version="${{ steps.version.outputs.version }}"
-          echo "docker_tags=langflowai/langflow-nightly:base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly:base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "docker_tags=langflowai/langflow-nightly:base-${version}-${{ matrix.arch }},langflowai/langflow:base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly:base-${version}-${{ matrix.arch }},ghcr.io/langflow-ai/langflow:base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
       - name: Docker cleanup
         run: |
@@ -187,8 +187,8 @@ jobs:
         id: tags
         run: |
           version="${{ steps.version.outputs.version }}"
-          echo "docker_tags=langflowai/langflow-nightly:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "docker_tags=langflowai/langflow-nightly:${version}-${{ matrix.arch }},langflowai/langflow:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly:${version}-${{ matrix.arch }},ghcr.io/langflow-ai/langflow:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
       - name: Docker cleanup
         run: |
@@ -282,8 +282,8 @@ jobs:
         id: tags
         run: |
           version="${{ steps.version.outputs.version }}"
-          echo "docker_tags=langflowai/langflow-nightly-all:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly-all:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "docker_tags=langflowai/langflow-nightly-all:${version}-${{ matrix.arch }},langflowai/langflow-all:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly-all:${version}-${{ matrix.arch }},ghcr.io/langflow-ai/langflow-all:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
       - name: Docker cleanup
         run: |
@@ -368,17 +368,26 @@ jobs:
           version="${{ steps.version.outputs.version }}"
           case "${{ inputs.release_type }}" in
             "nightly-base")
-              echo "final_tags=langflowai/langflow-nightly:base-${version},langflowai/langflow-nightly:base-latest,ghcr.io/langflow-ai/langflow-nightly:base-${version},ghcr.io/langflow-ai/langflow-nightly:base-latest" >> $GITHUB_OUTPUT
+              # Push versioned tag to canonical langflow repo (matches PyPI langflow-base .devN publish).
+              # :base-latest is only set on the -nightly repo to avoid overwriting the stable :base-latest
+              # on langflowai/langflow with a pre-release image.
+              echo "final_tags=langflowai/langflow-nightly:base-${version},langflowai/langflow-nightly:base-latest,langflowai/langflow:base-${version},ghcr.io/langflow-ai/langflow-nightly:base-${version},ghcr.io/langflow-ai/langflow-nightly:base-latest,ghcr.io/langflow-ai/langflow:base-${version}" >> $GITHUB_OUTPUT
               echo "arch_base=langflowai/langflow-nightly:base-${version}" >> $GITHUB_OUTPUT
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly:base-${version}" >> $GITHUB_OUTPUT
               ;;
             "nightly-main")
-              echo "final_tags=langflowai/langflow-nightly:${version},langflowai/langflow-nightly:latest,ghcr.io/langflow-ai/langflow-nightly:${version},ghcr.io/langflow-ai/langflow-nightly:latest" >> $GITHUB_OUTPUT
+              # Push versioned tag to canonical langflow repo (matches PyPI langflow .devN publish).
+              # :latest is only set on the -nightly repo to avoid overwriting the stable :latest
+              # on langflowai/langflow with a pre-release image.
+              echo "final_tags=langflowai/langflow-nightly:${version},langflowai/langflow-nightly:latest,langflowai/langflow:${version},ghcr.io/langflow-ai/langflow-nightly:${version},ghcr.io/langflow-ai/langflow-nightly:latest,ghcr.io/langflow-ai/langflow:${version}" >> $GITHUB_OUTPUT
               echo "arch_base=langflowai/langflow-nightly:${version}" >> $GITHUB_OUTPUT
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly:${version}" >> $GITHUB_OUTPUT
               ;;
             "nightly-main-all")
-              echo "final_tags=langflowai/langflow-nightly-all:${version},langflowai/langflow-nightly-all:latest,ghcr.io/langflow-ai/langflow-nightly-all:${version},ghcr.io/langflow-ai/langflow-nightly-all:latest" >> $GITHUB_OUTPUT
+              # Push versioned tag to canonical langflow-all repo (matches PyPI publish).
+              # :latest is only set on the -nightly-all repo to avoid overwriting the stable :latest
+              # on langflowai/langflow-all with a pre-release image.
+              echo "final_tags=langflowai/langflow-nightly-all:${version},langflowai/langflow-nightly-all:latest,langflowai/langflow-all:${version},ghcr.io/langflow-ai/langflow-nightly-all:${version},ghcr.io/langflow-ai/langflow-nightly-all:latest,ghcr.io/langflow-ai/langflow-all:${version}" >> $GITHUB_OUTPUT
               echo "arch_base=langflowai/langflow-nightly-all:${version}" >> $GITHUB_OUTPUT
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly-all:${version}" >> $GITHUB_OUTPUT
               ;;

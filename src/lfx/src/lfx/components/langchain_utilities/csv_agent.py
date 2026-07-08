@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 from lfx.base.agents.agent import LCAgentComponent
+from lfx.base.agents.utils import resolve_agent_verbose
 from lfx.base.data.storage_utils import read_file_bytes
 from lfx.base.models.unified_models import get_language_model_options, get_llm, handle_model_input_update
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
@@ -148,7 +149,10 @@ class CSVAgentComponent(LCAgentComponent):
             allow_dangerous = getattr(self, "allow_dangerous_code", False) or False
 
             agent_kwargs = {
-                "verbose": self.verbose,
+                # Gate LangChain's stdout chain markers on LANGCHAIN_VERBOSE (off by
+                # default) instead of the always-True component input. See
+                # resolve_agent_verbose().
+                "verbose": resolve_agent_verbose(),
                 "allow_dangerous_code": allow_dangerous,
             }
 
@@ -185,7 +189,10 @@ class CSVAgentComponent(LCAgentComponent):
         allow_dangerous = getattr(self, "allow_dangerous_code", False) or False
 
         agent_kwargs = {
-            "verbose": self.verbose,
+            # Gate LangChain's stdout chain markers on LANGCHAIN_VERBOSE (off by
+            # default) instead of the always-True component input. See
+            # resolve_agent_verbose().
+            "verbose": resolve_agent_verbose(),
             "allow_dangerous_code": allow_dangerous,
         }
 

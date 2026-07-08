@@ -58,6 +58,8 @@ const AudioButton = ({
           onClick={handleClick}
           unstyled
           data-testid="audio-button"
+          aria-label={getTooltipContent()}
+          aria-pressed={isRecording}
         >
           <ForwardedIconComponent
             className={cn(

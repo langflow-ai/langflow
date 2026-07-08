@@ -6,7 +6,17 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from langflow.services.auth.context import (
+    AUTH_METHOD_API_KEY,
+    AuthCredentialContext,
+    clear_current_auth_context,
+    set_current_auth_context,
+)
 from langflow.services.authorization import guards as authz_guards
+from langflow.services.authorization.access_ceiling import (
+    ExternalAccessContext,
+    set_current_external_access_context,
+)
 from langflow.services.authorization.actions import (
     DeploymentAction,
     FileAction,
@@ -161,6 +171,35 @@ async def test_ensure_permission_writes_audit_on_deny(monkeypatch, fake_user):
     assert audit_calls[0]["result"] == "deny"
 
 
+@pytest.mark.anyio
+async def test_ensure_permission_forwards_auth_context(monkeypatch, fake_user):
+    """Credential metadata is available to plugins and audit without route signature churn."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    api_key_id = uuid4()
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=api_key_id,
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+
+    try:
+        await authz_guards.ensure_permission(fake_user, domain="*", obj="flow:abc", act="read")
+    finally:
+        clear_current_auth_context()
+
+    forwarded_context = service.calls[0]["context"]
+    assert forwarded_context["auth_method"] == "api_key"
+    assert forwarded_context["api_key_id"] == api_key_id
+    assert forwarded_context["api_key_source"] == "db"  # pragma: allowlist secret
+    assert audit_calls[0]["details"]["auth_method"] == "api_key"
+    assert audit_calls[0]["details"]["api_key_id"] == str(api_key_id)
+
+
 # ----------------------------------------------------------------------------- #
 # ensure_flow_permission — enum coercion, domain, owner override
 # ----------------------------------------------------------------------------- #
@@ -291,6 +330,88 @@ async def test_owner_override_skips_enforce(monkeypatch, fake_user):
 
     assert service.calls == []
     assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "owner_override"
+
+
+@pytest.mark.anyio
+async def test_api_key_scope_plugin_sees_owner_resource_instead_of_owner_override(monkeypatch, fake_user):
+    """API-key scopes can be narrower than the owning user when a plugin opts in."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False, supports_api_key_scopes=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=uuid4(),
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_flow_permission(
+                fake_user,
+                FlowAction.DELETE,
+                flow_id=uuid4(),
+                flow_user_id=fake_user.id,
+            )
+    finally:
+        clear_current_auth_context()
+
+    assert exc_info.value.status_code == 403
+    assert len(service.calls) == 1
+    assert service.calls[0]["context"]["flow_user_id"] == fake_user.id
+    assert service.calls[0]["context"]["auth_method"] == "api_key"
+
+
+@pytest.mark.anyio
+async def test_external_viewer_ceiling_denies_before_owner_override(monkeypatch, fake_user):
+    """A viewer claim is a deny-only ceiling even when the user owns the flow."""
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="subject-1", level="viewer"))
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_flow_permission(
+                fake_user,
+                FlowAction.WRITE,
+                flow_id=uuid4(),
+                flow_user_id=fake_user.id,
+            )
+    finally:
+        set_current_external_access_context(None)
+
+    assert exc_info.value.status_code == 403
+    assert "External credentials" in exc_info.value.detail
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "deny"
+    assert audit_calls[0]["details"]["external_access_level"] == "viewer"
+
+
+@pytest.mark.anyio
+async def test_external_editor_ceiling_allows_write_then_owner_override(monkeypatch, fake_user):
+    """Editor is still only a ceiling; normal owner/plugin logic continues after it passes."""
+    install_settings(monkeypatch, authz_enabled=True, audit_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="subject-1", level="editor"))
+
+    try:
+        await authz_guards.ensure_flow_permission(
+            fake_user,
+            FlowAction.WRITE,
+            flow_id=uuid4(),
+            flow_user_id=fake_user.id,
+        )
+    finally:
+        set_current_external_access_context(None)
+
+    assert service.calls == []
     assert audit_calls[0]["result"] == "owner_override"
 
 

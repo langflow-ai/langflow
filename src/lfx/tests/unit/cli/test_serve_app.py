@@ -1010,7 +1010,10 @@ class TestCreateServeApp:
 
         app = create_multi_serve_app(registry=registry)
 
-        routes = [route.path for route in app.routes]
+        # FastAPI >=0.137 mounts included routers (the /api/v2 workflow router) as lazy
+        # `_IncludedRouter` wrappers with no `.path`; skip them — this asserts the
+        # directly-mounted serve paths only.
+        routes = [route.path for route in app.routes if hasattr(route, "path")]
         assert "/health" in routes
         assert "/flows" in routes
         assert "/flows/{flow_id}/run" in routes
@@ -1029,7 +1032,10 @@ class TestCreateServeApp:
 
         app = create_multi_serve_app(registry=registry)
 
-        routes = [route.path for route in app.routes]
+        # FastAPI >=0.137 mounts included routers (the /api/v2 workflow router) as lazy
+        # `_IncludedRouter` wrappers with no `.path`; skip them — this asserts the
+        # directly-mounted serve paths only.
+        routes = [route.path for route in app.routes if hasattr(route, "path")]
         assert "/flows/{flow_id}/run" in routes
         assert "/flows/{flow_id}/info" in routes
         # Single dispatch route covers all flow IDs — no per-flow routes
@@ -1054,7 +1060,10 @@ class TestCreateServeAppFactory:
                 os.environ["LANGFLOW_API_KEY"] = "test-key"  # pragma: allowlist secret
                 app = create_serve_app()
 
-        routes = [r.path for r in app.routes]
+        # FastAPI >=0.137 mounts included routers (the /api/v2 workflow router) as lazy
+        # `_IncludedRouter` wrappers with no `.path`; skip them — this asserts the
+        # directly-mounted serve paths only.
+        routes = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/health" in routes
         assert "/flows" in routes
         assert "/flows/upload/" in routes
@@ -1432,7 +1441,7 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         # Mock execute_graph_with_capture to raise an error
-        async def mock_execute_error(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_error(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             msg = "Flow execution failed"
             raise RuntimeError(msg)
 
@@ -1457,7 +1466,7 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         # Mock execute_graph_with_capture to return empty results
-        async def mock_execute_empty(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_empty(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             return [], ""  # Empty results and logs
 
         with (
@@ -1478,7 +1487,7 @@ class TestServeAppEndpoints:
         """The /run endpoint must forward session_id from RunRequest to the executor."""
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["session_id"] = session_id
             return [], ""
 
@@ -1497,7 +1506,7 @@ class TestServeAppEndpoints:
         """The /stream endpoint must forward session_id from StreamRequest to the executor."""
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["session_id"] = session_id
             return [], ""
 
@@ -1592,7 +1601,7 @@ class TestServeAppEndpoints:
 
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["request_variables"] = dict(graph.context.get("request_variables") or {})
             return [], ""
 
@@ -1628,7 +1637,7 @@ class TestServeAppEndpoints:
         app = create_multi_serve_app(registry=registry)
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
-        async def mock_execute_noop(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_noop(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             return [], ""
 
         headers = {"x-api-key": "test-api-key"}
@@ -1670,7 +1679,7 @@ class TestServeAppEndpoints:
 
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["no_env_fallback"] = graph.context.get("no_env_fallback")
             return [], ""
 
@@ -1705,7 +1714,7 @@ class TestServeAppEndpoints:
 
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["no_env_fallback"] = graph.context.get("no_env_fallback")
             return [], ""
 
@@ -1744,7 +1753,7 @@ class TestServeAppEndpoints:
 
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["request_variables"] = dict(graph.context.get("request_variables") or {})
             return [], ""
 
@@ -1786,7 +1795,7 @@ class TestServeAppEndpoints:
 
         captured: dict = {}
 
-        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_capture(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             captured["request_variables"] = graph.context.get("request_variables")
             return [], ""
 
@@ -1823,7 +1832,7 @@ class TestServeAppEndpoints:
         app = create_multi_serve_app(registry=registry)
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
-        async def mock_execute_noop(graph, input_value, session_id=None):  # noqa: ARG001
+        async def mock_execute_noop(graph, input_value, session_id=None, user_id=None):  # noqa: ARG001
             return [], ""
 
         headers = {"x-api-key": "test-api-key"}

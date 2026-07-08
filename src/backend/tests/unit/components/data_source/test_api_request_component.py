@@ -363,6 +363,86 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         assert file_path is not None
         assert file_path.suffix == ".bin"
 
+    async def test_response_info_content_disposition_path_traversal(self, component):
+        """A malicious Content-Disposition filename must not escape the component temp dir.
+
+        Regression for GHSA-h3c6-fqr4-m99p path traversal.
+        """
+        import tempfile
+        from pathlib import Path
+
+        component_temp_dir = Path(tempfile.gettempdir()) / component.__class__.__name__
+        request = httpx.Request("GET", "https://example.com/download")
+        malicious = Response(
+            200,
+            content=b"payload",
+            headers={"Content-Disposition": 'attachment; filename="../../../../tmp/evil.sh"'},
+            request=request,
+        )
+
+        _, file_path = await component._response_info(malicious, with_file_path=True)
+
+        assert file_path is not None
+        # The filename was reduced to its basename, so the file stays inside the temp dir.
+        assert file_path.parent.resolve() == component_temp_dir.resolve()
+        assert file_path.name.endswith("evil.sh")
+        assert ".." not in file_path.parts
+
+    async def test_response_info_content_disposition_backslash_traversal(self, component):
+        """Windows-style backslash separators must also be reduced to the basename.
+
+        On POSIX, ``Path(...).name`` treats backslashes as ordinary filename
+        characters, so the header value must be normalized before stripping
+        directory parts. Regression for GHSA-h3c6-fqr4-m99p path traversal.
+        """
+        import tempfile
+        from pathlib import Path
+
+        component_temp_dir = Path(tempfile.gettempdir()) / component.__class__.__name__
+        request = httpx.Request("GET", "https://example.com/download")
+        malicious = Response(
+            200,
+            content=b"payload",
+            headers={"Content-Disposition": r'attachment; filename="..\..\..\..\tmp\evil.sh"'},
+            request=request,
+        )
+
+        _, file_path = await component._response_info(malicious, with_file_path=True)
+
+        assert file_path is not None
+        assert file_path.parent.resolve() == component_temp_dir.resolve()
+        assert file_path.name.endswith("evil.sh")
+        assert "\\" not in file_path.name
+        assert ".." not in file_path.parts
+
+    async def test_response_info_content_disposition_null_byte(self, component):
+        """A NUL byte in the Content-Disposition filename must be stripped, not crash.
+
+        A NUL byte survives ``Path(...).name`` and would otherwise make the
+        defense-in-depth ``.resolve()`` raise a cryptic "embedded null character"
+        ValueError. It must be stripped so the path stays inside the temp dir and
+        the file is written cleanly. Regression for GHSA-h3c6-fqr4-m99p.
+        """
+        import tempfile
+        from pathlib import Path
+
+        component_temp_dir = Path(tempfile.gettempdir()) / component.__class__.__name__
+        request = httpx.Request("GET", "https://example.com/download")
+        malicious = Response(
+            200,
+            content=b"payload",
+            headers={"Content-Disposition": 'attachment; filename="evil\x00.sh"'},
+            request=request,
+        )
+
+        _, file_path = await component._response_info(malicious, with_file_path=True)
+
+        assert file_path is not None
+        assert file_path.parent.resolve() == component_temp_dir.resolve()
+        assert "\x00" not in str(file_path)
+        assert file_path.name.endswith("evil.sh")
+        assert ".." not in file_path.parts
+
 
 class TestAPIRequestSSRFProtection:
     """Rewritten SSRF Protection Tests for API Request Component.

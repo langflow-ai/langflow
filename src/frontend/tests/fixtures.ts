@@ -1,8 +1,24 @@
 // tests/fixtures.ts
-import { test as base, expect, Page } from "@playwright/test";
-import "./playwrightCoverage";
 
-export type { LangflowPage } from "./utils/types";
+import { test as base, expect, Page } from "@playwright/test";
+import type { ICheckerResult } from "accessibility-checker";
+import * as aChecker from "accessibility-checker";
+import "./playwrightCoverage";
+import {
+  buildA11yScanLabel,
+  buildA11ySummaryAttachment,
+  countNewA11yViolations,
+  formatA11yFailure,
+  isCheckerReport,
+} from "./utils/accessibility-checker";
+import type { A11yScanOptions, LangflowPage } from "./utils/types";
+
+const RUN_A11Y = process.env.RUN_A11Y === "true";
+const RUN_A11Y_ASSERT = process.env.RUN_A11Y_ASSERT === "true";
+
+type A11yFixtures = {
+  _a11ySession: void;
+};
 
 // Optional CPU throttling for reproducing race conditions seen on slower
 // runners (Windows CI). Enable with LF_CPU_THROTTLE=<rate>, e.g. 4.
@@ -14,8 +30,19 @@ const CPU_THROTTLE_RATE = (() => {
 })();
 
 // Extend test to log backend errors
-export const test = base.extend({
-  page: async ({ page }, use) => {
+export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
+  _a11ySession: [
+    async ({ browserName }, use) => {
+      void browserName;
+      await use();
+
+      if (RUN_A11Y) {
+        await aChecker.close();
+      }
+    },
+    { scope: "worker", auto: true },
+  ],
+  page: async ({ page }, use, testInfo) => {
     if (CPU_THROTTLE_RATE > 0) {
       try {
         const client = await page.context().newCDPSession(page);
@@ -41,6 +68,52 @@ export const test = base.extend({
     // Add helper method to page context — see LangflowPage type in utils/types.ts
     (page as Page & { allowFlowErrors?: () => void }).allowFlowErrors = () => {
       allowFlowErrors = true;
+    };
+
+    let a11yScanIndex = 0;
+    (
+      page as Page & {
+        runA11yScan?: (
+          label: string,
+          options?: A11yScanOptions,
+        ) => Promise<ICheckerResult | null>;
+      }
+    ).runA11yScan = async (label: string, options?: A11yScanOptions) => {
+      if (!RUN_A11Y) {
+        return null;
+      }
+
+      if (options?.colorScheme) {
+        await page.emulateMedia({ colorScheme: options.colorScheme });
+      }
+
+      const scanIndex = a11yScanIndex++;
+      const scanLabel = buildA11yScanLabel(
+        testInfo.project.name,
+        label,
+        scanIndex,
+      );
+
+      const result = await aChecker.getCompliance(page, scanLabel);
+
+      if (!isCheckerReport(result.report)) {
+        throw new Error(
+          `IBM accessibility scan failed for ${scanLabel}: checker returned an error payload.`,
+        );
+      }
+
+      testInfo.attachments.push(
+        buildA11ySummaryAttachment(scanIndex, scanLabel, result.report),
+      );
+
+      if (RUN_A11Y_ASSERT) {
+        const newViolationCount = countNewA11yViolations(result.report);
+        const failureMessage = formatA11yFailure(scanLabel, result.report);
+
+        expect(newViolationCount, failureMessage).toBe(0);
+      }
+
+      return result;
     };
 
     // Monitor API responses for errors
@@ -123,6 +196,10 @@ export const test = base.extend({
               console.warn(
                 `Timed out reading response body for ${url}; skipping body inspection.`,
               );
+              return;
+            }
+
+            if (typeof bodyResult !== "string") {
               return;
             }
 
@@ -220,8 +297,6 @@ export const test = base.extend({
                 `Error: ${errorPreview}\n\n` +
                 `If this error is expected, call page.allowFlowErrors() at the start of your test.`;
 
-              // Use page.close() to fail the test immediately
-              page.emit("pageerror", new Error(errorMessage));
               throw new Error(errorMessage);
             }
           }
@@ -238,7 +313,7 @@ export const test = base.extend({
       }
     });
 
-    await use(page);
+    await use(page as LangflowPage);
 
     // Check for errors and fail test if not allowed
     if (errors.length > 0) {

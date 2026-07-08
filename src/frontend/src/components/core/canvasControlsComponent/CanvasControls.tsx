@@ -20,6 +20,7 @@ import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
+import { useDismissOnTabBoundary } from "./utils/use-dismiss-on-tab-boundary";
 
 // Delay before the "Try the new Langflow Assistant!" tooltip surfaces, in ms.
 // Long enough that an active user mid-task isn't interrupted; short enough
@@ -98,6 +99,10 @@ const CanvasControls = ({
     },
     [markDiscovered],
   );
+  const {
+    containerRef: onboardingTooltipRef,
+    handleTabBoundary: handleOnboardingTooltipTabBoundary,
+  } = useDismissOnTabBoundary<HTMLDivElement>(markDiscovered);
 
   const [isAddNoteActive, setIsAddNoteActive] = useState(false);
 
@@ -208,6 +213,7 @@ const CanvasControls = ({
           </PopoverPrimitive.Anchor>
           <PopoverPrimitive.Portal>
             <PopoverPrimitive.Content
+              ref={onboardingTooltipRef}
               side="left"
               // Breathing room between the tooltip and the assistant button.
               // 4px reads as "touching"; 12px gives a clear visual separation
@@ -219,7 +225,10 @@ const CanvasControls = ({
               // break their flow.
               onOpenAutoFocus={(e) => e.preventDefault()}
               onCloseAutoFocus={(e) => e.preventDefault()}
+              onFocusOutside={markDiscovered}
+              onEscapeKeyDown={markDiscovered}
               data-testid="assistant-onboarding-tooltip"
+              onKeyDown={handleOnboardingTooltipTabBoundary}
               // Canvas-level stacking: kept BELOW the z-50 modal/dialog/dropdown
               // layer so the onboarding tooltip never floats in front of an open
               // modal (e.g. "My Files"). The Portal still lifts it clear of the

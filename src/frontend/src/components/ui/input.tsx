@@ -1,4 +1,8 @@
 import * as React from "react";
+import {
+  getSuppressedAutoComplete,
+  PASSWORD_MANAGER_IGNORE_PROPS,
+} from "@/utils/inputAutofill";
 import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../common/genericIconComponent";
 
@@ -11,6 +15,14 @@ export interface InputProps
   endIcon?: React.ReactNode;
   /** @deprecated use endIcon with JSX directly */
   endIconClassName?: string;
+  /**
+   * Opt back into browser / password-manager autofill. Defaults to false so
+   * Langflow inputs (node-config fields, modals) suppress autofill — otherwise
+   * the browser can inject saved credentials that autosave then persists,
+   * corrupting flows. Only real credential-entry forms (login / signup / admin
+   * login) set this to true.
+   */
+  allowAutofill?: boolean;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
@@ -23,10 +35,25 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       endIconClassName = "",
       type,
       placeholder,
+      autoComplete,
+      allowAutofill = false,
       ...props
     },
     ref,
   ) => {
+    // Suppress browser/password-manager autofill by default; credential forms
+    // opt back in via `allowAutofill`. A caller-provided `autoComplete` always
+    // wins. See utils/inputAutofill.ts for the rationale.
+    const autofillProps = allowAutofill
+      ? autoComplete !== undefined
+        ? { autoComplete }
+        : {}
+      : {
+          autoComplete:
+            autoComplete ?? getSuppressedAutoComplete(type === "password"),
+          ...PASSWORD_MANAGER_IGNORE_PROPS,
+        };
+
     // Support legacy string endIcon (icon name) for backwards compatibility
     const resolvedEndIcon =
       typeof endIcon === "string" ? (
@@ -42,7 +69,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       );
 
     return (
-      <label
+      // Neutral wrapper: a wrapping <label> would add the visual placeholder
+      // span to the input's accessible name and double-label fields that are
+      // already labeled externally (a11y-action-plan 1.2).
+      <div
         className={cn(
           "relative block h-fit w-full text-sm",
           icon ? className : "",
@@ -55,7 +85,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           />
         )}
         <input
-          autoComplete="off"
+          {...autofillProps}
           type={type}
           placeholder={placeholder}
           className={cn(
@@ -68,6 +98,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         <span
+          aria-hidden="true"
           className={cn(
             "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground",
             icon ? "left-9" : "left-3",
@@ -84,7 +115,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             {resolvedEndIcon}
           </div>
         )}
-      </label>
+      </div>
     );
   },
 );

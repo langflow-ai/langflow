@@ -64,9 +64,15 @@ export const openTemplatesModal = async (
   const welcomeSelector = '[data-testid="flow-builder-welcome-panel"]';
   const modalSelector = `[data-testid="${TID.modalTitle}"]`;
 
+  // The race must honor the caller's modalTimeout: clicking "New Flow" first
+  // POSTs the placeholder flow, and on CI shards where parallel workers share
+  // one SQLite backend that write can queue up to the 30s busy_timeout —
+  // callers in write-heavy loops pass TIMEOUTS.long to ride that window out.
+  const raceTimeout = options?.modalTimeout ?? TIMEOUTS.standard;
+
   await Promise.race([
-    page.waitForSelector(welcomeSelector, { timeout: TIMEOUTS.standard }),
-    page.waitForSelector(modalSelector, { timeout: TIMEOUTS.standard }),
+    page.waitForSelector(welcomeSelector, { timeout: raceTimeout }),
+    page.waitForSelector(modalSelector, { timeout: raceTimeout }),
   ]);
 
   if ((await page.locator(welcomeSelector).count()) > 0) {

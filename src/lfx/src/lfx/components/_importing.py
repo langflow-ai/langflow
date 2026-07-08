@@ -1,42 +1,14 @@
-"""Import utilities for LangFlow components."""
+"""Import utilities for LangFlow components.
+
+Backward-compatibility re-export: the canonical, contract-stable home of
+:func:`import_mod` is :mod:`lfx.utils.lazy_import` (part of the BUNDLE_API
+surface, since separately-installed bundle packages call it from their lazy
+``__init__.py`` files).  In-tree callers may keep using this path; bundle
+packages import from ``lfx.utils.lazy_import``.
+"""
 
 from __future__ import annotations
 
-from importlib import import_module
+from lfx.utils.lazy_import import import_mod
 
-
-def import_mod(
-    attr_name: str,
-    module_name: str | None,
-    package: str | None,
-) -> object:
-    """Import an attribute from a module located in a package.
-
-    This utility function is used in custom __getattr__ methods within __init__.py
-    files to dynamically import attributes.
-
-    Args:
-        attr_name: The name of the attribute to import.
-        module_name: The name of the module to import from. If None, the attribute
-            is imported from the package itself.
-        package: The name of the package where the module is located.
-    """
-    if module_name == "__module__" or module_name is None:
-        try:
-            result = import_module(f".{attr_name}", package=package)
-        except ModuleNotFoundError:
-            msg = f"module '{package!r}' has no attribute {attr_name!r}"
-            raise AttributeError(msg) from None
-    else:
-        try:
-            module = import_module(f".{module_name}", package=package)
-        except ModuleNotFoundError as e:
-            # Check if this is a missing dependency or a missing module
-            if "No module named" in str(e) and package in str(e):
-                # This is likely a missing module file, not a dependency issue
-                msg = f"module '{package}.{module_name}' not found"
-                raise ImportError(msg) from None
-            # This is likely a missing dependency, let the original error bubble up
-            raise
-        result = getattr(module, attr_name)
-    return result
+__all__ = ["import_mod"]

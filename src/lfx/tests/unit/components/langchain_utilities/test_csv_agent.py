@@ -373,8 +373,12 @@ class TestCSVAgentComponent:
                 temp_file_path = component._temp_file_path
                 assert not Path(temp_file_path).exists()
 
-    def test_build_agent(self, component_class, model_value, mock_langchain_experimental):
+    def test_build_agent(self, component_class, model_value, mock_langchain_experimental, monkeypatch):
         """Test build_agent method with allow_dangerous_code explicitly set."""
+        # The stdout chain markers follow LANGCHAIN_VERBOSE (off by default), not the
+        # component's verbose input -- see resolve_agent_verbose(). Ensure it's unset so
+        # the default-off assertion below is deterministic.
+        monkeypatch.delenv("LANGCHAIN_VERBOSE", raising=False)
         component = component_class()
 
         # Create real CSV file
@@ -413,7 +417,9 @@ class TestCSVAgentComponent:
                 assert agent == mock_agent
                 mock_create_agent.assert_called_once()
                 call_kwargs = mock_create_agent.call_args[1]
-                assert call_kwargs["verbose"] is True
+                # Default off despite the component's verbose=True input: the stdout chain
+                # markers are gated on LANGCHAIN_VERBOSE now (issue #13662).
+                assert call_kwargs["verbose"] is False
                 assert call_kwargs["allow_dangerous_code"] is True
                 assert call_kwargs["handle_parsing_errors"] is False
                 assert call_kwargs["pandas_kwargs"] == {"encoding": "utf-8"}

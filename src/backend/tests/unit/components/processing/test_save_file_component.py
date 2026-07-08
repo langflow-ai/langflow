@@ -17,7 +17,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Clean up test files after all tests in the class complete."""
         yield
         # Clean up test files created during tests
-        test_files = ["test_data.json", "test_message.txt", "test_output.csv"]
+        test_files = ["test_data.json", "test_message.txt", "test_output.csv", "test_page.html"]
         for filename in test_files:
             filepath = Path(filename)
             if filepath.exists():
@@ -375,6 +375,69 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             # Clean up temp file
             if tmp_path.exists():
                 tmp_path.unlink()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("append_mode", [False, True])
+    async def test_local_save_rejects_absolute_paths_before_file_access(self, component_class, tmp_path, append_mode):
+        """Reject path-shaped local file names before they can read or write a file."""
+        owner_file = tmp_path / "owner-user-id" / "owner-file.txt"
+        owner_file.parent.mkdir()
+        owner_file.write_text("owner content", encoding="utf-8")
+
+        component = component_class(_user_id=str(uuid4()))
+        component.set_attributes(
+            {
+                "input": Message(text="attacker content"),
+                "file_name": str(owner_file),
+                "local_format": "txt",
+                "storage_location": [{"name": "Local"}],
+                "append_mode": append_mode,
+            }
+        )
+
+        with (
+            patch.object(component, "_upload_file", new_callable=AsyncMock) as mock_upload,
+            pytest.raises(ValueError, match="Local file name must be a file name only"),
+        ):
+            await component.save_to_file()
+
+        assert owner_file.read_text(encoding="utf-8") == "owner content"
+        mock_upload.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "file_name",
+        [
+            "../owner-file",
+            "owner-user-id/owner-file",
+            r"owner-user-id\owner-file",
+            r"C:\Users\owner\file",
+            "C:owner-file",
+        ],
+    )
+    async def test_local_save_rejects_nested_or_traversal_paths(
+        self, component_class, tmp_path, monkeypatch, file_name
+    ):
+        """Reject relative path traversal and storage-prefix style local file names."""
+        monkeypatch.chdir(tmp_path)
+        component = component_class(_user_id=str(uuid4()))
+        component.set_attributes(
+            {
+                "input": Message(text="attacker content"),
+                "file_name": file_name,
+                "local_format": "txt",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
+
+        with (
+            patch.object(component, "_upload_file", new_callable=AsyncMock) as mock_upload,
+            pytest.raises(ValueError, match="Local file name must be a file name only"),
+        ):
+            await component.save_to_file()
+
+        assert not list(tmp_path.rglob("*.txt"))
+        mock_upload.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_google_drive_credential_parsing_with_control_characters(self, component_class):

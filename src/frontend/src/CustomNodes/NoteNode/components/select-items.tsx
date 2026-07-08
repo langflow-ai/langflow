@@ -9,7 +9,13 @@ import ToolbarSelectItem from "@/pages/FlowPage/components/nodeToolbarComponent/
 import type { NoteDataType } from "@/types/flow";
 
 export const SelectItems = memo(
-  ({ shortcuts, data }: { shortcuts: any[]; data: NoteDataType }) => {
+  ({
+    shortcuts,
+    data,
+  }: {
+    shortcuts: Array<{ name: string; display_name: string; shortcut: string }>;
+    data: NoteDataType;
+  }) => {
     const { t } = useTranslation();
     return (
       <SelectContentWithoutPortal>

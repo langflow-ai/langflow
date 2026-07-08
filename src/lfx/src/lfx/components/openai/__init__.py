@@ -1,37 +1,22 @@
-from __future__ import annotations
+# lfx-bundles-shim
+"""Compatibility shim: lfx.components.openai moved to the lfx-openai bundle.
 
-from typing import TYPE_CHECKING, Any
+This module re-points to the installed bundle distribution. It contains
+no component implementations and no third-party dependencies, and is
+removed once the deprecation window closes (M4).
+"""
 
-from lfx.components._importing import import_mod
+import importlib
+import sys
 
-if TYPE_CHECKING:
-    from lfx.components.openai.openai import OpenAIEmbeddingsComponent
-    from lfx.components.openai.openai_chat_model import OpenAIModelComponent
-
-_dynamic_imports = {
-    "OpenAIEmbeddingsComponent": "openai",
-    "OpenAIModelComponent": "openai_chat_model",
-}
-
-__all__ = [
-    "OpenAIEmbeddingsComponent",
-    "OpenAIModelComponent",
-]
-
-
-def __getattr__(attr_name: str) -> Any:
-    """Lazily import OpenAI components on attribute access."""
-    if attr_name not in _dynamic_imports:
-        msg = f"module '{__name__}' has no attribute '{attr_name}'"
-        raise AttributeError(msg)
-    try:
-        result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
-    except (ModuleNotFoundError, ImportError, AttributeError) as e:
-        msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
-        raise AttributeError(msg) from e
-    globals()[attr_name] = result
-    return result
-
-
-def __dir__() -> list[str]:
-    return list(__all__)
+try:
+    sys.modules[__name__] = importlib.import_module("lfx_openai.components.openai")
+except ModuleNotFoundError as exc:
+    if exc.name is not None and (exc.name == "lfx_openai" or exc.name.startswith("lfx_openai.")):
+        msg = (
+            "The 'openai' components moved to the 'lfx-openai' distribution. "
+            "Install it with:  pip install lfx-openai   "
+            "(or 'pip install langflow', which bundles it)."
+        )
+        raise ModuleNotFoundError(msg, name="lfx_openai") from exc
+    raise

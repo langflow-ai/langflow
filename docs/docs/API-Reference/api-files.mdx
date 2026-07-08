@@ -2,7 +2,7 @@
 title: Files endpoints
 slug: /api-files
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleApiFilesUploadFileV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/upload-file-v1.sh';
 import resultApiFilesResultUploadFileV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/result-upload-file-v1.json';
 import exampleApiFilesUploadImageFilesV1 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-files/upload-image-files-v1.sh';
@@ -96,17 +96,17 @@ Replace **FILE_NAME** with the uploaded file name.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFilesUploadFileV1} language="python" />
+<CodeBlock language="python">{examplePythonApiFilesUploadFileV1}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFilesUploadFileV1} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFilesUploadFileV1}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFilesUploadFileV1} language="bash" />
+<CodeBlock language="bash">{exampleApiFilesUploadFileV1}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -117,7 +117,7 @@ Not all file types are supported.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFilesResultUploadFileV1} language="json" />
+<CodeBlock language="json">{resultApiFilesResultUploadFileV1}</CodeBlock>
 
 </details>
 
@@ -133,17 +133,17 @@ To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment varia
     <Tabs>
     <TabItem value="Python" label="Python" default>
 
-    <CodeSnippet source={examplePythonApiFilesUploadImageFilesV1} language="python" />
+    <CodeBlock language="python">{examplePythonApiFilesUploadImageFilesV1}</CodeBlock>
 
     </TabItem>
     <TabItem value="JavaScript" label="JavaScript">
 
-    <CodeSnippet source={exampleJavascriptApiFilesUploadImageFilesV1} language="javascript" />
+    <CodeBlock language="javascript">{exampleJavascriptApiFilesUploadImageFilesV1}</CodeBlock>
 
     </TabItem>
     <TabItem value="curl" label="curl">
 
-    <CodeSnippet source={exampleApiFilesUploadImageFilesV1} language="bash" />
+    <CodeBlock language="bash">{exampleApiFilesUploadImageFilesV1}</CodeBlock>
 
     </TabItem>
     </Tabs>
@@ -166,17 +166,17 @@ To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment varia
     <Tabs>
     <TabItem value="Python" label="Python" default>
 
-    <CodeSnippet source={examplePythonApiFilesUploadImageFilesV12} language="python" />
+    <CodeBlock language="python">{examplePythonApiFilesUploadImageFilesV12}</CodeBlock>
 
     </TabItem>
     <TabItem value="JavaScript" label="JavaScript">
 
-    <CodeSnippet source={exampleJavascriptApiFilesUploadImageFilesV12} language="javascript" />
+    <CodeBlock language="javascript">{exampleJavascriptApiFilesUploadImageFilesV12}</CodeBlock>
 
     </TabItem>
     <TabItem value="curl" label="curl">
 
-    <CodeSnippet source={exampleApiFilesUploadImageFilesV12} language="bash" />
+    <CodeBlock language="bash">{exampleApiFilesUploadImageFilesV12}</CodeBlock>
 
     </TabItem>
     </Tabs>
@@ -193,17 +193,17 @@ List all files associated with a specific flow.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFilesListFilesV1} language="python" />
+<CodeBlock language="python">{examplePythonApiFilesListFilesV1}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFilesListFilesV1} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFilesListFilesV1}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFilesListFilesV1} language="bash" />
+<CodeBlock language="bash">{exampleApiFilesListFilesV1}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -211,7 +211,7 @@ List all files associated with a specific flow.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFilesResultListFilesV1} language="json" />
+<CodeBlock language="json">{resultApiFilesResultListFilesV1}</CodeBlock>
 
 </details>
 
@@ -222,17 +222,17 @@ Download a specific file from a flow.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFilesDownloadFileV1} language="python" />
+<CodeBlock language="python">{examplePythonApiFilesDownloadFileV1}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFilesDownloadFileV1} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFilesDownloadFileV1}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFilesDownloadFileV1} language="bash" />
+<CodeBlock language="bash">{exampleApiFilesDownloadFileV1}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -240,7 +240,7 @@ Download a specific file from a flow.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFilesResultDownloadFileV1} language="text" />
+<CodeBlock language="text">{resultApiFilesResultDownloadFileV1}</CodeBlock>
 
 </details>
 
@@ -251,17 +251,17 @@ Delete a specific file from a flow.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFilesDeleteFileV1} language="python" />
+<CodeBlock language="python">{examplePythonApiFilesDeleteFileV1}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFilesDeleteFileV1} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFilesDeleteFileV1}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFilesDeleteFileV1} language="bash" />
+<CodeBlock language="bash">{exampleApiFilesDeleteFileV1}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -269,7 +269,7 @@ Delete a specific file from a flow.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFilesResultDeleteFileV1} language="json" />
+<CodeBlock language="json">{resultApiFilesResultDeleteFileV1}</CodeBlock>
 
 </details>
 
@@ -291,17 +291,17 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, such as `07
     <Tabs>
     <TabItem value="Python" label="Python" default>
 
-    <CodeSnippet source={examplePythonApiFilesUploadFileV2} language="python" />
+    <CodeBlock language="python">{examplePythonApiFilesUploadFileV2}</CodeBlock>
 
     </TabItem>
     <TabItem value="JavaScript" label="JavaScript">
 
-    <CodeSnippet source={exampleJavascriptApiFilesUploadFileV2} language="javascript" />
+    <CodeBlock language="javascript">{exampleJavascriptApiFilesUploadFileV2}</CodeBlock>
 
     </TabItem>
     <TabItem value="curl" label="curl">
 
-    <CodeSnippet source={exampleApiFilesUploadFileV2} language="bash" />
+    <CodeBlock language="bash">{exampleApiFilesUploadFileV2}</CodeBlock>
 
     </TabItem>
     </Tabs>
@@ -309,7 +309,7 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, such as `07
     <details>
     <summary>Result</summary>
 
-    <CodeSnippet source={resultApiFilesResultUploadFileV2} language="text" />
+    <CodeBlock language="text">{resultApiFilesResultUploadFileV2}</CodeBlock>
 
     </details>
 
@@ -319,17 +319,17 @@ You must include the ampersand (`@`) in the request to instruct curl to upload t
     <Tabs>
     <TabItem value="Python" label="Python" default>
 
-    <CodeSnippet source={examplePythonApiFilesUploadFileV22} language="python" />
+    <CodeBlock language="python">{examplePythonApiFilesUploadFileV22}</CodeBlock>
 
     </TabItem>
     <TabItem value="JavaScript" label="JavaScript">
 
-    <CodeSnippet source={exampleJavascriptApiFilesUploadFileV22} language="javascript" />
+    <CodeBlock language="javascript">{exampleJavascriptApiFilesUploadFileV22}</CodeBlock>
 
     </TabItem>
     <TabItem value="curl" label="curl">
 
-    <CodeSnippet source={exampleApiFilesUploadFileV22} language="bash" />
+    <CodeBlock language="bash">{exampleApiFilesUploadFileV22}</CodeBlock>
 
     </TabItem>
     </Tabs>
@@ -366,17 +366,17 @@ The default file limit is 1024 MB. To configure this value, change the `LANGFLOW
     <Tabs>
     <TabItem value="Python" label="Python" default>
 
-    <CodeSnippet source={examplePythonApiFilesSendFilesToYourFlowsV2} language="python" />
+    <CodeBlock language="python">{examplePythonApiFilesSendFilesToYourFlowsV2}</CodeBlock>
 
     </TabItem>
     <TabItem value="JavaScript" label="JavaScript">
 
-    <CodeSnippet source={exampleJavascriptApiFilesSendFilesToYourFlowsV2} language="javascript" />
+    <CodeBlock language="javascript">{exampleJavascriptApiFilesSendFilesToYourFlowsV2}</CodeBlock>
 
     </TabItem>
     <TabItem value="curl" label="curl">
 
-    <CodeSnippet source={exampleApiFilesSendFilesToYourFlowsV2} language="bash" />
+    <CodeBlock language="bash">{exampleApiFilesSendFilesToYourFlowsV2}</CodeBlock>
 
     </TabItem>
     </Tabs>
@@ -401,17 +401,17 @@ This component loads files into flows from your local machine or Langflow file m
     <Tabs>
     <TabItem value="Python" label="Python" default>
 
-    <CodeSnippet source={examplePythonApiFilesSendFilesToYourFlowsV22} language="python" />
+    <CodeBlock language="python">{examplePythonApiFilesSendFilesToYourFlowsV22}</CodeBlock>
 
     </TabItem>
     <TabItem value="JavaScript" label="JavaScript">
 
-    <CodeSnippet source={exampleJavascriptApiFilesSendFilesToYourFlowsV22} language="javascript" />
+    <CodeBlock language="javascript">{exampleJavascriptApiFilesSendFilesToYourFlowsV22}</CodeBlock>
 
     </TabItem>
     <TabItem value="curl" label="curl">
 
-    <CodeSnippet source={exampleApiFilesSendFilesToYourFlowsV22} language="bash" />
+    <CodeBlock language="bash">{exampleApiFilesSendFilesToYourFlowsV22}</CodeBlock>
 
     </TabItem>
     </Tabs>
@@ -427,17 +427,17 @@ List all files associated with your user account.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFilesListFilesV2} language="python" />
+<CodeBlock language="python">{examplePythonApiFilesListFilesV2}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFilesListFilesV2} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFilesListFilesV2}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFilesListFilesV2} language="bash" />
+<CodeBlock language="bash">{exampleApiFilesListFilesV2}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -445,7 +445,7 @@ List all files associated with your user account.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFilesResultListFilesV2} language="json" />
+<CodeBlock language="json">{resultApiFilesResultListFilesV2}</CodeBlock>
 
 </details>
 
@@ -458,17 +458,17 @@ You must specify the file type you expect in the `--output` value.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFilesDownloadFileV2} language="python" />
+<CodeBlock language="python">{examplePythonApiFilesDownloadFileV2}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFilesDownloadFileV2} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFilesDownloadFileV2}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFilesDownloadFileV2} language="bash" />
+<CodeBlock language="bash">{exampleApiFilesDownloadFileV2}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -476,7 +476,7 @@ You must specify the file type you expect in the `--output` value.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFilesResultDownloadFileV2} language="text" />
+<CodeBlock language="text">{resultApiFilesResultDownloadFileV2}</CodeBlock>
 
 </details>
 
@@ -487,17 +487,17 @@ Change a file name.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFilesEditFileNameV2} language="python" />
+<CodeBlock language="python">{examplePythonApiFilesEditFileNameV2}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFilesEditFileNameV2} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFilesEditFileNameV2}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFilesEditFileNameV2} language="bash" />
+<CodeBlock language="bash">{exampleApiFilesEditFileNameV2}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -505,7 +505,7 @@ Change a file name.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFilesResultEditFileNameV2} language="json" />
+<CodeBlock language="json">{resultApiFilesResultEditFileNameV2}</CodeBlock>
 
 </details>
 
@@ -516,17 +516,17 @@ Delete a specific file by its ID.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFilesDeleteFileV2} language="python" />
+<CodeBlock language="python">{examplePythonApiFilesDeleteFileV2}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFilesDeleteFileV2} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFilesDeleteFileV2}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFilesDeleteFileV2} language="bash" />
+<CodeBlock language="bash">{exampleApiFilesDeleteFileV2}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -534,7 +534,7 @@ Delete a specific file by its ID.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFilesResultDeleteFileV2} language="json" />
+<CodeBlock language="json">{resultApiFilesResultDeleteFileV2}</CodeBlock>
 
 </details>
 
@@ -545,17 +545,17 @@ Delete all files associated with your user account.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFilesDeleteAllFilesV2} language="python" />
+<CodeBlock language="python">{examplePythonApiFilesDeleteAllFilesV2}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFilesDeleteAllFilesV2} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFilesDeleteAllFilesV2}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFilesDeleteAllFilesV2} language="bash" />
+<CodeBlock language="bash">{exampleApiFilesDeleteAllFilesV2}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -563,7 +563,7 @@ Delete all files associated with your user account.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFilesResultDeleteAllFilesV2} language="json" />
+<CodeBlock language="json">{resultApiFilesResultDeleteAllFilesV2}</CodeBlock>
 
 </details>
 

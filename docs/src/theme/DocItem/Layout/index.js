@@ -12,6 +12,7 @@ import DocItemContent from "@theme/DocItem/Content";
 import DocBreadcrumbs from "@theme/DocBreadcrumbs";
 import ContentVisibility from "@theme/ContentVisibility";
 import { CopyPageButton } from "@site/src/components/CopyPageButton";
+import { PageFeedback } from "@site/src/components/PageFeedback";
 import styles from "./styles.module.css";
 
 // Copied from default theme and extended to insert a "Copy page" button
@@ -50,6 +51,7 @@ export default function DocItemLayout({ children }) {
             </div>
             {docTOC.mobile}
             <DocItemContent>{children}</DocItemContent>
+            <PageFeedback />
             <DocItemFooter />
           </article>
           <DocItemPaginator />

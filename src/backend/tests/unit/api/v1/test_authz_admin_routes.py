@@ -995,10 +995,53 @@ async def test_me_permissions_returns_per_resource_actions(stub_authz):
         resource_type="flow",
         resource_ids=resource_ids,
     )
-    result = await authz_me.get_effective_permissions(body=body, current_user=user)
+    result = await authz_me.get_effective_permissions(body=body, current_user=user, session=_FakeAsyncSession())
     assert result.resource_type == "flow"
     assert set(result.permissions[resource_ids[0]]) == {"read", "execute"}
     assert "delete" in result.permissions[resource_ids[1]]
+
+
+@pytest.mark.asyncio
+async def test_me_permissions_adds_owner_override_actions(stub_authz):
+    """Owners get the same built-in owner override in the UI gate as route guards."""
+    from langflow.api.v1 import authz_me
+    from langflow.api.v1.authz_me import EffectivePermissionsRequest
+
+    authz = stub_authz()
+    owned_flow_id = uuid4()
+    other_flow_id = uuid4()
+    authz.effective_perms_payload = {
+        owned_flow_id: [],
+        other_flow_id: [],
+    }
+    user = _make_user()
+    session = _FakeAsyncSession(exec_results=[[owned_flow_id]])
+
+    body = EffectivePermissionsRequest(
+        resource_type="flow",
+        resource_ids=[owned_flow_id, other_flow_id],
+        actions=["read", "write", "execute", "delete"],
+    )
+    result = await authz_me.get_effective_permissions(body=body, current_user=user, session=session)
+
+    assert set(result.permissions[owned_flow_id]) == {"read", "write", "execute", "delete"}
+    assert result.permissions[other_flow_id] == []
+
+
+@pytest.mark.asyncio
+async def test_me_permissions_returns_empty_entries_for_plugin_omissions(stub_authz):
+    """A plugin omission is normalized to [] so the response shape stays stable."""
+    from langflow.api.v1 import authz_me
+    from langflow.api.v1.authz_me import EffectivePermissionsRequest
+
+    stub_authz()
+    flow_id = uuid4()
+    user = _make_user()
+    body = EffectivePermissionsRequest(resource_type="flow", resource_ids=[flow_id])
+
+    result = await authz_me.get_effective_permissions(body=body, current_user=user, session=_FakeAsyncSession())
+
+    assert result.permissions == {flow_id: []}
 
 
 @pytest.mark.asyncio
@@ -1014,7 +1057,7 @@ async def test_me_permissions_caps_resource_ids_at_500(stub_authz):
         resource_ids=[uuid4() for _ in range(501)],
     )
     with pytest.raises(HTTPException) as excinfo:
-        await authz_me.get_effective_permissions(body=body, current_user=user)
+        await authz_me.get_effective_permissions(body=body, current_user=user, session=_FakeAsyncSession())
     assert excinfo.value.status_code == 400
     assert "capped at 500" in excinfo.value.detail
 
@@ -1028,7 +1071,7 @@ async def test_me_permissions_empty_request_returns_empty(stub_authz):
     user = _make_user()
 
     body = EffectivePermissionsRequest(resource_type="flow", resource_ids=[])
-    result = await authz_me.get_effective_permissions(body=body, current_user=user)
+    result = await authz_me.get_effective_permissions(body=body, current_user=user, session=_FakeAsyncSession())
     assert result.permissions == {}
 
 
@@ -1116,7 +1159,7 @@ async def test_me_permissions_handler_uses_normalized_actions(stub_authz):
         resource_ids=[rid],
         actions=["READ", "read", " Write "],
     )
-    await authz_me.get_effective_permissions(body=body, current_user=user)
+    await authz_me.get_effective_permissions(body=body, current_user=user, session=_FakeAsyncSession())
     # Normalization happened at the model layer; handler sees the bounded set.
     assert tuple(captured["actions"]) == ("read", "write")
 

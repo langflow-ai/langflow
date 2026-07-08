@@ -1,7 +1,7 @@
+import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { Separator } from "@/components/ui/separator";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -17,7 +17,13 @@ import { NAV_ITEMS } from "./sidebar-nav-items";
 export type { SidebarSection };
 export { NAV_ITEMS };
 
-const SidebarSegmentedNav = () => {
+type SidebarSegmentedNavProps = {
+  hiddenFromTabOrder?: boolean;
+};
+
+const SidebarSegmentedNav = ({
+  hiddenFromTabOrder = false,
+}: SidebarSegmentedNavProps) => {
   const { t } = useTranslation();
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
   const { setSearch } = useSearchContext();
@@ -27,12 +33,19 @@ const SidebarSegmentedNav = () => {
   );
 
   return (
-    <div className="flex h-full flex-col border-r border-border bg-background">
+    <div
+      className="flex h-full flex-col border-r border-border bg-background"
+      aria-hidden={hiddenFromTabOrder || undefined}
+    >
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
-          <div key={item.id}>
+          <Fragment key={item.id}>
             {item.id === "memories" && (
-              <Separator className="mx-auto my-1 w-5" />
+              <li
+                role="separator"
+                aria-hidden="true"
+                className="mx-auto my-1 w-5 border-t border-border"
+              />
             )}
             <SidebarMenuItem className="px-1 pt-1">
               <ShadTooltip content={t(item.tooltip)} side="right">
@@ -66,6 +79,8 @@ const SidebarSegmentedNav = () => {
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
                   data-testid={`sidebar-nav-${item.id}`}
+                  data-sidebar-nav-item={item.id}
+                  tabIndex={hiddenFromTabOrder ? -1 : undefined}
                 >
                   <ForwardedIconComponent
                     name={item.icon}
@@ -75,7 +90,7 @@ const SidebarSegmentedNav = () => {
                 </SidebarMenuButton>
               </ShadTooltip>
             </SidebarMenuItem>
-          </div>
+          </Fragment>
         ))}
       </SidebarMenu>
     </div>

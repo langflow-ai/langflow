@@ -2,7 +2,7 @@
 title: Users endpoints
 slug: /api-users
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleApiUsersAddUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/add-user.sh';
 import resultApiUsersResultAddUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-add-user.json';
 import exampleApiUsersGetCurrentUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/get-current-user.sh';
@@ -43,17 +43,17 @@ Requires authentication as a superuser if the Langflow server has authentication
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiUsersAddUser} language="python" />
+<CodeBlock language="python">{examplePythonApiUsersAddUser}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiUsersAddUser} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiUsersAddUser}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiUsersAddUser} language="bash" />
+<CodeBlock language="bash">{exampleApiUsersAddUser}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -65,7 +65,7 @@ This `user_id` key is specifically for Langflow user management.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiUsersResultAddUser} language="json" />
+<CodeBlock language="json">{resultApiUsersResultAddUser}</CodeBlock>
 
 </details>
 
@@ -76,17 +76,17 @@ Retrieve information about the authenticated user.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiUsersGetCurrentUser} language="python" />
+<CodeBlock language="python">{examplePythonApiUsersGetCurrentUser}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiUsersGetCurrentUser} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiUsersGetCurrentUser}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiUsersGetCurrentUser} language="bash" />
+<CodeBlock language="bash">{exampleApiUsersGetCurrentUser}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -94,7 +94,7 @@ Retrieve information about the authenticated user.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiUsersResultGetCurrentUser} language="json" />
+<CodeBlock language="json">{resultApiUsersResultGetCurrentUser}</CodeBlock>
 
 </details>
 
@@ -107,17 +107,17 @@ Requires authentication as a superuser if the Langflow server has authentication
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiUsersListAllUsers} language="python" />
+<CodeBlock language="python">{examplePythonApiUsersListAllUsers}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiUsersListAllUsers} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiUsersListAllUsers}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiUsersListAllUsers} language="bash" />
+<CodeBlock language="bash">{exampleApiUsersListAllUsers}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -125,7 +125,7 @@ Requires authentication as a superuser if the Langflow server has authentication
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiUsersResultListAllUsers} language="json" />
+<CodeBlock language="json">{resultApiUsersResultListAllUsers}</CodeBlock>
 
 </details>
 
@@ -140,17 +140,17 @@ This example activates the specified user's account and makes them a superuser:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiUsersUpdateUser} language="python" />
+<CodeBlock language="python">{examplePythonApiUsersUpdateUser}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiUsersUpdateUser} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiUsersUpdateUser}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiUsersUpdateUser} language="bash" />
+<CodeBlock language="bash">{exampleApiUsersUpdateUser}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -158,7 +158,7 @@ This example activates the specified user's account and makes them a superuser:
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiUsersResultUpdateUser} language="json" />
+<CodeBlock language="json">{resultApiUsersResultUpdateUser}</CodeBlock>
 
 </details>
 
@@ -171,17 +171,17 @@ Requires authentication as the target user.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiUsersResetPassword} language="python" />
+<CodeBlock language="python">{examplePythonApiUsersResetPassword}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiUsersResetPassword} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiUsersResetPassword}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiUsersResetPassword} language="bash" />
+<CodeBlock language="bash">{exampleApiUsersResetPassword}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -189,7 +189,7 @@ Requires authentication as the target user.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiUsersResultResetPassword} language="json" />
+<CodeBlock language="json">{resultApiUsersResultResetPassword}</CodeBlock>
 
 </details>
 
@@ -202,17 +202,17 @@ Requires authentication as a superuser if the Langflow server has authentication
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiUsersDeleteUser} language="python" />
+<CodeBlock language="python">{examplePythonApiUsersDeleteUser}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiUsersDeleteUser} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiUsersDeleteUser}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiUsersDeleteUser} language="bash" />
+<CodeBlock language="bash">{exampleApiUsersDeleteUser}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -220,6 +220,6 @@ Requires authentication as a superuser if the Langflow server has authentication
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiUsersResultDeleteUser} language="json" />
+<CodeBlock language="json">{resultApiUsersResultDeleteUser}</CodeBlock>
 
 </details>

@@ -79,6 +79,7 @@ if TYPE_CHECKING:
         installed_extension_roots,
         load_extension,
         load_installed_extensions,
+        load_lfx_bundles_extensions,
         load_seed_extensions,
         manifest_owning_distributions,
     )
@@ -159,6 +160,7 @@ _EXPORTS: dict[str, str] = {
     "installed_extension_roots": "loader",
     "load_extension": "loader",
     "load_installed_extensions": "loader",
+    "load_lfx_bundles_extensions": "loader",
     "load_seed_extensions": "loader",
     "manifest_owning_distributions": "loader",
     # dev_registry
@@ -261,6 +263,7 @@ __all__ = [
     "load_dev_extensions",
     "load_extension",
     "load_installed_extensions",
+    "load_lfx_bundles_extensions",
     "load_manifest",
     "load_migration_table",
     "load_seed_extensions",

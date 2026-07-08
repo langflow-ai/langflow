@@ -1,6 +1,6 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from lfx.base.data.utils import read_text_file
+from lfx.base.data.utils import parse_text_file_to_data, read_text_file
 
 
 class TestReadTextFile:
@@ -48,3 +48,30 @@ class TestReadTextFile:
         # Should not raise, should fall back to latin-1
         result = read_text_file(str(f))
         assert len(result) == 128
+
+
+class TestParseTextFileToDataS3Mode:
+    """Regression tests for issue #13798.
+
+    When S3 storage is configured, reading a real local file (e.g. the bundled
+    lfx components directory the Langflow Assistant scans) must still read from
+    disk instead of being forced through the S3 key parser.
+    """
+
+    def test_should_read_existing_local_file_when_storage_type_is_s3(self, tmp_path):
+        """A real local file on disk must be read locally even when storage_type is s3."""
+        local_file = tmp_path / "_importing.py"
+        local_file.write_text("x = 1\n", encoding="utf-8")
+
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = "s3"
+
+        with (
+            patch("lfx.base.data.utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+        ):
+            result = parse_text_file_to_data(str(local_file), silent_errors=False)
+
+        assert result is not None
+        assert result.data["text"] == "x = 1\n"
+        assert result.data["file_path"] == str(local_file)

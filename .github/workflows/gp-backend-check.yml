@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - "src/lfx/src/lfx/components/**"
+      # Bundle component strings reach core locales/en.json through the
+      # lfx/components/<provider> import shims, so an edit to a bundle's
+      # display_name/description/info must re-trigger the extractor too --
+      # otherwise en.json silently drifts from src/bundles/**.
+      - "src/bundles/**"
       - "src/backend/base/langflow/initial_setup/starter_projects/**"
 
 jobs:

@@ -275,7 +275,14 @@ class TestMultiServeStreaming:
         """Test error handling in streaming endpoint."""
         with patch("lfx.cli.serve_app.run_flow_generator_for_serve") as mock_generator:
             # Mock an error in the generator that properly terminates the stream
-            async def mock_error_generator(graph, input_request, flow_id, event_manager, client_consumed_queue):  # noqa: ARG001
+            async def mock_error_generator(
+                graph,  # noqa: ARG001
+                input_request,  # noqa: ARG001
+                flow_id,  # noqa: ARG001
+                event_manager,
+                client_consumed_queue,  # noqa: ARG001
+                user_id=None,  # noqa: ARG001
+            ):
                 try:
                     msg = "Test error during streaming"
                     raise RuntimeError(msg)

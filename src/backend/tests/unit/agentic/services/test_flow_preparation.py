@@ -146,6 +146,30 @@ class TestInjectModelIntoFlow:
         assert metadata["url_param"] == "azure_endpoint"
         assert metadata["base_url_param"] == "base_url"
 
+    def test_should_use_model_id_param_for_watsonx(self):
+        """WatsonX must inject model_id, not the generic model (GitHub #13735).
+
+        inject_model_into_flow read the non-existent key model_name_param from
+        get_provider_param_mapping (which emits model_param), defaulting to "model".
+        For WatsonX that sets ChatWatsonx.model, routing to the OpenAI-compatible AI
+        Gateway (400 "model not found") instead of native ModelInference (model_id).
+        Uses the real WatsonX provider mapping (no mock) so the key drift is exercised.
+        """
+        flow_data = _make_flow_data(["Agent"])
+
+        result = inject_model_into_flow(
+            flow_data,
+            "IBM WatsonX",
+            "openai/gpt-oss-120b",
+            provider_vars={
+                "WATSONX_URL": "https://us-south.ml.cloud.ibm.com",
+                "WATSONX_PROJECT_ID": "pid",
+            },
+        )
+
+        metadata = result["data"]["nodes"][0]["data"]["node"]["template"]["model"]["value"][0]["metadata"]
+        assert metadata["model_name_param"] == "model_id"
+
     def test_should_handle_flow_without_agent_nodes(self):
         """Flow with no Agent nodes should return data without modification."""
         flow_data = _make_flow_data(["ChatInput", "ChatOutput"])

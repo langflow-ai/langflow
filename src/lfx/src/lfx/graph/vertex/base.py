@@ -660,6 +660,13 @@ class Vertex:
         """Iterates over a list of vertices, builds each and updates the params dictionary."""
         self.params[key] = []
         for vertex in vertices:
+            # A conditionally-excluded predecessor that never built contributes nothing to a
+            # list input. Pulling a result for it would return this input's template default
+            # (e.g. an empty Message) and inject a stray element next to the real branch's
+            # value -- ``ComponentVertex._get_result`` returns that default for the
+            # single-value case, which is wrong for a merged list.
+            if not vertex.built and vertex.id in self.graph.conditionally_excluded_vertices:
+                continue
             result = await vertex.get_result(self, target_handle_name=key)
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Data and breaks the code

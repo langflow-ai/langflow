@@ -24,6 +24,7 @@ from lfx.utils.secrets import secret_value_to_str
 from openai import OpenAI
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
+from websockets.asyncio.client import ClientConnection
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow_and_stream
@@ -165,47 +166,18 @@ class VoiceConfig:
         return dict(self.default_openai_realtime_session)
 
 
-class ElevenLabsClientManager:
-    _instance = None
-    _api_key = None
-
-    @classmethod
-    async def get_client(cls, user_id=None, session=None):
-        """Get or create an ElevenLabs client with the API key."""
-        if cls._instance is None:
-            if cls._api_key is None and user_id and session:
-                variable_service = get_variable_service()
-                try:
-                    cls._api_key = await variable_service.get_variable(
-                        user_id=user_id,
-                        name="ELEVENLABS_API_KEY",
-                        field="elevenlabs_api_key",
-                        session=session,
-                    )
-                    cls._api_key = secret_value_to_str(cls._api_key)
-                except (InvalidToken, ValueError) as e:
-                    await logger.aerror(f"Error with ElevenLabs API key: {e}")
-                    cls._api_key = os.getenv("ELEVENLABS_API_KEY", "")
-                    if not cls._api_key:
-                        await logger.aerror("ElevenLabs API key not found")
-                        return None
-                except (KeyError, AttributeError, sqlalchemy.exc.SQLAlchemyError) as e:
-                    await logger.aerror(f"Exception getting ElevenLabs API key: {e}")
-                    return None
-
-            if cls._api_key:
-                cls._instance = ElevenLabs(api_key=cls._api_key)
-
-        return cls._instance
-
-
-def get_voice_config(session_id: str) -> VoiceConfig:
+def get_voice_config(session_id: str, user_id: UUID | None = None) -> VoiceConfig:
     if session_id is None:
         msg = "session_id cannot be None"
         raise ValueError(msg)
-    if session_id not in voice_config_cache:
-        voice_config_cache[session_id] = VoiceConfig(session_id)
-    return voice_config_cache[session_id]
+    # Key the cache by (user_id, session_id). session_id is client-supplied (the
+    # human chat-session name), so keying on it alone let two different users
+    # collide on the same session and share cached config/clients across tenants.
+    # Binding the key to the authenticated user prevents that.
+    cache_key = (user_id, session_id)
+    if cache_key not in voice_config_cache:
+        voice_config_cache[cache_key] = VoiceConfig(session_id)
+    return voice_config_cache[cache_key]
 
 
 class TTSConfig:
@@ -247,13 +219,17 @@ class TTSConfig:
         return self.openai_voice
 
 
-def get_tts_config(session_id: str, openai_key: str) -> TTSConfig:
+def get_tts_config(session_id: str, openai_key: str, user_id: UUID | None = None) -> TTSConfig:
     if session_id is None:
         msg = "session_id cannot be None"
         raise ValueError(msg)
-    if session_id not in tts_config_cache:
-        tts_config_cache[session_id] = TTSConfig(session_id, openai_key)
-    return tts_config_cache[session_id]
+    # Key by (user_id, session_id) so a client-supplied session_id cannot make one
+    # user reuse another user's cached TTSConfig — which holds an OpenAI client
+    # built from that other user's key.
+    cache_key = (user_id, session_id)
+    if cache_key not in tts_config_cache:
+        tts_config_cache[cache_key] = TTSConfig(session_id, openai_key)
+    return tts_config_cache[cache_key]
 
 
 async def add_message_to_db(message, session, flow_id, session_id, sender, sender_name):
@@ -331,8 +307,8 @@ async def process_message_queue(queue_key, session):
 
 
 class SendQueues:
-    def __init__(self, openai_ws: websockets.WebSocketClientProtocol, client_ws: WebSocket, log_event):
-        self.openai_ws: websockets.WebSocketClientProtocol = openai_ws
+    def __init__(self, openai_ws: ClientConnection, client_ws: WebSocket, log_event):
+        self.openai_ws: ClientConnection = openai_ws
         self.openai_send_q: asyncio.Queue[tuple] = asyncio.Queue()
         self.openai_writer_task: asyncio.Task = asyncio.create_task(self.__openai_writer())
 
@@ -395,13 +371,13 @@ class SendQueues:
         await self.client_writer_task
 
 
-def get_create_response(send_handler: SendQueues, session_id):
+def get_create_response(send_handler: SendQueues, session_id, user_id=None):
     def create_response(original: dict | None = None):
         msg = {}
         if original is not None:
             msg = original
         msg["type"] = "response.create"
-        voice_config = get_voice_config(session_id)
+        voice_config = get_voice_config(session_id, user_id)
         if voice_config.use_elevenlabs:
             response = msg.setdefault("response", {})
             response["modalities"] = ["text"]
@@ -420,7 +396,7 @@ async def handle_function_call(
     session_id: str,
     msg_handler: SendQueues,
 ):
-    create_response = get_create_response(msg_handler, session_id)
+    create_response = get_create_response(msg_handler, session_id, current_user.id)
     """Handle function calls from the OpenAI API."""
     try:
         args = json.loads(function_call_args) if function_call_args else {}
@@ -509,8 +485,8 @@ async def handle_function_call(
         msg_handler.openai_send(function_output)
 
 
-voice_config_cache: dict[str, VoiceConfig] = {}
-tts_config_cache: dict[str, TTSConfig] = {}
+voice_config_cache: dict[tuple[UUID | None, str], VoiceConfig] = {}
+tts_config_cache: dict[tuple[UUID | None, str], TTSConfig] = {}
 
 
 # --- Global Queues and Message Processing ---
@@ -532,8 +508,38 @@ async def get_flow_desc_from_db(flow_id: str) -> Flow:
 
 
 async def get_or_create_elevenlabs_client(user_id=None, session=None):
-    """Get or create an ElevenLabs client with the API key."""
-    return await ElevenLabsClientManager.get_client(user_id, session)
+    """Build an ElevenLabs client scoped to the requesting user.
+
+    Security: this previously delegated to a process-global singleton
+    (``ElevenLabsClientManager``) that cached the *first* caller's API key and
+    returned that same client to every subsequent user. As a result one tenant's
+    ElevenLabs account was billed for everyone's TTS (cross-tenant billing
+    siphon) and their voice library was exposed via /voice/elevenlabs/voice_ids.
+
+    Build a fresh client from the requesting user's own key on each call and never
+    cache it on a class/module global.
+    """
+    if not (user_id and session):
+        return None
+    variable_service = get_variable_service()
+    try:
+        api_key = await variable_service.get_variable(
+            user_id=user_id,
+            name="ELEVENLABS_API_KEY",
+            field="elevenlabs_api_key",
+            session=session,
+        )
+        api_key = secret_value_to_str(api_key)
+    except (InvalidToken, ValueError) as e:
+        await logger.aerror(f"Error with ElevenLabs API key: {e}")
+        api_key = os.getenv("ELEVENLABS_API_KEY", "")
+    except (KeyError, AttributeError, sqlalchemy.exc.SQLAlchemyError) as e:
+        await logger.aerror(f"Exception getting ElevenLabs API key: {e}")
+        return None
+    if not api_key:
+        await logger.aerror("ElevenLabs API key not found")
+        return None
+    return ElevenLabs(api_key=api_key)
 
 
 def pcm16_to_float_array(pcm_data):
@@ -677,7 +683,7 @@ class FunctionCall:
                 },
             }
         )
-        create_response = partial(get_create_response(self.msg_handler, self.session_id))
+        create_response = partial(get_create_response(self.msg_handler, self.session_id, self.current_user.id))
         create_response()
 
     def _send_function_call(self):
@@ -730,11 +736,12 @@ async def flow_as_tool_websocket(
         log_event = create_event_logger()
 
         vad_task: asyncio.Task | None = None
-        voice_config = get_voice_config(session_id)
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
+        # Resolve voice config only after authentication, scoped to this user.
+        voice_config = get_voice_config(session_id, current_user.id)
         try:
             flow_description = await get_flow_desc_from_db(flow_id)
             flow_tool = {
@@ -764,7 +771,7 @@ async def flow_as_tool_websocket(
             session_dict["tools"] = [flow_tool]
             return session_dict
 
-        async with websockets.connect(url, extra_headers=headers) as openai_ws:
+        async with websockets.connect(url, additional_headers=headers) as openai_ws:
             msg_handler = SendQueues(openai_ws, client_websocket, log_event)
 
             openai_realtime_session = init_session_dict()
@@ -928,7 +935,7 @@ async def flow_as_tool_websocket(
 
             async def forward_to_openai() -> None:
                 nonlocal openai_realtime_session
-                create_response = get_create_response(msg_handler, session_id)
+                create_response = get_create_response(msg_handler, session_id, current_user.id)
                 try:
                     num_audio_samples = 0  # Initialize as an integer instead of None
                     while True:
@@ -1202,14 +1209,16 @@ async def flow_tts_websocket(
 
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
+        if current_user is None or openai_key is None:
+            return
         url = "wss://api.openai.com/v1/realtime?intent=transcription"
         headers = {
             "Authorization": f"Bearer {openai_key}",
             "OpenAI-Beta": "realtime=v1",
         }
 
-        tts_config = get_tts_config(session_id, openai_key)
-        async with websockets.connect(url, extra_headers=headers) as openai_ws:
+        tts_config = get_tts_config(session_id, openai_key, current_user.id)
+        async with websockets.connect(url, additional_headers=headers) as openai_ws:
             openai_writer_task = asyncio.create_task(openai_writer())
             client_writer_task = asyncio.create_task(client_writer())
 

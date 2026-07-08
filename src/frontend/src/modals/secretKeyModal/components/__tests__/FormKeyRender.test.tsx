@@ -33,9 +33,9 @@ describe("FormKeyRender", () => {
     expect(screen.getByPlaceholderText("Enter key name")).toBeInTheDocument();
   });
 
-  it("renders the expiration date input", () => {
+  it("renders the expiration date picker trigger", () => {
     render(<FormKeyRender {...makeProps()} />);
-    expect(document.querySelector('input[type="date"]')).toBeInTheDocument();
+    expect(screen.getByTestId("expires-at-input")).toBeInTheDocument();
   });
 
   it("renders all three preset buttons", () => {

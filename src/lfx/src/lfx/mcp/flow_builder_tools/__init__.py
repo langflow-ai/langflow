@@ -38,7 +38,9 @@ from ._state import (
     isolate_flow_run_context,
     node_existed_at_start,
     reset_working_flow,
+    set_apply_edits_live,
     set_propose_existing_edits,
+    should_apply_edits_live,
     should_propose_existing_edits,
 )
 from .edit_tools import ProposeFieldEdit
@@ -81,6 +83,8 @@ __all__ = [
     "isolate_flow_run_context",
     "node_existed_at_start",
     "reset_working_flow",
+    "set_apply_edits_live",
     "set_propose_existing_edits",
+    "should_apply_edits_live",
     "should_propose_existing_edits",
 ]

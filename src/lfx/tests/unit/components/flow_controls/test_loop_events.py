@@ -77,79 +77,107 @@ class TestEventManagerPropagation:
 
     @pytest.mark.asyncio
     async def test_event_manager_passed_to_subgraph_async_start(self):
-        """Test that event_manager is passed to subgraph's async_start method."""
-        mock_event_manager = MagicMock()
-        received_event_manager = None
-
-        # Create a mock subgraph that captures the event_manager
-        async def mock_async_start(event_manager=None):
-            nonlocal received_event_manager
-            received_event_manager = event_manager
-            yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
-
-        def create_mock_subgraph(_vertex_ids):
-            mock_subgraph = MagicMock()
-            mock_subgraph._vertices = []
-            mock_subgraph.prepare = MagicMock()
-            mock_subgraph.async_start = mock_async_start
-            mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
-            return mock_subgraph
-
-        mock_graph = MagicMock()
-        mock_graph.create_subgraph = create_subgraph_context_manager_mock(create_mock_subgraph)
-
-        data_list = [Data(text="item1")]
-
-        await execute_loop_body(
-            graph=mock_graph,
-            data_list=data_list,
-            loop_body_vertex_ids={"vertex1"},
-            start_vertex_id="vertex1",
-            start_edge=MagicMock(target_handle=MagicMock(field_name="data")),
-            end_vertex_id="vertex1",
-            event_manager=mock_event_manager,
+        """The loop body's runner must forward event_manager into the executor's runtime_options."""
+        from lfx.execution import (
+            Coordinator,
+            ExecutorRegistry,
+            reset_default_coordinator,
+            set_default_coordinator,
         )
+        from lfx.execution.executor import Executor
+        from lfx.execution.types import RunComplete
 
-        # Verify event_manager was passed to async_start
-        assert received_event_manager is mock_event_manager
+        try:
+            mock_event_manager = MagicMock()
+            seen: list = []
+
+            class _Recorder(Executor):
+                kind = "in-process"
+
+                async def execute(self, unit):
+                    seen.append(unit.runtime_options.get("event_manager"))
+                    yield RunComplete(outputs=[])
+
+            registry = ExecutorRegistry()
+            registry.register(_Recorder())
+            set_default_coordinator(Coordinator(registry=registry))
+
+            def create_mock_subgraph(_vertex_ids):
+                mock_subgraph = MagicMock()
+                mock_subgraph._vertices = []
+                mock_subgraph.prepare = MagicMock()
+                mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
+                return mock_subgraph
+
+            mock_graph = MagicMock()
+            mock_graph.create_subgraph = create_subgraph_context_manager_mock(create_mock_subgraph)
+
+            await execute_loop_body(
+                graph=mock_graph,
+                data_list=[Data(text="item1")],
+                loop_body_vertex_ids={"vertex1"},
+                start_vertex_id="vertex1",
+                start_edge=MagicMock(target_handle=MagicMock(field_name="data")),
+                end_vertex_id="vertex1",
+                event_manager=mock_event_manager,
+            )
+
+            assert len(seen) == 1
+            assert seen[0] is mock_event_manager
+        finally:
+            reset_default_coordinator()
 
     @pytest.mark.asyncio
     async def test_event_manager_passed_for_each_iteration(self):
-        """Test that event_manager is passed to async_start for each loop iteration."""
-        mock_event_manager = MagicMock()
-        event_manager_calls = []
-
-        async def mock_async_start(event_manager=None):
-            event_manager_calls.append(event_manager)
-            yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
-
-        def create_mock_subgraph(_vertex_ids):
-            mock_subgraph = MagicMock()
-            mock_subgraph._vertices = []
-            mock_subgraph.prepare = MagicMock()
-            mock_subgraph.async_start = mock_async_start
-            mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
-            return mock_subgraph
-
-        mock_graph = MagicMock()
-        mock_graph.create_subgraph = create_subgraph_context_manager_mock(create_mock_subgraph)
-
-        # 3 items = 3 iterations
-        data_list = [Data(text="item1"), Data(text="item2"), Data(text="item3")]
-
-        await execute_loop_body(
-            graph=mock_graph,
-            data_list=data_list,
-            loop_body_vertex_ids={"vertex1"},
-            start_vertex_id="vertex1",
-            start_edge=MagicMock(target_handle=MagicMock(field_name="data")),
-            end_vertex_id="vertex1",
-            event_manager=mock_event_manager,
+        """Every loop iteration runs through the executor with the same event_manager."""
+        from lfx.execution import (
+            Coordinator,
+            ExecutorRegistry,
+            reset_default_coordinator,
+            set_default_coordinator,
         )
+        from lfx.execution.executor import Executor
+        from lfx.execution.types import RunComplete
 
-        # Verify event_manager was passed for each iteration
-        assert len(event_manager_calls) == 3
-        assert all(em is mock_event_manager for em in event_manager_calls)
+        try:
+            mock_event_manager = MagicMock()
+            seen: list = []
+
+            class _Recorder(Executor):
+                kind = "in-process"
+
+                async def execute(self, unit):
+                    seen.append(unit.runtime_options.get("event_manager"))
+                    yield RunComplete(outputs=[])
+
+            registry = ExecutorRegistry()
+            registry.register(_Recorder())
+            set_default_coordinator(Coordinator(registry=registry))
+
+            def create_mock_subgraph(_vertex_ids):
+                mock_subgraph = MagicMock()
+                mock_subgraph._vertices = []
+                mock_subgraph.prepare = MagicMock()
+                mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
+                return mock_subgraph
+
+            mock_graph = MagicMock()
+            mock_graph.create_subgraph = create_subgraph_context_manager_mock(create_mock_subgraph)
+
+            await execute_loop_body(
+                graph=mock_graph,
+                data_list=[Data(text="item1"), Data(text="item2"), Data(text="item3")],
+                loop_body_vertex_ids={"vertex1"},
+                start_vertex_id="vertex1",
+                start_edge=MagicMock(target_handle=MagicMock(field_name="data")),
+                end_vertex_id="vertex1",
+                event_manager=mock_event_manager,
+            )
+
+            assert len(seen) == 3
+            assert all(em is mock_event_manager for em in seen)
+        finally:
+            reset_default_coordinator()
 
     def test_subgraph_preserves_vertex_ids(self):
         """Test that subgraph vertices maintain original IDs.

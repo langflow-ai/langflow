@@ -243,6 +243,109 @@ class BundleRef(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Model providers
+# ---------------------------------------------------------------------------
+
+
+class ProviderClassRef(BaseModel):
+    """Lazy class-import pointer ``(module, attr, install_hint)`` for a provider.
+
+    Mirrors the tuples in ``unified_models.class_registry`` so the provider's
+    LangChain class is imported only at instantiation, never at discovery.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    module: StrictStr = Field(..., min_length=1, description="Importable module path, e.g. 'langchain_openai'.")
+    attr: StrictStr = Field(..., min_length=1, description="Attribute on the module, e.g. 'ChatOpenAI'.")
+    install_hint: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description="Optional pip package name surfaced when the import fails (defaults to the top module).",
+    )
+
+
+class ProviderEmbeddingRef(BaseModel):
+    """Embedding wiring for a provider that also offers embeddings."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    class_name: StrictStr = Field(..., min_length=1, description="Embedding class name, e.g. 'OpenAIEmbeddings'.")
+    module: StrictStr = Field(..., min_length=1, description="Importable module path of the embedding class.")
+    attr: StrictStr = Field(..., min_length=1, description="Attribute on the module for the embedding class.")
+    install_hint: StrictStr | None = Field(default=None, min_length=1, description="Optional pip package hint.")
+    param_mapping_key: StrictStr = Field(
+        ...,
+        min_length=1,
+        description="Key under which param_mapping is stored in EMBEDDING_PARAM_MAPPINGS.",
+    )
+    param_mapping: dict[str, StrictStr] = Field(
+        default_factory=dict,
+        description="Abstract-slot -> real-kwarg mapping for the embedding class constructor.",
+    )
+
+
+class ProviderManifestEntry(BaseModel):
+    """A model provider contributed by an extension bundle (``providers[]``).
+
+    ``metadata`` mirrors a single ``MODEL_PROVIDER_METADATA`` value (``icon``,
+    ``variables``, ``mapping`` with at least ``model_class``, ``api_docs_url``).
+    The loader translates this into a ``provider_registry.ProviderSpec`` and
+    merges it into the core provider tables at load time.
+    """
+
+    # ``model_class`` lives in pydantic's protected ``model_`` namespace; opt
+    # out so the manifest can mirror the core table's field name verbatim.
+    model_config = ConfigDict(extra="forbid", frozen=True, protected_namespaces=())
+
+    name: StrictStr = Field(..., min_length=1, max_length=120, description="Canonical provider name, e.g. 'vLLM'.")
+    metadata: dict[str, Any] = Field(
+        ...,
+        description="MODEL_PROVIDER_METADATA value: icon, variables, mapping (with model_class), api_docs_url, etc.",
+    )
+    model_class: ProviderClassRef | None = Field(
+        default=None,
+        description="Lazy import for the LLM class in metadata.mapping.model_class. Omit when reusing a core class.",
+    )
+    embedding: ProviderEmbeddingRef | None = Field(default=None, description="Optional embedding wiring.")
+    api_key_required: StrictBool = Field(
+        default=True,
+        description="If False, get_llm/get_embeddings do not raise when no API key is configured.",
+    )
+    live: StrictBool = Field(default=False, description="Add to LIVE_MODEL_PROVIDERS (always-on live discovery).")
+    conditional_live: StrictBool = Field(
+        default=False,
+        description="Add to CONDITIONAL_LIVE_MODEL_PROVIDERS (live only when a custom endpoint is configured).",
+    )
+    live_discovery: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description="Dotted-path callable 'module:attr' for live models: (user_id, model_type) -> list[dict].",
+    )
+    validator: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description="Dotted-path callable 'module:attr' validating credentials: (provider, variables, model) -> None.",
+    )
+
+    @field_validator("metadata")
+    @classmethod
+    def _metadata_has_model_class(cls, value: dict[str, Any]) -> dict[str, Any]:
+        mapping = value.get("mapping") if isinstance(value, dict) else None
+        if not isinstance(mapping, dict) or not mapping.get("model_class"):
+            msg = "provider.metadata must include a 'mapping' object with a non-empty 'model_class'"
+            raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _live_mutually_exclusive(self) -> ProviderManifestEntry:
+        if self.live and self.conditional_live:
+            msg = f"provider {self.name!r} cannot set both 'live' and 'conditional_live'"
+            raise ValueError(msg)
+        return self
+
+
+# ---------------------------------------------------------------------------
 # ExtensionManifest
 # ---------------------------------------------------------------------------
 
@@ -299,13 +402,23 @@ class ExtensionManifest(BaseModel):
     )
 
     bundles: list[BundleRef] = Field(
-        ...,
-        min_length=1,
+        default_factory=list,
         max_length=1,
         description=(
-            "Bundles shipped by this extension. v0 accepts exactly one; the "
-            "constraint is encoded as ``minItems``/``maxItems`` in the published "
-            "JSON Schema so third-party manifest tools agree with the runtime."
+            "Bundles (component groups) shipped by this extension. At most one in "
+            "v0. May be empty for a provider-only extension that ships model "
+            "providers but no components; an extension must declare at least one "
+            "of ``bundles`` or ``providers``."
+        ),
+    )
+
+    providers: list[ProviderManifestEntry] = Field(
+        default_factory=list,
+        description=(
+            "Model providers contributed by this extension. Each is merged into "
+            "Langflow's unified model-provider tables (MODEL_PROVIDER_METADATA, the "
+            "class-import registries, LIVE_MODEL_PROVIDERS) at load time, so a "
+            "provider bundle adds a provider without editing core lfx."
         ),
     )
 
@@ -346,6 +459,23 @@ class ExtensionManifest(BaseModel):
     # ------------------------------------------------------------------
     # Validators
     # ------------------------------------------------------------------
+
+    @model_validator(mode="after")
+    def _validate_declares_something(self) -> ExtensionManifest:
+        # An extension must contribute at least one bundle (components) or one
+        # provider; an empty manifest is almost certainly a mistake.
+        if not self.bundles and not self.providers:
+            msg = "An extension must declare at least one bundle or one provider"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_provider_name_uniqueness(self) -> ExtensionManifest:
+        names = [p.name for p in self.providers]
+        if len(set(names)) != len(names):
+            msg = "Provider names must be unique within an extension"
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def _validate_bundle_uniqueness(self) -> ExtensionManifest:

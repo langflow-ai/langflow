@@ -232,7 +232,8 @@ def list_command(
 
         ids = [r.extension_id for r in rows]
         versions = [r.version for r in rows]
-        bundles = [r.bundle_name for r in rows]
+        # A provider-only extension has no component bundle; show a dash.
+        bundles = [r.bundle_name or "—" for r in rows]
         slots = [r.namespaced_slot for r in rows]
         sources = [r.source_kind for r in rows]
         statuses = [r.load_status.value for r in rows]
@@ -251,7 +252,7 @@ def list_command(
             cells = (
                 row.extension_id,
                 row.version,
-                row.bundle_name,
+                row.bundle_name or "—",
                 row.namespaced_slot,
                 row.source_kind,
                 row.load_status.value,
@@ -395,7 +396,7 @@ def _resolve_bundle_from_discovery(extension_id: str) -> str | None:
     if len(matches) > 1:
         # Can happen if two seed roots ship the same id; registry usually
         # de-dupes via shadow-error, but be defensive at the CLI layer.
-        bundles = sorted({ext.bundle_name for ext in matches})
+        bundles = sorted({ext.bundle_name or "—" for ext in matches})
         typer.echo(
             f"extension reload: extension {extension_id!r} resolves to multiple bundles "
             f"({', '.join(bundles)}); pass --bundle <name> to disambiguate.",

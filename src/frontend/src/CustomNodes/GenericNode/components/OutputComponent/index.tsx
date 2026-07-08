@@ -76,7 +76,7 @@ export default function OutputComponent({
               unstyled
               role="combobox"
               ref={refButton}
-              className="no-focus-visible group flex items-center gap-2"
+              className="focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 group flex items-center gap-2"
               data-testid={`dropdown-output-${outputName?.toLowerCase()}`}
             >
               <div className="flex items-center gap-1 truncate rounded-md px-2 py-1 text-sm font-medium group-hover:bg-primary/10">

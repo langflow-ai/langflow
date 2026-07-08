@@ -98,6 +98,10 @@ class BundleRecord:
     components: tuple[LoadedComponent, ...] = ()
     distribution: str | None = None
     source_path: Path | None = None
+    # Provenance: True for manifest-less lfx.bundles metapackage providers.
+    # The reload pipeline refuses these with reload-manifestless-unsupported
+    # (no manifest exists for its load_extension stage to consume).
+    manifestless: bool = False
 
     @property
     def class_names(self) -> frozenset[str]:

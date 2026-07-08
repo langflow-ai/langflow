@@ -1,0 +1,14 @@
+"""lfx-firecrawl: Firecrawl bundle.
+
+Distribution unit ``lfx-firecrawl``.  At runtime Langflow's loader
+discovers ``extension.json`` shipped alongside this ``__init__.py`` and
+registers the bundle's components under the namespaced IDs
+``ext:firecrawl:<Class>@official``.
+"""
+
+from lfx_firecrawl.components.firecrawl.firecrawl_crawl_api import FirecrawlCrawlApi
+from lfx_firecrawl.components.firecrawl.firecrawl_map_api import FirecrawlMapApi
+from lfx_firecrawl.components.firecrawl.firecrawl_scrape_api import FirecrawlScrapeApi
+from lfx_firecrawl.components.firecrawl.firecrawl_search_api import FirecrawlSearchApi
+
+__all__ = ["FirecrawlCrawlApi", "FirecrawlMapApi", "FirecrawlScrapeApi", "FirecrawlSearchApi"]

@@ -32,6 +32,7 @@ from .model_catalog import (
 )
 from .provider_queries import (
     MODELS_DETAILED,
+    get_live_only_providers,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
@@ -57,6 +58,7 @@ __all__ = [
     "get_embedding_model_options",
     "get_embeddings",
     "get_language_model_options",
+    "get_live_only_providers",
     "get_llm",
     "get_model_class",
     "get_model_provider_metadata",

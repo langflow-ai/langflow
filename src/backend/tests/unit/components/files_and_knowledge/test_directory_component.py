@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 import pytest
 from lfx.components.files_and_knowledge.directory import DirectoryComponent
 from lfx.schema import Data, DataFrame
+from lfx.services.deps import get_settings_service
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -16,10 +17,13 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
         return DirectoryComponent
 
     @pytest.fixture
-    def default_kwargs(self, tmp_path):
+    def default_kwargs(self, tmp_path, monkeypatch):
         """Return the default kwargs for the component."""
+        default_root = tmp_path / "default-root"
+        default_root.mkdir()
+        monkeypatch.setattr(get_settings_service().settings, "directory_component_allowed_roots", [str(default_root)])
         return {
-            "path": str(tmp_path),
+            "path": str(default_root),
             "recursive": True,
             "use_multithreading": False,
             "silent_errors": False,
@@ -85,10 +89,11 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             silent_errors=silent_errors,
         )
 
-    def test_directory_without_mocks(self):
+    def test_directory_without_mocks(self, monkeypatch):
         directory_component = DirectoryComponent()
 
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir, monkeypatch.context() as context:
+            context.chdir(temp_dir)
             (Path(temp_dir) / "test.txt").write_text("test", encoding="utf-8")
             # also add a json file
             (Path(temp_dir) / "test.json").write_text('{"test": "test"}', encoding="utf-8")
@@ -125,11 +130,12 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
         docs_files = list(docs_path.glob("*.md")) + list(docs_path.glob("*.json"))
         assert len(results) == len(docs_files)
 
-    def test_directory_as_dataframe(self):
+    def test_directory_as_dataframe(self, monkeypatch):
         """Test DirectoryComponent's as_dataframe method."""
         directory_component = DirectoryComponent()
 
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir, monkeypatch.context() as context:
+            context.chdir(temp_dir)
             # Create test files with different content
             files_content = {
                 "file1.txt": "content1",
@@ -180,11 +186,12 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             missing_paths = [path for path in expected_paths if not any(path in fp for fp in file_paths)]
             assert not missing_paths, f"Missing expected file paths in DataFrame: {missing_paths}"
 
-    def test_directory_with_depth(self):
+    def test_directory_with_depth(self, monkeypatch):
         """Test DirectoryComponent with different depth settings."""
         directory_component = DirectoryComponent()
 
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir, monkeypatch.context() as context:
+            context.chdir(temp_dir)
             # Create a nested directory structure
             base_dir = Path(temp_dir)
             (base_dir / "level1").mkdir()
@@ -239,11 +246,12 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             (["txt", "json"], 2),
         ],
     )
-    def test_directory_with_types(self, file_types, expected_count):
+    def test_directory_with_types(self, file_types, expected_count, monkeypatch):
         """Test DirectoryComponent with different file type filters (parameterized)."""
         directory_component = DirectoryComponent()
 
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir, monkeypatch.context() as context:
+            context.chdir(temp_dir)
             # Create files with different extensions
             (Path(temp_dir) / "test.txt").write_text("text content", encoding="utf-8")
             (Path(temp_dir) / "test.json").write_text('{"key": "value"}', encoding="utf-8")
@@ -269,11 +277,205 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
                 file_ext = Path(r.data["file_path"]).suffix.lstrip(".")
                 assert file_ext in file_types, f"Unexpected file extension: {file_ext}"
 
-    def test_directory_invalid_type(self):
+    def test_directory_rejects_parent_traversal_before_loading_files(self, tmp_path, monkeypatch):
+        """Reject traversal before it can enumerate and load files outside the working root."""
+        workspace = tmp_path / "workspace"
+        outside = tmp_path / "tmp"
+        workspace.mkdir()
+        outside.mkdir()
+        (outside / "poc_langflow_001.txt").write_text("outside secret", encoding="utf-8")
+        monkeypatch.chdir(workspace)
+
+        directory_component = DirectoryComponent()
+        directory_component.set_attributes(
+            {
+                "path": "../tmp",
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["txt"],
+            }
+        )
+
+        with pytest.raises(ValueError, match="Directory path escapes the allowed root"):
+            directory_component.load_directory()
+
+    def test_directory_rejects_absolute_path_outside_allowed_root(self, tmp_path, monkeypatch):
+        """Reject absolute paths outside the working root before file content is loaded."""
+        workspace = tmp_path / "workspace"
+        outside = tmp_path / "tmp"
+        workspace.mkdir()
+        outside.mkdir()
+        (outside / "poc_langflow_002.txt").write_text("outside secret", encoding="utf-8")
+        monkeypatch.chdir(workspace)
+
+        directory_component = DirectoryComponent()
+        directory_component.set_attributes(
+            {
+                "path": str(outside),
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["txt"],
+            }
+        )
+
+        with pytest.raises(ValueError, match="Directory path escapes the allowed root"):
+            directory_component.load_directory()
+
+    def test_directory_loads_configured_absolute_allowed_root(self, tmp_path, monkeypatch):
+        """Operator-configured roots can be loaded by absolute path."""
+        workspace = tmp_path / "workspace"
+        shared = tmp_path / "shared"
+        workspace.mkdir()
+        shared.mkdir()
+        (shared / "allowed.txt").write_text("configured content", encoding="utf-8")
+        monkeypatch.chdir(workspace)
+        monkeypatch.setattr(get_settings_service().settings, "directory_component_allowed_roots", [str(shared)])
+
+        directory_component = DirectoryComponent()
+        directory_component.set_attributes(
+            {
+                "path": str(shared),
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["txt"],
+            }
+        )
+
+        results = directory_component.load_directory()
+
+        assert [result.text for result in results] == ["configured content"]
+
+    def test_directory_allows_drive_absolute_path_inside_allowed_root(self, tmp_path, monkeypatch):
+        r"""A Windows drive/UNC path inside a configured allowed root must not be blanket-rejected.
+
+        On Windows a drive-absolute path (``D:\\shared\\docs``) or a UNC path
+        (``\\\\server\\share``) used to be rejected by the drive pre-check before the
+        containment check ran, breaking the documented allowed-roots escape hatch. The
+        drive component alone must no longer reject the path; canonicalization plus the
+        ``_allowed_roots()`` containment check decide access. POSIX runners cannot
+        canonicalize Windows paths, so ``resolve_path``/``_allowed_roots`` are stubbed to
+        the resolution a Windows host would produce.
+        """
+        shared = tmp_path / "shared"
+        docs = shared / "docs"
+        docs.mkdir(parents=True)
+        (docs / "allowed.txt").write_text("drive content", encoding="utf-8")
+
+        directory_component = DirectoryComponent()
+        # Simulate the Windows host resolving ``D:\shared\docs`` to the configured root.
+        monkeypatch.setattr(directory_component, "resolve_path", lambda _path: str(docs))
+        monkeypatch.setattr(directory_component, "_allowed_roots", lambda: [shared])
+
+        directory_component.set_attributes(
+            {
+                "path": "D:\\shared\\docs",
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["txt"],
+            }
+        )
+
+        results = directory_component.load_directory()
+
+        assert [result.text for result in results] == ["drive content"]
+
+    def test_directory_rejects_drive_absolute_path_outside_allowed_root(self, tmp_path, monkeypatch):
+        """A Windows drive path outside every allowed root must still be rejected by containment."""
+        shared = tmp_path / "shared"
+        outside = tmp_path / "outside"
+        shared.mkdir()
+        outside.mkdir()
+        (outside / "secret.txt").write_text("outside secret", encoding="utf-8")
+
+        directory_component = DirectoryComponent()
+        # The drive path canonicalizes outside any configured root.
+        monkeypatch.setattr(directory_component, "resolve_path", lambda _path: str(outside))
+        monkeypatch.setattr(directory_component, "_allowed_roots", lambda: [shared])
+
+        directory_component.set_attributes(
+            {
+                "path": "D:\\outside",
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["txt"],
+            }
+        )
+
+        with pytest.raises(ValueError, match="Directory path escapes the allowed root"):
+            directory_component.load_directory()
+
+    def test_directory_rejects_windows_parent_traversal(self):
+        """A Windows-style parent reference is still rejected by the pre-check."""
+        directory_component = DirectoryComponent()
+
+        with pytest.raises(ValueError, match="Directory path escapes the allowed root"):
+            directory_component._resolve_directory_path("D:\\shared\\..\\secret")
+
+    def test_directory_loads_relative_path_inside_allowed_root(self, tmp_path, monkeypatch):
+        """Legitimate relative paths inside the working root still load normally."""
+        workspace = tmp_path / "workspace"
+        docs = workspace / "docs"
+        docs.mkdir(parents=True)
+        (docs / "allowed.txt").write_text("allowed content", encoding="utf-8")
+        monkeypatch.chdir(workspace)
+
+        directory_component = DirectoryComponent()
+        directory_component.set_attributes(
+            {
+                "path": "docs",
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["txt"],
+            }
+        )
+
+        results = directory_component.load_directory()
+
+        assert [result.text for result in results] == ["allowed content"]
+
+    def test_directory_does_not_follow_symlinked_file_outside_allowed_root(self, tmp_path, monkeypatch):
+        """Skip files whose canonical path escapes the resolved directory."""
+        workspace = tmp_path / "workspace"
+        docs = workspace / "docs"
+        outside = tmp_path / "outside"
+        docs.mkdir(parents=True)
+        outside.mkdir()
+        (docs / "allowed.txt").write_text("allowed content", encoding="utf-8")
+        outside_file = outside / "secret.txt"
+        outside_file.write_text("outside secret", encoding="utf-8")
+        try:
+            (docs / "linked-secret.txt").symlink_to(outside_file)
+        except OSError as exc:
+            pytest.skip(f"symlink creation unavailable: {exc}")
+        monkeypatch.chdir(workspace)
+
+        directory_component = DirectoryComponent()
+        directory_component.set_attributes(
+            {
+                "path": "docs",
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["txt"],
+            }
+        )
+
+        results = directory_component.load_directory()
+
+        assert [result.text for result in results] == ["allowed content"]
+
+    def test_directory_invalid_type(self, monkeypatch):
         """Test DirectoryComponent raises error with invalid file type."""
         directory_component = DirectoryComponent()
 
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir, monkeypatch.context() as context:
+            context.chdir(temp_dir)
             # Create test file
             (Path(temp_dir) / "test.exe").write_text("test", encoding="utf-8")
 
@@ -294,11 +496,12 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             assert "Invalid file types specified: ['exe']" in str(exc_info.value)
             assert "Valid types are:" in str(exc_info.value)
 
-    def test_directory_with_hidden_files(self):
+    def test_directory_with_hidden_files(self, monkeypatch):
         """Test DirectoryComponent with hidden files."""
         directory_component = DirectoryComponent()
 
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir, monkeypatch.context() as context:
+            context.chdir(temp_dir)
             # Create regular and hidden files
             (Path(temp_dir) / "regular.txt").write_text("regular", encoding="utf-8")
             (Path(temp_dir) / ".hidden.txt").write_text("hidden", encoding="utf-8")
@@ -326,11 +529,12 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             assert "hidden" in texts
 
     @patch("lfx.components.data.directory.parallel_load_data")
-    def test_directory_with_multithreading(self, mock_parallel_load):
+    def test_directory_with_multithreading(self, mock_parallel_load, monkeypatch):
         """Test DirectoryComponent with multithreading enabled."""
         directory_component = DirectoryComponent()
 
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir, monkeypatch.context() as context:
+            context.chdir(temp_dir)
             # Create test files
             (Path(temp_dir) / "test1.txt").write_text("content1", encoding="utf-8")
             (Path(temp_dir) / "test2.txt").write_text("content2", encoding="utf-8")

@@ -131,8 +131,8 @@ class TestSuperuserCommand:
 
     @pytest.mark.skip(reason="Skip -- default superuser is created by initialize_services() function")
     @pytest.mark.asyncio
-    async def test_auto_login_forces_default_credentials(self, client):
-        """Test AUTO_LOGIN=true forces default credentials."""
+    async def test_auto_login_uses_bootstrap_superuser(self, client):
+        """Test AUTO_LOGIN=true bootstraps the configured superuser."""
         # Since client fixture already creates default user, we need to test in a clean DB scenario
         # But that's why this test is skipped - the behavior is already handled by initialize_services
 

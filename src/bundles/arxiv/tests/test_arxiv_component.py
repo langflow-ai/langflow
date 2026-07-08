@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 from lfx_arxiv import ArXivComponent
+from lfx_arxiv.components.arxiv.arxiv import ARXIV_REQUEST_TIMEOUT_SECONDS
 
 
 @pytest.fixture
@@ -87,3 +88,17 @@ def test_invalid_url_handling(mock_build_opener, default_kwargs):
     assert len(results) == 1
     assert hasattr(results[0], "error")
     assert "Invalid URL" in results[0].error
+
+
+@patch("urllib.request.build_opener")
+def test_request_uses_bounded_timeout(mock_build_opener, default_kwargs):
+    component = ArXivComponent(**default_kwargs)
+    mock_build_opener.return_value.open.side_effect = TimeoutError("timed out")
+
+    results = component.search_papers()
+
+    mock_build_opener.return_value.open.assert_called_once()
+    assert mock_build_opener.return_value.open.call_args.kwargs["timeout"] == ARXIV_REQUEST_TIMEOUT_SECONDS
+    assert len(results) == 1
+    assert hasattr(results[0], "error")
+    assert "timed out" in results[0].error

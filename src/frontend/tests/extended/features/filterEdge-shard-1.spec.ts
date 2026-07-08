@@ -71,7 +71,6 @@ test(
       "disclosure-utilities",
       "disclosure-bundles-langchain",
       "disclosure-bundles-assemblyai",
-      "disclosure-bundles-datastax",
     ];
 
     const elementTestIds = [
@@ -93,6 +92,13 @@ test(
         return expect(page.getByTestId(id)).toBeVisible();
       }),
     );
+
+    // Astra DB ships in the temporarily-unpublished datastax bundle; assert its
+    // disclosure only when present so the rest of the coverage still runs.
+    const datastaxDisclosure = page.getByTestId("disclosure-bundles-datastax");
+    if (await datastaxDisclosure.isVisible().catch(() => false)) {
+      await expect(datastaxDisclosure).toBeVisible();
+    }
 
     await Promise.all(
       elementTestIds.map(async (id) => {

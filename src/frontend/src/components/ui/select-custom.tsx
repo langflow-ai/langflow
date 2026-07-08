@@ -3,6 +3,7 @@
 import * as SelectPrimitive from "@radix-ui/react-select";
 import * as React from "react";
 import { cn } from "../../utils/utils";
+import { useClosedTriggerAriaControls } from "./use-closed-trigger-aria-controls";
 
 const Select = SelectPrimitive.Root;
 
@@ -15,7 +16,7 @@ const SelectTrigger = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
 >(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Trigger
-    ref={ref}
+    ref={useClosedTriggerAriaControls(ref)}
     className={cn("flex w-full items-center justify-between", className)}
     {...props}
   >

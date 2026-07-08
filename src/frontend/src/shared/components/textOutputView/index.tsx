@@ -6,6 +6,7 @@ const TextOutputView = ({
   value,
 }: {
   left: boolean | undefined;
+  // biome-ignore lint/suspicious/noExplicitAny: polymorphic output value (string | object | ...) rendered as text
   value: any;
 }) => {
   const { t } = useTranslation();

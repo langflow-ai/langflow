@@ -221,7 +221,10 @@ export const SidebarDraggableComponent = forwardRef(
                     name="GripVertical"
                     className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
                   />
-                  <SelectTrigger tabIndex={-1}></SelectTrigger>
+                  <SelectTrigger
+                    tabIndex={-1}
+                    aria-label={t("folder.options")}
+                  ></SelectTrigger>
                   <SelectContent
                     position="popper"
                     side="bottom"

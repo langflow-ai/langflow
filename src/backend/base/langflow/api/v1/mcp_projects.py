@@ -67,9 +67,17 @@ from langflow.api.v1.schemas import (
     MCPSettings,
 )
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
+from langflow.services.auth.context import (
+    AUTH_METHOD_AUTO_LOGIN,
+    AuthCredentialContext,
+    clear_current_auth_context,
+    set_current_auth_context,
+)
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.services.authorization import ProjectAction, ensure_project_permission
+from langflow.services.authorization.access_ceiling import clear_current_external_access_context
 from langflow.services.database.models import Flow, Folder
-from langflow.services.database.models.api_key.crud import check_key, create_api_key
+from langflow.services.database.models.api_key.crud import authenticate_api_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
@@ -93,6 +101,12 @@ async def verify_project_auth(
     This function provides authentication for MCP endpoints when using MCP Composer and no API key is provided,
     or checks if the API key is valid.
     """
+    # Mirror the service.py auth entrypoints: reset request-local credential metadata at entry so a
+    # later branch (e.g. the composer-token fast path) never inherits stale context from a prior call.
+    clear_current_auth_context()
+    # Defensive invariant: drop any stale external access ceiling so it can't carry into MCP project auth.
+    clear_current_external_access_context()
+
     settings_service = get_settings_service()
 
     project = (await db.exec(select(Folder).where(Folder.id == project_id))).first()
@@ -144,9 +158,11 @@ async def verify_project_auth(
             )
 
         # Validate the API key
-        user = await check_key(db, api_key)
-        if not user:
+        api_key_result = await authenticate_api_key(db, api_key)
+        if not api_key_result:
             raise HTTPException(status_code=401, detail="Invalid API key")
+        set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+        user = api_key_result.user
 
         # Verify user has access to the project
         project_access = (
@@ -171,6 +187,7 @@ async def _superuser_fallback(db: AsyncSession, settings_service) -> User:
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
     if result:
         logger.warning(AUTO_LOGIN_WARNING)
+        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
         return result
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -545,6 +562,18 @@ async def update_project_mcp_settings(
 
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
+
+            # Mutating flow MCP exposure + project MCP auth settings is a project
+            # WRITE: enforce so the external access ceiling (e.g. a "viewer")
+            # cannot change MCP settings. The owner with no ceiling fast-paths via
+            # owner-override; behavior is unchanged when the feature is off.
+            await ensure_project_permission(
+                current_user,
+                ProjectAction.WRITE,
+                project_id=project_id,
+                project_user_id=project.user_id,
+                workspace_id=project.workspace_id,
+            )
 
             # Track if MCP Composer needs to be started or stopped
             should_handle_mcp_composer = False

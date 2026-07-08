@@ -92,7 +92,16 @@ def test_route_is_mounted_unconditionally() -> None:
     def collect_paths(routes, prefix: str = "") -> list[str]:
         out: list[str] = []
         for route in routes:
-            if hasattr(route, "routes"):
+            # FastAPI >=0.137 includes sub-routers lazily via an internal
+            # `_IncludedRouter` wrapper (no `.routes`/`.path`); descend through
+            # its public `original_router` / `include_context` so this works on
+            # both eager (<=0.136) and lazy (>=0.137) inclusion.
+            original_router = getattr(route, "original_router", None)
+            if original_router is not None:
+                include_context = getattr(route, "include_context", None)
+                include_prefix = getattr(include_context, "prefix", "") or ""
+                out.extend(collect_paths(original_router.routes, prefix + include_prefix))
+            elif hasattr(route, "routes"):
                 out.extend(collect_paths(route.routes, prefix + getattr(route, "prefix", "")))
             elif hasattr(route, "path"):
                 out.append(prefix + route.path)
@@ -120,7 +129,16 @@ def test_no_runtime_mutation_routes() -> None:
     def collect_paths(routes, prefix: str = "") -> list[str]:
         out: list[str] = []
         for route in routes:
-            if hasattr(route, "routes"):
+            # FastAPI >=0.137 includes sub-routers lazily via an internal
+            # `_IncludedRouter` wrapper (no `.routes`/`.path`); descend through
+            # its public `original_router` / `include_context` so this works on
+            # both eager (<=0.136) and lazy (>=0.137) inclusion.
+            original_router = getattr(route, "original_router", None)
+            if original_router is not None:
+                include_context = getattr(route, "include_context", None)
+                include_prefix = getattr(include_context, "prefix", "") or ""
+                out.extend(collect_paths(original_router.routes, prefix + include_prefix))
+            elif hasattr(route, "routes"):
                 out.extend(collect_paths(route.routes, prefix + getattr(route, "prefix", "")))
             elif hasattr(route, "path"):
                 out.append(prefix + route.path)

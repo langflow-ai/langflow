@@ -90,12 +90,16 @@ jobs:
           RELATIVE_FILES=$(echo "$CHANGED_FILES" | sed 's|^src/frontend/||')
 
           cd src/frontend
+          # NUL-delimit so paths containing spaces (e.g. starter-project
+          # specs like "Basic Prompting.spec.ts") aren't split by xargs.
           if ${{ inputs.allow-failure || 'false' }}; then
-            echo "$RELATIVE_FILES" | xargs npx @biomejs/biome check \
-              --files-ignore-unknown=true \
-              --diagnostic-level=error || echo "Biome found errors (non-blocking for this run)."
+            printf '%s\n' "$RELATIVE_FILES" | tr '\n' '\0' \
+              | xargs -0 npx @biomejs/biome check \
+                --files-ignore-unknown=true \
+                --diagnostic-level=error || echo "Biome found errors (non-blocking for this run)."
           else
-            echo "$RELATIVE_FILES" | xargs npx @biomejs/biome check \
-              --files-ignore-unknown=true \
-              --diagnostic-level=error
+            printf '%s\n' "$RELATIVE_FILES" | tr '\n' '\0' \
+              | xargs -0 npx @biomejs/biome check \
+                --files-ignore-unknown=true \
+                --diagnostic-level=error
           fi

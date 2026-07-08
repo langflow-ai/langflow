@@ -25,6 +25,7 @@ from ._state import (
     _find_node,
     _load_registry_user_aware,
     node_existed_at_start,
+    should_apply_edits_live,
     should_propose_existing_edits,
 )
 from .edit_tools import emit_field_edit_proposal
@@ -248,7 +249,11 @@ class ConfigureComponent(Component):
 
         # Deterministic review gate (Bug B): editing a TEXT field on a pre-existing
         # component is surfaced as a reviewable diff; model/number/bool still apply live.
-        if should_propose_existing_edits() and node_existed_at_start(self.component_id):
+        if (
+            should_propose_existing_edits()
+            and node_existed_at_start(self.component_id)
+            and not should_apply_edits_live()
+        ):
             text_params = {k: v for k, v in params.items() if isinstance(v, str) and k != "model"}
             if text_params:
                 proposed: list[str] = [

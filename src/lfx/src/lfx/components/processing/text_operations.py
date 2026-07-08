@@ -25,6 +25,7 @@ class TextOperations(Component):
     description = "Perform various text processing operations including text-to-DataFrame conversion."
     icon = "type"
     name = "TextOperations"
+    legacy = True
 
     # Configuration for operation-specific input fields
     OPERATION_FIELDS: dict[str, list[str]] = {

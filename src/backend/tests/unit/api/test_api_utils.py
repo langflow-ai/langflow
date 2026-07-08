@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from langflow.api.utils import get_suggestion_message, remove_api_keys
-from langflow.api.utils.core import build_content_disposition
+from langflow.api.utils.core import build_content_disposition, format_exception_message, get_causing_exception
 from langflow.services.database.models.flow.utils import get_outdated_components
 from langflow.utils.version import get_version_info
 
@@ -247,3 +247,50 @@ def test_build_content_disposition_very_long_filename():
     header = build_content_disposition(long_name)
     assert "attachment;" in header
     assert "filename*=UTF-8''" in header
+
+
+def _wrap_like_create_class(exc: Exception) -> ValueError:
+    """Mirror how ``custom.validate.create_class`` wraps a build failure."""
+    msg = f"Error creating class. {type(exc).__name__}({exc!s})."
+    try:
+        raise ValueError(msg) from exc
+    except ValueError as wrapped:
+        return wrapped
+
+
+def _raise_like_shim(raw: ModuleNotFoundError) -> ModuleNotFoundError:
+    """Mirror how a graduated bundle shim re-raises its curated message from the raw import error."""
+    msg = (
+        "The 'datastax' components moved to the 'lfx-datastax' distribution. "
+        "Install it with:  pip install lfx-datastax   "
+        "(or 'pip install langflow', which bundles it)."
+    )
+    try:
+        raise ModuleNotFoundError(msg, name="lfx_datastax") from raw
+    except ModuleNotFoundError as curated:
+        return curated
+
+
+def test_format_exception_message_plain_module_not_found_gets_guidance():
+    cause = ModuleNotFoundError("No module named 'langchain_chroma'", name="langchain_chroma")
+    msg = format_exception_message(_wrap_like_create_class(cause))
+    assert "pip install langchain-chroma" in msg
+
+
+def test_format_exception_message_graduated_shim_message_wins_over_raw_cause():
+    # The graduated case Gabriel flagged: the chain bottoms out at the raw
+    # "No module named 'lfx_datastax'", but the curated shim message must win.
+    raw = ModuleNotFoundError("No module named 'lfx_datastax'", name="lfx_datastax")
+    wrapped = _wrap_like_create_class(_raise_like_shim(raw))
+    msg = format_exception_message(wrapped)
+    assert "moved to the 'lfx-datastax' distribution" in msg
+    assert "pip install langflow" in msg
+    assert not msg.startswith("Error creating class")
+    assert "moved out of the lfx engine" not in msg
+
+
+def test_get_causing_exception_stops_at_curated_shim_error():
+    raw = ModuleNotFoundError("No module named 'lfx_datastax'", name="lfx_datastax")
+    curated = _raise_like_shim(raw)
+    wrapped = _wrap_like_create_class(curated)
+    assert get_causing_exception(wrapped) is curated

@@ -86,10 +86,40 @@ _INTERNAL_IMPORT_NAMES: frozenset[str] = frozenset({"lfx", "langflow", "langflow
 _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 
 # Fallback provider → package mapping for providers whose component class may
-# not be importable in every environment (e.g. Azure OpenAI shares
-# langchain-openai with the regular OpenAI provider).
+# not be importable in every environment. Since the bundle split, provider
+# model components live in bundle distributions (lfx-openai, lfx-bundles, ...)
+# that an engine-only install does not carry, so MODEL_PROVIDERS_DICT registers
+# only in-tree providers there and the dynamic source-inspection path cannot
+# run. These static entries keep requirements inference working for flows
+# configured with those providers; a MODEL_PROVIDERS_DICT hit still wins.
+#
+# CRITICAL: every provider string a flow can persist via the unified Language
+# Model / Embedding Model / Agent components (the keys of
+# ``MODEL_PROVIDER_METADATA``) MUST have an entry here, keyed by the *exact*
+# catalog string. After the bundle split the langchain SDKs no longer ship with
+# a bare ``lfx`` install, so a provider missing from this table (or keyed by the
+# wrong casing) yields an empty requirements set and the deployed flow fails to
+# import its model class on the runner. ``test_provider_fallback_covers_unified_catalog``
+# guards this invariant. Some keys below (Amazon Bedrock, SambaNova, NVIDIA via
+# ``MODEL_PROVIDERS_DICT``) are not unified-selectable but back the dedicated
+# provider components / legacy flows.
 _PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
+    "Amazon Bedrock": {"langchain-aws"},
+    "Anthropic": {"langchain-anthropic"},
     "Azure OpenAI": {"langchain-openai"},
+    "Google Generative AI": {"langchain-google-genai"},
+    "Groq": {"langchain-groq"},
+    # Both spellings: "IBM WatsonX" is the unified-catalog string a flow persists
+    # (MODEL_PROVIDER_METADATA), "IBM watsonx.ai" is the MODEL_PROVIDERS_DICT alias.
+    "IBM WatsonX": {"langchain-ibm"},
+    "IBM watsonx.ai": {"langchain-ibm"},
+    "Ollama": {"langchain-ollama"},
+    "OpenAI": {"langchain-openai"},
+    # OpenRouter is unified-selectable and routes through ChatOpenAI at runtime
+    # (get_provider_param_mapping -> model_class "ChatOpenAI" -> langchain_openai),
+    # but is not in MODEL_PROVIDERS_DICT, so only this fallback can supply its package.
+    "OpenRouter": {"langchain-openai"},
+    "SambaNova": {"langchain-sambanova"},
 }
 
 
@@ -596,4 +626,85 @@ def generate_requirements_from_file(
         lfx_package=lfx_package,
         include_lfx=include_lfx,
         pin_versions=pin_versions,
+    )
+
+
+# ===================================================================
+# Dependency preflight (fail-fast for `lfx run`)
+# `lfx serve` does not call this; it surfaces missing deps at request
+# time via its own module-not-found hint.
+# ===================================================================
+
+
+def _is_installed(package_name: str) -> bool:
+    """Return True if a distribution providing *package_name* is installed.
+
+    Mirrors the presence check used by the inline-script installer
+    (``cli.common._needs_install``): ``importlib.metadata`` normalizes the name
+    per PEP 503, so hyphen/underscore/case variants resolve to the same record.
+    """
+    try:
+        md.version(package_name)
+    except md.PackageNotFoundError:
+        return False
+    return True
+
+
+def find_missing_dependencies(flow: dict) -> list[str]:
+    """Return the sorted PyPI names a flow needs that are not installed.
+
+    Reuses :func:`generate_requirements_from_flow` to infer the flow's
+    third-party packages (excluding ``lfx`` itself and anything already provided
+    by lfx's transitive tree), then keeps only those with no installed
+    distribution.
+
+    Best-effort by design: it shares the analyzer's limitations (string-based
+    dynamic imports and ``PythonREPLTool.global_imports`` are invisible), so it
+    is a guard against the common "exported flow run on a bare ``pip install
+    lfx``" failure, not a complete dependency solver. Callers run it as a
+    fail-fast preflight before the graph load triggers the missing import deep
+    in a component.
+    """
+    required = generate_requirements_from_flow(flow, include_lfx=False, pin_versions=False)
+    return sorted(pkg for pkg in required if not _is_installed(pkg))
+
+
+def format_missing_dependencies_error(missing: list[str]) -> str:
+    """Build the actionable error message for a failed dependency preflight."""
+    bullets = "\n".join(f"  - {pkg}" for pkg in missing)
+    install_line = " ".join(missing)
+    return (
+        "This flow needs Python packages that are not installed in this environment:\n"
+        f"{bullets}\n\n"
+        "Install them and re-run:\n"
+        f"  pip install {install_line}\n\n"
+        "Provider components moved out of the lfx engine in the bundle split, so an "
+        "exported flow can require packages that a bare `pip install lfx` does not "
+        "include. Skip this preflight with --no-check-dependencies."
+    )
+
+
+def format_missing_module_error(module_name: str) -> str:
+    """Build actionable install guidance for a single missing import module.
+
+    Maps the top-level import name to its PyPI distribution name (reusing the
+    same resolver as the requirements analyzer) and returns a message that
+    mirrors the ``lfx run`` dependency preflight. This lets a bare
+    ``ModuleNotFoundError`` raised deep in a server-side component build (the
+    UI/API run path, which has no preflight) surface the same ``pip install ...``
+    guidance the CLI already gives, instead of a cryptic "No module named ..."
+    string.
+    """
+    # A dotted import (e.g. ``langchain_chroma.vectorstores``) maps via its
+    # top-level package, so resolve on the first segment while still showing
+    # the user the full module name they hit.
+    top_level = module_name.split(".", 1)[0]
+    package = _import_to_package(top_level)
+    return (
+        f"No module named '{module_name}'. This flow needs a Python package that is "
+        "not installed in this environment.\n\n"
+        "Install it and re-run:\n"
+        f"  pip install {package}\n\n"
+        "Provider components moved out of the lfx engine in the bundle split, so a "
+        "flow can require packages that a bare `pip install lfx` does not include."
     )

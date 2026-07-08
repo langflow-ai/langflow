@@ -1,0 +1,15 @@
+ruleArchive: 19May2026
+policies:
+  - IBM_Accessibility
+reportLevels:
+  - violation
+  # - potentialviolation
+  # - recommendation
+  # - potentialrecommendation
+  # - manual
+outputFormat:
+  - html
+  - json
+outputFilenameTimestamp: false
+baselineFolder: tests/baselines
+outputFolder: coverage/accessibility-reports

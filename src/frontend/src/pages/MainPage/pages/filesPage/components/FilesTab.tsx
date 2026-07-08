@@ -235,7 +235,14 @@ const FilesTab = ({
                 file={params.data}
                 handleRename={handleOpenRename}
               >
-                <Button variant="ghost" size="iconMd">
+                <Button
+                  variant="ghost"
+                  size="iconMd"
+                  aria-label={t("files.actionsMenu", {
+                    defaultValue: "File actions for {{name}}",
+                    name: params.data.name,
+                  })}
+                >
                   <ForwardedIconComponent name="EllipsisVertical" />
                 </Button>
               </FilesContextMenuComponent>

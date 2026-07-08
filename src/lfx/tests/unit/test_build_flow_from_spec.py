@@ -29,12 +29,14 @@ edges:
         assert "B" in result["node_id_map"]
 
     def test_three_node_flow(self):
+        # LanguageModelComponent: a model type that stays in-tree (provider
+        # model components live in bundle packages not installed in this env).
         spec = """\
 name: Chat with Model
 
 nodes:
   A: ChatInput
-  B: OpenAIModel
+  B: LanguageModelComponent
   C: ChatOutput
 
 edges:
@@ -262,7 +264,7 @@ name: Chat Flow
 
 nodes:
   A: ChatInput
-  B: OpenAIModel
+  B: LanguageModelComponent
   C: ChatOutput
 
 edges:
@@ -273,7 +275,7 @@ edges:
         summary = flow_to_spec_summary(result["flow"])
         assert "Chat Flow" in summary
         assert "ChatInput" in summary
-        assert "OpenAIModel" in summary
+        assert "LanguageModelComponent" in summary
         assert "ChatOutput" in summary
         assert "connections:" in summary
 

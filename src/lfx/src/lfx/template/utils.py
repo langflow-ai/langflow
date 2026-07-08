@@ -15,20 +15,21 @@ def raw_frontend_data_is_valid(raw_frontend_data):
 def get_file_path_value(file_path):
     """Get the file path value if the file exists, else return empty string."""
     try:
-        path = Path(file_path)
-    except TypeError:
+        path = Path(file_path).resolve()
+        cache_dir = Path(user_cache_dir("langflow", "langflow")).resolve()
+    except (OSError, RuntimeError, TypeError, ValueError):
         return ""
 
     # Check for safety
     # If the path is not in the cache dir, return empty string
     # This is to prevent access to files outside the cache dir
     # If the path is not a file, return empty string
-    if not str(path).startswith(user_cache_dir("langflow", "langflow")):
+    if not path.is_relative_to(cache_dir):
         return ""
 
-    if not path.exists():
+    if not path.is_file():
         return ""
-    return file_path
+    return str(path)
 
 
 def update_template_field(new_template, key, previous_value_dict) -> None:

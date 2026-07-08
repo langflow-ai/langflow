@@ -2150,6 +2150,20 @@ const getTemplateAliases = (
     aliases.push(componentType.replace(/Component$/, ""));
   }
 
+  // Extension components are keyed ``ext:<bundle>:<ClassName>@<slot>``.
+  // Flows saved before the provider moved out of the built-in palette
+  // reference the legacy keys (``OpenAIModelComponent`` / ``OpenAIModel``);
+  // without these aliases such nodes stop resolving a current template and
+  // are wrongly reported as blocked instead of merely outdated.
+  const extMatch = componentKey.match(/^ext:[^:]+:([^@]+)@.+$/);
+  if (extMatch) {
+    const bareClassName = extMatch[1];
+    aliases.push(bareClassName);
+    if (bareClassName.endsWith("Component")) {
+      aliases.push(bareClassName.replace(/Component$/, ""));
+    }
+  }
+
   return Array.from(new Set(aliases.filter(Boolean)));
 };
 

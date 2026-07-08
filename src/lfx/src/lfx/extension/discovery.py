@@ -93,7 +93,8 @@ class DiscoveredExtension:
     Attributes:
         extension_id: The :attr:`ExtensionManifest.id` value.
         version: The :attr:`ExtensionManifest.version` value.
-        bundle_name: The single bundle's name (v0 ships exactly one).
+        bundle_name: The component bundle's name, or ``None`` for a
+            provider-only extension that ships ``providers[]`` and no bundle.
         manifest: The parsed manifest source (path + kind preserved).
         source_kind: Where the manifest came from -- ``installed`` for an
             ``importlib.metadata`` distribution, ``seed`` for a filesystem
@@ -108,7 +109,7 @@ class DiscoveredExtension:
 
     extension_id: str
     version: str
-    bundle_name: str
+    bundle_name: str | None
     manifest: ManifestSource
     source_kind: SourceKind
     source: str
@@ -397,16 +398,19 @@ def _build_installed_record(
             hint="Run `lfx extension validate` against the package source to see the per-field detail.",
         )
 
-    bundle = manifest.bundles[0]
-    path_error = _verify_bundle_path_safety(extension_root, bundle)
-    if path_error is not None:
-        return None, path_error
+    # A provider-only extension ships no component bundle (bundles is empty);
+    # the path-safety check only applies to a bundle directory.
+    bundle = manifest.bundles[0] if manifest.bundles else None
+    if bundle is not None:
+        path_error = _verify_bundle_path_safety(extension_root, bundle)
+        if path_error is not None:
+            return None, path_error
     source = ManifestSource(manifest=manifest, path=manifest_path, kind=kind)
     return (
         DiscoveredExtension(
             extension_id=manifest.id,
             version=manifest.version,
-            bundle_name=bundle.name,
+            bundle_name=bundle.name if bundle else None,
             manifest=source,
             source_kind="installed",
             source=canonical,
@@ -614,15 +618,17 @@ def _build_seed_record(seed_subdir: Path) -> tuple[DiscoveredExtension | None, E
             hint="Run `lfx extension validate` against the seed subdirectory to see per-field detail.",
         )
 
-    bundle = source.manifest.bundles[0]
-    path_error = _verify_bundle_path_safety(seed_subdir, bundle)
-    if path_error is not None:
-        return None, path_error
+    # Provider-only seed extension: no component bundle to path-check.
+    bundle = source.manifest.bundles[0] if source.manifest.bundles else None
+    if bundle is not None:
+        path_error = _verify_bundle_path_safety(seed_subdir, bundle)
+        if path_error is not None:
+            return None, path_error
     return (
         DiscoveredExtension(
             extension_id=source.manifest.id,
             version=source.manifest.version,
-            bundle_name=bundle.name,
+            bundle_name=bundle.name if bundle else None,
             manifest=source,
             source_kind="seed",
             source=str(seed_subdir.resolve(strict=False)),

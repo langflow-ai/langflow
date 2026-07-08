@@ -24,8 +24,8 @@ class DummyAuthService(Service):
         self.calls.append(call)
         return {"call": call}
 
-    async def get_current_user(self, token, query_param, header_param, db):
-        call = ("get_current_user", token, query_param, header_param)
+    async def get_current_user(self, token, query_param, header_param, db, external_token=None):
+        call = ("get_current_user", token, query_param, header_param, external_token)
         self.calls.append(call)
         return {"user": "dummy", "db": db}
 
@@ -77,8 +77,12 @@ async def test_api_key_security_uses_registered_service(dummy_auth_registration)
 async def test_get_current_user_delegates_to_service(dummy_auth_registration):
     dummy = dummy_auth_registration
     db = MagicMock(spec=AsyncSession)
-    response = await auth_utils.get_current_user(token=None, query_param="q", header_param=None, db=db)
+    # get_current_user now extracts the external credential from the request and
+    # threads it to the service as external_token. With external auth disabled the
+    # extractor returns None, so delegation records external_token=None.
+    request = SimpleNamespace(headers={}, cookies={})
+    response = await auth_utils.get_current_user(request, token=None, query_param="q", header_param=None, db=db)
 
-    assert ("get_current_user", None, "q", None) in dummy.calls
+    assert ("get_current_user", None, "q", None, None) in dummy.calls
     assert response["user"] == "dummy"
     assert response["db"] is db

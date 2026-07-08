@@ -82,8 +82,8 @@ def test_deepseek_build_model(mock_chat_openai, temperature, max_tokens):
 def test_deepseek_get_models(mocker):
     component = DeepSeekModelComponent()
 
-    # Mock requests.get
-    mock_get = mocker.patch("requests.get")
+    # Mock SSRF-safe httpx helper
+    mock_get = mocker.patch("lfx.components.deepseek.deepseek.ssrf_safe_httpx_get")
     mock_response = MagicMock()
     mock_response.json.return_value = {"data": [{"id": "deepseek-chat"}, {"id": "deepseek-coder"}]}
     mock_get.return_value = mock_response
@@ -110,3 +110,8 @@ def test_deepseek_error_handling(mock_chat_openai):
 
     with pytest.raises(Exception, match="Invalid API key"):
         component.build_model()
+
+
+@pytest.fixture(autouse=True)
+def disable_ssrf_protection(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")

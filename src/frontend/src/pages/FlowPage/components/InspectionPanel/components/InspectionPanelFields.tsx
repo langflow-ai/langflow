@@ -53,7 +53,10 @@ export default function InspectionPanelFields({
       .filter((templateField) => {
         const template = data.node?.template[templateField];
         if (isInternalField(templateField)) return false;
-        if (HIDDEN_FIELDS[data.type]?.includes(templateField)) return false;
+        // HIDDEN_FIELDS are intentionally kept out of the default advanced
+        // view (see advancedFields below) but must remain reachable here in
+        // edit mode so users still have a path to toggle their visibility and
+        // edit them (regression fixed: github.com/langflow-ai/langflow/issues/13595).
         if (INSPECTION_PANEL_ONLY_FIELDS[data.type]?.includes(templateField))
           return false;
         if (
