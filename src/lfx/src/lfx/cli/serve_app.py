@@ -19,10 +19,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 import traceback
 import uuid
 from copy import deepcopy
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
@@ -64,6 +66,7 @@ _SERVE_ENV_PREFIX = "LFX_SERVE_"
 _SERVE_FLOW_DIR_ENV = f"{_SERVE_ENV_PREFIX}FLOW_DIR"
 _SERVE_NO_ENV_FALLBACK_ENV = f"{_SERVE_ENV_PREFIX}NO_ENV_FALLBACK"
 _SERVE_STARTUP_PATHS_ENV = f"{_SERVE_ENV_PREFIX}STARTUP_PATHS"
+_SERVE_DURABLE_DB_ENV = f"{_SERVE_ENV_PREFIX}DURABLE_DB"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
@@ -860,11 +863,17 @@ def create_multi_serve_app(
     # V2 workflow contract endpoints (sync + stream), shared with the langflow backend.
     # Mounted under /api/v2 so the path matches the backend (/api/v2/workflows): a client
     # switches runtimes by changing the host, not the URL. developer_api_guard=False keeps
-    # serve's surface ungated, and no background job endpoints are registered.
-    app.include_router(
-        create_workflow_router(ServeWorkflowHost(registry, verify_api_key), developer_api_guard=False),
-        prefix="/api/v2",
-    )
+    # serve's surface ungated. With LFX_SERVE_DURABLE_DB set, the durable host also
+    # registers background job + HITL resume endpoints (LE-1695); otherwise serve stays
+    # stateless and background mode keeps its 422.
+    durable_db = os.environ.get(_SERVE_DURABLE_DB_ENV, "").strip()
+    if durable_db:
+        from lfx.cli.serve_durable import create_durable_workflow_router
+
+        workflow_router = create_durable_workflow_router(registry, verify_api_key, db_path=Path(durable_db))
+    else:
+        workflow_router = create_workflow_router(ServeWorkflowHost(registry, verify_api_key), developer_api_guard=False)
+    app.include_router(workflow_router, prefix="/api/v2")
 
     return app
 
