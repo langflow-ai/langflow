@@ -30,8 +30,18 @@ export function FlowPageSlidingContainerContent({
   const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
   const { open, setOpen, setWidth } = useSimpleSidebar();
-  const inputs = useFlowStore((state) => state.inputs);
-  const nodes = useFlowStore((state) => state.nodes);
+  // Select primitives, not arrays: setNodes recreates nodes/inputs on every
+  // node-drag frame, and array subscriptions re-render the whole panel.
+  const hasChatInput = useFlowStore((state) =>
+    state.inputs.some((input) => input.type === "ChatInput"),
+  );
+  const chatInputValue = useFlowStore((state) => {
+    const chatInput = state.inputs.find((input) => input.type === "ChatInput");
+    if (!chatInput) return null;
+    const node = state.nodes.find((n) => n.id === chatInput.id);
+    if (!node) return null;
+    return node.data?.node?.template?.["input_value"]?.value ?? "";
+  });
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
 
@@ -53,37 +63,39 @@ export function FlowPageSlidingContainerContent({
   const panelRef = useRef<HTMLDivElement>(null);
 
   const { sendMessage } = useSendMessage({ sessionId: activeSessionId });
-  const inputTypes = inputs.map((obj) => obj.type);
-  const noInput = !inputTypes.includes("ChatInput");
+  const noInput = !hasChatInput;
 
-  const chatHistory = useChatHistory(activeSessionId ?? currentFlowId ?? null);
+  const { chatHistory } = useChatHistory(
+    activeSessionId ?? currentFlowId ?? null,
+  );
 
   useEffect(() => {
-    const chatInput = inputs.find((input) => input.type === "ChatInput");
-    const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
-
-    if (chatHistory.length === 0 && !isBuilding && chatInputNode) {
-      setChatValueStore(
-        chatInputNode.data.node.template["input_value"].value ?? "",
-      );
+    if (chatHistory.length === 0 && !isBuilding && chatInputValue !== null) {
+      setChatValueStore(chatInputValue);
     }
-  }, [chatHistory.length, isBuilding, inputs, nodes, setChatValueStore]);
+  }, [chatHistory.length, isBuilding, chatInputValue, setChatValueStore]);
 
   const stickyInstance = useStickToBottom({
     resize: "instant",
     initial: "instant",
   });
 
-  const prevChatLenRef = useRef(chatHistory.length);
+  // Scroll down only when a new message is appended (last-message id change);
+  // prepending older history also grows the length and must not scroll.
+  const prevLastMsgIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (chatHistory.length > prevChatLenRef.current) {
-      const lastMsg = chatHistory[chatHistory.length - 1];
-      if (shouldForceScrollOnNewMessage(lastMsg)) {
-        window.dispatchEvent(new Event("langflow-scroll-to-bottom"));
-        stickyInstance.scrollToBottom("smooth");
-      }
+    const lastMsg = chatHistory[chatHistory.length - 1];
+    const lastId = lastMsg?.id;
+    if (
+      lastId &&
+      prevLastMsgIdRef.current !== undefined &&
+      lastId !== prevLastMsgIdRef.current &&
+      shouldForceScrollOnNewMessage(lastMsg)
+    ) {
+      window.dispatchEvent(new Event("langflow-scroll-to-bottom"));
+      stickyInstance.scrollToBottom("smooth");
     }
-    prevChatLenRef.current = chatHistory.length;
+    prevLastMsgIdRef.current = lastId;
   }, [chatHistory, stickyInstance]);
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
