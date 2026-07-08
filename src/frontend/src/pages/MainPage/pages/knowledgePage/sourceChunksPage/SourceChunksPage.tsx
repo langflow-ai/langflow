@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -34,6 +40,14 @@ export const SourceChunksPage = () => {
     Record<string, string[]>
   >({});
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Portal SelectContent into main so IBM does not flag body-level portaled
+  // content as outside a landmark (aria_content_in_landmark).
+  const [selectContainer, setSelectContainer] = useState<HTMLElement | null>(
+    null,
+  );
+  useLayoutEffect(() => {
+    setSelectContainer(document.querySelector<HTMLElement>("main"));
+  }, []);
 
   const removeMetadataChip = useCallback((key: string, value: string) => {
     setMetadataFilter((prev) => {
@@ -188,6 +202,7 @@ export const SourceChunksPage = () => {
                 </SelectTrigger>
                 <SelectContent
                   aria-label={t("knowledge.sourceTypeFilterLabel")}
+                  container={selectContainer ?? undefined}
                 >
                   <SelectItem value="all">
                     {t("knowledge.allSources")}
@@ -296,7 +311,10 @@ export const SourceChunksPage = () => {
                             >
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="min-w-[70px]">
+                            <SelectContent
+                              className="min-w-[70px]"
+                              container={selectContainer ?? undefined}
+                            >
                               {PAGE_SIZE_OPTIONS.map((opt) => (
                                 <SelectItem key={opt} value={String(opt)}>
                                   {opt}

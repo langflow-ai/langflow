@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useInertForAriaHiddenElements } from "@/components/ui/use-inert-for-aria-hidden";
 
 const CONTROLS_CACHE_ATTR = "data-radix-aria-controls-cache";
 
@@ -13,8 +14,16 @@ const CONTROLS_CACHE_ATTR = "data-radix-aria-controls-cache";
  * DOM directly, so a trigger that closes and later reopens would otherwise
  * be left with no aria-controls at all. Restoring from the cache when the
  * trigger re-opens keeps that reference intact.
+ *
+ * Also applies `inert` to Radix `data-aria-hidden` subtrees (same helper
+ * Dialog uses) so open Selects/Popovers do not leave focusable controls
+ * under aria-hidden (aria_hidden_nontabbable). For an expanded combobox,
+ * unwraps aria-hidden on its ancestor path so the open Select trigger is
+ * neither inert nor under aria-hidden (combobox_focusable_elements).
  */
 export function RadixAriaControlsFix() {
+  useInertForAriaHiddenElements();
+
   useEffect(() => {
     const fixClosedTriggers = () => {
       document
