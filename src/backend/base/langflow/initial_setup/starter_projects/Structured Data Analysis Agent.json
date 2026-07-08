@@ -9,18 +9,12 @@
             "dataType": "FileDescriptionGeneratorComponent",
             "id": "FileDescriptionGeneratorComponent-oTrJn",
             "name": "descriptions",
-            "output_types": [
-              "JSON"
-            ]
+            "output_types": ["JSON"]
           },
           "targetHandle": {
             "fieldName": "ingest_data",
             "id": "Chroma-eMTbF",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Table"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Table"],
             "type": "other"
           }
         },
@@ -39,16 +33,12 @@
             "dataType": "Chroma",
             "id": "Chroma-IkIQx",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "OpenDsStarAgent-CYVYX",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -67,16 +57,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-zSTGd",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenDsStarAgent-CYVYX",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -95,20 +81,12 @@
             "dataType": "OpenDsStarAgent",
             "id": "OpenDsStarAgent-CYVYX",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-JmTk1",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "other"
           }
         },
@@ -127,16 +105,12 @@
             "dataType": "FileContentRetriever",
             "id": "FileContentRetriever-Yhfgz",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "OpenDsStarAgent-CYVYX",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -155,9 +129,7 @@
             "dataType": "Chroma",
             "id": "Chroma-eMTbF",
             "name": "search_results",
-            "output_types": [
-              "JSON"
-            ]
+            "output_types": ["JSON"]
           },
           "targetHandle": {
             "fieldName": "inputs",
@@ -188,9 +160,7 @@
             "dataType": "FileContentRetriever",
             "id": "FileContentRetriever-353E9",
             "name": "content",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "inputs",
@@ -221,16 +191,12 @@
             "dataType": "OllamaModel",
             "id": "OllamaModel-7LbmX",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "FileDescriptionGeneratorComponent-oTrJn",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
@@ -249,16 +215,12 @@
             "dataType": "OllamaModel",
             "id": "OllamaModel-7LbmX",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "OpenDsStarAgent-CYVYX",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
@@ -277,16 +239,12 @@
             "dataType": "OllamaEmbeddings",
             "id": "OllamaEmbeddings-zAbkk",
             "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
+            "output_types": ["Embeddings"]
           },
           "targetHandle": {
             "fieldName": "embedding",
             "id": "Chroma-eMTbF",
-            "inputTypes": [
-              "Embeddings"
-            ],
+            "inputTypes": ["Embeddings"],
             "type": "other"
           }
         },
@@ -305,16 +263,12 @@
             "dataType": "OllamaEmbeddings",
             "id": "OllamaEmbeddings-zAbkk",
             "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
+            "output_types": ["Embeddings"]
           },
           "targetHandle": {
             "fieldName": "embedding",
             "id": "Chroma-IkIQx",
-            "inputTypes": [
-              "Embeddings"
-            ],
+            "inputTypes": ["Embeddings"],
             "type": "other"
           }
         },
@@ -333,18 +287,12 @@
             "dataType": "File",
             "id": "File-jKAIS",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "file_data",
             "id": "FileDescriptionGeneratorComponent-oTrJn",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
@@ -363,18 +311,12 @@
             "dataType": "File",
             "id": "File-jKAIS",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "file_data",
             "id": "FileContentRetriever-353E9",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
@@ -393,16 +335,12 @@
             "dataType": "SaveToFile",
             "id": "SaveToFile-9FQfI",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "OpenDsStarAgent-CYVYX",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -419,10 +357,7 @@
         "data": {
           "id": "OpenDsStarAgent-CYVYX",
           "node": {
-            "base_classes": [
-              "Message",
-              "Runnable"
-            ],
+            "base_classes": ["Message", "Runnable"],
             "beta": true,
             "conditional_paths": [],
             "custom_fields": {},
@@ -484,9 +419,7 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -498,9 +431,7 @@
                 "name": "agent",
                 "selected": "Runnable",
                 "tool_mode": false,
-                "types": [
-                  "Runnable"
-                ],
+                "types": ["Runnable"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -515,9 +446,7 @@
                 "display_name": "Agent Description",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -542,10 +471,7 @@
                 "display_name": "Chat Memory",
                 "dynamic": false,
                 "info": "This input stores the chat history, allowing the agent to remember previous conversations.",
-                "input_types": [
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["Data", "JSON"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "chat_history",
@@ -589,10 +515,7 @@
                 "external_options": {},
                 "info": "Code execution mode: 'stepwise' executes each step separately, 'full' executes all steps together",
                 "name": "code_mode",
-                "options": [
-                  "stepwise",
-                  "full"
-                ],
+                "options": ["stepwise", "full"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -659,9 +582,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "Message or query to send to the agent",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -684,9 +605,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "Language model to use for the OpenDsStar agent",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "llm",
@@ -732,9 +651,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to customize agent behavior",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -757,9 +674,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -817,9 +732,7 @@
         "data": {
           "id": "FileDescriptionGeneratorComponent-oTrJn",
           "node": {
-            "base_classes": [
-              "JSON"
-            ],
+            "base_classes": ["JSON"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -864,9 +777,7 @@
                 "name": "descriptions",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -959,11 +870,7 @@
                 "display_name": "File Data",
                 "dynamic": false,
                 "info": "Output from a Read File component.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_data",
@@ -983,9 +890,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "LLM used to generate file descriptions.",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "llm",
@@ -1042,9 +947,7 @@
         "data": {
           "id": "File-jKAIS",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1121,9 +1024,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1295,9 +1196,7 @@
                 "display_name": "Doc Key",
                 "dynamic": false,
                 "info": "The key to use for the DoclingDocument column.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1341,11 +1240,7 @@
                 "display_name": "Server File Path",
                 "dynamic": false,
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
-                "input_types": [
-                  "Data",
-                  "JSON",
-                  "Message"
-                ],
+                "input_types": ["Data", "JSON", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_path",
@@ -1492,10 +1387,7 @@
                 "external_options": {},
                 "info": "OCR engine to use. Only available when pipeline is set to 'standard'.",
                 "name": "ocr_engine",
-                "options": [
-                  "None",
-                  "easyocr"
-                ],
+                "options": ["None", "easyocr"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -1588,10 +1480,7 @@
                 "external_options": {},
                 "info": "Docling pipeline to use",
                 "name": "pipeline",
-                "options": [
-                  "standard",
-                  "vlm"
-                ],
+                "options": ["standard", "vlm"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -1773,9 +1662,7 @@
         "data": {
           "id": "ChatInput-zSTGd",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1821,9 +1708,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1854,9 +1739,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1957,10 +1840,7 @@
                 "external_options": {},
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -1980,9 +1860,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2005,9 +1883,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2068,9 +1944,7 @@
         "data": {
           "id": "ChatOutput-JmTk1",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2125,9 +1999,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2178,9 +2050,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2203,9 +2073,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2258,10 +2126,7 @@
                 "external_options": {},
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -2281,9 +2146,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2306,9 +2169,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2519,10 +2380,7 @@
         "data": {
           "id": "Chroma-eMTbF",
           "node": {
-            "base_classes": [
-              "JSON",
-              "Table"
-            ],
+            "base_classes": ["JSON", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2592,9 +2450,7 @@
                 "name": "search_results",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2606,9 +2462,7 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2782,9 +2636,7 @@
                 "display_name": "Embedding",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Embeddings"
-                ],
+                "input_types": ["Embeddings"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "embedding",
@@ -2804,11 +2656,7 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Table"
-                ],
+                "input_types": ["Data", "DataFrame", "Table"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -2889,9 +2737,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2918,10 +2764,7 @@
                 "external_options": {},
                 "info": "",
                 "name": "search_type",
-                "options": [
-                  "Similarity",
-                  "MMR"
-                ],
+                "options": ["Similarity", "MMR"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -2979,10 +2822,7 @@
         "data": {
           "id": "Chroma-IkIQx",
           "node": {
-            "base_classes": [
-              "JSON",
-              "Table"
-            ],
+            "base_classes": ["JSON", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3057,9 +2897,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3233,9 +3071,7 @@
                 "display_name": "Embedding",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Embeddings"
-                ],
+                "input_types": ["Embeddings"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "embedding",
@@ -3255,11 +3091,7 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Table"
-                ],
+                "input_types": ["Data", "DataFrame", "Table"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -3340,9 +3172,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3369,10 +3199,7 @@
                 "external_options": {},
                 "info": "",
                 "name": "search_type",
-                "options": [
-                  "Similarity",
-                  "MMR"
-                ],
+                "options": ["Similarity", "MMR"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -3441,9 +3268,7 @@
                     "name": "search_documents",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "search_documents"
-                    ]
+                    "tags": ["search_documents"]
                   },
                   {
                     "args": {
@@ -3460,9 +3285,7 @@
                     "name": "as_dataframe",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "as_dataframe"
-                    ]
+                    "tags": ["as_dataframe"]
                   }
                 ]
               }
@@ -3490,10 +3313,7 @@
         "data": {
           "id": "FileContentRetriever-353E9",
           "node": {
-            "base_classes": [
-              "Message",
-              "Table"
-            ],
+            "base_classes": ["Message", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3501,11 +3321,7 @@
             "display_name": "File Content Retriever",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "file_data",
-              "persistent_dir",
-              "file_path"
-            ],
+            "field_order": ["file_data", "persistent_dir", "file_path"],
             "frozen": false,
             "icon": "file-text",
             "legacy": false,
@@ -3539,9 +3355,7 @@
                 "name": "content",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3553,9 +3367,7 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3586,11 +3398,7 @@
                 "display_name": "File Data",
                 "dynamic": false,
                 "info": "Output from a Read File component.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_data",
@@ -3610,9 +3418,7 @@
                 "display_name": "File Path",
                 "dynamic": false,
                 "info": "The full file path as a string (e.g., '/path/to/file.csv'). Do not pass search results or other objects.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3674,10 +3480,7 @@
         "data": {
           "id": "FileContentRetriever-Yhfgz",
           "node": {
-            "base_classes": [
-              "Message",
-              "Table"
-            ],
+            "base_classes": ["Message", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3685,11 +3488,7 @@
             "display_name": "File Content Retriever",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "file_data",
-              "persistent_dir",
-              "file_path"
-            ],
+            "field_order": ["file_data", "persistent_dir", "file_path"],
             "frozen": false,
             "icon": "file-text",
             "last_updated": "2026-06-26T12:13:06.970Z",
@@ -3728,9 +3527,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3761,11 +3558,7 @@
                 "display_name": "File Data",
                 "dynamic": false,
                 "info": "Output from a Read File component.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_data",
@@ -3785,9 +3578,7 @@
                 "display_name": "File Path",
                 "dynamic": false,
                 "info": "The full file path as a string (e.g., '/path/to/file.csv'). Do not pass search results or other objects.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3860,9 +3651,7 @@
                     "name": "retrieve_content",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "retrieve_content"
-                    ]
+                    "tags": ["retrieve_content"]
                   },
                   {
                     "args": {
@@ -3879,9 +3668,7 @@
                     "name": "retrieve_content_as_dataframe",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "retrieve_content_as_dataframe"
-                    ]
+                    "tags": ["retrieve_content_as_dataframe"]
                   }
                 ]
               }
@@ -3909,9 +3696,7 @@
         "data": {
           "id": "MergeFlows-TfkV5",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3919,9 +3704,7 @@
             "display_name": "Merge Flows",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "inputs"
-            ],
+            "field_order": ["inputs"],
             "frozen": false,
             "icon": "git-merge",
             "legacy": false,
@@ -3951,9 +3734,7 @@
                 "name": "done",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -4028,12 +3809,7 @@
         "data": {
           "id": "OllamaModel-7LbmX",
           "node": {
-            "base_classes": [
-              "JSON",
-              "LanguageModel",
-              "Message",
-              "Table"
-            ],
+            "base_classes": ["JSON", "LanguageModel", "Message", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -4113,9 +3889,7 @@
                 "name": "text_output",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -4127,9 +3901,7 @@
                 "name": "model_output",
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -4141,9 +3913,7 @@
                 "name": "data_output",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -4155,9 +3925,7 @@
                 "name": "dataframe_output",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -4271,10 +4039,7 @@
                 "display_name": "Format",
                 "dynamic": false,
                 "info": "Specify the format of the output.",
-                "input_types": [
-                  "DataFrame",
-                  "Table"
-                ],
+                "input_types": ["DataFrame", "Table"],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "format",
@@ -4306,13 +4071,7 @@
                     "display_name": "Type",
                     "edit_mode": "inline",
                     "name": "type",
-                    "options": [
-                      "str",
-                      "int",
-                      "float",
-                      "bool",
-                      "dict"
-                    ],
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "type": "str"
                   },
                   {
@@ -4321,10 +4080,7 @@
                     "display_name": "As List",
                     "edit_mode": "inline",
                     "name": "multiple",
-                    "options": [
-                      "True",
-                      "False"
-                    ],
+                    "options": ["True", "False"],
                     "type": "boolean"
                   }
                 ],
@@ -4350,9 +4106,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4399,11 +4153,7 @@
                 "external_options": {},
                 "info": "Enable/disable Mirostat sampling for controlling perplexity.",
                 "name": "mirostat",
-                "options": [
-                  "Disabled",
-                  "Mirostat",
-                  "Mirostat 2.0"
-                ],
+                "options": ["Disabled", "Mirostat", "Mirostat 2.0"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -4590,9 +4340,7 @@
                 "display_name": "Stop Tokens",
                 "dynamic": false,
                 "info": "Comma-separated list of tokens to signal the model to stop generating text.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4635,9 +4383,7 @@
                 "display_name": "System",
                 "dynamic": false,
                 "info": "System to use for generating text.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4662,9 +4408,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4689,9 +4433,7 @@
                 "display_name": "Tags",
                 "dynamic": false,
                 "info": "Comma-separated list of tags to add to the run trace.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4744,9 +4486,7 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "Template to use for generating text.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4888,9 +4628,7 @@
         "data": {
           "id": "OllamaEmbeddings-zAbkk",
           "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
+            "base_classes": ["Embeddings"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -4898,11 +4636,7 @@
             "display_name": "Ollama Embeddings",
             "documentation": "https://python.langchain.com/docs/integrations/text_embedding/ollama",
             "edited": false,
-            "field_order": [
-              "model_name",
-              "base_url",
-              "api_key"
-            ],
+            "field_order": ["model_name", "base_url", "api_key"],
             "frozen": false,
             "icon": "Ollama",
             "legacy": false,
@@ -4945,9 +4679,7 @@
                 "name": "embeddings",
                 "selected": "Embeddings",
                 "tool_mode": true,
-                "types": [
-                  "Embeddings"
-                ],
+                "types": ["Embeddings"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -5184,9 +4916,7 @@
         "data": {
           "id": "SaveToFile-9FQfI",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -5268,9 +4998,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -5566,14 +5294,7 @@
                 "external_options": {},
                 "info": "Select the file format for local storage.",
                 "name": "local_format",
-                "options": [
-                  "csv",
-                  "excel",
-                  "json",
-                  "markdown",
-                  "txt",
-                  "html"
-                ],
+                "options": ["csv", "excel", "json", "markdown", "txt", "html"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -5715,9 +5436,7 @@
                     "name": "save_to_file",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "save_to_file"
-                    ]
+                    "tags": ["save_to_file"]
                   }
                 ]
               }
@@ -5754,7 +5473,5 @@
   "last_tested_version": "1.10.1",
   "locked": false,
   "name": "Structured Data Analysis Agent",
-  "tags": [
-    "agents"
-  ]
+  "tags": ["agents"]
 }
