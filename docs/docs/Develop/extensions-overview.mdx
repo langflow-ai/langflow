@@ -6,26 +6,28 @@ slug: /extensions-overview
 import Icon from "@site/src/components/icon";
 
 Langflow ships component bundles that are maintained and released separately from the core Langflow server as Extensions.
-Instead of every integration being built into `langflow`, each bundle is its own pip-installable package, such as `lfx-duckduckgo` or `lfx-arxiv`.
+Instead of every integration being built into `langflow`, bundles ship as pip-installable packages.
 
-When you run `uv pip install langflow`, you install:
+There are two install stories:
 
-* All Langflow core components
-* All bundles that ship as dependencies of the `langflow` metapackage
+* **`uv pip install langflow`** — everything, same as today. The `langflow` metapackage pins the component packages below as regular pip dependencies, so a flat install is functionally identical to earlier releases.
+* **`uv pip install lfx`** — the engine only, with no component bundles. Bring your own bundles: install `lfx-bundles`, individual `lfx-<provider>` packages, or your own extensions alongside it.
 
-Some bundles that were previously included in `langflow` are moved into standalone packages.
-The `langflow` metapackage adds them as regular pip dependencies, so `pip install langflow` continues to include them.
+A component's identity is its **bundle name**, never the package it ships in.
+The canonical ID `ext:<bundle>:<Class>@official`, the palette grouping, and saved flows are identical whether a provider ships in the `lfx-bundles` metapackage or in its own standalone package, so providers can move between packages without affecting your flows.
 
 ## Current Extension bundles
 
-The following Extension bundles are included with `uv pip install langflow`:
+The following component packages are included with `uv pip install langflow`:
 
-| Package | Bundle | Components |
-|---------|--------|------------|
-| `lfx-arxiv` | [arXiv](/bundles-arxiv) | arXiv search |
-| `lfx-docling` | [Docling](/bundles-docling) | Document parsing and chunking |
-| `lfx-duckduckgo` | [DuckDuckGo](/bundles-duckduckgo) | Web search |
-| `lfx-ibm` | [IBM](/bundles-ibm) | IBM watsonx.ai LLM and embeddings, IBM Db2 Vector Store |
+| Package | Contents |
+|---------|----------|
+| `lfx-bundles` | The long tail of provider bundles (vector stores, model providers, search and tool integrations) as a single package. Each provider is one bundle, for example `tavily`, `qdrant`, or `ollama`. Per-provider pip extras carry the third-party SDKs, and the generated `lfx-bundles[all]` extra pulls all of them. |
+| `lfx-openai`, `lfx-anthropic`, `lfx-amazon`, `lfx-datastax`, `lfx-cohere` | Partner providers as standalone packages, each on its own release cadence. |
+| `lfx-arxiv` | [arXiv](/bundles-arxiv) search |
+| `lfx-docling` | [Docling](/bundles-docling) document parsing and chunking |
+| `lfx-duckduckgo` | [DuckDuckGo](/bundles-duckduckgo) web search |
+| `lfx-ibm` | [IBM](/bundles-ibm) watsonx.ai LLM and embeddings, IBM Db2 Vector Store |
 
 The internal identifier for each component changes.
 For example, a DuckDuckGo component previously referenced as a `DuckDuckGoSearchComponent` class is now `ext:duckduckgo:DuckDuckGoSearchComponent@official`.
@@ -66,8 +68,49 @@ To see what extensions are currently loaded, run:
 lfx extension list
 ```
 
+:::note
+`lfx extension list` shows manifest-shipping extensions only.
+Manifest-less packages such as `lfx-bundles` are discovered and loaded at server startup but are not listed by this command.
+:::
+
+## Legacy import paths and the shim error
+
+Code that imports components by their old in-tree path, such as `from lfx.components.qdrant import QdrantVectorStoreComponent`, keeps working as long as the bundle that now ships the provider is installed — which `pip install langflow` always guarantees.
+A small import shim at the old location forwards to the bundle package.
+
+On an engine-only install with no bundles, the same import raises an actionable error that names exactly what to install:
+
+```text
+ModuleNotFoundError: The 'qdrant' components moved to the 'lfx-bundles' distribution.
+Install it with:  pip install lfx-bundles   (or 'pip install langflow', which bundles it).
+```
+
+If you `pip install lfx` directly and your code depends on components, either switch to `lfx[bundles]` (see [LFX and Langflow version compatibility](/lfx-compatibility)) or pin the specific `lfx-<provider>` packages you use.
+The shims are a compatibility bridge and will be removed in a future major milestone; prefer the bundle packages' own import paths for new code.
+
+## Override a bundled component
+
+Want to replace a provider that ships in `lfx-bundles` with your own implementation? **Ship a manifest. A manifest always wins.**
+
+Discovery resolves bundle-name collisions by source precedence: installed manifest-shipping extensions beat seed-directory extensions, which beat manifest-less bundle packages, which beat local development paths.
+Package your override as an extension with an `extension.json` that declares the same bundle name, and your copy shadows the bundled one — the server logs a typed `bundle-shadowed` warning naming both sources so the shadowing is visible.
+This works the same for first-party and third-party packages, and it is also why a provider can graduate from `lfx-bundles` to its own standalone package with no coordinated release.
+
+## Version compatibility
+
+`bundle_api_version` is the single compatibility number between bundles and the engine.
+Manifest-shipping extensions declare the contract versions they support with `lfx.compat: ["1"]`; the engine refuses to load an extension that does not list its current version.
+Manifest-less packages such as `lfx-bundles` carry no manifest, so their compatibility is enforced at install time by their `lfx>=X,<Y` dependency pin instead.
+
+There is no version arithmetic across the `lfx`, `lfx-bundles`, and `lfx-<provider>` lines: each package releases on its own cadence, and the pip dependency ranges plus `lfx.compat` do the coordination.
+
 ## Build your own extension
 
 If you have custom components that you want to distribute and version independently of your Langflow install, you can package them as an extension.
 
 For more information, see [Build your first Langflow Extension](./extensions-quickstart.mdx).
+
+## See also
+
+- [Build your first extension](./extensions-quickstart)
+- [Manifest reference](./extensions-manifest)

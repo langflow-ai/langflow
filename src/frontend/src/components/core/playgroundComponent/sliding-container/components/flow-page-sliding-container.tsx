@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StickToBottom, useStickToBottom } from "use-stick-to-bottom";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-header";
@@ -26,8 +27,9 @@ export function FlowPageSlidingContainerContent({
   isFullscreen,
   setIsFullscreen,
 }: FlowPageSlidingContainerContentProps) {
+  const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
-  const { setOpen, setWidth } = useSimpleSidebar();
+  const { open, setOpen, setWidth } = useSimpleSidebar();
   const inputs = useFlowStore((state) => state.inputs);
   const nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -36,10 +38,8 @@ export function FlowPageSlidingContainerContent({
   const {
     activeSessionId,
     sessions,
-    fetchedSessions,
     createSession,
     deleteSession,
-    deleteSessionLocalOnly,
     bulkDeleteSessions,
     renameSession,
     selectSession,
@@ -50,6 +50,7 @@ export function FlowPageSlidingContainerContent({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const { sendMessage } = useSendMessage({ sessionId: activeSessionId });
   const inputTypes = inputs.map((obj) => obj.type);
@@ -111,6 +112,17 @@ export function FlowPageSlidingContainerContent({
     setSidebarOpen(isFullscreen);
   }, [isFullscreen]);
 
+  useEffect(() => {
+    if (!open) return;
+    const raf = requestAnimationFrame(() => {
+      const chatInput = panelRef.current?.querySelector<HTMLTextAreaElement>(
+        '[data-testid="input-chat-playground"]',
+      );
+      (chatInput ?? panelRef.current)?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [open]);
+
   const handleExitFullscreen = () => {
     setIsFullscreen(false);
     setOpen(true);
@@ -132,6 +144,10 @@ export function FlowPageSlidingContainerContent({
 
   return (
     <div
+      ref={panelRef}
+      tabIndex={-1}
+      role="region"
+      aria-label={t("misc.playground")}
       className="h-full w-full muted shadow-lg flex flex-col relative z-[50] @container/chat-panel"
       onDragOver={dragOver}
       onDragEnter={dragEnter}
@@ -199,6 +215,7 @@ export function FlowPageSlidingContainerContent({
               >
                 <ChatInput
                   noInput={noInput}
+                  playgroundPage={true}
                   files={files}
                   setFiles={setFiles}
                   isDragging={isDragging}

@@ -380,7 +380,7 @@ export function getSetFromObject(obj: object, key?: string): Set<string> {
   return set;
 }
 
-export function freezeObject(obj: any) {
+export function freezeObject<T>(obj: T): T {
   if (!obj) return obj;
   return JSON.parse(JSON.stringify(obj));
 }
@@ -395,8 +395,8 @@ export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
   excludeColumns?: Array<string>,
-): ColDef<any>[] {
-  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+): ColDef[] {
+  const columnsKeys: { [key: string]: ColDef | ColGroupDef } = {};
   if (rows.length === 0) {
     return [];
   }
@@ -451,9 +451,9 @@ export function isThereModal(): boolean {
   return modal.length > 0;
 }
 
-export function messagesSorter(a: any, b: any) {
-  const indexA = MESSAGES_TABLE_ORDER.indexOf(a.field);
-  const indexB = MESSAGES_TABLE_ORDER.indexOf(b.field);
+export function messagesSorter(a: { field?: string }, b: { field?: string }) {
+  const indexA = a.field ? MESSAGES_TABLE_ORDER.indexOf(a.field) : -1;
+  const indexB = b.field ? MESSAGES_TABLE_ORDER.indexOf(b.field) : -1;
 
   // If the field is not in the MESSAGES_TABLE_ORDER, we can place it at the end.
   const orderA = indexA === -1 ? MESSAGES_TABLE_ORDER.length : indexA;
@@ -542,7 +542,7 @@ export function brokenEdgeMessage({
     source.outputDisplayName ? " | " + source.outputDisplayName : ""
   } -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
 }
-export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
+export function FormatColumns(columns: ColumnField[]): ColDef[] {
   if (!columns) return [];
   const basic_types = new Set(["date", "number"]);
   const colDefs = columns.map((col) => {
@@ -568,10 +568,10 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
               newValue,
               context.field_parsers[colDef.field ?? ""],
             );
-          } catch (error: any) {
+          } catch (error) {
             useAlertStore.getState().setErrorData({
               title: i18n.t("errors.errorParsingString"),
-              list: [String(error.message ?? error)],
+              list: [String(error instanceof Error ? error.message : error)],
             });
             return oldValue;
           }
@@ -659,7 +659,7 @@ export function generateBackendColumnsFromValue(
 
     // Determine the formatter based on the sample value
     if (rows[0] && rows[0][column.field ?? ""]) {
-      const value = rows[0][column.field ?? ""] as any;
+      const value = rows[0][column.field ?? ""] as unknown;
       if (typeof value === "string") {
         if (isTimeStampString(value)) {
           newColumn.formatter = FormatterType.date;
@@ -805,7 +805,7 @@ export const isStringArray = (value: unknown): value is string[] => {
 export const stringToBool = (str) => (str === "false" ? false : true);
 
 // Filter out null/undefined options
-export const filterNullOptions = (opts: any[]): any[] => {
+export const filterNullOptions = <T>(opts: T[]): T[] => {
   return opts.filter((opt) => opt !== null && opt !== undefined);
 };
 

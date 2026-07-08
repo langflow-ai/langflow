@@ -57,6 +57,9 @@ def create_model_metadata(
 
 LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
 
+# Live only with a custom endpoint configured; empty live fetch keeps the static catalog.
+CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI"]
+
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider
 #
@@ -103,7 +106,20 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                     "advanced": True,
                     "info": "Falls back to OPENAI_API_KEY environment variable",
                 },
-            }
+            },
+            {
+                "variable_name": "OpenAI Base URL",
+                "variable_key": "OPENAI_BASE_URL",
+                "description": (
+                    "Optional. Point to an OpenAI-compatible server "
+                    "(e.g. vLLM, LM Studio, LiteLLM). Leave empty for api.openai.com."
+                ),
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "base_url",
+            },
         ],
         "api_docs_url": "https://platform.openai.com/docs/overview",
         "mapping": {

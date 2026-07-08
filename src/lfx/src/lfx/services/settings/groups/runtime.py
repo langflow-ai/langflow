@@ -130,7 +130,12 @@ class RuntimeSettings(BaseModel):
     celery_enabled: bool = False
 
     executor_kind: str = "in-process"
-    """Default executor kind for the execution coordinator; must match a registered Executor's `kind`."""
+    """The default executor kind used by the execution coordinator.
+
+    Must match the `kind` of an Executor registered with the executor service. The built-in
+    `in-process` executor runs graphs in the current process; third-party executors registered
+    via the `lfx.executors` entry-point group can be selected by setting this to their kind.
+    """
 
     @field_validator("event_delivery", mode="before")
     @classmethod

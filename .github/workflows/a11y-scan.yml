@@ -1,0 +1,157 @@
+name: A11y / IBM Equal Access Scans
+
+on:
+  pull_request:
+  schedule:
+    # Run nightly at 02:00 UTC, after the nightly build window
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+      assert:
+        description: "Fail the run when scans differ from committed baselines"
+        required: false
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: "22"
+  PYTHON_VERSION: "3.13"
+  # Define the directory where Playwright browsers will be installed.
+  # This path is used for caching across workflows
+  PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
+  PLAYWRIGHT_VERSION: "1.60.0"
+
+jobs:
+  a11y-scan:
+    name: Playwright scan runner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # Cron only fires from the default branch, so scheduled runs resolve the
+      # latest release-* branch and scan that (same pattern as nightly_build).
+      - name: Resolve Ref To Scan
+        id: resolve_ref
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.ref }}" ]; then
+            REF="${{ inputs.ref }}"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            REF=$(git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+              | awk '{print $2}' \
+              | sed 's|refs/heads/||' \
+              | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -V \
+              | tail -n 1)
+            if [ -z "$REF" ]; then
+              echo "No release-* branch found in ${{ github.repository }}"
+              exit 1
+            fi
+          else
+            REF="${{ github.ref }}"
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Scanning ref: $REF"
+
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.resolve_ref.outputs.ref }}
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: ./src/frontend
+
+      - name: Cache Playwright Browsers
+        id: cache-playwright
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
+          restore-keys: |
+            playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
+
+      - name: Install Playwright Browser Dependencies
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          cd ./src/frontend
+          npx playwright install --with-deps chromium
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install Python Dependencies
+        run: uv sync
+
+      - name: Run IBM Equal Access Scans
+        shell: bash
+        env:
+          RUN_A11Y: "true"
+          RUN_A11Y_ASSERT: ${{ github.event_name == 'workflow_dispatch' && inputs.assert && 'true' || 'false' }}
+          LANGFLOW_DEACTIVATE_TRACING: "true"
+        run: |
+          cd src/frontend
+          # Only specs that call runA11yScan produce reports; discover them
+          # so new scan hosts are picked up without editing this workflow.
+          SCAN_SPECS=$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)
+          echo "Specs with a11y scans:"
+          echo "$SCAN_SPECS"
+          test -n "$SCAN_SPECS"
+          npx playwright test $SCAN_SPECS --project=chromium --workers=1 --retries=2
+
+      - name: Build IBM Scan Summary
+        if: always()
+        shell: bash
+        run: |
+          cd src/frontend
+          if ls coverage/accessibility-reports/*.json > /dev/null 2>&1; then
+            npm run a11y:html-report --silent
+            {
+              echo '## Accessibility Report'
+              echo ''
+              echo 'Full route-by-route HTML report: download the `ibm-a11y-reports-${{ github.run_attempt }}` artifact from this run and open `index.html`.'
+              echo ''
+              npm run a11y:job-summary --silent
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No accessibility reports were generated." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Accessibility Reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ibm-a11y-reports-${{ github.run_attempt }}
+          path: src/frontend/coverage/accessibility-reports
+          retention-days: 30
+          overwrite: true
