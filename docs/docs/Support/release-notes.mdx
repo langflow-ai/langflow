@@ -61,7 +61,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Upcoming breaking change: bundle separation
 
     Langflow 1.10.x introduced the Extension bundles model.
-    In future releases, bundle separation will extend to more component providers.
+    In Langflow 1.11.x and future releases, bundle separation will extend to more component providers.
 
     Saved flows continue to open normally, but the following may require manual updates before upgrading:
 
@@ -70,6 +70,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     - Custom deployment scripts that install or pin individual component packages.
 
     For more information, see [Langflow Extensions overview](/extensions-overview).
+
+- PyTorch components are opt-in by default
+
+    **CUGA**, **Code Agents**, and **Docling** local conversion are excluded from the default `uv pip install langflow` installation because they require PyTorch.
+
+    To install these components, see [Torch opt-in installs](/components-bundle-components#torch-opt-in).
 
 ### New features and enhancements
 
