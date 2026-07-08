@@ -1,5 +1,5 @@
 ---
-title: Run flows with LFX
+title: Run and serve flows with LFX
 slug: /lfx-run
 ---
 
@@ -25,7 +25,7 @@ Both commands accept a `.json` flow file or a `.py` Python script.
 
 ## Install flow dependencies {#install-dependencies}
 
-`pip install lfx` and `uvx lfx` install the LFX engine only. Before running a flow, install the **extensions** that provide the flow's components.
+`uv pip install lfx` and `uvx lfx` install the LFX engine only. Before running a flow, install the **extensions** that provide the flow's components.
 
 If a component is missing, LFX reports `component-not-found` with a hint naming the bundle to install, for example:
 
@@ -122,35 +122,33 @@ curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
   -d '{"input_value": "Hello, world!"}'
 ```
 
-### Load multiple flows
+### Serve multiple flows
 
-Pass a directory to `lfx serve` to load all `.json` flows at startup:
+To serve multiple flows, pass a directory to `lfx serve` to load all `.json` flows at server startup:
 
 ```bash
 uv run lfx serve ./flows/
 ```
 
-Or start with an empty registry and upload flows via the API after the server starts.
-
 ## lfx run {#lfx-run}
 
-`lfx run` executes a flow once and streams results to `stdout`. No API key is required.
+`lfx run` executes a flow once and streams the results to `stdout`. No API key is required.
 
-### Run a flow from a file
+### Run a flow {#run-a-flow}
+
+To run a flow from a JSON file, run:
 
 ```bash
 uv run lfx run simple-agent-flow.json "Hello world"
 ```
 
-Or use the `--input-value` flag:
+Alternatively, use the `--input-value` flag:
 
 ```bash
 uv run lfx run simple-agent-flow.json --input-value "Hello world"
 ```
 
-### Run a flow from stdin
-
-Read a flow JSON from `stdin` to run flows from dynamic sources or after modifying the flow before execution:
+To run a flow JSON from `stdin`, run:
 
 ```bash
 cat simple-agent-flow.json | uv run lfx run --stdin \
@@ -158,14 +156,14 @@ cat simple-agent-flow.json | uv run lfx run --stdin \
   --format json | jq '.result'
 ```
 
-Fetch and run a flow from a remote API:
+To fetch and run a flow from a remote API, run:
 
 ```bash
 curl https://api.example.com/flows/my-agent-flow | uv run lfx run --stdin \
   --input-value "Hello world"
 ```
 
-Modify a flow before running it (for example, change the model to `gpt-4o`):
+To modify a flow before running it, for example, to change the model to `gpt-4o`, run:
 
 ```bash
 cat simple-agent-flow.json | jq '(.data.nodes[] | select(.data.node.template.model_name.value) | .data.node.template.model_name.value) = "gpt-4o"' | \
@@ -174,32 +172,15 @@ cat simple-agent-flow.json | jq '(.data.nodes[] | select(.data.node.template.mod
   --format json | jq '.result'
 ```
 
-### Run a flow with inline JSON
-
-Pass flow JSON directly as a string argument:
+To pass a flow JSON directly as a string argument, run:
 
 ```bash
 uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' \
   --input-value "Hello world"
 ```
 
-### lfx run options
 
-| Option | Description |
-|---|---|
-| `--check-variables` / `--no-check-variables` | Validate the flow's global variables. Default: check. |
-| `--flow-json` | Load inline JSON flow content as a string. |
-| `--format`, `-f` | Output format: `json`, `text`, `message`, or `result`. Default: `json`. |
-| `--input-value` | Input value to pass to the graph. Required with `--stdin` and `--flow-json`. |
-| `--session-id` | Session ID for conversation tracking. Auto-generated if not set. |
-| `--stdin` | Read JSON flow content from `stdin`. |
-| `--timing` | Include detailed timing information in output. |
-| `--upgrade-flow` | Compatibility mode: `check` reports issues and fails; `safe` applies safe upgrades in memory before running. |
-| `--verbose`, `-v` | Show basic progress and diagnostic output. |
-| `-vv` | Show detailed progress and debug information. |
-| `-vvv` | Show full debugging output including component logs. |
-
-## Run flows from a Python script
+### Run a flow from a Python script
 
 In addition to JSON files, `lfx run` accepts `.py` Python scripts that define flows programmatically.
 
@@ -243,13 +224,30 @@ async def get_graph() -> Graph:
     return Graph(chat_input, chat_output, log_config=log_config)
 ```
 
-Run it:
+Run the flow:
 
 ```bash
 uv run lfx run simple_agent.py "How are you?" --verbose
 ```
 
 For more examples, see the [Complete Agent Example on PyPI](https://pypi.org/project/lfx).
+
+
+### lfx run options
+
+| Option | Description |
+|---|---|
+| `--check-variables` / `--no-check-variables` | Validate the flow's global variables. Default: check. |
+| `--flow-json` | Load inline JSON flow content as a string. |
+| `--format`, `-f` | Output format: `json`, `text`, `message`, or `result`. Default: `json`. |
+| `--input-value` | Input value to pass to the graph. Required with `--stdin` and `--flow-json`. |
+| `--session-id` | Session ID for conversation tracking. Auto-generated if not set. |
+| `--stdin` | Read JSON flow content from `stdin`. |
+| `--timing` | Include detailed timing information in output. |
+| `--upgrade-flow` | Compatibility mode: `check` reports issues and fails; `safe` applies safe upgrades in memory before running. |
+| `--verbose`, `-v` | Show basic progress and diagnostic output. |
+| `-vv` | Show detailed progress and debug information. |
+| `-vvv` | Show full debugging output including component logs. |
 
 ## Control which components load
 
@@ -262,21 +260,25 @@ LFX loads all component categories by default. Use environment variables to rest
 
 Category names are case-insensitive. The virtual keyword `core` in the allowlist or blocklist expands to all core component categories.
 
-**Restrict to specific categories:**
+
+Component category names don't always match the labels displayed in the Langflow visual editor.
+To view the component categories, see [Bundle list](./extensions-bundle-list).
+
+To restrict components to specific categories:
 
 ```bash
 export LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST="openai,anthropic,processing,input_output"
 uv run lfx serve my_flow.json
 ```
 
-**Exclude specific categories:**
+To exclude specific categories:
 
 ```bash
 export LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST="prototypes,langchain_utilities"
 uv run lfx run my_flow.json "Hello"
 ```
 
-**Allow only core categories:**
+To allow only core categories:
 
 ```bash
 export LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST="core"
