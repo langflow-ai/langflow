@@ -961,14 +961,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       signal: buildController.signal,
       silent,
     };
-    const canSuspend = get().nodes.some((node) => {
-      if (node.data?.type === "HumanInput") return true;
-      const rows = node.data?.node?.template?.tools_metadata?.value;
-      return (
-        Array.isArray(rows) &&
-        rows.some((row) => (row?.approval_actions?.length ?? 0) > 0)
-      );
-    });
+    // Per-node inspect-builds can't pause; the background path leaves flowPool empty and
+    // disables output inspection. Only full playground runs consider HITL.
+    const isPartialBuild = Boolean(startNodeId || stopNodeId);
+    const canSuspend =
+      !isPartialBuild &&
+      get().nodes.some((node) => {
+        if (node.data?.type === "HumanInput") return true;
+        const rows = node.data?.node?.template?.tools_metadata?.value;
+        return (
+          Array.isArray(rows) &&
+          rows.some((row) => (row?.approval_actions?.length ?? 0) > 0)
+        );
+      });
     await (canSuspend ? runFlowHITL(runArgs) : runFlowAGUI(runArgs));
 
     // Invalidate KB-related caches so any KnowledgeIngestion node that ran
