@@ -942,9 +942,10 @@ async def list_deployments_synced(
         provider_data_by_resource_key.update(deployment_mapper.extract_list_item_provider_data(provider_view))
         provider_metadata_by_resource_key.update(deployment_mapper.extract_metadata_for_list(provider_view))
 
+        last_row = batch[-1][0]
+        cursor_created_at = last_row.created_at
+        cursor_exclude_id = last_row.id
         for row, attached_count, matched_flow_versions in batch:
-            cursor_created_at = row.created_at
-            cursor_exclude_id = row.id
             if row.resource_key not in known:
                 # Provider `known` is type-filtered; skip other local types instead of deleting as stale.
                 if deployment_type is not None and row.deployment_type != deployment_type:
