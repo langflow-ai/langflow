@@ -1227,7 +1227,7 @@ async def resume_workflow(
         raise _not_found() from exc
 
     job = await get_job_service().get_job_by_job_id(parsed_job_id)
-    is_owner = job is not None and (job.user_id is None or job.user_id == current_user.id)
+    is_owner = job is not None and job.user_id is not None and job.user_id == current_user.id
     if job is None or job.type != JobType.WORKFLOW or not (is_owner or current_user.is_superuser):
         raise _not_found()
 

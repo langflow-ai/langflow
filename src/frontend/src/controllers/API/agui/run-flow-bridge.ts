@@ -17,6 +17,7 @@ import {
 import { BuildStatus } from "@/constants/enums";
 import { persistMessageProperties } from "@/controllers/API/helpers/persist-message-properties";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
+import i18n from "@/i18n";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useHitlStore } from "@/stores/hitlStore";
@@ -415,7 +416,7 @@ export async function runFlowAGUI(
       terminalEventSeen = true;
       markRunningAsError = true;
       flowStore.setBuildInfo({ error: [message], success: false });
-      setErrorData({ title: "Workflow run failed", list: [message] });
+      setErrorData({ title: i18n.t("humanInput.runFailed"), list: [message] });
     },
   };
 
@@ -476,7 +477,10 @@ export async function runFlowAGUI(
       error: (err: Error) => {
         markRunningAsError = true;
         flowStore.setBuildInfo({ error: [err.message], success: false });
-        setErrorData({ title: "Workflow run failed", list: [err.message] });
+        setErrorData({
+          title: i18n.t("humanInput.runFailed"),
+          list: [err.message],
+        });
         subscription.unsubscribe();
         finish();
       },
@@ -567,7 +571,7 @@ export async function consumeBackgroundEvents(
     },
     onError: (message) => {
       flowStore.setBuildInfo({ error: [message], success: false });
-      setErrorData({ title: "Workflow run failed", list: [message] });
+      setErrorData({ title: i18n.t("humanInput.runFailed"), list: [message] });
     },
   };
 

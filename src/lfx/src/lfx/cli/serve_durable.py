@@ -22,6 +22,8 @@ from uuid import uuid4
 from fastapi import HTTPException, Request, status
 
 from lfx.cli.serve_workflow import ServeWorkflowHost
+from lfx.graph.checkpoint.resume import _unbuild_needed_dropped_producers
+from lfx.graph.checkpoint.store import set_default_checkpoint_store
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
@@ -94,6 +96,9 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
         self.jobs = SqliteDurableJobStore(db_path)
         self.checkpoints = SqliteCheckpointStore(db_path)
         self._tasks: dict[str, asyncio.Task] = {}
+        # Agent pause blobs resolve via get_checkpoint_service() -> the module fallback
+        # store; without this they land in-memory and do not survive a restart.
+        set_default_checkpoint_store(self.checkpoints)
 
     async def submit_background(
         self,
@@ -160,6 +165,17 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
         pending = (job.job_metadata or {}).get("pending") or {}
         if pending.get("request_id") != request.request_id:
             raise _not_resumable(job_id)
+        allowed = pending.get("allowed_decisions") or []
+        if allowed and (request.decision or {}).get("action_id") not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "error": "Invalid decision",
+                    "code": "INVALID_DECISION",
+                    "message": "decision.action_id is not one of the pending request's allowed_decisions.",
+                    "job_id": job_id,
+                },
+            )
         if not await self.jobs.claim_suspended_for_resume(job_id):
             raise _not_resumable(job_id)
 
@@ -171,6 +187,9 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
 
         graph = Graph.resume_from_checkpoint(checkpoint, checkpoint_store=self.checkpoints)
         self._attach_stores(job_id, graph)
+        apply_run_defaults(
+            graph, session_id=graph.session_id, user_id=job.user_id or None, overwrite_user_id=bool(job.user_id)
+        )
         decision = reroute_decision_on_timeout(pending, request.decision or {})
         graph.human_input_decisions = {
             **(getattr(graph, "human_input_decisions", {}) or {}),
@@ -179,6 +198,9 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
         for vertex in graph.vertices:
             if f"{vertex.id}:{graph.run_id}" == request.request_id:
                 vertex.built = False
+        # Re-run the fixpoint post-un-build: a dropped producer feeding only the request
+        # vertex was still built at restore time, and its restored None would crash the re-run.
+        _unbuild_needed_dropped_producers(graph)
         await self.jobs.update_metadata(job_id, {"pending": None})
         await self.jobs.append_event(job_id, "human_input_decision", {"request_id": request.request_id, **decision})
         self._spawn(job_id, self._drive(job_id, graph))

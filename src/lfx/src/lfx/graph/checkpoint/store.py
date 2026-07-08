@@ -76,12 +76,23 @@ class InMemoryCheckpointStore(CheckpointStore):
         return [cp for cp in self._checkpoints.values() if cp.session_id == session_id and not _expired(cp)]
 
 
-_default_store: InMemoryCheckpointStore | None = None
+_default_store: CheckpointStore | None = None
 
 
-def default_checkpoint_store() -> InMemoryCheckpointStore:
+def default_checkpoint_store() -> CheckpointStore:
     """Module-singleton fallback store for standalone lfx (no service registry)."""
     global _default_store  # noqa: PLW0603
     if _default_store is None:
         _default_store = InMemoryCheckpointStore()
     return _default_store
+
+
+def set_default_checkpoint_store(store: CheckpointStore | None) -> None:
+    """Replace the standalone fallback store (e.g. serve's durable SQLite store).
+
+    Blob consumers resolve through ``get_checkpoint_service`` → this fallback, so a
+    durable host must install its store here or agent pause blobs stay in-memory
+    and do not survive a restart. ``None`` resets to a fresh in-memory store.
+    """
+    global _default_store  # noqa: PLW0603
+    _default_store = store
