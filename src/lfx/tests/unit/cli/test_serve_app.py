@@ -1130,7 +1130,10 @@ class TestCreateServeApp:
 
         app = create_multi_serve_app(registry=registry)
 
-        routes = [route.path for route in app.routes]
+        # FastAPI >=0.137 mounts included routers (the /api/v2 workflow router) as lazy
+        # `_IncludedRouter` wrappers with no `.path`; skip them — this asserts the
+        # directly-mounted serve paths only.
+        routes = [route.path for route in app.routes if hasattr(route, "path")]
         assert "/health" in routes
         assert "/flows" in routes
         assert "/flows/{flow_id}/run" in routes
@@ -1149,7 +1152,10 @@ class TestCreateServeApp:
 
         app = create_multi_serve_app(registry=registry)
 
-        routes = [route.path for route in app.routes]
+        # FastAPI >=0.137 mounts included routers (the /api/v2 workflow router) as lazy
+        # `_IncludedRouter` wrappers with no `.path`; skip them — this asserts the
+        # directly-mounted serve paths only.
+        routes = [route.path for route in app.routes if hasattr(route, "path")]
         assert "/flows/{flow_id}/run" in routes
         assert "/flows/{flow_id}/info" in routes
         # Single dispatch route covers all flow IDs — no per-flow routes
@@ -1174,7 +1180,10 @@ class TestCreateServeAppFactory:
                 os.environ["LANGFLOW_API_KEY"] = "test-key"  # pragma: allowlist secret
                 app = create_serve_app()
 
-        routes = [r.path for r in app.routes]
+        # FastAPI >=0.137 mounts included routers (the /api/v2 workflow router) as lazy
+        # `_IncludedRouter` wrappers with no `.path`; skip them — this asserts the
+        # directly-mounted serve paths only.
+        routes = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/health" in routes
         assert "/flows" in routes
         assert "/flows/upload/" in routes

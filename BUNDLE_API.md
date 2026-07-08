@@ -498,3 +498,24 @@ the deserialize half is covered by
   collides with a built-in or already-loaded provider surfaces
   `provider-skipped`.  Both are warning-only — the rest of the extension still
   loads — so adding them is backward-compatible (no `BUNDLE_API_VERSION` bump).
+- **`ExtensionError.ref_url` / CLI ``see:`` no longer carry per-code anchors.**
+  Auto-derived ``ref_url`` values (and the rendered ``see:`` line) now point
+  to the single extension-error guidance page
+  (``https://docs.langflow.org/extensions/errors``) instead of
+  ``…/extensions/errors#<code>``.  The ``code``, ``message``, ``location``,
+  ``content``, and ``hint`` fields are unchanged; only the docs link shape
+  changed.  Callers that deep-linked on ``ref_url`` suffix should read
+  ``code`` directly instead.
+- **`duplicate-distribution` detection resolves symlinks first.**
+  `load_installed_extensions` collapses manifest paths that are merely
+  different spellings of the same physical file (compared via
+  `Path.resolve()`; an `OSError` during resolution falls back to the raw
+  path) before the duplicate check.  RHEL-family (ubi) venvs symlink
+  `lib64 -> lib` and put both spellings on `sys.path`, so
+  `importlib.metadata.distributions()` yields every installed distribution
+  twice — previously each manifest-shipping bundle logged a false
+  `duplicate-distribution` error at Docker startup.  The
+  lexicographically-first unresolved spelling remains the winner, so error
+  messages and winner selection are unchanged, and two physically distinct
+  manifests for one canonical name still error.  No public symbol's name or
+  signature changed.

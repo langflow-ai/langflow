@@ -11,8 +11,16 @@ import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the 
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
 import cloneDeep from "lodash";
-import { type ElementRef, forwardRef, useRef, useState } from "react";
+import {
+  type ElementRef,
+  forwardRef,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import TableOptions from "./components/TableOptions";
+import { useAgGridAccessibilityPatch } from "./hooks/use-ag-grid-accessibility-patch";
+import { applyRowTabIndices } from "./utils/applyRowTabIndices";
 import resetGrid from "./utils/reset-grid-columns";
 
 export interface TableComponentProps extends AgGridReactProps {
@@ -37,6 +45,7 @@ export interface TableComponentProps extends AgGridReactProps {
   addRow?: () => void;
   tableOptions?: TableOptionsTypeAPI;
   paginationInfo?: string;
+  tableLabel?: string;
 }
 
 const TableComponent = forwardRef<
@@ -44,13 +53,20 @@ const TableComponent = forwardRef<
   TableComponentProps
 >(
   (
-    { alertTitle, alertDescription, displayEmptyAlert = true, ...props },
+    {
+      alertTitle,
+      alertDescription,
+      displayEmptyAlert = true,
+      tableLabel,
+      ...props
+    },
     ref,
   ) => {
     const { t } = useTranslation();
     const resolvedAlertTitle = alertTitle ?? t("table.noDataTitle");
     const resolvedAlertDescription =
       alertDescription ?? t("table.noDataMessage");
+    const resolvedTableLabel = tableLabel ?? t("table.dataTable", "Data table");
     const isSingleToggleRowEditable = (
       colField: string,
       // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -264,9 +280,14 @@ const TableComponent = forwardRef<
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
       useRef<AgGridReact | null>(null);
+    const {
+      containerRef: tableContainerRef,
+      schedulePatch: scheduleGridAccessibilityPatch,
+    } = useAgGridAccessibilityPatch(resolvedTableLabel);
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
+    const ariaLabel = props["aria-label"] as string | undefined;
     // Only use visible columns for the store reference
     const storeReference = props.columnDefs
       .filter((col) => !col.hide)
@@ -276,6 +297,8 @@ const TableComponent = forwardRef<
     const onGridReady = (params) => {
       // @ts-ignore
       realRef.current = params;
+      params.api.setGridAriaProperty("label", ariaLabel ?? null);
+      scheduleGridAccessibilityPatch();
       const updatedColumnDefs = [...colDef];
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       const customInit = localStorage.getItem(storeReference);
@@ -302,6 +325,10 @@ const TableComponent = forwardRef<
       }, 1000);
       if (props.onGridReady) props.onGridReady(params);
     };
+
+    useEffect(() => {
+      realRef.current?.api?.setGridAriaProperty("label", ariaLabel ?? null);
+    }, [ariaLabel]);
     const onColumnMoved = (params) => {
       const updatedColumnDefs = cloneDeep(
         params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
@@ -382,6 +409,7 @@ const TableComponent = forwardRef<
 
     return (
       <div
+        ref={tableContainerRef}
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
           "ag-theme-shadcn flex h-full flex-col",
@@ -422,6 +450,11 @@ const TableComponent = forwardRef<
             }
           }}
           onGridReady={onGridReady}
+          onFirstDataRendered={(event) => {
+            applyRowTabIndices(tableContainerRef.current);
+            scheduleGridAccessibilityPatch();
+            props.onFirstDataRendered?.(event);
+          }}
           onColumnMoved={onColumnMoved}
           onCellEditingStarted={onCellEditingStarted}
           onCellValueChanged={
@@ -493,6 +526,11 @@ const TableComponent = forwardRef<
               );
               setColumnStateChange(true);
             }
+          }}
+          onRowDataUpdated={(e) => {
+            applyRowTabIndices(tableContainerRef.current);
+            scheduleGridAccessibilityPatch();
+            props.onRowDataUpdated?.(e);
           }}
         />
         {!props.tableOptions?.hide_options && props.pagination && (
