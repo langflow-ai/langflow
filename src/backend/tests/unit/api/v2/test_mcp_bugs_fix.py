@@ -48,7 +48,7 @@ class FakeSession:
     def __init__(self):
         self._db: dict[str, object] = {}
 
-    async def exec(self, stmt):
+    async def exec(self, _stmt):
         return FakeResult([])
 
     def add(self, obj):
@@ -102,7 +102,6 @@ def session():
     return FakeSession()
 
 
-@pytest.mark.asyncio
 async def test_b1_cache_invalidation_clears_hashed_keys(session, storage_service, settings_service, current_user):
     """Cache invalidation must clear all cache entries, including those with hashed keys.
 
@@ -112,7 +111,7 @@ async def test_b1_cache_invalidation_clears_hashed_keys(session, storage_service
     """
     cache_updates = []
 
-    def mock_safe_cache_get(cache, key, default=None):
+    def mock_safe_cache_get(_cache, key, default=None):
         # Simulate having a "servers" dict with both bare and hashed keys
         if key == "servers":
             return {
@@ -122,7 +121,7 @@ async def test_b1_cache_invalidation_clears_hashed_keys(session, storage_service
             }
         return default
 
-    def mock_safe_cache_set(cache, key, value):
+    def mock_safe_cache_set(_cache, key, value):
         cache_updates.append((key, value))
 
     config_state = {"mcpServers": {"my_server": {"command": "new"}}}
@@ -183,7 +182,6 @@ async def test_b1_cache_invalidation_clears_hashed_keys(session, storage_service
     assert "other_server" in servers_update, "Other servers should remain"
 
 
-@pytest.mark.asyncio
 async def test_b0_distributed_lock_protects_concurrent_updates(
     session, storage_service, settings_service, current_user
 ):
@@ -222,7 +220,7 @@ async def test_b0_distributed_lock_protects_concurrent_updates(
 
     # Mock the lock context with proper synchronization
     class MockLockContext:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *_args, **_kwargs):
             self.lock = lock
 
         async def __aenter__(self):

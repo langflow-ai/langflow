@@ -346,7 +346,7 @@ async def test_concurrent_update_server_should_not_lose_servers(
     lock = asyncio.Lock()
 
     class MockLockContext:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *_args, **_kwargs):
             self.lock = lock
 
         async def __aenter__(self):
