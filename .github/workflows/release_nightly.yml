@@ -644,6 +644,9 @@ jobs:
         with:
           enable-cache: false
           python-version: "3.13"
+      - name: Wait for bundle PyPI propagation
+        if: needs.publish-nightly-bundles.result == 'success'
+        run: sleep 120
       - name: Check direct bundle dependencies on PyPI
         run: |
           uv run --with packaging --no-project python - <<'PY'
