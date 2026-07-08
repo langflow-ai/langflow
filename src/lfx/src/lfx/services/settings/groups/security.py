@@ -69,6 +69,19 @@ class SecuritySettings(BaseModel):
     Has no effect when allow_custom_components is True (the flag is not blocking anything
     to override)."""
 
+    allow_public_custom_components: bool = False
+    """If set to True, the unauthenticated public flow build path
+    (POST /api/v1/build_public_tmp/{flow_id}/flow) honors allow_custom_components just like
+    the authenticated build path, building the flow from the database as its owner.
+
+    Default is False: on the public path the server substitutes its own trusted code into
+    every known component and rejects unrecognized custom components, so anonymous visitors
+    can only ever run server code that matches a known component template. The global
+    allow_custom_components flag grants custom-code execution to *authenticated* users; it is
+    intentionally not extended to the unauthenticated public path, which builds flows as their
+    owner (report H1-3754930 follow-up). Enable this only if you knowingly want public flows to
+    run custom component code permitted by allow_custom_components."""
+
     # Rate Limiting
     rate_limit_enabled: bool = True
     """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""

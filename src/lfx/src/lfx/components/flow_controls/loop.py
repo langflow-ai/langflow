@@ -28,8 +28,8 @@ class LoopComponent(Component):
         HandleInput(
             name="data",
             display_name="Inputs",
-            info="The initial DataFrame to iterate over.",
-            input_types=["DataFrame", "Table"],
+            info="Data to iterate over. Accepts DataFrame, Table, Data, or Message.",
+            input_types=["DataFrame", "Table", "Data", "Message"],
         ),
     ]
 
@@ -38,11 +38,18 @@ class LoopComponent(Component):
             display_name="Item",
             name="item",
             method="item_output",
+            types=["Data"],
             allows_loop=True,
             loop_types=["Message"],
             group_outputs=True,
         ),
-        Output(display_name="Done", name="done", method="done_output", group_outputs=True),
+        Output(
+            display_name="Done",
+            name="done",
+            method="done_output",
+            types=["DataFrame", "Table"],
+            group_outputs=True,
+        ),
     ]
 
     def initialize_data(self) -> None:
@@ -71,7 +78,34 @@ class LoopComponent(Component):
         return convert_to_data(message, auto_parse=False)
 
     def _validate_data(self, data):
-        """Validate and return a list of Data objects."""
+        """Validate and normalize the input to a flat list of Data objects.
+
+        Coerces each accepted input type into Data so `validate_data_input`
+        always receives a homogeneous payload:
+        - Message -> a clean Data via `_convert_message_to_data` (just the
+          message payload, not the full envelope). `Message` subclasses
+          `Data`, so without this it would slip through as a single Data
+          carrying all of the message metadata.
+        - DataFrame/Table -> expanded to its rows.
+        - Data / list[Data] -> passed through unchanged.
+
+        Lists are normalized item-by-item so a mixed `[Message, DataFrame,
+        Data]` still yields `list[Data]` instead of being rejected as a
+        mixed-type list (`validate_data_input` requires every list item to be
+        a Data, and DataFrame is not a Data subclass).
+        """
+        if isinstance(data, Message):
+            data = self._convert_message_to_data(data)
+        elif isinstance(data, list):
+            normalized: list = []
+            for item in data:
+                if isinstance(item, Message):
+                    normalized.append(self._convert_message_to_data(item))
+                elif isinstance(item, DataFrame):
+                    normalized.extend(item.to_data_list())
+                else:
+                    normalized.append(item)
+            data = normalized
         return validate_data_input(data)
 
     def get_loop_body_vertices(self) -> set[str]:

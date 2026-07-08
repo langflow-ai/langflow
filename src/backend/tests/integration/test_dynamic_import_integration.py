@@ -1,107 +1,87 @@
-"""Integration tests for dynamic import refactor.
+"""Integration tests for the component dynamic import system.
 
-Tests the dynamic import system in realistic usage scenarios to ensure
-the refactor doesn't break existing functionality.
+These tests intentionally use core components only. Provider/bundle component
+compatibility belongs in the owning bundle's test suite so the core Langflow
+test suite keeps collecting when optional bundles are not installed.
 """
 
 import sys
+import threading
 import time
 
 import pytest
 from langflow.components.data import APIRequestComponent
-from langflow.components.models_and_agents import AgentComponent  # Backwards compatibility alias
-from langflow.components.openai import OpenAIModelComponent
+from langflow.components.models_and_agents import AgentComponent, LanguageModelComponent
 
 
 class TestDynamicImportIntegration:
     """Integration tests for the dynamic import system."""
 
     def test_component_discovery_still_works(self):
-        """Test that component discovery mechanisms still work after refactor."""
-        # This tests that the existing component discovery logic
-        # can still find and load components
         from langflow import components
-
-        # Test that we can discover components through the main module
-        openai_module = components.openai
-        assert hasattr(openai_module, "OpenAIModelComponent")
 
         data_module = components.data
         assert hasattr(data_module, "APIRequestComponent")
 
+        helpers_module = components.helpers
+        assert hasattr(helpers_module, "CalculatorComponent")
+
+        models_module = components.models_and_agents
+        assert hasattr(models_module, "LanguageModelComponent")
+
     def test_existing_import_patterns_work(self):
-        """Test that all existing import patterns continue to work."""
-        # Test direct imports
         import langflow.components.data as data_comp
+        import langflow.components.helpers as helpers_comp
 
-        # Test module imports
-        import langflow.components.openai as openai_comp
-
-        # All should work
-        assert OpenAIModelComponent is not None
         assert APIRequestComponent is not None
         assert AgentComponent is not None
-        assert openai_comp.OpenAIModelComponent is not None
+        assert LanguageModelComponent is not None
         assert data_comp.APIRequestComponent is not None
+        assert helpers_comp.CalculatorComponent is not None
 
     def test_component_instantiation_works(self):
-        """Test that components can still be instantiated normally."""
-        # Test that we can create component instances
-        # (Note: Some components may require specific initialization parameters)
-
         from langflow.components.helpers import CalculatorComponent
 
-        # Should be able to access the class
         assert CalculatorComponent is not None
         assert callable(CalculatorComponent)
 
     def test_template_creation_compatibility(self):
-        """Test that template creation still works with dynamic imports."""
-        # Test accessing component attributes needed for templates
-
-        # Components should have all necessary attributes for template creation
-        assert hasattr(OpenAIModelComponent, "__name__")
-        assert hasattr(OpenAIModelComponent, "__module__")
-        assert hasattr(OpenAIModelComponent, "display_name")
-        assert isinstance(OpenAIModelComponent.display_name, str)
-        assert OpenAIModelComponent.display_name
-        assert hasattr(OpenAIModelComponent, "description")
-        assert isinstance(OpenAIModelComponent.description, str)
-        assert OpenAIModelComponent.description
-        assert hasattr(OpenAIModelComponent, "icon")
-        assert isinstance(OpenAIModelComponent.icon, str)
-        assert OpenAIModelComponent.icon
-        assert hasattr(OpenAIModelComponent, "inputs")
-        assert isinstance(OpenAIModelComponent.inputs, list)
-        assert len(OpenAIModelComponent.inputs) > 0
-        # Check that each input has required attributes
-        for input_field in OpenAIModelComponent.inputs:
-            assert hasattr(input_field, "name"), f"Input {input_field} missing 'name' attribute"
-            assert hasattr(input_field, "display_name"), f"Input {input_field} missing 'display_name' attribute"
+        for component_class in (APIRequestComponent, LanguageModelComponent):
+            assert hasattr(component_class, "__name__")
+            assert hasattr(component_class, "__module__")
+            assert hasattr(component_class, "display_name")
+            assert isinstance(component_class.display_name, str)
+            assert component_class.display_name
+            assert hasattr(component_class, "description")
+            assert isinstance(component_class.description, str)
+            assert component_class.description
+            assert hasattr(component_class, "icon")
+            assert isinstance(component_class.icon, str)
+            assert component_class.icon
+            assert hasattr(component_class, "inputs")
+            assert isinstance(component_class.inputs, list)
+            assert len(component_class.inputs) > 0
+            for input_field in component_class.inputs:
+                assert hasattr(input_field, "name"), f"Input {input_field} missing 'name' attribute"
+                assert hasattr(input_field, "display_name"), f"Input {input_field} missing 'display_name' attribute"
 
     def test_multiple_import_styles_same_result(self):
-        """Test that different import styles yield the same component."""
-        # Import the same component in different ways
         from langflow import components
-        from langflow.components.openai import OpenAIModelComponent as DirectImport
+        from langflow.components.data import APIRequestComponent as DirectImport
 
-        dynamic_import = components.openai.OpenAIModelComponent
+        dynamic_import = components.data.APIRequestComponent
 
-        import langflow.components.openai as openai_module
+        import langflow.components.data as data_module
 
-        module_import = openai_module.OpenAIModelComponent
+        module_import = data_module.APIRequestComponent
 
-        # All three should be the exact same class object
         assert DirectImport is dynamic_import
         assert dynamic_import is module_import
         assert DirectImport is module_import
 
     def test_startup_performance_improvement(self):
-        """Test that startup time is improved with lazy loading."""
-        # This test measures the difference in import time
-        # Fresh modules to test startup behavior
         modules_to_clean = [
-            "langflow.components.vectorstores",
+            "langflow.components.processing",
             "langflow.components.tools",
             "langflow.components.langchain_utilities",
         ]
@@ -110,81 +90,59 @@ class TestDynamicImportIntegration:
             if module_name in sys.modules:
                 del sys.modules[module_name]
 
-        # Time the import of a large module
         start_time = time.time()
-        from langflow.components import chroma
+        from langflow.components import processing
 
         import_time = time.time() - start_time
 
-        # Import time should be very fast (just loading the __init__.py)
-        assert import_time < 0.1  # Should be well under 100ms
+        assert import_time < 0.1
 
-        # Test that we can access a component (it may already be cached from previous tests)
-        # This is expected behavior in a test suite where components get cached
-
-        # Now access a component - this should trigger loading
         start_time = time.time()
-        chroma_component = chroma.ChromaVectorStoreComponent
+        parser_component = processing.ParserComponent
         access_time = time.time() - start_time
 
-        assert chroma_component is not None
-        # Access time should still be reasonable
-        assert access_time < 2.0  # Should be under 2 seconds
+        assert parser_component is not None
+        assert access_time < 2.0
 
     def test_memory_usage_efficiency(self):
-        """Test that memory usage is more efficient with lazy loading."""
         from langflow.components import processing
 
-        # Count currently loaded components
         initial_component_count = len([k for k in processing.__dict__ if k.endswith("Component")])
 
-        # Access just one component
         combine_text = processing.CombineTextComponent
         assert combine_text is not None
 
-        # At least one more component should be loaded now
         after_one_access = len([k for k in processing.__dict__ if k.endswith("Component")])
         assert after_one_access >= initial_component_count
 
-        # Access another component
         split_text = processing.SplitTextComponent
         assert split_text is not None
 
-        # Should have at least one more component loaded
         after_two_access = len([k for k in processing.__dict__ if k.endswith("Component")])
         assert after_two_access >= after_one_access
 
     def test_error_handling_in_realistic_scenarios(self):
-        """Test error handling in realistic usage scenarios."""
         from langflow import components
 
-        # Test accessing non-existent component category
         with pytest.raises(AttributeError):
             _ = components.nonexistent_category
 
-        # Test accessing non-existent component in valid category
         with pytest.raises(AttributeError):
-            _ = components.openai.NonExistentComponent
+            _ = components.data.NonExistentComponent
 
     def test_ide_autocomplete_support(self):
-        """Test that IDE autocomplete support still works."""
-        import langflow.components.openai as openai_components
+        import langflow.components.data as data_components
         from langflow import components
 
-        # __dir__ should return all available components/modules
         main_dir = dir(components)
-        assert "openai" in main_dir
         assert "data" in main_dir
+        assert "helpers" in main_dir
         assert "models_and_agents" in main_dir
 
-        openai_dir = dir(openai_components)
-        assert "OpenAIModelComponent" in openai_dir
-        assert "OpenAIEmbeddingsComponent" in openai_dir
+        data_dir = dir(data_components)
+        assert "APIRequestComponent" in data_dir
 
     def test_concurrent_access(self):
-        """Test that concurrent access to components works correctly."""
-        import threading
-
         from langflow.components import helpers
 
         results = []
@@ -197,196 +155,66 @@ class TestDynamicImportIntegration:
             except Exception as e:
                 errors.append(e)
 
-        # Create multiple threads accessing the same component
         threads = []
         for _ in range(5):
             thread = threading.Thread(target=access_component)
             threads.append(thread)
             thread.start()
 
-        # Wait for all threads to complete
         for thread in threads:
             thread.join()
 
-        # Should have no errors
         assert len(errors) == 0
         assert len(results) == 5
 
-        # All results should be the same component class
         first_result = results[0]
         for result in results[1:]:
             assert result is first_result
 
     def test_circular_import_prevention(self):
-        """Test that the refactor doesn't introduce circular imports."""
-        # This test ensures that importing components doesn't create
-        # circular dependency issues
-
-        # These imports should work without circular import errors
         from langflow import components
-        from langflow.components import openai
+        from langflow.components import data
 
-        # Access components in different orders
-        model1 = components.openai.OpenAIModelComponent
-        model2 = openai.OpenAIModelComponent
-        model3 = OpenAIModelComponent
+        component1 = components.data.APIRequestComponent
+        component2 = data.APIRequestComponent
+        component3 = APIRequestComponent
 
-        # All should be the same
-        assert model1 is model2 is model3
+        assert component1 is component2 is component3
 
     def test_large_scale_component_access(self):
-        """Test accessing many components doesn't cause issues."""
-        from langflow.components import datastax
+        from langflow.components import data
 
-        # Access multiple components rapidly
-        components_accessed = []
         component_names = [
-            "AstraDBVectorStoreComponent",
-            "AstraDBChatMemory",
-            "AstraDBToolComponent",
-            "AstraDBCQLToolComponent",
-            "GraphRAGComponent",
+            "APIRequestComponent",
+            "DirectoryComponent",
+            "FileComponent",
+            "URLComponent",
         ]
 
-        for name in component_names:
-            if hasattr(datastax, name):
-                component = getattr(datastax, name)
-                components_accessed.append(component)
+        components_accessed = [getattr(data, name) for name in component_names if hasattr(data, name)]
 
-        # Should have accessed all listed components
         assert len(components_accessed) == len(component_names)
-
-        # All should be different classes
         assert len(set(components_accessed)) == len(components_accessed)
 
     def test_component_metadata_preservation(self):
-        """Test that component metadata is preserved after dynamic loading."""
-        # Component should have all expected metadata
-        assert hasattr(OpenAIModelComponent, "__name__")
-        assert hasattr(OpenAIModelComponent, "__module__")
-        assert hasattr(OpenAIModelComponent, "__doc__")
-
-        # Module path should be correct
-        assert "openai" in OpenAIModelComponent.__module__
+        assert hasattr(APIRequestComponent, "__name__")
+        assert hasattr(APIRequestComponent, "__module__")
+        assert hasattr(APIRequestComponent, "__doc__")
+        assert "data" in APIRequestComponent.__module__
 
     def test_backwards_compatibility_comprehensive(self):
-        """Comprehensive test of backwards compatibility."""
-        # Test all major import patterns that should still work
-
-        # 1. Direct component imports
-        from langflow.components.data import APIRequestComponent
+        from langflow.components.data import APIRequestComponent as DirectAPIRequest
 
         assert AgentComponent is not None
-        assert APIRequestComponent is not None
+        assert DirectAPIRequest is not None
 
-        # 2. Module imports
-        # 3. Main module access
         import langflow.components as comp
+        import langflow.components.data as data_mod
         import langflow.components.helpers as helpers_mod
-        import langflow.components.openai as openai_mod
 
-        # 4. Nested access
-        nested_component = comp.openai.OpenAIModelComponent
-        direct_component = openai_mod.OpenAIModelComponent
+        nested_component = comp.data.APIRequestComponent
+        direct_component = data_mod.APIRequestComponent
 
-        # All patterns should work and yield consistent results
-        assert openai_mod.OpenAIModelComponent is not None
+        assert data_mod.APIRequestComponent is not None
         assert helpers_mod.CalculatorComponent is not None
         assert nested_component is direct_component
-
-    def test_deprecated_astra_assistants_removed(self):
-        """Test that deprecated Astra Assistants components are no longer importable."""
-        from langflow.components import datastax
-
-        removed_components = [
-            "AssistantsCreateAssistant",
-            "AssistantsCreateThread",
-            "AssistantsGetAssistantName",
-            "AssistantsListAssistants",
-            "AssistantsRun",
-            "AstraAssistantManager",
-        ]
-
-        for name in removed_components:
-            assert not hasattr(datastax, name), f"Deprecated component {name} should have been removed"
-
-    def test_datastax_remaining_components_accessible(self):
-        """Test that all non-deprecated datastax components are still accessible."""
-        from langflow.components import datastax
-
-        expected_components = [
-            "AstraDBVectorStoreComponent",
-            "AstraDBChatMemory",
-            "AstraDBToolComponent",
-            "AstraDBCQLToolComponent",
-            "AstraDBGraphVectorStoreComponent",
-            "AstraVectorizeComponent",
-            "GraphRAGComponent",
-            "Dotenv",
-        ]
-
-        for name in expected_components:
-            assert hasattr(datastax, name), f"Component {name} should still be accessible"
-            component = getattr(datastax, name)
-            assert component is not None, f"Component {name} should not be None"
-
-    def test_getenvvar_component_removed(self):
-        """Test that the removed GetEnvVar component cannot be imported from lfx datastax."""
-        import importlib
-
-        import lfx.components.datastax as lfx_datastax
-
-        with pytest.raises(AttributeError):
-            _ = lfx_datastax.GetEnvVar
-
-        assert not hasattr(lfx_datastax, "GetEnvVar"), "GetEnvVar should have been removed from lfx.components.datastax"
-
-        with pytest.raises((ImportError, ModuleNotFoundError)):
-            importlib.import_module("lfx.components.datastax.getenvvar")
-
-    def test_python_code_structured_tool_removed(self):
-        """Test that the removed PythonCodeStructuredTool component cannot be imported from lfx tools.
-
-        Security follow-up to report H1-3754930: this legacy component ``exec()``'d
-        attacker-controlled ``tool_code`` at flow-build time and was reachable as an
-        unauthenticated RCE through public flows. It was first neutered to a
-        non-executable stub (#13538) and is now fully removed. The node ``type`` is
-        still blocked on the unauthenticated public path (see
-        ``lfx.utils.flow_validation.CODE_EXECUTION_COMPONENT_TYPES``) so stored code in
-        any saved flow that still references it cannot execute on that path.
-        """
-        import importlib
-
-        import lfx.components.tools as lfx_tools
-
-        with pytest.raises(AttributeError):
-            _ = lfx_tools.PythonCodeStructuredTool
-
-        assert not hasattr(lfx_tools, "PythonCodeStructuredTool"), (
-            "PythonCodeStructuredTool should have been removed from lfx.components.tools"
-        )
-
-        with pytest.raises((ImportError, ModuleNotFoundError)):
-            importlib.import_module("lfx.components.tools.python_code_structured_tool")
-
-    def test_datastax_dir_excludes_deprecated(self):
-        """Test that dir(datastax) does not list deprecated components."""
-        from langflow.components import datastax
-
-        exported = dir(datastax)
-        deprecated = {
-            "AssistantsCreateAssistant",
-            "AssistantsCreateThread",
-            "AssistantsGetAssistantName",
-            "AssistantsListAssistants",
-            "AssistantsRun",
-            "AstraAssistantManager",
-        }
-
-        assert not deprecated.intersection(exported), (
-            f"Deprecated components still appear in dir(): {deprecated.intersection(exported)}"
-        )
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

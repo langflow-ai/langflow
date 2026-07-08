@@ -47,6 +47,7 @@ export function EditMessageButton({
               size="icon"
               onClick={onEdit}
               className="h-8 w-8"
+              aria-label={t("chat.editMessage")}
             >
               <IconComponent name="Pen" className="h-4 w-4" />
             </Button>
@@ -65,6 +66,7 @@ export function EditMessageButton({
             size="icon"
             onClick={handleCopy}
             className="h-8 w-8"
+            aria-label={isCopied ? t("chat.copied") : t("chat.copyMessage")}
           >
             <IconComponent
               name={isCopied ? "Check" : "Copy"}
@@ -88,6 +90,8 @@ export function EditMessageButton({
                 onClick={() => handleEvaluate(true)}
                 className="h-8 w-8"
                 data-testid="helpful-button"
+                aria-label={t("chat.helpful")}
+                aria-pressed={evaluation === true}
               >
                 <IconComponent
                   name={evaluation === true ? "ThumbUpIconCustom" : "ThumbsUp"}
@@ -109,6 +113,8 @@ export function EditMessageButton({
                 onClick={() => handleEvaluate(false)}
                 className="h-8 w-8"
                 data-testid="not-helpful-button"
+                aria-label={t("chat.notHelpful")}
+                aria-pressed={evaluation === false}
               >
                 <IconComponent
                   name={

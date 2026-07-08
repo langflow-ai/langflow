@@ -265,8 +265,14 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             msg = "Policies: in_tools cannot be empty!"
             raise ValueError(msg)
 
-        if not self.model or not self.api_key:
-            msg = "Policies: model or api_key cannot be empty!"
+        # Only the model selection is mandatory. ``api_key`` is declared optional
+        # (required=False, advanced=True) and is frequently supplied by the model
+        # connection, an environment variable, or a global variable rather than by
+        # this field — requiring it here wrongly blocked valid setups with
+        # "model or api_key cannot be empty!". When credentials really are missing,
+        # ``build_model`` -> ``get_llm`` raises a clear provider-specific error.
+        if not self.model:
+            msg = "Policies: model cannot be empty!"
             raise ValueError(msg)
 
         # uncomment if willing to enforce certain models for buildtime
@@ -316,28 +322,108 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
         self._verify_cached_guards(code_dir)
 
+    @staticmethod
+    def _template_field_key(file_name: str | Path) -> str:
+        r"""Normalize a generated file name to its node-template field key.
+
+        ``sync_generated_guard_code_inputs`` keys every generated CodeInput by the
+        file's POSIX relative path (``Path.relative_to(...).as_posix()``), so the
+        keys always use forward slashes. The toolguard result model stores
+        ``file_name`` as a :class:`pathlib.Path`, whose ``str()`` uses the OS
+        separator — backslashes on Windows. Reading back with ``str(file_name)``
+        therefore misses every key on Windows, ``attrs.get(...)`` returns ``None``
+        and the subsequent ``["value"]`` raised the cryptic
+        ``'NoneType' object is not subscriptable`` (issue #13727).
+
+        Normalizing through ``as_posix()`` is the exact inverse of how the keys are
+        written, so lookups match on every platform. ``replace("\\", "/")`` is a
+        belt-and-suspenders guard for the rare case where ``file_name`` is already a
+        string carrying Windows separators (e.g. a flow generated on Windows and
+        opened on POSIX, where ``PurePosixPath`` would not split on backslashes).
+        """
+        return Path(str(file_name).replace("\\", "/")).as_posix()
+
     def make_toolguard_result(self) -> ToolGuardsCodeGenerationResult:
         tg = self._import_toolguard()
         attrs = self.get_vertex().data["node"]["template"]
         if not attrs:
-            raise ValueError
+            msg = "Policies: component template data is missing. This may indicate a corrupted flow state."
+            raise ValueError(msg)
 
-        result_str = attrs[str(tg["RESULTS_FILENAME"])]["value"]
+        def read_content(file_name: str | Path) -> str:
+            """Fetch a generated file's stored source from the node template.
+
+            Raises a clear, actionable error when the field is absent instead of
+            letting a missing key surface as ``'NoneType' object is not
+            subscriptable``. A missing field means the guard code was never
+            generated (or only the ``pass  # FIXME`` scaffold was produced), so the
+            fix is to re-run Generate.
+            """
+            key = self._template_field_key(file_name)
+            field = attrs.get(key)
+            if field is None:
+                msg = (
+                    f"Policies: generated guard file '{key}' is missing from the component. "
+                    f"Re-run in 'Generate' mode to (re)build the guard code before guarding."
+                )
+                raise ValueError(msg)
+            return field["value"]
+
+        result_str = read_content(tg["RESULTS_FILENAME"])
         result = tg["ToolGuardsCodeGenerationResult"].model_validate_json(result_str)
 
-        result.domain.app_types.content = attrs.get(str(result.domain.app_types.file_name))["value"]
-        result.domain.app_api.content = attrs.get(str(result.domain.app_api.file_name))["value"]
-        result.domain.app_api_impl.content = attrs.get(str(result.domain.app_api_impl.file_name))["value"]
+        result.domain.app_types.content = read_content(result.domain.app_types.file_name)
+        result.domain.app_api.content = read_content(result.domain.app_api.file_name)
+        result.domain.app_api_impl.content = read_content(result.domain.app_api_impl.file_name)
 
         for tool in result.tools.values():
-            tool.guard_file.content = attrs.get(str(tool.guard_file.file_name))["value"]
+            tool.guard_file.content = read_content(tool.guard_file.file_name)
             for tool_item in tool.item_guard_files:
-                tool_item.content = attrs.get(str(tool_item.file_name))["value"]
+                tool_item.content = read_content(tool_item.file_name)
 
         return result
 
+    @staticmethod
+    def _code_execution_allowed() -> bool:
+        """Whether executing guard code is permitted by the deployment policy.
+
+        ToolGuard runs guard Python whose source comes from the component's
+        client-editable CodeInput template values (make_toolguard_result reads
+        attrs[...]["value"]) — these are NOT covered by the custom-component hash
+        gate. So when an operator locks the deployment down with
+        allow_custom_components=False, running that code must be refused too.
+
+        Fails closed to match validate_flow_for_current_settings: when the
+        settings layer is present but the service is unavailable (returns None),
+        execution is denied. Fail-open is reserved for the truly standalone case
+        where the settings layer cannot be imported at all (lfx used as a bare
+        library), which is a local/trusted context.
+        """
+        try:
+            from lfx.services.deps import get_settings_service
+        except ImportError:
+            # No settings layer at all (lfx used as a bare library) -> local/trusted.
+            return True
+
+        settings_service = get_settings_service()
+        if settings_service is None:
+            # Settings layer present but service unavailable: fail closed, matching
+            # validate_flow_for_current_settings (which raises in this case).
+            return False
+        return bool(getattr(settings_service.settings, "allow_custom_components", True))
+
     async def guard_tools(self) -> list[Tool]:
         if self.enabled:
+            # Refuse to execute guard code when allow_custom_components is disabled.
+            # Checked before importing/loading any toolguard runtime so
+            # the client-supplied CodeInput guard values are never exec'd.
+            if not self._code_execution_allowed():
+                msg = (
+                    "Policies/ToolGuard executes guard code, which is disabled because "
+                    "allow_custom_components is False. Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true "
+                    "to enable this component."
+                )
+                raise ValueError(msg)
             tg = self._import_toolguard()
             mode = getattr(self, "mode", MODE_GENERATE)
             if mode == MODE_GENERATE:

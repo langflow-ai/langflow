@@ -36,3 +36,48 @@ jobs:
 
       - name: Build docs
         run: cd docs && npm run build
+
+  test-docs-accessibility:
+    name: Docs Accessibility (IBM Equal Access)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+
+      - name: Allow Chrome sandbox (Ubuntu 24.04 AppArmor restriction)
+        # Ubuntu 24.04 runners restrict unprivileged user namespaces, which
+        # breaks Chrome's sandbox (used by the IBM checker via puppeteer).
+        # This re-enables them — the documented GitHub Actions workaround.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ./docs/package-lock.json
+
+      - name: Install dependencies
+        run: cd docs && npm install
+
+      - name: Build docs (light theme)
+        run: cd docs && npm run build
+
+      - name: Scan light theme
+        run: cd docs && ./scripts/a11y-ci.sh
+
+      - name: Rebuild with dark theme as default
+        # The IBM CLI scans the page in its default color mode, so the dark
+        # scan flips the Docusaurus default and rebuilds (build-only change,
+        # nothing is committed).
+        run: |
+          cd docs
+          sed -i 's/defaultMode: "light"/defaultMode: "dark"/; s/respectPrefersColorScheme: true/respectPrefersColorScheme: false/' docusaurus.config.js
+          rm -rf build .docusaurus
+          npm run build
+
+      - name: Scan dark theme
+        run: cd docs && ./scripts/a11y-ci.sh

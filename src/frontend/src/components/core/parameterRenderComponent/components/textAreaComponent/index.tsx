@@ -4,6 +4,7 @@ import { customGetHostProtocol } from "@/customization/utils/custom-get-host-pro
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
 import ComponentTextModal from "@/modals/textAreaModal";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { getSuppressedAutoComplete } from "@/utils/inputAutofill";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
@@ -211,6 +212,9 @@ export default function TextAreaComponent({
         placeholder={getPlaceholder(disabled, placeholder)}
         aria-label={disabled ? displayValue : undefined}
         ref={inputRef}
+        // Keyed on the secret-ness, not the live type, so revealing a masked
+        // value doesn't re-arm autofill.
+        autoComplete={getSuppressedAutoComplete(!!password)}
         type={password ? (passwordVisible ? "text" : "password") : "text"}
         readOnly={isWebhook}
       />

@@ -61,6 +61,10 @@ def get_service(service_type: ServiceType, default=None):
     try:
         return service_manager.get(service_type, default)
     except Exception:  # noqa: BLE001
+        # Preserve the traceback in logs so callers seeing a None return have something to grep
+        # for. Returning None remains the contract because several callers (e.g. get_db_service)
+        # treat absence as "not configured" and substitute a noop implementation.
+        logger.exception("Failed to resolve service %s", service_type)
         return None
 
 
