@@ -13,6 +13,7 @@ export const UploadFolderButton = ({ onClick, disabled }) => {
         className="h-7 w-7 border-0 text-muted-foreground hover:bg-muted"
         onClick={onClick}
         data-testid="upload-project-button"
+        aria-label={t("folder.uploadFlow")}
         disabled={disabled}
       >
         <IconComponent name="Upload" className="h-4 w-4" />

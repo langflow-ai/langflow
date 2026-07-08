@@ -162,18 +162,12 @@ async def handle_on_chain_end(
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
         output = data_output.return_values.get("output")
 
+        # The text setter records the final answer as a trailing top-level
+        # TextContent (content_blocks is the source of truth), mirroring the
+        # streaming path. Appending it into the Agent Steps group as well would
+        # render the answer twice.
         agent_message.text = _extract_output_text(output)
         agent_message.properties.state = "complete"
-        # Add duration to the last content if it exists
-        if agent_message.content_blocks:
-            duration = _calculate_duration(start_time)
-            text_content = TextContent(
-                type="text",
-                text=agent_message.text,
-                duration=duration,
-                header={"title": "Output", "icon": "MessageSquare"},
-            )
-            agent_message.content_blocks[0].contents.append(text_content)
 
         # Only send final message if we didn't have streaming chunks
         # If we had streaming, frontend already accumulated the chunks

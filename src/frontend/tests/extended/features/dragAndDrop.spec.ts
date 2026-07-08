@@ -7,7 +7,7 @@ import { simulateDragAndDrop } from "../../utils/simulate-drag-and-drop";
 
 test(
   "user should be able to drag and drop an old collection without crashing the application",
-  { tag: ["@release", "@mainpage"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
