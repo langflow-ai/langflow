@@ -410,7 +410,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -1401,10 +1401,10 @@
             "description": "# 🔍 SEO Keyword Generator\n\nGenerate SEO keywords and phrases for a topic with an **Agent**.\n\n## Setup\n1. **Agent** - add your LLM key (any provider in the Model dropdown).\n2. **Prompt Template** - set the topic / niche and tune the keyword instructions.\n\n## How it works\n1. **Prompt (instructions) → Agent (System Prompt)** - steers how keywords are generated.\n2. **Prompt (topic) → Agent (Input)** - the subject to generate keywords for.\n3. **Agent → Chat Output** - the SEO keyword list.\n\n## Run\nOpen **Playground**, set your topic in the Prompt, and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.seo_keyword_generator.11d10888",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.seo_keyword_generator.11d10888"
+            }
           },
           "type": "note"
         },

@@ -95,9 +95,9 @@ const HeaderComponent = ({
 
   // Determine which tabs to show based on feature flags
   const tabTypes = [
-    ...(isDeploymentsEnabled ? ["deployments"] : []),
-    ...(isMCPEnabled ? ["mcp"] : ["components"]),
     "flows",
+    ...(isMCPEnabled ? ["mcp"] : ["components"]),
+    ...(isDeploymentsEnabled ? ["deployments"] : []),
   ];
 
   const handleDownload = () => {
@@ -153,8 +153,7 @@ const HeaderComponent = ({
       </div>
       {!isEmptyFolder && (
         <>
-          <div className={cn("flex flex-row-reverse pb-4")}>
-            <div className="w-full border-b dark:border-border" />
+          <div className={cn("flex pb-4")}>
             {tabTypes.map((type) => (
               <Button
                 key={type}
@@ -197,6 +196,7 @@ const HeaderComponent = ({
                 </div>
               </Button>
             ))}
+            <div className="w-full border-b dark:border-border" />
           </div>
           {/* Search and filters */}
           {flowType !== "mcp" && flowType !== "deployments" && (
