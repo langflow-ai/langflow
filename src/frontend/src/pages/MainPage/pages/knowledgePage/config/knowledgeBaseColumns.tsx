@@ -1,4 +1,5 @@
 import type { ColDef } from "ag-grid-community";
+import { useLayoutEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,145 @@ export interface KnowledgeBaseColumnsCallbacks {
   onDelete?: (knowledgeBase: KnowledgeBaseInfo) => void;
   onAddSources?: (knowledgeBase: KnowledgeBaseInfo) => void;
   onStopIngestion?: (knowledgeBase: KnowledgeBaseInfo) => void;
+}
+
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+interface KnowledgeBaseRowActionsProps {
+  knowledgeBase: KnowledgeBaseInfo;
+  callbacks?: KnowledgeBaseColumnsCallbacks;
+  t: TranslateFn;
+}
+
+/**
+ * Row action controls for the knowledge-bases table. Portals the dropdown into
+ * `main` so IBM a11y does not flag body-level portaled content as outside a
+ * landmark (aria_content_in_landmark) — same pattern as the KB upload modal
+ * menus, which portal into `[role="dialog"]`.
+ *
+ * AG Grid may mount cell renderers before they are attached under `main`, so
+ * `closest("main")` can miss on first paint. Resolve the landmark when the
+ * menu opens (and fall back to `document.querySelector("main")`) so Radix
+ * never receives `null` and silently portals to `document.body`.
+ */
+function KnowledgeBaseRowActions({
+  knowledgeBase,
+  callbacks,
+  t,
+}: KnowledgeBaseRowActionsProps) {
+  const status = knowledgeBase?.status;
+  const isBusy = isBusyStatus(status);
+  const isCancelling = status === "cancelling";
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [menuContainer, setMenuContainer] = useState<HTMLElement | null>(null);
+
+  const resolveMenuContainer = () =>
+    rootRef.current?.closest<HTMLElement>("main") ??
+    document.querySelector<HTMLElement>("main");
+
+  useLayoutEffect(() => {
+    setMenuContainer(resolveMenuContainer());
+  }, []);
+
+  return (
+    <div ref={rootRef} className="flex items-center justify-center gap-1">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={isBusy}
+              data-testid="kb-row-update-button"
+              aria-label={t("knowledge.action.ingestFiles")}
+              onClick={(e) => {
+                e.stopPropagation();
+                callbacks?.onAddSources?.(knowledgeBase);
+              }}
+            >
+              <ForwardedIconComponent
+                name="FileUp"
+                className="h-4 w-4 text-primary"
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("knowledge.action.ingestFiles")}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <DropdownMenu
+        open={open}
+        onOpenChange={(next) => {
+          if (next) {
+            setMenuContainer(resolveMenuContainer());
+          }
+          setOpen(next);
+        }}
+      >
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            data-testid="kb-row-actions-trigger"
+            onClick={(e) => e.stopPropagation()}
+            aria-label={t("knowledge.action.moreActionsFor", {
+              name: knowledgeBase?.name,
+            })}
+          >
+            <ForwardedIconComponent
+              name="EllipsisVertical"
+              className="h-4 w-4 text-primary"
+            />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" container={menuContainer ?? undefined}>
+          <DropdownMenuItem
+            disabled={isBusy}
+            onClick={(e) => {
+              e.stopPropagation();
+              callbacks?.onAddSources?.(knowledgeBase);
+            }}
+          >
+            <ForwardedIconComponent name="FileUp" className="mr-2 h-4 w-4" />
+            {t("knowledge.action.ingestFiles")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              callbacks?.onViewChunks?.(knowledgeBase);
+            }}
+          >
+            <ForwardedIconComponent name="Layers" className="mr-2 h-4 w-4" />
+            {t("knowledge.action.viewChunks")}
+          </DropdownMenuItem>
+          {isBusy ? (
+            <DropdownMenuItem
+              disabled={isCancelling}
+              onClick={(e) => {
+                e.stopPropagation();
+                callbacks?.onStopIngestion?.(knowledgeBase);
+              }}
+              className="text-destructive focus:text-destructive"
+            >
+              <ForwardedIconComponent name="Square" className="mr-2 h-4 w-4" />
+              {t("knowledge.action.stopIngestion")}
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                callbacks?.onDelete?.(knowledgeBase);
+              }}
+              className="text-destructive focus:text-destructive"
+            >
+              <ForwardedIconComponent name="Trash2" className="mr-2 h-4 w-4" />
+              {t("knowledge.action.delete")}
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 }
 
 export const createKnowledgeBaseColumns = (
@@ -227,115 +367,13 @@ export const createKnowledgeBaseColumns = (
         return nextIndex >= 0 && nextIndex < focusables.length;
       },
       cellClass: "flex items-center justify-center text-primary",
-      cellRenderer: (params: { data: KnowledgeBaseInfo }) => {
-        const status = params.data?.status;
-        const isBusy = isBusyStatus(status);
-        const isCancelling = status === "cancelling";
-        return (
-          <div className="flex items-center justify-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    disabled={isBusy}
-                    data-testid="kb-row-update-button"
-                    aria-label={t("knowledge.action.ingestFiles")}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      callbacks?.onAddSources?.(params.data);
-                    }}
-                  >
-                    <ForwardedIconComponent
-                      name="FileUp"
-                      className="h-4 w-4 text-primary"
-                    />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t("knowledge.action.ingestFiles")}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  data-testid="kb-row-actions-trigger"
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label={t("knowledge.action.moreActionsFor", {
-                    name: params.data?.name,
-                  })}
-                >
-                  <ForwardedIconComponent
-                    name="EllipsisVertical"
-                    className="h-4 w-4 text-primary"
-                  />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  disabled={isBusy}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    callbacks?.onAddSources?.(params.data);
-                  }}
-                >
-                  <ForwardedIconComponent
-                    name="FileUp"
-                    className="mr-2 h-4 w-4"
-                  />
-                  {t("knowledge.action.ingestFiles")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    callbacks?.onViewChunks?.(params.data);
-                  }}
-                >
-                  <ForwardedIconComponent
-                    name="Layers"
-                    className="mr-2 h-4 w-4"
-                  />
-                  {t("knowledge.action.viewChunks")}
-                </DropdownMenuItem>
-                {isBusy ? (
-                  <DropdownMenuItem
-                    disabled={isCancelling}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      callbacks?.onStopIngestion?.(params.data);
-                    }}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <ForwardedIconComponent
-                      name="Square"
-                      className="mr-2 h-4 w-4"
-                    />
-                    {t("knowledge.action.stopIngestion")}
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      callbacks?.onDelete?.(params.data);
-                    }}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <ForwardedIconComponent
-                      name="Trash2"
-                      className="mr-2 h-4 w-4"
-                    />
-                    {t("knowledge.action.delete")}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        );
-      },
+      cellRenderer: (params: { data: KnowledgeBaseInfo }) => (
+        <KnowledgeBaseRowActions
+          knowledgeBase={params.data}
+          callbacks={callbacks}
+          t={t}
+        />
+      ),
     },
   ];
 };
