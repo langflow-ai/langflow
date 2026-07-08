@@ -5,7 +5,6 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
@@ -32,6 +31,10 @@ export interface MetadataComboboxProps {
  * shadcn `Select` visual so it sits naturally beside other dropdowns,
  * but also accepts a free-typed value via a "Use \"foo\"" fallback item.
  *
+ * Search uses a plain input (same pattern as `dropdownComponent`) instead of
+ * cmdk's CommandInput so IBM does not flag aria-autocomplete on an element
+ * inside the popup while the trigger already owns role="combobox".
+ *
  * Presentational: holds only its own open/query state. All filter-level
  * state (selected key/value, validation, submit) lives in the parent.
  */
@@ -49,13 +52,16 @@ export const MetadataCombobox = ({
   const [query, setQuery] = useState("");
 
   const trimmedQuery = query.trim();
-  const normalizedOptions = useMemo(
-    () => options.map((option) => option.toLowerCase()),
-    [options],
-  );
+  const normalizedQuery = trimmedQuery.toLowerCase();
+  const filteredOptions = useMemo(() => {
+    if (!normalizedQuery) return options;
+    return options.filter((option) =>
+      option.toLowerCase().includes(normalizedQuery),
+    );
+  }, [options, normalizedQuery]);
   const showCustom =
     trimmedQuery.length > 0 &&
-    !normalizedOptions.includes(trimmedQuery.toLowerCase());
+    !options.some((option) => option.toLowerCase() === normalizedQuery);
 
   const commit = (next: string) => {
     onChange(next);
@@ -99,25 +105,33 @@ export const MetadataCombobox = ({
         align="start"
         className="w-[--radix-popover-trigger-width] p-0"
       >
-        <Command shouldFilter>
-          <CommandInput
-            value={query}
-            onValueChange={setQuery}
-            placeholder={placeholder}
-            data-testid={`${testId}-input`}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !showCustom && options.length === 0) {
-                e.preventDefault();
-                if (trimmedQuery) commit(trimmedQuery);
-                else onEnter?.();
-              }
-            }}
-          />
+        <Command shouldFilter={false} label={placeholder}>
+          <div className="flex items-center border-b px-2.5">
+            <ForwardedIconComponent
+              name="search"
+              className="mr-2 h-4 w-4 shrink-0 opacity-50"
+            />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={placeholder}
+              data-testid={`${testId}-input`}
+              autoComplete="off"
+              className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !showCustom && options.length === 0) {
+                  e.preventDefault();
+                  if (trimmedQuery) commit(trimmedQuery);
+                  else onEnter?.();
+                }
+              }}
+            />
+          </div>
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
-            {options.length > 0 && (
+            {filteredOptions.length > 0 && (
               <CommandGroup>
-                {options.map((option) => (
+                {filteredOptions.map((option) => (
                   <CommandItem
                     key={option}
                     value={option}

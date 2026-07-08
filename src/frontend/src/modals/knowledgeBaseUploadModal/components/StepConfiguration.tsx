@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { DBProviderInput } from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
@@ -96,8 +97,18 @@ export function StepConfiguration({
   onMetadataPairsChange,
 }: StepConfigurationProps) {
   const { t } = useTranslation();
+  // Portal menus into the dialog so IBM a11y does not flag body-level
+  // portaled content as outside a landmark (aria_content_in_landmark).
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [menuContainer, setMenuContainer] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setMenuContainer(
+      rootRef.current?.closest<HTMLElement>('[role="dialog"]') ?? null,
+    );
+  }, []);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <div className="flex flex-col">
         {isAddSourcesMode && kbName && (
           <div className="pb-4">
@@ -283,7 +294,11 @@ export function StepConfiguration({
                         />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[220px]">
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-[220px]"
+                      container={menuContainer}
+                    >
                       <DropdownMenuItem
                         onClick={() => {
                           document.getElementById("file-input")?.click();

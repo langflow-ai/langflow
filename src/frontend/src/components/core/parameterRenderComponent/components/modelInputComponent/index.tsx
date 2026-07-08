@@ -680,7 +680,7 @@ export default function ModelInputComponent({
         {/* Section 1 — the option list (a self-contained listbox). Keeping the
             footer actions out of <Command> stops them from being swept into the
             listbox's composite keyboard/focus model. */}
-        <Command className="flex flex-col">
+        <Command label={t("model.selectModel")} className="flex flex-col">
           <ModelList
             groupedOptions={groupedOptions}
             selectedModel={selectedModel}

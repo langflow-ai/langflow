@@ -47,9 +47,20 @@ export function RadixAriaControlsFix() {
       // tabbable descendant and the checker flags aria_child_tabbable. For those
       // input-less lists only, make the first enabled option tabbable so the
       // listbox is keyboard-reachable.
+      //
+      // The same input-less roots also get a visually-hidden <label
+      // cmdk-label htmlFor={inputId}> from cmdk. With no CommandInput, that
+      // for= target does not exist (label_ref_valid). Strip htmlFor only in
+      // that case; searchable Commands keep the association to their input.
       document.querySelectorAll("[cmdk-list]").forEach((list) => {
         const root = list.closest("[cmdk-root]");
         if (root?.querySelector("[cmdk-input]")) return;
+
+        root
+          ?.querySelectorAll<HTMLLabelElement>("label[cmdk-label][for]")
+          .forEach((label) => {
+            label.removeAttribute("for");
+          });
 
         const options = Array.from(
           list.querySelectorAll<HTMLElement>(
@@ -71,7 +82,7 @@ export function RadixAriaControlsFix() {
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ["data-state", "aria-controls"],
+      attributeFilter: ["data-state", "aria-controls", "for"],
     });
 
     return () => observer.disconnect();

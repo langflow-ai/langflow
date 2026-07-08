@@ -199,7 +199,10 @@ export function DBProviderInput({
         {/* Section 1 — the provider list (a self-contained listbox). Keeping the
             manage action out of <Command> stops it from being swept into the
             listbox's composite keyboard/focus model. */}
-        <Command className="flex flex-col">
+        <Command
+          label={t("knowledge.dbProviderLabel")}
+          className="flex flex-col"
+        >
           <CommandList className="max-h-[300px] overflow-y-auto">
             {selectableOptions.map(({ provider, configured }) => (
               <DBProviderOptionItem
