@@ -887,6 +887,7 @@ export default function Page({
       {showCanvas ? (
         <>
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
+            {!isWelcomeOpen && <MemoizedSidebarTrigger />}
             {!view && !isWelcomeOpen && (
               <>
                 <MemoizedCanvasControls
@@ -899,7 +900,6 @@ export default function Page({
                 )}
               </>
             )}
-            {!isWelcomeOpen && <MemoizedSidebarTrigger />}
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}

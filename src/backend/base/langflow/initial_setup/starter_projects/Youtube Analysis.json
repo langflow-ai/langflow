@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-2lY00",
+            "id": "Prompt-rcsrm",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-2FN2V",
+            "id": "Agent-s4EYR",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-2lY00{œdataTypeœ:œPromptœ,œidœ:œPrompt-2lY00œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-2FN2V{œfieldNameœ:œinput_valueœ,œidœ:œAgent-2FN2Vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-rcsrm{œdataTypeœ:œPromptœ,œidœ:œPrompt-rcsrmœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-s4EYR{œfieldNameœ:œinput_valueœ,œidœ:œAgent-s4EYRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-2lY00",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-2lY00œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-2FN2V",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-2FN2Vœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-rcsrm",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-rcsrmœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-s4EYR",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-s4EYRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-2FN2V",
+            "id": "Agent-s4EYR",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-JZAp9",
+            "id": "ChatOutput-btXOD",
             "inputTypes": [
               "Data",
               "JSON",
@@ -54,12 +54,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-2FN2V{œdataTypeœ:œAgentœ,œidœ:œAgent-2FN2Vœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JZAp9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JZAp9œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-s4EYR{œdataTypeœ:œAgentœ,œidœ:œAgent-s4EYRœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-btXOD{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-btXODœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-2FN2V",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-2FN2Vœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-JZAp9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JZAp9œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-s4EYR",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-s4EYRœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-btXOD",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-btXODœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -67,7 +67,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeTranscripts",
-            "id": "YouTubeTranscripts-fnDOA",
+            "id": "YouTubeTranscripts-xk4T0",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -75,19 +75,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-2FN2V",
+            "id": "Agent-s4EYR",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeTranscripts-fnDOA{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-fnDOAœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-2FN2V{œfieldNameœ:œtoolsœ,œidœ:œAgent-2FN2Vœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeTranscripts-xk4T0{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-xk4T0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-s4EYR{œfieldNameœ:œtoolsœ,œidœ:œAgent-s4EYRœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeTranscripts-fnDOA",
-        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-fnDOAœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-2FN2V",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-2FN2Vœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YouTubeTranscripts-xk4T0",
+        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-xk4T0œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-s4EYR",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-s4EYRœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -95,7 +95,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-ogxGV",
+            "id": "parser-TfJyk",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -103,19 +103,19 @@
           },
           "targetHandle": {
             "fieldName": "analysis",
-            "id": "Prompt-2lY00",
+            "id": "Prompt-rcsrm",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-ogxGV{œdataTypeœ:œparserœ,œidœ:œparser-ogxGVœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-2lY00{œfieldNameœ:œanalysisœ,œidœ:œPrompt-2lY00œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-TfJyk{œdataTypeœ:œparserœ,œidœ:œparser-TfJykœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-rcsrm{œfieldNameœ:œanalysisœ,œidœ:œPrompt-rcsrmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-ogxGV",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-ogxGVœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-2lY00",
-        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-2lY00œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-TfJyk",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-TfJykœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-rcsrm",
+        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-rcsrmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -123,7 +123,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-1LEQy",
+            "id": "ChatInput-yUpgD",
             "name": "message",
             "output_types": [
               "Message"
@@ -131,19 +131,19 @@
           },
           "targetHandle": {
             "fieldName": "video_url",
-            "id": "YouTubeCommentsComponent-ZkD9X",
+            "id": "YouTubeCommentsComponent-wei8j",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-1LEQy{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1LEQyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-ZkD9X{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-ZkD9Xœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-yUpgD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-yUpgDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-wei8j{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-wei8jœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-1LEQy",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1LEQyœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "YouTubeCommentsComponent-ZkD9X",
-        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-ZkD9Xœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-yUpgD",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-yUpgDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "YouTubeCommentsComponent-wei8j",
+        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-wei8jœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -151,7 +151,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-1LEQy",
+            "id": "ChatInput-yUpgD",
             "name": "message",
             "output_types": [
               "Message"
@@ -159,19 +159,19 @@
           },
           "targetHandle": {
             "fieldName": "url",
-            "id": "Prompt-2lY00",
+            "id": "Prompt-rcsrm",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-1LEQy{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1LEQyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-2lY00{œfieldNameœ:œurlœ,œidœ:œPrompt-2lY00œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-yUpgD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-yUpgDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-rcsrm{œfieldNameœ:œurlœ,œidœ:œPrompt-rcsrmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-1LEQy",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1LEQyœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-2lY00",
-        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-2lY00œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-yUpgD",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-yUpgDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-rcsrm",
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-rcsrmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -179,7 +179,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeCommentsComponent",
-            "id": "YouTubeCommentsComponent-ZkD9X",
+            "id": "YouTubeCommentsComponent-wei8j",
             "name": "comments",
             "output_types": [
               "Table"
@@ -187,7 +187,7 @@
           },
           "targetHandle": {
             "fieldName": "df",
-            "id": "BatchRunComponent-hJ8qJ",
+            "id": "BatchRunComponent-xJe89",
             "inputTypes": [
               "DataFrame",
               "Table"
@@ -195,12 +195,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__YouTubeCommentsComponent-ZkD9X{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-ZkD9Xœ,œnameœ:œcommentsœ,œoutput_typesœ:[œTableœ]}-BatchRunComponent-hJ8qJ{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-hJ8qJœ,œinputTypesœ:[œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeCommentsComponent-wei8j{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-wei8jœ,œnameœ:œcommentsœ,œoutput_typesœ:[œTableœ]}-BatchRunComponent-xJe89{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-xJe89œ,œinputTypesœ:[œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeCommentsComponent-ZkD9X",
-        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-ZkD9Xœ, œnameœ: œcommentsœ, œoutput_typesœ: [œTableœ]}",
-        "target": "BatchRunComponent-hJ8qJ",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-hJ8qJœ, œinputTypesœ: [œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "YouTubeCommentsComponent-wei8j",
+        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-wei8jœ, œnameœ: œcommentsœ, œoutput_typesœ: [œTableœ]}",
+        "target": "BatchRunComponent-xJe89",
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-xJe89œ, œinputTypesœ: [œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -208,7 +208,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "BatchRunComponent",
-            "id": "BatchRunComponent-hJ8qJ",
+            "id": "BatchRunComponent-xJe89",
             "name": "batch_results",
             "output_types": [
               "Table"
@@ -216,7 +216,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-ogxGV",
+            "id": "parser-TfJyk",
             "inputTypes": [
               "DataFrame",
               "Table",
@@ -226,18 +226,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-BatchRunComponent-hJ8qJ{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-hJ8qJœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œTableœ]}-parser-ogxGV{œfieldNameœ:œinput_dataœ,œidœ:œparser-ogxGVœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-BatchRunComponent-xJe89{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-xJe89œ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œTableœ]}-parser-TfJyk{œfieldNameœ:œinput_dataœ,œidœ:œparser-TfJykœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "BatchRunComponent-hJ8qJ",
-        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-hJ8qJœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œTableœ]}",
-        "target": "parser-ogxGV",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-ogxGVœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
+        "source": "BatchRunComponent-xJe89",
+        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-xJe89œ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œTableœ]}",
+        "target": "parser-TfJyk",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-TfJykœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "YouTubeCommentsComponent-ZkD9X",
+          "id": "YouTubeCommentsComponent-wei8j",
           "node": {
             "base_classes": [
               "DataFrame",
@@ -274,7 +274,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": "2.198.0"
                   },
                   {
                     "name": "lfx",
@@ -450,9 +450,9 @@
           "type": "YouTubeCommentsComponent"
         },
         "dragging": false,
-        "id": "YouTubeCommentsComponent-ZkD9X",
+        "id": "YouTubeCommentsComponent-wei8j",
         "measured": {
-          "height": 467,
+          "height": 468,
           "width": 320
         },
         "position": {
@@ -464,7 +464,7 @@
       },
       {
         "data": {
-          "id": "Agent-2FN2V",
+          "id": "Agent-s4EYR",
           "node": {
             "base_classes": [
               "Message"
@@ -497,7 +497,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2025-12-22T21:08:01.050Z",
+            "last_updated": "2026-06-25T20:50:14.446Z",
             "legacy": false,
             "metadata": {
               "code_hash": "ce7ae1d8e196",
@@ -562,6 +562,7 @@
                 "display_name": "Calculator",
                 "dynamic": false,
                 "info": "If true, adds a zero-config arithmetic calculator tool to the agent (safe: only +, -, *, /, ** operators via AST).",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "add_calculator_tool",
@@ -626,6 +627,7 @@
                 "dynamic": false,
                 "external_options": {},
                 "info": "The base URL of the API (IBM watsonx.ai only)",
+                "input_types": [],
                 "name": "base_url_ibm_watsonx",
                 "options": [
                   "https://us-south.ml.cloud.ibm.com",
@@ -793,15 +795,16 @@
                 "display_name": "Max Tokens",
                 "dynamic": false,
                 "info": "Maximum number of tokens to generate. Field name varies by provider.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_tokens",
                 "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 128000.0,
-                  "min": 1.0,
-                  "step": 1.0,
+                  "max": 128000,
+                  "min": 1,
+                  "step": 1,
                   "step_type": "int"
                 },
                 "required": false,
@@ -829,6 +832,9 @@
                     }
                   }
                 },
+                "filters": {
+                  "tool_calling": true
+                },
                 "info": "Select your model provider",
                 "input_types": [
                   "LanguageModel"
@@ -837,7 +843,140 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [],
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5-pro"
+                      ]
+                    },
+                    "name": "gpt-5.5-pro",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5"
+                      ]
+                    },
+                    "name": "gpt-5.5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-nano"
+                      ]
+                    },
+                    "name": "gpt-5.4-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-mini"
+                      ]
+                    },
+                    "name": "gpt-5.4-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4"
+                      ]
+                    },
+                    "name": "gpt-5.4",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.5-flash",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.1-flash-lite",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-31b-it",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-26b-a4b-it",
+                    "provider": "Google Generative AI"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -946,6 +1085,7 @@
                 "display_name": "watsonx Project ID",
                 "dynamic": false,
                 "info": "The project ID associated with the foundation model (IBM watsonx.ai only)",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -967,6 +1107,7 @@
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "stream",
@@ -1039,9 +1180,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-2FN2V",
+        "id": "Agent-s4EYR",
         "measured": {
-          "height": 429,
+          "height": 430,
           "width": 320
         },
         "position": {
@@ -1053,7 +1194,7 @@
       },
       {
         "data": {
-          "id": "Prompt-2lY00",
+          "id": "Prompt-rcsrm",
           "node": {
             "base_classes": [
               "Message"
@@ -1251,9 +1392,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-2lY00",
+        "id": "Prompt-rcsrm",
         "measured": {
-          "height": 449,
+          "height": 428,
           "width": 320
         },
         "position": {
@@ -1265,7 +1406,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-JZAp9",
+          "id": "ChatOutput-btXOD",
           "node": {
             "base_classes": [
               "Message"
@@ -1303,7 +1444,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -1539,9 +1680,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-JZAp9",
+        "id": "ChatOutput-btXOD",
         "measured": {
-          "height": 204,
+          "height": 206,
           "width": 320
         },
         "position": {
@@ -1553,7 +1694,7 @@
       },
       {
         "data": {
-          "id": "YouTubeTranscripts-fnDOA",
+          "id": "YouTubeTranscripts-xk4T0",
           "node": {
             "base_classes": [
               "Data",
@@ -1576,7 +1717,7 @@
             ],
             "frozen": false,
             "icon": "YouTube",
-            "last_updated": "2025-12-22T21:08:01.050Z",
+            "last_updated": "2026-06-25T20:50:14.163Z",
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
@@ -1689,8 +1830,8 @@
                         "type": "string"
                       }
                     },
-                    "description": "YouTubeTranscripts. get_dataframe_output - Extracts spoken content from YouTube videos with multiple output options.",
-                    "display_description": "YouTubeTranscripts. get_dataframe_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "description": "Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_description": "Extracts spoken content from YouTube videos with multiple output options.",
                     "display_name": "get_dataframe_output",
                     "name": "get_dataframe_output",
                     "readonly": false,
@@ -1707,8 +1848,8 @@
                         "type": "string"
                       }
                     },
-                    "description": "YouTubeTranscripts. get_message_output - Extracts spoken content from YouTube videos with multiple output options.",
-                    "display_description": "YouTubeTranscripts. get_message_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "description": "Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_description": "Extracts spoken content from YouTube videos with multiple output options.",
                     "display_name": "get_message_output",
                     "name": "get_message_output",
                     "readonly": false,
@@ -1725,8 +1866,8 @@
                         "type": "string"
                       }
                     },
-                    "description": "YouTubeTranscripts. get_data_output - Extracts spoken content from YouTube videos with multiple output options.",
-                    "display_description": "YouTubeTranscripts. get_data_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "description": "Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_description": "Extracts spoken content from YouTube videos with multiple output options.",
                     "display_name": "get_data_output",
                     "name": "get_data_output",
                     "readonly": false,
@@ -1803,9 +1944,9 @@
           "type": "YouTubeTranscripts"
         },
         "dragging": false,
-        "id": "YouTubeTranscripts-fnDOA",
+        "id": "YouTubeTranscripts-xk4T0",
         "measured": {
-          "height": 328,
+          "height": 336,
           "width": 320
         },
         "position": {
@@ -1817,37 +1958,37 @@
       },
       {
         "data": {
-          "id": "note-01q9d",
+          "id": "note-aDZfC",
           "node": {
-            "description": "# 📖 README\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n## Quick start\n- Configure your **Model Provider** with your API credentials.\n- Add your **YouTube Data API v3 key**\n- If you don't have a YoutTube API key, create one in the [Google Cloud Console](https://console.cloud.google.com).\n- Ensure the chat input is a valid YouTube video URL. A sample URL is provided in the chat input component.\n",
+            "description": "# 📺 YouTube Analysis\n\nAnalyze a YouTube video using its comments and transcript — the sentiment of\nthe comments plus the transcript content, combined into one analysis.\n\n## Setup\n1. Agent — add your LLM key (any provider in the Model dropdown).\n2. YouTube components — add your YouTube Data API v3 key (free, Google Cloud Console).\n3. Chat Input — paste a valid YouTube video URL (a sample is already provided).\n\n## How it works\n1. Chat Input → YouTube Comments — fetches the video's comments.\n2. Batch Run → Parser — runs the comments through the model in batches and formats the result.\n3. Prompt → Agent — the Agent (with YouTube Transcripts tool) combines comment analysis + transcript.\n4. Agent → Chat Output — the comprehensive video analysis.\n\n## Run\nPaste a YouTube URL in the chat and run.",
             "display_name": "",
             "documentation": "",
-            "i18n_key": "template_notes.youtube_analysis.8d068d5f",
+            "i18n_key": "template_notes.youtube_analysis.c8787173",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
-        "height": 582,
-        "id": "note-01q9d",
+        "height": 938,
+        "id": "note-aDZfC",
         "measured": {
-          "height": 582,
-          "width": 553
+          "height": 938,
+          "width": 675
         },
         "position": {
-          "x": -499.7725169737987,
-          "y": 5666.258559615042
+          "x": -1042.1213251587017,
+          "y": 5736.605057747812
         },
         "resizing": false,
-        "selected": false,
+        "selected": true,
         "type": "noteNode",
-        "width": 553
+        "width": 675
       },
       {
         "data": {
-          "id": "parser-ogxGV",
+          "id": "parser-TfJyk",
           "node": {
             "base_classes": [
               "Message"
@@ -2024,9 +2165,9 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-ogxGV",
+        "id": "parser-TfJyk",
         "measured": {
-          "height": 361,
+          "height": 330,
           "width": 320
         },
         "position": {
@@ -2038,7 +2179,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-1LEQy",
+          "id": "ChatInput-yUpgD",
           "node": {
             "base_classes": [
               "Message"
@@ -2303,21 +2444,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-1LEQy",
+        "id": "ChatInput-yUpgD",
         "measured": {
-          "height": 204,
+          "height": 206,
           "width": 320
         },
         "position": {
-          "x": -467.5929504081053,
-          "y": 6344.887293468443
+          "x": -320.0922285168137,
+          "y": 6315.387149090185
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "BatchRunComponent-hJ8qJ",
+          "id": "BatchRunComponent-xJe89",
           "node": {
             "base_classes": [
               "DataFrame",
@@ -2343,7 +2484,7 @@
             ],
             "frozen": false,
             "icon": "List",
-            "last_updated": "2025-12-22T21:08:20.144Z",
+            "last_updated": "2026-06-25T20:50:14.449Z",
             "legacy": false,
             "metadata": {
               "code_hash": "1b10e577e096",
@@ -2547,7 +2688,124 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [],
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5-pro"
+                      ]
+                    },
+                    "name": "gpt-5.5-pro",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5"
+                      ]
+                    },
+                    "name": "gpt-5.5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-nano"
+                      ]
+                    },
+                    "name": "gpt-5.4-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-mini"
+                      ]
+                    },
+                    "name": "gpt-5.4-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.5-flash",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.1-flash-lite",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-31b-it",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-26b-a4b-it",
+                    "provider": "Google Generative AI"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -2642,30 +2900,31 @@
           "type": "BatchRunComponent"
         },
         "dragging": false,
-        "id": "BatchRunComponent-hJ8qJ",
+        "id": "BatchRunComponent-xJe89",
         "measured": {
-          "height": 429,
+          "height": 430,
           "width": 320
         },
         "position": {
           "x": 622.635742060747,
           "y": 5919.499445555994
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 191.1479092456134,
-      "y": -3316.287064227974,
-      "zoom": 0.6036468280963493
+      "x": 527.6878061858094,
+      "y": -2468.3941306903503,
+      "zoom": 0.4406758093557343
     }
   },
   "description": "The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.",
   "endpoint_name": null,
-  "id": "ec8fea99-360e-46e0-a4c5-46d10defb57b",
+  "id": "c8731384-fc7e-4d9c-92d9-a9657a1f0593",
   "is_component": false,
-  "last_tested_version": "1.7.0",
+  "last_tested_version": "1.10.0",
+  "locked": false,
   "name": "YouTube Analysis",
   "tags": [
     "agents",

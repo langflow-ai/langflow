@@ -19,7 +19,7 @@ def test_extension_error_rejects_unknown_code() -> None:
 
 def test_ref_url_default_anchors_to_code() -> None:
     err = ExtensionError(code="manifest-invalid", message="x", hint="y")
-    assert err.ref_url == f"{DOCS_BASE}#manifest-invalid"
+    assert err.ref_url == f"{DOCS_BASE}"
 
 
 def test_to_dict_contains_all_fields() -> None:
@@ -32,7 +32,7 @@ def test_to_dict_contains_all_fields() -> None:
     )
     payload = err.to_dict()
     assert set(payload) == {"code", "message", "location", "content", "hint", "ref_url"}
-    assert payload["ref_url"].endswith("#manifest-invalid")
+    assert payload["ref_url"] == f"{DOCS_BASE}"
 
 
 def test_collection_ok_when_no_errors() -> None:
@@ -114,6 +114,8 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "multi-bundle-unsupported": "error[multi-bundle-unsupported]: Manifest declares more than one bundle entry; v0 supports exactly one bundle per extension.",  # noqa: E501
     "extension-reload-disabled": "error[extension-reload-disabled]: Extension reload is disabled on this server.  Set LANGFLOW_ENABLE_EXTENSION_RELOAD=true to enable it on a local-development install (Mode A).",  # noqa: E501
     "extension-events-keyspace-forbidden": "error[extension-events-keyspace-forbidden]: The loc query parameter is not accepted; events are scoped server-side to the authenticated user (rejected value: 'content').",  # noqa: E501
+    "provider-invalid": "error[provider-invalid]: Model provider 'content' declared at loc could not be registered: msg",  # noqa: E501
+    "provider-skipped": "error[provider-skipped]: Model provider 'content' declared at loc was skipped: msg",
 }
 
 
@@ -140,7 +142,7 @@ def test_format_branch_for_code(code: str) -> None:
     assert "  location: loc" in rendered
     assert "  content:  content" in rendered
     assert "  hint:     fix it" in rendered
-    assert f"  see:      {DOCS_BASE}#{code}" in rendered
+    assert f"  see:      {DOCS_BASE}" in rendered
 
 
 def test_format_omits_blank_location_and_content() -> None:

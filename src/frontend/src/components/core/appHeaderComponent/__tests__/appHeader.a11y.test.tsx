@@ -69,4 +69,13 @@ describe("AppHeader accessibility", () => {
       "aria-label",
     );
   });
+
+  it("should_name_home_navigation_button", () => {
+    renderHeader();
+
+    expect(screen.getByTestId("icon-ChevronLeft")).toHaveAttribute(
+      "aria-label",
+      "Go to home",
+    );
+  });
 });

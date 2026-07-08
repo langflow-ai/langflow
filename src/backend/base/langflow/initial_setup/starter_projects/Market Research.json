@@ -6,34 +6,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-3WTYa",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-Hz2it",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-TavilySearchComponent-3WTYa{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-3WTYaœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Hz2it{œfieldNameœ:œtoolsœ,œidœ:œAgent-Hz2itœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "TavilySearchComponent-3WTYa",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-3WTYaœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Hz2it",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Hz2itœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "ChatInput",
             "id": "ChatInput-OSw5o",
             "name": "message",
@@ -82,7 +54,7 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__ParserComponent-8lfAE{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-8lfAEœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-tjFWM{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tjFWMœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParserComponent-8lfAE{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-8lfAEœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-tjFWM{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tjFWMœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-8lfAE",
         "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-8lfAEœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
@@ -110,7 +82,7 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__Agent-Hz2it{œdataTypeœ:œAgentœ,œidœ:œAgent-Hz2itœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-zfjb9{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-zfjb9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-Hz2it{œdataTypeœ:œAgentœ,œidœ:œAgent-Hz2itœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-zfjb9{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-zfjb9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-Hz2it",
         "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Hz2itœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
@@ -141,12 +113,40 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__StructuredOutput-zfjb9{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-zfjb9œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œTableœ]}-ParserComponent-8lfAE{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-8lfAEœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-zfjb9{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-zfjb9œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œTableœ]}-ParserComponent-8lfAE{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-8lfAEœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-zfjb9",
         "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-zfjb9œ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "ParserComponent-8lfAE",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-8lfAEœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "UnifiedWebSearch",
+            "id": "WebSearch-mr",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-Hz2it",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-WebSearch-mr{œdataTypeœ:œUnifiedWebSearchœ,œidœ:œWebSearch-mrœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Hz2it{œfieldNameœ:œtoolsœ,œidœ:œAgent-Hz2itœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "WebSearch-mr",
+        "sourceHandle": "{œdataTypeœ: œUnifiedWebSearchœ, œidœ: œWebSearch-mrœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-Hz2it",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Hz2itœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -178,7 +178,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.6.0",
+            "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "7a26c54d89ed",
               "dependencies": {
@@ -402,12 +402,12 @@
         "dragging": false,
         "id": "ChatInput-OSw5o",
         "measured": {
-          "height": 234,
+          "height": 206,
           "width": 320
         },
         "position": {
-          "x": 472.38251755471583,
-          "y": 889.8398446936101
+          "x": 793.3188040923693,
+          "y": 791.284607095433
         },
         "positionAbsolute": {
           "x": 472.38251755471583,
@@ -445,7 +445,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.6.0",
+            "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "84009527d08c",
               "dependencies": {
@@ -456,7 +456,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -682,7 +682,7 @@
         "dragging": false,
         "id": "ChatOutput-tjFWM",
         "measured": {
-          "height": 234,
+          "height": 206,
           "width": 320
         },
         "position": {
@@ -692,464 +692,6 @@
         "positionAbsolute": {
           "x": 2518.282039019285,
           "y": 855.3686932779933
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-goubF",
-          "node": {
-            "description": "# 📖 README\nThis flow helps you gather comprehensive information about companies for sales and business intelligence purposes.\n\n## Prerequisites\n\n- **[Tavily API Key](https://docs.tavily.com/welcome)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Add your **Tavily API key** to the **Tavily Search** component.\n3. In the **Chat Input**, enter a company name you want to research.\n4. Open the **Playground** and research the company. The **Structured Output** component transforms the raw LLM response into structured data, and the **Parser** component presents the data as text for the **Chat output** component to present.",
-            "display_name": "",
-            "documentation": "",
-            "i18n_key": "template_notes.market_research.a1643ecd",
-            "template": {
-              "backgroundColor": "neutral"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 671,
-        "id": "note-goubF",
-        "measured": {
-          "height": 671,
-          "width": 659
-        },
-        "position": {
-          "x": -226.74339309333172,
-          "y": 683.3969749619654
-        },
-        "positionAbsolute": {
-          "x": 244.92297036777086,
-          "y": 340.99805740871204
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
-          "height": 324,
-          "width": 324
-        },
-        "type": "noteNode",
-        "width": 659
-      },
-      {
-        "data": {
-          "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-          "display_name": "Tavily AI Search",
-          "id": "TavilySearchComponent-3WTYa",
-          "node": {
-            "base_classes": [
-              "Data",
-              "JSON",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "**Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-            "display_name": "Tavily AI Search",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "api_key",
-              "query",
-              "search_depth",
-              "chunks_per_source",
-              "topic",
-              "days",
-              "max_results",
-              "include_answer",
-              "time_range",
-              "include_images",
-              "include_domains",
-              "exclude_domains",
-              "include_raw_content"
-            ],
-            "frozen": false,
-            "icon": "TavilyIcon",
-            "last_updated": "2025-09-29T15:47:37.204Z",
-            "legacy": false,
-            "lf_version": "1.6.0",
-            "metadata": {
-              "code_hash": "5c39b6f53d51",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "httpx",
-                    "version": "0.28.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "lfx.components.tavily.tavily_search.TavilySearchComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Toolset",
-                "group_outputs": false,
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Tool",
-                "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "Tavily API Key",
-                "dynamic": false,
-                "info": "Your Tavily API Key.",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "TAVILY_API_KEY"
-              },
-              "chunks_per_source": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Chunks Per Source",
-                "dynamic": false,
-                "info": "The number of content chunks to retrieve from each source (1-3). Only works with advanced search.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "chunks_per_source",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 3
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import httpx\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.template.field.base import Output\n\n\nclass TavilySearchComponent(Component):\n    display_name = \"Tavily Search API\"\n    description = \"\"\"**Tavily Search** is a search engine optimized for LLMs and RAG, \\\n        aimed at efficient, quick, and persistent search results.\"\"\"\n    icon = \"TavilyIcon\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            required=True,\n            info=\"Your Tavily API Key.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Tavily.\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_depth\",\n            display_name=\"Search Depth\",\n            info=\"The depth of the search.\",\n            options=[\"basic\", \"advanced\"],\n            value=\"advanced\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunks_per_source\",\n            display_name=\"Chunks Per Source\",\n            info=(\"The number of content chunks to retrieve from each source (1-3). Only works with advanced search.\"),\n            value=3,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"topic\",\n            display_name=\"Search Topic\",\n            info=\"The category of the search.\",\n            options=[\"general\", \"news\"],\n            value=\"general\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"days\",\n            display_name=\"Days\",\n            info=\"Number of days back from current date to include. Only available with news topic.\",\n            value=7,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=5,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_answer\",\n            display_name=\"Include Answer\",\n            info=\"Include a short answer to original query.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"time_range\",\n            display_name=\"Time Range\",\n            info=\"The time range back from the current date to filter results.\",\n            options=[\"day\", \"week\", \"month\", \"year\"],\n            value=None,  # Default to None to make it optional\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_images\",\n            display_name=\"Include Images\",\n            info=\"Include a list of query-related images in the response.\",\n            value=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"include_domains\",\n            display_name=\"Include Domains\",\n            info=\"Comma-separated list of domains to include in the search results.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"exclude_domains\",\n            display_name=\"Exclude Domains\",\n            info=\"Comma-separated list of domains to exclude from the search results.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_raw_content\",\n            display_name=\"Include Raw Content\",\n            info=\"Include the cleaned and parsed HTML content of each search result.\",\n            value=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Table\", name=\"dataframe\", method=\"fetch_content_dataframe\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            # Only process domains if they're provided\n            include_domains = None\n            exclude_domains = None\n\n            if self.include_domains:\n                include_domains = [domain.strip() for domain in self.include_domains.split(\",\") if domain.strip()]\n\n            if self.exclude_domains:\n                exclude_domains = [domain.strip() for domain in self.exclude_domains.split(\",\") if domain.strip()]\n\n            url = \"https://api.tavily.com/search\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n            }\n\n            payload = {\n                \"api_key\": self.api_key,\n                \"query\": self.query,\n                \"search_depth\": self.search_depth,\n                \"topic\": self.topic,\n                \"max_results\": self.max_results,\n                \"include_images\": self.include_images,\n                \"include_answer\": self.include_answer,\n                \"include_raw_content\": self.include_raw_content,\n                \"days\": self.days,\n                \"time_range\": self.time_range,\n            }\n\n            # Only add domains to payload if they exist and have values\n            if include_domains:\n                payload[\"include_domains\"] = include_domains\n            if exclude_domains:\n                payload[\"exclude_domains\"] = exclude_domains\n\n            # Add conditional parameters only if they should be included\n            if self.search_depth == \"advanced\" and self.chunks_per_source:\n                payload[\"chunks_per_source\"] = self.chunks_per_source\n\n            if self.topic == \"news\" and self.days:\n                payload[\"days\"] = int(self.days)  # Ensure days is an integer\n\n            # Add time_range if it's set\n            if hasattr(self, \"time_range\") and self.time_range:\n                payload[\"time_range\"] = self.time_range\n\n            # Add timeout handling\n            with httpx.Client(timeout=90.0) as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n\n            if self.include_answer and search_results.get(\"answer\"):\n                data_results.append(Data(text=search_results[\"answer\"]))\n\n            for result in search_results.get(\"results\", []):\n                content = result.get(\"content\", \"\")\n                result_data = {\n                    \"title\": result.get(\"title\"),\n                    \"url\": result.get(\"url\"),\n                    \"content\": content,\n                    \"score\": result.get(\"score\"),\n                }\n                if self.include_raw_content:\n                    result_data[\"raw_content\"] = result.get(\"raw_content\")\n\n                data_results.append(Data(text=content, data=result_data))\n\n            if self.include_images and search_results.get(\"images\"):\n                data_results.append(Data(text=\"Images found\", data={\"images\": search_results[\"images\"]}))\n\n        except httpx.TimeoutException:\n            error_message = \"Request timed out (90s). Please try again or adjust parameters.\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_dataframe(self) -> DataFrame:\n        data = self.fetch_content()\n        return DataFrame(data)\n"
-              },
-              "days": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Days",
-                "dynamic": false,
-                "info": "Number of days back from current date to include. Only available with news topic.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "days",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 7
-              },
-              "exclude_domains": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Exclude Domains",
-                "dynamic": false,
-                "info": "Comma-separated list of domains to exclude from the search results.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "exclude_domains",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "include_answer": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Include Answer",
-                "dynamic": false,
-                "info": "Include a short answer to original query.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "include_answer",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "include_domains": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Include Domains",
-                "dynamic": false,
-                "info": "Comma-separated list of domains to include in the search results.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "include_domains",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "include_images": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Include Images",
-                "dynamic": false,
-                "info": "Include a list of query-related images in the response.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "include_images",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "include_raw_content": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Include Raw Content",
-                "dynamic": false,
-                "info": "Include the cleaned and parsed HTML content of each search result.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "include_raw_content",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "max_results": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Results",
-                "dynamic": false,
-                "info": "The maximum number of search results to return.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_results",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 5
-              },
-              "query": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Search Query",
-                "dynamic": false,
-                "info": "The search query you want to execute with Tavily.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "query",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "search_depth": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Search Depth",
-                "dynamic": false,
-                "info": "The depth of the search.",
-                "name": "search_depth",
-                "options": [
-                  "basic",
-                  "advanced"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "advanced"
-              },
-              "time_range": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Time Range",
-                "dynamic": false,
-                "info": "The time range back from the current date to filter results.",
-                "name": "time_range",
-                "options": [
-                  "day",
-                  "week",
-                  "month",
-                  "year"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str"
-              },
-              "tools_metadata": {
-                "_input_type": "ToolsInput",
-                "advanced": false,
-                "display_name": "Actions",
-                "dynamic": false,
-                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tools",
-                "value": [
-                  {
-                    "args": {
-                      "query": {
-                        "default": "",
-                        "description": "The search query you want to execute with Tavily.",
-                        "title": "Query",
-                        "type": "string"
-                      }
-                    },
-                    "description": "TavilySearchComponent. fetch_content_dataframe - **Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "display_description": "TavilySearchComponent. fetch_content_dataframe - **Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "display_name": "fetch_content_dataframe",
-                    "name": "fetch_content_dataframe",
-                    "readonly": false,
-                    "status": true,
-                    "tags": [
-                      "fetch_content_dataframe"
-                    ]
-                  }
-                ]
-              },
-              "topic": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Search Topic",
-                "dynamic": false,
-                "info": "The category of the search.",
-                "name": "topic",
-                "options": [
-                  "general",
-                  "news"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "general"
-              }
-            },
-            "tool_mode": true
-          },
-          "selected_output": "component_as_tool",
-          "showNode": true,
-          "type": "TavilySearchComponent"
-        },
-        "dragging": false,
-        "id": "TavilySearchComponent-3WTYa",
-        "measured": {
-          "height": 316,
-          "width": 320
-        },
-        "position": {
-          "x": 868.5433981701304,
-          "y": 653.9732314682851
         },
         "selected": false,
         "type": "genericNode"
@@ -1189,8 +731,9 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2025-12-11T21:41:48.407Z",
+            "last_updated": "2026-06-25T20:08:51.274Z",
             "legacy": false,
+            "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "ce7ae1d8e196",
               "dependencies": {
@@ -1254,6 +797,7 @@
                 "display_name": "Calculator",
                 "dynamic": false,
                 "info": "If true, adds a zero-config arithmetic calculator tool to the agent (safe: only +, -, *, /, ** operators via AST).",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "add_calculator_tool",
@@ -1318,6 +862,7 @@
                 "dynamic": false,
                 "external_options": {},
                 "info": "The base URL of the API (IBM watsonx.ai only)",
+                "input_types": [],
                 "name": "base_url_ibm_watsonx",
                 "options": [
                   "https://us-south.ml.cloud.ibm.com",
@@ -1485,15 +1030,16 @@
                 "display_name": "Max Tokens",
                 "dynamic": false,
                 "info": "Maximum number of tokens to generate. Field name varies by provider.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_tokens",
                 "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 128000.0,
-                  "min": 1.0,
-                  "step": 1.0,
+                  "max": 128000,
+                  "min": 1,
+                  "step": 1,
                   "step_type": "int"
                 },
                 "required": false,
@@ -1521,6 +1067,9 @@
                     }
                   }
                 },
+                "filters": {
+                  "tool_calling": true
+                },
                 "info": "Select your model provider",
                 "input_types": [
                   "LanguageModel"
@@ -1529,7 +1078,140 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [],
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5-pro"
+                      ]
+                    },
+                    "name": "gpt-5.5-pro",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5"
+                      ]
+                    },
+                    "name": "gpt-5.5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-nano"
+                      ]
+                    },
+                    "name": "gpt-5.4-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-mini"
+                      ]
+                    },
+                    "name": "gpt-5.4-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4"
+                      ]
+                    },
+                    "name": "gpt-5.4",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.5-flash",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.1-flash-lite",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-31b-it",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-26b-a4b-it",
+                    "provider": "Google Generative AI"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -1638,6 +1320,7 @@
                 "display_name": "watsonx Project ID",
                 "dynamic": false,
                 "info": "The project ID associated with the foundation model (IBM watsonx.ai only)",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1659,6 +1342,7 @@
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "stream",
@@ -1726,13 +1410,14 @@
             },
             "tool_mode": false
           },
+          "selected_output": "response",
           "showNode": true,
           "type": "Agent"
         },
         "dragging": false,
         "id": "Agent-Hz2it",
         "measured": {
-          "height": 594,
+          "height": 430,
           "width": 320
         },
         "position": {
@@ -1765,7 +1450,7 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "lf_version": "1.6.0",
+            "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "cda7b997a730",
               "dependencies": {
@@ -1919,14 +1604,14 @@
         "dragging": false,
         "id": "ParserComponent-8lfAE",
         "measured": {
-          "height": 329,
+          "height": 330,
           "width": 320
         },
         "position": {
           "x": 2109.171649979737,
           "y": 774.5251266612232
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
@@ -1956,8 +1641,9 @@
             ],
             "frozen": false,
             "icon": "braces",
+            "last_updated": "2026-06-25T20:08:51.279Z",
             "legacy": false,
-            "lf_version": "1.6.0",
+            "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "6df6b4102fcf",
               "dependencies": {
@@ -2021,7 +1707,7 @@
                 "dynamic": false,
                 "info": "Overrides global provider settings. Leave blank to use your pre-configured API Key.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "override_skip": false,
                 "password": true,
@@ -2101,7 +1787,124 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [],
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5-pro"
+                      ]
+                    },
+                    "name": "gpt-5.5-pro",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5"
+                      ]
+                    },
+                    "name": "gpt-5.5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-nano"
+                      ]
+                    },
+                    "name": "gpt-5.4-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-mini"
+                      ]
+                    },
+                    "name": "gpt-5.4-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.5-flash",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.1-flash-lite",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-31b-it",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-26b-a4b-it",
+                    "provider": "Google Generative AI"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -2300,7 +2103,7 @@
         "dragging": false,
         "id": "StructuredOutput-zfjb9",
         "measured": {
-          "height": 349,
+          "height": 388,
           "width": 320
         },
         "position": {
@@ -2309,19 +2112,412 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "WebSearch-mr",
+          "node": {
+            "base_classes": [
+              "Table"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Search the web, news, or RSS feeds.",
+            "display_name": "Web Search",
+            "documentation": "https://docs.langflow.org/web-search",
+            "edited": false,
+            "field_order": [
+              "search_mode",
+              "query",
+              "hl",
+              "gl",
+              "ceid",
+              "topic",
+              "location",
+              "timeout"
+            ],
+            "frozen": false,
+            "icon": "search",
+            "last_updated": "2026-06-25T20:08:51.016Z",
+            "legacy": false,
+            "lf_version": "1.10.0",
+            "metadata": {
+              "code_hash": "2d9f0a47d117",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "httpx",
+                    "version": "0.28.1"
+                  },
+                  {
+                    "name": "pandas",
+                    "version": "2.3.3"
+                  },
+                  {
+                    "name": "requests",
+                    "version": "2.34.2"
+                  },
+                  {
+                    "name": "bs4",
+                    "version": "4.15.0"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 5
+              },
+              "module": "lfx.components.data_source.web_search.WebSearchComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "group_outputs": false,
+                "hidden": null,
+                "loop_types": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "ceid": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Country:Language (ceid)",
+                "dynamic": false,
+                "info": "e.g. US:en, FR:fr. Default: US:en.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "ceid",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "US:en"
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Unified Web Search Component.\n\nThis component consolidates Web Search, News Search, and RSS Reader into a single\ncomponent with tabs for different search modes.\n\"\"\"\n\nimport re\nfrom typing import Any\nfrom urllib.parse import parse_qs, quote_plus, unquote, urlparse\n\nimport httpx\nimport pandas as pd\nimport requests\nfrom bs4 import BeautifulSoup\n\nfrom lfx.custom import Component\nfrom lfx.io import IntInput, MessageTextInput, Output, TabInput\nfrom lfx.schema import DataFrame\nfrom lfx.utils.request_utils import get_user_agent\nfrom lfx.utils.ssrf_protection import SSRFProtectionError, is_ssrf_protection_enabled, validate_and_resolve_url\nfrom lfx.utils.ssrf_transport import create_ssrf_protected_sync_client\n\n\nclass WebSearchComponent(Component):\n    display_name = \"Web Search\"\n    description = \"Search the web, news, or RSS feeds.\"\n    documentation: str = \"https://docs.langflow.org/web-search\"\n    icon = \"search\"\n    name = \"UnifiedWebSearch\"\n\n    inputs = [\n        TabInput(\n            name=\"search_mode\",\n            display_name=\"Search Mode\",\n            options=[\"Web\", \"News\", \"RSS\"],\n            info=\"Choose search mode: Web (DuckDuckGo), News (Google News), or RSS (Feed Reader)\",\n            value=\"Web\",\n            real_time_refresh=True,\n            tool_mode=True,\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"Search keywords for news articles.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"hl\",\n            display_name=\"Language (hl)\",\n            info=\"Language code, e.g. en-US, fr, de. Default: en-US.\",\n            tool_mode=False,\n            input_types=[],\n            required=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"gl\",\n            display_name=\"Country (gl)\",\n            info=\"Country code, e.g. US, FR, DE. Default: US.\",\n            tool_mode=False,\n            input_types=[],\n            required=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"ceid\",\n            display_name=\"Country:Language (ceid)\",\n            info=\"e.g. US:en, FR:fr. Default: US:en.\",\n            tool_mode=False,\n            value=\"US:en\",\n            input_types=[],\n            required=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"topic\",\n            display_name=\"Topic\",\n            info=\"One of: WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH.\",\n            tool_mode=False,\n            input_types=[],\n            required=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"location\",\n            display_name=\"Location (Geo)\",\n            info=\"City, state, or country for location-based news. Leave blank for keyword search.\",\n            tool_mode=False,\n            input_types=[],\n            required=False,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout for the request in seconds.\",\n            value=5,\n            required=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [Output(name=\"results\", display_name=\"Results\", method=\"perform_search\")]\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        \"\"\"Update input visibility based on search mode.\"\"\"\n        if field_name == \"search_mode\":\n            # Show/hide inputs based on search mode\n            is_news = field_value == \"News\"\n            is_rss = field_value == \"RSS\"\n\n            # Update query field info based on mode\n            if is_rss:\n                build_config[\"query\"][\"info\"] = \"RSS feed URL to parse\"\n                build_config[\"query\"][\"display_name\"] = \"RSS Feed URL\"\n            elif is_news:\n                build_config[\"query\"][\"info\"] = \"Search keywords for news articles.\"\n                build_config[\"query\"][\"display_name\"] = \"Search Query\"\n            else:  # Web\n                build_config[\"query\"][\"info\"] = \"Keywords to search for\"\n                build_config[\"query\"][\"display_name\"] = \"Search Query\"\n\n            # Keep news-specific fields as advanced (matching original News Search component)\n            # They remain advanced=True in all modes, just like in the original component\n\n        return build_config\n\n    def validate_url(self, string: str) -> bool:\n        \"\"\"Validate URL format.\"\"\"\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\" r\"(www\\.)?\" r\"([a-zA-Z0-9.-]+)\" r\"(\\.[a-zA-Z]{2,})?\" r\"(:\\d+)?\" r\"(\\/[^\\s]*)?$\",\n            re.IGNORECASE,\n        )\n        return bool(url_regex.match(string))\n\n    def ensure_url(self, url: str) -> str:\n        \"\"\"Ensure URL has proper protocol.\"\"\"\n        if not url.startswith((\"http://\", \"https://\")):\n            url = \"https://\" + url\n        if not self.validate_url(url):\n            msg = f\"Invalid URL: {url}\"\n            raise ValueError(msg)\n        return url\n\n    def _build_safe_client(self, url: str, validated_ips: list[str]) -> httpx.Client:\n        \"\"\"Create a sync HTTP client with DNS pinning when SSRF protection applies.\"\"\"\n        if is_ssrf_protection_enabled() and validated_ips:\n            hostname = urlparse(url).hostname\n            if hostname:\n                return create_ssrf_protected_sync_client(hostname=hostname, validated_ips=validated_ips)\n        return httpx.Client()\n\n    def _safe_get_url(self, url: str, *, headers: dict[str, str] | None = None) -> httpx.Response:\n        \"\"\"Validate an arbitrary URL and fetch it without following unvalidated redirects.\"\"\"\n        url = self.ensure_url(url)\n        try:\n            safe_url, validated_ips = validate_and_resolve_url(url)\n        except SSRFProtectionError as e:\n            msg = f\"SSRF Protection: {e}\"\n            raise ValueError(msg) from e\n\n        with self._build_safe_client(safe_url, validated_ips) as client:\n            return client.get(safe_url, headers=headers, timeout=self.timeout, follow_redirects=False)\n\n    def _sanitize_query(self, query: str) -> str:\n        \"\"\"Sanitize search query.\"\"\"\n        return re.sub(r'[<>\"\\']', \"\", query.strip())\n\n    def clean_html(self, html_string: str) -> str:\n        \"\"\"Remove HTML tags from text.\"\"\"\n        return BeautifulSoup(html_string, \"html.parser\").get_text(separator=\" \", strip=True)\n\n    def perform_web_search(self) -> DataFrame:\n        \"\"\"Perform DuckDuckGo web search.\"\"\"\n        query = self._sanitize_query(self.query)\n        if not query:\n            msg = \"Empty search query\"\n            raise ValueError(msg)\n\n        headers = {\"User-Agent\": get_user_agent()}\n        params = {\"q\": query, \"kl\": \"us-en\"}\n        url = \"https://html.duckduckgo.com/html/\"\n\n        try:\n            response = requests.get(url, params=params, headers=headers, timeout=self.timeout)\n            response.raise_for_status()\n        except requests.RequestException as e:\n            self.status = f\"Failed request: {e!s}\"\n            return DataFrame(pd.DataFrame([{\"title\": \"Error\", \"link\": \"\", \"snippet\": str(e), \"content\": \"\"}]))\n\n        if not response.text or \"text/html\" not in response.headers.get(\"content-type\", \"\").lower():\n            self.status = \"No results found\"\n            return DataFrame(\n                pd.DataFrame([{\"title\": \"Error\", \"link\": \"\", \"snippet\": \"No results found\", \"content\": \"\"}])\n            )\n\n        soup = BeautifulSoup(response.text, \"html.parser\")\n        results = []\n\n        for result in soup.select(\"div.result\"):\n            title_tag = result.select_one(\"a.result__a\")\n            snippet_tag = result.select_one(\"a.result__snippet\")\n            if title_tag:\n                raw_link = title_tag.get(\"href\", \"\")\n                parsed = urlparse(raw_link)\n                uddg = parse_qs(parsed.query).get(\"uddg\", [\"\"])[0]\n                decoded_link = unquote(uddg) if uddg else raw_link\n\n                try:\n                    final_url = self.ensure_url(decoded_link)\n                    page = self._safe_get_url(final_url, headers=headers)\n                    page.raise_for_status()\n                    content = BeautifulSoup(page.text, \"lxml\").get_text(separator=\" \", strip=True)\n                except (httpx.HTTPError, ValueError) as e:\n                    final_url = decoded_link\n                    content = f\"(Failed to fetch: {e!s})\"\n\n                results.append(\n                    {\n                        \"title\": title_tag.get_text(strip=True),\n                        \"link\": final_url,\n                        \"snippet\": snippet_tag.get_text(strip=True) if snippet_tag else \"\",\n                        \"content\": content,\n                    }\n                )\n\n        return DataFrame(pd.DataFrame(results))\n\n    def perform_news_search(self) -> DataFrame:\n        \"\"\"Perform Google News search.\"\"\"\n        query = getattr(self, \"query\", \"\")\n        hl = getattr(self, \"hl\", \"en-US\") or \"en-US\"\n        gl = getattr(self, \"gl\", \"US\") or \"US\"\n        topic = getattr(self, \"topic\", None)\n        location = getattr(self, \"location\", None)\n\n        ceid = f\"{gl}:{hl.split('-')[0]}\"\n\n        # Build RSS URL based on parameters\n        if topic:\n            # Topic-based feed\n            base_url = f\"https://news.google.com/rss/headlines/section/topic/{quote_plus(topic.upper())}\"\n            params = f\"?hl={hl}&gl={gl}&ceid={ceid}\"\n            rss_url = base_url + params\n        elif location:\n            # Location-based feed\n            base_url = f\"https://news.google.com/rss/headlines/section/geo/{quote_plus(location)}\"\n            params = f\"?hl={hl}&gl={gl}&ceid={ceid}\"\n            rss_url = base_url + params\n        elif query:\n            # Keyword search feed\n            base_url = \"https://news.google.com/rss/search?q=\"\n            query_encoded = quote_plus(query)\n            params = f\"&hl={hl}&gl={gl}&ceid={ceid}\"\n            rss_url = f\"{base_url}{query_encoded}{params}\"\n        else:\n            self.status = \"No search query, topic, or location provided.\"\n            return DataFrame(\n                pd.DataFrame(\n                    [{\"title\": \"Error\", \"link\": \"\", \"published\": \"\", \"summary\": \"No search parameters provided\"}]\n                )\n            )\n\n        try:\n            response = requests.get(rss_url, timeout=self.timeout)\n            response.raise_for_status()\n            soup = BeautifulSoup(response.content, \"xml\")\n            items = soup.find_all(\"item\")\n        except requests.RequestException as e:\n            self.status = f\"Failed to fetch news: {e}\"\n            return DataFrame(pd.DataFrame([{\"title\": \"Error\", \"link\": \"\", \"published\": \"\", \"summary\": str(e)}]))\n\n        if not items:\n            self.status = \"No news articles found.\"\n            return DataFrame(pd.DataFrame([{\"title\": \"No articles found\", \"link\": \"\", \"published\": \"\", \"summary\": \"\"}]))\n\n        articles = []\n        for item in items:\n            try:\n                title = self.clean_html(item.title.text if item.title else \"\")\n                link = item.link.text if item.link else \"\"\n                published = item.pubDate.text if item.pubDate else \"\"\n                summary = self.clean_html(item.description.text if item.description else \"\")\n                articles.append({\"title\": title, \"link\": link, \"published\": published, \"summary\": summary})\n            except (AttributeError, ValueError, TypeError) as e:\n                self.log(f\"Error parsing article: {e!s}\")\n                continue\n\n        return DataFrame(pd.DataFrame(articles))\n\n    def perform_rss_read(self) -> DataFrame:\n        \"\"\"Read RSS feed.\"\"\"\n        rss_url = getattr(self, \"query\", \"\")\n        if not rss_url:\n            return DataFrame(\n                pd.DataFrame([{\"title\": \"Error\", \"link\": \"\", \"published\": \"\", \"summary\": \"No RSS URL provided\"}])\n            )\n\n        try:\n            response = self._safe_get_url(rss_url)\n            response.raise_for_status()\n            if not response.content.strip():\n                msg = \"Empty response received\"\n                raise ValueError(msg)\n\n            # Validate XML\n            try:\n                BeautifulSoup(response.content, \"xml\")\n            except Exception as e:\n                msg = f\"Invalid XML response: {e}\"\n                raise ValueError(msg) from e\n\n            soup = BeautifulSoup(response.content, \"xml\")\n            items = soup.find_all(\"item\")\n        except (httpx.HTTPError, ValueError) as e:\n            self.status = f\"Failed to fetch RSS: {e}\"\n            return DataFrame(pd.DataFrame([{\"title\": \"Error\", \"link\": \"\", \"published\": \"\", \"summary\": str(e)}]))\n\n        articles = [\n            {\n                \"title\": item.title.text if item.title else \"\",\n                \"link\": item.link.text if item.link else \"\",\n                \"published\": item.pubDate.text if item.pubDate else \"\",\n                \"summary\": item.description.text if item.description else \"\",\n            }\n            for item in items\n        ]\n\n        # Ensure DataFrame has correct columns even if empty\n        df_articles = pd.DataFrame(articles, columns=[\"title\", \"link\", \"published\", \"summary\"])\n        self.log(f\"Fetched {len(df_articles)} articles.\")\n        return DataFrame(df_articles)\n\n    def perform_search(self) -> DataFrame:\n        \"\"\"Main search method that routes to appropriate search function based on mode.\"\"\"\n        search_mode = getattr(self, \"search_mode\", \"Web\")\n\n        if search_mode == \"Web\":\n            return self.perform_web_search()\n        if search_mode == \"News\":\n            return self.perform_news_search()\n        if search_mode == \"RSS\":\n            return self.perform_rss_read()\n        # Fallback to web search\n        return self.perform_web_search()\n"
+              },
+              "gl": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Country (gl)",
+                "dynamic": false,
+                "info": "Country code, e.g. US, FR, DE. Default: US.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "gl",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "hl": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Language (hl)",
+                "dynamic": false,
+                "info": "Language code, e.g. en-US, fr, de. Default: en-US.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "hl",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "location": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Location (Geo)",
+                "dynamic": false,
+                "info": "City, state, or country for location-based news. Leave blank for keyword search.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "location",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "query": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Search Query",
+                "dynamic": false,
+                "info": "Search keywords for news articles.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "query",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "search_mode": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Search Mode",
+                "dynamic": false,
+                "info": "Choose search mode: Web (DuckDuckGo), News (Google News), or RSS (Feed Reader)",
+                "name": "search_mode",
+                "options": [
+                  "Web",
+                  "News",
+                  "RSS"
+                ],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "tab",
+                "value": "Web"
+              },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "Timeout for the request in seconds.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 5
+              },
+              "tools_metadata": {
+                "_input_type": "ToolsInput",
+                "advanced": false,
+                "display_name": "Actions",
+                "dynamic": false,
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "tools",
+                "value": [
+                  {
+                    "args": {
+                      "query": {
+                        "description": "Search keywords for news articles.",
+                        "title": "Query",
+                        "type": "string"
+                      },
+                      "search_mode": {
+                        "default": "Web",
+                        "description": "Choose search mode: Web (DuckDuckGo), News (Google News), or RSS (Feed Reader)",
+                        "enum": [
+                          "Web",
+                          "News",
+                          "RSS"
+                        ],
+                        "title": "Search Mode",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Search the web, news, or RSS feeds.",
+                    "display_description": "Search the web, news, or RSS feeds.",
+                    "display_name": "perform_search",
+                    "name": "perform_search",
+                    "readonly": false,
+                    "status": true,
+                    "tags": [
+                      "perform_search"
+                    ]
+                  }
+                ]
+              },
+              "topic": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Topic",
+                "dynamic": false,
+                "info": "One of: WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "topic",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": true
+          },
+          "type": "UnifiedWebSearch"
+        },
+        "dragging": false,
+        "id": "WebSearch-mr",
+        "measured": {
+          "height": 210,
+          "width": 320
+        },
+        "position": {
+          "x": 787.677562192139,
+          "y": 466.97098576917995
+        },
+        "positionAbsolute": {
+          "x": 868.5433981701304,
+          "y": 653.9732314682851
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-mr",
+          "node": {
+            "description": "# 📈 Market Research\n\nResearch a company and get a structured profile - pricing, plans, market, features, and more.\n\n## Setup\n1. **Agent** - add your LLM key (any provider in the Model dropdown).\n2. **Web Search** - needs no key.\n\n## How it works\n1. **Chat Input** - the company or domain to research.\n2. **Agent (Web Search)** - searches the web and gathers detailed information.\n3. **Structured Output** - extracts a structured company profile (domain, pricing tiers, free trial, enterprise, API, market, key features, target industries).\n4. **Parser - Chat Output** - the profile, formatted as a clean report.\n\n## Run\nType a company name (e.g. \"Amazon\") and run.",
+            "display_name": "",
+            "documentation": "",
+            "i18n_key": "template_notes.market_research.ce13af36",
+            "template": {
+              "backgroundColor": "blue"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 874,
+        "id": "note-mr",
+        "measured": {
+          "height": 874,
+          "width": 597
+        },
+        "position": {
+          "x": -133.53743317190003,
+          "y": 410.1318615632817
+        },
+        "positionAbsolute": {
+          "x": -47.61748244528417,
+          "y": 849.8398446936101
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 597
       }
     ],
     "viewport": {
-      "x": -286.2250796857875,
-      "y": -257.26691224713466,
-      "zoom": 0.5812257189224358
+      "x": -4.156944464609296,
+      "y": -92.02888941832902,
+      "zoom": 0.39571717293207936
     }
   },
-  "description": "Researches companies, extracts key business data, and presents structured information for efficient analysis. ",
+  "description": "Research a company and extract a structured profile (pricing, plans, market, features, target industries).",
   "endpoint_name": null,
-  "id": "3e7efab1-f6d9-4279-8a81-819f094f871b",
+  "id": "b27fa95b-dd5a-4713-a33a-6043d1c41839",
   "is_component": false,
-  "last_tested_version": "1.6.0",
+  "last_tested_version": "1.10.0",
+  "locked": false,
   "name": "Market Research",
   "tags": [
     "assistants",

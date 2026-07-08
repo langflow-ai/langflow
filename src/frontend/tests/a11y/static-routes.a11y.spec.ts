@@ -121,7 +121,7 @@ test.describe("canonical static route accessibility", () => {
   for (const route of canonicalStaticRoutes) {
     test(
       `scans ${route.path}`,
-      { tag: ["@a11y", "@routes", "@workspace"] },
+      { tag: ["@release", "@workspace"] },
       async ({ page }) => {
         await waitForRouteToSettle(page, route);
         await page.runA11yScan(`route-${route.id}`);

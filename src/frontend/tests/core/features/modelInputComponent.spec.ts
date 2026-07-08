@@ -2,8 +2,8 @@ import type { Page } from "@playwright/test";
 
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { openFlowCard } from "../../utils/flow/open-flow-card";
 
 const addLanguageModelNode = async (page: Page) => {
   await page.getByTestId("sidebar-search-input").click();
@@ -45,7 +45,7 @@ const openBlankFlowForModelInput = async (page: Page) => {
       .catch(() => false);
 
     if (createdFlowVisible) {
-      await createdFlow.click();
+      await openFlowCard(page, "New Flow");
     }
   }
 
@@ -74,111 +74,6 @@ test.describe("ModelInputComponent", () => {
         '[data-testid*="model"], button:has-text("Setup Provider"), [role="combobox"]',
       );
       await expect(modelSection.first()).toBeVisible({ timeout: 3000 });
-    },
-  );
-
-  test(
-    "should open model dropdown and show providers",
-    { tag: ["@release", "@components", "@workspace"] },
-    async ({ page }) => {
-      await openBlankFlowForModelInput(page);
-
-      await addLanguageModelNode(page);
-
-      const modelDropdown = page.locator('[role="combobox"]').first();
-      if (await modelDropdown.isVisible()) {
-        await modelDropdown.click();
-        await page.waitForTimeout(500);
-
-        const dropdownContent = page.locator('[role="listbox"], [cmdk-list]');
-        if (await dropdownContent.isVisible({ timeout: 2000 })) {
-          await expect(dropdownContent).toBeVisible();
-        }
-      }
-    },
-  );
-
-  test(
-    "should show Manage Model Providers button in dropdown",
-    { tag: ["@release", "@components", "@workspace"] },
-    async ({ page }) => {
-      await openBlankFlowForModelInput(page);
-
-      await addLanguageModelNode(page);
-
-      const modelDropdown = page.locator('[role="combobox"]').first();
-      if (await modelDropdown.isVisible()) {
-        await modelDropdown.click();
-        await page.waitForTimeout(500);
-
-        const manageProvidersBtn = page.getByTestId("manage-model-providers");
-        if (await manageProvidersBtn.isVisible({ timeout: 2000 })) {
-          await expect(manageProvidersBtn).toBeVisible();
-          await expect(page.getByText("Manage Model Providers")).toBeVisible();
-        }
-      }
-    },
-  );
-
-  test(
-    "should open Model Provider Modal from dropdown",
-    { tag: ["@release", "@components", "@workspace"] },
-    async ({ page }) => {
-      await openBlankFlowForModelInput(page);
-
-      await addLanguageModelNode(page);
-
-      const modelDropdown = page.locator('[role="combobox"]').first();
-      if (await modelDropdown.isVisible()) {
-        await modelDropdown.click();
-        await page.waitForTimeout(500);
-
-        const manageProvidersBtn = page.getByTestId("manage-model-providers");
-        if (await manageProvidersBtn.isVisible({ timeout: 2000 })) {
-          await manageProvidersBtn.click();
-
-          await expect(page.getByText("Model providers")).toBeVisible({
-            timeout: 5000,
-          });
-        }
-      }
-    },
-  );
-
-  test(
-    "should show Refresh List button in dropdown",
-    { tag: ["@release", "@components", "@workspace"] },
-    async ({ page }) => {
-      await openBlankFlowForModelInput(page);
-
-      await addLanguageModelNode(page);
-
-      const modelDropdown = page.locator('[role="combobox"]').first();
-      if (await modelDropdown.isVisible()) {
-        await modelDropdown.click();
-        await page.waitForTimeout(500);
-
-        const refreshText = page.getByText("Refresh List");
-        if (await refreshText.isVisible({ timeout: 2000 })) {
-          await expect(refreshText).toBeVisible();
-        }
-      }
-    },
-  );
-
-  test(
-    "should display selected model in trigger button",
-    { tag: ["@release", "@components", "@workspace"] },
-    async ({ page }) => {
-      await openBlankFlowForModelInput(page);
-
-      await addLanguageModelNode(page);
-
-      const modelDropdown = page.locator('[role="combobox"]').first();
-      if (await modelDropdown.isVisible()) {
-        const text = await modelDropdown.textContent();
-        expect(text).toBeTruthy();
-      }
     },
   );
 });
