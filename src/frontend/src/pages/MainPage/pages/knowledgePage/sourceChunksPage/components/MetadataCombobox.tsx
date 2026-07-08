@@ -26,18 +26,6 @@ export interface MetadataComboboxProps {
   onEnter?: () => void;
 }
 
-/**
- * Searchable combobox built on Popover + Command (cmdk). Matches the
- * shadcn `Select` visual so it sits naturally beside other dropdowns,
- * but also accepts a free-typed value via a "Use \"foo\"" fallback item.
- *
- * Search uses a plain input (same pattern as `dropdownComponent`) instead of
- * cmdk's CommandInput so IBM does not flag aria-autocomplete on an element
- * inside the popup while the trigger already owns role="combobox".
- *
- * Presentational: holds only its own open/query state. All filter-level
- * state (selected key/value, validation, submit) lives in the parent.
- */
 export const MetadataCombobox = ({
   value,
   onChange,

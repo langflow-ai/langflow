@@ -196,9 +196,6 @@ export function DBProviderInput({
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "240px" }}
       >
-        {/* Section 1 — the provider list (a self-contained listbox). Keeping the
-            manage action out of <Command> stops it from being swept into the
-            listbox's composite keyboard/focus model. */}
         <Command
           label={t("knowledge.dbProviderLabel")}
           className="flex flex-col"
@@ -215,7 +212,6 @@ export function DBProviderInput({
             ))}
           </CommandList>
         </Command>
-        {/* Section 2 — footer action, reachable by Tab after the list. */}
         <div className="flex flex-col border-t border-border bg-background">
           <Button
             className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"

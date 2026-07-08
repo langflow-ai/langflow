@@ -97,8 +97,6 @@ export function StepConfiguration({
   onMetadataPairsChange,
 }: StepConfigurationProps) {
   const { t } = useTranslation();
-  // Portal menus into the dialog so IBM a11y does not flag body-level
-  // portaled content as outside a landmark (aria_content_in_landmark).
   const rootRef = useRef<HTMLDivElement>(null);
   const [menuContainer, setMenuContainer] = useState<HTMLElement | null>(null);
   useLayoutEffect(() => {

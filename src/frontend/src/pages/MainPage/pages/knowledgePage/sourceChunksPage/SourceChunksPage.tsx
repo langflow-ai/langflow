@@ -40,8 +40,6 @@ export const SourceChunksPage = () => {
     Record<string, string[]>
   >({});
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Portal SelectContent into main so IBM does not flag body-level portaled
-  // content as outside a landmark (aria_content_in_landmark).
   const [selectContainer, setSelectContainer] = useState<HTMLElement | null>(
     null,
   );
