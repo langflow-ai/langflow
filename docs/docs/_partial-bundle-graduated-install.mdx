@@ -2,12 +2,23 @@ import Admonition from '@theme/Admonition';
 
 export const GraduatedBundleInstall = ({ packageName }) => {
   const providers = {
-    'openai':    { name: 'OpenAI',         coreSupport: true  },
-    'anthropic': { name: 'Anthropic',       coreSupport: true  },
-    'amazon':    { name: 'Amazon Bedrock',  coreSupport: true  },
-    'cohere':    { name: 'Cohere',          coreSupport: true  },
-    'datastax':  { name: 'DataStax',        coreSupport: false },
-    'firecrawl': { name: 'Firecrawl',       coreSupport: false },
+    'amazon':             { name: 'Amazon Bedrock',  coreSupport: true  },
+    'anthropic':          { name: 'Anthropic',       coreSupport: true  },
+    'arxiv':              { name: 'arXiv Search',    coreSupport: false },
+    'cohere':             { name: 'Cohere',          coreSupport: true  },
+    'datastax':           { name: 'DataStax',        coreSupport: false },
+    'docling':            { name: 'Docling',         coreSupport: false },
+    'duckduckgo':         { name: 'DuckDuckGo Search', coreSupport: false },
+    'empiriolabs':        { name: 'EmpirioLabs',     coreSupport: false },
+    'exa':                { name: 'Exa',             coreSupport: false },
+    'firecrawl':          { name: 'Firecrawl',       coreSupport: false },
+    'ibm':                { name: 'IBM',             coreSupport: true  },
+    'nextplaid':          { name: 'NextPlaid',       coreSupport: false },
+    'openai':             { name: 'OpenAI',          coreSupport: true  },
+    'openai-compatible':  { name: 'OpenAI Compatible', coreSupport: false },
+    'oracle':             { name: 'Oracle',          coreSupport: false },
+    'paddle':             { name: 'PaddleOCR',       coreSupport: false },
+    'vllm':               { name: 'vLLM',            coreSupport: false },
   };
 
   const { name, coreSupport } = providers[packageName] ?? { name: packageName, coreSupport: false };
