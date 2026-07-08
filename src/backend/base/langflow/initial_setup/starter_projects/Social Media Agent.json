@@ -9,16 +9,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-lPSbs",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-Ngl5n",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -37,20 +33,12 @@
             "dataType": "Agent",
             "id": "Agent-Ngl5n",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-PfBhm",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "other"
           }
         },
@@ -69,16 +57,12 @@
             "dataType": "UnifiedWebSearch",
             "id": "UnifiedWebSearch-Figkb",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-Ngl5n",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -97,16 +81,12 @@
             "dataType": "URLComponent",
             "id": "URLComponent-ymoox",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-Ngl5n",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -123,9 +103,7 @@
         "data": {
           "id": "ChatInput-lPSbs",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -171,9 +149,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -204,9 +180,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -296,10 +270,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -316,9 +287,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -339,9 +308,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -398,9 +365,7 @@
         "data": {
           "id": "ChatOutput-PfBhm",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -455,9 +420,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -506,9 +469,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -529,9 +490,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -579,10 +538,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -599,9 +555,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -622,9 +576,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -680,9 +632,7 @@
         "data": {
           "id": "Agent-Ngl5n",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -747,9 +697,7 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -761,10 +709,7 @@
                 "name": "structured_response",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "Data",
-                  "JSON"
-                ],
+                "types": ["Data", "JSON"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -890,9 +835,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -917,9 +860,7 @@
                 "display_name": "Output Format Instructions",
                 "dynamic": false,
                 "info": "Generic Template for structured output formatting. Valid only with Structured response.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -964,9 +905,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1051,9 +990,7 @@
                   "tool_calling": true
                 },
                 "info": "Select your model provider",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -1122,10 +1059,7 @@
                 "display_name": "Output Schema",
                 "dynamic": false,
                 "info": "Schema Validation: Define the structure and data types for structured output. No validation if no output schema.",
-                "input_types": [
-                  "DataFrame",
-                  "Table"
-                ],
+                "input_types": ["DataFrame", "Table"],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "output_schema",
@@ -1160,13 +1094,7 @@
                     "edit_mode": "inline",
                     "formatter": "text",
                     "name": "type",
-                    "options": [
-                      "str",
-                      "int",
-                      "float",
-                      "bool",
-                      "dict"
-                    ],
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "type": "str"
                   },
                   {
@@ -1239,9 +1167,7 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior. Supports dynamic placeholders: {current_date}, {model_name}, {optional_user_context}.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1265,9 +1191,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -1305,9 +1229,7 @@
         "data": {
           "id": "UnifiedWebSearch-Figkb",
           "node": {
-            "base_classes": [
-              "Table"
-            ],
+            "base_classes": ["Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1375,9 +1297,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1500,9 +1420,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Search keywords for news articles.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1526,11 +1444,7 @@
                 "dynamic": false,
                 "info": "Choose search mode: Web (DuckDuckGo), News (Google News), or RSS (Feed Reader)",
                 "name": "search_mode",
-                "options": [
-                  "Web",
-                  "News",
-                  "RSS"
-                ],
+                "options": ["Web", "News", "RSS"],
                 "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -1593,11 +1507,7 @@
                       "search_mode": {
                         "default": "Web",
                         "description": "Choose search mode: Web (DuckDuckGo), News (Google News), or RSS (Feed Reader)",
-                        "enum": [
-                          "Web",
-                          "News",
-                          "RSS"
-                        ],
+                        "enum": ["Web", "News", "RSS"],
                         "title": "Search Mode",
                         "type": "string"
                       }
@@ -1608,9 +1518,7 @@
                     "name": "perform_search",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "perform_search"
-                    ]
+                    "tags": ["perform_search"]
                   }
                 ]
               },
@@ -1665,10 +1573,7 @@
           "display_name": "URL",
           "id": "URLComponent-ymoox",
           "node": {
-            "base_classes": [
-              "Message",
-              "Table"
-            ],
+            "base_classes": ["Message", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1734,9 +1639,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1871,11 +1774,7 @@
                 "external_options": {},
                 "info": "Output Format. Use 'Text' to extract the text from the HTML, 'Markdown' to parse the HTML into Markdown format, or 'HTML' for the raw HTML content.",
                 "name": "format",
-                "options": [
-                  "Text",
-                  "HTML",
-                  "Markdown"
-                ],
+                "options": ["Text", "HTML", "Markdown"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -1895,10 +1794,7 @@
                 "display_name": "Headers",
                 "dynamic": false,
                 "info": "The headers to send with the request",
-                "input_types": [
-                  "DataFrame",
-                  "Table"
-                ],
+                "input_types": ["DataFrame", "Table"],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2044,9 +1940,7 @@
                     "name": "fetch_content",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "fetch_content"
-                    ]
+                    "tags": ["fetch_content"]
                   }
                 ]
               },
@@ -2056,9 +1950,7 @@
                 "display_name": "URLs",
                 "dynamic": false,
                 "info": "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": true,
                 "list_add_label": "Add URL",
                 "load_from_db": false,
@@ -2073,9 +1965,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": [
-                  "https://docs.langflow.org/"
-                ]
+                "value": ["https://docs.langflow.org/"]
               },
               "use_async": {
                 "_input_type": "BoolInput",
@@ -2169,8 +2059,5 @@
   "last_tested_version": "1.10.1",
   "locked": false,
   "name": "Social Media Agent",
-  "tags": [
-    "agent",
-    "assistants"
-  ]
+  "tags": ["agent", "assistants"]
 }
