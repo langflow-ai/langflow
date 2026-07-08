@@ -1,9 +1,11 @@
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.unified_models import (
+    get_language_model_options,
     get_llm,
     handle_model_input_update,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
+from lfx.components.models_and_agents.model_selection import apply_model_overrides
 from lfx.field_typing.constants import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, StrInput
@@ -26,6 +28,25 @@ class LanguageModelComponent(LCModelComponent):
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
+        ),
+        StrInput(
+            name="model_name",
+            display_name="Model Name Override",
+            info=(
+                "Optional model name to use instead of the selected model. "
+                "Can be set from a global variable for runtime model selection."
+            ),
+            advanced=True,
+            load_from_db=False,
+        ),
+        StrInput(
+            name="provider",
+            display_name="Provider Override",
+            info=(
+                "Optional provider to use with Model Name Override. Leave blank to use the selected model's provider."
+            ),
+            advanced=True,
+            load_from_db=False,
         ),
         SecretStrInput(
             name="api_key",
@@ -97,8 +118,15 @@ class LanguageModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:
+        model = apply_model_overrides(
+            self.model,
+            model_name=getattr(self, "model_name", None),
+            provider=getattr(self, "provider", None),
+            user_id=self.user_id,
+            get_options=get_language_model_options,
+        )
         return get_llm(
-            model=self.model,
+            model=model,
             user_id=self.user_id,
             api_key=self.api_key,
             temperature=self.temperature,

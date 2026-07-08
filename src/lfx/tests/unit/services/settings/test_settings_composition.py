@@ -151,6 +151,7 @@ EXPECTED_FIELDS = {
     # ---- Added in 1.10.0, folded into the mixins during the release back-merge ----
     # PathSettings
     "kb_allowed_folder_roots",
+    "directory_component_allowed_roots",
     # McpSettings
     "mcp_tool_execution_timeout",
     "mcp_servers_locked",

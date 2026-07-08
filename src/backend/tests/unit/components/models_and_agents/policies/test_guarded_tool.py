@@ -1,6 +1,15 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+try:
+    import toolguard  # noqa: F401
+except ImportError:
+    # toolguard is an optional extra (langflow-base[toolguard]); skip if not
+    # installed. Gated off Python 3.14 because it depends on litellm, which has
+    # no 3.14-compatible release (see langflow-base pyproject).
+    pytest.skip("toolguard not available", allow_module_level=True)
+
 from langchain_core.tools import StructuredTool
 from lfx.components.models_and_agents.policies.guarded_tool import GuardedTool
 from pydantic import BaseModel

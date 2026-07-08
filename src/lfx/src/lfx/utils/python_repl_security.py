@@ -19,7 +19,13 @@ This module restricts that environment:
 * :func:`validate_code_safety` rejects code that bypasses the allow-list with an inline
   ``import`` or reaches the classic builtin-free escape gadgets: dunder attribute access
   (``().__class__.__subclasses__()``) and frame/traceback introspection
-  (``gen.gi_frame.f_back.f_globals``).
+  (``gen.gi_frame.f_back.f_globals``). It also rejects ``str.format`` /
+  ``str.format_map`` and the lower-level formatter sinks (``string.Formatter`` traversal
+  primitives, ``operator.attrgetter`` and ``operator.methodcaller``) because replacement
+  fields / dotted paths / deferred method names are evaluated at runtime and can traverse
+  attributes that are invisible to the AST, and it rejects literal replacement-field
+  templates that reach into a dunder regardless of which formatter ultimately consumes
+  them.
 
 This is defense-in-depth, NOT a guaranteed sandbox — Python sandboxing is notoriously
 hard and determined attackers may still find gadgets. The primary control for untrusted
@@ -136,13 +142,40 @@ _BLOCKED_ATTRIBUTES = frozenset(
         "func_globals",
         "func_code",
         "__dict__",
+        "format",
+        "format_map",
+        # ``str.format``/``format_map`` are not the only formatter sinks: the same
+        # dunder-traversal lives in a *string* argument (invisible to the AST attribute
+        # check) when fed through the lower-level ``string.Formatter`` primitives or
+        # ``operator.attrgetter``. Block the method names so e.g.
+        # ``string.Formatter().vformat("{0.__globals__[os]...}", (f,), {})``,
+        # ``Formatter().get_field("0.__globals__...", (f,), {})`` and
+        # ``operator.attrgetter("__globals__")(f)`` are rejected as ast.Attribute.
+        "vformat",
+        "get_field",
+        "get_value",
+        "format_field",
+        "convert_field",
+        "attrgetter",
+        # ``operator.methodcaller`` defers a method *name* (a runtime string) to call
+        # time, so it reaches the same sinks invisibly to the AST: a runtime-assembled
+        # template defeats the ``_FORMAT_FIELD_DUNDER_RE`` literal scan, and
+        # ``methodcaller("format", f)(tmpl)`` (== ``tmpl.format(f)``) /
+        # ``methodcaller("format_map", d)(tmpl)`` carry the dunder chain in ``tmpl``.
+        # More generally ``methodcaller("__getattribute__", "__globals__")(f)`` would
+        # bypass the dunder-attribute check entirely, so block the factory by name.
+        # (``operator.itemgetter`` is intentionally NOT blocked: it only performs
+        # subscription, cannot do the attribute traversal needed to bootstrap an escape,
+        # and is common in legitimate data code.)
+        "methodcaller",
         "mro",  # int.mro() reaches the object hierarchy without a dunder attribute
     }
 )
 
-# Matches a str.format()/format_map() replacement field that reaches into a dunder
-# attribute or item (e.g. "{0.__globals__}", "{0[__builtins__]}"). Such traversals live
-# inside the template string and are invisible to the AST attribute check below.
+# Matches a dunder reached inside a str.format()/Formatter replacement field, e.g.
+# "{0.__globals__}" or "{0[__builtins__]}". Such traversals live inside a literal
+# template string and are invisible to the AST attribute check below, so a literal
+# dunder-bearing template is rejected regardless of which formatter consumes it.
 _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 
 
@@ -223,7 +256,8 @@ def validate_code_safety(code: str) -> None:
 
     This complements :func:`safe_builtins`: restricted builtins stop ``__import__`` /
     ``open`` / ``eval`` etc., while this AST check stops the builtin-free escapes
-    (dunder attribute traversal and frame introspection) and inline imports.
+    (dunder attribute traversal, formatter traversal, and frame introspection) and
+    inline imports.
 
     Args:
         code: The Python source to be executed.
@@ -245,7 +279,9 @@ def validate_code_safety(code: str) -> None:
             and isinstance(node.value, str)
             and _FORMAT_FIELD_DUNDER_RE.search(node.value)
         ):
-            # Blocks str.format("{0.__globals__}") style traversal that the AST attribute
-            # check cannot see because the attribute chain is inside a literal string.
+            # Blocks "{0.__globals__}" style traversal that the AST attribute check cannot
+            # see because the attribute chain lives inside a literal string. Catches the
+            # template regardless of which formatter (str.format, Formatter.vformat, ...)
+            # ultimately consumes it.
             msg = "Access to dunder attributes via format strings is not allowed."
             raise ValueError(msg)

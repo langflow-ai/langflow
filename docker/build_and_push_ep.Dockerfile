@@ -121,6 +121,7 @@ WORKDIR /app
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 ENV LANGFLOW_EVENT_DELIVERY=polling
+ENV LANGFLOW_AUTO_LOGIN=false
 
 USER 1000
 CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--backend-only"]

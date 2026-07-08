@@ -197,13 +197,13 @@ def _patch_pydantic_builder_once() -> None:
 def _patch_identifier_substitution_once() -> None:
     """Extend composio_langchain's keyword substitution to cover all invalid Python identifiers.
 
-    composio_langchain._substitute_reserved_python_keywords only renames schema
+    composio_langchain.substitute_reserved_python_keywords only renames schema
     properties that are in its hardcoded _python_reserved set. Property names
     like 'extension-id' (hyphen) are valid JSON Schema names but not valid
     Python identifiers, causing inspect.Parameter to raise ValueError when the
     tool signature is built.
 
-    We wrap _substitute_reserved_python_keywords so that after it runs, any
+    We wrap substitute_reserved_python_keywords so that after it runs, any
     remaining property whose name is not a valid Python identifier is also
     renamed (invalid chars replaced with underscores) and registered in the
     keywords dict. This ensures _reinstate_reserved_python_keywords maps the
@@ -217,7 +217,13 @@ def _patch_identifier_substitution_once() -> None:
     import re as _re
 
     _invalid_char_re = _re.compile(r"[^a-zA-Z0-9_]")
-    original_substitute = _composio_lc_provider._substitute_reserved_python_keywords  # noqa: SLF001
+    # composio-langchain>=0.16.0 made this function public (dropped leading underscore)
+    _fn_name = (
+        "substitute_reserved_python_keywords"
+        if hasattr(_composio_lc_provider, "substitute_reserved_python_keywords")
+        else "_substitute_reserved_python_keywords"
+    )
+    original_substitute = getattr(_composio_lc_provider, _fn_name)
 
     def safe_substitute(schema: dict) -> tuple:
         schema, keywords = original_substitute(schema)
@@ -235,7 +241,7 @@ def _patch_identifier_substitution_once() -> None:
             keywords[clean_name] = p_name
         return schema, keywords
 
-    _composio_lc_provider._substitute_reserved_python_keywords = safe_substitute  # noqa: SLF001
+    setattr(_composio_lc_provider, _fn_name, safe_substitute)
     _composio_lc_provider._lfx_identifier_patched = True  # noqa: SLF001
 
 
