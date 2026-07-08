@@ -281,7 +281,7 @@ async def run_flow(
         output_error(error_msg, verbose=verbose, exception=e)
         raise RunError(error_msg, e) from e
 
-    start_time = time.time() if timing else None
+    start_time = time.monotonic() if timing else None
 
     # Use either positional input_value or --input-value option
     final_input_value = input_value or input_value_option
@@ -427,7 +427,7 @@ async def run_flow(
     inputs = InputValueRequest(input_value=final_input_value) if final_input_value else None
 
     # Mark end of loading phase if timing
-    load_end_time = time.time() if timing else None
+    load_end_time = time.monotonic() if timing else None
 
     if verbosity > 0:
         sys.stderr.write("Preparing graph for execution...\n")
@@ -476,7 +476,7 @@ async def run_flow(
         raise RunError(error_msg, e) from e
 
     logger.info("Executing graph...")
-    execution_start_time = time.time() if timing else None
+    execution_start_time = time.monotonic() if timing else None
     if verbose:
         logger.debug("Setting up execution environment")
         if inputs:
@@ -550,7 +550,7 @@ async def run_flow(
                     if hasattr(result, "vertex") and hasattr(result.vertex, "display_name"):
                         logger.debug(f"Component: {result.vertex.display_name}")
                 if timing:
-                    step_end_time = time.time()
+                    step_end_time = time.monotonic()
                     step_duration = step_end_time - execution_step_start
 
                     # Extract component information
@@ -634,7 +634,7 @@ async def run_flow(
         sys.stdout = original_stdout
         sys.stderr = original_stderr
 
-    execution_end_time = time.time() if timing else None
+    execution_end_time = time.monotonic() if timing else None
 
     captured_logs = captured_stdout.getvalue() + captured_stderr.getvalue()
 

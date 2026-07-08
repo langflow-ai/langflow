@@ -8,6 +8,7 @@ Expired checkpoints are filtered at read time, mirroring the in-memory store.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import sqlite3
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -49,7 +50,7 @@ class SqliteCheckpointStore(CheckpointStore):
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.executescript(_SCHEMA)
 
     def _connect(self) -> sqlite3.Connection:
@@ -61,7 +62,9 @@ class SqliteCheckpointStore(CheckpointStore):
 
     async def _run(self, fn):
         def call():
-            with self._connect() as conn:
+            # sqlite3's context manager commits/rolls back but never closes; close
+            # explicitly or every op leaks a connection until GC.
+            with contextlib.closing(self._connect()) as conn, conn:
                 return fn(conn)
 
         return await asyncio.to_thread(call)

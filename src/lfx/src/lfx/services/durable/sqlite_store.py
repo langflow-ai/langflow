@@ -11,6 +11,7 @@ metadata merge) run under ``BEGIN IMMEDIATE``.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import sqlite3
 from datetime import datetime, timezone
@@ -69,7 +70,7 @@ class SqliteDurableJobStore:
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.executescript(_SCHEMA)
 
     def _connect(self) -> sqlite3.Connection:
@@ -81,7 +82,9 @@ class SqliteDurableJobStore:
 
     async def _run(self, fn, *args):
         def call():
-            with self._connect() as conn:
+            # sqlite3's context manager commits/rolls back but never closes; close
+            # explicitly or every op leaks a connection until GC.
+            with contextlib.closing(self._connect()) as conn, conn:
                 return fn(conn, *args)
 
         return await asyncio.to_thread(call)
@@ -158,13 +161,17 @@ class SqliteDurableJobStore:
         def op(conn: sqlite3.Connection) -> int:
             # BEGIN IMMEDIATE serializes writers so MAX(seq)+1 is race-free (gap-free per job).
             conn.execute("BEGIN IMMEDIATE")
-            cursor = conn.execute(
-                "INSERT INTO job_events (job_id, seq, event_type, payload, created_at)"
-                " SELECT ?, COALESCE(MAX(seq), 0) + 1, ?, ?, ? FROM job_events WHERE job_id = ?"
-                " RETURNING seq",
-                (job_id, event_type, json.dumps(payload), _utcnow(), job_id),
+            # Two statements instead of INSERT...RETURNING: RETURNING needs SQLite >= 3.35,
+            # which older bundled interpreters (Linux/Windows CPython) may not have.
+            row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 AS next_seq FROM job_events WHERE job_id = ?", (job_id,)
+            ).fetchone()
+            next_seq = int(row["next_seq"])
+            conn.execute(
+                "INSERT INTO job_events (job_id, seq, event_type, payload, created_at) VALUES (?, ?, ?, ?, ?)",
+                (job_id, next_seq, event_type, json.dumps(payload), _utcnow()),
             )
-            return int(cursor.fetchone()["seq"])
+            return next_seq
 
         return await self._run(op)
 

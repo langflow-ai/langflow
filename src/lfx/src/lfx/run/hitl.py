@@ -20,6 +20,7 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
+from lfx.graph.checkpoint.resume import _unbuild_needed_dropped_producers
 from lfx.graph.checkpoint.store import CheckpointStore, InMemoryCheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.schema import VertexBuildResult
@@ -46,16 +47,19 @@ def reroute_decision_on_timeout(pending: dict | None, decision: dict) -> dict:
     to an expired sentinel (no branch taken) otherwise. A timely answer is kept unchanged.
     """
     pending = pending or {}
-    timeout_s = pending.get("timeout_seconds") or 0
+    timeout_s = max(0, pending.get("timeout_seconds") or 0)
     fallback = pending.get("fallback_action")
     paused_at = pending.get("paused_at")
     if not (timeout_s and paused_at):
         return decision
     try:
         paused_dt = datetime.fromisoformat(paused_at)
+        if paused_dt.tzinfo is None:
+            paused_dt = paused_dt.replace(tzinfo=timezone.utc)
+        elapsed = (datetime.now(timezone.utc) - paused_dt).total_seconds()
     except (TypeError, ValueError):
         return decision
-    if (datetime.now(timezone.utc) - paused_dt).total_seconds() > timeout_s:
+    if elapsed > timeout_s:
         return {**(decision or {}), "action_id": fallback or EXPIRED_ACTION}
     return decision
 
@@ -118,6 +122,9 @@ async def run_graph_with_human_input(
             for vertex in graph.vertices:
                 if f"{vertex.id}:{graph.run_id}" == request_id:
                     vertex.built = False
+            # Re-run the fixpoint post-un-build: a dropped producer feeding only the paused
+            # vertex was still built at restore time, and its restored None would crash the re-run.
+            _unbuild_needed_dropped_producers(graph)
             continue
         break
 

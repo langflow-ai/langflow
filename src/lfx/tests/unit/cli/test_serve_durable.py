@@ -14,6 +14,7 @@ from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
 from lfx.components.flow_controls.human_input import HumanInput
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
+from lfx.graph.checkpoint.store import set_default_checkpoint_store
 
 _ECHO_FLOW_ID = "67ccd2be-17f0-4190-81ff-3bb2cf6508e6"
 _HITL_FLOW_ID = "aaccd2be-17f0-4190-81ff-3bb2cf6508e6"
@@ -78,6 +79,13 @@ def _build_registry() -> FlowRegistry:
         FlowMeta(id=_HITL_FLOW_ID, relative_path=f"{_HITL_FLOW_ID}.json", title="hitl", description=None),
     )
     return registry
+
+
+@pytest.fixture(autouse=True)
+def _reset_default_checkpoint_store():
+    """The durable host installs its store as the module fallback; undo it per test."""
+    yield
+    set_default_checkpoint_store(None)
 
 
 @pytest.fixture
@@ -198,6 +206,20 @@ def test_resume_unknown_job_404(client):
     )
     assert resp.status_code == 404
     assert resp.json()["detail"]["code"] == "JOB_NOT_FOUND"
+
+
+def test_resume_disallowed_decision_422(client):
+    job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, job_id, "suspended")
+    pending = _pending_request(client, job_id)
+    resp = client.post(
+        f"/api/v2/workflows/{job_id}/resume",
+        json={"request_id": pending["request_id"], "decision": {"action_id": "not-a-real-option"}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"]["code"] == "INVALID_DECISION"
+    assert _get_status(client, job_id)["status"] == "suspended"
 
 
 def test_resume_stale_request_id_409(client):
