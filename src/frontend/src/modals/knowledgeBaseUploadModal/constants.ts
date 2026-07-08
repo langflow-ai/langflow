@@ -11,8 +11,8 @@ export const getStepDescriptions = (): Record<WizardStep, string> => ({
   2: i18n.t("knowledge.reviewDescription"),
 });
 
-export const DEFAULT_CHUNK_SIZE = 100;
-export const DEFAULT_CHUNK_OVERLAP = 0;
+export const DEFAULT_CHUNK_SIZE = 1000;
+export const DEFAULT_CHUNK_OVERLAP = 200;
 export const DEFAULT_SEPARATOR = "\\n";
 
 export const KB_INGEST_FORMATS: Record<string, string[]> = {

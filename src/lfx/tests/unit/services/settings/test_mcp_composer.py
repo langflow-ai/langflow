@@ -20,25 +20,30 @@ def mcp_service():
     return MCPComposerService()
 
 
+def get_available_local_port() -> int:
+    """Ask the OS for a currently available localhost TCP port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
 class TestPortAvailability:
     """Test port availability checking."""
 
     def test_is_port_available_when_free(self, mcp_service):
         """Test that is_port_available returns True for an available port."""
-        # Use a very high port number that's likely to be free
-        test_port = 59999
-        assert mcp_service._is_port_available(test_port) is True
+        test_port = get_available_local_port()
+        assert mcp_service._is_port_available(test_port, host="127.0.0.1") is True
 
     def test_is_port_available_when_in_use(self, mcp_service):
         """Test that is_port_available returns False when port is in use."""
-        # Create a socket that binds to a port
-        test_port = 59998
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            sock.bind(("0.0.0.0", test_port))
+            sock.bind(("127.0.0.1", 0))
+            test_port = sock.getsockname()[1]
             sock.listen(1)
             # Port should now be unavailable
-            assert mcp_service._is_port_available(test_port) is False
+            assert mcp_service._is_port_available(test_port, host="127.0.0.1") is False
         finally:
             sock.close()
 

@@ -21,7 +21,9 @@ jest.mock("@xyflow/react", () => ({
 }));
 
 // Capture the StreamCallbacks the hook passes in so we can drive them in tests.
+// biome-ignore lint/suspicious/noExplicitAny: captures the hook's StreamCallbacks (interface not exported)
 let capturedCallbacks: any = null;
+// biome-ignore lint/suspicious/noExplicitAny: mock signature mirrors postAssistStream's untyped callbacks arg
 const mockPostAssistStream = jest.fn(async (_req: unknown, callbacks: any) => {
   capturedCallbacks = callbacks;
 });

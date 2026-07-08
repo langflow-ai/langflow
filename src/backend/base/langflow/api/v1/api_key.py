@@ -36,6 +36,8 @@ async def create_api_key_route(
     try:
         user_id = current_user.id
         return await create_api_key(db, req, user_id=user_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

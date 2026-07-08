@@ -21,7 +21,12 @@ from langflow.main import create_app
 
 
 def _clean_descriptions(spec: dict[str, Any]) -> None:
-    """Convert newlines in operation descriptions to <br> for better ReDoc rendering."""
+    """Strip trailing whitespace from operation descriptions.
+
+    Previously this converted newlines to <br>, but that broke Markdown rendering
+    in Redoc because mixing HTML tags with Markdown headings (### ...) prevents
+    CommonMark from parsing the headings.  Descriptions are left as plain Markdown.
+    """
     paths = spec.get("paths") or {}
     for path_item in paths.values():
         if not isinstance(path_item, dict):
@@ -31,7 +36,7 @@ def _clean_descriptions(spec: dict[str, Any]) -> None:
                 continue
             description = operation.get("description")
             if isinstance(description, str) and description:
-                operation["description"] = description.replace("\n", "<br>")
+                operation["description"] = description.strip()
 
 
 def _collect_and_rewrite_defs(node: Any, collected: dict[str, Any]) -> None:

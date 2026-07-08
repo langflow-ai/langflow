@@ -6,7 +6,7 @@ import { openTemplatesModal } from "../../utils/flow/new-project-flow";
 
 test(
   "user should be able to select flows with different methods and perform bulk actions",
-  { tag: ["@release", "@workspace", "@mainpage"] },
+  { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 

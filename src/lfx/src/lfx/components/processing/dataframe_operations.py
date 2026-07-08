@@ -13,6 +13,7 @@ class DataFrameOperationsComponent(Component):
     documentation: str = "https://docs.langflow.org/dataframe-operations"
     icon = "table"
     name = "DataFrameOperations"
+    legacy = True
     metadata = {
         "keywords": [
             "dataframe",

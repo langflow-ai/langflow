@@ -8,11 +8,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from lfx.log.logger import logger
+from lfx.services.authorization.base import BaseAuthorizationService
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareRead, ShareUpdate
 from langflow.services.authorization import ShareAction, ensure_share_permission
+from langflow.services.authorization.invalidation import safe_invalidate_all, safe_invalidate_user
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzShare, AuthzTeamMember, SharePermissionLevel, ShareScope
 from langflow.services.database.models.deployment.model import Deployment
@@ -104,13 +106,32 @@ async def _user_can_see_share(
     )
 
 
-async def _invalidate_for_share(scope: str, target_id: UUID | None) -> None:
+async def _invalidate_for_share(scope: str, target_id: UUID | None, *, op: str = "share:write") -> None:
     """Invalidate cached policy after a share write (user scope vs invalidate_all)."""
     authz = get_authorization_service()
     if scope == ShareScope.USER.value and target_id is not None:
-        await authz.invalidate_user(target_id)
+        await safe_invalidate_user(authz, target_id, op=op)
     else:
-        await authz.invalidate_all()
+        await safe_invalidate_all(authz, op=op)
+
+
+def _uses_base_sync_shares(authz: BaseAuthorizationService) -> bool:
+    """Return True when the service only has the OSS no-op sync_shares hook."""
+    return getattr(type(authz), "sync_shares", None) is BaseAuthorizationService.sync_shares
+
+
+async def _refresh_policy_for_share(scope: str, target_id: UUID | None, *, op: str) -> None:
+    """Refresh share-derived policy after the share DB transaction is durable."""
+    authz = get_authorization_service()
+    sync_shares = getattr(authz, "sync_shares", None)
+    if sync_shares is not None and not _uses_base_sync_shares(authz):
+        try:
+            await sync_shares()
+        except Exception as exc:  # noqa: BLE001 - plugin hooks are best-effort post-commit work
+            logger.warning("sync_shares failed after %s; falling back to targeted invalidation: %s", op, exc)
+        else:
+            return
+    await _invalidate_for_share(scope, target_id, op=op)
 
 
 async def _ensure_can_administer_share(
@@ -189,9 +210,12 @@ async def create_share(
             detail="Share could not be created: it may already exist or conflict with an existing share.",
         ) from exc
     await session.refresh(row)
+    response = ShareRead.model_validate(row, from_attributes=True)
+    await session.commit()
 
-    # Invalidate policy cache for the share audience.
-    await _invalidate_for_share(payload.scope, payload.target_id)
+    # Refresh policy after commit so plugins using a separate DB connection see
+    # the durable authz_share row instead of the pre-commit transaction state.
+    await _refresh_policy_for_share(payload.scope, payload.target_id, op="share:create")
 
     await audit_decision(
         user_id=current_user.id,
@@ -199,13 +223,13 @@ async def create_share(
         obj=f"{payload.resource_type}:{payload.resource_id}",
         result="allow",
         details={
-            "share_id": str(row.id),
+            "share_id": str(response.id),
             "scope": payload.scope,
             "target_id": str(payload.target_id) if payload.target_id else None,
             "permission_level": payload.permission_level,
         },
     )
-    return ShareRead.model_validate(row, from_attributes=True)
+    return response
 
 
 _LIST_SHARES_MAX_LIMIT = 200
@@ -381,20 +405,22 @@ async def update_share(
             detail="Share could not be updated: it may conflict with an existing share.",
         ) from exc
     await session.refresh(row)
+    response = ShareRead.model_validate(row, from_attributes=True)
+    await session.commit()
 
-    await _invalidate_for_share(row.scope, row.target_id)
+    await _refresh_policy_for_share(response.scope, response.target_id, op="share:update")
 
     await audit_decision(
         user_id=current_user.id,
         action="share:update",
-        obj=f"{row.resource_type}:{row.resource_id}",
+        obj=f"{response.resource_type}:{response.resource_id}",
         result="allow",
         details={
-            "share_id": str(row.id),
-            "permission_level": row.permission_level,
+            "share_id": str(response.id),
+            "permission_level": response.permission_level,
         },
     )
-    return ShareRead.model_validate(row, from_attributes=True)
+    return response
 
 
 @router.delete("/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -429,8 +455,9 @@ async def delete_share(
     scope = row.scope
     await session.delete(row)
     await session.flush()
+    await session.commit()
 
-    await _invalidate_for_share(scope, target_id)
+    await _refresh_policy_for_share(scope, target_id, op="share:delete")
 
     await audit_decision(
         user_id=current_user.id,

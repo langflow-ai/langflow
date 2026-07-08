@@ -190,9 +190,11 @@ class TestAPIEndpoints:
 
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
+        from langflow.services.auth.utils import get_current_active_user
 
         app = FastAPI()
         app.include_router(router)
+        app.dependency_overrides[get_current_active_user] = lambda: MagicMock()
         client = TestClient(app)
 
         response = client.post(
@@ -210,9 +212,11 @@ class TestAPIEndpoints:
         """Test registration with invalid email."""
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
+        from langflow.services.auth.utils import get_current_active_user
 
         app = FastAPI()
         app.include_router(router)
+        app.dependency_overrides[get_current_active_user] = lambda: MagicMock()
         client = TestClient(app)
 
         response = client.post(
@@ -230,9 +234,11 @@ class TestAPIEndpoints:
 
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
+        from langflow.services.auth.utils import get_current_active_user
 
         app = FastAPI()
         app.include_router(router)
+        app.dependency_overrides[get_current_active_user] = lambda: MagicMock()
         client = TestClient(app)
 
         response = client.post(
@@ -242,6 +248,29 @@ class TestAPIEndpoints:
 
         assert response.status_code == 500
         assert "Registration failed" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    @patch("langflow.api.v2.registration.save_registration")
+    async def test_register_user_requires_auth(self, mock_save):
+        """POST /registration/ must require authentication (no anonymous email registration)."""
+        from fastapi import FastAPI, HTTPException
+        from fastapi.testclient import TestClient
+        from langflow.services.auth.utils import get_current_active_user
+
+        def _deny():
+            raise HTTPException(status_code=403, detail="Not authenticated")
+
+        app = FastAPI()
+        app.include_router(router)
+        # If the endpoint were missing the auth dependency, this override would
+        # never run and save_registration would be reached (200/500).
+        app.dependency_overrides[get_current_active_user] = _deny
+        client = TestClient(app)
+
+        response = client.post("/registration/", json={"email": "anon@example.com"})
+
+        assert response.status_code == 403
+        mock_save.assert_not_called()
 
     @pytest.mark.asyncio
     @patch("langflow.api.v2.registration.load_registration")

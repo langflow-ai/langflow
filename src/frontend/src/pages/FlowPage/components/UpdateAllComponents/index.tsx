@@ -1,6 +1,6 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
-import { cloneDeep } from "lodash";
 import { AnimatePresence, motion } from "framer-motion";
+import { cloneDeep } from "lodash";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
@@ -12,8 +12,8 @@ import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/us
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore, {
-  registerNodeUpdate,
   completeNodeUpdate,
+  registerNodeUpdate,
 } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";

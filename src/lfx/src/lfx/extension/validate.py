@@ -404,6 +404,26 @@ def _is_component_class(node: ast.ClassDef) -> bool:
     return False
 
 
+def _inherits_entry_point(node: ast.ClassDef) -> bool:
+    """True when a *derived* Component base plausibly supplies the entry-point.
+
+    Subclasses of bases like ``LCVectorStoreComponent`` / ``LCToolComponent`` /
+    ``LCModelComponent`` inherit the class-level ``outputs = [Output(...)]``
+    declaration and only override the output *method*, so the subclass body
+    shows neither ``build`` nor ``outputs`` (the original pilots declared
+    ``outputs`` inline, which is why this never fired before the partner
+    graduations).  Static analysis cannot resolve the base across modules, so
+    accept any base whose name ends with ``Component`` but is not the root
+    ``Component`` itself -- the loader's registration-time checks remain the
+    real gate, exactly as for :func:`_is_component_class`.
+    """
+    for base in node.bases:
+        name = base.id if isinstance(base, ast.Name) else base.attr if isinstance(base, ast.Attribute) else None
+        if name and name != "Component" and name.endswith("Component"):
+            return True
+    return False
+
+
 def _has_build_method(node: ast.ClassDef) -> bool:
     """Return True if the class body declares an invocable entry-point.
 
@@ -577,7 +597,7 @@ def _scan_python_file(py_path: Path, bundle_root: Path, errors: ExtensionErrorCo
     for node in tree.body if isinstance(tree, ast.Module) else []:
         if isinstance(node, ast.ClassDef) and _is_component_class(node):
             has_component = True
-            if not _has_build_method(node):
+            if not _has_build_method(node) and not _inherits_entry_point(node):
                 errors.add_error(
                     ExtensionError(
                         code="build-method-missing",

@@ -9,7 +9,7 @@ class CombineTextComponent(Component):
     icon = "merge"
     name = "CombineText"
     legacy: bool = True
-    replacement = ["processing.DataOperations"]
+    replacement = ["processing.Operations"]
 
     inputs = [
         MessageTextInput(

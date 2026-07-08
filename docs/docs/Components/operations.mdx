@@ -1,0 +1,96 @@
+---
+title: Operations
+slug: /operations
+---
+
+import Icon from "@site/src/components/icon";
+
+The **Operations** component performs operations on all three of Langflow's main data types — [`JSON`](/data-types#json), [`Table`](/data-types#table), and [`Message`](/data-types#message) (text) — from a single component.
+
+It replaces three separate components that were each scoped to one data type:
+
+- [**JSON Operations**](/data-operations)
+- [**Table Operations**](/dataframe-operations)
+- [**Text Operations**](/text-operations)
+
+Those three components are now legacy. Existing flows that use them continue to work, but new flows should use the **Operations** component.
+
+## Use the Operations component in a flow
+
+1. Add an **Operations** component to your flow.
+
+2. In the **Operation** field, select the operation you want to perform.
+The list contains every operation across all three data types.
+
+3. When you select an operation, the component reveals the matching input — **JSON**, **Table**, or **Text** — along with any fields the operation needs, and sets the output to the appropriate type.
+Connect the matching input to the component that produces that data type.
+
+    :::tip
+    You can select only one operation per component.
+    To perform multiple operations, chain multiple **Operations** components together.
+    :::
+
+## Available operations
+
+The **Operation** field is a single flat list of every operation across all three data types.
+The operations are grouped below by the data type they act on for reference.
+Selecting an operation reveals the input and fields it needs.
+
+### JSON operations
+
+These operations take a `JSON` input and return a `JSON` output.
+
+| Operation | Description |
+|---|---|
+| Select Keys | Keep only the specified top-level keys. |
+| Literal Eval | Evaluate string values that look like Python literals (lists, dicts, numbers, booleans). |
+| Combine | Merge multiple `JSON` objects into one. |
+| Append or Update | Add or overwrite top-level key-value pairs. |
+| Remove Keys | Recursively remove the specified keys. |
+| Rename Keys | Recursively rename keys using an old-to-new mapping. |
+| Path Selection | Explore the structure of a `JSON` example and extract a value at a selected path. |
+| JQ Expression | Filter or transform the data with a [jq](https://jqlang.github.io/jq/) expression. |
+
+### Table operations
+
+These operations take a `Table` input and return a `Table` output.
+
+| Operation | Description |
+|---|---|
+| Add Column | Add a new column populated with a fixed value. |
+| Concatenate | Stack multiple tables vertically (append rows). |
+| Drop Column | Remove a column. |
+| Filter | Keep rows where a column matches a value using a comparison operator. |
+| Head | Return the first N rows. |
+| Merge | Join two tables on a shared column. |
+| Rename Column | Rename a column. |
+| Replace Value | Replace a value within a column. |
+| Select Columns | Keep only the specified columns. |
+| Sort | Sort rows by a column, ascending or descending. |
+| Tail | Return the last N rows. |
+| Drop Duplicates | Remove duplicate rows based on a column. |
+
+### Text operations
+
+These operations take a `Text` input. Most return a `Message`; **Word Count** returns `JSON` and **Text to DataFrame** returns a `Table`.
+
+| Operation | Description | Output |
+|---|---|---|
+| Word Count | Count words, characters, and lines. | `JSON` |
+| Case Conversion | Convert text to uppercase, lowercase, title, capitalize, or swapcase. | `Message` |
+| Text Replace | Replace text, optionally using a regular expression. | `Message` |
+| Text Extract | Extract substrings matching a regular expression. | `Message` |
+| Text Head | Return the first N characters. | `Message` |
+| Text Tail | Return the last N characters. | `Message` |
+| Text Strip | Strip whitespace or specified characters from the edges of the text. | `Message` |
+| Text Join | Join two text inputs with a line break. | `Text` and `Message` |
+| Text Clean | Remove extra spaces, special characters, or empty lines. | `Message` |
+| Text to DataFrame | Convert a delimited table in text into a `Table`. | `Table` |
+
+## Operations parameters
+
+The **Operations** component's inputs and outputs are dynamic: they change based on the selected operation.
+
+The main inputs are **JSON**, **Table**, and **Text**. When no operation is selected, all three are available so you can pre-wire the component. After you choose an operation, only the input for that operation's data type remains.
+
+The output type matches the selected operation — `JSON`, `Table`, or `Message` (with **Text Join** producing both `Text` and `Message`) — as listed in [Available operations](#available-operations).

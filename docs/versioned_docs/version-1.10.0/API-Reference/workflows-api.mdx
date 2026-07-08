@@ -2,7 +2,7 @@
 title: Workflow API (Beta)
 slug: /workflow-api
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleWorkflowsApiExampleSynchronousRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-synchronous-request.sh';
 import exampleWorkflowsApiExampleAsynchronousRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-asynchronous-request.sh';
 import exampleWorkflowsApiExampleRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/workflows-api/example-request.sh';
@@ -54,17 +54,17 @@ Execute a workflow synchronously and receive complete results immediately:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonWorkflowsApiExampleSynchronousRequest} language="python" />
+<CodeBlock language="python">{examplePythonWorkflowsApiExampleSynchronousRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleSynchronousRequest} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptWorkflowsApiExampleSynchronousRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleWorkflowsApiExampleSynchronousRequest} language="bash" />
+<CodeBlock language="bash">{exampleWorkflowsApiExampleSynchronousRequest}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -84,17 +84,17 @@ The asynchronous request contains `stream` parameter, but streaming is not yet s
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonWorkflowsApiExampleAsynchronousRequest} language="python" />
+<CodeBlock language="python">{examplePythonWorkflowsApiExampleAsynchronousRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleAsynchronousRequest} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptWorkflowsApiExampleAsynchronousRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleWorkflowsApiExampleAsynchronousRequest} language="bash" />
+<CodeBlock language="bash">{exampleWorkflowsApiExampleAsynchronousRequest}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -174,17 +174,17 @@ The response includes an `outputs` field containing component-level results. Eac
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonWorkflowsApiExampleRequest} language="python" />
+<CodeBlock language="python">{examplePythonWorkflowsApiExampleRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleRequest} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptWorkflowsApiExampleRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleWorkflowsApiExampleRequest} language="bash" />
+<CodeBlock language="bash">{exampleWorkflowsApiExampleRequest}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -249,17 +249,17 @@ The response includes a `status` field that indicates the current state of the w
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonWorkflowsApiExampleRequest2} language="python" />
+<CodeBlock language="python">{examplePythonWorkflowsApiExampleRequest2}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptWorkflowsApiExampleRequest2} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptWorkflowsApiExampleRequest2}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleWorkflowsApiExampleRequest2} language="bash" />
+<CodeBlock language="bash">{exampleWorkflowsApiExampleRequest2}</CodeBlock>
 
 </TabItem>
 </Tabs>

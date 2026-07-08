@@ -260,7 +260,8 @@ jobs:
       (
         inputs.run-all-tests ||
         (needs.path-filter.result != 'skipped' &&
-        needs.path-filter.outputs.docs-only != 'true')
+        needs.path-filter.outputs.docs-only != 'true' &&
+        needs.path-filter.outputs.python == 'true')
       )
     uses: ./.github/workflows/python_test.yml
     with:

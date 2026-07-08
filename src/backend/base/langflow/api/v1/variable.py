@@ -4,7 +4,11 @@ import logging
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
-from lfx.base.models.unified_models import get_model_provider_variable_mapping, validate_model_provider_key
+from lfx.base.models.unified_models import (
+    get_all_variables_for_provider,
+    get_model_provider_variable_mapping,
+    validate_model_provider_key,
+)
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -131,10 +135,12 @@ async def create_variable(
     if variable.name in model_provider_variable_mapping.values():
         provider = get_provider_from_variable_name(variable.name)
         if provider is not None:
-            # Validate that the key actually works using the Language Model Service
-            # Run validation off the event loop to avoid blocking
+            # Saved provider vars (e.g. OPENAI_BASE_URL) must reach the validator; run off the event loop.
+            provider_vars = await asyncio.to_thread(get_all_variables_for_provider, current_user.id, provider)
             try:
-                await asyncio.to_thread(validate_model_provider_key, provider, {variable.name: variable.value})
+                await asyncio.to_thread(
+                    validate_model_provider_key, provider, {**provider_vars, variable.name: variable.value}
+                )
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -245,12 +251,13 @@ async def update_variable(
         if existing_variable.name in model_provider_variable_mapping.values() and variable.value:
             provider = get_provider_from_variable_name(existing_variable.name)
             if provider is not None:
-                # Run validation off the event loop to avoid blocking
+                # Run validation off the event loop; owner context (not caller) for share-aware updates.
+                provider_vars = await asyncio.to_thread(get_all_variables_for_provider, owner_id, provider)
                 try:
                     await asyncio.to_thread(
                         validate_model_provider_key,
                         provider,
-                        {existing_variable.name: variable.value},
+                        {**provider_vars, existing_variable.name: variable.value},
                     )
                 except ValueError as e:
                     raise HTTPException(status_code=400, detail=str(e)) from e

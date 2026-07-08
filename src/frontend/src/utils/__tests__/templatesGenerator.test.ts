@@ -127,6 +127,57 @@ describe("templatesGenerator", () => {
       expect(templates["parser"]).toBe(templates["ParserComponent"]);
     });
 
+    it("should derive bare and Component-stripped aliases from ext keys", () => {
+      // Graduated bundle components are keyed ``ext:<bundle>:<Class>@<slot>``.
+      // Flows saved before the move reference ``OpenAIModelComponent`` /
+      // ``OpenAIModel``; both must resolve to the ext template so outdated
+      // detection keeps working for legacy flows.
+      const data = asApiObject({
+        openai: {
+          "ext:openai:OpenAIModelComponent@official": {
+            template: {
+              code: { value: "openai_code" },
+              _type: "Component",
+            },
+            display_name: "OpenAI",
+          },
+        },
+      });
+
+      const templates = templatesGenerator(data);
+      expect(templates).toHaveProperty(
+        "ext:openai:OpenAIModelComponent@official",
+      );
+      expect(templates).toHaveProperty("OpenAIModelComponent");
+      expect(templates).toHaveProperty("OpenAIModel");
+      expect(templates["OpenAIModel"]).toBe(
+        templates["ext:openai:OpenAIModelComponent@official"],
+      );
+    });
+
+    it("should not let an ext-derived alias overwrite a built-in key", () => {
+      const data = asApiObject({
+        builtin: {
+          Agent: {
+            template: { code: { value: "builtin_agent_code" } },
+            display_name: "Agent",
+          },
+        },
+        somebundle: {
+          "ext:somebundle:AgentComponent@official": {
+            template: {
+              code: { value: "bundle_agent_code" },
+              _type: "Component",
+            },
+            display_name: "Agent",
+          },
+        },
+      });
+
+      const templates = templatesGenerator(data);
+      expect(templates["Agent"].template.code.value).toBe("builtin_agent_code");
+    });
+
     it("should handle components without metadata gracefully", () => {
       const data = asApiObject({
         category: {

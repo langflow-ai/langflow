@@ -1,0 +1,59 @@
+[project]
+name = "lfx-paddle"
+version = "0.1.0"
+description = "PaddleOCR component (OCR and layout-aware document parsing via the AI Studio async Job API) as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "paddle", "paddleocr", "ocr"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus any third-party imports the
+# bundle's components rely on.  The PaddleOCR component talks to the PaddleOCR
+# AI Studio async Job HTTP API directly via ``httpx`` -- it intentionally does
+# NOT depend on the ``paddleocr`` SDK, whose transitive ``pyyaml`` constraint
+# conflicts with Langflow's dependency tree.  ``httpx`` is already a runtime
+# dependency of ``lfx``; it is declared here too because the component imports
+# it directly.
+# lfx is floored at the current major.minor line and capped below the next lfx
+# major; the floor is read from src/lfx/pyproject.toml at port time and
+# re-synced on ``make patch`` via scripts/ci/sync_bundle_lfx_pin.py.
+# Fine-grained BUNDLE_API compatibility is enforced via extension.json's
+# lfx.compat list against BUNDLE_API_VERSION.
+dependencies = [
+    "lfx>=1.11.0.dev0,<2.0.0",
+    "httpx>=0.24.0,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  Editable installs whose
+# ``dist.files`` only surfaces dist-info entries fall back to this
+# entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-paddle = "lfx_paddle"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_paddle package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_paddle"]
+include = ["src/lfx_paddle/extension.json", "src/lfx_paddle/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_paddle",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

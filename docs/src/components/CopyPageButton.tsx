@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Copy as CopyIcon, Check as CheckIcon } from "lucide-react";
 import styles from "./CopyPageButton.module.css";
 
@@ -136,10 +136,18 @@ async function copyCurrentPageAsMarkdown(): Promise<boolean> {
   return true;
 }
 
+function isEditableElement(el: Element | null): boolean {
+  if (!el) return false;
+  const tag = el.tagName.toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return true;
+  return (el as HTMLElement).isContentEditable;
+}
+
 export function CopyPageButton(): JSX.Element | null {
   const [copied, setCopied] = useState(false);
+  const [isMac, setIsMac] = useState(true);
 
-  const handleClick = useCallback(async () => {
+  const handleCopy = useCallback(async () => {
     const ok = await copyCurrentPageAsMarkdown();
     if (ok) {
       setCopied(true);
@@ -147,9 +155,51 @@ export function CopyPageButton(): JSX.Element | null {
     }
   }, []);
 
+  useEffect(() => {
+    const platform =
+      (navigator as { userAgentData?: { platform?: string } }).userAgentData
+        ?.platform ?? navigator.platform;
+    setIsMac(/Mac|iPhone|iPad|iPod/i.test(platform));
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Option/Alt+C copies the whole page as Markdown. Unlike Cmd/Ctrl+C,
+      // this never shadows the native copy gesture or clobbers the clipboard
+      // on a reflexive copy with a collapsed selection.
+      // event.code is required here: on macOS, Option+C produces
+      // event.key === "ç", and key-based checks also break on non-Latin
+      // layouts.
+      const isCopyShortcut =
+        event.altKey &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        event.code === "KeyC";
+      if (!isCopyShortcut) return;
+      if (event.repeat) return;
+
+      // Don't fire while typing in a form field, where Option+C may insert a
+      // character (e.g. "ç" on macOS).
+      if (isEditableElement(document.activeElement)) return;
+
+      event.preventDefault();
+      void handleCopy();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleCopy]);
+
+  const shortcutLabel = isMac ? "⌥C" : "Alt+C";
+
   return (
     <div className={styles.root}>
-      <button type="button" onClick={handleClick} className={styles.button}>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className={styles.button}
+        title={`Copy page as Markdown (${shortcutLabel})`}
+        aria-keyshortcuts="Alt+C"
+      >
         <span aria-hidden="true" className={styles.icon}>
           {copied ? (
             <CheckIcon size={12} strokeWidth={2} />
@@ -158,6 +208,9 @@ export function CopyPageButton(): JSX.Element | null {
           )}
         </span>
         <span className={styles.label}>{copied ? "Copied!" : "Copy page"}</span>
+        <kbd aria-hidden="true" className={styles.kbd}>
+          {shortcutLabel}
+        </kbd>
       </button>
     </div>
   );

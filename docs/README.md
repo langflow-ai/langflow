@@ -24,23 +24,17 @@ $ npm run build
 
 This command generates static content into the `build` directory and can be served using any static contents hosting service, including `npm run serve`.
 
-### Import code snippets from the repo with a line range
+### Import code snippets from the repo
 
-To pull a slice of a file into the docs, source the content with `raw-loader` and present the code with the `CodeSnippet` component.
-For a working example, see the [Components overview](/concepts-components#component-code).
+To embed source files directly in the docs, use `raw-loader` to import the file as a string and pass it to the native `CodeBlock` component.
 
 ```mdx
-import CodeSnippet from "@site/src/components/CodeSnippet";
+import CodeBlock from "@theme/CodeBlock";
 import customComponent from "!!raw-loader!@langflow/src/lfx/src/lfx/custom/custom_component/custom_component.py";
 
-<CodeSnippet
-  source={customComponent}
-  startLine={41}
-  endLine={74}
-  language="python"
-  title="CustomComponent metadata (from codebase)"
-  showLineNumbers
-/>
+<CodeBlock language="python" title="CustomComponent metadata (from codebase)">
+  {customComponent}
+</CodeBlock>
 ```
 
 ## Docusaurus Versioning

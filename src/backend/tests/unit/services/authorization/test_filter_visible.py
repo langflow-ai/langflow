@@ -6,6 +6,12 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+from langflow.services.auth.context import (
+    AUTH_METHOD_API_KEY,
+    AuthCredentialContext,
+    clear_current_auth_context,
+    set_current_auth_context,
+)
 from langflow.services.authorization import guards as authz_guards
 from langflow.services.authorization import listing as authz_listing
 from langflow.services.authorization.actions import FlowAction
@@ -170,3 +176,41 @@ async def test_filter_visible_resources_owner_override_skips_enforcer(monkeypatc
     # Enforcer was consulted only for the non-owned item.
     assert len(service.batch_calls) == 1
     assert len(service.batch_calls[0]["requests"]) == 1
+
+
+@pytest.mark.anyio
+async def test_filter_visible_resources_api_key_scope_plugin_evaluates_owned_rows(monkeypatch, fake_user):
+    """API-key scope plugins can filter owned rows instead of owner-skipping them."""
+    install_settings(monkeypatch, authz_enabled=True)
+    items = [
+        SimpleNamespace(id=uuid4(), user_id=fake_user.id),
+        SimpleNamespace(id=uuid4(), user_id=fake_user.id),
+    ]
+    service = _StubAuthorizationService(batch_results=[True, False], supports_api_key_scopes=True)
+    install_authz(monkeypatch, service)
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=uuid4(),
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+
+    try:
+        result = await authz_listing.filter_visible_resources(
+            fake_user,
+            resource_type="flow",
+            candidates=items,
+            owner_extractor=lambda item: item.user_id,
+            act=FlowAction.READ,
+        )
+    finally:
+        clear_current_auth_context()
+
+    assert result == [items[0]]
+    assert len(service.batch_calls) == 1
+    assert service.batch_calls[0]["requests"] == [
+        (f"flow:{items[0].id}", "read"),
+        (f"flow:{items[1].id}", "read"),
+    ]
+    assert service.batch_calls[0]["context"]["auth_method"] == "api_key"

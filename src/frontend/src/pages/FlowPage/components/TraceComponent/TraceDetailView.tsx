@@ -102,8 +102,6 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
     );
   }
 
-  const headerTitle = `${trace.name || flowName || "Trace"}`;
-
   return (
     <div
       className="flex h-full flex-col overflow-hidden"

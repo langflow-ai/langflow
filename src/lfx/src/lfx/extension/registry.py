@@ -90,7 +90,7 @@ class Extension:
 
     extension_id: str
     version: str
-    bundle_name: str
+    bundle_name: str | None
     slot: Literal["official"]
     source_kind: SourceKind
     source: str

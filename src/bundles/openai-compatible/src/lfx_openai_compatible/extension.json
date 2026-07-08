@@ -1,0 +1,82 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-openai-compatible",
+  "version": "0.1.0",
+  "name": "OpenAI Compatible",
+  "description": "Generic OpenAI-compatible endpoints (OpenRouter, Together, Groq, self-hosted vLLM/TGI, ...) as a first-class Langflow model provider, packaged as a standalone Extension Bundle.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "providers": [
+    {
+      "name": "OpenAI Compatible",
+      "metadata": {
+        "icon": "Plug",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+          {
+            "variable_name": "Base URL",
+            "variable_key": "OPENAI_COMPATIBLE_BASE_URL",
+            "description": "Base URL of any OpenAI-compatible endpoint, e.g. https://openrouter.ai/api/v1 or http://localhost:8000/v1.",
+            "required": true,
+            "is_secret": false,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "base_url",
+            "component_metadata": {
+              "mapping_field": "openai_compatible_base_url",
+              "required": false,
+              "advanced": true,
+              "info": "Falls back to the OPENAI_COMPATIBLE_BASE_URL environment variable"
+            }
+          },
+          {
+            "variable_name": "API Key",
+            "variable_key": "OPENAI_COMPATIBLE_API_KEY",
+            "description": "Bearer token for the endpoint. Optional for local servers without authentication.",
+            "required": false,
+            "is_secret": true,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "api_key",
+            "component_metadata": {
+              "mapping_field": "api_key",
+              "required": false,
+              "advanced": true,
+              "info": "Falls back to the OPENAI_COMPATIBLE_API_KEY environment variable (optional for local servers)"
+            }
+          }
+        ],
+        "api_docs_url": "https://platform.openai.com/docs/api-reference",
+        "mapping": {
+          "model_class": "ChatOpenAI",
+          "model_param": "model"
+        }
+      },
+      "model_class": {
+        "module": "langchain_openai",
+        "attr": "ChatOpenAI"
+      },
+      "embedding": {
+        "class_name": "OpenAIEmbeddings",
+        "module": "langchain_openai",
+        "attr": "OpenAIEmbeddings",
+        "param_mapping_key": "OpenAI Compatible",
+        "param_mapping": {
+          "model": "model",
+          "api_base": "base_url",
+          "dimensions": "dimensions",
+          "chunk_size": "chunk_size",
+          "request_timeout": "timeout",
+          "max_retries": "max_retries",
+          "show_progress_bar": "show_progress_bar",
+          "model_kwargs": "model_kwargs"
+        }
+      },
+      "api_key_required": false,
+      "live": true,
+      "live_discovery": "lfx_openai_compatible.discovery:fetch_live_openai_compatible_models",
+      "validator": "lfx_openai_compatible.discovery:validate_openai_compatible_credentials"
+    }
+  ]
+}

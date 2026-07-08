@@ -24,6 +24,26 @@ if TYPE_CHECKING:
 EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
 
 
+def _is_existing_local_file(file_path: str) -> bool:
+    """Return True when file_path is an absolute path to a real local file.
+
+    Under S3 storage some callers still hand us genuine local paths (e.g. the
+    Langflow Assistant injects the installed lfx components dir into a Directory
+    node). A real local file is never an S3 key, so it must be read from disk
+    instead of being parsed as "flow_id/filename". See issue #13798.
+
+    The check is restricted to ABSOLUTE paths on purpose: S3 keys are always
+    relative ("flow_id/filename"), so requiring an absolute path makes it
+    impossible to mistake a relative S3 key for a same-named file that happens
+    to exist relative to the process CWD.
+    """
+    try:
+        path_obj = Path(file_path)
+        return path_obj.is_absolute() and path_obj.is_file()
+    except OSError:
+        return False
+
+
 def parse_storage_path(path: str) -> tuple[str, str] | None:
     """Parse a storage service path into flow_id and filename.
 
@@ -68,6 +88,9 @@ async def read_file_bytes(
     settings = get_settings_service().settings
 
     if settings.storage_type == "s3":
+        if _is_existing_local_file(file_path):
+            return Path(file_path).read_bytes()
+
         parsed = parse_storage_path(file_path)
         if not parsed:
             msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
@@ -154,6 +177,9 @@ def get_file_size(file_path: str, storage_service: StorageService | None = None)
     settings = get_settings_service().settings
 
     if settings.storage_type == "s3":
+        if _is_existing_local_file(file_path):
+            return Path(file_path).stat().st_size
+
         parsed = parse_storage_path(file_path)
         if not parsed:
             msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"

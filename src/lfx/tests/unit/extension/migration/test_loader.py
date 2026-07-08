@@ -32,6 +32,24 @@ def test_canonical_table_loads() -> None:
 
 
 @pytest.mark.unit
+def test_canonical_table_rewrites_legacy_tavily_tool() -> None:
+    table, error = load_migration_table()
+    assert error is None
+    assert table is not None
+    target = "ext:tavily:TavilySearchComponent@official"
+
+    direct_import_path = "lfx.components.tools.tavily_search_tool.TavilySearchToolComponent"
+    package_import_path = "lfx.components.tools.TavilySearchToolComponent"
+    direct_tavily_tool_import = table.lookup_import_path(direct_import_path)
+    package_tavily_tool_import = table.lookup_import_path(package_import_path)
+
+    assert direct_tavily_tool_import is not None
+    assert package_tavily_tool_import is not None
+    assert direct_tavily_tool_import.target == target
+    assert package_tavily_tool_import.target == target
+
+
+@pytest.mark.unit
 def test_canonical_path_lives_in_lfx_package() -> None:
     """Sanity: the canonical path is inside the lfx wheel layout."""
     assert MIGRATION_TABLE_PATH.name == "migration_table.json"

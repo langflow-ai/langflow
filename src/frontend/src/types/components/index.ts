@@ -1,5 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
-import type { ReactElement, ReactNode } from "react";
+import type { InputHTMLAttributes, ReactElement, ReactNode } from "react";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { InputOutput } from "../../constants/enums";
 import type {
@@ -26,12 +26,20 @@ export type InputComponentType = {
   password: boolean;
   required?: boolean;
   isForm?: boolean;
+  /**
+   * Opt back into browser / password-manager autofill (default false). Only set
+   * by real credential-entry forms (login / signup / admin login); node-config
+   * inputs leave it false so autofill cannot inject values that autosave
+   * persists. See utils/inputAutofill.ts.
+   */
+  allowAutofill?: boolean;
   editNode?: boolean;
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
   placeholder?: string;
   className?: string;
   id?: string;
+  inputProps?: InputHTMLAttributes<HTMLInputElement>;
   blurOnEnter?: boolean;
   optionsIcon?: string;
   optionsPlaceholder?: string;
@@ -325,6 +333,11 @@ export type IconComponentProps = {
   id?: string;
   skipFallback?: boolean;
   dataTestId?: string;
+  /** Icons are decorative (aria-hidden) by default; pass false to expose. */
+  ariaHidden?: boolean;
+  /** Accessible name for meaningful icons; implies ariaHidden=false. */
+  ariaLabel?: string;
+  title?: string;
 };
 
 export type InputProps = {

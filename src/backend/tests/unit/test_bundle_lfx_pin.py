@@ -87,7 +87,8 @@ class TestRewriteLfxDep:
             assert mod.rewrite_lfx_dep(self_ref, self.FLOOR) == self_ref
 
     def test_leaves_nightly_form_untouched(self):
-        # update_bundle_versions.py rewrites to this; sync must not clobber it.
+        # Legacy form from the retired nightly bundle-rename track (see
+        # src/bundles/NIGHTLY.md); sync must not clobber it if encountered.
         assert mod.rewrite_lfx_dep('"lfx-nightly==1.10.0.dev38"', self.FLOOR) == '"lfx-nightly==1.10.0.dev38"'
 
     def test_only_rewrites_runtime_dep_in_full_block(self):

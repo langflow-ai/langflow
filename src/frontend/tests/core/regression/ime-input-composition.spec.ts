@@ -61,7 +61,7 @@ async function composeKorean(page: Page, input: Locator) {
 
 test(
   "node input preserves IME composition",
-  { tag: ["@release", "@workspace", "@regression"] },
+  { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await addChromaNode(page);
 

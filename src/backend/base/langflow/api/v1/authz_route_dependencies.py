@@ -5,13 +5,15 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.flows_helpers import _read_flow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.database.models.flow.model import Flow, FlowCreate
+
+_FLOW_WRITE_DENIED_DETAIL = "You don't have permission to edit this flow."
 
 
 async def _get_authorized_flow(
@@ -35,6 +37,19 @@ async def _get_authorized_flow(
             folder_id=flow.folder_id,
         )
     except HTTPException as exc:
+        if act == FlowAction.WRITE and exc.status_code == status.HTTP_403_FORBIDDEN:
+            try:
+                await ensure_flow_permission(
+                    current_user,
+                    FlowAction.READ,
+                    flow_id=flow_id,
+                    flow_user_id=flow.user_id,
+                    workspace_id=flow.workspace_id,
+                    folder_id=flow.folder_id,
+                )
+            except HTTPException as read_exc:
+                raise deny_to_404(read_exc, detail="Flow not found") from read_exc
+            raise HTTPException(status_code=403, detail=_FLOW_WRITE_DENIED_DETAIL) from exc
         raise deny_to_404(exc, detail="Flow not found") from exc
     return flow
 

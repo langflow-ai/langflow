@@ -51,6 +51,7 @@ from langflow.services.authorization.guards import (
     ensure_project_permission,
     ensure_share_permission,
     ensure_variable_permission,
+    should_apply_owner_override,
 )
 from langflow.services.authorization.listing import (
     _default_resource_id_getter,
@@ -104,4 +105,5 @@ __all__ = [
     "get_authorization_service",
     "get_settings_service",
     "permission_denied_to_http",
+    "should_apply_owner_override",
 ]

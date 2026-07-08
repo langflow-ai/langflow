@@ -5,6 +5,7 @@ import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
   "should copy code from playground modal",
@@ -41,11 +42,12 @@ test(
       .getByTestId("sidebar-search-input")
       .fill(TEXTS.providerOpenAiSearch);
 
-    await page
-      .getByTestId("openaiOpenAI")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 200 },
-      });
+    const openAIComponent = page.getByTestId("openaiOpenAI");
+    await skipIfComponentUnavailable(openAIComponent, "OpenAI");
+
+    await openAIComponent.dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 100, y: 200 },
+    });
 
     await initialGPTsetup(page);
     await adjustScreenView(page);
@@ -71,10 +73,12 @@ test(
     await page
       .getByTestId("handle-chatinput-noshownode-chat message-source")
       .click();
-    await page.getByTestId("handle-openaimodel-shownode-input-left").click();
+    await page
+      .getByTestId("handle-openaimodelcomponent-shownode-input-left")
+      .click();
 
     await page
-      .getByTestId("handle-openaimodel-shownode-model response-right")
+      .getByTestId("handle-openaimodelcomponent-shownode-model response-right")
       .click();
     await page
       .getByTestId("handle-chatoutput-noshownode-inputs-target")

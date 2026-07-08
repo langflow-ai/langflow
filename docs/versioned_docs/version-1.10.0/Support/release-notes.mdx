@@ -67,6 +67,11 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [Langflow Extensions overview](../Develop/extensions-overview.mdx).
 
+- Default superuser password removed
+
+    Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
+    If `LANGFLOW_AUTO_LOGIN=False`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup.
+
 ### New features and enhancements
 
 - **Langflow Assistant**: build complete flows

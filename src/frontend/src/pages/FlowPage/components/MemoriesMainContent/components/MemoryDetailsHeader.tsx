@@ -120,8 +120,8 @@ export function MemoryDetailsHeader({
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label={t("memory.sessionFilter")}
                   className="w-[180px] justify-between rounded-[10px] px-3"
+                  data-testid="session-filter-button"
                 >
                   <span className="truncate">
                     {sessionLabel.length > 20

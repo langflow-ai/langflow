@@ -110,9 +110,9 @@ jobs:
       - name: Generate shared nightly tag (main == base, lockstep)
         id: generate_shared_tag
         run: |
-          # langflow-nightly pins langflow-base-nightly[complete]==<exact dev>, so both tags
-          # MUST be identical. Compute them in ONE invocation (single PyPI snapshot) so they
-          # cannot drift across separate calls.
+          # langflow (nightly .devN pre-release) pins langflow-base[complete]==<exact dev>, so
+          # both tags MUST be identical. Compute them in ONE invocation (single PyPI snapshot)
+          # so they cannot drift across separate calls.
           # NOTE: This outputs the tag with the `v` prefix.
           TAGS_OUTPUT="$(uv run ./scripts/ci/pypi_nightly_tag.py both)"
           RELEASE_TAG="$(printf '%s\n' "$TAGS_OUTPUT" | sed -n '1p')"
@@ -314,8 +314,9 @@ jobs:
     with:
       # Pass Docker image reference for docker-compose and version without 'v' prefix for pip
       # release_tag format: v1.10.0.dev20260522
-      # We need: langflowai/langflow-nightly:1.10.0.dev20260522 for Docker
-      nightly_tag: langflowai/langflow-nightly:${{ needs.create-nightly-tag.outputs.release_tag }}
+      # We need: langflowai/langflow:1.10.0.dev20260522 for Docker (nightly .devX images are
+      # pushed to the canonical langflowai/langflow repo to match PyPI langflow package naming)
+      nightly_tag: langflowai/langflow:${{ needs.create-nightly-tag.outputs.release_tag }}
     secrets: inherit
 
   slack-notification:

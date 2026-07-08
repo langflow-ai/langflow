@@ -2,7 +2,7 @@
 title: Build endpoints
 slug: /api-build
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleApiBuildBuildFlowAndStreamEvents from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-build/build-flow-and-stream-events.sh';
 import resultApiBuildResultBuildFlowAndStreamEvents from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-build/result-build-flow-and-stream-events.json';
 import exampleApiBuildBuildFlowAndStreamEvents2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-build/build-flow-and-stream-events-2.sh';
@@ -47,17 +47,17 @@ This endpoint builds and executes a flow, returning a job ID that can be used to
     <Tabs>
     <TabItem value="Python" label="Python" default>
 
-    <CodeSnippet source={examplePythonApiBuildBuildFlowAndStreamEvents} language="python" />
+    <CodeBlock language="python">{examplePythonApiBuildBuildFlowAndStreamEvents}</CodeBlock>
 
     </TabItem>
     <TabItem value="JavaScript" label="JavaScript">
 
-    <CodeSnippet source={exampleJavascriptApiBuildBuildFlowAndStreamEvents} language="javascript" />
+    <CodeBlock language="javascript">{exampleJavascriptApiBuildBuildFlowAndStreamEvents}</CodeBlock>
 
     </TabItem>
     <TabItem value="curl" label="curl">
 
-    <CodeSnippet source={exampleApiBuildBuildFlowAndStreamEvents} language="bash" />
+    <CodeBlock language="bash">{exampleApiBuildBuildFlowAndStreamEvents}</CodeBlock>
 
     </TabItem>
     </Tabs>
@@ -65,7 +65,7 @@ This endpoint builds and executes a flow, returning a job ID that can be used to
     <details>
     <summary>Result</summary>
 
-    <CodeSnippet source={resultApiBuildResultBuildFlowAndStreamEvents} language="json" />
+    <CodeBlock language="json">{resultApiBuildResultBuildFlowAndStreamEvents}</CodeBlock>
 
     </details>
 
@@ -74,17 +74,17 @@ This endpoint builds and executes a flow, returning a job ID that can be used to
     <Tabs>
     <TabItem value="Python" label="Python" default>
 
-    <CodeSnippet source={examplePythonApiBuildBuildFlowAndStreamEvents2} language="python" />
+    <CodeBlock language="python">{examplePythonApiBuildBuildFlowAndStreamEvents2}</CodeBlock>
 
     </TabItem>
     <TabItem value="JavaScript" label="JavaScript">
 
-    <CodeSnippet source={exampleJavascriptApiBuildBuildFlowAndStreamEvents2} language="javascript" />
+    <CodeBlock language="javascript">{exampleJavascriptApiBuildBuildFlowAndStreamEvents2}</CodeBlock>
 
     </TabItem>
     <TabItem value="curl" label="curl">
 
-    <CodeSnippet source={exampleApiBuildBuildFlowAndStreamEvents2} language="bash" />
+    <CodeBlock language="bash">{exampleApiBuildBuildFlowAndStreamEvents2}</CodeBlock>
 
     </TabItem>
     </Tabs>
@@ -92,7 +92,7 @@ This endpoint builds and executes a flow, returning a job ID that can be used to
     <details>
     <summary>Result</summary>
 
-    <CodeSnippet source={resultApiBuildResultBuildFlowAndStreamEvents2} language="json" />
+    <CodeBlock language="json">{resultApiBuildResultBuildFlowAndStreamEvents2}</CodeBlock>
 
     </details>
 
@@ -102,17 +102,17 @@ To disable streaming and get all events at once, set `?stream=false`.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiBuildBuildFlowAndStreamEvents3} language="python" />
+<CodeBlock language="python">{examplePythonApiBuildBuildFlowAndStreamEvents3}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiBuildBuildFlowAndStreamEvents3} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiBuildBuildFlowAndStreamEvents3}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiBuildBuildFlowAndStreamEvents3} language="bash" />
+<CodeBlock language="bash">{exampleApiBuildBuildFlowAndStreamEvents3}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -146,17 +146,17 @@ The following example stops flow execution at an **OpenAI** component:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiBuildSetStartAndStopPoints} language="python" />
+<CodeBlock language="python">{examplePythonApiBuildSetStartAndStopPoints}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiBuildSetStartAndStopPoints} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiBuildSetStartAndStopPoints}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiBuildSetStartAndStopPoints} language="bash" />
+<CodeBlock language="bash">{exampleApiBuildSetStartAndStopPoints}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -169,17 +169,17 @@ This is useful for running flows without having to pass custom values through th
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiBuildOverrideFlowParameters} language="python" />
+<CodeBlock language="python">{examplePythonApiBuildOverrideFlowParameters}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiBuildOverrideFlowParameters} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiBuildOverrideFlowParameters}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiBuildOverrideFlowParameters} language="bash" />
+<CodeBlock language="bash">{exampleApiBuildOverrideFlowParameters}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -187,7 +187,7 @@ This is useful for running flows without having to pass custom values through th
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiBuildResultOverrideFlowParameters} language="json" />
+<CodeBlock language="json">{resultApiBuildResultOverrideFlowParameters}</CodeBlock>
 
 </details>
 

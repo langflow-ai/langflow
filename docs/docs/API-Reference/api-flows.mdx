@@ -2,7 +2,7 @@
 title: Flow management endpoints
 slug: /api-flows
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleApiFlowsCreateFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/create-flow.sh';
 import resultApiFlowsResultCreateFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/result-create-flow.json';
 import exampleApiFlowsCreateFlows from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/create-flows.sh';
@@ -54,17 +54,17 @@ Creates a new flow.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsCreateFlow} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsCreateFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsCreateFlow} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsCreateFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsCreateFlow} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsCreateFlow}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -72,7 +72,7 @@ Creates a new flow.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFlowsResultCreateFlow} language="json" />
+<CodeBlock language="json">{resultApiFlowsResultCreateFlow}</CodeBlock>
 
 </details>
 
@@ -83,17 +83,17 @@ Creates multiple new flows, returning an array of flow objects.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsCreateFlows} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsCreateFlows}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsCreateFlows} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsCreateFlows}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsCreateFlows} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsCreateFlows}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -105,17 +105,17 @@ Retrieves a specific flow by its ID.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsReadFlow} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsReadFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsReadFlow} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsReadFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsReadFlow} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsReadFlow}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -123,7 +123,7 @@ Retrieves a specific flow by its ID.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFlowsResultReadFlow} language="json" />
+<CodeBlock language="json">{resultApiFlowsResultReadFlow}</CodeBlock>
 
 </details>
 
@@ -136,17 +136,17 @@ Retrieve all flows with pagination:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsReadFlows} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsReadFlows}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsReadFlows} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsReadFlows}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsReadFlows} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsReadFlows}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -156,17 +156,17 @@ To retrieve flows from a specific project, use the `project_id` query parameter:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsReadFlows2} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsReadFlows2}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsReadFlows2} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsReadFlows2}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsReadFlows2} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsReadFlows2}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -178,17 +178,17 @@ Retrieves a list of sample flows:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsReadSampleFlows} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsReadSampleFlows}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsReadSampleFlows} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsReadSampleFlows}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsReadSampleFlows} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsReadSampleFlows}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -202,17 +202,17 @@ This example changes the value for `endpoint_name` from a random UUID to `my_new
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsUpdateFlow} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsUpdateFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsUpdateFlow} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsUpdateFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsUpdateFlow} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsUpdateFlow}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -220,7 +220,7 @@ This example changes the value for `endpoint_name` from a random UUID to `my_new
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFlowsResultUpdateFlow} language="json" />
+<CodeBlock language="json">{resultApiFlowsResultUpdateFlow}</CodeBlock>
 
 </details>
 
@@ -231,17 +231,17 @@ Deletes a specific flow by its ID.
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsDeleteFlow} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsDeleteFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsDeleteFlow} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsDeleteFlow}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsDeleteFlow} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsDeleteFlow}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -249,7 +249,7 @@ Deletes a specific flow by its ID.
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFlowsResultDeleteFlow} language="json" />
+<CodeBlock language="json">{resultApiFlowsResultDeleteFlow}</CodeBlock>
 
 </details>
 
@@ -262,17 +262,17 @@ This endpoint downloads a ZIP file containing [Langflow JSON files](/concepts-fl
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsExportFlows} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsExportFlows}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsExportFlows} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsExportFlows}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsExportFlows} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsExportFlows}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -280,7 +280,7 @@ This endpoint downloads a ZIP file containing [Langflow JSON files](/concepts-fl
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiFlowsResultExportFlows} language="text" />
+<CodeBlock language="text">{resultApiFlowsResultExportFlows}</CodeBlock>
 
 </details>
 
@@ -296,17 +296,17 @@ This example uploads a local file named `agent-with-astra-db-tool.json` to a fol
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiFlowsImportFlows} language="python" />
+<CodeBlock language="python">{examplePythonApiFlowsImportFlows}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiFlowsImportFlows} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiFlowsImportFlows}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiFlowsImportFlows} language="bash" />
+<CodeBlock language="bash">{exampleApiFlowsImportFlows}</CodeBlock>
 
 </TabItem>
 </Tabs>

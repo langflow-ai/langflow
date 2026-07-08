@@ -60,18 +60,17 @@ It outputs the API response as [`Data`](/data-types#data).
 | Sitemap Only (`sitemap_only`) | Boolean | Input parameter. When true, only links found in the sitemap are returned. |
 | Include Subdomains (`include_subdomains`) | Boolean | Input parameter. When true, subdomains of the provided URL are also scanned. |
 
-## Firecrawl Extract API
+## Firecrawl Search API
 
-This component extracts structured data from one or more URLs using a prompt or schema.
+This component searches the web and returns the results.
 
 It outputs the API response as [`Data`](/data-types#data).
 
-### Firecrawl Extract API parameters
+### Firecrawl Search API parameters
 
 | Name | Type | Description |
 |------|------|-------------|
 | Firecrawl API Key (`api_key`) | SecretString | Input parameter. The API key to use Firecrawl API. |
-| URLs (`urls`) | String | Input parameter. List of URLs to extract data from (separated by commas or new lines). |
-| Prompt (`prompt`) | String | Input parameter. Prompt to guide the extraction process. |
-| Schema (`schema`) | Data | Input parameter. Schema to define the structure of the extracted data. |
-| Enable Web Search (`enable_web_search`) | Boolean | Input parameter. When true, the extraction uses web search to find additional data. |
+| Query (`query`) | String | Input parameter. The search query to run. |
+| Limit (`limit`) | Integer | Input parameter. The maximum number of results to return. |
+| Location (`location`) | String | Input parameter. Location to bias the search results (for example, a country or region). |

@@ -2,7 +2,7 @@
 title: OpenAI Responses API
 slug: /api-openai-responses
 ---
-import CodeSnippet from '@site/src/components/CodeSnippet';
+import CodeBlock from '@theme/CodeBlock';
 import exampleApiOpenaiResponsesExampleRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-openai-responses/example-request.sh';
 import exampleApiOpenaiResponsesExampleStreamingRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-openai-responses/example-streaming-request.sh';
 import resultApiOpenaiResponsesResultExampleStreamingRequest from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-openai-responses/result-example-streaming-request.json';
@@ -70,12 +70,12 @@ In the following examples, replace the values for `LANGFLOW_SERVER_URL`, `LANGFL
 <Tabs groupId="client">
 <TabItem value="Python" label="OpenAI Python Client" default>
 
-<CodeSnippet source={examplePythonApiOpenaiResponsesAdditionalConfigurationForOpenaiClientLibraries} language="python" />
+<CodeBlock language="python">{examplePythonApiOpenaiResponsesAdditionalConfigurationForOpenaiClientLibraries}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="OpenAI TypeScript Client">
 
-<CodeSnippet source={exampleJavascriptApiOpenaiResponsesAdditionalConfigurationForOpenaiClientLibraries} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiOpenaiResponsesAdditionalConfigurationForOpenaiClientLibraries}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -105,17 +105,17 @@ If you need these in a different format or want a downloadable calendar, let me 
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiOpenaiResponsesExampleRequest} language="python" />
+<CodeBlock language="python">{examplePythonApiOpenaiResponsesExampleRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiOpenaiResponsesExampleRequest} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiOpenaiResponsesExampleRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiOpenaiResponsesExampleRequest} language="bash" />
+<CodeBlock language="bash">{exampleApiOpenaiResponsesExampleRequest}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -234,17 +234,17 @@ When you set `"stream": true` with your request, the API returns a stream where 
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiOpenaiResponsesExampleStreamingRequest} language="python" />
+<CodeBlock language="python">{examplePythonApiOpenaiResponsesExampleStreamingRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiOpenaiResponsesExampleStreamingRequest} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiOpenaiResponsesExampleStreamingRequest}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiOpenaiResponsesExampleStreamingRequest} language="bash" />
+<CodeBlock language="bash">{exampleApiOpenaiResponsesExampleStreamingRequest}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -252,7 +252,7 @@ When you set `"stream": true` with your request, the API returns a stream where 
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiOpenaiResponsesResultExampleStreamingRequest} language="json" />
+<CodeBlock language="json">{resultApiOpenaiResponsesResultExampleStreamingRequest}</CodeBlock>
 
 </details>
 
@@ -295,17 +295,17 @@ First Message:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds} language="python" />
+<CodeBlock language="python">{examplePythonApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds} language="bash" />
+<CodeBlock language="bash">{exampleApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -313,7 +313,7 @@ First Message:
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiOpenaiResponsesResultContinueConversationsWithResponseAndSessionIds} language="json" />
+<CodeBlock language="json">{resultApiOpenaiResponsesResultContinueConversationsWithResponseAndSessionIds}</CodeBlock>
 
 </details>
 
@@ -322,17 +322,17 @@ Follow-up message:
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds2} language="python" />
+<CodeBlock language="python">{examplePythonApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds2}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds2} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds2}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds2} language="bash" />
+<CodeBlock language="bash">{exampleApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds2}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -340,7 +340,7 @@ Follow-up message:
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiOpenaiResponsesResultContinueConversationsWithResponseAndSessionIds2} language="json" />
+<CodeBlock language="json">{resultApiOpenaiResponsesResultContinueConversationsWithResponseAndSessionIds2}</CodeBlock>
 
 </details>
 
@@ -349,17 +349,17 @@ Optionally, you can use your own session ID values for the `previous_response_id
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds3} language="python" />
+<CodeBlock language="python">{examplePythonApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds3}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds3} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds3}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds3} language="bash" />
+<CodeBlock language="bash">{exampleApiOpenaiResponsesContinueConversationsWithResponseAndSessionIds3}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -419,17 +419,17 @@ To get the raw `results` of each tool execution, add  `include: ["tool_call.resu
 <Tabs>
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiOpenaiResponsesRetrieveToolCallResults} language="python" />
+<CodeBlock language="python">{examplePythonApiOpenaiResponsesRetrieveToolCallResults}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiOpenaiResponsesRetrieveToolCallResults} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiOpenaiResponsesRetrieveToolCallResults}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiOpenaiResponsesRetrieveToolCallResults} language="bash" />
+<CodeBlock language="bash">{exampleApiOpenaiResponsesRetrieveToolCallResults}</CodeBlock>
 
 </TabItem>
 </Tabs>
@@ -450,7 +450,7 @@ For example:
 <details>
 <summary>Result</summary>
 
-<CodeSnippet source={resultApiOpenaiResponsesResultRetrieveToolCallResults} language="json" />
+<CodeBlock language="json">{resultApiOpenaiResponsesResultRetrieveToolCallResults}</CodeBlock>
 
 </details>
 
@@ -477,17 +477,17 @@ The `usage` field is always present in the response, either with token counts or
 <Tabs groupId="token-usage">
 <TabItem value="Python" label="Python" default>
 
-<CodeSnippet source={examplePythonApiOpenaiResponsesTokenUsageTracking} language="python" />
+<CodeBlock language="python">{examplePythonApiOpenaiResponsesTokenUsageTracking}</CodeBlock>
 
 </TabItem>
 <TabItem value="JavaScript" label="JavaScript">
 
-<CodeSnippet source={exampleJavascriptApiOpenaiResponsesTokenUsageTracking} language="javascript" />
+<CodeBlock language="javascript">{exampleJavascriptApiOpenaiResponsesTokenUsageTracking}</CodeBlock>
 
 </TabItem>
 <TabItem value="curl" label="curl">
 
-<CodeSnippet source={exampleApiOpenaiResponsesTokenUsageTracking} language="bash" />
+<CodeBlock language="bash">{exampleApiOpenaiResponsesTokenUsageTracking}</CodeBlock>
 
 <details>
 <summary>Response with token usage</summary>

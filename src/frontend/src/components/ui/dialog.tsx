@@ -5,10 +5,18 @@ import DialogContentWithouFixed from "@/customization/components/custom-dialog-c
 import { dialogClass } from "@/customization/utils/dialog-class";
 import { cn } from "../../utils/utils";
 import ShadTooltip from "../common/shadTooltipComponent";
+import { useClosedTriggerAriaControls } from "./use-closed-trigger-aria-controls";
+import { useInertForAriaHiddenElements } from "./use-inert-for-aria-hidden";
 
 const Dialog = DialogPrimitive.Root;
 
-const DialogTrigger = DialogPrimitive.Trigger;
+const DialogTrigger = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Trigger>
+>((props, ref) => (
+  <DialogPrimitive.Trigger ref={useClosedTriggerAriaControls(ref)} {...props} />
+));
+DialogTrigger.displayName = DialogPrimitive.Trigger.displayName;
 
 const DialogPortal = ({
   children,
@@ -33,6 +41,26 @@ const DialogOverlay = React.forwardRef<
   />
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
+
+const MAX_DIALOG_CHILD_SCAN_DEPTH = 4;
+
+const hasChildOfType = (
+  children: React.ReactNode,
+  targetType: React.ElementType,
+  depth = 0,
+): boolean =>
+  React.Children.toArray(children).some((child) => {
+    if (!React.isValidElement<{ children?: React.ReactNode }>(child)) {
+      return false;
+    }
+    if (child.type === targetType) {
+      return true;
+    }
+    if (depth >= MAX_DIALOG_CHILD_SCAN_DEPTH) {
+      return false;
+    }
+    return hasChildOfType(child.props.children, targetType, depth + 1);
+  });
 
 // Create a VisuallyHidden component for accessibility
 const VisuallyHidden = React.forwardRef<
@@ -73,13 +101,10 @@ const DialogContent = React.forwardRef<
     ref,
   ) => {
     // Check if DialogTitle is included in children
-    const hasDialogTitle = React.Children.toArray(children).some(
-      (child) => React.isValidElement(child) && child.type === DialogTitle,
-    );
-    const hasDialogDescription = React.Children.toArray(children).some(
-      (child) =>
-        React.isValidElement(child) && child.type === DialogDescription,
-    );
+    const hasDialogTitle = hasChildOfType(children, DialogTitle);
+    const hasDialogDescription = hasChildOfType(children, DialogDescription);
+
+    useInertForAriaHiddenElements();
 
     return (
       <DialogPortal>
@@ -93,9 +118,13 @@ const DialogContent = React.forwardRef<
           onOpenAutoFocus={(e) => {
             if (onOpenAutoFocus) {
               onOpenAutoFocus(e);
-            } else {
-              e.preventDefault();
+              return;
             }
+            // Focus must enter the dialog on open (WCAG 2.4.3), but not
+            // land on the close button — that would pop its tooltip.
+            // Focus the dialog container itself instead.
+            e.preventDefault();
+            (e.target as HTMLElement | null)?.focus();
           }}
           {...props}
         >
@@ -123,7 +152,7 @@ const DialogContent = React.forwardRef<
                   closeButtonClassName,
                 )}
               >
-                <Cross2Icon className="h-[18px] w-[18px]" />
+                <Cross2Icon className="h-[18px] w-[18px]" aria-hidden="true" />
                 <span className="sr-only">Close</span>
               </DialogPrimitive.Close>
             </ShadTooltip>

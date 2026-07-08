@@ -12,7 +12,7 @@ from langchain_core.runnables import Runnable
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
-from lfx.base.agents.utils import get_chat_output_sender_name
+from lfx.base.agents.utils import get_chat_output_sender_name, resolve_agent_verbose
 from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import InputTypes
@@ -52,7 +52,25 @@ class LCAgentComponent(Component):
             advanced=True,
             info="Should the Agent fix errors when reading user input for better processing?",
         ),
-        BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True),
+        # The stdout chain markers this used to enable now follow the LANGCHAIN_VERBOSE
+        # env var (off by default) via resolve_agent_verbose(); see run_agent /
+        # get_agent_kwargs. The input value alone no longer attaches LangChain's
+        # StdOutCallbackHandler. The info string surfaces this in the UI so the toggle
+        # and its (now env-gated) behavior agree.
+        BoolInput(
+            name="verbose",
+            display_name="Verbose",
+            value=True,
+            advanced=True,
+            info=(
+                "Legacy toggle. The '> Entering new ... chain' / '> Finished chain.' "
+                "markers it used to print to stdout are now gated on the "
+                "LANGCHAIN_VERBOSE environment variable (off by default); set "
+                "LANGCHAIN_VERBOSE=true to emit them. Toggling this input on its own no "
+                "longer attaches LangChain's stdout handler. Agent steps remain visible "
+                "in the UI regardless of this setting."
+            ),
+        ),
         IntInput(
             name="max_iterations",
             display_name="Max Iterations",
@@ -99,7 +117,10 @@ class LCAgentComponent(Component):
     def get_agent_kwargs(self, *, flatten: bool = False) -> dict:
         base = {
             "handle_parsing_errors": self.handle_parsing_errors,
-            "verbose": self.verbose,
+            # Gate LangChain's stdout chain markers on LANGCHAIN_VERBOSE (off by
+            # default) instead of the always-True component input, so they don't
+            # leak to container/k8s stdout logs. See resolve_agent_verbose().
+            "verbose": resolve_agent_verbose(),
             "allow_dangerous_code": True,
         }
         agent_kwargs = {
@@ -144,7 +165,9 @@ class LCAgentComponent(Component):
         else:
             # note the tools are not required to run the agent, hence the validation removed.
             handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
-            verbose = hasattr(self, "verbose") and self.verbose
+            # Gate LangChain's stdout chain markers on LANGCHAIN_VERBOSE (off by default)
+            # rather than the always-True component input. See resolve_agent_verbose().
+            verbose = resolve_agent_verbose()
             max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,

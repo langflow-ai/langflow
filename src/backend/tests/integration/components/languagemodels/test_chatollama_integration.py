@@ -7,6 +7,11 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 
 
+@pytest.fixture(autouse=True)
+def allow_local_ollama(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "localhost")
+
+
 @pytest.mark.integration
 class TestChatOllamaIntegration:
     """Integration tests for ChatOllama structured output flow."""

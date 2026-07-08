@@ -5,13 +5,22 @@ import { useDarkStore } from "@/stores/darkStore";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import type { ColDef } from "ag-grid-community";
 import type { TableOptionsTypeAPI } from "@/types/api";
+import { suppressAutofillOnElement } from "@/utils/inputAutofill";
 import { cn } from "@/utils/utils";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
 import cloneDeep from "lodash";
-import { type ElementRef, forwardRef, useRef, useState } from "react";
+import {
+  type ElementRef,
+  forwardRef,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import TableOptions from "./components/TableOptions";
+import { useAgGridAccessibilityPatch } from "./hooks/use-ag-grid-accessibility-patch";
+import { applyRowTabIndices } from "./utils/applyRowTabIndices";
 import resetGrid from "./utils/reset-grid-columns";
 
 export interface TableComponentProps extends AgGridReactProps {
@@ -36,6 +45,7 @@ export interface TableComponentProps extends AgGridReactProps {
   addRow?: () => void;
   tableOptions?: TableOptionsTypeAPI;
   paginationInfo?: string;
+  tableLabel?: string;
 }
 
 const TableComponent = forwardRef<
@@ -43,13 +53,20 @@ const TableComponent = forwardRef<
   TableComponentProps
 >(
   (
-    { alertTitle, alertDescription, displayEmptyAlert = true, ...props },
+    {
+      alertTitle,
+      alertDescription,
+      displayEmptyAlert = true,
+      tableLabel,
+      ...props
+    },
     ref,
   ) => {
     const { t } = useTranslation();
     const resolvedAlertTitle = alertTitle ?? t("table.noDataTitle");
     const resolvedAlertDescription =
       alertDescription ?? t("table.noDataMessage");
+    const resolvedTableLabel = tableLabel ?? t("table.dataTable", "Data table");
     const isSingleToggleRowEditable = (
       colField: string,
       // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -263,9 +280,14 @@ const TableComponent = forwardRef<
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
       useRef<AgGridReact | null>(null);
+    const {
+      containerRef: tableContainerRef,
+      schedulePatch: scheduleGridAccessibilityPatch,
+    } = useAgGridAccessibilityPatch(resolvedTableLabel);
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
+    const ariaLabel = props["aria-label"] as string | undefined;
     // Only use visible columns for the store reference
     const storeReference = props.columnDefs
       .filter((col) => !col.hide)
@@ -275,6 +297,8 @@ const TableComponent = forwardRef<
     const onGridReady = (params) => {
       // @ts-ignore
       realRef.current = params;
+      params.api.setGridAriaProperty("label", ariaLabel ?? null);
+      scheduleGridAccessibilityPatch();
       const updatedColumnDefs = [...colDef];
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       const customInit = localStorage.getItem(storeReference);
@@ -301,6 +325,10 @@ const TableComponent = forwardRef<
       }, 1000);
       if (props.onGridReady) props.onGridReady(params);
     };
+
+    useEffect(() => {
+      realRef.current?.api?.setGridAriaProperty("label", ariaLabel ?? null);
+    }, [ariaLabel]);
     const onColumnMoved = (params) => {
       const updatedColumnDefs = cloneDeep(
         params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
@@ -330,6 +358,22 @@ const TableComponent = forwardRef<
       if (totalWidth < containerWidth) {
         params.api.sizeColumnsToFit();
       }
+    };
+    const onCellEditingStarted = (event) => {
+      // ag-grid mounts its cell editor <input>/<textarea> outside React, so the
+      // hardened Input primitive doesn't cover them. Stamp the autofill-
+      // suppression attributes on the active editor so the browser can't inject
+      // saved credentials into editable cells (which autosave persists). Defer a
+      // frame so the editor DOM exists; cover inline and popup (large-text)
+      // editors.
+      requestAnimationFrame(() => {
+        document
+          .querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+            ".ag-cell-inline-editing input, .ag-cell-inline-editing textarea, .ag-popup-editor input, .ag-popup-editor textarea",
+          )
+          .forEach(suppressAutofillOnElement);
+      });
+      props.onCellEditingStarted?.(event);
     };
     if (props.rowData.length === 0 && displayEmptyAlert) {
       return (
@@ -365,6 +409,7 @@ const TableComponent = forwardRef<
 
     return (
       <div
+        ref={tableContainerRef}
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
           "ag-theme-shadcn flex h-full flex-col",
@@ -405,7 +450,13 @@ const TableComponent = forwardRef<
             }
           }}
           onGridReady={onGridReady}
+          onFirstDataRendered={(event) => {
+            applyRowTabIndices(tableContainerRef.current);
+            scheduleGridAccessibilityPatch();
+            props.onFirstDataRendered?.(event);
+          }}
           onColumnMoved={onColumnMoved}
+          onCellEditingStarted={onCellEditingStarted}
           onCellValueChanged={
             props.onCellValueChanged
               ? (e) => {
@@ -475,6 +526,11 @@ const TableComponent = forwardRef<
               );
               setColumnStateChange(true);
             }
+          }}
+          onRowDataUpdated={(e) => {
+            applyRowTabIndices(tableContainerRef.current);
+            scheduleGridAccessibilityPatch();
+            props.onRowDataUpdated?.(e);
           }}
         />
         {!props.tableOptions?.hide_options && props.pagination && (

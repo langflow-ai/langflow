@@ -154,10 +154,8 @@ async def test_mcp_servers_upload_replace(session, storage_service, settings_ser
     stored_bytes = storage_service._store[expected_path]
     assert stored_bytes == content2
 
-    # Third upload with server config provided by user
-    content3 = (
-        b'{"mcpServers": {"everything": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-everything"]}}}'
-    )
+    # Third upload with an (allow-listed) server config provided by the user.
+    content3 = b'{"mcpServers": {"fetch": {"command": "uvx", "args": ["mcp-server-fetch"]}}}'
     file3 = UploadFile(filename=mcp_file_ext, file=io.BytesIO(content3))
     file3.size = len(content3)
 
@@ -171,6 +169,142 @@ async def test_mcp_servers_upload_replace(session, storage_service, settings_ser
 
     stored_bytes = storage_service._store[expected_path]
     assert stored_bytes == content3
+
+
+@pytest.mark.asyncio
+async def test_mcp_servers_upload_rejects_disallowed_command(session, storage_service, settings_service, current_user):
+    """An uploaded MCP config with a disallowed command must be rejected (no stdio-spawn RCE).
+
+    The upload path must enforce the same MCPServerConfig allow-list as the
+    structured /api/v2/mcp/servers endpoints, so it can't be used to smuggle an
+    arbitrary command that is later spawned via the stdio transport.
+    """
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+
+    malicious = b'{"mcpServers": {"evil": {"command": "/bin/sh; rm -rf /", "args": []}}}'
+    file = UploadFile(filename=mcp_file_ext, file=io.BytesIO(malicious))
+    file.size = len(malicious)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await upload_user_file(
+            file=file,
+            session=session,
+            current_user=current_user,
+            storage_service=storage_service,
+            settings_service=settings_service,
+        )
+
+    assert exc_info.value.status_code == 422
+    # Nothing should have been written to storage on rejection.
+    assert storage_service._store == {}
+    # And no database metadata record should have been created either, so a rejected
+    # upload can't leave a dangling row behind (partial-write regression guard).
+    assert session._db == {}
+
+
+@pytest.mark.asyncio
+async def test_mcp_servers_upload_rejects_not_valid_json(session, storage_service, settings_service, current_user):
+    """A non-JSON upload to the MCP config path is rejected with 422 (validator JSON branch)."""
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+
+    not_json = b"not json"
+    file = UploadFile(filename=mcp_file_ext, file=io.BytesIO(not_json))
+    file.size = len(not_json)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await upload_user_file(
+            file=file,
+            session=session,
+            current_user=current_user,
+            storage_service=storage_service,
+            settings_service=settings_service,
+        )
+
+    assert exc_info.value.status_code == 422
+    assert "not valid JSON" in exc_info.value.detail
+    assert storage_service._store == {}
+    assert session._db == {}
+
+
+@pytest.mark.asyncio
+async def test_mcp_servers_upload_rejects_non_object_mcpservers(
+    session, storage_service, settings_service, current_user
+):
+    """An ``mcpServers`` value that isn't an object is rejected with 422 (validator shape branch)."""
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+
+    bad_shape = b'{"mcpServers": "x"}'
+    file = UploadFile(filename=mcp_file_ext, file=io.BytesIO(bad_shape))
+    file.size = len(bad_shape)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await upload_user_file(
+            file=file,
+            session=session,
+            current_user=current_user,
+            storage_service=storage_service,
+            settings_service=settings_service,
+        )
+
+    assert exc_info.value.status_code == 422
+    assert "expected an 'mcpServers' object" in exc_info.value.detail
+    assert storage_service._store == {}
+    assert session._db == {}
+
+
+@pytest.mark.asyncio
+async def test_mcp_servers_upload_blocked_when_locked_for_non_superuser(session, storage_service, current_user):
+    """A locked MCP config can't be replaced by a non-superuser via the file-upload path.
+
+    The structured /api/v2/mcp/servers endpoints 403 non-superuser writes while locked,
+    and this branch writes the same _mcp_servers_<uid>.json that get_server_list reads —
+    so without the same guard the upload path would be a lock bypass.
+    """
+    locked_settings = SimpleNamespace(settings=SimpleNamespace(max_file_size_upload=10, mcp_servers_locked=True))
+    current_user.is_superuser = False
+
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+    content = b'{"mcpServers": {"fetch": {"command": "uvx", "args": ["mcp-server-fetch"]}}}'
+    file = UploadFile(filename=mcp_file_ext, file=io.BytesIO(content))
+    file.size = len(content)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await upload_user_file(
+            file=file,
+            session=session,
+            current_user=current_user,
+            storage_service=storage_service,
+            settings_service=locked_settings,
+        )
+
+    assert exc_info.value.status_code == 403
+    # The lock fires before any write, so nothing is persisted.
+    assert storage_service._store == {}
+    assert session._db == {}
+
+
+@pytest.mark.asyncio
+async def test_mcp_servers_upload_allowed_when_locked_for_superuser(session, storage_service, current_user):
+    """A superuser can still replace the MCP config via upload while the lock is on."""
+    locked_settings = SimpleNamespace(settings=SimpleNamespace(max_file_size_upload=10, mcp_servers_locked=True))
+    current_user.is_superuser = True
+
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+    mcp_file = await get_mcp_file(current_user)
+    content = b'{"mcpServers": {"fetch": {"command": "uvx", "args": ["mcp-server-fetch"]}}}'
+    file = UploadFile(filename=mcp_file_ext, file=io.BytesIO(content))
+    file.size = len(content)
+
+    await upload_user_file(
+        file=file,
+        session=session,
+        current_user=current_user,
+        storage_service=storage_service,
+        settings_service=locked_settings,
+    )
+
+    expected_path = f"{current_user.id}/{mcp_file}.json"
+    assert storage_service._store[expected_path] == content
 
 
 @pytest.mark.asyncio

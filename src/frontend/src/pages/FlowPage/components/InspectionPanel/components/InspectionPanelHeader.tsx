@@ -138,6 +138,9 @@ export default function InspectionPanelHeader({
                   ? "save-name-description-button"
                   : "edit-name-description-button"
               }
+              aria-label={
+                editMode ? t("settings.saveButton") : t("admin.editTitle")
+              }
             >
               <ForwardedIconComponent
                 name={editMode ? "Check" : "PencilLine"}
@@ -181,6 +184,7 @@ export default function InspectionPanelHeader({
                 )}
                 className="!text-muted-foreground"
                 dataTestId="docs-button-modal"
+                label={t("nodeToolbar.docs")}
               />
             )}
             {hasCode && (

@@ -132,8 +132,11 @@ _MALFORMED_CASES: list[tuple[str, dict[str, Any]]] = [
     ("lfx", {**_VALID, "lfx": {"compat": []}}),
     # 8. lfx.compat wrong element type (must be a string, not int)
     ("lfx", {**_VALID, "lfx": {"compat": [1]}}),
-    # 9. bundles empty
-    ("bundles", {**_VALID, "bundles": []}),
+    # 9. provider entry missing the required ``metadata`` field. (Empty bundles
+    # is no longer schema-invalid: provider-only extensions ship no components,
+    # and "at least one of bundles/providers" is a model_validator the JSON
+    # Schema cannot express.)
+    ("providers", {**_VALID, "providers": [{"name": "X"}]}),
     # 10. bundles[0].path wrong type
     ("bundles", {**_VALID, "bundles": [{"name": "x", "path": 7}]}),
     # 11. multi-bundle (must be encoded as maxItems in the published schema, not

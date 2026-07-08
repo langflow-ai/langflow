@@ -66,6 +66,37 @@ def test_decorate_template_stamps_required_fields() -> None:
     assert decorated["display_name"] == "X"
 
 
+def test_decorate_template_stamps_legacy_name() -> None:
+    """``legacy_name`` lands as ``template["name"]``.
+
+    It is the bridge both alias maps (frontend getTemplateAliases, lfx
+    component_aliases) use to resolve pre-move node types like ``AstraDB``
+    whose saved ``type`` is the component's ``name`` attribute, not its
+    class name.
+    """
+    decorated = _decorate_template_with_extension(
+        {"display_name": "X"},
+        extension_id="lfx-pilot",
+        bundle="pilot",
+        extension_version="1.2.3",
+        namespaced_id="ext:pilot:PilotThing@official",
+        legacy_name="AstraDB",
+    )
+    assert decorated["name"] == "AstraDB"
+
+
+def test_decorate_template_never_overrides_existing_name() -> None:
+    decorated = _decorate_template_with_extension(
+        {"display_name": "X", "name": "Original"},
+        extension_id="lfx-pilot",
+        bundle="pilot",
+        extension_version="1.2.3",
+        namespaced_id="ext:pilot:PilotThing@official",
+        legacy_name="AstraDB",
+    )
+    assert decorated["name"] == "Original"
+
+
 @pytest.mark.asyncio
 async def test_import_extension_components_returns_empty_when_nothing_to_load() -> None:
     """No installed extensions and no inline paths -> empty mapping."""
@@ -113,6 +144,9 @@ async def test_inline_bundle_components_decorated_with_extension_metadata(tmp_pa
     assert template["extension"]  # id derived from bundle.json or default
     assert template["extension_version"]  # default "0.0.0" when no bundle.json
     assert template["namespaced_id"] == expected_id
+    # The legacy in-tree identity (name attr falling back to class name) is
+    # carried in the template value so saved flows' node types still resolve.
+    assert template["name"] == "AlphaThing"
 
 
 @pytest.mark.asyncio

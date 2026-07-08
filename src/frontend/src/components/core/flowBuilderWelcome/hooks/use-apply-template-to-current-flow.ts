@@ -14,19 +14,21 @@ import {
 export function useApplyTemplateToCurrentFlow() {
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
-  const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const examples = useFlowsManagerStore((state) => state.examples);
   const flows = useFlowsManagerStore((state) => state.flows);
+  // Use the manager store's setCurrentFlow so resetFlow (and syncNodeTranslations)
+  // runs, ensuring component names are shown in the active language immediately.
+  const setCurrentFlowInManager = useFlowsManagerStore(
+    (state) => state.setCurrentFlow,
+  );
   const saveFlow = useSaveFlow();
 
   return useCallback(
     (nameKey: StarterTemplateNameKey, onFitted?: () => void): boolean => {
       const template = findStarterTemplate(examples, nameKey);
       if (!template?.data) return false;
-      setNodes(template.data.nodes ?? []);
-      setEdges(template.data.edges ?? []);
 
       if (currentFlow) {
         const renamedFlow: FlowType = {
@@ -42,10 +44,23 @@ export function useApplyTemplateToCurrentFlow() {
             viewport: currentFlow.data?.viewport ?? { x: 0, y: 0, zoom: 1 },
           },
         };
-        setCurrentFlow(renamedFlow);
+        // resetFlow (called inside setCurrentFlowInManager) sets nodes/edges
+        // and calls syncNodeTranslations — no need for separate setNodes/setEdges.
+        setCurrentFlowInManager(renamedFlow);
         // Roll back the optimistic rename on failure (saveFlow toasts its own error).
-        void saveFlow(renamedFlow).catch(() => setCurrentFlow(currentFlow));
+        // Only restore if the user hasn't already switched to a different flow.
+        void saveFlow(renamedFlow).catch(() => {
+          const latest = useFlowsManagerStore.getState().currentFlow;
+          if (latest?.id === renamedFlow.id) {
+            setCurrentFlowInManager(currentFlow);
+          }
+        });
+      } else {
+        // No flow context yet — update the canvas directly as a fallback.
+        setNodes(template.data.nodes ?? []);
+        setEdges(template.data.edges ?? []);
       }
+
       // fitView reads node sizes from the DOM: wait two rAFs for ReactFlow to
       // commit/measure, then snap (no duration) while the overlay still covers it.
       requestAnimationFrame(() => {
@@ -64,7 +79,7 @@ export function useApplyTemplateToCurrentFlow() {
       currentFlow,
       setNodes,
       setEdges,
-      setCurrentFlow,
+      setCurrentFlowInManager,
       saveFlow,
       reactFlowInstance,
     ],

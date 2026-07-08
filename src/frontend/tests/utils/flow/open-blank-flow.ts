@@ -1,7 +1,31 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { awaitBootstrapTest } from "../await-bootstrap-test";
 import { TID } from "../constants/testIds";
 import { TIMEOUTS } from "../constants/timeouts";
+import { openFlowCard } from "./open-flow-card";
+
+async function waitForFlowEditor(page: Page): Promise<void> {
+  const sidebarSearchInput = page.getByTestId(TID.sidebarSearchInput);
+  if (!(await sidebarSearchInput.isVisible())) {
+    const createdFlow = page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+
+    const createdFlowVisible = await createdFlow
+      .waitFor({ state: "visible", timeout: TIMEOUTS.medium })
+      .then(() => true)
+      .catch(() => false);
+
+    if (createdFlowVisible) {
+      await openFlowCard(page, "New Flow");
+    }
+  }
+
+  await expect(sidebarSearchInput).toBeVisible({
+    timeout: TIMEOUTS.standard,
+  });
+}
 
 /**
  * Bootstrap the app and open a blank flow.
@@ -17,4 +41,8 @@ export async function openBlankFlow(page: Page): Promise<void> {
     timeout: TIMEOUTS.standard,
   });
   await page.getByTestId(TID.blankFlow).click();
+  await expect(page.getByTestId(TID.modalTitle)).toBeHidden({
+    timeout: TIMEOUTS.standard,
+  });
+  await waitForFlowEditor(page);
 }

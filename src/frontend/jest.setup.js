@@ -1,4 +1,5 @@
 // Jest setup file to mock globals and Vite-specific syntax
+const React = require("react");
 
 // Mock react-i18next globally so t(key) returns the English string from en.json
 const enTranslations = require("./src/locales/en.json");
@@ -16,13 +17,33 @@ const resolveKey = (key, params) => {
   }
   return key;
 };
+// Parse <N>text</N> interpolation tags used by Trans i18nKey values.
+const renderTrans = ({ i18nKey, children, components }) => {
+  if (!i18nKey || !enTranslations[i18nKey]) return children ?? null;
+  const raw = enTranslations[i18nKey];
+  if (!components) return raw.replace(/<\d+>([\s\S]*?)<\/\d+>/g, "$1");
+  const parts = raw.split(/(<\d+>[\s\S]*?<\/\d+>)/);
+  return React.createElement(
+    React.Fragment,
+    null,
+    ...parts.map((part, idx) => {
+      const m = part.match(/^<(\d+)>([\s\S]*?)<\/\d+>$/);
+      if (m) {
+        const comp = components[Number(m[1])];
+        if (comp) return React.cloneElement(comp, { key: idx }, m[2]);
+        return m[2];
+      }
+      return part;
+    }),
+  );
+};
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key, params) =>
       interpolate(enTranslations[resolveKey(key, params)] ?? key, params),
     i18n: { changeLanguage: jest.fn(), language: "en" },
   }),
-  Trans: ({ children }) => children,
+  Trans: renderTrans,
   initReactI18next: { type: "3rdParty", init: jest.fn() },
   withTranslation: () => (Component) => Component,
 }));

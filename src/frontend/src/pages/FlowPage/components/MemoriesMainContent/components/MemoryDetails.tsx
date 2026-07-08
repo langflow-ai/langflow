@@ -106,7 +106,11 @@ export function MemoryDetails({
                 />
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-72 p-4">
+            <PopoverContent
+              align="start"
+              className="w-72 p-4"
+              aria-label={t("memory.configLabel")}
+            >
               <div className="flex flex-col gap-3 text-xs">
                 <div className="flex flex-col gap-0.5">
                   <span className="font-medium text-muted-foreground">

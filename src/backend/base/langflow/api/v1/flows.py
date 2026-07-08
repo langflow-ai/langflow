@@ -45,7 +45,13 @@ from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_dep
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.authorization import FlowAction, ensure_flow_permission, filter_visible_resources
+from langflow.services.authorization import (
+    FlowAction,
+    ensure_flow_permission,
+    filter_visible_resources,
+    restrict_to_owned_or_visible,
+    visible_id_prefilter,
+)
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.cache.service import ThreadingInMemoryCache
@@ -144,12 +150,32 @@ async def read_flows(
         if not folder_id:
             folder_id = default_folder_id
 
+        # Rows the caller owns outright. Under AUTO_LOGIN the legacy owner-scoped
+        # query also surfaces null-owner flows; keep that in the fallback path
+        # (``fallback_clause``). The SQL prefilter union, however, must NOT
+        # blanket-include null-owner rows: the in-memory fallback routes them
+        # through ``batch_enforce`` (``filter_visible_resources``'s owner_extractor
+        # returns None, which never equals a real user id), so the prefilter keeps
+        # them out of the owned half and a null-owner flow is visible only when the
+        # plugin lists its id. AUTHZ_ENABLED and AUTO_LOGIN are independent flags,
+        # so both can be set — this keeps the two paths consistent regardless.
+        owned_clause = Flow.user_id == current_user.id
+        fallback_clause = owned_clause
         if auth_settings.AUTO_LOGIN:
-            stmt = select(Flow).where(
-                (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa: E711
+            fallback_clause = (Flow.user_id == None) | owned_clause  # noqa: E711
+
+        # DB-layer authz prefilter: a registered authorization plugin can return
+        # the concrete set of flow ids the caller may read, letting us widen the
+        # owner-scoped query to (owned ⊕ visible) in SQL and skip the per-row
+        # in-memory filter below. OSS pass-through returns None → the query stays
+        # owner-scoped and ``filter_visible_resources`` runs unchanged.
+        visible_flow_ids = await visible_id_prefilter(current_user, resource_type="flow", act=FlowAction.READ)
+        if visible_flow_ids is not None:
+            stmt = restrict_to_owned_or_visible(
+                select(Flow), id_column=Flow.id, owner_clause=owned_clause, visible_ids=visible_flow_ids
             )
         else:
-            stmt = select(Flow).where(Flow.user_id == current_user.id)
+            stmt = select(Flow).where(fallback_clause)
 
         if remove_example_flows:
             stmt = stmt.where(Flow.folder_id != starter_folder_id)
@@ -164,15 +190,19 @@ async def read_flows(
                 flows = [flow for flow in flows if flow.is_component]
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
-            # Filter list rows when AUTHZ_ENABLED (per-flow domain_extractor).
-            flows = await filter_visible_resources(
-                current_user,
-                resource_type="flow",
-                candidates=list(flows),
-                domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
-                owner_extractor=lambda flow: flow.user_id,
-                act=FlowAction.READ,
-            )
+            # When no DB prefilter is available (OSS pass-through), drop denied
+            # rows in memory (per-flow domain_extractor). When the prefilter is
+            # active the SQL union above is already authoritative, so skip the
+            # per-row enforce to avoid an N+1.
+            if visible_flow_ids is None:
+                flows = await filter_visible_resources(
+                    current_user,
+                    resource_type="flow",
+                    candidates=list(flows),
+                    domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+                    owner_extractor=lambda flow: flow.user_id,
+                    act=FlowAction.READ,
+                )
             if header_flows:
                 # Convert to FlowHeader objects and compress the response
                 flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
@@ -192,15 +222,19 @@ async def read_flows(
             )
             page = await apaginate(session, stmt, params=params)
 
-        # Same authz filter as get_all (page.total may overcount denied rows).
-        page.items = await filter_visible_resources(
-            current_user,
-            resource_type="flow",
-            candidates=list(page.items),
-            domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
-            owner_extractor=lambda flow: flow.user_id,
-            act=FlowAction.READ,
-        )
+        # Same authz handling as get_all. With the SQL prefilter active the union
+        # was applied before pagination, so ``page.total`` is accurate; the OSS
+        # fallback narrows ``page.items`` in memory and ``page.total`` may
+        # overcount denied rows (unchanged from before).
+        if visible_flow_ids is None:
+            page.items = await filter_visible_resources(
+                current_user,
+                resource_type="flow",
+                candidates=list(page.items),
+                domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+                owner_extractor=lambda flow: flow.user_id,
+                act=FlowAction.READ,
+            )
         return page  # noqa: TRY300 — final return inside try matches the existing style of this handler
 
     except Exception as e:

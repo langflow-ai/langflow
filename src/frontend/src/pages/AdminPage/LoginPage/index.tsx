@@ -61,6 +61,7 @@ export default function LoginAdminPage() {
           {t("auth.adminTitle")}
         </span>
         <Input
+          allowAutofill
           onChange={({ target: { value } }) => {
             handleInput({ target: { name: "username", value } });
           }}
@@ -69,6 +70,7 @@ export default function LoginAdminPage() {
         />
         <Input
           type="password"
+          allowAutofill
           onChange={({ target: { value } }) => {
             handleInput({ target: { name: "password", value } });
           }}

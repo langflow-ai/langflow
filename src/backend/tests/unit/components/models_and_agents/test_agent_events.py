@@ -16,7 +16,7 @@ from lfx.base.agents.events import (
     process_agent_events,
 )
 from lfx.schema.content_block import ContentBlock
-from lfx.schema.content_types import ToolContent
+from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -270,7 +270,14 @@ async def test_multiple_events():
 
     assert result.properties.state == "complete"
     assert result.properties.icon == "Bot"
-    assert len(result.content_blocks) == 1
+    # content_blocks is the source of truth: the Agent Steps group holds the
+    # input + tool calls, and the final answer is a single trailing top-level
+    # TextContent. It must not also be duplicated inside the group.
+    assert len(result.content_blocks) == 2
+    agent_steps, final_text = result.content_blocks
+    assert isinstance(final_text, TextContent)
+    assert final_text.text == "final output"
+    assert all(getattr(content, "text", None) != "final output" for content in agent_steps.contents)
     assert result.text == "final output"
 
 

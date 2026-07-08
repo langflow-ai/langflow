@@ -4,6 +4,7 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import * as React from "react";
 import { cn } from "../../utils/utils";
+import { useClosedTriggerAriaControls } from "./use-closed-trigger-aria-controls";
 
 const Select = SelectPrimitive.Root;
 
@@ -18,7 +19,7 @@ const SelectTrigger = React.forwardRef<
   }
 >(({ className, children, direction = "down", ...props }, ref) => (
   <SelectPrimitive.Trigger
-    ref={ref}
+    ref={useClosedTriggerAriaControls(ref)}
     className={cn(
       "flex h-8 items-center justify-between gap-2 rounded-md border border-input px-4 py-2 text-sm text-primary ring-offset-background placeholder:text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
       className,

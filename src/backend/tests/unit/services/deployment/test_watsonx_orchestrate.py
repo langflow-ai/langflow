@@ -6871,6 +6871,107 @@ def test_build_langflow_artifact_bytes_structure():
         assert "bundle-format" in names
 
 
+def _read_artifact_requirements(artifact_bytes: bytes) -> list[str]:
+    """Return the non-empty requirements.txt lines from a wxO artifact zip."""
+    with zipfile.ZipFile(io.BytesIO(artifact_bytes), "r") as zf:
+        content = zf.read("requirements.txt").decode("utf-8")
+    return [line.strip() for line in content.splitlines() if line.strip()]
+
+
+def _provider_model_flow(provider: str, field: str = "model") -> dict:
+    """Minimal flow whose single unified-model node selects *provider*.
+
+    ``field`` is the model-selection template field (``model`` for Language
+    Model / Embedding, ``agent_llm`` for the Agent component).
+    """
+    return {
+        "id": "flow-1",
+        "name": "Provider Flow",
+        "data": {
+            "nodes": [
+                {
+                    "id": "lm-1",
+                    "type": "genericNode",
+                    "data": {
+                        "type": "LanguageModelComponent",
+                        "node": {
+                            "template": {
+                                "code": {
+                                    "type": "code",
+                                    "value": "from lfx.base.models.model import LCModelComponent",
+                                },
+                                field: {"value": [{"provider": provider, "name": "x"}]},
+                            }
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    }
+
+
+def test_build_langflow_artifact_requirements_pin_lfx_first_line():
+    """requirements.txt for an empty flow pins lfx as its first (and only) line.
+
+    Locks the bundle-split contract that the wxO runner installs a pinned lfx
+    plus only the third-party packages dependency detection emits.
+    """
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        build_langflow_artifact_bytes,
+    )
+    from packaging.requirements import Requirement
+
+    tool = SimpleNamespace(__tool_spec__=SimpleNamespace(name="empty_tool"))
+    artifact_bytes = build_langflow_artifact_bytes(tool=tool, flow_definition={"data": {"nodes": [], "edges": []}})
+
+    reqs = _read_artifact_requirements(artifact_bytes)
+    assert reqs, "requirements.txt should never be empty (lfx must always be pinned)"
+    assert reqs[0].startswith("lfx=="), f"first requirement should pin lfx, got {reqs[0]!r}"
+    # Every line must be a valid, installable PEP 508 specifier.
+    for line in reqs:
+        Requirement(line)
+
+
+def test_build_langflow_artifact_requirements_for_openai_provider_flow():
+    """A bundle-resident provider flow ships the langchain SDK, never a bundle dist.
+
+    The runner builds the model from the langchain class directly, so it needs
+    ``langchain-openai`` — and must NOT be told to install ``lfx-openai`` /
+    ``lfx-bundles`` (those are not on the runner and are not required).
+    """
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        build_langflow_artifact_bytes,
+    )
+
+    tool = SimpleNamespace(__tool_spec__=SimpleNamespace(name="openai_tool"))
+    artifact_bytes = build_langflow_artifact_bytes(tool=tool, flow_definition=_provider_model_flow("OpenAI"))
+
+    reqs = _read_artifact_requirements(artifact_bytes)
+    names = {line.split("==")[0] for line in reqs}
+    assert "langchain-openai" in names
+    assert "lfx-openai" not in names
+    assert "lfx-bundles" not in names
+    assert any(line.startswith("lfx==") for line in reqs)
+
+
+def test_build_langflow_artifact_requirements_for_openrouter_provider_flow():
+    """OpenRouter is unified-selectable and runs on langchain-openai at runtime.
+
+    Regression guard for the gap where OpenRouter resolved to no packages and
+    produced an artifact that ImportErrors on the wxO runner.
+    """
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        build_langflow_artifact_bytes,
+    )
+
+    tool = SimpleNamespace(__tool_spec__=SimpleNamespace(name="openrouter_tool"))
+    artifact_bytes = build_langflow_artifact_bytes(tool=tool, flow_definition=_provider_model_flow("OpenRouter"))
+
+    names = {line.split("==")[0] for line in _read_artifact_requirements(artifact_bytes)}
+    assert "langchain-openai" in names
+
+
 # ---------------------------------------------------------------------------
 # WxOCredentials repr masking
 # ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@ import { TEXTS } from "../../utils/constants/texts";
 
 test(
   "user can open component dropdown menu by right-clicking on nodes",
-  { tag: ["@release", "@components", "@dropdown", "@right-click"] },
+  { tag: ["@release", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 

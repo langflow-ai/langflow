@@ -283,8 +283,14 @@ class ServiceManager:
             self.services.pop(service_name, None)
             self.get(service_name)
 
-    async def teardown(self) -> None:
-        """Teardown all the services."""
+    async def teardown(self, *, raise_on_error: bool = False) -> None:
+        """Teardown all the services.
+
+        Args:
+            raise_on_error: When True, still attempt every teardown, but re-raise the
+                first error after the table is cleared. Default False logs failures only.
+        """
+        errors: list[tuple[str, Exception]] = []
         for service in list(self.services.values()):
             if service is None:
                 continue
@@ -295,6 +301,7 @@ class ServiceManager:
                     await teardown_result
             except Exception as exc:  # noqa: BLE001
                 logger.debug(f"Error in teardown of {service.name}", exc_info=exc)
+                errors.append((service.name, exc))
 
         # Adapter registries own singleton adapter instances and must also be cleaned up.
         try:
@@ -303,9 +310,21 @@ class ServiceManager:
             await teardown_all_adapter_registries()
         except Exception as exc:  # noqa: BLE001
             logger.error(f"Error during adapter registry teardown: {exc}", exc_info=True)
+            errors.append(("adapter_registries", exc))
 
         self.services = {}
         self.factories = {}
+        # ``teardown`` empties the factory registry, so the "registered" flag has
+        # to drop too: get_service() re-registers factories only when
+        # are_factories_registered() is False. Leaving it set after a teardown
+        # makes the next lookup skip re-registration and raise
+        # NoFactoryRegisteredError.
+        self.factory_registered = False
+
+        if raise_on_error and errors:
+            names = ", ".join(name for name, _ in errors)
+            msg = f"Service teardown failed for: {names}"
+            raise RuntimeError(msg) from errors[0][1]
 
     @classmethod
     def get_factories(cls) -> list[ServiceFactory]:

@@ -21,7 +21,7 @@ def build_model_config(provider: str, model_name: str) -> list[dict]:
         "api_key_param": mapping.get("api_key_param", "api_key"),  # pragma: allowlist secret
         "context_length": 128000,
         "model_class": mapping.get("model_class", "ChatOpenAI"),
-        "model_name_param": mapping.get("model_name_param", "model"),
+        "model_name_param": mapping.get("model_param", "model"),
     }
     for extra_param in ("url_param", "project_id_param", "base_url_param"):
         if extra_param in mapping:

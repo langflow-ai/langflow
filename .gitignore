@@ -195,6 +195,9 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+# IBM Equal Access accessibility scan results
+docs/a11y-results/
+
 # PyBuilder
 target/
 

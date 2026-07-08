@@ -1,57 +1,22 @@
-from __future__ import annotations
+# lfx-bundles-shim
+"""Compatibility shim: lfx.components.nvidia moved to lfx-bundles.
 
+This module re-points to the installed bundle distribution. It contains
+no component implementations and no third-party dependencies, and is
+removed once the deprecation window closes (M4).
+"""
+
+import importlib
 import sys
-from typing import TYPE_CHECKING, Any
 
-from lfx.components._importing import import_mod
-
-if TYPE_CHECKING:
-    from .nvidia import NVIDIAModelComponent
-    from .nvidia_embedding import NVIDIAEmbeddingsComponent
-    from .nvidia_ingest import NvidiaIngestComponent
-    from .nvidia_rerank import NvidiaRerankComponent
-
-    if sys.platform == "win32":
-        from .system_assist import NvidiaSystemAssistComponent
-
-_dynamic_imports = {
-    "NVIDIAModelComponent": "nvidia",
-    "NVIDIAEmbeddingsComponent": "nvidia_embedding",
-    "NvidiaIngestComponent": "nvidia_ingest",
-    "NvidiaRerankComponent": "nvidia_rerank",
-}
-
-if sys.platform == "win32":
-    _dynamic_imports["NvidiaSystemAssistComponent"] = "system_assist"
-    __all__ = [
-        "NVIDIAEmbeddingsComponent",
-        "NVIDIAModelComponent",
-        "NvidiaIngestComponent",
-        "NvidiaRerankComponent",
-        "NvidiaSystemAssistComponent",
-    ]
-else:
-    __all__ = [
-        "NVIDIAEmbeddingsComponent",
-        "NVIDIAModelComponent",
-        "NvidiaIngestComponent",
-        "NvidiaRerankComponent",
-    ]
-
-
-def __getattr__(attr_name: str) -> Any:
-    """Lazily import nvidia components on attribute access."""
-    if attr_name not in _dynamic_imports:
-        msg = f"module '{__name__}' has no attribute '{attr_name}'"
-        raise AttributeError(msg)
-    try:
-        result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
-    except (ModuleNotFoundError, ImportError, AttributeError) as e:
-        msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
-        raise AttributeError(msg) from e
-    globals()[attr_name] = result
-    return result
-
-
-def __dir__() -> list[str]:
-    return list(__all__)
+try:
+    sys.modules[__name__] = importlib.import_module("lfx_bundles.nvidia")
+except ModuleNotFoundError as exc:
+    if exc.name is not None and (exc.name == "lfx_bundles" or exc.name.startswith("lfx_bundles.")):
+        msg = (
+            "The 'nvidia' components moved to the 'lfx-bundles' distribution. "
+            "Install it with:  pip install lfx-bundles   "
+            "(or 'pip install langflow', which bundles it)."
+        )
+        raise ModuleNotFoundError(msg, name="lfx_bundles") from exc
+    raise

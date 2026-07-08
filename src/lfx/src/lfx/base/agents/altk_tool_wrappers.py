@@ -390,7 +390,10 @@ class PreToolValidationWrapper(BaseToolWrapper):
 
                 tool_specs.append(tool_spec)
 
-            except (AttributeError, KeyError, TypeError, ValueError) as e:
+            except (AttributeError, KeyError, TypeError, ValueError, RuntimeError) as e:
+                # RuntimeError covers RecursionError, which langchain_core's
+                # get_all_basemodel_annotations can raise on Python 3.14 when a tool's
+                # args_schema is not a usable model (e.g. a shadowing property object).
                 logger.warning(f"Could not convert tool {getattr(tool, 'name', 'unknown')} to spec: {e}")
                 # Create minimal spec
                 minimal_spec = {

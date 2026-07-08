@@ -32,7 +32,7 @@ export default function DeleteConfirmationModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild={!children ? true : asChild} tabIndex={-1}>
+      <DialogTrigger asChild={!children ? true : asChild}>
         {children}
       </DialogTrigger>
       <DialogContent>
