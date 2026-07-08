@@ -86,9 +86,8 @@ test(
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 1000,
     });
-    await page.getByTestId("more-options-modal").click();
 
-    await page.getByText("Freeze", { exact: true }).first().click();
+    await page.getByTestId("freeze-all-button-modal").click();
 
     await page.waitForSelector(".border-ring-frozen", { timeout: 3000 });
 

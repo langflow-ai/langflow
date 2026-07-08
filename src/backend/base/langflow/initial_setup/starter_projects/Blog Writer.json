@@ -159,7 +159,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -434,7 +434,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "markitdown",
@@ -1710,10 +1710,10 @@
             "description": "# ✍️ Blog Writer\n\nGive it a **URL** and it writes a blog post grounded in that page. An **Agent** fetches the page itself using the **URL component as a tool** (Fetch Content), then writes the article in Markdown. Rebuilt on the new Agent core component — no separate parsing step.\n\n## Setup\n1. **Agent** — pick your **Model Provider** and paste its API key (OpenAI, Anthropic, Google, Groq, etc. — any option in the Model dropdown).\n2. **URL tool** — already wired into the Agent's **Tools**; no setup needed. Keep **Depth = 1** so it fetches just the page you give it (higher depth follows links and costs more time/tokens).\n\n## Use\n1. Open the **Playground**.\n2. Paste a **source URL**, e.g. `https://docs.langflow.org/`.\n3. The Agent fetches that page through the URL tool and returns a finished blog post.\n\n> If nothing runs on an empty task, type `Write the blog post from the source URL.` in the Agent's **Input** field.\n\n## How it works\n1. **Chat Input** — you enter the source URL.\n2. **Prompt Template `{URL}`** — injects the URL into the Agent's instructions.\n3. **Agent (+ URL tool)** — calls the URL **Fetch Content** tool to retrieve the page, then writes a Markdown post grounded only in what it fetched (no invented facts).\n4. **Chat Output** — the finished blog post.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.blog_writer.23fde7d9",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.blog_writer.23fde7d9"
+            }
           },
           "type": "note"
         },

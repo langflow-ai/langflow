@@ -436,7 +436,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -1349,7 +1349,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "markitdown",
@@ -1806,7 +1806,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "lfx",
@@ -2124,10 +2124,10 @@
             "description": "# 🤖 Simple Agent\n\nA starter **Agent** with tools: it can search the web, read a page, and do math/dates - then answer your request.\n\n## Setup\n1. **Agent** - add your LLM key (any provider in the Model dropdown).\n2. **Web Search** and **URL** tools need no key.\n\n## Tools\n- **Web Search** - find current information on the web.\n- **URL** - fetch the content of a specific page.\n- **Calculator** & **Current Date** - built into the Agent (toggles), so no extra nodes needed.\n\n## Run\nOpen **Playground** and ask something that needs a tool, e.g. \"Find the latest on <topic> and summarize it\" or \"What's today's date plus 30 days?\".",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.simple_agent.bf18216d",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.simple_agent.bf18216d"
+            }
           },
           "type": "note"
         },
