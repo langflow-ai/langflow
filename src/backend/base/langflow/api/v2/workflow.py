@@ -803,8 +803,13 @@ async def stop_workflow(
         # runner's terminal reconcile keys off, so persisting it first means an
         # in-flight runner racing to a terminal state reliably observes the stop
         # and finalizes CANCELLED rather than overwriting it with COMPLETED/FAILED.
-        with contextlib.suppress(Exception):
+        # Best-effort: a backend that cannot take the signal must not block the
+        # cancel, but swallowing it silently would hide the one failure that lets
+        # a run keep going after we report CANCELLED. Log, do not suppress quietly.
+        try:
             await get_background_execution_service().stop_job(job_id, current_user)
+        except Exception:  # noqa: BLE001
+            await logger.aexception("Failed to signal stop for workflow job %s; cancelling row anyway", job_id)
         await job_service.update_job_status(job_id, JobStatus.CANCELLED)
 
         message = f"Job {job_id} cancelled successfully." if revoked else f"Job {job_id} is already cancelled."

@@ -222,7 +222,11 @@ class JobRunner:
             else:
                 await self._bus.publish(
                     str(job_id),
-                    LiveFrame(seq=last_durable_seq, data=self._restamp_id(frame_bytes, last_durable_seq)),
+                    LiveFrame(
+                        seq=last_durable_seq,
+                        data=self._restamp_id(frame_bytes, last_durable_seq),
+                        durable=False,
+                    ),
                 )
 
         # Final cooperative-stop check: a STOP that lands after the last frame
