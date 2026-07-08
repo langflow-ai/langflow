@@ -129,6 +129,9 @@ class RuntimeSettings(BaseModel):
 
     celery_enabled: bool = False
 
+    executor_kind: str = "in-process"
+    """Default executor kind for the execution coordinator; must match a registered Executor's `kind`."""
+
     @field_validator("event_delivery", mode="before")
     @classmethod
     def set_event_delivery(cls, value, info):
