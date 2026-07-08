@@ -266,7 +266,7 @@ export function StepConfiguration({
                         variant="outline"
                         data-testid="kb-browse-btn"
                         className={cn(
-                          "w-full justify-between focus-visible:ring-1 focus-visible:ring-input focus-visible:ring-offset-0 focus-visible:ring-offset-background",
+                          "w-full justify-between focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                           validationErrors.files && "border-destructive",
                         )}
                       >

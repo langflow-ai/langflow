@@ -48,59 +48,6 @@ function readRouteManifest() {
 
 const routeLabelMap = readRouteManifest();
 
-function resolveRulesDir() {
-  const candidates = [
-    path.resolve(process.cwd(), "tests/a11y/rules"),
-    path.resolve(process.cwd(), "src/frontend/tests/a11y/rules"),
-  ];
-  return candidates.find((candidate) => existsSync(candidate));
-}
-
-// Human-readable justifications for suppressed rules, unioned across every
-// feature's `<feature>-ignore-rules.json`. Used ONLY for tooltip text — the
-// decision of whether a finding is suppressed comes from each scan's sidecar
-// (see readReports), never from membership here. Any feature that adds a rules
-// file contributes its reasons automatically.
-function readSuppressionReasons() {
-  const rulesDir = resolveRulesDir();
-  if (!rulesDir) return new Map();
-  const reasons = new Map();
-  for (const file of readdirSync(rulesDir)) {
-    if (!file.endsWith("-ignore-rules.json")) continue;
-    const parsed = JSON.parse(readFileSync(path.join(rulesDir, file), "utf8"));
-    for (const entry of parsed.suppressed ?? []) {
-      if (!reasons.has(entry.ruleId)) {
-        reasons.set(entry.ruleId, entry.reason ?? "");
-      }
-    }
-  }
-  return reasons;
-}
-
-const suppressionReasons = readSuppressionReasons();
-
-// A finding is suppressed iff the scan that produced it declared the rule in
-// its ignore list (persisted to {label}.ignore.json by runA11yScan).
-function isSuppressedForRoute(ruleId, ignoredRules) {
-  return ignoredRules.has(ruleId);
-}
-
-function suppressionReason(ruleId) {
-  return suppressionReasons.get(ruleId) ?? "";
-}
-
-// Read a report's ignore sidecar into a Set of rule ids. Missing file → empty
-// set (older report dirs / scans that passed no ignore rules).
-function readIgnoredRules(reportFile) {
-  const sidecarPath = path.join(
-    REPORTS_DIR,
-    reportFile.replace(/\.json$/, ".ignore.json"),
-  );
-  if (!existsSync(sidecarPath)) return new Set();
-  const parsed = JSON.parse(readFileSync(sidecarPath, "utf8"));
-  return new Set(parsed.ignoreRules ?? []);
-}
-
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -109,30 +56,13 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-// Scan labels are built as `project__label[__scanIndex]` (buildA11yScanLabel);
-// the numeric scanIndex is only appended for the 2nd+ scan within a test.
-// Strip the leading project segment and any trailing numeric index so the
-// developer-chosen label survives — otherwise a greedy strip collapses every
-// multi-scan test's later scans into meaningless "1"/"2" routes.
-function shortLabelFromLabel(label) {
-  const parts = String(label).split("__");
-  const withoutProject = parts.length > 1 ? parts.slice(1) : parts;
-  if (
-    withoutProject.length > 1 &&
-    /^\d+$/.test(withoutProject[withoutProject.length - 1])
-  ) {
-    withoutProject.pop();
-  }
-  return withoutProject.join("__");
-}
-
 function routeFromLabel(label) {
-  const shortLabel = shortLabelFromLabel(label);
+  const shortLabel = label.replace(/^.*__/, "");
   return routeLabelMap.get(shortLabel)?.path ?? shortLabel;
 }
 
 function surfaceFromLabel(label) {
-  const shortLabel = shortLabelFromLabel(label);
+  const shortLabel = label.replace(/^.*__/, "");
   return routeLabelMap.get(shortLabel)?.surface ?? "";
 }
 
@@ -160,7 +90,6 @@ function readReports() {
     files = readdirSync(REPORTS_DIR).filter(
       (file) =>
         file.endsWith(".json") &&
-        !file.endsWith(".ignore.json") &&
         file !== "summary.json" &&
         file !== "route-summary.json",
     );
@@ -174,8 +103,6 @@ function readReports() {
         readFileSync(path.join(REPORTS_DIR, file), "utf8"),
       );
       const label = report.label ?? file.replace(/\.json$/, "");
-      const shortLabel = shortLabelFromLabel(label);
-      const ignoredRules = readIgnoredRules(file);
       const issues = (report.results ?? [])
         .filter(
           (issue) =>
@@ -201,41 +128,21 @@ function readReports() {
         rules.set(issue.ruleId, (rules.get(issue.ruleId) ?? 0) + 1);
       }
 
-      const actionableIssueCount = issues.filter(
-        (issue) => !isSuppressedForRoute(issue.ruleId, ignoredRules),
-      ).length;
-
       return {
         file,
         htmlFile: file.replace(/\.json$/, ".html"),
         label,
-        shortLabel,
-        ignoredRules,
         route: routeFromLabel(label),
         surface: surfaceFromLabel(label),
         issues,
-        issueCount: issues.length,
-        actionableIssueCount,
-        suppressedIssueCount: issues.length - actionableIssueCount,
         rules: [...rules.entries()]
-          .map(([ruleId, count]) => ({
-            ruleId,
-            count,
-            suppressed: isSuppressedForRoute(ruleId, ignoredRules),
-          }))
+          .map(([ruleId, count]) => ({ ruleId, count }))
           .sort(
-            (a, b) =>
-              Number(a.suppressed) - Number(b.suppressed) ||
-              b.count - a.count ||
-              a.ruleId.localeCompare(b.ruleId),
+            (a, b) => b.count - a.count || a.ruleId.localeCompare(b.ruleId),
           ),
       };
     })
-    .sort(
-      (a, b) =>
-        b.actionableIssueCount - a.actionableIssueCount ||
-        a.route.localeCompare(b.route),
-    );
+    .sort((a, b) => a.route.localeCompare(b.route));
 }
 
 function groupByRule(routes) {
@@ -251,43 +158,26 @@ function groupByRule(routes) {
           routes: new Map(),
           messages: new Set(),
           help: issue.help,
-          hasUnsuppressedOccurrence: false,
         };
         rules.set(issue.ruleId, rule);
       }
       rule.count += 1;
       rule.routes.set(route.route, (rule.routes.get(route.route) ?? 0) + 1);
       rule.messages.add(issue.message);
-      if (!isSuppressedForRoute(issue.ruleId, route.ignoredRules)) {
-        rule.hasUnsuppressedOccurrence = true;
-      }
     }
   }
 
   return [...rules.values()]
-    .map((rule) => {
-      // A rule is globally suppressed only if every scan that saw it chose to
-      // suppress it. If any occurrence was left actionable by its own scan,
-      // that's a real finding for that feature and the rule stays actionable.
-      const suppressed = !rule.hasUnsuppressedOccurrence;
-      return {
-        ruleId: rule.ruleId,
-        count: rule.count,
-        suppressed,
-        suppressionReason: suppressed ? suppressionReason(rule.ruleId) : "",
-        routes: [...rule.routes.entries()]
-          .map(([route, count]) => ({ route, count }))
-          .sort((a, b) => b.count - a.count || a.route.localeCompare(b.route)),
-        messages: [...rule.messages],
-        help: rule.help,
-      };
-    })
-    .sort(
-      (a, b) =>
-        Number(a.suppressed) - Number(b.suppressed) ||
-        b.count - a.count ||
-        a.ruleId.localeCompare(b.ruleId),
-    );
+    .map((rule) => ({
+      ruleId: rule.ruleId,
+      count: rule.count,
+      routes: [...rule.routes.entries()]
+        .map(([route, count]) => ({ route, count }))
+        .sort((a, b) => b.count - a.count || a.route.localeCompare(b.route)),
+      messages: [...rule.messages],
+      help: rule.help,
+    }))
+    .sort((a, b) => b.count - a.count || a.ruleId.localeCompare(b.ruleId));
 }
 
 function renderRoute(route) {
@@ -299,42 +189,27 @@ function renderRoute(route) {
   }
 
   const ruleGroups = [...issuesByRule.entries()]
-    .sort(
-      (a, b) =>
-        Number(isSuppressedForRoute(a[0], route.ignoredRules)) -
-          Number(isSuppressedForRoute(b[0], route.ignoredRules)) ||
-        b[1].length - a[1].length ||
-        a[0].localeCompare(b[0]),
-    )
-    .map(([ruleId, issues]) => {
-      const suppressed = isSuppressedForRoute(ruleId, route.ignoredRules);
-      const badge = suppressed
-        ? `<span class="tag" title="${escapeHtml(suppressionReason(ruleId))}">suppressed</span>`
-        : "";
-      return `
-        <details class="rule${suppressed ? " suppressed" : ""}">
+    .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
+    .map(
+      ([ruleId, issues]) => `
+        <details class="rule">
           <summary>
-            <span class="rule-name">${escapeHtml(ruleId)}${badge}</span>
-            <span class="count${suppressed ? " muted-count" : ""}">${issues.length}</span>
+            <span class="rule-name">${escapeHtml(ruleId)}</span>
+            <span class="count">${issues.length}</span>
           </summary>
           <div class="issue-list">
             ${issues.map(renderIssue).join("")}
           </div>
         </details>
-      `;
-    })
+      `,
+    )
     .join("");
 
-  const countLabel =
-    route.suppressedIssueCount > 0
-      ? `${route.actionableIssueCount} <span class="count-sub">(+${route.suppressedIssueCount} suppressed)</span>`
-      : `${route.actionableIssueCount}`;
-
   return `
-    <details class="route${route.actionableIssueCount === 0 ? " clean" : ""}"${route.actionableIssueCount > 0 ? " open" : ""}>
+    <details class="route" open>
       <summary>
         <span class="route-name">${escapeHtml(route.route)}${route.surface ? ` <span class="surface">${escapeHtml(route.surface)}</span>` : ""}</span>
-        <span class="count${route.actionableIssueCount === 0 ? " muted-count" : ""}">${countLabel}</span>
+        <span class="count">${route.issues.length}</span>
       </summary>
       <div class="route-meta">
         <a href="${escapeHtml(route.htmlFile)}">Open IBM HTML</a>
@@ -371,12 +246,9 @@ function renderIssue(issue) {
 }
 
 function renderRuleSummary(rule) {
-  const badge = rule.suppressed
-    ? `<span class="tag" title="${escapeHtml(rule.suppressionReason)}">suppressed</span>`
-    : "";
   return `
-    <tr${rule.suppressed ? ' class="suppressed"' : ""}>
-      <td><a href="${escapeHtml(rule.help)}">${escapeHtml(rule.ruleId)}</a>${badge}</td>
+    <tr>
+      <td><a href="${escapeHtml(rule.help)}">${escapeHtml(rule.ruleId)}</a></td>
       <td>${rule.count}</td>
       <td>${rule.routes
         .map((route) => `${escapeHtml(route.route)} (${route.count})`)
@@ -386,13 +258,10 @@ function renderRuleSummary(rule) {
 }
 
 function renderHtml(routes, rules) {
-  const totalIssues = routes.reduce((sum, route) => sum + route.issueCount, 0);
-  const actionableIssues = routes.reduce(
-    (sum, route) => sum + route.actionableIssueCount,
+  const totalIssues = routes.reduce(
+    (sum, route) => sum + route.issues.length,
     0,
   );
-  const suppressedIssues = totalIssues - actionableIssues;
-  const actionableRuleCount = rules.filter((rule) => !rule.suppressed).length;
   const generatedAt = new Date().toISOString();
 
   return `<!doctype html>
@@ -530,28 +399,6 @@ function renderHtml(routes, rules) {
       word-break: break-word;
     }
     .empty { padding: 0 16px 16px; color: var(--muted); }
-    .note { margin-top: 12px; font-size: 13px; }
-    .stat.actionable strong { color: var(--danger); }
-    .tag {
-      display: inline-block;
-      margin-left: 8px;
-      padding: 1px 7px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: var(--code);
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .03em;
-      vertical-align: middle;
-      cursor: help;
-    }
-    .muted-count { background: var(--muted) !important; }
-    .count-sub { font-weight: 400; font-size: 11px; opacity: .85; }
-    tr.suppressed td, .rule.suppressed > summary .rule-name { color: var(--muted); }
-    tr.suppressed td a { color: var(--muted); }
-    .route.clean > summary .route-name { color: var(--muted); }
   </style>
 </head>
 <body>
@@ -560,11 +407,9 @@ function renderHtml(routes, rules) {
     <p class="muted">Generated ${escapeHtml(generatedAt)} from IBM accessibility-checker JSON reports.</p>
     <div class="stats">
       <div class="stat"><strong>${routes.length}</strong> routes scanned</div>
-      <div class="stat actionable"><strong>${actionableIssues}</strong> actionable issues</div>
-      <div class="stat"><strong>${suppressedIssues}</strong> suppressed (chrome/framework)</div>
-      <div class="stat"><strong>${actionableRuleCount}</strong> actionable rules <span class="muted">/ ${rules.length} total</span></div>
+      <div class="stat"><strong>${totalIssues}</strong> issues</div>
+      <div class="stat"><strong>${rules.length}</strong> rules</div>
     </div>
-    <p class="muted note">Suppressed findings are the rules each scan explicitly ignored via <code>runA11yScan({ ignoreRules })</code> — shared app chrome or third-party widgets the feature under test cannot fix (reasons live in <code>tests/a11y/rules/&lt;feature&gt;-ignore-rules.json</code>). They are kept visible but greyed so feature-owned issues stand out. Suppression is per-scan, so no other scan is affected.</p>
   </header>
   <main>
     <h2>Rules Summary</h2>
@@ -585,26 +430,16 @@ function renderHtml(routes, rules) {
 
 const routes = readReports();
 const rules = groupByRule(routes);
-const issueCount = routes.reduce((sum, route) => sum + route.issueCount, 0);
-const actionableIssueCount = routes.reduce(
-  (sum, route) => sum + route.actionableIssueCount,
-  0,
-);
 const summary = {
   generatedAt: new Date().toISOString(),
   routeCount: routes.length,
-  issueCount,
-  actionableIssueCount,
-  suppressedIssueCount: issueCount - actionableIssueCount,
+  issueCount: routes.reduce((sum, route) => sum + route.issues.length, 0),
   ruleCount: rules.length,
-  actionableRuleCount: rules.filter((rule) => !rule.suppressed).length,
   routes: routes.map((route) => ({
     route: route.route,
     surface: route.surface,
     label: route.label,
-    issueCount: route.issueCount,
-    actionableIssueCount: route.actionableIssueCount,
-    suppressedIssueCount: route.suppressedIssueCount,
+    issueCount: route.issues.length,
     rules: route.rules,
     htmlFile: route.htmlFile,
     jsonFile: route.file,

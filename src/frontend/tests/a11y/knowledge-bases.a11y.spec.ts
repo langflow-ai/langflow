@@ -29,18 +29,6 @@ import {
   SEEDED_STATUS_KNOWLEDGE_BASES,
   settleNetwork,
 } from "./helpers/knowledge-bases.fixtures";
-import a11yIgnoreRules from "./rules/knowledge-bases-ignore-rules.json";
-
-// Accessibility scans for /assets/knowledge-bases and its chunks child route.
-// Each distinct UI surface gets its own runA11yScan label; tests are grouped
-// into data-driven scenarios and serial journeys to cut bootstrap overhead.
-
-// Rules triggered by shared app chrome, the global theme, or third-party
-// widgets that the knowledge-base feature does not own. The list (with a
-// per-rule justification for each entry) is the single source of truth in
-// knowledge-bases-ignore-rules.json — shared with build-a11y-html-report.mjs so the
-// report greys these out instead of counting them as KB-owned issues.
-const KB_IGNORE_RULES = a11yIgnoreRules.suppressed.map((rule) => rule.ruleId);
 
 type A11yScenario = {
   name: string;
@@ -57,7 +45,7 @@ const KB_LIST_SCENARIOS: A11yScenario[] = [
         page.getByRole("heading", { name: /no knowledge bases/i }),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
       await settleNetwork(page);
-      await page.runA11yScan("kb-empty", { ignoreRules: KB_IGNORE_RULES });
+      await page.runA11yScan("kb-empty");
     },
   },
   {
@@ -70,7 +58,7 @@ const KB_LIST_SCENARIOS: A11yScenario[] = [
         timeout: TIMEOUTS.standard,
       });
       await settleNetwork(page);
-      await page.runA11yScan("kb-populated", { ignoreRules: KB_IGNORE_RULES });
+      await page.runA11yScan("kb-populated");
     },
   },
   {
@@ -85,9 +73,7 @@ const KB_LIST_SCENARIOS: A11yScenario[] = [
         timeout: TIMEOUTS.standard,
       });
       await settleNetwork(page);
-      await page.runA11yScan("kb-row-status-variants", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-row-status-variants");
     },
   },
 ];
@@ -103,9 +89,7 @@ const KB_CHUNKS_SCENARIOS: A11yScenario[] = [
         page.getByText(/langflow lets you compose ai workflows/i),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
       await settleNetwork(page);
-      await page.runA11yScan("kbchunks-populated", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kbchunks-populated");
     },
   },
   {
@@ -123,9 +107,7 @@ const KB_CHUNKS_SCENARIOS: A11yScenario[] = [
         timeout: TIMEOUTS.standard,
       });
       await settleNetwork(page);
-      await page.runA11yScan("kbchunks-empty", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kbchunks-empty");
     },
   },
   {
@@ -141,9 +123,7 @@ const KB_CHUNKS_SCENARIOS: A11yScenario[] = [
         timeout: TIMEOUTS.standard,
       });
       await settleNetwork(page);
-      await page.runA11yScan("kbchunks-pagination", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kbchunks-pagination");
     },
   },
 ];
@@ -172,7 +152,7 @@ test.describe("knowledge bases route accessibility", () => {
     await expect(page.getByText(/loading knowledge bases/i)).toBeVisible({
       timeout: TIMEOUTS.standard,
     });
-    await page.runA11yScan("kb-loading", { ignoreRules: KB_IGNORE_RULES });
+    await page.runA11yScan("kb-loading");
 
     releaseList();
     await settleNetwork(page);
@@ -195,7 +175,7 @@ test.describe("knowledge bases route accessibility", () => {
     await expect(page.getByText(/failed to load knowledge bases/i)).toBeVisible(
       { timeout: TIMEOUTS.standard },
     );
-    await page.runA11yScan("kb-error", { ignoreRules: KB_IGNORE_RULES });
+    await page.runA11yScan("kb-error");
   });
 
   test("scans selection and bulk-delete states", RELEASE, async ({ page }) => {
@@ -208,17 +188,13 @@ test.describe("knowledge bases route accessibility", () => {
     await page.locator(".ag-header-select-all").first().click();
     const deleteSelected = page.getByRole("button", { name: /^Delete \(/ });
     await expect(deleteSelected).toBeVisible({ timeout: TIMEOUTS.standard });
-    await page.runA11yScan("kb-selection-mode", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-selection-mode");
 
     await deleteSelected.click();
     await expect(
       page.getByTestId("btn_delete_delete_confirmation_modal"),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
-    await page.runA11yScan("kb-bulk-delete-modal-open", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-bulk-delete-modal-open");
   });
 
   test(
@@ -240,9 +216,7 @@ test.describe("knowledge bases route accessibility", () => {
 
       await rowActionsTrigger.click();
       await expect(viewChunksItem).toBeVisible({ timeout: TIMEOUTS.standard });
-      await page.runA11yScan("kb-row-actions-open", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-row-actions-open");
 
       // The a11y scan drops the open menu, so it must be reopened to reach the
       // Delete item. Reopening a Radix menu is a toggle click, which can race
@@ -260,9 +234,7 @@ test.describe("knowledge bases route accessibility", () => {
       await expect(
         page.getByTestId("btn_delete_delete_confirmation_modal"),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
-      await page.runA11yScan("kb-delete-modal-open", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-delete-modal-open");
     },
   );
 
@@ -276,7 +248,7 @@ test.describe("knowledge bases route accessibility", () => {
 
     await openKnowledgeBaseDrawer(page);
     await settleNetwork(page);
-    await page.runA11yScan("kb-drawer-open", { ignoreRules: KB_IGNORE_RULES });
+    await page.runA11yScan("kb-drawer-open");
   });
 
   test(
@@ -296,9 +268,7 @@ test.describe("knowledge bases route accessibility", () => {
         timeout: TIMEOUTS.standard,
       });
       await settleNetwork(page);
-      await page.runA11yScan("kb-drawer-runs-populated", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-drawer-runs-populated");
 
       await page
         .getByText(/succeeded/i)
@@ -307,18 +277,14 @@ test.describe("knowledge bases route accessibility", () => {
       await expect(page.getByTestId("run-detail-run-id")).toBeVisible({
         timeout: TIMEOUTS.standard,
       });
-      await page.runA11yScan("kb-ingestion-run-detail", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-ingestion-run-detail");
     },
   );
 
   test("scans create-modal step 1 surfaces", RELEASE, async ({ page }) => {
     await openCreateModal(page);
     await settleNetwork(page);
-    await page.runA11yScan("kb-upload-step-configuration", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-upload-step-configuration");
 
     await expect(page.getByTestId("kb-chunk-size-input")).toBeVisible();
     await expect(page.getByTestId("kb-separator-input")).toBeVisible();
@@ -326,9 +292,7 @@ test.describe("knowledge bases route accessibility", () => {
     await expect(
       page.getByRole("menuitem", { name: /upload files/i }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
-    await page.runA11yScan("kb-upload-step-configuration-advanced", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-upload-step-configuration-advanced");
 
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("kb-run-metadata-add")).toBeVisible();
@@ -337,9 +301,7 @@ test.describe("knowledge bases route accessibility", () => {
       timeout: TIMEOUTS.standard,
     });
     await expect(page.getByTestId("kb-run-metadata-value-0")).toBeVisible();
-    await page.runA11yScan("kb-upload-metadata-add", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-upload-metadata-add");
   });
 
   test("scans the review & build step (step 2)", RELEASE, async ({ page }) => {
@@ -372,9 +334,7 @@ test.describe("knowledge bases route accessibility", () => {
     ).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(page.getByTestId("kb-create-button")).toBeVisible();
     await settleNetwork(page);
-    await page.runA11yScan("kb-upload-step-review", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-upload-step-review");
   });
 
   test("scans the no-search-results table", RELEASE, async ({ page }) => {
@@ -389,9 +349,7 @@ test.describe("knowledge bases route accessibility", () => {
       timeout: TIMEOUTS.standard,
     });
     await settleNetwork(page);
-    await page.runA11yScan("kb-no-search-results", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-no-search-results");
   });
 
   test(
@@ -411,9 +369,7 @@ test.describe("knowledge bases route accessibility", () => {
       await expect(
         page.getByRole("menuitem", { name: /stop ingestion/i }),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
-      await page.runA11yScan("kb-row-actions-busy", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-row-actions-busy");
     },
   );
 
@@ -435,9 +391,7 @@ test.describe("knowledge bases route accessibility", () => {
     await expect(page.getByText(/loading runs/i)).toBeVisible({
       timeout: TIMEOUTS.standard,
     });
-    await page.runA11yScan("kb-drawer-runs-loading", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-drawer-runs-loading");
 
     releaseRuns();
     await settleNetwork(page);
@@ -462,18 +416,14 @@ test.describe("knowledge bases route accessibility", () => {
     await expect(page.getByText(/unable to load ingestion runs/i)).toBeVisible({
       timeout: TIMEOUTS.standard,
     });
-    await page.runA11yScan("kb-drawer-runs-error", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-drawer-runs-error");
   });
 
   test("scans the add-sources modal", RELEASE, async ({ page }) => {
     await openAddSourcesModal(page);
     await expect(page.getByTestId("kb-source-name-input")).toBeDisabled();
     await settleNetwork(page);
-    await page.runA11yScan("kb-add-sources-mode", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-add-sources-mode");
   });
 
   test(
@@ -483,9 +433,7 @@ test.describe("knowledge bases route accessibility", () => {
       await openCreateModal(page);
       await attachFiles(page, [SAMPLE_FILE_PATH]);
       await settleNetwork(page);
-      await page.runA11yScan("kb-upload-files-panel", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-upload-files-panel");
 
       const toggle = page.getByTestId("kb-file-metadata-toggle-0");
       await toggle.hover();
@@ -493,9 +441,7 @@ test.describe("knowledge bases route accessibility", () => {
       await expect(page.getByTestId("kb-file-metadata-editor-0")).toBeVisible({
         timeout: TIMEOUTS.standard,
       });
-      await page.runA11yScan("kb-upload-per-file-metadata", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-upload-per-file-metadata");
     },
   );
 
@@ -509,18 +455,14 @@ test.describe("knowledge bases route accessibility", () => {
       await expect(
         page.getByTestId("text-embedding-3-small-option"),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
-      await page.runA11yScan("kb-upload-embedding-dropdown", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-upload-embedding-dropdown");
 
       await page.keyboard.press("Escape");
       await page.getByTestId("value-dropdown-kb-db-provider").click();
       await expect(page.getByTestId("chroma-provider-option")).toBeVisible({
         timeout: TIMEOUTS.standard,
       });
-      await page.runA11yScan("kb-upload-db-provider-dropdown", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-upload-db-provider-dropdown");
     },
   );
 
@@ -533,9 +475,7 @@ test.describe("knowledge bases route accessibility", () => {
     await expect(page.getByTestId("kb-run-metadata-error-0")).toBeVisible({
       timeout: TIMEOUTS.standard,
     });
-    await page.runA11yScan("kb-upload-metadata-error", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-upload-metadata-error");
   });
 
   test("scans the review step with no files", RELEASE, async ({ page }) => {
@@ -549,9 +489,7 @@ test.describe("knowledge bases route accessibility", () => {
     await expect(page.getByText(/no files selected/i)).toBeVisible({
       timeout: TIMEOUTS.standard,
     });
-    await page.runA11yScan("kb-review-no-files", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-review-no-files");
   });
 
   test("scans the review preview loading state", RELEASE, async ({ page }) => {
@@ -565,9 +503,7 @@ test.describe("knowledge bases route accessibility", () => {
     await expect(page.getByText(/generating preview/i)).toBeVisible({
       timeout: TIMEOUTS.standard,
     });
-    await page.runA11yScan("kb-review-preview-loading", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-review-preview-loading");
 
     releasePreview();
     await settleNetwork(page);
@@ -589,9 +525,7 @@ test.describe("knowledge bases route accessibility", () => {
     await expect(page.getByText(/could not generate preview/i)).toBeVisible({
       timeout: TIMEOUTS.standard,
     });
-    await page.runA11yScan("kb-review-preview-error", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kb-review-preview-error");
   });
 
   test(
@@ -636,9 +570,7 @@ test.describe("knowledge bases route accessibility", () => {
       await expect(
         page.getByRole("menuitem", { name: /test-file\.txt/i }),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
-      await page.runA11yScan("kb-review-multifile", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kb-review-multifile");
     },
   );
 });
@@ -666,9 +598,7 @@ test.describe("knowledge base chunks page accessibility", () => {
     await expect(page.getByText(/loading chunks/i)).toBeVisible({
       timeout: TIMEOUTS.standard,
     });
-    await page.runA11yScan("kbchunks-loading", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kbchunks-loading");
 
     releaseChunks();
     await settleNetwork(page);
@@ -688,7 +618,7 @@ test.describe("knowledge base chunks page accessibility", () => {
     await expect(page.getByText(/failed to load chunks/i)).toBeVisible({
       timeout: TIMEOUTS.standard,
     });
-    await page.runA11yScan("kbchunks-error", { ignoreRules: KB_IGNORE_RULES });
+    await page.runA11yScan("kbchunks-error");
   });
 
   test("scans the source-type filter dropdown", RELEASE, async ({ page }) => {
@@ -702,9 +632,7 @@ test.describe("knowledge base chunks page accessibility", () => {
     await expect(
       page.getByRole("option", { name: /file upload/i }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
-    await page.runA11yScan("kbchunks-source-type-filter-open", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kbchunks-source-type-filter-open");
   });
 
   test(
@@ -722,17 +650,13 @@ test.describe("knowledge base chunks page accessibility", () => {
       await expect(
         page.getByTestId("chunks-metadata-filter-submit"),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
-      await page.runA11yScan("kbchunks-filter-open", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kbchunks-filter-open");
 
       await page.getByTestId("chunks-metadata-filter-key").click();
       await expect(
         page.getByTestId("chunks-metadata-filter-key-option-team"),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
-      await page.runA11yScan("kbchunks-metadata-key-combobox", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kbchunks-metadata-key-combobox");
 
       await page.getByTestId("chunks-metadata-filter-key-option-team").click();
       await page.getByTestId("chunks-metadata-filter-value").click();
@@ -742,9 +666,7 @@ test.describe("knowledge base chunks page accessibility", () => {
       await expect(
         page.getByTestId("chunks-metadata-filter-value-custom"),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
-      await page.runA11yScan("kbchunks-metadata-value-combobox", {
-        ignoreRules: KB_IGNORE_RULES,
-      });
+      await page.runA11yScan("kbchunks-metadata-value-combobox");
     },
   );
 
@@ -767,9 +689,7 @@ test.describe("knowledge base chunks page accessibility", () => {
       timeout: TIMEOUTS.standard,
     });
     await settleNetwork(page);
-    await page.runA11yScan("kbchunks-filter-chips", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kbchunks-filter-chips");
   });
 
   test("scans an expanded chunk card", RELEASE, async ({ page }) => {
@@ -798,8 +718,6 @@ test.describe("knowledge base chunks page accessibility", () => {
 
     await card.first().click();
     await settleNetwork(page);
-    await page.runA11yScan("kbchunks-card-expanded", {
-      ignoreRules: KB_IGNORE_RULES,
-    });
+    await page.runA11yScan("kbchunks-card-expanded");
   });
 });

@@ -1,25 +1,5 @@
-import { writeFileSync } from "node:fs";
 import type { ICheckerReport, ICheckerResult } from "accessibility-checker";
 import path from "path";
-
-// Keep in sync with .achecker.yml `outputFolder`.
-const A11Y_REPORTS_DIR = "coverage/accessibility-reports";
-
-// Persist the ignore rules a scan actually applied as a sidecar next to its IBM
-// report ({scanLabel}.json). The report builder reads this to grey out the
-// suppressed rules for exactly that scan — no label-prefix guessing. Always
-// written (even []) so "this scan suppressed nothing" is explicit and
-// distinguishable from a missing/legacy report.
-export function writeA11yIgnoreSidecar(
-  scanLabel: string,
-  ignoreRules?: string[],
-): void {
-  const file = path.join(A11Y_REPORTS_DIR, `${scanLabel}.ignore.json`);
-  writeFileSync(
-    file,
-    `${JSON.stringify({ label: scanLabel, ignoreRules: ignoreRules ?? [] }, null, 2)}\n`,
-  );
-}
 
 function compactWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
@@ -84,7 +64,6 @@ export function buildA11ySummaryAttachment(
 export function formatA11yFailure(
   scanLabel: string,
   report: ICheckerReport,
-  ignoreRules?: string[],
 ): string {
   const counts = report.summary.counts;
   const reportPath = path.posix.join(
@@ -96,8 +75,7 @@ export function formatA11yFailure(
   const failingIssues = report.results.filter(
     (issue) =>
       !issue.ignored &&
-      (issue.level === "violation" || issue.level === "potentialviolation") &&
-      !ignoreRules?.includes(issue.ruleId),
+      (issue.level === "violation" || issue.level === "potentialviolation"),
   );
 
   const groupedIssues = new Map<
@@ -154,14 +132,8 @@ export function formatA11yFailure(
   return lines.join("\n");
 }
 
-export function countNewA11yViolations(
-  report: ICheckerReport,
-  ignoreRules?: string[],
-): number {
+export function countNewA11yViolations(report: ICheckerReport): number {
   return report.results.filter(
-    (issue) =>
-      issue.level === "violation" &&
-      !issue.ignored &&
-      !ignoreRules?.includes(issue.ruleId),
+    (issue) => issue.level === "violation" && !issue.ignored,
   ).length;
 }

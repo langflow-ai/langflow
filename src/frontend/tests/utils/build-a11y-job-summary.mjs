@@ -22,35 +22,31 @@ function escapeCell(value) {
     .replaceAll("\n", " ");
 }
 
-// Show the actionable (non-suppressed) rules for a route; these are the ones a
-// feature owner needs to fix. Suppressed chrome/framework rules are counted
-// separately in the "Suppressed" column.
-function renderActionableRules(rules, limit = 3) {
-  const actionable = (rules ?? []).filter((rule) => !rule.suppressed);
-  if (!actionable.length) return "none";
-  const shown = actionable
+function renderRules(rules, limit = 3) {
+  if (!rules?.length) return "none";
+  const shown = rules
     .slice(0, limit)
     .map((rule) => `\`${rule.ruleId}\` (${rule.count})`)
     .join(", ");
-  const hidden = actionable.length - limit;
+  const hidden = rules.length - limit;
   return hidden > 0 ? `${shown}, +${hidden}` : shown;
 }
 
 function renderRouteTable(routes) {
   return [
-    "| Route | Surface | Actionable | Suppressed | Top actionable rules |",
-    "| --- | --- | ---: | ---: | --- |",
+    "| Route | Surface | Issues | Top rules |",
+    "| --- | --- | ---: | --- |",
     ...routes.map(
       (route) =>
-        `| \`${escapeCell(route.route)}\` | ${escapeCell(route.surface)} | ${route.actionableIssueCount ?? route.issueCount} | ${route.suppressedIssueCount ?? 0} | ${renderActionableRules(route.rules)} |`,
+        `| \`${escapeCell(route.route)}\` | ${escapeCell(route.surface)} | ${route.issueCount} | ${renderRules(route.rules)} |`,
     ),
   ].join("\n");
 }
 
 function renderRuleTable(rules) {
   return [
-    "| Rule | Issues | Suppressed | Top routes |",
-    "| --- | ---: | :---: | --- |",
+    "| Rule | Issues | Top routes |",
+    "| --- | ---: | --- |",
     ...rules.slice(0, 10).map((rule) => {
       const topRoutes = rule.routes
         .slice(0, 5)
@@ -58,7 +54,7 @@ function renderRuleTable(rules) {
         .join(", ");
       const hidden = rule.routes.length - 5;
       const routes = hidden > 0 ? `${topRoutes}, +${hidden}` : topRoutes;
-      return `| \`${escapeCell(rule.ruleId)}\` | ${rule.count} | ${rule.suppressed ? "yes" : "—"} | ${routes} |`;
+      return `| \`${escapeCell(rule.ruleId)}\` | ${rule.count} | ${routes} |`;
     }),
   ].join("\n");
 }
@@ -70,37 +66,21 @@ if (!existsSync(summaryPath)) {
 }
 
 const summary = JSON.parse(readFileSync(summaryPath, "utf8"));
-
-const actionableOf = (route) =>
-  route.actionableIssueCount ?? route.issueCount ?? 0;
-
 const routesByIssues = [...summary.routes].sort(
-  (a, b) => actionableOf(b) - actionableOf(a) || a.route.localeCompare(b.route),
+  (a, b) => b.issueCount - a.issueCount || a.route.localeCompare(b.route),
 );
 
 const worstRoutes = routesByIssues.slice(0, 10);
 const remainingRoutes = routesByIssues.slice(10);
 
-// Actionable rules first (route-summary already sorts them that way), then the
-// suppressed chrome/framework rules.
-const actionableRules = summary.rules.filter((rule) => !rule.suppressed);
-
-const totalIssues = summary.issueCount;
-const actionableIssues = summary.actionableIssueCount ?? totalIssues;
-const suppressedIssues = summary.suppressedIssueCount ?? 0;
-
 const lines = [
   `Generated: \`${summary.generatedAt}\``,
   "",
-  "| Routes scanned | Actionable issues | Suppressed | Total issues | Rules |",
-  "| ---: | ---: | ---: | ---: | ---: |",
-  `| ${summary.routeCount} | ${actionableIssues} | ${suppressedIssues} | ${totalIssues} | ${summary.ruleCount} |`,
+  "| Routes scanned | Issues | Rules |",
+  "| ---: | ---: | ---: |",
+  `| ${summary.routeCount} | ${summary.issueCount} | ${summary.ruleCount} |`,
   "",
-  "> Suppressed = findings owned by shared app chrome or third-party widgets,",
-  "> ignored per-scan via `runA11yScan({ ignoreRules })` (reasons in",
-  "> `tests/a11y/rules/<feature>-ignore-rules.json`). Focus on actionable issues.",
-  "",
-  "### Worst Routes (by actionable issues)",
+  "### Worst Routes",
   "",
   renderRouteTable(worstRoutes),
   "",
@@ -111,18 +91,16 @@ const lines = [
   "",
   "</details>",
   "",
-  "### Top Actionable Rules",
+  "### Top Rules",
   "",
-  actionableRules.length > 0
-    ? renderRuleTable(actionableRules)
-    : "_No actionable rules — all findings are suppressed chrome/framework issues._",
+  renderRuleTable(summary.rules),
 ];
 
 if (remainingRoutes.length > 0) {
   lines.splice(
-    9,
+    8,
     0,
-    `Showing top ${worstRoutes.length} routes by actionable issue count. Expand all routes for the remaining ${remainingRoutes.length}.`,
+    `Showing top ${worstRoutes.length} routes by issue count. Expand all routes for the remaining ${remainingRoutes.length}.`,
     "",
   );
 }

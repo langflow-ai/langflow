@@ -171,7 +171,7 @@ export function MetadataEditor({
           onClick={addPair}
           disabled={disabled || pairs.length >= MAX_KEYS}
           data-testid={`${testIdScope}-metadata-add`}
-          className="w-fit"
+          className="w-fit focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
           <ForwardedIconComponent name="Plus" className="mr-1 h-3.5 w-3.5" />
           {t("knowledge.metadataAddField")}
