@@ -512,11 +512,14 @@ async def generate_flow_events(
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
-            # Apply request tweaks to the built graph. The sync path applies tweaks before Graph
-            # construction; the streaming/background path builds from the DB (or request data), so
-            # tweaks must be applied here or they are silently dropped. ``update_raw_params`` is used
-            # rather than the lfx ``process_tweaks_on_graph`` helper because that helper only sets
-            # ``vertex.params`` and does not persist the override to runtime.
+            # Apply request tweaks to the built graph. The sync path applies
+            # tweaks before Graph construction; the streaming/background path
+            # builds from the DB (or request data), so tweaks must be applied
+            # to the built graph here or they are silently dropped. We use
+            # ``update_raw_params`` rather than the lfx ``process_tweaks_on_graph``
+            # helper because that helper only sets ``vertex.params`` and does not
+            # persist the override to runtime (mirrors the workaround in
+            # ``lfx.base.tools.run_flow._process_tweaks_on_graph``).
             if tweaks:
                 for vertex in graph.vertices:
                     if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):
