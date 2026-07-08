@@ -33,7 +33,7 @@ import { CanvasPlaceholder } from "./CanvasPlaceholder";
 import { D2Canvas } from "./D2Canvas";
 import type { Anchor } from "./d2/anchor";
 import { isNotImplemented, NotReady } from "./NotReady";
-import { phaseIndex } from "./phases";
+import { phaseIndex, uiPhase } from "./phases";
 
 function PaneLoading({ label }: { label: string }) {
   return (
@@ -100,7 +100,7 @@ export function ArtifactsPane({
 }) {
   // The artifact map only exists from ARCHITECTURE onward; before that the
   // endpoint is phase-gated, so we don't even fetch it.
-  const hasArchitecture = phaseIndex(project.phase) >= 1;
+  const hasArchitecture = phaseIndex(uiPhase(project.phase)) >= 1;
   const { data, isLoading, isError, error } = useArtifacts(
     project.id,
     hasArchitecture,

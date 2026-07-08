@@ -20,6 +20,7 @@ import {
   StatusDot,
   SystemBlock,
   TopBar,
+  uiPhase,
 } from "../index";
 
 describe("phases", () => {
@@ -29,13 +30,21 @@ describe("phases", () => {
       "ARCHITECTURE",
       "PROTOTYPE",
       "PLAN",
-      "CODE_GENERATION",
+      "REVIEW",
       "DONE",
     ]);
     expect(phaseIndex("ARCHITECTURE")).toBe(1);
     expect(phaseIndex("PROTOTYPE")).toBe(2);
     expect(phaseIndex("PLAN")).toBe(3);
     expect(phaseIndex("UNKNOWN")).toBe(-1);
+  });
+
+  it("maps the backend CODE_GENERATION phase onto the REVIEW UI stage", () => {
+    // Part B: codegen is a backend stage launched from the Plan pane; the UI
+    // presents it as Review. Every other phase passes through unchanged.
+    expect(uiPhase("CODE_GENERATION")).toBe("REVIEW");
+    expect(uiPhase("PLAN")).toBe("PLAN");
+    expect(phaseIndex(uiPhase("CODE_GENERATION"))).toBe(4);
   });
 });
 
@@ -64,9 +73,9 @@ describe("Button", () => {
 });
 
 describe("StatusDot", () => {
-  it("shows the verb for the phase", () => {
+  it("shows the verb for the phase (raw backend phase maps to Review)", () => {
     render(<StatusDot phase="CODE_GENERATION" />);
-    expect(screen.getByText("generating")).toBeInTheDocument();
+    expect(screen.getByText("reviewing")).toBeInTheDocument();
   });
 
   it("falls back to the clarifying verb for an unknown phase", () => {
@@ -83,7 +92,7 @@ describe("PhaseStepper", () => {
       "Design",
       "Prototype",
       "Plan",
-      "Generate",
+      "Review",
       "Deliver",
     ]) {
       expect(screen.getByText(label)).toBeInTheDocument();

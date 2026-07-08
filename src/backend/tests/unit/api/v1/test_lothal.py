@@ -2969,3 +2969,358 @@ async def test_get_codegen_status_bridges_to_pm(client: AsyncClient, logged_in_h
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["state"] == "running"
     assert codegen.called
+
+
+# --- Review stage (git-read bridge) -------------------------------------------
+# The ReviewPane bridges to TWO internal services: the PM service (node tree +
+# audit, mocked as above) and the standalone git-read service (diffs/trees/blobs).
+# These tests mock both with respx so the ref-derivation + endpoints are verified
+# end-to-end against stubs, never live services.
+
+GITREAD_BASE = "http://review:8000"
+REVIEW_ROOT_ID = "33333333-3333-3333-3333-333333333333"
+REVIEW_CHILD_ID = "44444444-4444-4444-4444-444444444444"
+
+# A two-node tree: a root (parent branches off lothal/trunk) and a child (branches
+# off the root's node branch). Drives the ref-derivation assertions below.
+_REVIEW_TREE = [
+    {"id": REVIEW_ROOT_ID, "parent_id": None, "kind": "app", "state": "verified", "name": "Root", "depth": 0},
+    {
+        "id": REVIEW_CHILD_ID,
+        "parent_id": REVIEW_ROOT_ID,
+        "kind": "story",
+        "state": "verified",
+        "name": "Child",
+        "depth": 1,
+    },
+]
+
+
+@pytest.fixture(autouse=True)
+async def _reset_gitread_singleton():
+    """Reset the process-wide git-read client around every test (mirrors the PM reset)."""
+    from langflow.lothal.gitread_client import aclose_gitread_client
+
+    await aclose_gitread_client()
+    yield
+    await aclose_gitread_client()
+
+
+@pytest.fixture
+def _gitread_env(monkeypatch):
+    monkeypatch.setenv("LOTHAL_GITREAD_BASE_URL", GITREAD_BASE)
+
+
+def _mock_pm_tree(pm_id: str, nodes: list[dict]) -> None:
+    respx.get(f"{PM_BASE}/api/projects/{pm_id}/nodes").mock(return_value=httpx.Response(200, json=nodes))
+
+
+@pytest.mark.parametrize("phase", ["CLARIFICATION", "ARCHITECTURE", "PROTOTYPE"])
+async def test_review_diff_403_before_plan_phase(client: AsyncClient, logged_in_headers: dict, phase: str):
+    """Review is gated to the planning window: a read before then is a 403 (no PM/git call)."""
+    project_id = await _make_plan_project(client, logged_in_headers, phase=phase)
+    response = await client.get(
+        f"api/v1/lothal/projects/{project_id}/review/nodes/{REVIEW_CHILD_ID}/diff", headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.usefixtures("_pm_env", "_gitread_env")
+async def test_review_diff_derives_child_refs_and_bridges(client: AsyncClient, logged_in_headers: dict):
+    """Bridge a child node's diff through the git-read service.
+
+    The diff derives base=parent branch, head=node branch, and passes the git-read
+    service's response straight through.
+    """
+    project_id = await _make_plan_project(client, logged_in_headers)
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    with respx.mock:
+        _mock_pm_login()
+        _mock_pm_tree(PM_ID_EXISTING, _REVIEW_TREE)
+        diff = respx.get(f"{GITREAD_BASE}/diff").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "repo": PM_ID_EXISTING,
+                    "before": "aaa",
+                    "after": "bbb",
+                    "files": [
+                        {
+                            "path": "src/app.py",
+                            "status": "added",
+                            "old_path": None,
+                            "binary": False,
+                            "additions": 1,
+                            "deletions": 0,
+                        }
+                    ],
+                    "unified": "diff --git a/src/app.py b/src/app.py\n",
+                    "truncated": False,
+                },
+            )
+        )
+        response = await client.get(
+            f"api/v1/lothal/projects/{project_id}/review/nodes/{REVIEW_CHILD_ID}/diff", headers=logged_in_headers
+        )
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["after"] == "bbb"
+    assert body["files"][0]["path"] == "src/app.py"
+    params = diff.calls.last.request.url.params
+    assert params["repo"] == PM_ID_EXISTING
+    assert params["base"] == f"lothal/node/{REVIEW_ROOT_ID}"  # parent branch
+    assert params["head"] == f"lothal/node/{REVIEW_CHILD_ID}"  # node branch
+
+
+@pytest.mark.usefixtures("_pm_env", "_gitread_env")
+async def test_review_diff_root_node_uses_trunk_base(client: AsyncClient, logged_in_headers: dict):
+    """A root node (no parent) diffs against lothal/trunk."""
+    project_id = await _make_plan_project(client, logged_in_headers)
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    with respx.mock:
+        _mock_pm_login()
+        _mock_pm_tree(PM_ID_EXISTING, _REVIEW_TREE)
+        diff = respx.get(f"{GITREAD_BASE}/diff").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "repo": PM_ID_EXISTING,
+                    "before": "x",
+                    "after": "y",
+                    "files": [],
+                    "unified": "",
+                    "truncated": False,
+                },
+            )
+        )
+        response = await client.get(
+            f"api/v1/lothal/projects/{project_id}/review/nodes/{REVIEW_ROOT_ID}/diff", headers=logged_in_headers
+        )
+    assert response.status_code == status.HTTP_200_OK
+    assert diff.calls.last.request.url.params["base"] == "lothal/trunk"
+
+
+@pytest.mark.usefixtures("_pm_env", "_gitread_env")
+async def test_review_diff_empty_state_when_no_branch(client: AsyncClient, logged_in_headers: dict):
+    """Turn a git-read 404 into an explicit empty diff.
+
+    A node with no branch yet (nothing committed) → the git-read 404 becomes an empty
+    diff (200), not an error, so the pane shows an empty state.
+    """
+    project_id = await _make_plan_project(client, logged_in_headers)
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    with respx.mock:
+        _mock_pm_login()
+        _mock_pm_tree(PM_ID_EXISTING, _REVIEW_TREE)
+        respx.get(f"{GITREAD_BASE}/diff").mock(return_value=httpx.Response(404, json={"detail": "ref not found"}))
+        response = await client.get(
+            f"api/v1/lothal/projects/{project_id}/review/nodes/{REVIEW_CHILD_ID}/diff", headers=logged_in_headers
+        )
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["empty"] is True
+    assert body["files"] == []
+
+
+@pytest.mark.usefixtures("_pm_env", "_gitread_env")
+async def test_review_diff_node_not_in_plan_is_404(client: AsyncClient, logged_in_headers: dict):
+    """A node id absent from the project's plan is a 404 (never a leak of another plan)."""
+    project_id = await _make_plan_project(client, logged_in_headers)
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    missing = "55555555-5555-5555-5555-555555555555"
+    with respx.mock:
+        _mock_pm_login()
+        _mock_pm_tree(PM_ID_EXISTING, _REVIEW_TREE)
+        response = await client.get(
+            f"api/v1/lothal/projects/{project_id}/review/nodes/{missing}/diff", headers=logged_in_headers
+        )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.usefixtures("_pm_env", "_gitread_env")
+async def test_review_filetree_and_blob_bridge(client: AsyncClient, logged_in_headers: dict):
+    project_id = await _make_plan_project(client, logged_in_headers)
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    with respx.mock:
+        _mock_pm_login()
+        _mock_pm_tree(PM_ID_EXISTING, _REVIEW_TREE)
+        tree = respx.get(f"{GITREAD_BASE}/filetree").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "repo": PM_ID_EXISTING,
+                    "ref": f"lothal/node/{REVIEW_CHILD_ID}",
+                    "sha": "bbb",
+                    "root": [{"name": "src", "path": "src", "type": "tree", "size": None, "sha": None, "children": []}],
+                },
+            )
+        )
+        respx.get(f"{GITREAD_BASE}/blob").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "repo": PM_ID_EXISTING,
+                    "ref": "bbb",
+                    "path": "src/app.py",
+                    "sha": "ccc",
+                    "size": 3,
+                    "binary": False,
+                    "content": "hi\n",
+                    "truncated": False,
+                },
+            )
+        )
+        ft = await client.get(
+            f"api/v1/lothal/projects/{project_id}/review/nodes/{REVIEW_CHILD_ID}/filetree", headers=logged_in_headers
+        )
+        bl = await client.get(
+            f"api/v1/lothal/projects/{project_id}/review/nodes/{REVIEW_CHILD_ID}/blob",
+            params={"ref": "bbb", "path": "src/app.py"},
+            headers=logged_in_headers,
+        )
+    assert ft.status_code == status.HTTP_200_OK
+    assert ft.json()["sha"] == "bbb"
+    assert tree.calls.last.request.url.params["ref"] == f"lothal/node/{REVIEW_CHILD_ID}"  # after side
+    assert bl.status_code == status.HTTP_200_OK
+    assert bl.json()["content"] == "hi\n"
+
+
+async def test_review_endpoints_404_for_foreign_project(client: AsyncClient, logged_in_headers: dict, user_two):
+    """Enforce R4 on every review read against a foreign project.
+
+    Every review read on another user's project 404s at the ownership guard, before
+    any PM or git-read call (no service is even reached).
+    """
+    async with session_scope() as session:
+        foreign = Project(name="Theirs", user_id=user_two.id, phase="PLAN")
+        session.add(foreign)
+        await session.flush()
+        foreign_pk = foreign.id
+    try:
+        for suffix in (
+            "/review/nodes",
+            f"/review/nodes/{REVIEW_CHILD_ID}/diff",
+            f"/review/nodes/{REVIEW_CHILD_ID}/filetree",
+            f"/review/nodes/{REVIEW_CHILD_ID}/blob?ref=bbb&path=x",
+        ):
+            response = await client.get(f"api/v1/lothal/projects/{foreign_pk}{suffix}", headers=logged_in_headers)
+            assert response.status_code == status.HTTP_404_NOT_FOUND, suffix
+    finally:
+        async with session_scope() as session:
+            leftover = await session.get(Project, foreign_pk)
+            if leftover:
+                await session.delete(leftover)
+
+
+@pytest.mark.usefixtures("_pm_env", "_gitread_env")
+async def test_review_maps_gitread_5xx_to_502(client: AsyncClient, logged_in_headers: dict):
+    project_id = await _make_plan_project(client, logged_in_headers)
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    with respx.mock:
+        _mock_pm_login()
+        _mock_pm_tree(PM_ID_EXISTING, _REVIEW_TREE)
+        respx.get(f"{GITREAD_BASE}/diff").mock(return_value=httpx.Response(500, json={"detail": "boom"}))
+        response = await client.get(
+            f"api/v1/lothal/projects/{project_id}/review/nodes/{REVIEW_CHILD_ID}/diff", headers=logged_in_headers
+        )
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+
+
+def _mock_node_ledger(pm_id: str, node_id: str, *, events, tests, codegen_status: int, codegen_json):
+    """Register the three PM reads the ledger route composes (events / tests / codegen)."""
+    base = f"{PM_BASE}/api/projects/{pm_id}/nodes/{node_id}"
+    respx.get(f"{base}/events").mock(return_value=httpx.Response(200, json=events))
+    respx.get(f"{base}/tests").mock(return_value=httpx.Response(200, json=tests))
+    respx.get(f"{base}/codegen").mock(return_value=httpx.Response(codegen_status, json=codegen_json))
+
+
+@pytest.mark.usefixtures("_pm_env", "_gitread_env")
+async def test_review_ledger_composes_pm_records(client: AsyncClient, logged_in_headers: dict):
+    """Compose the node's audit record from the PM service.
+
+    The ledger route merges the node's events, tests, and code-gen run, preserving the
+    human-vs-agent actor distinction (R3).
+    """
+    project_id = await _make_plan_project(client, logged_in_headers)
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    with respx.mock:
+        _mock_pm_login()
+        _mock_pm_tree(PM_ID_EXISTING, _REVIEW_TREE)  # node-membership check
+        _mock_node_ledger(
+            PM_ID_EXISTING,
+            REVIEW_CHILD_ID,
+            events=[
+                {
+                    "id": "e1",
+                    "node_id": REVIEW_CHILD_ID,
+                    "event_type": "ratified",
+                    "actor_type": "human",
+                    "actor_user_id": "u1",
+                    "summary": "Ratified the contract",
+                    "data": None,
+                    "caused_by_id": None,
+                    "created_at": "2026-01-01T00:00:00Z",
+                },
+                {
+                    "id": "e2",
+                    "node_id": REVIEW_CHILD_ID,
+                    "event_type": "agent_diff",
+                    "actor_type": "agent",
+                    "actor_user_id": None,
+                    "summary": "Wrote src/app.py",
+                    "data": None,
+                    "caused_by_id": "e1",
+                    "created_at": "2026-01-01T00:01:00Z",
+                },
+            ],
+            tests=[{"id": "t1", "scope": "unit", "title": "works", "status": "passed"}],
+            codegen_status=200,
+            codegen_json={"state": "succeeded", "attempt": 1},
+        )
+        response = await client.get(
+            f"api/v1/lothal/projects/{project_id}/review/nodes/{REVIEW_CHILD_ID}/ledger", headers=logged_in_headers
+        )
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert [e["actor_type"] for e in body["events"]] == ["human", "agent"]  # user vs LLM
+    assert body["tests"][0]["status"] == "passed"
+    assert body["codegen"]["state"] == "succeeded"
+
+
+@pytest.mark.usefixtures("_pm_env", "_gitread_env")
+async def test_review_ledger_no_codegen_run_is_null(client: AsyncClient, logged_in_headers: dict):
+    """Treat a missing code-gen run as null, not an error.
+
+    A node that hasn't been launched has no code-gen run — the PM 404 becomes a null
+    `codegen`, not an error.
+    """
+    project_id = await _make_plan_project(client, logged_in_headers)
+    await _link_pm_project(project_id, PM_ID_EXISTING)
+    with respx.mock:
+        _mock_pm_login()
+        _mock_pm_tree(PM_ID_EXISTING, _REVIEW_TREE)
+        _mock_node_ledger(
+            PM_ID_EXISTING,
+            REVIEW_CHILD_ID,
+            events=[
+                {
+                    "id": "e1",
+                    "node_id": REVIEW_CHILD_ID,
+                    "event_type": "created",
+                    "actor_type": "human",
+                    "actor_user_id": "u1",
+                    "summary": "Created the node",
+                    "data": None,
+                    "caused_by_id": None,
+                    "created_at": "2026-01-01T00:00:00Z",
+                }
+            ],
+            tests=[],
+            codegen_status=404,
+            codegen_json={"detail": "No code-generation run for this node yet."},
+        )
+        response = await client.get(
+            f"api/v1/lothal/projects/{project_id}/review/nodes/{REVIEW_CHILD_ID}/ledger", headers=logged_in_headers
+        )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["codegen"] is None

@@ -286,6 +286,26 @@ jobs:
               exit 1
             fi
 
+            # Health-check the internal ReviewPane git-read service (same posture as
+            # `pm`: no host port, probe from inside the network). Boots fast (no schema
+            # build) but poll anyway to absorb the startup window. Up to 20 × 5s = 100s.
+            review_ok=
+            for i in $(seq 1 20); do
+              if docker compose -f docker-compose.prod.yml exec -T review \
+                   curl -fsS http://localhost:8000/health >/dev/null 2>&1; then
+                review_ok=1; echo "review /health OK after ${i} attempt(s)"; break
+              fi
+              echo "waiting for review /health (attempt ${i}/20)"
+              sleep 5
+            done
+            if [ -z "$review_ok" ]; then
+              echo "::error::review health check failed after 100s"
+              docker compose -f docker-compose.prod.yml ps
+              docker compose -f docker-compose.prod.yml logs --tail=120 review
+              docker logout ghcr.io || true
+              exit 1
+            fi
+
             # Reclaim disk: remove ALL images not used by a running container
             # (-a), not just dangling ones. Runs only after `up -d` + a passing
             # health check, so the new backend/frontend/db images are live and

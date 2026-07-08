@@ -107,6 +107,12 @@ services:
       # in the /plan routes (the owner check), not by the pm service.
       LOTHAL_PM_USER: ${PM_BRIDGE_USER:-langflow-bridge}
       LOTHAL_PM_PASSWORD: ${PM_BRIDGE_PASSWORD:?PM_BRIDGE_PASSWORD required}
+      # ── Lothal ReviewPane git-read service ──
+      # Internal base URL of the standalone git-read service (the `review` service
+      # below) that computes read-only per-node diffs/trees/blobs from the shared code
+      # repos. The backend bridges to it (lothal/gitread_client.py) and re-exposes the
+      # results as /api/v1/lothal/projects/{id}/review/*. Unpublished, same-network only.
+      LOTHAL_GITREAD_BASE_URL: http://review:8000
     volumes:
       - lothal-langflow-data:/app/langflow  # secret_key, profile pics, etc. — must persist
     healthcheck:
@@ -237,6 +243,15 @@ services:
       LOTHAL_DEV_USER: ${PM_BRIDGE_USER:-langflow-bridge}
       LOTHAL_DEV_PASS: ${PM_BRIDGE_PASSWORD:?PM_BRIDGE_PASSWORD required}
       # The backend bridges server-side, so no browser calls this directly → no CORS.
+      # Persist code-gen git repos on the shared `lothal-repos` volume so the ReviewPane
+      # git-read service (below) can read them, and enable the git branch-tree store
+      # (off by default). NOTE: the code-gen *worker* (a separate `python -m lothal.worker`
+      # container — see lothal_project deploy/langflow-integration.md §8) must mount the
+      # SAME volume at the SAME path and set LOTHAL_VCS=true, or no commits are written.
+      LOTHAL_VCS: "true"
+      LOTHAL_REPOS_ROOT: /repos
+    volumes:
+      - lothal-repos:/repos  # per-project code-gen git repos (shared with `review`)
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
       interval: 15s
@@ -245,7 +260,33 @@ services:
       start_period: 30s
     # intentionally no `ports:` — only reachable inside the compose network
 
+  # Lothal ReviewPane git-read service — the read-only backend of the code-review
+  # stage (prod_spec.md Part B). Computes per-node diffs/trees/blobs straight from the
+  # shared code-gen repos volume (git --git-dir; no clone, no checkout), so a node is
+  # reviewable even after its sandbox is gone. Internal-only: the backend bridges to it
+  # (lothal/gitread_client.py) after the per-user ownership check, and re-exposes the
+  # results at /api/v1/lothal/projects/{id}/review/*. The browser never calls it.
+  # Image built + published by the separate realbytecode/lothal_review repo's own CI as
+  # ghcr.io/realbytecode/lothal-review, NOT by the Lothal deploy workflow. Rolled by
+  # editing REVIEW_IMAGE in /opt/lothal/.env.
+  review:
+    image: ${REVIEW_IMAGE:-ghcr.io/realbytecode/lothal-review:latest}
+    restart: unless-stopped
+    environment:
+      # Must match the pm service's LOTHAL_REPOS_ROOT — the same repos, mounted here.
+      LOTHAL_REPOS_ROOT: /repos
+    volumes:
+      - lothal-repos:/repos:ro  # read-only: review never writes the code store
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+    # intentionally no `ports:` — only reachable inside the compose network
+
 volumes:
   lothal-db-data:
   lothal-langflow-data:
   lothal-od-data:
+  lothal-repos:

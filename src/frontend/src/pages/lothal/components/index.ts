@@ -33,7 +33,7 @@ export {
 } from "./NotReady";
 export { PhaseStepper, type PhaseStepperStyle } from "./PhaseStepper";
 export {
-  isCodePhase,
+  isReviewPhase,
   type LothalPhaseId,
   PHASE_IDS,
   PHASES,
@@ -42,6 +42,7 @@ export {
   phaseIndex,
   phaseLabel,
   phaseStatus,
+  uiPhase,
 } from "./phases";
 export {
   SampleDiagram,

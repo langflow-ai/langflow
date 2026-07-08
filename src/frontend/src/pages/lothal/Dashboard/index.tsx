@@ -20,6 +20,7 @@ import {
   phaseStatus,
   StatusDot,
   TopBar,
+  uiPhase,
 } from "../components";
 import { LothalSurface } from "../theme/LothalSurface";
 
@@ -267,7 +268,9 @@ function ProjectCard({
   // The card-footer line. The design shows turns/commits here, but those
   // counts aren't on the project list yet, so we surface the phase-derived
   // status from the shared phase metadata.
-  const status = phaseStatus(project.phase);
+  // Map through uiPhase first: the backend's CODE_GENERATION presents as the
+  // REVIEW stage (Part B), same as the StatusDot beside it.
+  const status = phaseStatus(uiPhase(project.phase));
   return (
     <div
       role="button"

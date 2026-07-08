@@ -34,7 +34,6 @@ import {
   type ChatComposerHandle,
   CodeView,
   EmptyHint,
-  isCodePhase,
   isNotImplemented,
   LOTHAL_VERSION,
   LothalMark,
@@ -46,11 +45,13 @@ import {
   StatusDot,
   SystemBlock,
   TopBar,
+  uiPhase,
 } from "../components";
 import { ArtifactsPane } from "../components/ArtifactsPane";
 import { PlanPane } from "../components/PlanPane";
 import { PrdPane } from "../components/PrdPane";
 import { PrototypePane } from "../components/PrototypePane";
+import { ReviewPane } from "../components/ReviewPane";
 import { LothalSurface } from "../theme/LothalSurface";
 
 // The line shown when the conversation crosses a phase boundary.
@@ -648,19 +649,30 @@ function WorkspaceView() {
 
   // Phase navigation: you can browse any phase up to the project's real one to
   // review the artifacts it produced. The right pane renders the viewed phase;
-  // the live (current) phase is the only editable one.
-  const currentIdx = phaseIndex(project.phase);
-  const viewedPhase = viewedPhaseRaw ?? project.phase;
+  // the live (current) phase is the only editable one. The project's raw phase is
+  // mapped through `uiPhase` first (the backend's CODE_GENERATION presents as the
+  // REVIEW stage), so navigation works in UI-phase space.
+  const currentPhase = uiPhase(project.phase);
+  const currentIdx = phaseIndex(currentPhase);
+  const viewedPhase = viewedPhaseRaw ?? currentPhase;
   const viewedIdx = phaseIndex(viewedPhase);
   const browsingPast =
     viewedIdx >= 0 && currentIdx >= 0 && viewedIdx !== currentIdx;
+  // Review is ungated and continuous with Plan (Part B): once the project reaches
+  // the planning stage you can flip forward to Review to inspect committed nodes
+  // even while the plan/codegen is still in progress. So the navigable bound is
+  // normally the live phase, but is lifted to REVIEW from PLAN onward.
+  const planIdx = phaseIndex("PLAN");
+  const reviewIdx = phaseIndex("REVIEW");
+  const maxIdx =
+    currentIdx >= planIdx ? Math.max(currentIdx, reviewIdx) : currentIdx;
   // Selecting the project's real phase normalizes back to `null` (follow live) so
   // a later server phase change still advances the right pane; only an EARLIER
   // phase pins the read-only browse.
   const selectViewedPhase = (id: string) =>
-    setViewedPhase(id === project.phase ? null : id);
+    setViewedPhase(id === currentPhase ? null : id);
   const gotoPhase = (delta: number) => {
-    const next = Math.min(Math.max(viewedIdx + delta, 0), currentIdx);
+    const next = Math.min(Math.max(viewedIdx + delta, 0), maxIdx);
     selectViewedPhase(PHASE_IDS[next]);
   };
 
@@ -759,7 +771,8 @@ function WorkspaceView() {
             </button>
             <PhaseStepper
               phase={viewedPhase}
-              currentPhase={project.phase}
+              currentPhase={currentPhase}
+              navigableTo={PHASE_IDS[maxIdx]}
               variant="stepper"
               onSelect={selectViewedPhase}
             />
@@ -767,9 +780,9 @@ function WorkspaceView() {
               type="button"
               aria-label="Next stage"
               title="Next stage"
-              disabled={viewedIdx >= currentIdx}
+              disabled={viewedIdx >= maxIdx}
               onClick={() => gotoPhase(1)}
-              style={navArrowStyle(viewedIdx >= currentIdx)}
+              style={navArrowStyle(viewedIdx >= maxIdx)}
             >
               <Chevron dir="right" />
             </button>
@@ -893,12 +906,17 @@ function WorkspaceView() {
                 size="sm"
                 onClick={() => setViewedPhase(null)}
               >
-                Back to {phaseLabel(project.phase)}
+                Back to {phaseLabel(currentPhase)}
               </Button>
             </div>
           )}
           <div style={{ flex: 1, minHeight: 0 }}>
-            {isCodePhase(viewedPhase) ? (
+            {viewedPhase === "REVIEW" ? (
+              // Part B: read-only per-node code review. Reachable continuously from
+              // the Plan stage onward (ungated) — a node is reviewable the moment it
+              // commits, while codegen for its siblings is still running.
+              <ReviewPane project={project} />
+            ) : viewedPhase === "DONE" ? (
               <CodePanel project={project} />
             ) : viewedPhase === "CLARIFICATION" ? (
               // Phase-gates: the drafted PRD lands on the main page for review /

@@ -3,23 +3,38 @@
 // and StatusDot atoms, the Dashboard card status, and the Workspace pane
 // switch.
 
-// The lothal phases, in order. Keep in sync with the backend contract:
-// src/backend/base/langflow/lothal/schemas.py (`Phase` Literal) — the two
-// sides can't share code across languages. Epic E.2 merged the two diagram
-// phases (DIAGRAM_GENERATION + DIAGRAM_REFINEMENT) into one ARCHITECTURE stage;
-// Epic UI (U.8) inserts the PROTOTYPE stage between ARCHITECTURE and
-// CODE_GENERATION (the Open Design prototype stage); Epic U-PLAN inserts the PLAN
-// stage (the verification-driven PM tree) after PROTOTYPE.
+// The lothal *UI* phases, in order. These drive the stepper, StatusDot, and the
+// Workspace pane switch. They mostly mirror the backend `ProjectPhase`, with one
+// deliberate divergence (ReviewPane, Part B): the backend's CODE_GENERATION phase is
+// presented as the REVIEW stage. Generation is launched from the Plan pane and runs
+// in the backend; there is no separate "Generate" UI stage — while codegen runs the
+// user reviews the committed code in the ReviewPane. `uiPhase()` maps a backend phase
+// onto this list; use it wherever a project's raw `phase` feeds phase positioning.
+//
+// (History: Epic E.2 merged the two diagram phases into ARCHITECTURE; Epic UI U.8
+// inserted PROTOTYPE; Epic U-PLAN inserted PLAN; Part B replaces the Generate UI
+// stage with REVIEW.)
 export const PHASE_IDS = [
   "CLARIFICATION",
   "ARCHITECTURE",
   "PROTOTYPE",
   "PLAN",
-  "CODE_GENERATION",
+  "REVIEW",
   "DONE",
 ] as const;
 
 export type LothalPhaseId = (typeof PHASE_IDS)[number];
+
+/**
+ * Map a backend project phase onto the UI phase list. The backend still transitions
+ * a project into CODE_GENERATION (codegen is a backend stage launched from the Plan
+ * pane); the UI presents that as the REVIEW stage. Every other phase passes through.
+ * Use this wherever a raw `project.phase` is fed to `phaseIndex` / the stepper /
+ * StatusDot, so CODE_GENERATION resolves to a valid UI index instead of -1.
+ */
+export function uiPhase(phase: string): string {
+  return phase === "CODE_GENERATION" ? "REVIEW" : phase;
+}
 
 export type PhaseStatus = {
   /** Card-footer status line ("needs your input"). */
@@ -61,10 +76,10 @@ export const PHASES: PhaseMeta[] = [
     status: { text: "needs your review", action: true },
   },
   {
-    id: "CODE_GENERATION",
-    label: "Generate",
+    id: "REVIEW",
+    label: "Review",
     short: "05",
-    status: { text: "writing the code", action: false },
+    status: { text: "reviewing the code", action: true },
   },
   {
     id: "DONE",
@@ -93,7 +108,9 @@ export function phaseStatus(phase: string): PhaseStatus {
   );
 }
 
-/** From code generation onward the code surface takes over the canvas pane. */
-export function isCodePhase(phase: string): boolean {
-  return phase === "CODE_GENERATION" || phase === "DONE";
+/** The code-review stage (Part B): the ReviewPane takes over the right pane.
+ * Accepts either the UI id (REVIEW) or the backend phase it maps from
+ * (CODE_GENERATION), so callers can pass a raw `project.phase`. */
+export function isReviewPhase(phase: string): boolean {
+  return uiPhase(phase) === "REVIEW";
 }

@@ -1,13 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { LothalPhaseId } from "@/pages/lothal/components/phases";
 import { api } from "../../api";
 
 // Types use plain names within the `lothal` namespace and mirror the
-// `/api/v1/lothal/` contract (api-endpoints.md) exactly. Phase ids are
-// declared once — in pages/lothal/components/phases.ts — and re-exported
-// here under the contract's name (a type-only import, erased at build).
+// `/api/v1/lothal/` contract (api-endpoints.md) exactly.
 
-export type Phase = LothalPhaseId;
+// The wire phase — what the server stores and returns (backend `ProjectPhase`).
+// The UI presents CODE_GENERATION as the REVIEW stage (see `uiPhase` in
+// pages/lothal/components/phases.ts); "REVIEW" is a UI-only id (in `LothalPhaseId`)
+// and is never a wire value, so it is intentionally NOT part of `Phase`.
+export type Phase =
+  | "CLARIFICATION"
+  | "ARCHITECTURE"
+  | "PROTOTYPE"
+  | "PLAN"
+  | "CODE_GENERATION"
+  | "DONE";
 
 export type Project = {
   id: string;
@@ -870,5 +877,206 @@ export function useMovePlanNode(projectId: string) {
       invalidatePlanNode(qc, projectId, vars.nodeId);
       qc.invalidateQueries({ queryKey: planDagKey(projectId) }); // topology changed
     },
+  });
+}
+
+// --- Review (read-only code review, Part B) --------------------------------
+// The ReviewPane reads what code a node produced. The node tree comes from the PM
+// service (same source as the plan tree); the diff / file tree / blobs are computed
+// by the standalone git-read service. All under `/projects/{id}/review/*`, bridged
+// server-side after the ownership check. Everything here is read-only.
+
+// The review node tree — same shape as the plan tree (both come from the PM service).
+export type ReviewTree = {
+  plan_id: string;
+  nodes: PlanNode[];
+  links: PlanLink[];
+};
+
+// One file's entry in the whole-node diff (git-read `DiffFileModel`).
+export type DiffFile = {
+  path: string;
+  status: string; // added | modified | deleted | renamed | copied | type-changed
+  old_path: string | null;
+  binary: boolean;
+  additions: number;
+  deletions: number;
+};
+
+// The whole-node diff (git-read `DiffResponse`). `before`/`after` are the resolved
+// range SHAs (null + `empty` when the node has no branch yet). `unified` is the raw
+// unified diff `react-diff-view` parses.
+export type NodeDiff = {
+  repo: string;
+  before: string | null;
+  after: string | null;
+  files: DiffFile[];
+  unified: string;
+  truncated: boolean;
+  empty?: boolean;
+};
+
+// A node in the file tree at a ref (git-read `TreeNodeModel`).
+export type FileTreeNode = {
+  name: string;
+  path: string;
+  type: "blob" | "tree";
+  size: number | null;
+  sha: string | null;
+  children: FileTreeNode[];
+};
+
+export type NodeFileTree = {
+  repo: string;
+  ref: string;
+  sha: string;
+  root: FileTreeNode[];
+  empty?: boolean;
+};
+
+// A single file's content at a ref (git-read `BlobResponse`).
+export type Blob = {
+  repo: string;
+  ref: string;
+  path: string;
+  sha: string;
+  size: number;
+  binary: boolean;
+  content: string | null;
+  truncated: boolean;
+};
+
+const reviewTreeKey = (projectId: string) =>
+  ["lothal", "review", projectId, "tree"] as const;
+const nodeDiffKey = (projectId: string, nodeId: string) =>
+  ["lothal", "review", projectId, "diff", nodeId] as const;
+const nodeFileTreeKey = (projectId: string, nodeId: string) =>
+  ["lothal", "review", projectId, "filetree", nodeId] as const;
+const blobKey = (projectId: string, ref: string, path: string) =>
+  ["lothal", "review", projectId, "blob", ref, path] as const;
+
+// The commit range is immutable once a node has committed, so per-node reads stay
+// fresh for a while — this makes flipping between nodes (and back) instant without a
+// refetch (spec Stage 8). A node still generating just re-reads on the next select.
+const REVIEW_STALE_MS = 5 * 60 * 1000;
+
+// `GET /review/nodes` — the verification tree for the master selector. Phase-gated to
+// PLAN onward (the pane keys its NotReady state off the deterministic 403/501/409).
+export function useReviewTree(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: reviewTreeKey(projectId),
+    queryFn: async () => {
+      const res = await api.get<ReviewTree>(`${BASE}${projectId}/review/nodes`);
+      return res.data;
+    },
+    enabled,
+    retry: retrySkipping(501, 403, 409),
+  });
+}
+
+// `GET /review/nodes/{id}/diff` — the whole-node diff. Disabled until a node is
+// selected; cached per node so inner file switches never refetch it.
+export function useNodeDiff(projectId: string, nodeId: string | null) {
+  return useQuery({
+    queryKey: nodeDiffKey(projectId, nodeId ?? ""),
+    queryFn: async () => {
+      const res = await api.get<NodeDiff>(
+        `${BASE}${projectId}/review/nodes/${nodeId}/diff`,
+      );
+      return res.data;
+    },
+    enabled: !!nodeId,
+    retry: retrySkipping(501, 403, 404),
+    staleTime: REVIEW_STALE_MS,
+  });
+}
+
+// `GET /review/nodes/{id}/filetree` — the full tree at the node head (changed +
+// unchanged files). Cached per node alongside the diff.
+export function useNodeFileTree(projectId: string, nodeId: string | null) {
+  return useQuery({
+    queryKey: nodeFileTreeKey(projectId, nodeId ?? ""),
+    queryFn: async () => {
+      const res = await api.get<NodeFileTree>(
+        `${BASE}${projectId}/review/nodes/${nodeId}/filetree`,
+      );
+      return res.data;
+    },
+    enabled: !!nodeId,
+    retry: retrySkipping(501, 403, 404),
+    staleTime: REVIEW_STALE_MS,
+  });
+}
+
+// `GET /review/nodes/{id}/blob` — one file's content at a ref (a `before`/`after` SHA
+// from the diff). Keyed by ref+path so the same blob is fetched once and reused.
+export function useBlob(
+  projectId: string,
+  nodeId: string | null,
+  ref: string | null,
+  path: string | null,
+) {
+  return useQuery({
+    queryKey: blobKey(projectId, ref ?? "", path ?? ""),
+    queryFn: async () => {
+      const res = await api.get<Blob>(
+        `${BASE}${projectId}/review/nodes/${nodeId}/blob`,
+        { params: { ref, path } },
+      );
+      return res.data;
+    },
+    enabled: !!nodeId && !!ref && !!path,
+    retry: retrySkipping(501, 403, 404),
+    staleTime: REVIEW_STALE_MS,
+  });
+}
+
+// One entry in the decision/provenance ledger (the PM `LothalEvent`). `actor_type`
+// distinguishes a human decision from an agent (LLM) one — the ledger's headline.
+export type LedgerEvent = {
+  id: string;
+  node_id: string | null;
+  event_type: string;
+  actor_type: string; // "human" | "agent" | "system"
+  actor_user_id: string | null;
+  summary: string;
+  data: Record<string, unknown> | null;
+  caused_by_id: string | null;
+  created_at: string;
+};
+
+// A node's test + (optionally) its latest run status. The PM service owns the exact
+// shape; the panel only reads a few well-known fields, so the rest stays open.
+export type LedgerTest = {
+  id: string;
+  scope: string; // unit | integration
+  title: string;
+  status?: string | null;
+  [key: string]: unknown;
+};
+
+// The node's audit / decision record (R3), composed by the bridge from the PM service.
+export type NodeLedger = {
+  events: LedgerEvent[];
+  tests: LedgerTest[];
+  codegen: Record<string, unknown> | null;
+};
+
+const nodeLedgerKey = (projectId: string, nodeId: string) =>
+  ["lothal", "review", projectId, "ledger", nodeId] as const;
+
+// `GET /review/nodes/{id}/ledger` — the node's immutable audit trail. Cached per node.
+export function useNodeLedger(projectId: string, nodeId: string | null) {
+  return useQuery({
+    queryKey: nodeLedgerKey(projectId, nodeId ?? ""),
+    queryFn: async () => {
+      const res = await api.get<NodeLedger>(
+        `${BASE}${projectId}/review/nodes/${nodeId}/ledger`,
+      );
+      return res.data;
+    },
+    enabled: !!nodeId,
+    retry: retrySkipping(501, 403, 404),
+    staleTime: REVIEW_STALE_MS,
   });
 }

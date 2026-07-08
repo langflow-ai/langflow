@@ -33,6 +33,12 @@ from sqlmodel import select
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.lothal import prototype as prototype_engine
 from langflow.lothal.d2_compile import D2CompilerUnavailableError, render_d2
+from langflow.lothal.gitread_client import (
+    GitReadConfigError,
+    GitReadConnectionError,
+    GitReadError,
+    gitread_client,
+)
 from langflow.lothal.llm import LLMConfigError, LLMConnectionError, call_llm
 from langflow.lothal.od_client import ODConfigError, ODError
 from langflow.lothal.pm_client import PMClient, PMConfigError, PMConnectionError, PMError, pm_client
@@ -1645,6 +1651,222 @@ async def download_project(project: OwnedProject) -> JSONResponse:
     # dropped in migration a6ba6bdf00b7). No `.mmd` wiring exists here to remove —
     # only this contract to honour once delivery is implemented.
     return stub("Downloading the project is not implemented yet.")
+
+
+# --- Review (read-only code review, bridged to the git-read service) ----------
+#
+# The ReviewPane (prod_spec.md Part B) is a read-only view of the code a node
+# produced. The node tree, per-node commit range, and audit ledger come from the PM
+# service (via `pm_client`); the actual diffs/trees/blobs are computed by the
+# standalone git-read service (repo realbytecode/lothal_review) straight from the
+# shared code-gen repos volume (via `gitread_client`). Both are reached only after
+# the `OwnedProject` check (R4) — the browser never calls either service directly.
+#
+# The repo key is the PM project id (`plan_id`): the codegen repo lives at
+# `<repos_root>/<plan_id>`. A node's branch is `lothal/node/<node_id>` cut from
+# `lothal/trunk` (the PM service's `vcs.py` convention); the whole-node diff is the
+# net change between the branch point (merge-base of the parent branch and the node
+# branch) and the node head, which the git-read service derives from the ref pair.
+#
+# Review is continuous and ungated with the plan — a node is reviewable the moment it
+# commits — so it shares the plan's visibility window (PLAN onward), not a gate of
+# its own.
+
+_TRUNK_BRANCH = "lothal/trunk"
+
+
+def _node_branch(node_id: object) -> str:
+    return f"lothal/node/{node_id}"
+
+
+def _require_review_visible(project: Project) -> None:
+    """403 unless the project has reached the planning stage.
+
+    A review before then has nothing to show — no plan, no nodes, no commits yet.
+    """
+    if project.phase not in _PLAN_VISIBLE_PHASES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Review is not available until the planning stage begins.",
+        )
+
+
+def _gitread_error_to_http(exc: GitReadError) -> HTTPException:
+    """Map the git-read client errors to HTTP.
+
+    A misconfigured bridge is a 503; a 4xx the service returned (bad ref/path) passes
+    through; a 5xx/transport fault is a 502.
+    """
+    if isinstance(exc, GitReadConfigError):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"The review service is not configured: {exc}",
+        )
+    code = getattr(exc, "status_code", None)
+    if code is not None and status.HTTP_400_BAD_REQUEST <= code < status.HTTP_500_INTERNAL_SERVER_ERROR:
+        detail = getattr(exc, "detail", None) or "The review service rejected the request."
+        return HTTPException(status_code=code, detail=detail)
+    return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"The review service call failed: {exc}")
+
+
+async def _review_refs(pm: PMClient, plan_id: str, node_id: UUID) -> tuple[str, str]:
+    """Derive `(base_ref, head_ref)` for a node's whole-node diff from the PM tree.
+
+    `head` is the node's own branch; `base` is its parent's branch (the root's parent
+    is `lothal/trunk`). The git-read service turns this pair into the commit range
+    (branch point → node head). 404 if the node isn't in this project's plan.
+    """
+    nodes = await pm.list_nodes(plan_id)
+    index = {str(n.get("id")): n for n in nodes if isinstance(n, dict)}
+    node = index.get(str(node_id))
+    if node is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Node not found in this project's plan.")
+    parent_id = node.get("parent_id")
+    base = _node_branch(parent_id) if parent_id else _TRUNK_BRANCH
+    return base, _node_branch(node_id)
+
+
+def _empty_diff(plan_id: str) -> dict[str, Any]:
+    """The empty whole-node diff for a node with no branch yet (nothing committed).
+
+    The pane renders this as an explicit empty state, not an error.
+    """
+    return {
+        "repo": plan_id,
+        "before": None,
+        "after": None,
+        "files": [],
+        "unified": "",
+        "truncated": False,
+        "empty": True,
+    }
+
+
+@router.get(
+    "/projects/{project_id}/review/nodes",
+    summary="The node tree for review (master selector) — nodes + links from the PM tree",
+)
+async def get_review_tree(*, session: DbSession, project: OwnedProject) -> dict[str, Any]:
+    """The verification-tree DAG the ReviewPane's master selector renders.
+
+    Same source as the plan tree (the PM service), scoped to this project.
+    """
+    _require_review_visible(project)
+    try:
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        nodes = await pm.list_nodes(plan_id)
+        links = await pm.list_links(plan_id)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+    return {"plan_id": plan_id, "nodes": nodes, "links": links}
+
+
+@router.get(
+    "/projects/{project_id}/review/nodes/{node_id}/diff",
+    summary="The whole-node diff (net change between the node's branch point and head)",
+)
+async def get_review_diff(
+    *, session: DbSession, project: OwnedProject, node_id: UUID, context: int = 3
+) -> dict[str, Any]:
+    _require_review_visible(project)
+    try:
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        base, head = await _review_refs(pm, plan_id, node_id)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+    try:
+        return await gitread_client().node_diff(plan_id, base, head, context=context)
+    except GitReadConnectionError as exc:
+        if exc.status_code == status.HTTP_404_NOT_FOUND:
+            return _empty_diff(plan_id)  # no branch yet → empty state
+        raise _gitread_error_to_http(exc) from exc
+    except GitReadError as exc:
+        raise _gitread_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/review/nodes/{node_id}/filetree",
+    summary="The full file tree at the node head (changed + unchanged, for context)",
+)
+async def get_review_filetree(*, session: DbSession, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
+    _require_review_visible(project)
+    try:
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        _base, head = await _review_refs(pm, plan_id, node_id)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+    try:
+        return await gitread_client().file_tree(plan_id, head)
+    except GitReadConnectionError as exc:
+        if exc.status_code == status.HTTP_404_NOT_FOUND:
+            return {"repo": plan_id, "ref": head, "sha": "", "root": [], "empty": True}
+        raise _gitread_error_to_http(exc) from exc
+    except GitReadError as exc:
+        raise _gitread_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/review/nodes/{node_id}/blob",
+    summary="A single file's content at a ref (before/after SHA from the node diff)",
+)
+async def get_review_blob(
+    *, session: DbSession, project: OwnedProject, node_id: UUID, ref: str, path: str
+) -> dict[str, Any]:
+    """Fetch a single file's content at a ref.
+
+    `ref` is a SHA or branch from this node's diff/tree (e.g. the diff's
+    `before`/`after`); `path` is repo-relative. Used by the per-file Monaco view to
+    fetch both sides.
+    """
+    _require_review_visible(project)
+    try:
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        # Resolve the node so a caller can't read blobs for a node outside their plan.
+        await _review_refs(pm, plan_id, node_id)
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+    try:
+        return await gitread_client().blob(plan_id, ref, path)
+    except GitReadError as exc:
+        raise _gitread_error_to_http(exc) from exc
+
+
+@router.get(
+    "/projects/{project_id}/review/nodes/{node_id}/ledger",
+    summary="The node's audit / decision record: events, tests, and code-gen run (R3)",
+)
+async def get_review_ledger(*, session: DbSession, project: OwnedProject, node_id: UUID) -> dict[str, Any]:
+    """The immutable audit trail the ReviewPane's ledger panel renders.
+
+    Composed from the PM service's own records — the event stream (who did what, and
+    whether it was a human or the agent), the node's tests + their runs, and the
+    current/last code-gen run. Nothing is re-derived here; the PM service is the source
+    of truth for the decision log.
+    """
+    _require_review_visible(project)
+    try:
+        pm = pm_client()
+        plan_id = await _ensure_pm_project(session, project, pm)
+        nid = str(node_id)
+        # 404s if the node isn't in this project's plan (before any ledger read).
+        await _review_refs(pm, plan_id, node_id)
+        events = await pm.node_events(plan_id, nid)
+        tests = await pm.list_tests(plan_id, nid)
+        # A node that hasn't been launched has no code-gen run yet — that's a 404 from
+        # the PM service, which here just means "no run", not an error.
+        codegen: dict[str, Any] | None = None
+        try:
+            codegen = await pm.get_codegen(plan_id, nid)
+        except PMConnectionError as exc:
+            if exc.status_code != status.HTTP_404_NOT_FOUND:
+                raise
+    except PMError as exc:
+        raise _pm_error_to_http(exc) from exc
+    return {"events": events, "tests": tests, "codegen": codegen}
 
 
 # --- Debug -------------------------------------------------------------------

@@ -15,7 +15,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
-  isCodePhase,
+  isReviewPhase,
   LOTHAL_VERSION,
   LothalMark,
   PHASES,
@@ -1417,7 +1417,7 @@ function LandingView() {
             }}
           >
             {PHASES.map((p) => {
-              const soon = isCodePhase(p.id);
+              const soon = isReviewPhase(p.id) || p.id === "DONE";
               return (
                 <div
                   key={p.id}

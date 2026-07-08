@@ -351,6 +351,15 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as e:  # noqa: BLE001
                 await logger.aerror(f"Failed to close Lothal PM client: {e}")
 
+            # Close the shared ReviewPane git-read bridge client (its connection pool).
+            # Best-effort: a failure here must never block shutdown.
+            try:
+                from langflow.lothal.gitread_client import aclose_gitread_client
+
+                await aclose_gitread_client()
+            except Exception as e:  # noqa: BLE001
+                await logger.aerror(f"Failed to close Lothal git-read client: {e}")
+
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
             from langflow.__main__ import get_number_of_workers

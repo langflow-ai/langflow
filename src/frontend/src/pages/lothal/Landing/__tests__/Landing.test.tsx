@@ -47,7 +47,7 @@ describe("Lothal Landing", () => {
       "Design",
       "Prototype",
       "Plan",
-      "Generate",
+      "Review",
       "Deliver",
     ]) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
@@ -57,7 +57,7 @@ describe("Lothal Landing", () => {
         "From a sentence to a shipped build — one accountable step at a time.",
       ),
     ).toBeInTheDocument();
-    // Generate + Deliver aren't built yet — dimmed and tagged "coming next" in
+    // Review + Deliver aren't built yet — dimmed and tagged "coming next" in
     // the phase ribbon.
     expect(screen.getAllByText("coming next").length).toBe(2);
   });

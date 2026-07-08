@@ -75,6 +75,13 @@ jest.mock("../../components/D2Canvas", () => ({
   ),
 }));
 
+// Stub the ReviewPane: the real one pulls in monaco-editor + shiki (ESM-only,
+// untransformed under Jest) and its own review queries. The Workspace tests only
+// assert the pane switch routes REVIEW here; the pane has its own concerns.
+jest.mock("../../components/ReviewPane", () => ({
+  ReviewPane: () => <div data-testid="review-pane" />,
+}));
+
 import Workspace from "../index";
 
 const project = {
@@ -121,6 +128,9 @@ const codeError501 = {
 };
 
 const codeProject = { ...project, phase: "CODE_GENERATION" };
+// The generated-code surface (CodePanel) now renders at DONE; during
+// CODE_GENERATION the right pane presents the REVIEW stage instead (Part B).
+const doneProject = { ...project, phase: "DONE" };
 
 describe("Lothal Workspace", () => {
   beforeEach(() => {
@@ -486,7 +496,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("renders the code surface with the file tree in a code phase", () => {
-    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
+    mockUseProject.mockReturnValue({ data: doneProject, isLoading: false });
     mockUseCode.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -504,7 +514,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows a file's content when selected in the code tree", () => {
-    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
+    mockUseProject.mockReturnValue({ data: doneProject, isLoading: false });
     mockUseCode.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -519,7 +529,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows NotReady (not an error) when the code endpoint 501s", () => {
-    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
+    mockUseProject.mockReturnValue({ data: doneProject, isLoading: false });
     mockUseCode.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -534,7 +544,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows a generic failure (not NotReady) when /code fails non-501", () => {
-    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
+    mockUseProject.mockReturnValue({ data: doneProject, isLoading: false });
     mockUseCode.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -551,10 +561,19 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows the generating state while code files are still empty", () => {
-    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
+    mockUseProject.mockReturnValue({ data: doneProject, isLoading: false });
     mockUseCode.mockReturnValue({ data: [], isLoading: false, isError: false });
     render(<Workspace />);
     expect(screen.getByText("Generating the code…")).toBeInTheDocument();
+  });
+
+  it("presents CODE_GENERATION as the REVIEW stage and renders the ReviewPane", () => {
+    // Part B: the backend still transitions into CODE_GENERATION, but the UI maps
+    // it to the Review stage (uiPhase) — the ReviewPane, not the code surface.
+    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
+    render(<Workspace />);
+    expect(screen.getByTestId("review-pane")).toBeInTheDocument();
+    expect(screen.getByText("reviewing")).toBeInTheDocument(); // StatusDot verb
   });
 
   it("titles the tab 'project — Lothal' and restores the default on unmount", () => {

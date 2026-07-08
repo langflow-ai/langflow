@@ -226,6 +226,24 @@ on a new box (full detail in `lothal_project/deploy/langflow-integration.md`):
    `PM_BRIDGE_PASSWORD`) is seeded by the pm app itself on boot — no SQL needed —
    and **must** be set, or the pm seeder falls back to `admin`/`admin`.
 
+### Lothal ReviewPane git-read service (`review`)
+
+The `review` service (the read-only backend of the code-review stage) ships from the
+separate `realbytecode/lothal_review` repo as `ghcr.io/realbytecode/lothal-review` and
+runs internal-only, consumed by the backend at `http://review:8000`. It is stateless
+(no DB, no seeding) and reads the shared `lothal-repos` volume **read-only**. One
+one-time step, plus one dependency:
+
+1. **GHCR package access** — like `lothal`/`od`: GitHub → the `lothal-review` package →
+   **Package settings → Manage Actions access → add `realbytecode/langflow` (role:
+   Read)** (or make it public), or `docker compose pull` → `denied`.
+2. **Code store must be populated** — the ReviewPane can only show what the pm
+   **code-gen worker** committed. Ensure the worker (`python -m lothal.worker`, a second
+   container from the pm image — see `lothal_project` deploy §8) runs with
+   `LOTHAL_VCS=true` and the **same** `lothal-repos` volume mounted at `/repos`. The
+   `pm` and `review` services in `docker-compose.prod.yml` already mount it; the worker
+   must too, or every node's diff is empty.
+
 ## Deploy / redeploy (manual)
 
 ```bash

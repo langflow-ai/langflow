@@ -11,25 +11,35 @@ export function PhaseStepper({
   phase,
   variant = "stepper",
   currentPhase,
+  navigableTo,
   onSelect,
 }: {
   /** The highlighted (active / viewed) phase. */
   phase: string;
   variant?: PhaseStepperStyle;
   /**
-   * The project's real phase — drives the "done" checks, the navigable bound,
-   * and the "live" marker. Defaults to `phase` (the legacy single-phase use).
+   * The project's real phase — drives the "done" checks and the "live" marker.
+   * Defaults to `phase` (the legacy single-phase use).
    */
   currentPhase?: string;
   /**
-   * When provided, the default stepper renders each phase up to `currentPhase`
-   * as a button that calls this to navigate (view that phase's artifacts).
+   * The farthest phase the user may navigate to, when it differs from
+   * `currentPhase`. Lets a stage be reachable ahead of the live phase (Part B:
+   * Review is reachable from Plan onward, before codegen completes). Defaults to
+   * `currentPhase`.
+   */
+  navigableTo?: string;
+  /**
+   * When provided, the default stepper renders each phase up to the navigable
+   * bound as a button that calls this to navigate (view that phase's artifacts).
    */
   onSelect?: (phaseId: string) => void;
 }) {
   const idx = phaseIndex(phase);
-  // The farthest reached phase: drives completion + the clickable bound.
+  // The farthest reached phase: drives completion + the "live" marker.
   const cur = currentPhase != null ? phaseIndex(currentPhase) : idx;
+  // The clickable bound — may reach past `cur` (an ungated forward stage).
+  const navBound = navigableTo != null ? phaseIndex(navigableTo) : cur;
 
   if (variant === "pill") {
     return (
@@ -102,7 +112,7 @@ export function PhaseStepper({
         const done = i < cur;
         const active = i === idx;
         const isLive = i === cur;
-        const navigable = !!onSelect && i <= cur;
+        const navigable = !!onSelect && i <= navBound;
         const Step = navigable ? "button" : "div";
         return (
           <Fragment key={p.id}>

@@ -1,6 +1,8 @@
 // Phase-aware status dot with a soft glow ring and a verb label.
 // Pulses while in progress; steady once delivered.
 
+import { uiPhase } from "./phases";
+
 const MAP: Record<string, { color: string; label: string }> = {
   CLARIFICATION: { color: "var(--accent)", label: "clarifying" },
   // Epic E.2 merged the sketch + refine phases into one ARCHITECTURE stage.
@@ -9,12 +11,15 @@ const MAP: Record<string, { color: string; label: string }> = {
   PROTOTYPE: { color: "#6f5bd0", label: "prototyping" },
   // Epic U-PLAN: the verification-driven planning stage.
   PLAN: { color: "#2f8f83", label: "planning" },
-  CODE_GENERATION: { color: "#c08a2e", label: "generating" },
+  // Part B: the code-review stage (backend CODE_GENERATION maps here via uiPhase).
+  REVIEW: { color: "#c08a2e", label: "reviewing" },
   DONE: { color: "var(--success)", label: "delivered" },
 };
 
 export function StatusDot({ phase }: { phase: string }) {
-  const m = MAP[phase] ?? MAP.CLARIFICATION;
+  // Accept a raw backend phase (e.g. CODE_GENERATION) as well as a UI phase.
+  const ui = uiPhase(phase);
+  const m = MAP[ui] ?? MAP.CLARIFICATION;
   return (
     <span
       style={{
@@ -26,7 +31,7 @@ export function StatusDot({ phase }: { phase: string }) {
       }}
     >
       <span
-        className={phase !== "DONE" ? "pulse" : ""}
+        className={ui !== "DONE" ? "pulse" : ""}
         style={{
           width: 7,
           height: 7,
