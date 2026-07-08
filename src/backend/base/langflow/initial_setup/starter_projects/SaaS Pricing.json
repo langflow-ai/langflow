@@ -131,7 +131,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -1274,10 +1274,10 @@
             "description": "# 💵 SaaS Pricing\n\nCalculate the right monthly subscription price for a software product — from costs, profit margin, and subscriber count. The Agent can also pull the numbers from your own database.\n\n## Setup\n1. **Agent** — add your LLM key. ⚠️ **Use a capable model** (e.g. a flagship GPT / Claude / Gemini Pro tier). The Agent calls the **SQL Database** tool and does multi-step math, so smaller/faster models may loop and hit the recursion limit when querying the DB.\n2. **SQL Database** *(optional)* — set your **Database URL** to let the Agent query real cost / subscriber data from your own database. Leave it unset to just type the numbers in the chat.\n3. The Agent has a built-in **calculator** and **current-date** tool.\n\n## How it works\n1. **Chat Input → Agent** — your request (e.g. \"subscription price for Beta CRM using my database\", or \"price: infra 2000, support 1000, dev 3000, margin 30%, 200 subscribers\").\n2. The Agent queries the **SQL Database** when connected, then computes the minimum price per subscriber with its built-in calculator.\n3. **Agent → Chat Output** — the recommended pricing breakdown.\n\n## Run\nOpen the **Playground**, describe the product (or name one in your connected database), and run.\n\n> Tip: when using the database, mention the table/product so the Agent queries it in one shot — and prefer a capable model to avoid tool-call loops.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.saas_pricing.d9213061",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.saas_pricing.d9213061"
+            }
           },
           "type": "note"
         },

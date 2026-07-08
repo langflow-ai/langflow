@@ -49,16 +49,28 @@ class ServeWorkflowHost(WorkflowHostBase):
         self._verify_api_key = verify_api_key
 
     async def resolve_caller(self, request: Request) -> Any:
-        """Validate the api key the same way the serve dependency does, returning the key.
+        """Validate the api key, then resolve the caller identity, returning the verified user id (or ``None``).
 
-        Reuses ``verify_api_key``'s ``APIKeyQuery`` / ``APIKeyHeader`` extraction
-        by resolving them off the request, so the 401 behavior is identical.
+        Reuses ``verify_api_key``'s ``APIKeyQuery`` / ``APIKeyHeader`` extraction by
+        resolving them off the request, so the serve-key 401 behavior is identical.
+        Then reads the caller identity via the app's identity verifier, matching the
+        ``resolve_identity`` dependency the ``/run`` endpoints use: a bad token is
+        rejected (401) before execution, and ``off`` mode returns ``None`` (no
+        per-user attribution). The returned user id is threaded into the run via
+        ``_run_user_id`` so v2 workflows honor identity like ``/run`` does.
         """
         from lfx.cli.serve_app import api_key_header, api_key_query
 
         query_param = await api_key_query(request)
         header_param = await api_key_header(request)
-        return self._verify_api_key(query_param, header_param)
+        self._verify_api_key(query_param, header_param)
+
+        verifier = request.app.state.identity_verifier
+        return verifier.authenticate(request.headers) if verifier is not None else None
+
+    def _run_user_id(self, caller: Any) -> str | None:
+        """Serve's ``resolve_caller`` returns the verified user id, so thread it directly."""
+        return caller
 
     async def get_flow(self, flow_id: str, caller: Any) -> ResolvedFlow:  # noqa: ARG002
         hit = self._registry.get(flow_id)

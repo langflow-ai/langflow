@@ -508,15 +508,26 @@ def test_upgrade_from_main_branch(db_url):
     # Step 4: Downgrade back to main's head to verify rollback works
     command.downgrade(alembic_cfg, main_head)
 
-    # Step 5: Verify the DB is actually at main's revision after downgrade
+    # Step 5: Verify the DB is back at main's revision after downgrade.
+    # When the graph contains a merge revision joining main's lineage with a
+    # release-branch lineage, downgrading across it "un-merges": alembic leaves
+    # one version-table row per joined lineage (it only walks the branch that
+    # contains the target), so get_current_revision() — which requires a single
+    # head — would raise. Assert on get_current_heads() instead: main's head
+    # must be current again, and the branch's own head must be unapplied.
     engine = create_engine(_engine_url(db_url))
     try:
         with engine.connect() as connection:
             ctx = MigrationContext.configure(connection)
-            current_rev = ctx.get_current_revision()
-            assert current_rev == main_head, f"After downgrade, expected revision {main_head} but got {current_rev}"
+            current_heads = ctx.get_current_heads()
     finally:
         engine.dispose()
+
+    assert main_head in current_heads, (
+        f"After downgrade, expected revision {main_head} among current heads but got {current_heads}"
+    )
+    still_applied = set(branch_heads) & set(current_heads) - {main_head}
+    assert not still_applied, f"Branch head(s) still applied after downgrade to {main_head}: {still_applied}"
 
 
 def test_deployment_display_name_downgrade_restores_name_unique_constraint(db_url):

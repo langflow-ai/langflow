@@ -30,6 +30,7 @@ from lfx.cli.common import execute_graph_with_capture
 from lfx.cli.runtime_variables import apply_global_vars_to_graph, build_request_variables_from_global_vars
 from lfx.events.event_manager import create_stream_tokens_event_manager
 from lfx.processing.process import run_graph_internal
+from lfx.run._defaults import apply_run_defaults
 from lfx.schema.schema import InputValueRequest
 
 # WorkflowRunRequest / WorkflowStopRequest stay runtime imports: FastAPI resolves
@@ -222,7 +223,9 @@ def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[s
         )
 
 
-async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: str) -> WorkflowExecutionResponse:
+async def run_workflow_sync(
+    graph: Graph, parsed: ParsedWorkflowRun, flow_id: str, *, user_id: str | None = None
+) -> WorkflowExecutionResponse:
     """Run a flow to completion and build a v2 ``WorkflowExecutionResponse``.
 
     Uses ``run_graph_internal`` (the same primitive the langflow backend sync
@@ -234,6 +237,11 @@ async def run_workflow_sync(graph: Graph, parsed: ParsedWorkflowRun, flow_id: st
     job_id = str(uuid4())
     terminal_ids = _terminal_node_ids(graph)
     _validate_output_ids(parsed.output_ids, terminal_ids)
+
+    # Pin the verified caller identity onto the graph the same way
+    # execute_graph_with_capture does for the stream path. run_graph_internal does
+    # not touch user_id, so without this the sync path would drop it.
+    apply_run_defaults(graph, session_id=parsed.session_id, user_id=user_id, overwrite_user_id=user_id is not None)
 
     # Apply request-level globals to the graph, then activate the request scope so
     # components resolving through VariableService.get_variable see them, matching
@@ -288,7 +296,7 @@ def _format_sse(data_json: str, seq: int) -> bytes:
 
 
 async def stream_workflow_frames(
-    graph: Graph, parsed: ParsedWorkflowRun, adapter: StreamAdapter
+    graph: Graph, parsed: ParsedWorkflowRun, adapter: StreamAdapter, *, user_id: str | None = None
 ) -> AsyncIterator[bytes]:
     """Run a flow and stream its events through ``adapter`` as SSE frames.
 
@@ -310,7 +318,11 @@ async def stream_workflow_frames(
         nonlocal drive_error
         try:
             await execute_graph_with_capture(
-                graph, parsed.input_value or None, session_id=parsed.session_id, event_manager=event_manager
+                graph,
+                parsed.input_value or None,
+                session_id=parsed.session_id,
+                event_manager=event_manager,
+                user_id=user_id,
             )
             # lfx's async_start does not emit a terminal ``end`` event (the
             # langflow build loop does). Emit one so the adapter closes the run

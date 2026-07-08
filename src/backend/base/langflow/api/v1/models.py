@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.base.models.model_utils import replace_with_live_models
 from lfx.base.models.unified_models import (
+    get_live_only_providers,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
@@ -196,10 +197,42 @@ async def list_models(
         **metadata_filters,
     )
 
+    # Live-discovery-only providers (contributed by extension bundles, e.g. vLLM or
+    # OpenAI Compatible) ship no static catalog rows, so the catalog query above can
+    # never emit them, and replace_with_live_models below only fills providers that
+    # are already configured. Union them in with an empty model list so the Model
+    # Providers dialog can offer their configuration form in the first place; once
+    # configured, replace_with_live_models fills this same entry with the endpoint's
+    # discovered models. Skipped for model_name/metadata queries, which ask about
+    # concrete models rather than which providers exist.
+    if model_name is None and not metadata_filters:
+        provider_metadata = get_model_provider_metadata()
+        listed_providers = {provider_dict.get("provider") for provider_dict in filtered_models}
+        for live_only_provider in get_live_only_providers():
+            if live_only_provider in listed_providers:
+                continue
+            if selected_providers and live_only_provider not in selected_providers:
+                continue
+            filtered_models.append(
+                {
+                    "provider": live_only_provider,
+                    "models": [],
+                    "num_models": 0,
+                    **provider_metadata.get(live_only_provider, {}),
+                }
+            )
+
     # Run before status is computed so live-only providers appended here (e.g. IBM WatsonX,
     # whose static catalog is fully deprecated) still receive is_enabled/is_configured (#13735).
     configured_providers = {p for p, configured in provider_configured_status.items() if configured}
     replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
+
+    # replace_with_live_models iterates every live-capable provider regardless of
+    # the ?provider= filter, so it can append providers the caller excluded (e.g.
+    # a configured OpenRouter appearing in a ?provider=OpenAI response). Re-apply
+    # the filter so the response honors its own contract.
+    if selected_providers:
+        filtered_models = [p for p in filtered_models if p.get("provider") in selected_providers]
 
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")

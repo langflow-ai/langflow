@@ -9,16 +9,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-7S2Wg",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-KHx2J",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -37,20 +33,12 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-KHx2J",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-Ou5RJ",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "str"
           }
         },
@@ -69,9 +57,7 @@
           "display_name": "Chat Input",
           "id": "ChatInput-7S2Wg",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -116,9 +102,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -149,9 +133,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -238,10 +220,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -257,9 +236,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -279,9 +256,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -339,9 +314,7 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-Ou5RJ",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -373,7 +346,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -395,9 +368,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -446,9 +417,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -469,9 +438,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -518,10 +485,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -537,9 +501,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -559,9 +521,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -617,10 +577,7 @@
         "data": {
           "id": "LanguageModelComponent-KHx2J",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -630,6 +587,8 @@
             "edited": false,
             "field_order": [
               "model",
+              "model_name",
+              "provider",
               "api_key",
               "base_url_ibm_watsonx",
               "project_id",
@@ -646,7 +605,7 @@
             "legacy": false,
             "lf_version": "1.10.0",
             "metadata": {
-              "code_hash": "7fe3257f2169",
+              "code_hash": "4942994b24a6",
               "dependencies": {
                 "dependencies": [
                   {
@@ -680,9 +639,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -698,9 +655,7 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -782,7 +737,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from lfx.base.models.model import LCModelComponent\nfrom lfx.base.models.unified_models import (\n    get_llm,\n    handle_model_input_update,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing.constants import LanguageModel\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, StrInput\nfrom lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput\n\nDEFAULT_OLLAMA_URL = \"http://localhost:11434\"\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Overrides global provider settings. Leave blank to use your pre-configured API Key.\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            combobox=True,\n            show=False,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"watsonx Project ID\",\n            info=\"The project ID associated with the foundation model (IBM watsonx.ai only)\",\n            show=False,\n            required=False,\n        ),\n        StrInput(\n            name=\"ollama_base_url\",\n            display_name=\"Ollama API URL\",\n            info=f\"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}\",\n            value=DEFAULT_OLLAMA_URL,\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            info=\"Maximum number of tokens to generate. Field name varies by provider.\",\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=128000, step=1, step_type=\"int\"),\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        return get_llm(\n            model=self.model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n            temperature=self.temperature,\n            stream=self.stream,\n            max_tokens=getattr(self, \"max_tokens\", None),\n            watsonx_url=getattr(self, \"base_url_ibm_watsonx\", None),\n            watsonx_project_id=getattr(self, \"project_id\", None),\n            ollama_base_url=getattr(self, \"ollama_base_url\", None),\n        )\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        return handle_model_input_update(self, build_config, field_value, field_name)\n"
+                "value": "from lfx.base.models.model import LCModelComponent\nfrom lfx.base.models.unified_models import (\n    get_language_model_options,\n    get_llm,\n    handle_model_input_update,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.components.models_and_agents.model_selection import apply_model_overrides\nfrom lfx.field_typing.constants import LanguageModel\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, StrInput\nfrom lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput\n\nDEFAULT_OLLAMA_URL = \"http://localhost:11434\"\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        StrInput(\n            name=\"model_name\",\n            display_name=\"Model Name Override\",\n            info=(\n                \"Optional model name to use instead of the selected model. \"\n                \"Can be set from a global variable for runtime model selection.\"\n            ),\n            advanced=True,\n            load_from_db=False,\n        ),\n        StrInput(\n            name=\"provider\",\n            display_name=\"Provider Override\",\n            info=(\n                \"Optional provider to use with Model Name Override. Leave blank to use the selected model's provider.\"\n            ),\n            advanced=True,\n            load_from_db=False,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Overrides global provider settings. Leave blank to use your pre-configured API Key.\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            combobox=True,\n            show=False,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"watsonx Project ID\",\n            info=\"The project ID associated with the foundation model (IBM watsonx.ai only)\",\n            show=False,\n            required=False,\n        ),\n        StrInput(\n            name=\"ollama_base_url\",\n            display_name=\"Ollama API URL\",\n            info=f\"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}\",\n            value=DEFAULT_OLLAMA_URL,\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            info=\"Maximum number of tokens to generate. Field name varies by provider.\",\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=128000, step=1, step_type=\"int\"),\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        model = apply_model_overrides(\n            self.model,\n            model_name=getattr(self, \"model_name\", None),\n            provider=getattr(self, \"provider\", None),\n            user_id=self.user_id,\n            get_options=get_language_model_options,\n        )\n        return get_llm(\n            model=model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n            temperature=self.temperature,\n            stream=self.stream,\n            max_tokens=getattr(self, \"max_tokens\", None),\n            watsonx_url=getattr(self, \"base_url_ibm_watsonx\", None),\n            watsonx_project_id=getattr(self, \"project_id\", None),\n            ollama_base_url=getattr(self, \"ollama_base_url\", None),\n        )\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        return handle_model_input_update(self, build_config, field_value, field_name)\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -790,9 +745,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -827,9 +780,7 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -844,9 +795,7 @@
                       "max_tokens_field_name": "max_tokens",
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5.5-pro"
-                      ]
+                      "reasoning_models": ["gpt-5.5-pro"]
                     },
                     "name": "gpt-5.5-pro",
                     "provider": "OpenAI"
@@ -860,9 +809,7 @@
                       "max_tokens_field_name": "max_tokens",
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5.5"
-                      ]
+                      "reasoning_models": ["gpt-5.5"]
                     },
                     "name": "gpt-5.5",
                     "provider": "OpenAI"
@@ -876,9 +823,7 @@
                       "max_tokens_field_name": "max_tokens",
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5.4-nano"
-                      ]
+                      "reasoning_models": ["gpt-5.4-nano"]
                     },
                     "name": "gpt-5.4-nano",
                     "provider": "OpenAI"
@@ -892,9 +837,7 @@
                       "max_tokens_field_name": "max_tokens",
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5.4-mini"
-                      ]
+                      "reasoning_models": ["gpt-5.4-mini"]
                     },
                     "name": "gpt-5.4-mini",
                     "provider": "OpenAI"
@@ -965,6 +908,27 @@
                 "type": "model",
                 "value": ""
               },
+              "model_name": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Model Name Override",
+                "dynamic": false,
+                "info": "Optional model name to use instead of the selected model. Can be set from a global variable for runtime model selection.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "model_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
               "ollama_base_url": {
                 "_input_type": "StrInput",
                 "advanced": false,
@@ -1010,6 +974,27 @@
                 "type": "str",
                 "value": ""
               },
+              "provider": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Provider Override",
+                "dynamic": false,
+                "info": "Optional provider to use with Model Name Override. Leave blank to use the selected model's provider.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "provider",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
               "stream": {
                 "_input_type": "BoolInput",
                 "advanced": true,
@@ -1038,9 +1023,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1115,10 +1098,10 @@
             "description": "# 🖼️ Image Sentiment Analysis\n\nUpload an image and a **Language Model** (vision) classifies its sentiment (**positive / negative / neutral**) and describes it in a single `Sentiment: ..., Description: ...` line.\n\n## Setup\n1. **Language Model** - pick a **vision-capable** model (e.g. a GPT-4o / multimodal model) and add your API key. The classification instruction lives in its **System Message** (edit there).\n2. **Chat Input** - attach the image (paperclip 📎) you want analyzed.\n\n## How it works\n1. **Chat Input -> Language Model** - the image is sent straight to the vision model as content (unlike an Agent, the Language Model passes images natively, so the model truly sees them).\n2. **Language Model -> Chat Output** - the model returns the sentiment + description in that single-line format.\n\n## Run\nOpen **Playground**, attach an image, and run. You can send the image on its own - no extra text needed.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.image_sentiment_analysis.7126745f",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.image_sentiment_analysis.7126745f"
+            }
           },
           "type": "note"
         },
@@ -1156,7 +1139,5 @@
   "last_tested_version": "1.10.0",
   "locked": false,
   "name": "Image Sentiment Analysis",
-  "tags": [
-    "classification"
-  ]
+  "tags": ["classification"]
 }

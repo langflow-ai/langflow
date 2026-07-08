@@ -132,11 +132,20 @@ class WorkflowHostBase(ABC):
         """No-db default: no request session."""
         yield None
 
+    def _run_user_id(self, caller: Any) -> str | None:  # noqa: ARG002
+        """The verified caller identity to thread into a run, or ``None``.
+
+        Default: the caller is opaque, so no per-user identity is threaded. A host
+        whose ``resolve_caller`` returns a user id overrides this to surface it, so
+        the lfx-default run/stream path pins it onto the graph.
+        """
+        return None
+
     async def run_sync(
         self,
         parsed: ParsedWorkflowRun,
         flow: ResolvedFlow,
-        caller: Any,  # noqa: ARG002
+        caller: Any,
         *,
         http_request: Request,  # noqa: ARG002
         background_tasks: BackgroundTasks,  # noqa: ARG002
@@ -144,13 +153,13 @@ class WorkflowHostBase(ABC):
         """No-db default: run the resolved graph to completion via the lfx primitive."""
         from lfx.workflow.router import run_workflow_sync
 
-        return await run_workflow_sync(flow.graph, parsed, flow.flow_id)
+        return await run_workflow_sync(flow.graph, parsed, flow.flow_id, user_id=self._run_user_id(caller))
 
     def stream_response(
         self,
         parsed: ParsedWorkflowRun,
         flow: ResolvedFlow,
-        caller: Any,  # noqa: ARG002
+        caller: Any,
         *,
         stream_protocol: str,
         http_request: Request,  # noqa: ARG002
@@ -170,7 +179,7 @@ class WorkflowHostBase(ABC):
             StreamAdapterContext(run_id=str(uuid4()), thread_id=thread_id),
         )
         return StreamingResponse(
-            stream_workflow_frames(flow.graph, parsed, adapter),
+            stream_workflow_frames(flow.graph, parsed, adapter, user_id=self._run_user_id(caller)),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
