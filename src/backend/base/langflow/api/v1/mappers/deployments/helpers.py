@@ -891,8 +891,8 @@ async def list_deployments_synced(
     """Return a page of deployments, batch-deleting DB rows the provider doesn't recognise.
 
     Each round fetches a candidate window so one provider lookup reconciles
-    stale rows beyond the page. Refill rounds seek after the last processed row,
-    so concurrent deletes do not shift a numeric offset under the loop.
+    stale rows beyond the page. Refill rounds seek after the last processed row
+    to avoid corruption to the offset under concurrent deletes.
 
     ``allowed_ids`` is the DB-layer authorization prefilter, threaded into both
     the page query and the total count so a registered authorization plugin can
