@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 
 function setAttributeIfChanged(
   element: HTMLElement | Element,
@@ -11,168 +11,130 @@ function setAttributeIfChanged(
 }
 
 export type AgGridAccessibilityLabels = {
-  endFocusBoundary: string;
-  rows: string;
   startFocusBoundary: string;
-  table: string;
+  endFocusBoundary: string;
 };
 
-export function patchGridAccessibility(
-  container: HTMLDivElement,
+export function isDisabledPagingButton(button: Element) {
+  return (
+    button.classList.contains("ag-disabled") ||
+    button.getAttribute("aria-disabled") === "true"
+  );
+}
+
+/**
+ * AG Grid (v32) leaves disabled pagination buttons (`.ag-paging-button.ag-disabled`)
+ * with `tabindex="0"` and only sets `aria-disabled="true"`, so they stay keyboard
+ * tab stops (`FOCUSABLE_EXCLUDE` spares `.ag-button`).
+ *
+ * Demote disabled paging buttons to `tabindex="-1"` and restore enabled ones to
+ * `0`. This alone is not enough — AG Grid still *programmatically* focuses a
+ * disabled paging button on tab-out (`allowFocusForNextGridCoreContainer`),
+ * handled by the focusin redirect in the table component. `inert`/`disabled` are
+ * deliberately avoided: they break AG Grid's tab guards, which then dead-stop on
+ * `<body>` and trap reverse (Shift+Tab) entry into the grid (WCAG 2.1.2).
+ */
+export function patchDisabledPagingButtons(container: HTMLElement) {
+  container
+    .querySelectorAll<HTMLElement>(".ag-paging-button")
+    .forEach((button) => {
+      setAttributeIfChanged(
+        button,
+        "tabindex",
+        isDisabledPagingButton(button) ? "-1" : "0",
+      );
+    });
+}
+
+/**
+ * AG Grid's focus-boundary sentinels (`.ag-tab-guard`) are `tabindex="0"` with
+ * `role="presentation"`. A tabbable element with a non-widget role fails IBM's
+ * `element_tabbable_role_valid` (WCAG 4.1.2). Give them a valid widget role and
+ * an accessible name so a screen reader announces the table's focus boundaries.
+ */
+export function patchTabGuards(
+  container: HTMLElement,
   labels: AgGridAccessibilityLabels,
 ) {
-  const treeGrid = container.querySelector('[role="treegrid"]');
-  if (treeGrid) {
-    setAttributeIfChanged(treeGrid, "aria-label", labels.table);
-    setAttributeIfChanged(treeGrid, "tabindex", "0");
-  }
-
   container
     .querySelectorAll<HTMLElement>(".ag-tab-guard")
-    .forEach((tabGuard, index) => {
-      setAttributeIfChanged(tabGuard, "role", "button");
+    .forEach((guard, index) => {
+      setAttributeIfChanged(guard, "role", "button");
       setAttributeIfChanged(
-        tabGuard,
+        guard,
         "aria-label",
         index === 0 ? labels.startFocusBoundary : labels.endFocusBoundary,
       );
     });
+}
 
+/**
+ * AG Grid renders several `role="rowgroup"` containers (pinned top/bottom,
+ * spacers) that never own a `role="row"` child. An empty rowgroup fails IBM's
+ * `aria_child_valid` (WCAG 1.3.1). Demote the empty ones to `role="presentation"`
+ * and restore the role once they do own rows. A marker attribute lets the patch
+ * find the demoted containers again after their role has been changed.
+ */
+export function patchEmptyRowGroups(container: HTMLElement) {
   container
     .querySelectorAll<HTMLElement>(
       '[role="rowgroup"], [data-langflow-a11y-rowgroup="true"]',
     )
     .forEach((rowGroup) => {
-      const isHidden =
-        rowGroup.getAttribute("aria-hidden") === "true" ||
-        rowGroup.classList.contains("ag-hidden");
-      const cells = Array.from(
-        rowGroup.querySelectorAll<HTMLElement>(
-          '[role="gridcell"], [role="columnheader"]',
-        ),
-      );
-      const rows = Array.from(
-        rowGroup.querySelectorAll<HTMLElement>('[role="row"]'),
-      );
-
-      if (isHidden || rows.length === 0) {
-        setAttributeIfChanged(rowGroup, "role", "presentation");
-        setAttributeIfChanged(rowGroup, "data-langflow-a11y-rowgroup", "true");
-        rowGroup.removeAttribute("aria-label");
-        rowGroup.removeAttribute("tabindex");
-        return;
-      }
-
-      setAttributeIfChanged(rowGroup, "role", "rowgroup");
       setAttributeIfChanged(rowGroup, "data-langflow-a11y-rowgroup", "true");
-      setAttributeIfChanged(rowGroup, "aria-label", labels.rows);
-
-      rows.forEach((row) => {
-        setAttributeIfChanged(row, "tabindex", "-1");
-      });
-      cells.forEach((cell) => {
-        setAttributeIfChanged(cell, "tabindex", "-1");
-      });
-    });
-
-  container
-    .querySelectorAll<HTMLElement>(".ag-paging-button")
-    .forEach((button) => {
-      // Only use the class as input signal to avoid self-latching
-      const isDisabled = button.classList.contains("ag-disabled");
+      const hasRows = rowGroup.querySelector('[role="row"]') !== null;
       setAttributeIfChanged(
-        button,
-        "aria-disabled",
-        isDisabled ? "true" : "false",
+        rowGroup,
+        "role",
+        hasRows ? "rowgroup" : "presentation",
       );
-      setAttributeIfChanged(button, "tabindex", isDisabled ? "-1" : "0");
     });
+}
 
-  treeGrid?.querySelectorAll<HTMLElement>('[role="row"]').forEach((row) => {
-    setAttributeIfChanged(row, "tabindex", "-1");
-
-    const isHidden = !!row.closest('[aria-hidden="true"], .ag-hidden');
-    const focusableSelector =
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-    if (isHidden) {
-      // Mark and demote focusable elements in hidden rows
-      row.querySelectorAll<HTMLElement>(focusableSelector).forEach((el) => {
-        if (!el.hasAttribute("data-langflow-a11y-demoted")) {
-          el.setAttribute(
-            "data-langflow-a11y-demoted",
-            el.getAttribute("tabindex") ?? "",
-          );
-        }
-        setAttributeIfChanged(el, "tabindex", "-1");
-      });
-    } else {
-      // Restore previously demoted elements in visible rows
-      row
-        .querySelectorAll<HTMLElement>("[data-langflow-a11y-demoted]")
-        .forEach((el) => {
-          const original = el.getAttribute("data-langflow-a11y-demoted");
-          if (original) {
-            el.setAttribute("tabindex", original);
-          } else {
-            el.removeAttribute("tabindex");
-          }
-          el.removeAttribute("data-langflow-a11y-demoted");
-        });
-    }
+/**
+ * A `treegrid`/`grid` must expose a tabbable `row` so keyboard users can reach
+ * its content (IBM `aria_child_tabbable`, WCAG 2.1.1 / 4.1.2). AG Grid keeps all
+ * rows at `tabindex="-1"` and relies on its tab guards instead. Apply a roving
+ * tabindex: the first rendered body row becomes the grid's single tabbable row,
+ * the rest stay `-1`. Actual cell navigation is unchanged (arrow keys / the tab
+ * guards still drive focus into cells).
+ */
+export function patchTabbableRow(container: HTMLElement) {
+  const rows = container.querySelectorAll<HTMLElement>(
+    '.ag-center-cols-container [role="row"]',
+  );
+  rows.forEach((row, index) => {
+    setAttributeIfChanged(row, "tabindex", index === 0 ? "0" : "-1");
   });
+}
+
+export function patchGridAccessibility(
+  container: HTMLElement,
+  labels: AgGridAccessibilityLabels,
+) {
+  patchDisabledPagingButtons(container);
+  patchTabGuards(container, labels);
+  patchEmptyRowGroups(container);
+  patchTabbableRow(container);
 }
 
 export function useAgGridAccessibilityPatch(labels: AgGridAccessibilityLabels) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<number | undefined>(undefined);
-  const timeoutRefs = useRef<number[]>([]);
-
-  const clearScheduledPatch = useCallback(() => {
-    if (frameRef.current !== undefined) {
-      cancelAnimationFrame(frameRef.current);
-      frameRef.current = undefined;
-    }
-    timeoutRefs.current.forEach(clearTimeout);
-    timeoutRefs.current = [];
-  }, []);
-
-  const applyPatch = useCallback(() => {
-    if (containerRef.current) {
-      patchGridAccessibility(containerRef.current, labels);
-    }
-  }, [labels]);
+  const labelsRef = useRef(labels);
+  labelsRef.current = labels;
 
   const schedulePatch = useCallback(() => {
-    clearScheduledPatch();
-
+    if (frameRef.current !== undefined) {
+      cancelAnimationFrame(frameRef.current);
+    }
     frameRef.current = requestAnimationFrame(() => {
       frameRef.current = undefined;
-      applyPatch();
+      if (containerRef.current) {
+        patchGridAccessibility(containerRef.current, labelsRef.current);
+      }
     });
-    timeoutRefs.current = [0, 100, 500, 1000].map((delay) =>
-      window.setTimeout(applyPatch, delay),
-    );
-  }, [applyPatch, clearScheduledPatch]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const observer = new MutationObserver(schedulePatch);
-    observer.observe(container, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["aria-hidden", "class", "role", "tabindex"],
-    });
-    schedulePatch();
-
-    return () => {
-      observer.disconnect();
-      clearScheduledPatch();
-    };
-  }, [clearScheduledPatch, schedulePatch]);
+  }, []);
 
   return { containerRef, schedulePatch };
 }
