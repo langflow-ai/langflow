@@ -1,7 +1,6 @@
 import importlib
 
 from langchain_core.tools import StructuredTool, ToolException
-from langchain_experimental.utilities import PythonREPL
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -9,7 +8,7 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
-from lfx.utils.python_repl_security import safe_builtins, validate_code_safety
+from lfx.utils.python_repl_security import ensure_code_execution_enabled, safe_builtins, validate_code_safety
 
 
 class PythonREPLToolComponent(LCToolComponent):
@@ -78,10 +77,15 @@ class PythonREPLToolComponent(LCToolComponent):
     def build_tool(self) -> Tool:
         def run_python_code(code: str) -> str:
             try:
+                # Refuse to run user code when allow_custom_components is disabled
+                # (GHSA-8qpj-27x8-pwpq).
+                ensure_code_execution_enabled()
                 # Validate the exact (sanitized) code that will run, rejecting inline
                 # imports and escape gadgets; combined with the restricted builtins in
                 # get_globals(). A fresh globals namespace is built per invocation so
                 # state does not leak across tool calls.
+                from langchain_experimental.utilities import PythonREPL
+
                 cleaned_code = PythonREPL.sanitize_input(code)
                 validate_code_safety(cleaned_code)
                 python_repl = PythonREPL(_globals=self.get_globals(self.global_imports))

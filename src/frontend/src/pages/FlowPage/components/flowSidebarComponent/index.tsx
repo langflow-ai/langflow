@@ -621,6 +621,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
 
   const isFeatureSection = showTraces || showMemories;
+  const previousSidebarOpenRef = useRef(sidebarOpen);
+  const isFullSidebarPanelHidden = ENABLE_NEW_SIDEBAR && !sidebarOpen;
 
   const SIDEBAR_EXPAND_ANIMATION_MS = 300;
   const [isFullSidebarPanelMounted, setIsFullSidebarPanelMounted] = useState(
@@ -681,6 +683,25 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setIsFullSidebarPanelShown(true);
   }, [isFeatureSection]);
 
+  useEffect(() => {
+    const wasSidebarOpen = previousSidebarOpenRef.current;
+    previousSidebarOpenRef.current = sidebarOpen;
+
+    if (!ENABLE_NEW_SIDEBAR || wasSidebarOpen === sidebarOpen) return;
+
+    requestAnimationFrame(() => {
+      const navItemSelector = sidebarOpen
+        ? "data-sidebar-nav-item"
+        : "data-sidebar-collapsed-nav-item";
+      const nextFocusTarget =
+        document.querySelector<HTMLButtonElement>(
+          `[${navItemSelector}="${activeSection}"]`,
+        ) ?? document.querySelector<HTMLButtonElement>(`[${navItemSelector}]`);
+
+      nextFocusTarget?.focus();
+    });
+  }, [activeSection, sidebarOpen]);
+
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
   const filterDescription =
@@ -710,8 +731,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       className="noflow select-none"
     >
       <div className="flex h-full">
-        {ENABLE_NEW_SIDEBAR && <SidebarSegmentedNav />}
+        {ENABLE_NEW_SIDEBAR && (
+          <SidebarSegmentedNav hiddenFromTabOrder={isFullSidebarPanelHidden} />
+        )}
         <div
+          inert={isFullSidebarPanelHidden}
+          aria-hidden={isFullSidebarPanelHidden}
           className={cn(
             "flex flex-col h-full w-full group-data-[collapsible=icon]:hidden",
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",

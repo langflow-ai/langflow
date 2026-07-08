@@ -178,6 +178,23 @@ jobs:
             arch: amd64
             runner: windows-latest
             python-version: "3.12"
+          # Python 3.13 - graduated from experimental to stable (blocking).
+          # macOS Intel (amd64) is intentionally omitted here: like 3.10/3.12 above
+          # it stays on the costly macos-latest-large runner only at 3.12. Intel
+          # coverage for newer Python continues (non-blocking) in the experimental
+          # 3.14 set below.
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            python-version: "3.13"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
+            python-version: "3.13"
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.13"
 
     steps:
       - name: Determine install method
@@ -454,23 +471,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Python 3.13 - Experimental
+          # Python 3.14 - Experimental (non-blocking) to monitor ecosystem readiness.
+          # macOS Intel (x86_64) is intentionally omitted: langflow requires
+          # onnxruntime>=1.26 on Python >=3.14 (pyproject.toml), but onnxruntime
+          # dropped macOS x86_64 wheels at 1.24 — so macOS Intel + py3.14 is
+          # permanently unsatisfiable (older onnxruntime that still ships macOS
+          # x86_64 wheels has no cp314 ABI). macOS Intel resolves fine through 3.13;
+          # arm64 has cp314 wheels. Running it would only burn the costly
+          # macos-latest-large runner on a guaranteed, no-signal failure.
           - os: linux
             arch: amd64
             runner: ubuntu-latest
-            python-version: "3.13"
+            python-version: "3.14"
           - os: windows
             arch: amd64
             runner: windows-latest
-            python-version: "3.13"
-          - os: macos
-            arch: amd64
-            runner: macos-latest-large
-            python-version: "3.13"
+            python-version: "3.14"
           - os: macos
             arch: arm64
             runner: macos-latest
-            python-version: "3.13"
+            python-version: "3.14"
 
     steps:
       - name: Determine install method
@@ -615,6 +635,19 @@ jobs:
       - name: Force reinstall local wheels to prevent downgrades (Windows)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
         run: |
+          # Expose the local wheel dirs so dependency re-resolution (the
+          # pre-release path below drops --no-deps) can find the local
+          # pre-release lfx/base wheels. Without these, uv re-resolves
+          # langflow-base's `lfx>=X.Y.Zrc0` constraint against PyPI only, where
+          # the matching rc/dev wheel is not published yet, and fails with
+          # "No solution found when resolving dependencies".
+          FIND_LINKS=()
+          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+            if [ -d "$wheel_dir" ]; then
+              FIND_LINKS+=(--find-links "$wheel_dir")
+            fi
+          done
+
           # Reinstall LFX if it was provided
           if [ -n "${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name }}" ]; then
             LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
@@ -633,7 +666,7 @@ jobs:
               if [ "${{ inputs.pre_release }}" = "true" ]; then
                 NO_DEPS=""
               fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
+              uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
             fi
           fi
 
@@ -641,17 +674,48 @@ jobs:
           BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
+            INSTALL_WHEELS=("$BASE_WHEEL")
             NO_DEPS="--no-deps"
             if [ "${{ inputs.pre_release }}" = "true" ]; then
+              # Keep local pre-release roots explicit while re-resolving deps. uv's
+              # if-necessary-or-explicit mode does not allow pre-release transitive
+              # deps found only through --find-links, such as langflow-sdk dev wheels.
               NO_DEPS=""
+              LOCAL_WHEELS=()
+              if [ -d ./sdk-dist ]; then
+                SDK_WHEEL=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+                if [ -n "$SDK_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$SDK_WHEEL")
+                fi
+              fi
+              if [ -d ./lfx-dist ]; then
+                LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+                if [ -n "$LFX_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$LFX_WHEEL")
+                fi
+              fi
+              INSTALL_WHEELS=("${LOCAL_WHEELS[@]}" "$BASE_WHEEL")
             fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit --python ./test-env/Scripts/python.exe "$BASE_WHEEL"
+            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
           fi
         shell: bash
 
       - name: Force reinstall local wheels to prevent downgrades (Unix)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
         run: |
+          # Expose the local wheel dirs so dependency re-resolution (the
+          # pre-release path below drops --no-deps) can find the local
+          # pre-release lfx/base wheels. Without these, uv re-resolves
+          # langflow-base's `lfx>=X.Y.Zrc0` constraint against PyPI only, where
+          # the matching rc/dev wheel is not published yet, and fails with
+          # "No solution found when resolving dependencies".
+          FIND_LINKS=()
+          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+            if [ -d "$wheel_dir" ]; then
+              FIND_LINKS+=(--find-links "$wheel_dir")
+            fi
+          done
+
           # Reinstall LFX if it was provided
           if [ -n "${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name }}" ]; then
             LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
@@ -670,7 +734,7 @@ jobs:
               if [ "${{ inputs.pre_release }}" = "true" ]; then
                 NO_DEPS=""
               fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
+              uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
             fi
           fi
 
@@ -678,11 +742,29 @@ jobs:
           BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
+            INSTALL_WHEELS=("$BASE_WHEEL")
             NO_DEPS="--no-deps"
             if [ "${{ inputs.pre_release }}" = "true" ]; then
+              # Keep local pre-release roots explicit while re-resolving deps. uv's
+              # if-necessary-or-explicit mode does not allow pre-release transitive
+              # deps found only through --find-links, such as langflow-sdk dev wheels.
               NO_DEPS=""
+              LOCAL_WHEELS=()
+              if [ -d ./sdk-dist ]; then
+                SDK_WHEEL=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+                if [ -n "$SDK_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$SDK_WHEEL")
+                fi
+              fi
+              if [ -d ./lfx-dist ]; then
+                LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+                if [ -n "$LFX_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$LFX_WHEEL")
+                fi
+              fi
+              INSTALL_WHEELS=("${LOCAL_WHEELS[@]}" "$BASE_WHEEL")
             fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit --python ./test-env/bin/python "$BASE_WHEEL"
+            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
           fi
         shell: bash
 
@@ -826,9 +908,9 @@ jobs:
             if [ "$experimental_result" = "success" ]; then
               if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
                 if [ -n "${{ inputs.langflow-version }}" ]; then
-                  echo "✅ All PyPI installation tests passed (including Python 3.13)"
+                  echo "✅ All PyPI installation tests passed (including Python 3.14)"
                 else
-                  echo "✅ All source build and installation tests passed (including Python 3.13)"
+                  echo "✅ All source build and installation tests passed (including Python 3.14)"
                 fi
               else
                 echo "✅ All cross-platform tests passed - PyPI upload can proceed"
@@ -836,17 +918,17 @@ jobs:
             else
               if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
                 if [ -n "${{ inputs.langflow-version }}" ]; then
-                  echo "✅ PyPI installation tests passed (Python 3.13 experimental failures are acceptable)"
+                  echo "✅ PyPI installation tests passed (Python 3.14 experimental failures are acceptable)"
                 else
-                  echo "✅ Source build and installation tests passed (Python 3.13 experimental failures are acceptable)"
+                  echo "✅ Source build and installation tests passed (Python 3.14 experimental failures are acceptable)"
                 fi
               else
-                echo "✅ Cross-platform tests passed - Python 3.13 experimental failures are acceptable - PyPI upload can proceed"
+                echo "✅ Cross-platform tests passed - Python 3.14 experimental failures are acceptable - PyPI upload can proceed"
               fi
             fi
           elif [ "$stable_result" = "failure" ]; then
             echo "❌ Critical platform tests failed - blocking release"
-            echo "Stable platforms (Python 3.10, 3.12) must pass for release"
+            echo "Stable platforms (Python 3.10, 3.12, 3.13) must pass for release"
             exit 1
           elif [ "$stable_result" = "cancelled" ]; then
             echo "❌ Critical platform tests were cancelled"

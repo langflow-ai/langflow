@@ -65,6 +65,28 @@ def _import_callback_handler_or_skip():
     return CallbackHandler
 
 
+class _FakeLangchainCallbackHandler:
+    """Real (subclassable) stand-in for langfuse's ``CallbackHandler`` base.
+
+    ``get_langchain_callback`` now subclasses the imported ``CallbackHandler`` to
+    re-parent root LLM runs, so tests must patch the import with an actual class
+    (a bare ``MagicMock`` instance cannot be used as a base class). This mirrors
+    the relevant part of the real constructor signature.
+    """
+
+    def __init__(self, *, public_key=None, update_trace=False, trace_context=None):
+        self.run_inline = True
+        self.public_key = public_key
+        self.update_trace = update_trace
+        self.trace_context = trace_context
+
+    def on_chat_model_start(self, *args, **kwargs):  # noqa: ARG002
+        return None
+
+    def on_llm_start(self, *args, **kwargs):  # noqa: ARG002
+        return None
+
+
 class TestLangfuseV3ApiExists:
     """Verify that the langfuse v3 API methods we need actually exist."""
 
@@ -334,14 +356,12 @@ class TestLangfuseTracerFunctionality:
         tracer.add_trace("comp-1", "Test", "llm", {})
         assert mock_langfuse["root_span"].start_span.called
 
-        with patch("langfuse.langchain.CallbackHandler") as mock_handler:
-            mock_handler.return_value = MagicMock()
-            tracer.get_langchain_callback()
+        with patch("langfuse.langchain.CallbackHandler", _FakeLangchainCallbackHandler):
+            handler = tracer.get_langchain_callback()
 
-            mock_handler.assert_called_once()
-            call_kwargs = mock_handler.call_args[1]
-            assert "trace_context" in call_kwargs
-            assert "trace_id" in call_kwargs["trace_context"]
+        assert handler is not None
+        assert isinstance(handler, _FakeLangchainCallbackHandler)
+        assert "trace_id" in handler.trace_context
 
     def test_get_langchain_callback_includes_parent_span_id(self, mock_langfuse):
         """Test that callback handler gets parent span ID for proper nesting."""
@@ -358,14 +378,10 @@ class TestLangfuseTracerFunctionality:
         tracer.add_trace("comp-1", "Test", "llm", {})
         assert mock_langfuse["child_span"].id == "child-span-id"
 
-        with patch("langfuse.langchain.CallbackHandler") as mock_handler:
-            mock_handler.return_value = MagicMock()
-            tracer.get_langchain_callback()
+        with patch("langfuse.langchain.CallbackHandler", _FakeLangchainCallbackHandler):
+            handler = tracer.get_langchain_callback()
 
-            call_kwargs = mock_handler.call_args[1]
-            trace_context = call_kwargs["trace_context"]
-            assert "parent_span_id" in trace_context
-            assert trace_context["parent_span_id"] == "child-span-id"
+        assert handler.trace_context["parent_span_id"] == "child-span-id"
 
 
 class TestLangfuseClientSingleton:

@@ -25,32 +25,30 @@ const AccordionTrigger = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
 >(({ className, children, disabled, ...props }, ref) => (
   <AccordionPrimitive.Header className="flex">
+    {/* Native Radix trigger (a <button>) so the accordion is keyboard
+        focusable and exposes button role + expanded state. */}
     <AccordionPrimitive.Trigger
       disabled={disabled}
-      asChild
       ref={ref}
+      className={cn(
+        "flex flex-1 cursor-pointer items-center justify-between py-4 text-left text-sm font-medium transition-all [&[data-state=open]>svg]:rotate-180",
+        className,
+      )}
       {...props}
     >
-      <div
-        className={cn(
-          "flex flex-1 cursor-pointer items-center justify-between py-4 text-sm font-medium transition-all [&[data-state=open]>svg]:rotate-180",
-          className,
-        )}
+      {children}
+      <ShadTooltip
+        styleClasses="z-50"
+        content={disabled ? "Empty" : "Open"}
+        side="top"
       >
-        {children}
-        <ShadTooltip
-          styleClasses="z-50"
-          content={disabled ? "Empty" : "Open"}
-          side="top"
-        >
-          <ChevronDownIcon
-            className={cn(
-              "h-4 w-4 font-bold transition-transform duration-200",
-              disabled ? "text-muted-foreground" : "text-primary",
-            )}
-          />
-        </ShadTooltip>
-      </div>
+        <ChevronDownIcon
+          className={cn(
+            "h-4 w-4 font-bold transition-transform duration-200",
+            disabled ? "text-muted-foreground" : "text-primary",
+          )}
+        />
+      </ShadTooltip>
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ));

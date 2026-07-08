@@ -50,6 +50,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.schema import ServiceType
+from langflow.services.tracing.otel_fastapi_patch import patch_otel_fastapi_route_details
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
@@ -133,12 +134,26 @@ async def load_bundles_with_error_handling():
         return [], []
 
 
+def cors_origins_contain_wildcard(origins) -> bool:
+    """Return True if the configured CORS origins include a wildcard (`*`).
+
+    `LANGFLOW_CORS_ORIGINS="*"` is parsed as the raw string on some Python versions
+    and as a single-element list (`["*"]`) on others, and an operator may also mix a
+    wildcard into a list of specific origins (e.g. `"https://app.com,*"` ->
+    `["https://app.com", "*"]`). All of these mean "all origins"; treat them the same
+    so wildcard detection stays consistent everywhere it is used.
+    """
+    return origins == "*" or (isinstance(origins, list) and "*" in origins)
+
+
 def warn_about_future_cors_changes(settings):
     """Warn users about upcoming CORS security changes in version 1.7."""
-    # Check if using default (backward compatible) settings
-    using_defaults = settings.cors_origins == "*" and settings.cors_allow_credentials is True
+    # Check if using permissive (backward compatible) settings: a wildcard origin
+    # combined with credentials. Share the wildcard predicate with the middleware
+    # configuration so both fire for the same set of origins (string or list form).
+    using_permissive = cors_origins_contain_wildcard(settings.cors_origins) and settings.cors_allow_credentials is True
 
-    if using_defaults:
+    if using_permissive:
         logger.warning(
             "CORS: Using permissive defaults (all origins + credentials). "
             "Set LANGFLOW_CORS_ORIGINS for production. Stricter defaults in v2.0."
@@ -165,6 +180,12 @@ def get_lifespan(*, fix_migration=False, version=None):
         sync_flows_from_fs_task = None
         mcp_init_task = None
         models_dev_refresh_task = None
+        # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
+        # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
+        # when startup fails before bundle loading assigns it below. Otherwise an
+        # early failure (e.g. an unresolvable LANGFLOW_DATABASE_URL) is masked by a
+        # secondary error during cleanup. See issue #13634.
+        temp_dirs: list = []
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -215,6 +236,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"Failed to start telemetry writer; transactions and vertex_build "
                     f"writes will use the legacy direct-write path: {exc}"
                 )
+
+            # Start the periodic authz audit-log retention sweep. No-op unless
+            # AUTHZ_AUDIT_ENABLED and AUTHZ_AUDIT_RETENTION_DAYS > 0. The startup
+            # sweep in initialize_services() already pruned at boot; this keeps a
+            # long-running instance bounded between restarts.
+            try:
+                from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
+
+                await audit_log_cleanup_worker.start()
+            except Exception as exc:  # noqa: BLE001 — never block startup on cleanup scheduling
+                await logger.awarning(f"Failed to start authz audit-log cleanup worker: {exc}")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
@@ -438,7 +470,10 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
-            mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
+            if get_settings_service().settings.skip_mcp_auto_init:
+                await logger.adebug("Skipping MCP server auto-initialization (skip_mcp_auto_init=True)")
+            else:
+                mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
             async def refresh_models_dev_periodically() -> None:
                 """Hydrate the models.dev catalog at startup and refresh daily.
@@ -561,6 +596,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await stop_streamable_http_manager()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Stop the authz audit-log retention worker (best-effort;
+                    # no-op when it was never scheduled).
+                    try:
+                        from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
+
+                        await audit_log_cleanup_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop authz audit-log cleanup worker: {e}")
+
                     # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:
@@ -652,6 +696,25 @@ def create_app():
 
     # Configure CORS using settings (with backward compatible defaults)
     origins = settings.cors_origins
+    allow_credentials = settings.cors_allow_credentials
+    # Security: a wildcard origin combined with credentials is unsafe (and invalid
+    # per the CORS spec). Starlette would reflect the caller's Origin and return
+    # Access-Control-Allow-Credentials: true, letting any site make credentialed
+    # cross-origin requests (CSRF / token theft). Force credentials off whenever
+    # the origin list is a wildcard; specific origins keep credentials.
+    if cors_origins_contain_wildcard(origins):
+        if allow_credentials:
+            # Surface the override so an operator who set credentials on purpose can
+            # see why credentialed requests stopped working and points them at the
+            # wildcard origin as the cause.
+            logger.warning(
+                "CORS: wildcard origin ('*') is configured together with "
+                "LANGFLOW_CORS_ALLOW_CREDENTIALS=true; disabling credentials because a "
+                "wildcard origin with credentials enables cross-site credentialed "
+                "requests (CSRF / token theft) and is invalid per the CORS spec. "
+                "Set LANGFLOW_CORS_ORIGINS to explicit origins to keep credentials enabled."
+            )
+        allow_credentials = False
     if isinstance(origins, str) and origins != "*":
         origins = [origins]
 
@@ -659,7 +722,7 @@ def create_app():
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=settings.cors_allow_credentials,
+        allow_credentials=allow_credentials,
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
@@ -835,6 +898,10 @@ def create_app():
             content={"message": str(exc)},
         )
 
+    # FastAPI >=0.137 lazy include_router puts `_IncludedRouter` wrappers (no `.path`)
+    # in `app.routes`, which crashes OTel's span route extraction on partial matches
+    # (e.g. CORS preflight). Patch the helper before instrumenting.
+    patch_otel_fastapi_route_details()
     FastAPIInstrumentor.instrument_app(app)
 
     add_pagination(app)

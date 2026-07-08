@@ -15,6 +15,7 @@ from lfx.cli.script_loader import (
     load_graph_from_script,
 )
 from lfx.cli.validation import validate_global_variables_for_env
+from lfx.execution import get_default_coordinator
 from lfx.log.logger import logger
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
 from lfx.schema.schema import InputValueRequest
@@ -34,6 +35,57 @@ class RunError(Exception):
     def __init__(self, message: str, exception: Exception | None = None):
         super().__init__(message)
         self.original_exception = exception
+
+
+def _preflight_dependencies(
+    *,
+    flow_dict: dict | None,
+    script_path: Path | None,
+    verbose: bool,
+) -> None:
+    """Fail fast when a JSON flow needs packages that are not installed.
+
+    Runs before the graph load (and the component imports it triggers) so a
+    missing provider SDK surfaces as a single actionable ``pip install ...``
+    message instead of a deep ``ModuleNotFoundError`` mid-build.
+
+    Best-effort and conservative: it analyzes only JSON flows (``.py`` scripts
+    declare deps via PEP 723 inline metadata, handled elsewhere), and any
+    analysis error is logged and skipped so a runnable flow is never blocked by
+    the check itself. Disabled with ``--no-check-dependencies``.
+
+    Raises:
+        RunError: when one or more required packages are positively missing.
+    """
+    # Normalize to the ``{"data": {"nodes": [...]}}`` shape the analyzer expects.
+    if flow_dict is not None:
+        analysis_flow: dict = {"data": flow_dict}
+    elif script_path is not None and script_path.suffix.lower() == ".json":
+        try:
+            raw = json.loads(script_path.read_text(encoding="utf-8"))
+            _, inner = split_flow_envelope(raw)
+        except (OSError, json.JSONDecodeError, TypeError):
+            # Unreadable/invalid JSON: let the graph loader report it precisely.
+            return
+        analysis_flow = {"data": inner}
+    else:
+        # .py script or no JSON source: nothing to analyze here.
+        return
+
+    try:
+        from lfx.utils.flow_requirements import find_missing_dependencies
+
+        missing = find_missing_dependencies(analysis_flow)
+    except Exception as e:  # noqa: BLE001 - never let analysis crash a runnable flow
+        logger.debug(f"Dependency preflight skipped (analysis error: {e})")
+        return
+
+    if missing:
+        from lfx.utils.flow_requirements import format_missing_dependencies_error
+
+        error_msg = format_missing_dependencies_error(missing)
+        output_error(error_msg, verbose=verbose)
+        raise RunError(error_msg, None)
 
 
 def output_error(error_message: str, *, verbose: bool, exception: Exception | None = None) -> dict:
@@ -152,6 +204,7 @@ async def run_flow(
     *,
     stdin: bool = False,
     check_variables: bool = True,
+    check_dependencies: bool = True,
     verbose: bool = False,
     verbose_detailed: bool = False,
     verbose_full: bool = False,
@@ -176,6 +229,8 @@ async def run_flow(
         flow_json: Inline JSON flow content as a string
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
+        check_dependencies: Preflight the flow's required packages and fail fast
+            with install guidance when any are missing (JSON flows only)
         verbose: Show basic progress information
         verbose_detailed: Show detailed progress and debug information
         verbose_full: Show full debugging output including component logs
@@ -270,6 +325,11 @@ async def run_flow(
         if applied and verbose:
             sys.stderr.write(f"Applied {applied} safe component upgrade(s).\n")
     # --- end upgrade gate ---
+
+    # --- dependency preflight (fail fast before component imports) ---
+    if check_dependencies:
+        _preflight_dependencies(flow_dict=flow_dict, script_path=script_path, verbose=verbose)
+    # --- end dependency preflight ---
 
     try:
         # Handle direct JSON dict (from stdin or --flow-json)
@@ -478,8 +538,11 @@ async def run_flow(
                     "interactive-session only (in-memory, no durable resume). Run in a "
                     "terminal or pass --human-input to enable the interactive prompts.\n"
                 )
-            async for result in graph.async_start(
-                inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars
+            async for result in get_default_coordinator().stream(
+                graph,
+                initial_inputs=inputs,
+                event_manager=event_manager,
+                fallback_to_env_vars=fallback_to_env_vars,
             ):
                 result_count += 1
                 if verbosity > 0:

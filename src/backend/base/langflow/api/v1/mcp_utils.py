@@ -26,6 +26,7 @@ from langflow.api.v1.run_validation import HITL_UNSUPPORTED_DETAIL, flow_require
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models import Flow
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
@@ -287,6 +288,18 @@ async def handle_call_tool(
         if project_id and flow.folder_id != project_id:
             msg = f"Flow '{name}' not found in project {project_id}"
             raise ValueError(msg)
+
+        # Enforce execute permission (owner override + external access ceiling)
+        # before running the flow. Without this an external "viewer" could run a
+        # flow as a tool, escaping the deny-only access ceiling.
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
 
         if flow_requires_hitl(flow.data or {}):
             raise RuntimeError(HITL_UNSUPPORTED_DETAIL)
