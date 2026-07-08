@@ -18,7 +18,10 @@ import type {
   IngestionRunInfo,
   PaginatedIngestionRunResponse,
 } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
-import { useGetKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import {
+  type KnowledgeBaseInfo,
+  useGetKnowledgeBases,
+} from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -232,7 +235,7 @@ const KnowledgeBasesTab = ({
     }
   };
 
-  const handleCellKeyDown = (event: CellKeyDownEvent) => {
+  const handleCellKeyDown = (event: CellKeyDownEvent<KnowledgeBaseInfo>) => {
     const keyboardEvent = event.event as KeyboardEvent | undefined;
     if (!keyboardEvent || keyboardEvent.key !== "Enter") return;
 
