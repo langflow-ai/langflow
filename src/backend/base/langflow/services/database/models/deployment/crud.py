@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar
 
 from lfx.log.logger import logger
-from sqlalchemy import Select, column, values
+from sqlalchemy import Select, column, or_, tuple_, values
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select, update
 
@@ -29,6 +29,11 @@ if TYPE_CHECKING:
 # Preserves the concrete statement type (scalar count select vs. multi-column
 # page select) through the authz scoping helper below.
 StmtT = TypeVar("StmtT", bound=Select[Any])
+
+
+class DeploymentOwnerPair(NamedTuple):
+    owner_id: UUID
+    deployment_id: UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -356,11 +361,13 @@ async def list_deployments_page(
     *,
     user_id: UUID,
     deployment_provider_account_id: UUID,
-    offset: int,
     limit: int,
+    offset: int | None = None,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
     allowed_ids: list[UUID] | None = None,
+    cursor_created_at: datetime | None = None,
+    cursor_exclude_id: UUID | None = None,
 ) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
     """Return a page of deployments with attachment counts and matched attachments.
 
@@ -373,12 +380,22 @@ async def list_deployments_page(
     is widened to the union of owner rows and ``allowed_ids`` (rows a registered
     authorization plugin reports the caller may read) — see
     ``langflow.services.authorization.restrict_to_owned_or_visible``.
+
+    Use ``offset`` for the first page. Use ``cursor_created_at`` and
+    ``cursor_exclude_id`` together for follow-up keyset reads; cursor reads must
+    not also pass ``offset``.
     """
-    if offset < 0:
+    if offset is not None and offset < 0:
         msg = "offset must be greater than or equal to 0"
         raise ValueError(msg)
     if limit <= 0:
         msg = "limit must be greater than 0"
+        raise ValueError(msg)
+    if (cursor_created_at is None) != (cursor_exclude_id is None):
+        msg = "cursor_created_at and cursor_exclude_id must be provided together"
+        raise ValueError(msg)
+    if cursor_created_at and offset is not None:
+        msg = "offset cannot be used with cursor_created_at and cursor_exclude_id"
         raise ValueError(msg)
     attachment_counts_subquery = (
         select(
@@ -406,6 +423,15 @@ async def list_deployments_page(
     stmt = _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
+    if cursor_created_at:
+        stmt = stmt.where(
+            or_(
+                # older deployments
+                col(Deployment.created_at) < cursor_created_at,
+                # Same age but different deployments
+                (col(Deployment.created_at) == cursor_created_at) & (col(Deployment.id) < cursor_exclude_id),
+            )
+        )
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
@@ -420,7 +446,10 @@ async def list_deployments_page(
             matched_deployments_subquery,
             matched_deployments_subquery.c.deployment_id == Deployment.id,
         )
-    stmt = stmt.order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc()).offset(offset).limit(limit)
+    stmt = stmt.order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc())
+    if offset is not None:
+        stmt = stmt.offset(offset)
+    stmt = stmt.limit(limit)
     rows = (await db.exec(stmt)).all()
     deployment_rows = [(deployment, int(attached_count or 0)) for deployment, attached_count in rows]
     if not flow_version_ids or not deployment_rows:
@@ -678,3 +707,42 @@ async def delete_deployments_by_ids(
             deployment_ids,
         )
     return int(result.rowcount or 0)
+
+
+async def delete_deployments_by_owner_and_ids(
+    db: AsyncSession,
+    *,
+    deployment_owner_pairs: list[DeploymentOwnerPair],
+) -> int:
+    """Delete owner-scoped deployment rows; return the number of deployment rows deleted."""
+    if not deployment_owner_pairs:
+        return 0
+
+    await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(
+            tuple_(
+                FlowVersionDeploymentAttachment.user_id,
+                FlowVersionDeploymentAttachment.deployment_id,
+            ).in_(deployment_owner_pairs),
+        )
+    )
+
+    result = await db.exec(
+        delete(Deployment).where(
+            tuple_(
+                Deployment.user_id,
+                Deployment.id,
+            ).in_(deployment_owner_pairs),
+        )
+    )
+    if result.rowcount is None:
+        msg = (
+            "DELETE rowcount was None for deployments=%s -- "
+            "database driver may not support rowcount for DELETE statements"
+        )
+        await logger.aerror(
+            msg,
+            deployment_owner_pairs,
+        )
+        raise RuntimeError(msg % deployment_owner_pairs)
+    return result.rowcount

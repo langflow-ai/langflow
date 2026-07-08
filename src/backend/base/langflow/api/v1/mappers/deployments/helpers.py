@@ -46,8 +46,10 @@ from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
     DeploymentMetadataUpdate,
+    DeploymentOwnerPair,
     count_deployments_by_provider,
     delete_deployment_by_id,
+    delete_deployments_by_owner_and_ids,
     list_deployments_page,
     update_deployment_metadata,
     update_deployment_metadata_batch,
@@ -78,6 +80,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
 )
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.utils import require_non_empty
+from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -885,25 +888,30 @@ async def list_deployments_synced(
     project_id: UUID | None = None,
     allowed_ids: list[UUID] | None = None,
 ) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int, dict[str, dict[str, Any]]]:
-    """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
+    """Return a page of deployments, batch-deleting DB rows the provider doesn't recognise.
 
-    Fetches DB rows in batches, sends each batch's resource keys to the
-    provider for validation, deletes stale rows inline, and syncs
-    provider-owned display metadata for rows that still exist. The cursor
-    does not advance for deleted rows (deletion shifts subsequent offsets down).
+    Each round fetches a candidate window so one provider lookup reconciles
+    stale rows beyond the page. Refill rounds seek after the last processed row,
+    so concurrent deletes do not shift a numeric offset under the loop.
 
     ``allowed_ids`` is the DB-layer authorization prefilter, threaded into both
     the page query and the total count so a registered authorization plugin can
     constrain the listing to (owner ⊕ visible) rows without a per-row enforce.
     ``None`` (OSS default) keeps the listing owner-scoped exactly as before.
     """
+    settings = get_settings_service().settings
+    sync_batch_size = settings.deployment_list_sync_batch_size
+    max_sync_rounds = settings.deployment_list_sync_max_rounds
+
     accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
     accepted_deployment_ids: list[UUID] = []
     provider_bindings: list[ProviderSnapshotBinding] = []
     provider_data_by_resource_key: dict[str, dict[str, Any]] = {}
     provider_metadata_by_resource_key: dict[str, dict[str, Any]] = {}
-    cursor = page_offset(page, size)
-    max_sync_rounds = 2  # Initial pass + one refill pass.
+    stale_deployment_owner_pairs: list[DeploymentOwnerPair] = []
+    initial_offset = page_offset(page, size)
+    cursor_created_at = None
+    cursor_exclude_id = None
     for _ in range(max_sync_rounds):
         if len(accepted) >= size:
             break
@@ -911,11 +919,13 @@ async def list_deployments_synced(
             db,
             user_id=user_id,
             deployment_provider_account_id=provider_id,
-            offset=cursor,
-            limit=size - len(accepted),
+            offset=initial_offset if not cursor_created_at else None,
+            limit=sync_batch_size,
             flow_version_ids=flow_version_ids,
             project_id=project_id,
             allowed_ids=allowed_ids,
+            cursor_created_at=cursor_created_at,
+            cursor_exclude_id=cursor_exclude_id,
         )
         if not batch:
             break
@@ -933,22 +943,25 @@ async def list_deployments_synced(
         provider_metadata_by_resource_key.update(deployment_mapper.extract_metadata_for_list(provider_view))
 
         for row, attached_count, matched_flow_versions in batch:
+            cursor_created_at = row.created_at
+            cursor_exclude_id = row.id
             if row.resource_key not in known:
                 # Provider `known` is type-filtered; skip other local types instead of deleting as stale.
                 if deployment_type is not None and row.deployment_type != deployment_type:
-                    cursor += 1
                     continue
-                logger.warning(
-                    "Deployment %s (resource_key=%s) not found on provider %s — deleting stale row",
-                    row.id,
-                    row.resource_key,
-                    provider_id,
-                )
-                await delete_deployment_by_id(db, user_id=row.user_id, deployment_id=row.id)
+                stale_deployment_owner_pairs.append(DeploymentOwnerPair(owner_id=row.user_id, deployment_id=row.id))
                 continue
-            accepted.append((row, attached_count, matched_flow_versions))
-            accepted_deployment_ids.append(row.id)
-            cursor += 1
+            if len(accepted) < size:
+                accepted.append((row, attached_count, matched_flow_versions))
+                accepted_deployment_ids.append(row.id)
+
+    if stale_deployment_owner_pairs:
+        logger.warning(
+            "Deleting %d stale deployment row(s) not found on provider %s",
+            len(stale_deployment_owner_pairs),
+            provider_id,
+        )
+        await delete_deployments_by_owner_and_ids(db, deployment_owner_pairs=stale_deployment_owner_pairs)
 
     # Phase 2: metadata and binding-level sync.
     if accepted:
