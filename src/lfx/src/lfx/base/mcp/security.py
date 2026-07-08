@@ -53,6 +53,7 @@ ALLOWED_MCP_COMMANDS = frozenset(
 DANGEROUS_SHELL_CHARS = frozenset({";", "|", "&", "$", "`", "<", ">", "(", ")", "\n", "\r"})
 
 # SECURITY: Keywords that enable code execution or package installation.
+# These are blocked by default unless explicitly allowed via COMMAND_SAFE_FLAGS.
 DANGEROUS_KEYWORDS = frozenset(
     {
         "-c",
@@ -68,6 +69,15 @@ DANGEROUS_KEYWORDS = frozenset(
         "exec",
     }
 )
+
+# SECURITY: Per-command allowlist of flags that would otherwise be considered dangerous.
+# This enables fine-grained control over which flags are safe for specific commands.
+# For example, -y/--yes are in DANGEROUS_KEYWORDS but are safe for package managers
+# like npx/uvx (non-interactive mode), so they're explicitly allowed here.
+COMMAND_SAFE_FLAGS: dict[str, frozenset[str]] = {
+    "npx": frozenset({"-y", "--yes"}),
+    "uvx": frozenset({"-y", "--yes"}),
+}
 
 # SECURITY: Environment variables that enable code injection via approved commands.
 # All comparisons are case-insensitive.
@@ -299,13 +309,10 @@ def validate_mcp_stdio_config(
             wraps a non-allowed command, an env var is in the blocklist, or a docker arg
             breaks container isolation.
     """
-    # 0) Tokenize a command that carries its own arguments (e.g. "bash -c '<payload>'"). A tenant
-    #    could otherwise pack the whole payload into ``command`` with empty ``args`` and slip past
-    #    the checks below, which key off the first token / only scan ``args``. Folding the embedded
-    #    tokens into ``args`` makes every check see them -- at all callers (update_tools, the REST
-    #    MCPServerConfig, the legacy stdio component), so REST and execution enforcement stay equal.
-    #    Don't split file-path commands: a Windows/absolute path may contain spaces but carries no
-    #    embedded shell args (e.g. "C:\\Program Files\\nodejs\\node.exe").
+    # Split commands with embedded arguments (e.g. "bash -c 'payload'") into separate tokens
+    # so security checks can scan them. Without this, an attacker could bypass validation by
+    # packing everything into the command string with empty args. File paths with spaces
+    # (e.g. "C:\\Program Files\\nodejs\\node.exe") are not split since they're not shell commands.
     args = list(args or [])
     if command and not _is_file_path(command):
         try:
@@ -317,7 +324,7 @@ def validate_mcp_stdio_config(
             command = command_tokens[0]
             args = command_tokens[1:] + args
 
-    # 1) Command allowlist.
+    # Command allowlist.
     if command:
         base_command = extract_base_command(command)
         if base_command not in ALLOWED_MCP_COMMANDS:
@@ -325,9 +332,9 @@ def validate_mcp_stdio_config(
             msg = f"Command '{base_command}' is not allowed for security reasons. Allowed commands: {allowed_list}"
             raise MCPStdioSecurityError(msg)
 
-    # 2) Shell-wrapper rules: -c/-/c only with shell wrappers, and a wrapper may only wrap
-    #    another allowed (non-shell) command. This is what blocks `bash -c '<payload>'`. Checked
-    #    before the metacharacter scan so a `-c` on a non-shell command is reported as such.
+    # Shell-wrapper rules: -c/-/c only with shell wrappers, and a wrapper may only wrap
+    # another allowed (non-shell) command. This is what blocks `bash -c '<payload>'`. Checked
+    # before the metacharacter scan so a `-c` on a non-shell command is reported as such.
     if command and args:
         base_command = extract_base_command(command)
         has_shell_exec_flag = any(_is_shell_exec_flag(arg) for arg in args)
@@ -353,20 +360,52 @@ def validate_mcp_stdio_config(
                     )
                     raise MCPStdioSecurityError(msg)
 
-    # 3) Argument metacharacters and dangerous keywords.
+    # Argument metacharacters and dangerous keywords.
     if args:
+        # Shell metacharacters enable command injection by breaking out of argument context
         for arg in args:
             for char in DANGEROUS_SHELL_CHARS:
                 if char in arg:
                     msg = f"Argument contains dangerous shell metacharacter '{char}': {arg}"
                     raise MCPStdioSecurityError(msg)
+
+        # SECURITY FIX: Tokenize arguments to catch combined dangerous keywords
+        # like "pip install requests" that bypass whole-string matching.
+        base_command = extract_base_command(command) if command else ""
         for arg in args:
             arg_lower = arg.lower()
-            if arg_lower in DANGEROUS_KEYWORDS and arg_lower not in SHELL_EXEC_FLAGS:
-                msg = f"Argument '{arg}' is not allowed for security reasons"
-                raise MCPStdioSecurityError(msg)
 
-    # 4) Environment-variable blocklist.
+            # Shell exec flags require special validation context to prevent code injection
+            if arg_lower in SHELL_EXEC_FLAGS:
+                continue
+
+            # Some flags are dangerous in general but safe for specific commands (allowlist)
+            safe_flags = COMMAND_SAFE_FLAGS.get(base_command, frozenset())
+            if arg_lower in safe_flags:
+                continue
+
+            # Use shell-style parsing to handle quotes and escapes properly
+            try:
+                tokens = shlex.split(arg)
+            except ValueError:
+                # Malformed input still needs checking; whitespace split is safer than skipping
+                tokens = arg.split()
+
+            # Attackers may use separators like commas/semicolons to bypass tokenization
+            expanded_tokens = []
+            for token in tokens:
+                import re
+
+                subtokens = re.split(r"[,;|&]+", token)
+                expanded_tokens.extend(t for t in subtokens if t)
+
+            for token in expanded_tokens:
+                token_lower = token.lower()
+                if token_lower in DANGEROUS_KEYWORDS:
+                    msg = f"Argument '{arg}' contains dangerous keyword '{token}'"
+                    raise MCPStdioSecurityError(msg)
+
+    # Environment-variable blocklist.
     if env:
         for key in env:
             lower_key = key.lower()
@@ -374,9 +413,9 @@ def validate_mcp_stdio_config(
                 msg = f"Environment variable '{key}' is not allowed for security reasons"
                 raise MCPStdioSecurityError(msg)
 
-    # 5) Docker isolation-breaking arguments. The default (lenient) policy preserves the previous
-    #    behavior; the opt-in hardened policy adds host filesystem/device/namespace coverage. See
-    #    the DOCKER_* constants above for the rationale of each set.
+    # Docker isolation-breaking arguments. The default (lenient) policy preserves the previous
+    # behavior; the opt-in hardened policy adds host filesystem/device/namespace coverage. See
+    # the DOCKER_* constants above for the rationale of each set.
     if command and args and extract_base_command(command) == "docker":
         hardened = _docker_hardening_enabled() if docker_hardening is None else docker_hardening
         if hardened:

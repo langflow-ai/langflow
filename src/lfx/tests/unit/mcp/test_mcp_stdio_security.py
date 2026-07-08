@@ -46,6 +46,19 @@ from lfx.base.mcp.security import (
         ("docker", ["run", "--privileged", "img"], {}),
         ("docker", ["run", "--cap-add", "SYS_ADMIN", "img"], {}),
         ("docker", ["run", "--network=host", "img"], {}),
+        # SECURITY FIX: Combined dangerous keywords in a single argument (the reported vulnerability).
+        # These must be rejected because they contain dangerous keywords when tokenized.
+        ("python3", ["pip install requests"], {}),
+        ("python", ["pip install malicious-package"], {}),
+        ("node", ["npm install evil"], {}),
+        ("python3", ["pip install --upgrade pip"], {}),
+        ("bash", ["-c", "pip install requests"], {}),
+        # -y/--yes flags on non-safe commands (should be blocked - not in COMMAND_SAFE_FLAGS)
+        ("python", ["-y", "script.py"], {}),
+        ("docker", ["run", "-y", "img"], {}),
+        ("node", ["--yes", "script.js"], {}),
+        ("bash", ["-y"], {}),
+        ("sh", ["--yes", "script.sh"], {}),
     ],
 )
 def test_validate_mcp_stdio_config_blocks_malicious(command, args, env):
@@ -140,6 +153,16 @@ def test_docker_default_policy_is_lenient(args, should_block):
         ("docker", ["run", "-i", "--rm", "img"], {}),
         # Benign env var is fine.
         ("uvx", ["server"], {"MY_TOKEN": "abc"}),
+        # SECURITY FIX: -y/--yes flags are now allowed for npx and uvx (the reported false positive).
+        ("npx", ["-y", "@modelcontextprotocol/server-everything"], {}),
+        ("uvx", ["-y", "mcp-server-fetch"], {}),
+        ("npx", ["--yes", "@modelcontextprotocol/server-filesystem"], {}),
+        ("uvx", ["--yes", "some-package"], {}),
+        # Arguments that look like they might contain keywords but are actually safe
+        ("python", ["-m", "server"], {}),
+        ("node", ["server.js"], {}),
+        ("uvx", ["package-name"], {}),
+        ("npx", ["@scope/package"], {}),
     ],
 )
 def test_validate_mcp_stdio_config_allows_legitimate(command, args, env):
@@ -199,10 +222,259 @@ async def test_update_tools_requires_user_for_agentic_server():
     stdio_client = AsyncMock()
     stdio_client.connect_to_server = AsyncMock()
     config = {"mode": "Stdio", "command": "python", "args": ["-m", "langflow.agentic.mcp"]}
-
     with pytest.raises(ValueError, match="authenticated user"):
         await update_tools("langflow-agentic", config, mcp_stdio_client=stdio_client)
     assert stdio_client.connect_to_server.call_count == 0
+
+
+def test_dangerous_keyword_tokenization():
+    """Test that dangerous keywords are detected even when combined in a single argument.
+
+    This is the core fix for the reported vulnerability where "pip install requests"
+    as a single argument would bypass the keyword check.
+    """
+    # Single argument containing multiple dangerous keywords
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", ["pip install requests"], {})
+
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python", ["npm install evil"], {})
+
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("node", ["yarn install package"], {})
+
+    # Verify the old behavior (separate args) still works
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", ["pip", "install", "requests"], {})
+
+
+def test_yes_flag_allowed_for_safe_commands():
+    """Test that -y/--yes flags are allowed for npx and uvx but blocked for others.
+
+    This fixes the false positive where legitimate npx -y usage was rejected.
+    Uses the new COMMAND_SAFE_FLAGS structure for per-command flag allowlisting.
+    """
+    # Should be allowed for npx and uvx (defined in COMMAND_SAFE_FLAGS)
+    validate_mcp_stdio_config("npx", ["-y", "@modelcontextprotocol/server-everything"], {})
+    validate_mcp_stdio_config("uvx", ["-y", "mcp-server-fetch"], {})
+    validate_mcp_stdio_config("npx", ["--yes", "@scope/package"], {})
+    validate_mcp_stdio_config("uvx", ["--yes", "some-tool"], {})
+
+    # Should be blocked for other commands (not in COMMAND_SAFE_FLAGS)
+    # -y and --yes are in DANGEROUS_KEYWORDS, so they're rejected unless in COMMAND_SAFE_FLAGS
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python", ["-y", "script.py"], {})
+
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("docker", ["run", "-y", "img"], {})
+
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("node", ["--yes", "script.js"], {})
+
+
+def test_combined_keywords_with_quotes():
+    """Test that shell-wrapped commands with dangerous keywords are detected."""
+    # Shell wrappers with -c flag and dangerous keywords in the command string
+    # These are caught by the shell wrapper validation (pip/npm are not allowed wrapped commands)
+    with pytest.raises(MCPStdioSecurityError, match="cannot execute"):
+        validate_mcp_stdio_config("bash", ["-c", "pip install evil"], {})
+
+    with pytest.raises(MCPStdioSecurityError, match="cannot execute"):
+        validate_mcp_stdio_config("sh", ["-c", "npm install malicious"], {})
+
+    # But if we use an allowed wrapped command with dangerous keywords in args, those are caught
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("bash", ["-c", "python pip install evil"], {})
+
+
+def test_edge_cases_for_tokenization():
+    """Test edge cases in argument tokenization."""
+    # Unbalanced quotes should still be checked (fallback to split)
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", ["pip install' requests"], {})
+
+    # Multiple spaces between keywords
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python", ["pip  install  requests"], {})
+
+    # Tab-separated keywords
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python", ["pip\tinstall\trequests"], {})
+
+
+def test_combined_dangerous_keywords_bypass():
+    """Combined dangerous keywords in single argument bypassed whole-string equality check.
+
+    VULNERABILITY: POST /api/v2/mcp/servers/{name} with
+    {"command":"python3","args":["pip install requests"]} returned 200 and registered
+    the server because the check did `arg_lower in DANGEROUS_KEYWORDS` which compared
+    the entire string "pip install requests" against individual keywords like "pip".
+
+    FIX: Tokenize each argument with shlex.split() and check each token separately.
+
+    IMPACT: Authenticated tenant could execute arbitrary package installation commands,
+    leading to RCE via malicious packages or supply chain attacks.
+    """
+    # The exact payload from the vulnerability report - MUST be blocked
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", ["pip install requests"], {})
+
+    # Verify the properly-split version is still blocked (original behavior preserved)
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", ["pip", "install", "requests"], {})
+
+    # Other variations of the bypass exploit
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python", ["pip install malicious-package"], {})
+
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", ["pip install --upgrade pip"], {})
+
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("node", ["npm install evil-package"], {})
+
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("node", ["yarn install malicious"], {})
+
+
+def test_bypass_case_variation_combined_keywords():
+    """Bypass attempt: Case variation in combined dangerous keywords.
+
+    Attacker might try uppercase/mixed-case to bypass case-sensitive checks.
+    """
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", ["PIP INSTALL requests"], {})
+
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python", ["Pip Install malicious"], {})
+
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("node", ["NPM INSTALL evil"], {})
+
+
+def test_bypass_keyword_position_variation():
+    """Bypass attempt: Dangerous keywords in non-standard positions.
+
+    Attacker might place keywords at different positions hoping positional
+    checks would miss them.
+    """
+    # Keywords at start and end
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", ["pip some-package install"], {})
+
+    # Keywords separated by safe words
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python", ["install via pip"], {})
+
+    # Multiple dangerous keywords from different categories
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python", ["eval pip install"], {})
+
+
+def test_bypass_punctuation_separated_keywords():
+    """Bypass attempt: Dangerous keywords separated by punctuation instead of spaces.
+
+    Attacker might use commas, semicolons, or other punctuation to separate
+    keywords, hoping the tokenizer would fail. The enhanced tokenization now
+    splits on these separators to detect the keywords.
+
+    NOTE: Semicolons (;), pipes (|), and ampersands (&) are already in DANGEROUS_SHELL_CHARS,
+    so they're caught by the metacharacter check before the keyword check. Commas are not
+    shell metacharacters, so they reach the keyword tokenization logic.
+    """
+    # Keywords with commas - now detected by splitting on commas
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", ["pip,install,requests"], {})
+
+    # Keywords with semicolons - caught by shell metacharacter check first
+    with pytest.raises(MCPStdioSecurityError, match="dangerous shell metacharacter"):
+        validate_mcp_stdio_config("python", ["pip;install;requests"], {})
+
+    # Keywords with parentheses - caught by shell metacharacter check first
+    with pytest.raises(MCPStdioSecurityError, match="dangerous shell metacharacter"):
+        validate_mcp_stdio_config("python", ["(pip install)"], {})
+
+    # Keywords with pipes - caught by shell metacharacter check first
+    with pytest.raises(MCPStdioSecurityError, match="dangerous shell metacharacter"):
+        validate_mcp_stdio_config("python", ["pip|install|requests"], {})
+
+    # Keywords with ampersands - caught by shell metacharacter check first
+    with pytest.raises(MCPStdioSecurityError, match="dangerous shell metacharacter"):
+        validate_mcp_stdio_config("python", ["pip&install&requests"], {})
+
+    # Keywords with quotes (shlex handles these by removing quotes and splitting)
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", ['"pip" "install" "requests"'], {})
+
+
+def test_bypass_nested_shell_with_combined_keywords():
+    """Bypass attempt: Nested shell commands with combined dangerous keywords.
+
+    Attacker might try to nest dangerous commands within shell wrappers.
+    """
+    # Shell wrapper with nested dangerous keywords
+    # The shell wrapper validation catches "pip" as a non-allowed wrapped command
+    with pytest.raises(MCPStdioSecurityError, match="cannot execute"):
+        validate_mcp_stdio_config("bash", ["-c", "pip install requests"], {})
+
+    # Allowed wrapped command with dangerous keywords in its args
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("bash", ["-c", "python pip install evil"], {})
+
+
+def test_bypass_obfuscation_with_long_argument():
+    """Bypass attempt: Hide dangerous keywords in very long arguments.
+
+    Attacker might try to hide keywords in long strings hoping length-based
+    truncation or performance shortcuts would skip validation.
+    """
+    long_arg = "some safe words " * 50 + "pip install requests" + " more safe words" * 50
+    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+        validate_mcp_stdio_config("python3", [long_arg], {})
+
+
+def test_safe_substring_keywords_allowed():
+    """Verify that safe arguments containing keyword substrings are not blocked.
+
+    "install" is a dangerous keyword, but "installer" or "installation" should be
+    safe because they're different tokens after proper tokenization.
+    """
+    # These should NOT raise - they contain keyword substrings but not exact tokens
+    validate_mcp_stdio_config("python", ["-m", "my_installer"], {})
+    validate_mcp_stdio_config("node", ["installation-script.js"], {})
+    validate_mcp_stdio_config("python", ["-m", "pipeline"], {})  # "pip" substring
+    validate_mcp_stdio_config("python", ["--config=pipeline.yaml"], {})
+
+
+def test_empty_and_whitespace_arguments_safe():
+    """Verify that empty and whitespace-only arguments don't cause false positives."""
+    validate_mcp_stdio_config("python", [""], {})
+    validate_mcp_stdio_config("python", ["   "], {})
+    validate_mcp_stdio_config("python", ["-m", "", "server"], {})
+
+
+def test_command_safe_flags_extensibility():
+    """Test that COMMAND_SAFE_FLAGS allows per-command flag customization.
+
+    This verifies the new extensible structure where each command can have
+    its own set of safe flags, making it easy to add new commands with
+    specific flag requirements.
+    """
+    from lfx.base.mcp.security import COMMAND_SAFE_FLAGS
+
+    # Verify the structure exists and has the expected commands
+    assert "npx" in COMMAND_SAFE_FLAGS
+    assert "uvx" in COMMAND_SAFE_FLAGS
+
+    # Verify the flags are correctly defined
+    assert "-y" in COMMAND_SAFE_FLAGS["npx"]
+    assert "--yes" in COMMAND_SAFE_FLAGS["npx"]
+    assert "-y" in COMMAND_SAFE_FLAGS["uvx"]
+    assert "--yes" in COMMAND_SAFE_FLAGS["uvx"]
+
+    # Verify commands not in the dict have no safe flags
+    assert COMMAND_SAFE_FLAGS.get("python", frozenset()) == frozenset()
+    assert COMMAND_SAFE_FLAGS.get("docker", frozenset()) == frozenset()
 
 
 async def test_update_tools_injects_bound_user_for_agentic_server():
