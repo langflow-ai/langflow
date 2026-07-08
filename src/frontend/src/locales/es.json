@@ -680,6 +680,7 @@
   "fileManager.uploadOrImport": "Subir o importar archivos",
   "files.cancel": "Cancelar",
   "files.columnModified": "Modificado",
+  "files.columnActions": "Acciones",
   "files.columnName": "Nombre",
   "files.columnSize": "Tamaño",
   "files.columnType": "Tipo",

@@ -680,6 +680,7 @@
   "fileManager.uploadOrImport": "ファイルのアップロードまたはインポート",
   "files.cancel": "キャンセル",
   "files.columnModified": "変更済み",
+  "files.columnActions": "アクション",
   "files.columnName": "名前",
   "files.columnSize": "サイズ",
   "files.columnType": "タイプ",
