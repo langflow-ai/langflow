@@ -99252,7 +99252,7 @@
           "icon": "cpu",
           "legacy": false,
           "metadata": {
-            "code_hash": "50117607bf5e",
+            "code_hash": "9d19d0c45e28",
             "dependencies": {
               "dependencies": [
                 {
@@ -99319,14 +99319,14 @@
               "show": true,
               "title_case": false,
               "type": "code",
-              "value": "from langchain_community.vectorstores import PGVector\n\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.helpers.data import docs_to_data\nfrom lfx.io import HandleInput, IntInput, SecretStrInput, StrInput\nfrom lfx.schema.data import Data\nfrom lfx.utils.connection_string_parser import transform_connection_string\n\n\nclass PGVectorStoreComponent(LCVectorStoreComponent):\n    display_name = \"PGVector\"\n    description = \"PGVector Vector Store with search capabilities\"\n    name = \"pgvector\"\n    icon = \"cpu\"\n\n    inputs = [\n        SecretStrInput(name=\"pg_server_url\", display_name=\"PostgreSQL Server Connection String\", required=True),\n        StrInput(name=\"collection_name\", display_name=\"Table\", required=True),\n        *LCVectorStoreComponent.inputs,\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"], required=True),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            value=4,\n            advanced=True,\n        ),\n    ]\n\n    @check_cached_vector_store\n    def build_vector_store(self) -> PGVector:\n        # Convert DataFrame to Data if needed using parent's method\n        self.ingest_data = self._prepare_ingest_data()\n\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                documents.append(_input)\n\n        connection_string_parsed = transform_connection_string(self.pg_server_url)\n\n        if documents:\n            pgvector = PGVector.from_documents(\n                embedding=self.embedding,\n                documents=documents,\n                collection_name=self.collection_name,\n                connection_string=connection_string_parsed,\n            )\n        else:\n            pgvector = PGVector.from_existing_index(\n                embedding=self.embedding,\n                collection_name=self.collection_name,\n                connection_string=connection_string_parsed,\n            )\n\n        return pgvector\n\n    def search_documents(self) -> list[Data]:\n        vector_store = self.build_vector_store()\n\n        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():\n            docs = vector_store.similarity_search(\n                query=self.search_query,\n                k=self.number_of_results,\n            )\n\n            data = docs_to_data(docs)\n            self.status = data\n            return data\n        return []\n"
+              "value": "from langchain_community.vectorstores import PGVector\n\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.helpers.data import docs_to_data\nfrom lfx.io import HandleInput, IntInput, SecretStrInput, StrInput\nfrom lfx.schema.data import Data\nfrom lfx.utils.connection_string_parser import transform_connection_string\n\nLANGCHAIN_PGVECTOR_EMBEDDING_TABLE = \"langchain_pg_embedding\"\n\n\nclass PGVectorStoreComponent(LCVectorStoreComponent):\n    display_name = \"PGVector\"\n    description = \"PGVector Vector Store with search capabilities\"\n    name = \"pgvector\"\n    icon = \"cpu\"\n\n    inputs = [\n        SecretStrInput(name=\"pg_server_url\", display_name=\"PostgreSQL Server Connection String\", required=True),\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            info=(\n                \"LangChain PGVector collection name. Documents are stored in the shared \"\n                f\"{LANGCHAIN_PGVECTOR_EMBEDDING_TABLE} table and linked to this collection.\"\n            ),\n            required=True,\n        ),\n        *LCVectorStoreComponent.inputs,\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"], required=True),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            value=4,\n            advanced=True,\n        ),\n    ]\n\n    @check_cached_vector_store\n    def build_vector_store(self) -> PGVector:\n        # Convert DataFrame to Data if needed using parent's method\n        self.ingest_data = self._prepare_ingest_data()\n\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                documents.append(_input)\n\n        connection_string_parsed = transform_connection_string(self.pg_server_url)\n\n        if documents:\n            pgvector = PGVector.from_documents(\n                embedding=self.embedding,\n                documents=documents,\n                collection_name=self.collection_name,\n                connection_string=connection_string_parsed,\n            )\n        else:\n            pgvector = PGVector.from_existing_index(\n                embedding=self.embedding,\n                collection_name=self.collection_name,\n                connection_string=connection_string_parsed,\n            )\n\n        return pgvector\n\n    def search_documents(self) -> list[Data]:\n        vector_store = self.build_vector_store()\n\n        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():\n            docs = vector_store.similarity_search(\n                query=self.search_query,\n                k=self.number_of_results,\n            )\n\n            data = docs_to_data(docs)\n            self.status = data\n            return data\n        return []\n"
             },
             "collection_name": {
               "_input_type": "StrInput",
               "advanced": false,
-              "display_name": "Table",
+              "display_name": "Collection Name",
               "dynamic": false,
-              "info": "",
+              "info": "LangChain PGVector collection name. Documents are stored in the shared langchain_pg_embedding table and linked to this collection.",
               "list": false,
               "list_add_label": "Add More",
               "load_from_db": false,
@@ -99471,6 +99471,251 @@
               "track_in_telemetry": true,
               "type": "bool",
               "value": true
+            }
+          },
+          "tool_mode": false
+        },
+        "pgvector_write": {
+          "base_classes": [
+            "Table"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Batch writes documents to a LangChain PGVector vector store, creating its schema when missing.",
+          "display_name": "PGVector Write",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "pg_server_url",
+            "collection_name",
+            "ingest_data",
+            "embedding",
+            "embedding_field",
+            "metadata_fields",
+            "batch_size"
+          ],
+          "frozen": false,
+          "icon": "cpu",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "c76c1aa3fb21",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "langchain_community",
+                  "version": "0.4.2"
+                },
+                {
+                  "name": "langchain_core",
+                  "version": "1.4.8"
+                },
+                {
+                  "name": "sqlalchemy",
+                  "version": "2.0.51"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 4
+            },
+            "keywords": [
+              "pgvector",
+              "postgres",
+              "vector",
+              "write",
+              "batch"
+            ],
+            "module": "lfx.components.pgvector.pgvector_write.PGVectorWriteComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Write Summary",
+              "group_outputs": false,
+              "method": "write_documents",
+              "name": "write_summary",
+              "selected": "Table",
+              "tool_mode": true,
+              "types": [
+                "Table"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "batch_size": {
+              "_input_type": "IntInput",
+              "advanced": true,
+              "display_name": "Batch Size",
+              "dynamic": false,
+              "info": "Number of documents to write in each batch.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "batch_size",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 100
+            },
+            "code": {
+              "advanced": true,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "from langchain_community.vectorstores import PGVector\nfrom langchain_core.documents import Document\nfrom sqlalchemy.exc import SQLAlchemyError\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import HandleInput, IntInput, Output, SecretStrInput, StrInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.utils.connection_string_parser import transform_connection_string\n\nLANGCHAIN_PGVECTOR_COLLECTION_TABLE = \"langchain_pg_collection\"\nLANGCHAIN_PGVECTOR_EMBEDDING_TABLE = \"langchain_pg_embedding\"\n\n\ndef _parse_metadata_fields(metadata_fields: str | list[str] | None) -> list[str]:\n    if not metadata_fields:\n        return []\n    if isinstance(metadata_fields, list):\n        return [field.strip() for field in metadata_fields if field and field.strip()]\n    return [field.strip() for field in metadata_fields.split(\",\") if field.strip()]\n\n\ndef _data_to_document(data: Data, embedding_field: str, metadata_fields: list[str]) -> Document:\n    data_dict = data.data.copy()\n    if embedding_field not in data_dict:\n        msg = f\"Embedding Field '{embedding_field}' was not found in the input data.\"\n        raise ValueError(msg)\n\n    metadata_keys = metadata_fields or [key for key in data_dict if key != embedding_field]\n    missing_metadata_fields = [key for key in metadata_keys if key not in data_dict]\n    if missing_metadata_fields:\n        msg = f\"Metadata field(s) not found in the input data: {', '.join(missing_metadata_fields)}\"\n        raise ValueError(msg)\n    metadata = {key: data_dict[key] for key in metadata_keys if key in data_dict and key != embedding_field}\n    return Document(page_content=str(data_dict[embedding_field]), metadata=metadata)\n\n\ndef _prepare_documents(ingest_data, embedding_field: str, metadata_fields: str | list[str] | None) -> list[Document]:\n    if not ingest_data:\n        return []\n\n    if not isinstance(ingest_data, list):\n        ingest_data = [ingest_data]\n\n    documents = []\n    metadata_field_names = _parse_metadata_fields(metadata_fields)\n    for _input in ingest_data:\n        if isinstance(_input, DataFrame):\n            documents.extend(\n                _data_to_document(data, embedding_field, metadata_field_names) for data in _input.to_data_list()\n            )\n        elif isinstance(_input, Data):\n            documents.append(_data_to_document(_input, embedding_field, metadata_field_names))\n        elif isinstance(_input, Document):\n            metadata = _input.metadata\n            if metadata_field_names:\n                metadata = {key: _input.metadata[key] for key in metadata_field_names if key in _input.metadata}\n            documents.append(Document(page_content=_input.page_content, metadata=metadata))\n        else:\n            documents.append(_input)\n    return documents\n\n\ndef _batch_documents(documents: list, batch_size: int):\n    for index in range(0, len(documents), batch_size):\n        yield documents[index : index + batch_size]\n\n\nclass PGVectorWriteComponent(Component):\n    display_name = \"PGVector Write\"\n    description = \"Batch writes documents to a LangChain PGVector vector store, creating its schema when missing.\"\n    name = \"pgvector_write\"\n    icon = \"cpu\"\n    metadata = {\"keywords\": [\"pgvector\", \"postgres\", \"vector\", \"write\", \"batch\"]}\n\n    inputs = [\n        SecretStrInput(name=\"pg_server_url\", display_name=\"PostgreSQL Server Connection String\", required=True),\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            info=(\n                \"LangChain PGVector collection name. Documents are stored in the shared \"\n                f\"{LANGCHAIN_PGVECTOR_EMBEDDING_TABLE} table and linked to this collection.\"\n            ),\n            required=True,\n        ),\n        HandleInput(\n            name=\"ingest_data\",\n            display_name=\"Ingest Data\",\n            input_types=[\"Data\", \"DataFrame\", \"Table\"],\n            is_list=True,\n            required=True,\n        ),\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"], required=True),\n        StrInput(\n            name=\"embedding_field\",\n            display_name=\"Embedding Field\",\n            info=\"Field to use as the text content for embeddings.\",\n            value=\"text\",\n            required=True,\n        ),\n        StrInput(\n            name=\"metadata_fields\",\n            display_name=\"Metadata Fields\",\n            info=(\n                \"Comma-separated fields to store as metadata. \"\n                \"Leave empty to use all fields except the embedding field.\"\n            ),\n            advanced=True,\n        ),\n        IntInput(\n            name=\"batch_size\",\n            display_name=\"Batch Size\",\n            info=\"Number of documents to write in each batch.\",\n            value=100,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Write Summary\", name=\"write_summary\", method=\"write_documents\"),\n    ]\n\n    def _build_or_create_vector_store(self, connection_string: str) -> PGVector:\n        \"\"\"Initialize LangChain PGVector, which creates extension/tables/collection when missing.\"\"\"\n        return PGVector.from_existing_index(\n            embedding=self.embedding,\n            collection_name=self.collection_name,\n            connection_string=connection_string,\n        )\n\n    def _add_documents(self, vector_store: PGVector, documents: list[Document]) -> list[str]:\n        try:\n            return vector_store.add_documents(documents)\n        except IndexError as e:\n            msg = (\n                \"Embedding service returned fewer embeddings than requested. \"\n                \"Check that the selected embedding model supports embeddings and that the API response includes \"\n                \"one non-empty embedding for each input document.\"\n            )\n            raise ValueError(msg) from e\n        except SQLAlchemyError as e:\n            if \"vector must have at least 1 dimension\" in str(e):\n                msg = (\n                    \"Embedding service returned an empty embedding vector. \"\n                    \"Check the embedding model/API configuration before writing to PGVector.\"\n                )\n                raise ValueError(msg) from e\n            raise\n\n    def write_documents(self) -> DataFrame:\n        embedding_field = (self.embedding_field or \"\").strip()\n        if not embedding_field:\n            msg = \"Embedding Field is required.\"\n            raise ValueError(msg)\n\n        documents = _prepare_documents(self.ingest_data, embedding_field, self.metadata_fields)\n        if not documents:\n            msg = \"No documents were provided to write to PGVector.\"\n            raise ValueError(msg)\n\n        batch_size = int(self.batch_size or 0)\n        if batch_size <= 0:\n            msg = \"Batch Size must be greater than 0.\"\n            raise ValueError(msg)\n\n        connection_string_parsed = transform_connection_string(self.pg_server_url)\n        batches = list(_batch_documents(documents, batch_size))\n\n        vector_store = self._build_or_create_vector_store(connection_string_parsed)\n\n        inserted_ids = []\n        for batch in batches:\n            inserted_ids.extend(self._add_documents(vector_store, batch))\n\n        summary = DataFrame(\n            [\n                {\n                    \"collection_name\": self.collection_name,\n                    \"documents_written\": len(documents),\n                    \"batches_written\": len(batches),\n                    \"batch_size\": batch_size,\n                    \"embedding_field\": embedding_field,\n                    \"metadata_fields\": \", \".join(_parse_metadata_fields(self.metadata_fields)),\n                    \"storage_schema\": \"langchain_pgvector\",\n                    \"embedding_table\": LANGCHAIN_PGVECTOR_EMBEDDING_TABLE,\n                    \"collection_table\": LANGCHAIN_PGVECTOR_COLLECTION_TABLE,\n                    \"creates_schema_if_missing\": True,\n                    \"ids_returned\": len(inserted_ids),\n                }\n            ]\n        )\n        self.status = summary\n        return summary\n"
+            },
+            "collection_name": {
+              "_input_type": "StrInput",
+              "advanced": false,
+              "display_name": "Collection Name",
+              "dynamic": false,
+              "info": "LangChain PGVector collection name. Documents are stored in the shared langchain_pg_embedding table and linked to this collection.",
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "collection_name",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "embedding": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "display_name": "Embedding",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "Embeddings"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "embedding",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "embedding_field": {
+              "_input_type": "StrInput",
+              "advanced": false,
+              "display_name": "Embedding Field",
+              "dynamic": false,
+              "info": "Field to use as the text content for embeddings.",
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "embedding_field",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": "text"
+            },
+            "ingest_data": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "display_name": "Ingest Data",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "Data",
+                "DataFrame",
+                "Table"
+              ],
+              "list": true,
+              "list_add_label": "Add More",
+              "name": "ingest_data",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "metadata_fields": {
+              "_input_type": "StrInput",
+              "advanced": true,
+              "display_name": "Metadata Fields",
+              "dynamic": false,
+              "info": "Comma-separated fields to store as metadata. Leave empty to use all fields except the embedding field.",
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "metadata_fields",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "pg_server_url": {
+              "_input_type": "SecretStrInput",
+              "advanced": false,
+              "display_name": "PostgreSQL Server Connection String",
+              "dynamic": false,
+              "info": "",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "pg_server_url",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
             }
           },
           "tool_mode": false
@@ -114552,6 +114797,7 @@
             "request_timeout",
             "show_progress_bar",
             "skip_empty",
+            "tiktoken_enable",
             "model_kwargs",
             "default_headers",
             "default_query"
@@ -114560,7 +114806,7 @@
           "icon": "vLLM",
           "legacy": false,
           "metadata": {
-            "code_hash": "079b6a2dd397",
+            "code_hash": "4794bcfdc7e1",
             "dependencies": {
               "dependencies": [
                 {
@@ -114677,7 +114923,7 @@
               "show": true,
               "title_case": false,
               "type": "code",
-              "value": "from langchain_openai import OpenAIEmbeddings\n\nfrom lfx.base.embeddings.model import LCEmbeddingsModel\nfrom lfx.field_typing import Embeddings\nfrom lfx.io import BoolInput, DictInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass VllmEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"vLLM Embeddings\"\n    description = \"Generate embeddings using vLLM models via OpenAI-compatible API.\"\n    icon = \"vLLM\"\n    name = \"vLLMEmbeddings\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            info=\"The name of the vLLM embeddings model to use (e.g., 'BAAI/bge-large-en-v1.5').\",\n            value=\"BAAI/bge-large-en-v1.5\",\n        ),\n        MessageTextInput(\n            name=\"api_base\",\n            display_name=\"vLLM API Base\",\n            advanced=False,\n            info=\"The base URL of the vLLM API server. Defaults to http://localhost:8000/v1 for local vLLM server.\",\n            value=\"http://localhost:8000/v1\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"The API Key to use for the vLLM model (optional for local servers).\",\n            advanced=False,\n            value=\"\",\n            required=False,\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            advanced=True,\n            value=1000,\n            info=\"The chunk size to use when processing documents.\",\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            value=3,\n            advanced=True,\n            info=\"Maximum number of retries for failed requests.\",\n        ),\n        FloatInput(\n            name=\"request_timeout\",\n            display_name=\"Request Timeout\",\n            advanced=True,\n            info=\"Timeout for requests to vLLM API in seconds.\",\n        ),\n        BoolInput(\n            name=\"show_progress_bar\",\n            display_name=\"Show Progress Bar\",\n            advanced=True,\n            info=\"Whether to show a progress bar when processing multiple documents.\",\n        ),\n        BoolInput(\n            name=\"skip_empty\",\n            display_name=\"Skip Empty\",\n            advanced=True,\n            info=\"Whether to skip empty documents.\",\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            model=self.model_name,\n            base_url=self.api_base or \"http://localhost:8000/v1\",\n            api_key=self.api_key or None,\n            dimensions=self.dimensions or None,\n            chunk_size=self.chunk_size,\n            max_retries=self.max_retries,\n            timeout=self.request_timeout or None,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            model_kwargs=self.model_kwargs,\n            default_headers=self.default_headers or None,\n            default_query=self.default_query or None,\n        )\n"
+              "value": "from langchain_openai import OpenAIEmbeddings\n\nfrom lfx.base.embeddings.model import LCEmbeddingsModel\nfrom lfx.field_typing import Embeddings\nfrom lfx.io import BoolInput, DictInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass VllmEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"vLLM Embeddings\"\n    description = \"Generate embeddings using vLLM models via OpenAI-compatible API.\"\n    icon = \"vLLM\"\n    name = \"vLLMEmbeddings\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            info=\"The name of the vLLM embeddings model to use (e.g., 'BAAI/bge-large-en-v1.5').\",\n            value=\"BAAI/bge-large-en-v1.5\",\n        ),\n        MessageTextInput(\n            name=\"api_base\",\n            display_name=\"vLLM API Base\",\n            advanced=False,\n            info=\"The base URL of the vLLM API server. Defaults to http://localhost:8000/v1 for local vLLM server.\",\n            value=\"http://localhost:8000/v1\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"The API Key to use for the vLLM model (optional for local servers).\",\n            advanced=False,\n            value=\"\",\n            required=False,\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            advanced=True,\n            value=1000,\n            info=\"The chunk size to use when processing documents.\",\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            value=3,\n            advanced=True,\n            info=\"Maximum number of retries for failed requests.\",\n        ),\n        FloatInput(\n            name=\"request_timeout\",\n            display_name=\"Request Timeout\",\n            advanced=True,\n            info=\"Timeout for requests to vLLM API in seconds.\",\n        ),\n        BoolInput(\n            name=\"show_progress_bar\",\n            display_name=\"Show Progress Bar\",\n            advanced=True,\n            info=\"Whether to show a progress bar when processing multiple documents.\",\n        ),\n        BoolInput(\n            name=\"skip_empty\",\n            display_name=\"Skip Empty\",\n            advanced=True,\n            info=\"Whether to skip empty documents.\",\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=False,\n            info=(\n                \"Enable tiktoken-based length checks. Keep disabled for vLLM/OpenAI-compatible services that \"\n                \"expect embedding inputs as strings.\"\n            ),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            model=self.model_name,\n            base_url=self.api_base or \"http://localhost:8000/v1\",\n            api_key=self.api_key or None,\n            dimensions=self.dimensions or None,\n            chunk_size=self.chunk_size,\n            max_retries=self.max_retries,\n            timeout=self.request_timeout or None,\n            tiktoken_enabled=self.tiktoken_enable,\n            check_embedding_ctx_length=False,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            model_kwargs=self.model_kwargs,\n            default_headers=self.default_headers or None,\n            default_query=self.default_query or None,\n        )\n"
             },
             "default_headers": {
               "_input_type": "DictInput",
@@ -114853,6 +115099,26 @@
               "list": false,
               "list_add_label": "Add More",
               "name": "skip_empty",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            },
+            "tiktoken_enable": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "display_name": "TikToken Enable",
+              "dynamic": false,
+              "info": "Enable tiktoken-based length checks. Keep disabled for vLLM/OpenAI-compatible services that expect embedding inputs as strings.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "tiktoken_enable",
               "override_skip": false,
               "placeholder": "",
               "required": false,
@@ -118470,9 +118736,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 354,
+    "num_components": 355,
     "num_modules": 95
   },
-  "sha256": "1eaacdcac0e7f42362e192ca7a98b8e454abb57d636bb24f543b2599d10694db",
+  "sha256": "f0a274c636441a65ca2fa1d6ba74b9957bd2c64bd5cfb61a82b224138ada9eb6",
   "version": "1.10.1"
 }

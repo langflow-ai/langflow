@@ -73,6 +73,16 @@ class VllmEmbeddingsComponent(LCEmbeddingsModel):
             advanced=True,
             info="Whether to skip empty documents.",
         ),
+        BoolInput(
+            name="tiktoken_enable",
+            display_name="TikToken Enable",
+            advanced=True,
+            value=False,
+            info=(
+                "Enable tiktoken-based length checks. Keep disabled for vLLM/OpenAI-compatible services that "
+                "expect embedding inputs as strings."
+            ),
+        ),
         DictInput(
             name="model_kwargs",
             display_name="Model Kwargs",
@@ -102,6 +112,8 @@ class VllmEmbeddingsComponent(LCEmbeddingsModel):
             chunk_size=self.chunk_size,
             max_retries=self.max_retries,
             timeout=self.request_timeout or None,
+            tiktoken_enabled=self.tiktoken_enable,
+            check_embedding_ctx_length=False,
             show_progress_bar=self.show_progress_bar,
             skip_empty=self.skip_empty,
             model_kwargs=self.model_kwargs,

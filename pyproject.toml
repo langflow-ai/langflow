@@ -67,8 +67,6 @@ dev = [
     "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
     "onnxruntime>=1.26; python_version>='3.14'",
     "fakeredis>=2.0.0",
-    "numpy==2.4.6; sys_platform == 'darwin' and platform_release == '22.6.0' and platform_machine == 'x86_64' and implementation_name == 'cpython' and python_full_version == '3.12.13'",
-    "opencv-python==4.13.0.92; sys_platform == 'darwin' and platform_release == '22.6.0' and platform_machine == 'x86_64' and implementation_name == 'cpython' and python_full_version == '3.12.13'",
 ]
 
 [[tool.uv.index]]
