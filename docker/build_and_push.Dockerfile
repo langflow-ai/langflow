@@ -41,7 +41,6 @@ RUN microdnf install -y tar xz python3.14-devel \
     && NODE_VERSION="22.14.0" \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest \
     && microdnf clean all
 
 # Copy files first to avoid permission issues with bind mounts
@@ -106,8 +105,7 @@ RUN ARCH=$(uname -m) \
                     | head -1) \
     && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
-    | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest
+    | tar -xJ -C /usr/local --strip-components=1
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
