@@ -106,13 +106,16 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               : cn(className)
           }
           disabled={loading || disabled}
+          aria-busy={loading || undefined}
           {...(asChild ? {} : { type: type || "button" })}
           ref={ref}
           {...props}
         >
           {loading ? (
             <span className="relative flex items-center justify-center">
+              {/* Reserve layout width; hide from a11y so the name comes from sr-only. */}
               <span
+                aria-hidden="true"
                 className={cn(
                   className,
                   "invisible flex items-center justify-center gap-2 !p-0",
@@ -120,6 +123,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               >
                 {newChildren}
               </span>
+              <span className="sr-only">{newChildren}</span>
               <span className="absolute inset-0 flex items-center justify-center">
                 <ForwardedIconComponent
                   name={"Loader2"}
