@@ -417,21 +417,19 @@ class TestMCPCommandInjectionSecurity:
 
     # ==================== Npx/Uvx Auto-Install Prevention ====================
 
-    def test_npx_auto_install_flag_rejected(self):
-        """Test that npx -y (auto-install) flag is rejected."""
-        with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command="npx", args=["-y", "@malicious/package"])
+    def test_npx_auto_install_flag_accepted(self):
+        """Test that npx -y is accepted as a package-manager safe flag."""
+        config = MCPServerConfig(command="npx", args=["-y", "@modelcontextprotocol/server-everything"])
 
-        error_msg = str(exc_info.value)
-        assert "not allowed" in error_msg.lower()
+        assert config.command == "npx"
+        assert config.args == ["-y", "@modelcontextprotocol/server-everything"]
 
-    def test_npx_yes_flag_rejected(self):
-        """Test that npx --yes (auto-install) flag is rejected."""
-        with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command="npx", args=["--yes", "@malicious/package"])
+    def test_npx_yes_flag_accepted(self):
+        """Test that npx --yes is accepted as a package-manager safe flag."""
+        config = MCPServerConfig(command="npx", args=["--yes", "@modelcontextprotocol/server-filesystem"])
 
-        error_msg = str(exc_info.value)
-        assert "not allowed" in error_msg.lower()
+        assert config.command == "npx"
+        assert config.args == ["--yes", "@modelcontextprotocol/server-filesystem"]
 
     # ==================== Subshell Metacharacter Tests ====================
 

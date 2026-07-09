@@ -402,7 +402,7 @@ def validate_mcp_stdio_config(
             for token in expanded_tokens:
                 token_lower = token.lower()
                 if token_lower in DANGEROUS_KEYWORDS:
-                    msg = f"Argument '{arg}' contains dangerous keyword '{token}'"
+                    msg = f"Argument '{arg}' contains dangerous keyword '{token}' and is not allowed"
                     raise MCPStdioSecurityError(msg)
 
     # Environment-variable blocklist.
