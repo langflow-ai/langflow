@@ -13,6 +13,8 @@
   "account.updateAvailable": "（更新あり）",
   "account.version": "バージョン",
   "admin.attentionTitle": "注意",
+  "admin.backButton": "戻る",
+  "admin.clearSearch": "検索をクリア",
   "admin.cancelButton": "キャンセル",
   "admin.cannotDeactivateSelf": "ご自身のアカウントを無効にすることはできません",
   "admin.columnActive": "アクティブ",

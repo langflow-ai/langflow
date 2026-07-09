@@ -366,6 +366,8 @@
   "admin.deleteTitle": "Delete",
   "admin.deleteUserHeader": "Delete User",
   "admin.attentionTitle": "Attention!",
+  "admin.backButton": "Back",
+  "admin.clearSearch": "Clear search",
   "admin.confirmButton": "Confirm",
   "admin.editUserConfirmContent": "Are you completely confident about the changes you are making to this user?",
   "admin.deleteUserConfirmContent": "Are you sure you want to delete this user? This action cannot be undone.",

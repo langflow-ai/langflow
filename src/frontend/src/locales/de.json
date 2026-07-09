@@ -13,6 +13,8 @@
   "account.updateAvailable": "(Update verfügbar)",
   "account.version": "Version",
   "admin.attentionTitle": "Achtung!",
+  "admin.backButton": "Zurück",
+  "admin.clearSearch": "Suche löschen",
   "admin.cancelButton": "Abbrechen",
   "admin.cannotDeactivateSelf": "Sie können Ihr eigenes Konto nicht deaktivieren",
   "admin.columnActive": "Aktiv",

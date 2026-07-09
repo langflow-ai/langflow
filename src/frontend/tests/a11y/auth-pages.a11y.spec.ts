@@ -158,6 +158,38 @@ test.describe("auth page accessibility", () => {
     await page.runA11yScan("auth-signup-error-toast");
   });
 
+  test("scans empty admin login", { tag: ["@release"] }, async ({ page }) => {
+    await forceLightTheme(page);
+    await disableAutoLogin(page);
+
+    await page.goto("/login/admin");
+    await disableAnimations(page);
+    await expect(page.getByRole("button", { name: /login/i })).toBeVisible();
+    await page.runA11yScan("auth-admin-login-empty");
+  });
+
+  test(
+    "scans admin login error toast",
+    { tag: ["@release"] },
+    async ({ page }) => {
+      await forceLightTheme(page);
+      await disableAutoLogin(page);
+      await mockLoginError(page);
+
+      await page.goto("/login/admin");
+      await disableAnimations(page);
+      await expect(page.getByRole("button", { name: /login/i })).toBeVisible();
+      await page.getByPlaceholder(/^Username$/).fill("alice");
+      await page.getByPlaceholder(/^Password$/).fill("wrong-password");
+      await page.getByRole("button", { name: /login/i }).click();
+      await expect(page.getByText("Error signing in")).toBeVisible();
+      await expect(
+        page.getByText("Incorrect username or password."),
+      ).toBeVisible();
+      await page.runA11yScan("auth-admin-login-error-toast");
+    },
+  );
+
   test("scans login in dark mode", { tag: ["@release"] }, async ({ page }) => {
     await forceDarkTheme(page);
     await disableAutoLogin(page);

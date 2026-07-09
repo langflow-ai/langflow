@@ -29,15 +29,18 @@ Checkbox.displayName = CheckboxPrimitive.Root.displayName;
 const CheckBoxDiv = ({
   className = "",
   checked,
+  "aria-label": ariaLabel,
 }: {
   className?: string;
   checked?: boolean;
+  "aria-label"?: string;
 }) => (
   // Read-only state indicator: activation is owned by the wrapping
   // trigger/tooltip, so it exposes checkbox role + state but stays
   // non-focusable itself.
   <div
     role="checkbox"
+    aria-label={ariaLabel}
     aria-checked={Boolean(checked)}
     aria-readonly="true"
     className={cn(

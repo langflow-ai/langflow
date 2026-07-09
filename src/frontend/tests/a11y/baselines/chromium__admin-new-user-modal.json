@@ -1,0 +1,28 @@
+{
+  "label": "chromium__admin-new-user-modal",
+  "description": "KNOWN a11y debt (tracked, not accepted as correct) in the /admin New User modal. target_spacing_sufficient (WCAG 2.2 AAA): adjacent action targets sit closer than 12 CSS px. Delete this file to resurface the violation in tests/a11y/admin-page.a11y.spec.ts ('scans new user modal').",
+  "results": [
+    {
+      "ruleId": "target_spacing_sufficient",
+      "reasonId": "violation_spacing",
+      "level": "violation",
+      "message": "Undersized target \"button\" does not have sufficient spacing of 12 CSS pixels from another target \"button\"",
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/main[1]/div[3]/div[1]/div[1]/table[1]/tbody[1]/tr[1]/td[7]/div[1]/button[1]",
+        "aria": "/document[1]/generic[2]/main[1]/table[1]/rowgroup[2]/row[1]/cell[7]/button[1]"
+      },
+      "value": ["VIOLATION", "FAIL"]
+    },
+    {
+      "ruleId": "target_spacing_sufficient",
+      "reasonId": "violation_spacing",
+      "level": "violation",
+      "message": "Undersized target \"button\" does not have sufficient spacing of 12 CSS pixels from another target \"button\"",
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/main[1]/div[3]/div[1]/div[1]/table[1]/tbody[1]/tr[1]/td[7]/div[1]/button[2]",
+        "aria": "/document[1]/generic[2]/main[1]/table[1]/rowgroup[2]/row[1]/cell[7]/button[2]"
+      },
+      "value": ["VIOLATION", "FAIL"]
+    }
+  ]
+}

@@ -13,6 +13,8 @@
   "account.updateAvailable": "（有更新）",
   "account.version": "版本",
   "admin.attentionTitle": "注意！",
+  "admin.backButton": "返回",
+  "admin.clearSearch": "清除搜索",
   "admin.cancelButton": "取消",
   "admin.cannotDeactivateSelf": "您无法注销自己的账户",
   "admin.columnActive": "活动",

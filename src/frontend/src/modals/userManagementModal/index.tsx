@@ -242,7 +242,10 @@ export default function UserManagementModal({
             <div className="flex gap-8">
               <Form.Field name="is_active">
                 <div>
-                  <Form.Label className="data-[invalid]:label-invalid mr-3">
+                  <Form.Label
+                    htmlFor="is_active"
+                    className="data-[invalid]:label-invalid mr-3"
+                  >
                     {t("admin.columnActive")}
                   </Form.Label>
                   {data?.id === userData?.id ? (
@@ -276,7 +279,10 @@ export default function UserManagementModal({
               {userData?.is_superuser && (
                 <Form.Field name="is_superuser">
                   <div>
-                    <Form.Label className="data-[invalid]:label-invalid mr-3">
+                    <Form.Label
+                      htmlFor="is_superuser"
+                      className="data-[invalid]:label-invalid mr-3"
+                    >
                       {t("admin.columnSuperuser")}
                     </Form.Label>
                     <Form.Control asChild>

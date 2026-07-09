@@ -234,10 +234,15 @@ export default function AdminPage() {
   return (
     <>
       {userData && (
-        <div className="admin-page-panel flex h-full flex-col pb-8">
+        <main className="admin-page-panel flex h-full flex-col pb-8">
           <div className="main-page-nav-arrangement">
             <span className="main-page-nav-title">
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("admin.backButton")}
+                onClick={() => navigate(-1)}
+              >
                 <IconComponent name="ChevronLeft" className="w-5" />
               </Button>
               <IconComponent name="Shield" className="w-6" />
@@ -250,13 +255,16 @@ export default function AdminPage() {
           <div className="flex w-full justify-between">
             <div className="flex w-96 items-center gap-4">
               <Input
+                aria-label={t("admin.searchPlaceholder")}
                 placeholder={t("admin.searchPlaceholder")}
                 value={inputValue}
                 onChange={(e) => handleFilterUsers(e.target.value)}
               />
               {inputValue.length > 0 ? (
-                <div
+                <button
+                  type="button"
                   className="cursor-pointer"
+                  aria-label={t("admin.clearSearch")}
                   onClick={() => {
                     setInputValue("");
                     setPageIndex(PAGINATION_PAGE);
@@ -264,7 +272,7 @@ export default function AdminPage() {
                   }}
                 >
                   <IconComponent name="X" className="w-6 text-foreground" />
-                </div>
+                </button>
               ) : (
                 <div>
                   <IconComponent
@@ -352,13 +360,16 @@ export default function AdminPage() {
                               </span>
                             </ShadTooltip>
                           </TableCell>
-                          <TableCell className="relative left-1 truncate py-2 text-align-last-left">
+                          <TableCell className="relative left-1 truncate py-2 text-align-last-left [&>button]:w-fit">
                             {user.id === userData?.id ? (
                               <ShadTooltip
                                 content={t("admin.cannotDeactivateSelf")}
                               >
                                 <div className="flex w-fit cursor-not-allowed opacity-50">
-                                  <CheckBoxDiv checked={user.is_active} />
+                                  <CheckBoxDiv
+                                    checked={user.is_active}
+                                    aria-label={`${t("admin.columnActive")} — ${user.username}`}
+                                  />
                                 </div>
                               </ShadTooltip>
                             ) : (
@@ -387,13 +398,16 @@ export default function AdminPage() {
                                 </ConfirmationModal.Content>
                                 <ConfirmationModal.Trigger>
                                   <div className="flex w-fit">
-                                    <CheckBoxDiv checked={user.is_active} />
+                                    <CheckBoxDiv
+                                      checked={user.is_active}
+                                      aria-label={`${t("admin.columnActive")} — ${user.username}`}
+                                    />
                                   </div>
                                 </ConfirmationModal.Trigger>
                               </ConfirmationModal>
                             )}
                           </TableCell>
-                          <TableCell className="relative left-1 truncate py-2 text-align-last-left">
+                          <TableCell className="relative left-1 truncate py-2 text-align-last-left [&>button]:w-fit">
                             <ConfirmationModal
                               size="x-small"
                               title={t("admin.editTitle")}
@@ -417,7 +431,10 @@ export default function AdminPage() {
                               </ConfirmationModal.Content>
                               <ConfirmationModal.Trigger>
                                 <div className="flex w-fit">
-                                  <CheckBoxDiv checked={user.is_superuser} />
+                                  <CheckBoxDiv
+                                    checked={user.is_superuser}
+                                    aria-label={`${t("admin.columnSuperuser")} — ${user.username}`}
+                                  />
                                 </div>
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>
@@ -457,6 +474,7 @@ export default function AdminPage() {
                                   <IconComponent
                                     name="Pencil"
                                     className="h-4 w-4 cursor-pointer"
+                                    ariaLabel={`${t("admin.editTitle")} — ${user.username}`}
                                   />
                                 </ShadTooltip>
                               </UserManagementModal>
@@ -483,7 +501,8 @@ export default function AdminPage() {
                                 <ConfirmationModal.Trigger>
                                   <IconComponent
                                     name="Trash2"
-                                    className="ml-2 h-4 w-4 cursor-pointer"
+                                    className="ml-3 h-4 w-4 cursor-pointer"
+                                    ariaLabel={`${t("admin.deleteTitle")} — ${user.username}`}
                                   />
                                 </ConfirmationModal.Trigger>
                               </ConfirmationModal>
@@ -507,7 +526,7 @@ export default function AdminPage() {
               </div>
             </div>
           )}
-        </div>
+        </main>
       )}
     </>
   );
