@@ -195,6 +195,7 @@ module.exports = {
             "Develop/extensions-overview",
             "Develop/extensions-quickstart",
             "Develop/extensions-manifest",
+            "Develop/extensions-errors",
           ],
         },
       ],
