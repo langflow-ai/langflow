@@ -16,11 +16,11 @@ This example gates a flow with **Approve** and **Reject** branches:
 1. Add a **Human Input** component from **Flow Controls**.
 2. In **Form Content**, enter text for the human reviewer, such as `Review this summary before it is sent to the customer.`
 3. In **User Actions**, keep the default values **Approve** and **Reject**.
-Optionally, add a custom label, such as **Escalate**.
-Each action adds a matching output handle to the component.
+   Optionally, add a custom label, such as **Escalate**.
+   Each action adds a matching output handle to the component.
 4. Connect the **Approve** output to the components to run when the request is approved.
 5. Connect the **Reject** output to an alternate path, such as a [**Chat Output** component](./chat-input-and-output) that explains the rejection.
-6. Run the flow in the <Icon name="Play" aria-hidden="true"/> **Playground**. When execution reaches the **Human Input** node, select an action in the approval paneto resume the flow.
+6. Run the flow in the <Icon name="Play" aria-hidden="true"/> **Playground**. When execution reaches the **Human Input** node, select an action in the approval pane to resume the flow.
 
 :::tip
 Each **User Action** label maps to a stable `action_id` in API resume requests. For example, `Request Changes` becomes `request_changes`.
