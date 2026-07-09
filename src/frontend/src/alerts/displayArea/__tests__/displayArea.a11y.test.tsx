@@ -35,6 +35,9 @@ describe("AlertDisplayArea accessibility", () => {
     const { container } = render(<AlertDisplayArea />);
 
     expect(
+      screen.getByRole("complementary", { name: "Notifications" }),
+    ).toBeInTheDocument();
+    expect(
       container.querySelector('[aria-live="assertive"]'),
     ).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");

@@ -1,9 +1,11 @@
+import { useTranslation } from "react-i18next";
 import useAlertStore from "../../stores/alertStore";
 import ErrorAlert from "../error";
 import NoticeAlert from "../notice";
 import SuccessAlert from "../success";
 
 export default function AlertDisplayArea() {
+  const { t } = useTranslation();
   const removeFromTempNotificationList = useAlertStore(
     (state) => state.removeFromTempNotificationList,
   );
@@ -20,8 +22,11 @@ export default function AlertDisplayArea() {
     (alert) => alert.type !== "error",
   );
 
+  // Wrap live regions in a named landmark so toast content satisfies
+  // IBM aria_content_in_landmark (role="status"/"alert" are live regions,
+  // not landmarks).
   return (
-    <div style={{ zIndex: 999 }}>
+    <aside aria-label={t("alerts.notificationsTitle")} style={{ zIndex: 999 }}>
       <div
         aria-atomic="true"
         aria-live="assertive"
@@ -65,6 +70,6 @@ export default function AlertDisplayArea() {
           ),
         )}
       </div>
-    </div>
+    </aside>
   );
 }
