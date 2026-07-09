@@ -329,3 +329,64 @@ async def test_get_server_list_preserves_insertion_order():
 
     await engine.dispose()
     assert list(servers.keys()) == names, f"expected insertion order {names}, got {list(servers.keys())}"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_merge_patches_preserve_all_fields(tmp_path):
+    """Concurrent merge PATCHes to the SAME server each set a distinct field; the version lock keeps all of them.
+
+    Without the version-guarded retry, all writers read the same base config and the last
+    commit wins, silently dropping the other fields (the gap flagged in review of #13976).
+    """
+    engine = await _file_engine(tmp_path / "mcp.db")
+    user = SimpleNamespace(id=uuid.uuid4())
+
+    with patch.multiple("langflow.api.v2.mcp", **CACHE_PATCH):
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            await update_server("svc", {"url": "https://x", "k0": "base"}, user, session, None, None)
+
+        async def patch_field(i: int):
+            async with AsyncSession(engine, expire_on_commit=False) as session:
+                await update_server("svc", {f"k{i}": str(i)}, user, session, None, None, merge_existing=True)
+
+        results = await asyncio.gather(*[patch_field(i) for i in range(1, 9)], return_exceptions=True)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            final = await get_server("svc", user, session, None, None)
+
+    await engine.dispose()
+    errors = [r for r in results if isinstance(r, Exception)]
+    assert not errors, f"concurrent PATCHes raised: {errors}"
+    assert final["url"] == "https://x"
+    for i in range(1, 9):
+        assert final.get(f"k{i}") == str(i), f"lost concurrently-patched field k{i}; final={final}"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_patch_and_delete_never_raises_raw_db_error(tmp_path):
+    """A merge PATCH racing a DELETE of the same server must fail cleanly (HTTPException), never a raw DB error."""
+    from fastapi import HTTPException
+
+    engine = await _file_engine(tmp_path / "mcp.db")
+    user = SimpleNamespace(id=uuid.uuid4())
+
+    async def create():
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            await update_server("svc", {"url": "https://x", "a": "1"}, user, session, None, None)
+
+    async def patch_it():
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            await update_server("svc", {"b": "2"}, user, session, None, None, merge_existing=True)
+
+    async def delete_it():
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            await update_server("svc", {}, user, session, None, None, delete=True)
+
+    with patch.multiple("langflow.api.v2.mcp", **CACHE_PATCH):
+        # Many rounds to make the "deleted between the PATCH's read and its guarded write" window likely.
+        for _ in range(15):
+            await create()
+            results = await asyncio.gather(patch_it(), delete_it(), return_exceptions=True)
+            raw = [r for r in results if isinstance(r, Exception) and not isinstance(r, HTTPException)]
+            assert not raw, f"PATCH/DELETE race raised a raw DB error: {[type(r).__name__ for r in raw]}"
+
+    await engine.dispose()
