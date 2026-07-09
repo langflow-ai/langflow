@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.10.2"
+version = "0.11.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 
 dependencies = [
-    "lfx~=1.10.2",
+    "lfx~=1.11.0",
     "fastapi>=0.135.0,<1.0.0",
     "slowapi>=0.1.9,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
@@ -64,7 +64,6 @@ dependencies = [
     "uncurl>=0.0.11,<1.0.0",
     "sentry-sdk[fastapi,loguru]>=2.5.1,<3.0.0",
     "chardet>=7.3.0",
-    "firecrawl-py>=1.0.16,<2.0.0",
     "opentelemetry-api>=1.30.0,<2.0.0",
     "opentelemetry-sdk>=1.30.0,<2.0.0",
     "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
@@ -89,6 +88,7 @@ dependencies = [
     "networkx>=3.4.2,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
+    "ag-ui-protocol==0.1.18",
     "aiosqlite>=0.20.0,<1.0.0",
     "greenlet>=3.1.1,<4.0.0",
     "jsonquerylang>=1.1.1,<2.0.0",
@@ -108,6 +108,11 @@ dependencies = [
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
     "transformers>=5.6.0,<6.0.0",
+]
+
+[tool.uv]
+override-dependencies = [
+    "litellm>=1.85.1,<2.0.0"
 ]
 
 [dependency-groups]
@@ -190,7 +195,7 @@ local = [
 
 # Individual database providers
 couchbase = ["couchbase>=4.2.1"]
-cassandra = ["cassio>=0.1.7"]
+cassandra = ["lfx[cassandra]~=1.11.0"]  # cassio relocated to lfx (lfx-core Cassandra components)
 clickhouse = ["clickhouse-connect==0.7.19"]
 
 
@@ -215,12 +220,10 @@ upstash = ["upstash-vector==0.6.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
 milvus = ["langchain-milvus~=0.3.2"]
 mongodb-vectors = ["langchain-mongodb>=0.11.0"]
-astradb = ["langchain-astradb~=1.0.0"]
+# astradb graduated to the standalone lfx-datastax bundle (a regular dep of
+# langflow); langchain-astradb lives there now, not in langflow-base.
 
 # Individual LLM providers
-openai = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
-anthropic = ["langchain-anthropic~=1.4.6"]
-cohere = ["langchain-cohere~=0.5.0"]
 google = [
     "langchain-google-genai~=4.1.2",
     "langchain-google-vertexai>=3.2.0",
@@ -263,7 +266,7 @@ opendsstar = [
 ]
 
 # Individual tools
-beautifulsoup = ["beautifulsoup4==4.12.3"]
+beautifulsoup = ["lfx~=1.11.0"]  # beautifulsoup4 is now a hard lfx dependency
 serpapi = ["google-search-results>=2.4.1,<3.0.0"]
 google-api = ["google-api-python-client~=2.161"]
 wikipedia = ["wikipedia==1.4.0"]
@@ -292,20 +295,20 @@ lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
 huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
-metaphor = ["metaphor-python==0.1.23"]
+# Backwards-compatible alias: the Exa Search component moved to the lfx-exa
+# bundle and now uses exa-py; metaphor-python is deprecated and unused.
+metaphor = ["exa-py>=1.14,<3"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
-aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws~=1.1.0"]
+# Deliberately retained after the lfx-amazon graduation: boto3 also backs
+# langflow-base's own S3 storage backend (services/storage/s3.py, api/v2/files.py)
+# and lfx's S3 ingestion sources -- it is not exclusive to the amazon components.
+aws = ["boto3>=1.34.162,<2.0.0"]
 numexpr = ["numexpr>=2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector>=0.4.2"]
 litellm = [
-    # litellm has no Python 3.14-compatible release: every version from 1.83.8
-    # onward declares Requires-Python <3.14, so nothing satisfying our >=1.85.1
-    # floor installs on 3.14 (the newest 3.14-installable litellm is 1.83.7).
-    # Gate it off on 3.14 so `pip install langflow` resolves there instead of
-    # dead-ending; drop the marker once upstream ships a 3.14-compatible litellm.
-    "litellm>=1.85.1,<2.0.0; python_version < '3.14'",
+    "litellm>=1.85.1,<2.0.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
     # [proxy] extra pins boto3==1.43.1, which conflicts with our aioboto3
@@ -347,25 +350,20 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'"]
 
 # Toolguard Integration
-# Gated off 3.14: toolguard depends on litellm unconditionally, and litellm has
-# no 3.14-compatible release (see the litellm extra below), so allowing it on
-# 3.14 would drag in an uninstallable / sub-floor litellm. Re-enable once
-# upstream litellm supports 3.14.
-toolguard = ["toolguard>=0.2.20,<1.0.0; python_version < '3.14'"]
+# Gated off 3.14: lfx[toolguard] pulls the ToolGuard Policies component, which
+# depends on litellm. Re-enable once upstream litellm supports 3.14.
+toolguard = ["lfx[toolguard]~=1.11.0; python_version < '3.14'"]  # toolguard relocated to lfx
 
 # Additional LangChain integrations
 # Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels
 langchain-huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 langchain-unstructured = ["langchain-unstructured~=1.0.0"]
-graph-retriever = ["langchain-graph-retriever==0.8.0", "graph-retriever==0.8.0"]
+# graph-retriever graduated to the standalone lfx-datastax bundle (a regular
+# dep of langflow); langchain-graph-retriever / graph-retriever live there now.
 langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
 
 # Additional monitoring
-# Gated off 3.14: opik depends on litellm unconditionally, and litellm has no
-# 3.14-compatible release (see the litellm extra below), so allowing it on 3.14
-# would drag in an uninstallable / sub-floor litellm. Re-enable once upstream
-# litellm supports 3.14.
-opik = ["opik>=2.0.0,<3.0.0; python_version < '3.14'"]
+opik = ["opik>=2.0.0,<3.0.0"]
 traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
 openlayer = ["openlayer>=0.9.0,<1.0.0"]
 
@@ -422,126 +420,55 @@ gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 # SDKs for IBM watsonx Orchestrate deployment adapter.
 ibm-watsonx-clients = [
     "ibm-cloud-sdk-core~=3.24.4",
-    "ibm-watsonx-orchestrate-core~=2.8.0; python_version >= '3.11' and python_version < '3.14'",
-    "ibm-watsonx-orchestrate-clients~=2.8.0; python_version >= '3.11' and python_version < '3.14'",
+    "ibm-watsonx-orchestrate-core~=2.12.0; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-clients~=2.12.0; python_version >= '3.11'",
 ]
 
 complete = [
-    "langflow-base[couchbase]",
-    "langflow-base[cassandra]",
-    "langflow-base[clickhouse]",
-    "langflow-base[mongodb]",
-    "langflow-base[supabase]",
+    # langflow-base[complete] pulls the third-party libraries that
+    # langflow-base's OWN code imports -- service backends (cache, knowledge
+    # base), the tracing/observability backends in langflow.services.tracing.*,
+    # MCP, and deployment adapters. Provider *component* dependencies now live in
+    # the lfx-* bundles (installed via langflow's "lfx-bundles[all-no-torch]"
+    # default plus explicit bundle deps), so they are intentionally NOT
+    # re-declared here -- doing so re-pulled large, already-bundled stacks (and
+    # torch) into every install. When adding a base extra, only list it here if
+    # langflow-base itself imports it.
+
+    # Cache / state
     "langflow-base[redis]",
-    "langflow-base[elasticsearch]",
-    "langflow-base[faiss]",
-    "langflow-base[qdrant]",
-    "langflow-base[qdrant-vectors]",
-    "langflow-base[weaviate]",
+    # Knowledge-base vector store
     "langflow-base[chroma]",
-    "langflow-base[upstash]",
-    "langflow-base[pinecone]",
-    "langflow-base[milvus]",
-    "langflow-base[mongodb-vectors]",
-    "langflow-base[astradb]",
-    "langflow-base[openai]",
-    "langflow-base[anthropic]",
-    "langflow-base[cohere]",
-    "langflow-base[google]",
-    "langflow-base[ollama]",
-    "langflow-base[nvidia]",
-    "langflow-base[mistral]",
-    "langflow-base[sambanova]",
-    "langflow-base[groq]",
+    # Observability / tracing backends (langflow.services.tracing.*)
     "langflow-base[langfuse]",
     "langflow-base[langwatch]",
     "langflow-base[langsmith]",
     "langflow-base[arize]",
-    "langflow-base[pypdf]",
-    "langflow-base[docx]",
-    "langflow-base[pytube]",
-    # "langflow-base[crewai]",  # commented out due to httpx version conflict
-    "langflow-base[smolagents]",
-    "langflow-base[opendsstar]",
-    "langflow-base[beautifulsoup]",
-    "langflow-base[serpapi]",
-    "langflow-base[google-api]",
-    "langflow-base[wikipedia]",
-    "langflow-base[fake-useragent]",
-    # duckduckgo was an extra of langflow-base; it has been moved to
-    # the standalone lfx-duckduckgo bundle (now a regular dep of langflow).
-    "langflow-base[yfinance]",
-    "langflow-base[wolframalpha]",
-    "langflow-base[pyarrow]",
-    "langflow-base[fastavro]",
-    "langflow-base[gitpython]",
-    "langflow-base[nltk]",
-    "langflow-base[lark]",
-    "langflow-base[huggingface]",
-    "langflow-base[metaphor]",
-    "langflow-base[metal]",
-    "langflow-base[markup]",
-    "langflow-base[aws]",
-    "langflow-base[numexpr]",
-    "langflow-base[qianfan]",
-    "langflow-base[pgvector]",
-    "langflow-base[litellm]",
-    "langflow-base[zep]",
-    "langflow-base[youtube]",
-    "langflow-base[markdown]",
-    "langflow-base[kubernetes]",
-    "langflow-base[json-repair]",
-    "langflow-base[composio]",
-    "langflow-base[ragstack]",
-    "langflow-base[opensearch]",
-    "langflow-base[atlassian]",
-    "langflow-base[mem0]",
-    "langflow-base[needle]",
-    "langflow-base[sseclient]",
     "langflow-base[openinference]",
-    "langflow-base[mcp]",
-    "langflow-base[ag2]",
-    "langflow-base[scrapegraph]",
-    "langflow-base[apify]",
-    "langflow-base[spider]",
-    # ALTK
-    "langflow-base[altk]",
-    # Toolguard
-    "langflow-base[toolguard]",
-    # Additional LangChain integrations
-    "langflow-base[langchain-huggingface]",
-    "langflow-base[langchain-unstructured]",
-    "langflow-base[graph-retriever]",
-    "langflow-base[langchain-mcp-adapters]",
-    # Additional monitoring
     "langflow-base[opik]",
     "langflow-base[traceloop]",
     "langflow-base[openlayer]",
-    # Document processing / OCR
-    "langflow-base[docling]",
-    "langflow-base[easyocr]",
-    # Additional tools
-    "langflow-base[cleanlab]",
-    "langflow-base[twelvelabs]",
-    "langflow-base[jigsawstack]",
-    "langflow-base[assemblyai]",
-    # Data processing
-    "langflow-base[datasets]",
-    "langflow-base[fastparquet]",
-    # Vision / ML
-    "langflow-base[vlmrun]",
-    "langflow-base[cuga]",
-    "langflow-base[mlx]",
+    # Document processing / OCR: docling and easyocr are now OPT-IN -- both pull
+    # torch, which is no longer shipped by default. The File component's docling
+    # path degrades gracefully and is enabled with: pip install "langflow[docling]".
+    # Both extra definitions remain, so langflow-base[docling] / [easyocr] still
+    # install on demand.
     # MCP
-    "langflow-base[fastmcp]",
-    # AWS extras
+    "langflow-base[mcp]",
+    # Orchestration / deployment adapters
+    "langflow-base[kubernetes]",
     "langflow-base[aioboto3]",
-    # Astra
-    "langflow-base[astrapy]",
-    # Windows-specific
-    "langflow-base[gassist]",
-    # wxO deployment adapter,
-    "langflow-base[ibm-watsonx-clients]"
+    "langflow-base[ibm-watsonx-clients]",
+    # lfx-core component features: the dependency now lives in lfx (these base
+    # extras re-export the matching lfx extra), keeping a single source of truth
+    # while the default install still ships these components working.
+    "langflow-base[cassandra]",  # -> lfx[cassandra] (cassio; Cassandra components)
+    "langflow-base[toolguard]",  # -> lfx[toolguard] (Policies component)
+    # Deliberately retained in langflow-base (not bundled):
+    #   litellm -- langfuse logging via litellm.proxy.proxy_server (#12228);
+    #              the lfx-bundles litellm component uses the langchain-openai
+    #              client and does not import the litellm package.
+    "langflow-base[litellm]",
 ]
 
 all = [

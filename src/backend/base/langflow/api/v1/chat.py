@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import re
 import time
 import traceback
 import uuid
@@ -35,6 +34,7 @@ from langflow.api.utils import (
     get_top_level_vertices,
     parse_exception,
     scope_session_to_namespace,
+    validate_public_files,
     verify_public_flow_and_get_user,
 )
 from langflow.api.v1.schemas import (
@@ -59,7 +59,11 @@ from langflow.services.deps import (
     get_telemetry_service,
     session_scope,
 )
-from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
+from langflow.services.job_queue.service import (
+    JobQueueBackendUnavailableError,
+    JobQueueNotFoundError,
+    JobQueueService,
+)
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -73,7 +77,10 @@ async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, qu
 
     Jobs with no registered owner (build_public_tmp) are accessible to any authenticated user.
     """
-    job_owner = await queue_service.get_job_owner(job_id)
+    try:
+        job_owner = await queue_service.get_job_owner(job_id)
+    except JobQueueBackendUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     if job_owner is not None and job_owner != current_user.id:
         await logger.awarning(
             "Ownership check failed: user %s tried to access job %s owned by %s",
@@ -82,6 +89,25 @@ async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, qu
             job_owner,
         )
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+
+
+async def _register_job_owner_or_cancel(queue_service: JobQueueService, job_id: str, user_id: uuid.UUID) -> None:
+    """Register the build's owner, cancelling the just-started build on backend outage.
+
+    By the time this runs, start_flow_build has already launched the build task.
+    If the Redis-backed queue is unreachable, the client never receives the
+    job_id, so cancel the build (best-effort) instead of leaving an unreachable
+    build running, then surface a clean 503 instead of a raw redis
+    ConnectionError 500.
+    """
+    try:
+        await queue_service.register_job_owner(job_id, user_id)
+    except JobQueueBackendUnavailableError as exc:
+        try:
+            await queue_service.cancel_job(job_id)
+        except Exception as cancel_exc:  # noqa: BLE001
+            await logger.awarning(f"Failed to cancel job {job_id} after owner registration failed: {cancel_exc!r}")
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post(
@@ -302,7 +328,7 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
-    await queue_service.register_job_owner(job_id, current_user.id)
+    await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
     if event_delivery != EventDeliveryType.DIRECT:
@@ -722,34 +748,9 @@ async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user)
     )
 
 
-# Public flow file paths must be `{source_flow_id}/{safe_basename}` — uploads
-# under that namespace are the only legitimate inputs for an unauthenticated
-# build. Anything else (absolute paths, traversal, foreign flow_ids) is a
-# probe at the arbitrary-file-read class of bug.
-_PUBLIC_FILE_PATH_RE = re.compile(
-    r"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/([^/\\]+)$"
-)
-_PUBLIC_FILE_REJECTED_SUBSTRINGS = ("\x00", "..", "\\")
-
-
-def _validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) -> None:
-    """Reject file references that aren't `{source_flow_id}/{basename}`."""
-    if not files:
-        return
-    expected_flow_id = str(source_flow_id).lower()
-    for entry in files:
-        if not isinstance(entry, str) or not entry:
-            raise HTTPException(status_code=400, detail="Invalid file entry")
-        if any(token in entry for token in _PUBLIC_FILE_REJECTED_SUBSTRINGS):
-            raise HTTPException(status_code=400, detail="Invalid file path")
-        match = _PUBLIC_FILE_PATH_RE.match(entry)
-        if not match:
-            raise HTTPException(status_code=400, detail="Invalid file path format")
-        flow_id_segment, basename = match.group(1), match.group(2)
-        if flow_id_segment.lower() != expected_flow_id:
-            raise HTTPException(status_code=400, detail="File not in this flow's namespace")
-        if basename in (".", ".."):
-            raise HTTPException(status_code=400, detail="Invalid filename")
+# NOTE: ``validate_public_files`` (the canonical helper that mitigates
+# GHSA-rcjh-r59h-gq37) was moved to ``langflow.api.utils.flow_utils`` so v2's
+# public workflow endpoint shares the exact same gate. Keep it imported above.
 
 
 @router.post("/build_public_tmp/{flow_id}/flow")
@@ -812,7 +813,7 @@ async def build_public_tmp(
         # Reject caller-supplied file references that aren't scoped to this
         # public flow's own storage namespace. Done before any flow lookup so
         # malformed requests fail fast and don't touch the DB.
-        _validate_public_files(files, flow_id)
+        validate_public_files(files, flow_id)
 
         # Verify this is a public flow and get the associated user
         client_id = request.cookies.get("client_id")
@@ -888,6 +889,19 @@ async def build_public_tmp(
     except CustomComponentValidationError as exc:
         await logger.awarning(f"Public flow validation failed: {exc}")
         raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc
+    except JobQueueBackendUnavailableError as exc:
+        # The public marker could not be persisted to the shared (Redis) backend.
+        # Returning the job_id anyway would hand back an un-shareable id: on a
+        # multi-worker deployment every other worker's public events/cancel
+        # endpoints would 404 it. Cancel the just-started build (best-effort) and
+        # surface a clean 503 instead of a 500 / an unusable job_id.
+        try:
+            await queue_service.cancel_job(job_id)
+        except Exception as cancel_exc:  # noqa: BLE001
+            await logger.awarning(
+                f"Failed to cancel public job {job_id} after marker persistence failed: {cancel_exc!r}"
+            )
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

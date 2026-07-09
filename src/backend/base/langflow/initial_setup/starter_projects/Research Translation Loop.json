@@ -7,179 +7,151 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-nr0Vp",
+            "id": "ChatInput-MBlfD",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "ArXivComponent-tAHR5",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "ArXivComponent-zGqWh",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-nr0Vp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nr0Vpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-tAHR5{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-tAHR5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-MBlfD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-MBlfDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-zGqWh{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-zGqWhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-nr0Vp",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-nr0Vpœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ArXivComponent-tAHR5",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-tAHR5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-MBlfD",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-MBlfDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ArXivComponent-zGqWh",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-zGqWhœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-GtPZT",
+            "id": "LoopComponent-E7Ur0",
             "name": "item",
-            "output_types": [
-              "JSON"
-            ]
+            "output_types": ["JSON"]
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-pXAMb",
-            "inputTypes": [
-              "DataFrame",
-              "Table",
-              "Data",
-              "JSON"
-            ],
+            "id": "ParserComponent-V2o48",
+            "inputTypes": ["DataFrame", "Table", "Data", "JSON"],
             "type": "other"
           }
         },
-        "id": "xy-edge__LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œTableœ]}-ParserComponent-pXAMb{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-pXAMbœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
-        "source": "LoopComponent-GtPZT",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œitemœ, œoutput_typesœ: [œJSONœ]}",
-        "target": "ParserComponent-pXAMb",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-pXAMbœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-LoopComponent-E7Ur0{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-E7Ur0œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-V2o48{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-V2o48œ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-E7Ur0",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-E7Ur0œ, œnameœ: œitemœ, œoutput_typesœ: [œJSONœ]}",
+        "target": "ParserComponent-V2o48",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-V2o48œ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-pXAMb",
+            "id": "ParserComponent-V2o48",
             "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-XKvly",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "LanguageModelComponent-ps5yd",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__ParserComponent-pXAMb{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-pXAMbœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-XKvly{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-XKvlyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ParserComponent-pXAMb",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-pXAMbœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-XKvly",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-XKvlyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParserComponent-V2o48{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-V2o48œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-ps5yd{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-ps5ydœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParserComponent-V2o48",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-V2o48œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-ps5yd",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-ps5ydœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-XKvly",
+            "id": "LanguageModelComponent-ps5yd",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-GtPZT",
+            "id": "LoopComponent-E7Ur0",
             "name": "item",
-            "output_types": [
-              "Data",
-              "Message"
-            ]
+            "output_types": ["Data", "Message"]
           }
         },
-        "id": "xy-edge__LanguageModelComponent-XKvly{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-XKvlyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
-        "source": "LanguageModelComponent-XKvly",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-XKvlyœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LoopComponent-GtPZT",
-        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ, œMessageœ]}"
+        "id": "reactflow__edge-LanguageModelComponent-ps5yd{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-ps5ydœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-E7Ur0{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-E7Ur0œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
+        "selected": false,
+        "source": "LanguageModelComponent-ps5yd",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-ps5ydœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LoopComponent-E7Ur0",
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-E7Ur0œ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ, œMessageœ]}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ArXivComponent",
-            "id": "ArXivComponent-tAHR5",
+            "id": "ArXivComponent-zGqWh",
             "name": "dataframe",
-            "output_types": [
-              "Table"
-            ]
+            "output_types": ["Table"]
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "LoopComponent-GtPZT",
-            "inputTypes": [
-              "DataFrame",
-              "Table",
-              "Data",
-              "Message"
-            ],
+            "id": "LoopComponent-E7Ur0",
+            "inputTypes": ["DataFrame", "Table", "Data", "Message"],
             "type": "other"
           }
         },
-        "id": "xy-edge__ArXivComponent-tAHR5{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-tAHR5œ,œnameœ:œdataframeœ,œoutput_typesœ:[œTableœ]}-LoopComponent-GtPZT{œfieldNameœ:œdataœ,œidœ:œLoopComponent-GtPZTœ,œinputTypesœ:[œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
-        "source": "ArXivComponent-tAHR5",
-        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-tAHR5œ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
-        "target": "LoopComponent-GtPZT",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-GtPZTœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ArXivComponent-zGqWh{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-zGqWhœ,œnameœ:œdataframeœ,œoutput_typesœ:[œTableœ]}-LoopComponent-E7Ur0{œfieldNameœ:œdataœ,œidœ:œLoopComponent-E7Ur0œ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ArXivComponent-zGqWh",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-zGqWhœ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
+        "target": "LoopComponent-E7Ur0",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-E7Ur0œ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-GtPZT",
+            "id": "LoopComponent-E7Ur0",
             "name": "done",
-            "output_types": [
-              "Table"
-            ]
+            "output_types": ["Table"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-YAED9",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "id": "ChatOutput-scvYG",
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "other"
           }
         },
-        "id": "xy-edge__LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œdoneœ,œoutput_typesœ:[œTableœ]}-ChatOutput-YAED9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-YAED9œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "LoopComponent-GtPZT",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œdoneœ, œoutput_typesœ: [œTableœ]}",
-        "target": "ChatOutput-YAED9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-YAED9œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-LoopComponent-E7Ur0{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-E7Ur0œ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-scvYG{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-scvYGœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-E7Ur0",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-E7Ur0œ, œnameœ: œdoneœ, œoutput_typesœ: [œTableœ]}",
+        "target": "ChatOutput-scvYG",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-scvYGœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ArXivComponent-tAHR5",
+          "id": "ArXivComponent-zGqWh",
           "node": {
-            "base_classes": [
-              "DataFrame",
-              "Table"
-            ],
+            "base_classes": ["DataFrame", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -187,17 +159,13 @@
             "display_name": "arXiv",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "search_query",
-              "search_type",
-              "max_results"
-            ],
+            "field_order": ["search_query", "search_type", "max_results"],
             "frozen": false,
             "icon": "arXiv",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "0ed963027e25",
+              "code_hash": "9475ee946974",
               "dependencies": {
                 "dependencies": [
                   {
@@ -225,9 +193,7 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -250,7 +216,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import urllib\nfrom xml.etree.ElementTree import Element\n\nfrom defusedxml.ElementTree import fromstring\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import DropdownInput, IntInput, MessageTextInput, Output\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\n\n\nclass ArXivComponent(Component):\n    display_name = \"arXiv\"\n    description = \"Search and retrieve papers from arXiv.org.\"\n    icon = \"arXiv\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"The search query for arXiv papers (e.g., 'quantum computing')\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Field\",\n            info=\"The field to search in\",\n            options=[\"all\", \"title\", \"abstract\", \"author\", \"cat\"],  # cat is for category\n            value=\"all\",\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"Maximum number of results to return\",\n            value=10,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Table\", name=\"dataframe\", method=\"search_papers_dataframe\"),\n    ]\n\n    def build_query_url(self) -> str:\n        \"\"\"Build the arXiv API query URL.\"\"\"\n        base_url = \"http://export.arxiv.org/api/query?\"\n\n        # Build the search query based on search type\n        if self.search_type == \"all\":\n            search_query = self.search_query  # No prefix for all fields\n        else:\n            # Map dropdown values to ArXiv API prefixes\n            prefix_map = {\"title\": \"ti\", \"abstract\": \"abs\", \"author\": \"au\", \"cat\": \"cat\"}\n            prefix = prefix_map.get(self.search_type, \"\")\n            search_query = f\"{prefix}:{self.search_query}\"\n\n        # URL parameters\n        params = {\n            \"search_query\": search_query,\n            \"max_results\": str(self.max_results),\n        }\n\n        # Convert params to URL query string\n        query_string = \"&\".join([f\"{k}={urllib.parse.quote(str(v))}\" for k, v in params.items()])\n\n        return base_url + query_string\n\n    def parse_atom_response(self, response_text: str) -> list[dict]:\n        \"\"\"Parse the Atom XML response from arXiv.\"\"\"\n        # Parse XML safely using defusedxml\n        root = fromstring(response_text)\n\n        # Define namespace dictionary for XML parsing\n        ns = {\"atom\": \"http://www.w3.org/2005/Atom\", \"arxiv\": \"http://arxiv.org/schemas/atom\"}\n\n        papers = []\n        # Process each entry (paper)\n        for entry in root.findall(\"atom:entry\", ns):\n            paper = {\n                \"id\": self._get_text(entry, \"atom:id\", ns),\n                \"title\": self._get_text(entry, \"atom:title\", ns),\n                \"summary\": self._get_text(entry, \"atom:summary\", ns),\n                \"published\": self._get_text(entry, \"atom:published\", ns),\n                \"updated\": self._get_text(entry, \"atom:updated\", ns),\n                \"authors\": [author.find(\"atom:name\", ns).text for author in entry.findall(\"atom:author\", ns)],\n                \"arxiv_url\": self._get_link(entry, \"alternate\", ns),\n                \"pdf_url\": self._get_link(entry, \"related\", ns),\n                \"comment\": self._get_text(entry, \"arxiv:comment\", ns),\n                \"journal_ref\": self._get_text(entry, \"arxiv:journal_ref\", ns),\n                \"primary_category\": self._get_category(entry, ns),\n                \"categories\": [cat.get(\"term\") for cat in entry.findall(\"atom:category\", ns)],\n            }\n            papers.append(paper)\n\n        return papers\n\n    def _get_text(self, element: Element, path: str, ns: dict) -> str | None:\n        \"\"\"Safely extract text from an XML element.\"\"\"\n        el = element.find(path, ns)\n        return el.text.strip() if el is not None and el.text else None\n\n    def _get_link(self, element: Element, rel: str, ns: dict) -> str | None:\n        \"\"\"Get link URL based on relation type.\"\"\"\n        for link in element.findall(\"atom:link\", ns):\n            if link.get(\"rel\") == rel:\n                return link.get(\"href\")\n        return None\n\n    def _get_category(self, element: Element, ns: dict) -> str | None:\n        \"\"\"Get primary category.\"\"\"\n        cat = element.find(\"arxiv:primary_category\", ns)\n        return cat.get(\"term\") if cat is not None else None\n\n    def run_model(self) -> DataFrame:\n        return self.search_papers_dataframe()\n\n    def search_papers(self) -> list[Data]:\n        \"\"\"Search arXiv and return results.\"\"\"\n        try:\n            # Build the query URL\n            url = self.build_query_url()\n\n            # Validate URL scheme and host\n            parsed_url = urllib.parse.urlparse(url)\n            if parsed_url.scheme not in {\"http\", \"https\"}:\n                error_msg = f\"Invalid URL scheme: {parsed_url.scheme}\"\n                raise ValueError(error_msg)\n            if parsed_url.hostname != \"export.arxiv.org\":\n                error_msg = f\"Invalid host: {parsed_url.hostname}\"\n                raise ValueError(error_msg)\n\n            # Create a custom opener that only allows http/https schemes\n            class RestrictedHTTPHandler(urllib.request.HTTPHandler):\n                def http_open(self, req):\n                    return super().http_open(req)\n\n            class RestrictedHTTPSHandler(urllib.request.HTTPSHandler):\n                def https_open(self, req):\n                    return super().https_open(req)\n\n            # Build opener with restricted handlers\n            opener = urllib.request.build_opener(RestrictedHTTPHandler, RestrictedHTTPSHandler)\n            urllib.request.install_opener(opener)\n\n            # Make the request with validated URL using restricted opener\n            response = opener.open(url)\n            response_text = response.read().decode(\"utf-8\")\n\n            # Parse the response\n            papers = self.parse_atom_response(response_text)\n\n            # Convert to Data objects\n            results = [Data(data=paper) for paper in papers]\n            self.status = results\n        except (urllib.error.URLError, ValueError) as e:\n            error_data = Data(data={\"error\": f\"Request error: {e!s}\"})\n            self.status = error_data\n            return [error_data]\n        else:\n            return results\n\n    def search_papers_dataframe(self) -> DataFrame:\n        \"\"\"Convert the Arxiv search results to a DataFrame.\n\n        Returns:\n            DataFrame: A DataFrame containing the search results.\n        \"\"\"\n        data = self.search_papers()\n        return DataFrame(data)\n"
+                "value": "import urllib\nfrom xml.etree.ElementTree import Element\n\nfrom defusedxml.ElementTree import fromstring\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import DropdownInput, IntInput, MessageTextInput, Output\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\n\nARXIV_REQUEST_TIMEOUT_SECONDS = 10\n\n\nclass ArXivComponent(Component):\n    display_name = \"arXiv\"\n    description = \"Search and retrieve papers from arXiv.org.\"\n    icon = \"arXiv\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"The search query for arXiv papers (e.g., 'quantum computing')\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Field\",\n            info=\"The field to search in\",\n            options=[\"all\", \"title\", \"abstract\", \"author\", \"cat\"],  # cat is for category\n            value=\"all\",\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"Maximum number of results to return\",\n            value=10,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Table\", name=\"dataframe\", method=\"search_papers_dataframe\"),\n    ]\n\n    def build_query_url(self) -> str:\n        \"\"\"Build the arXiv API query URL.\"\"\"\n        base_url = \"http://export.arxiv.org/api/query?\"\n\n        # Build the search query based on search type\n        if self.search_type == \"all\":\n            search_query = self.search_query  # No prefix for all fields\n        else:\n            # Map dropdown values to ArXiv API prefixes\n            prefix_map = {\"title\": \"ti\", \"abstract\": \"abs\", \"author\": \"au\", \"cat\": \"cat\"}\n            prefix = prefix_map.get(self.search_type, \"\")\n            search_query = f\"{prefix}:{self.search_query}\"\n\n        # URL parameters\n        params = {\n            \"search_query\": search_query,\n            \"max_results\": str(self.max_results),\n        }\n\n        # Convert params to URL query string\n        query_string = \"&\".join([f\"{k}={urllib.parse.quote(str(v))}\" for k, v in params.items()])\n\n        return base_url + query_string\n\n    def parse_atom_response(self, response_text: str) -> list[dict]:\n        \"\"\"Parse the Atom XML response from arXiv.\"\"\"\n        # Parse XML safely using defusedxml\n        root = fromstring(response_text)\n\n        # Define namespace dictionary for XML parsing\n        ns = {\"atom\": \"http://www.w3.org/2005/Atom\", \"arxiv\": \"http://arxiv.org/schemas/atom\"}\n\n        papers = []\n        # Process each entry (paper)\n        for entry in root.findall(\"atom:entry\", ns):\n            paper = {\n                \"id\": self._get_text(entry, \"atom:id\", ns),\n                \"title\": self._get_text(entry, \"atom:title\", ns),\n                \"summary\": self._get_text(entry, \"atom:summary\", ns),\n                \"published\": self._get_text(entry, \"atom:published\", ns),\n                \"updated\": self._get_text(entry, \"atom:updated\", ns),\n                \"authors\": [author.find(\"atom:name\", ns).text for author in entry.findall(\"atom:author\", ns)],\n                \"arxiv_url\": self._get_link(entry, \"alternate\", ns),\n                \"pdf_url\": self._get_link(entry, \"related\", ns),\n                \"comment\": self._get_text(entry, \"arxiv:comment\", ns),\n                \"journal_ref\": self._get_text(entry, \"arxiv:journal_ref\", ns),\n                \"primary_category\": self._get_category(entry, ns),\n                \"categories\": [cat.get(\"term\") for cat in entry.findall(\"atom:category\", ns)],\n            }\n            papers.append(paper)\n\n        return papers\n\n    def _get_text(self, element: Element, path: str, ns: dict) -> str | None:\n        \"\"\"Safely extract text from an XML element.\"\"\"\n        el = element.find(path, ns)\n        return el.text.strip() if el is not None and el.text else None\n\n    def _get_link(self, element: Element, rel: str, ns: dict) -> str | None:\n        \"\"\"Get link URL based on relation type.\"\"\"\n        for link in element.findall(\"atom:link\", ns):\n            if link.get(\"rel\") == rel:\n                return link.get(\"href\")\n        return None\n\n    def _get_category(self, element: Element, ns: dict) -> str | None:\n        \"\"\"Get primary category.\"\"\"\n        cat = element.find(\"arxiv:primary_category\", ns)\n        return cat.get(\"term\") if cat is not None else None\n\n    def run_model(self) -> DataFrame:\n        return self.search_papers_dataframe()\n\n    def search_papers(self) -> list[Data]:\n        \"\"\"Search arXiv and return results.\"\"\"\n        try:\n            # Build the query URL\n            url = self.build_query_url()\n\n            # Validate URL scheme and host\n            parsed_url = urllib.parse.urlparse(url)\n            if parsed_url.scheme not in {\"http\", \"https\"}:\n                error_msg = f\"Invalid URL scheme: {parsed_url.scheme}\"\n                raise ValueError(error_msg)\n            if parsed_url.hostname != \"export.arxiv.org\":\n                error_msg = f\"Invalid host: {parsed_url.hostname}\"\n                raise ValueError(error_msg)\n\n            # Create a custom opener that only allows http/https schemes\n            class RestrictedHTTPHandler(urllib.request.HTTPHandler):\n                def http_open(self, req):\n                    return super().http_open(req)\n\n            class RestrictedHTTPSHandler(urllib.request.HTTPSHandler):\n                def https_open(self, req):\n                    return super().https_open(req)\n\n            # Build opener with restricted handlers\n            opener = urllib.request.build_opener(RestrictedHTTPHandler, RestrictedHTTPSHandler)\n            urllib.request.install_opener(opener)\n\n            # Make the request with validated URL using restricted opener\n            response = opener.open(url, timeout=ARXIV_REQUEST_TIMEOUT_SECONDS)\n            response_text = response.read().decode(\"utf-8\")\n\n            # Parse the response\n            papers = self.parse_atom_response(response_text)\n\n            # Convert to Data objects\n            results = [Data(data=paper) for paper in papers]\n            self.status = results\n        except (TimeoutError, urllib.error.URLError, ValueError) as e:\n            error_data = Data(data={\"error\": f\"Request error: {e!s}\"})\n            self.status = error_data\n            return [error_data]\n        else:\n            return results\n\n    def search_papers_dataframe(self) -> DataFrame:\n        \"\"\"Convert the Arxiv search results to a DataFrame.\n\n        Returns:\n            DataFrame: A DataFrame containing the search results.\n        \"\"\"\n        data = self.search_papers()\n        return DataFrame(data)\n"
               },
               "max_results": {
                 "_input_type": "IntInput",
@@ -277,9 +243,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "The search query for arXiv papers (e.g., 'quantum computing')",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -303,13 +267,7 @@
                 "dynamic": false,
                 "info": "The field to search in",
                 "name": "search_type",
-                "options": [
-                  "all",
-                  "title",
-                  "abstract",
-                  "author",
-                  "cat"
-                ],
+                "options": ["all", "title", "abstract", "author", "cat"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -328,9 +286,9 @@
           "type": "ArXivComponent"
         },
         "dragging": false,
-        "id": "ArXivComponent-tAHR5",
+        "id": "ArXivComponent-zGqWh",
         "measured": {
-          "height": 369,
+          "height": 371,
           "width": 320
         },
         "position": {
@@ -342,11 +300,9 @@
       },
       {
         "data": {
-          "id": "ChatOutput-YAED9",
+          "id": "ChatOutput-scvYG",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -401,9 +357,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -452,9 +406,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -475,9 +427,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -525,10 +475,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -546,9 +493,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -569,9 +514,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -611,9 +554,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-YAED9",
+        "id": "ChatOutput-scvYG",
         "measured": {
-          "height": 48,
+          "height": 52,
           "width": 192
         },
         "position": {
@@ -625,11 +568,9 @@
       },
       {
         "data": {
-          "id": "ChatInput-nr0Vp",
+          "id": "ChatInput-MBlfD",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -675,9 +616,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -708,9 +647,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -801,10 +738,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -822,9 +756,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -845,9 +777,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -887,13 +817,13 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-nr0Vp",
+        "id": "ChatInput-MBlfD",
         "measured": {
-          "height": 204,
+          "height": 207,
           "width": 320
         },
         "position": {
-          "x": -333.65585758816223,
+          "x": -303.21079570415833,
           "y": 107.75353484470551
         },
         "selected": false,
@@ -901,7 +831,7 @@
       },
       {
         "data": {
-          "id": "note-nrMOM",
+          "id": "note-Hiyq7",
           "node": {
             "description": "# 📖 README\nThis template translates research paper summaries on ArXiv into Portuguese and summarizes them. \n Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, translates them with the **OpenAI** model component, and outputs an aggregated version of all translated papers.  \n\n## Quick start\n1. Configure your **Model Provider** with your API credentials. \n2. In the **Playground**, enter a query related to a research topic (for example, “Quantum Computing Advancements”).  \n\n  The flow fetches a list of research papers from ArXiv matching the query. Each paper in the retrieved list is processed one-by-one using the Langflow **Loop component**. \n\n  The abstract of each paper is translated into Portuguese by the **OpenAI** model component. \n\n Once all papers are translated, the system aggregates them into a **single structured output**.",
             "display_name": "",
@@ -913,7 +843,7 @@
         },
         "dragging": false,
         "height": 647,
-        "id": "note-nrMOM",
+        "id": "note-Hiyq7",
         "measured": {
           "height": 647,
           "width": 576
@@ -929,12 +859,9 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-XKvly",
+          "id": "LanguageModelComponent-ps5yd",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -958,7 +885,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-12-18T20:14:17.831Z",
+            "last_updated": "2026-06-26T12:11:44.628Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -996,9 +923,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1014,9 +939,7 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1024,10 +947,10 @@
             "priority": 0,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "70f6d78d-41ad-42a3-854d-405e161ee563"
+                "value": "7eb7c081-888c-4f25-ba81-c84e6aab2778"
               },
               "_frontend_node_folder_id": {
-                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
+                "value": "511db528-db06-4bf9-bdf0-f13221918e76"
               },
               "_type": "Component",
               "api_key": {
@@ -1035,7 +958,7 @@
                 "advanced": true,
                 "display_name": "API Key",
                 "dynamic": false,
-                "info": "Model Provider API key",
+                "info": "Overrides global provider settings. Leave blank to use your pre-configured API Key.",
                 "input_types": [],
                 "load_from_db": false,
                 "name": "api_key",
@@ -1044,7 +967,7 @@
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "track_in_telemetry": false,
                 "type": "str",
@@ -1106,9 +1029,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1125,33 +1046,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": true,
-              "max_tokens": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Tokens",
-                "dynamic": false,
-                "info": "Maximum number of tokens to generate. Field name varies by provider.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_tokens",
-                "override_skip": false,
-                "placeholder": "",
-                "range_spec": {
-                  "max": 128000.0,
-                  "min": 1.0,
-                  "step": 1.0,
-                  "step_type": "int"
-                },
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "int",
-                "value": 0
-              },
+              "is_refresh": false,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -1169,7 +1064,7 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -1210,14 +1105,12 @@
                 "value": ""
               },
               "ollama_base_url": {
-                "_input_type": "MessageInput",
+                "_input_type": "StrInput",
                 "advanced": false,
                 "display_name": "Ollama API URL",
                 "dynamic": false,
                 "info": "Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1233,7 +1126,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "http://localhost:11434"
               },
               "project_id": {
                 "_input_type": "StrInput",
@@ -1305,9 +1198,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1363,9 +1254,9 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-XKvly",
+        "id": "LanguageModelComponent-ps5yd",
         "measured": {
-          "height": 369,
+          "height": 371,
           "width": 320
         },
         "position": {
@@ -1377,14 +1268,9 @@
       },
       {
         "data": {
-          "id": "LoopComponent-GtPZT",
+          "id": "LoopComponent-E7Ur0",
           "node": {
-            "base_classes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table"
-            ],
+            "base_classes": ["Data", "DataFrame", "JSON", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1392,9 +1278,7 @@
             "display_name": "Loop",
             "documentation": "https://docs.langflow.org/loop",
             "edited": false,
-            "field_order": [
-              "data"
-            ],
+            "field_order": ["data"],
             "frozen": false,
             "icon": "infinity",
             "legacy": false,
@@ -1419,17 +1303,12 @@
                 "cache": true,
                 "display_name": "Item",
                 "group_outputs": true,
-                "loop_types": [
-                  "Message"
-                ],
+                "loop_types": ["Message"],
                 "method": "item_output",
                 "name": "item",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "Data",
-                  "JSON"
-                ],
+                "types": ["Data", "JSON"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1441,10 +1320,7 @@
                 "name": "done",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "DataFrame",
-                  "Table"
-                ],
+                "types": ["DataFrame", "Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1475,12 +1351,7 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Data to iterate over. Accepts DataFrame, Table, Data, or Message.",
-                "input_types": [
-                  "DataFrame",
-                  "Table",
-                  "Data",
-                  "Message"
-                ],
+                "input_types": ["DataFrame", "Table", "Data", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "data",
@@ -1501,9 +1372,9 @@
           "type": "LoopComponent"
         },
         "dragging": false,
-        "id": "LoopComponent-GtPZT",
+        "id": "LoopComponent-E7Ur0",
         "measured": {
-          "height": 274,
+          "height": 245,
           "width": 320
         },
         "position": {
@@ -1515,11 +1386,9 @@
       },
       {
         "data": {
-          "id": "ParserComponent-pXAMb",
+          "id": "ParserComponent-V2o48",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "models_and_agents",
             "conditional_paths": [],
@@ -1528,12 +1397,7 @@
             "display_name": "Parser",
             "documentation": "https://docs.langflow.org/parser",
             "edited": false,
-            "field_order": [
-              "input_data",
-              "mode",
-              "pattern",
-              "sep"
-            ],
+            "field_order": ["input_data", "mode", "pattern", "sep"],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -1562,9 +1426,7 @@
                 "name": "parsed_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1595,12 +1457,7 @@
                 "display_name": "JSON or Table",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": [
-                  "DataFrame",
-                  "Table",
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["DataFrame", "Table", "Data", "JSON"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -1621,10 +1478,7 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
+                "options": ["Parser", "Stringify"],
                 "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -1645,9 +1499,7 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1671,9 +1523,7 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1697,9 +1547,9 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-pXAMb",
+        "id": "ParserComponent-V2o48",
         "measured": {
-          "height": 329,
+          "height": 331,
           "width": 320
         },
         "position": {
@@ -1711,19 +1561,17 @@
       }
     ],
     "viewport": {
-      "x": 245.66793868161778,
-      "y": 267.9129204471257,
-      "zoom": 0.48565229862392995
+      "x": 362.1507908140667,
+      "y": 244.92208036288463,
+      "zoom": 0.39415259018753734
     }
   },
   "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
   "endpoint_name": null,
-  "id": "70f6d78d-41ad-42a3-854d-405e161ee563",
+  "id": "7eb7c081-888c-4f25-ba81-c84e6aab2778",
   "is_component": false,
-  "last_tested_version": "1.7.0",
+  "last_tested_version": "1.10.1",
+  "locked": false,
   "name": "Research Translation Loop",
-  "tags": [
-    "chatbots",
-    "content-generation"
-  ]
+  "tags": ["chatbots", "content-generation"]
 }

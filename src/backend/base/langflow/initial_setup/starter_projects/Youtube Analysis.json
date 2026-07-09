@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-2lY00",
+            "id": "Prompt-rcsrm",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-2FN2V",
+            "id": "Agent-s4EYR",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-2lY00{œdataTypeœ:œPromptœ,œidœ:œPrompt-2lY00œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-2FN2V{œfieldNameœ:œinput_valueœ,œidœ:œAgent-2FN2Vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-rcsrm{œdataTypeœ:œPromptœ,œidœ:œPrompt-rcsrmœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-s4EYR{œfieldNameœ:œinput_valueœ,œidœ:œAgent-s4EYRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-2lY00",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-2lY00œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-2FN2V",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-2FN2Vœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-rcsrm",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-rcsrmœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-s4EYR",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-s4EYRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-2FN2V",
+            "id": "Agent-s4EYR",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-JZAp9",
+            "id": "ChatOutput-btXOD",
             "inputTypes": [
               "Data",
               "JSON",
@@ -54,12 +54,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-2FN2V{œdataTypeœ:œAgentœ,œidœ:œAgent-2FN2Vœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JZAp9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JZAp9œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-s4EYR{œdataTypeœ:œAgentœ,œidœ:œAgent-s4EYRœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-btXOD{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-btXODœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-2FN2V",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-2FN2Vœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-JZAp9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JZAp9œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-s4EYR",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-s4EYRœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-btXOD",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-btXODœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -67,7 +67,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeTranscripts",
-            "id": "YouTubeTranscripts-fnDOA",
+            "id": "YouTubeTranscripts-xk4T0",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -75,19 +75,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-2FN2V",
+            "id": "Agent-s4EYR",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeTranscripts-fnDOA{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-fnDOAœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-2FN2V{œfieldNameœ:œtoolsœ,œidœ:œAgent-2FN2Vœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeTranscripts-xk4T0{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-xk4T0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-s4EYR{œfieldNameœ:œtoolsœ,œidœ:œAgent-s4EYRœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeTranscripts-fnDOA",
-        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-fnDOAœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-2FN2V",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-2FN2Vœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YouTubeTranscripts-xk4T0",
+        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-xk4T0œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-s4EYR",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-s4EYRœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -95,7 +95,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-ogxGV",
+            "id": "parser-TfJyk",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -103,19 +103,19 @@
           },
           "targetHandle": {
             "fieldName": "analysis",
-            "id": "Prompt-2lY00",
+            "id": "Prompt-rcsrm",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-ogxGV{œdataTypeœ:œparserœ,œidœ:œparser-ogxGVœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-2lY00{œfieldNameœ:œanalysisœ,œidœ:œPrompt-2lY00œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-TfJyk{œdataTypeœ:œparserœ,œidœ:œparser-TfJykœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-rcsrm{œfieldNameœ:œanalysisœ,œidœ:œPrompt-rcsrmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-ogxGV",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-ogxGVœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-2lY00",
-        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-2lY00œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-TfJyk",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-TfJykœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-rcsrm",
+        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-rcsrmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -123,7 +123,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-1LEQy",
+            "id": "ChatInput-yUpgD",
             "name": "message",
             "output_types": [
               "Message"
@@ -131,19 +131,19 @@
           },
           "targetHandle": {
             "fieldName": "video_url",
-            "id": "YouTubeCommentsComponent-ZkD9X",
+            "id": "YouTubeCommentsComponent-wei8j",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-1LEQy{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1LEQyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-ZkD9X{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-ZkD9Xœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-yUpgD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-yUpgDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-wei8j{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-wei8jœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-1LEQy",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1LEQyœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "YouTubeCommentsComponent-ZkD9X",
-        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-ZkD9Xœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-yUpgD",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-yUpgDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "YouTubeCommentsComponent-wei8j",
+        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-wei8jœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -151,7 +151,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-1LEQy",
+            "id": "ChatInput-yUpgD",
             "name": "message",
             "output_types": [
               "Message"
@@ -159,19 +159,19 @@
           },
           "targetHandle": {
             "fieldName": "url",
-            "id": "Prompt-2lY00",
+            "id": "Prompt-rcsrm",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-1LEQy{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1LEQyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-2lY00{œfieldNameœ:œurlœ,œidœ:œPrompt-2lY00œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-yUpgD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-yUpgDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-rcsrm{œfieldNameœ:œurlœ,œidœ:œPrompt-rcsrmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-1LEQy",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1LEQyœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-2lY00",
-        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-2lY00œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-yUpgD",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-yUpgDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-rcsrm",
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-rcsrmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -179,7 +179,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeCommentsComponent",
-            "id": "YouTubeCommentsComponent-ZkD9X",
+            "id": "YouTubeCommentsComponent-wei8j",
             "name": "comments",
             "output_types": [
               "Table"
@@ -187,7 +187,7 @@
           },
           "targetHandle": {
             "fieldName": "df",
-            "id": "BatchRunComponent-hJ8qJ",
+            "id": "BatchRunComponent-xJe89",
             "inputTypes": [
               "DataFrame",
               "Table"
@@ -195,12 +195,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__YouTubeCommentsComponent-ZkD9X{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-ZkD9Xœ,œnameœ:œcommentsœ,œoutput_typesœ:[œTableœ]}-BatchRunComponent-hJ8qJ{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-hJ8qJœ,œinputTypesœ:[œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeCommentsComponent-wei8j{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-wei8jœ,œnameœ:œcommentsœ,œoutput_typesœ:[œTableœ]}-BatchRunComponent-xJe89{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-xJe89œ,œinputTypesœ:[œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeCommentsComponent-ZkD9X",
-        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-ZkD9Xœ, œnameœ: œcommentsœ, œoutput_typesœ: [œTableœ]}",
-        "target": "BatchRunComponent-hJ8qJ",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-hJ8qJœ, œinputTypesœ: [œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "YouTubeCommentsComponent-wei8j",
+        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-wei8jœ, œnameœ: œcommentsœ, œoutput_typesœ: [œTableœ]}",
+        "target": "BatchRunComponent-xJe89",
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-xJe89œ, œinputTypesœ: [œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -208,7 +208,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "BatchRunComponent",
-            "id": "BatchRunComponent-hJ8qJ",
+            "id": "BatchRunComponent-xJe89",
             "name": "batch_results",
             "output_types": [
               "Table"
@@ -216,7 +216,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-ogxGV",
+            "id": "parser-TfJyk",
             "inputTypes": [
               "DataFrame",
               "Table",
@@ -226,18 +226,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-BatchRunComponent-hJ8qJ{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-hJ8qJœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œTableœ]}-parser-ogxGV{œfieldNameœ:œinput_dataœ,œidœ:œparser-ogxGVœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-BatchRunComponent-xJe89{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-xJe89œ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œTableœ]}-parser-TfJyk{œfieldNameœ:œinput_dataœ,œidœ:œparser-TfJykœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "BatchRunComponent-hJ8qJ",
-        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-hJ8qJœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œTableœ]}",
-        "target": "parser-ogxGV",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-ogxGVœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
+        "source": "BatchRunComponent-xJe89",
+        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-xJe89œ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œTableœ]}",
+        "target": "parser-TfJyk",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-TfJykœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "YouTubeCommentsComponent-ZkD9X",
+          "id": "YouTubeCommentsComponent-wei8j",
           "node": {
             "base_classes": [
               "DataFrame",
@@ -265,7 +265,7 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "8c5296516f6c",
+              "code_hash": "eb72fbe45be9",
               "dependencies": {
                 "dependencies": [
                   {
@@ -340,7 +340,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from contextlib import contextmanager\n\nimport pandas as pd\nfrom googleapiclient.discovery import build\nfrom googleapiclient.errors import HttpError\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.template.field.base import Output\n\n\nclass YouTubeCommentsComponent(Component):\n    \"\"\"A component that retrieves comments from YouTube videos.\"\"\"\n\n    display_name: str = \"YouTube Comments\"\n    description: str = \"Retrieves and analyzes comments from YouTube videos.\"\n    icon: str = \"YouTube\"\n\n    # Constants\n    COMMENTS_DISABLED_STATUS = 403\n    NOT_FOUND_STATUS = 404\n    API_MAX_RESULTS = 100\n\n    inputs = [\n        MessageTextInput(\n            name=\"video_url\",\n            display_name=\"Video URL\",\n            info=\"The URL of the YouTube video to get comments from.\",\n            tool_mode=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"YouTube API Key\",\n            info=\"Your YouTube Data API key.\",\n            required=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            value=20,\n            info=\"The maximum number of comments to return.\",\n        ),\n        DropdownInput(\n            name=\"sort_by\",\n            display_name=\"Sort By\",\n            options=[\"time\", \"relevance\"],\n            value=\"relevance\",\n            info=\"Sort comments by time or relevance.\",\n        ),\n        BoolInput(\n            name=\"include_replies\",\n            display_name=\"Include Replies\",\n            value=False,\n            info=\"Whether to include replies to comments.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_metrics\",\n            display_name=\"Include Metrics\",\n            value=True,\n            info=\"Include metrics like like count and reply count.\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"comments\", display_name=\"Comments\", method=\"get_video_comments\"),\n    ]\n\n    def _extract_video_id(self, video_url: str) -> str:\n        \"\"\"Extracts the video ID from a YouTube URL.\"\"\"\n        import re\n\n        patterns = [\n            r\"(?:youtube\\.com\\/watch\\?v=|youtu.be\\/|youtube.com\\/embed\\/)([^&\\n?#]+)\",\n            r\"youtube.com\\/shorts\\/([^&\\n?#]+)\",\n        ]\n\n        for pattern in patterns:\n            match = re.search(pattern, video_url)\n            if match:\n                return match.group(1)\n\n        return video_url.strip()\n\n    def _process_reply(self, reply: dict, parent_id: str, *, include_metrics: bool = True) -> dict:\n        \"\"\"Process a single reply comment.\"\"\"\n        reply_snippet = reply[\"snippet\"]\n        reply_data = {\n            \"comment_id\": reply[\"id\"],\n            \"parent_comment_id\": parent_id,\n            \"author\": reply_snippet[\"authorDisplayName\"],\n            \"text\": reply_snippet[\"textDisplay\"],\n            \"published_at\": reply_snippet[\"publishedAt\"],\n            \"is_reply\": True,\n        }\n        if include_metrics:\n            reply_data[\"like_count\"] = reply_snippet[\"likeCount\"]\n            reply_data[\"reply_count\"] = 0  # Replies can't have replies\n\n        return reply_data\n\n    def _process_comment(\n        self, item: dict, *, include_metrics: bool = True, include_replies: bool = False\n    ) -> list[dict]:\n        \"\"\"Process a single comment thread.\"\"\"\n        comment = item[\"snippet\"][\"topLevelComment\"][\"snippet\"]\n        comment_id = item[\"snippet\"][\"topLevelComment\"][\"id\"]\n\n        # Basic comment data\n        processed_comments = [\n            {\n                \"comment_id\": comment_id,\n                \"parent_comment_id\": \"\",  # Empty for top-level comments\n                \"author\": comment[\"authorDisplayName\"],\n                \"author_channel_url\": comment.get(\"authorChannelUrl\", \"\"),\n                \"text\": comment[\"textDisplay\"],\n                \"published_at\": comment[\"publishedAt\"],\n                \"updated_at\": comment[\"updatedAt\"],\n                \"is_reply\": False,\n            }\n        ]\n\n        # Add metrics if requested\n        if include_metrics:\n            processed_comments[0].update(\n                {\n                    \"like_count\": comment[\"likeCount\"],\n                    \"reply_count\": item[\"snippet\"][\"totalReplyCount\"],\n                }\n            )\n\n        # Add replies if requested\n        if include_replies and item[\"snippet\"][\"totalReplyCount\"] > 0 and \"replies\" in item:\n            for reply in item[\"replies\"][\"comments\"]:\n                reply_data = self._process_reply(reply, parent_id=comment_id, include_metrics=include_metrics)\n                processed_comments.append(reply_data)\n\n        return processed_comments\n\n    @contextmanager\n    def youtube_client(self):\n        \"\"\"Context manager for YouTube API client.\"\"\"\n        client = build(\"youtube\", \"v3\", developerKey=self.api_key)\n        try:\n            yield client\n        finally:\n            client.close()\n\n    def get_video_comments(self) -> DataFrame:\n        \"\"\"Retrieves comments from a YouTube video and returns as DataFrame.\"\"\"\n        try:\n            # Extract video ID from URL\n            video_id = self._extract_video_id(self.video_url)\n\n            # Use context manager for YouTube API client\n            with self.youtube_client() as youtube:\n                comments_data = []\n                results_count = 0\n                request = youtube.commentThreads().list(\n                    part=\"snippet,replies\",\n                    videoId=video_id,\n                    maxResults=min(self.API_MAX_RESULTS, self.max_results),\n                    order=self.sort_by,\n                    textFormat=\"plainText\",\n                )\n\n                while request and results_count < self.max_results:\n                    response = request.execute()\n\n                    for item in response.get(\"items\", []):\n                        if results_count >= self.max_results:\n                            break\n\n                        comments = self._process_comment(\n                            item, include_metrics=self.include_metrics, include_replies=self.include_replies\n                        )\n                        comments_data.extend(comments)\n                        results_count += 1\n\n                    # Get the next page if available and needed\n                    if \"nextPageToken\" in response and results_count < self.max_results:\n                        request = youtube.commentThreads().list(\n                            part=\"snippet,replies\",\n                            videoId=video_id,\n                            maxResults=min(self.API_MAX_RESULTS, self.max_results - results_count),\n                            order=self.sort_by,\n                            textFormat=\"plainText\",\n                            pageToken=response[\"nextPageToken\"],\n                        )\n                    else:\n                        request = None\n\n                # Define column order\n                column_order = [\n                    \"video_id\",\n                    \"video_url\",\n                    \"comment_id\",\n                    \"parent_comment_id\",\n                    \"is_reply\",\n                    \"author\",\n                    \"author_channel_url\",\n                    \"text\",\n                    \"published_at\",\n                    \"updated_at\",\n                ]\n\n                if self.include_metrics:\n                    column_order.extend([\"like_count\", \"reply_count\"])\n\n                # Handle empty comments case\n                if not comments_data:\n                    # Create empty DataFrame with proper columns\n                    comments_df = pd.DataFrame(columns=column_order)\n                else:\n                    # Convert to DataFrame\n                    comments_df = pd.DataFrame(comments_data)\n\n                    # Add video metadata\n                    comments_df[\"video_id\"] = video_id\n                    comments_df[\"video_url\"] = self.video_url\n\n                    # Reorder columns\n                    comments_df = comments_df[column_order]\n\n                return DataFrame(comments_df)\n\n        except HttpError as e:\n            error_message = f\"YouTube API error: {e!s}\"\n            if e.resp.status == self.COMMENTS_DISABLED_STATUS:\n                error_message = \"Comments are disabled for this video or API quota exceeded.\"\n            elif e.resp.status == self.NOT_FOUND_STATUS:\n                error_message = \"Video not found.\"\n\n            return DataFrame(pd.DataFrame({\"error\": [error_message]}))\n"
+                "value": "from contextlib import contextmanager\n\nimport pandas as pd\nfrom googleapiclient.discovery import build\nfrom googleapiclient.errors import HttpError\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.template.field.base import Output\n\n\nclass YouTubeCommentsComponent(Component):\n    \"\"\"A component that retrieves comments from YouTube videos.\"\"\"\n\n    display_name: str = \"YouTube Comments\"\n    description: str = \"Retrieves and analyzes comments from YouTube videos.\"\n    icon: str = \"YouTube\"\n\n    # Constants\n    COMMENTS_DISABLED_STATUS = 403\n    NOT_FOUND_STATUS = 404\n    API_MAX_RESULTS = 100\n\n    inputs = [\n        MessageTextInput(\n            name=\"video_url\",\n            display_name=\"Video URL\",\n            info=\"The URL of the YouTube video to get comments from.\",\n            tool_mode=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"YouTube API Key\",\n            info=\"Your YouTube Data API key.\",\n            required=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            value=20,\n            info=\"The maximum number of comments to return.\",\n        ),\n        DropdownInput(\n            name=\"sort_by\",\n            display_name=\"Sort By\",\n            options=[\"time\", \"relevance\"],\n            value=\"relevance\",\n            info=\"Sort comments by time or relevance.\",\n        ),\n        BoolInput(\n            name=\"include_replies\",\n            display_name=\"Include Replies\",\n            value=False,\n            info=\"Whether to include replies to comments.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_metrics\",\n            display_name=\"Include Metrics\",\n            value=True,\n            info=\"Include metrics like like count and reply count.\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"comments\", display_name=\"Comments\", method=\"get_video_comments\"),\n    ]\n\n    def _extract_video_id(self, video_url: str) -> str:\n        \"\"\"Extracts the video ID from a YouTube URL.\"\"\"\n        import re\n\n        patterns = [\n            r\"(?:youtube\\.com\\/watch\\?v=|youtu.be\\/|youtube.com\\/embed\\/)([^&\\n?#]+)\",\n            r\"youtube.com\\/shorts\\/([^&\\n?#]+)\",\n        ]\n\n        for pattern in patterns:\n            match = re.search(pattern, video_url)\n            if match:\n                return match.group(1)\n\n        return video_url.strip()\n\n    def _process_reply(self, reply: dict, parent_id: str, *, include_metrics: bool = True) -> dict:\n        \"\"\"Process a single reply comment.\"\"\"\n        reply_snippet = reply[\"snippet\"]\n        reply_data = {\n            \"comment_id\": reply[\"id\"],\n            \"parent_comment_id\": parent_id,\n            \"author\": reply_snippet[\"authorDisplayName\"],\n            \"text\": reply_snippet[\"textDisplay\"],\n            \"published_at\": reply_snippet[\"publishedAt\"],\n            \"is_reply\": True,\n        }\n        if include_metrics:\n            reply_data[\"like_count\"] = reply_snippet[\"likeCount\"]\n            reply_data[\"reply_count\"] = 0  # Replies can't have replies\n\n        return reply_data\n\n    def _process_comment(\n        self, item: dict, *, include_metrics: bool = True, include_replies: bool = False\n    ) -> list[dict]:\n        \"\"\"Process a single comment thread.\"\"\"\n        comment = item[\"snippet\"][\"topLevelComment\"][\"snippet\"]\n        comment_id = item[\"snippet\"][\"topLevelComment\"][\"id\"]\n\n        # Basic comment data\n        processed_comments = [\n            {\n                \"comment_id\": comment_id,\n                \"parent_comment_id\": \"\",  # Empty for top-level comments\n                \"author\": comment[\"authorDisplayName\"],\n                \"author_channel_url\": comment.get(\"authorChannelUrl\", \"\"),\n                \"text\": comment[\"textDisplay\"],\n                \"published_at\": comment[\"publishedAt\"],\n                \"updated_at\": comment[\"updatedAt\"],\n                \"is_reply\": False,\n            }\n        ]\n\n        # Add metrics if requested\n        if include_metrics:\n            processed_comments[0].update(\n                {\n                    \"like_count\": comment[\"likeCount\"],\n                    \"reply_count\": item[\"snippet\"][\"totalReplyCount\"],\n                }\n            )\n\n        # Add replies if requested\n        if include_replies and item[\"snippet\"][\"totalReplyCount\"] > 0 and \"replies\" in item:\n            for reply in item[\"replies\"][\"comments\"]:\n                reply_data = self._process_reply(reply, parent_id=comment_id, include_metrics=include_metrics)\n                processed_comments.append(reply_data)\n\n        return processed_comments\n\n    @contextmanager\n    def youtube_client(self):\n        \"\"\"Context manager for YouTube API client.\"\"\"\n        client = build(\"youtube\", \"v3\", developerKey=self.api_key)\n        try:\n            yield client\n        finally:\n            client.close()\n\n    def get_video_comments(self) -> DataFrame:\n        \"\"\"Retrieves comments from a YouTube video and returns as DataFrame.\"\"\"\n        try:\n            # Extract video ID from URL\n            video_id = self._extract_video_id(self.video_url)\n\n            # Use context manager for YouTube API client\n            with self.youtube_client() as youtube:\n                comments_data = []\n                results_count = 0\n                request = youtube.commentThreads().list(\n                    part=\"snippet,replies\",\n                    videoId=video_id,\n                    maxResults=min(self.API_MAX_RESULTS, self.max_results),\n                    order=self.sort_by,\n                    textFormat=\"plainText\",\n                )\n\n                while request and results_count < self.max_results:\n                    response = request.execute()\n\n                    for item in response.get(\"items\", []):\n                        if results_count >= self.max_results:\n                            break\n\n                        comments = self._process_comment(\n                            item, include_metrics=self.include_metrics, include_replies=self.include_replies\n                        )\n                        comments_data.extend(comments)\n                        results_count += 1\n\n                    # Get the next page if available and needed\n                    if \"nextPageToken\" in response and results_count < self.max_results:\n                        request = youtube.commentThreads().list(\n                            part=\"snippet,replies\",\n                            videoId=video_id,\n                            maxResults=min(self.API_MAX_RESULTS, self.max_results - results_count),\n                            order=self.sort_by,\n                            textFormat=\"plainText\",\n                            pageToken=response[\"nextPageToken\"],\n                        )\n                    else:\n                        request = None\n\n                # Define column order\n                column_order = [\n                    \"video_id\",\n                    \"video_url\",\n                    \"comment_id\",\n                    \"parent_comment_id\",\n                    \"is_reply\",\n                    \"author\",\n                    \"author_channel_url\",\n                    \"text\",\n                    \"published_at\",\n                    \"updated_at\",\n                ]\n\n                if self.include_metrics:\n                    column_order.extend([\"like_count\", \"reply_count\"])\n\n                # Handle empty comments case\n                if not comments_data:\n                    # Create empty DataFrame with proper columns\n                    comments_df = pd.DataFrame(columns=column_order)\n                else:\n                    # Convert to DataFrame\n                    comments_df = pd.DataFrame(comments_data)\n\n                    # Add video metadata\n                    comments_df[\"video_id\"] = video_id\n                    comments_df[\"video_url\"] = self.video_url\n\n                    # Reorder columns\n                    comments_df = comments_df[column_order]\n\n                return DataFrame(comments_df)\n\n        except HttpError as e:\n            error_message = f\"YouTube API error: {e!s}\"\n            if e.resp.status == self.COMMENTS_DISABLED_STATUS:\n                error_message = \"Comments are disabled for this video or API quota exceeded.\"\n            elif e.resp.status == self.NOT_FOUND_STATUS:\n                error_message = \"Video not found.\"\n\n            return DataFrame(pd.DataFrame({\"error\": [error_message]}))\n"
               },
               "include_metrics": {
                 "_input_type": "BoolInput",
@@ -450,9 +450,9 @@
           "type": "YouTubeCommentsComponent"
         },
         "dragging": false,
-        "id": "YouTubeCommentsComponent-ZkD9X",
+        "id": "YouTubeCommentsComponent-wei8j",
         "measured": {
-          "height": 467,
+          "height": 468,
           "width": 320
         },
         "position": {
@@ -464,7 +464,7 @@
       },
       {
         "data": {
-          "id": "Agent-2FN2V",
+          "id": "Agent-s4EYR",
           "node": {
             "base_classes": [
               "Message"
@@ -497,7 +497,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2025-12-22T21:08:01.050Z",
+            "last_updated": "2026-06-25T20:50:14.446Z",
             "legacy": false,
             "metadata": {
               "code_hash": "d08c17dbf863",
@@ -562,6 +562,7 @@
                 "display_name": "Calculator",
                 "dynamic": false,
                 "info": "If true, adds a zero-config arithmetic calculator tool to the agent (safe: only +, -, *, /, ** operators via AST).",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "add_calculator_tool",
@@ -626,6 +627,7 @@
                 "dynamic": false,
                 "external_options": {},
                 "info": "The base URL of the API (IBM watsonx.ai only)",
+                "input_types": [],
                 "name": "base_url_ibm_watsonx",
                 "options": [
                   "https://us-south.ml.cloud.ibm.com",
@@ -793,15 +795,16 @@
                 "display_name": "Max Tokens",
                 "dynamic": false,
                 "info": "Maximum number of tokens to generate. Field name varies by provider.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_tokens",
                 "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 128000.0,
-                  "min": 1.0,
-                  "step": 1.0,
+                  "max": 128000,
+                  "min": 1,
+                  "step": 1,
                   "step_type": "int"
                 },
                 "required": false,
@@ -829,6 +832,9 @@
                     }
                   }
                 },
+                "filters": {
+                  "tool_calling": true
+                },
                 "info": "Select your model provider",
                 "input_types": [
                   "LanguageModel"
@@ -837,7 +843,140 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [],
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5-pro"
+                      ]
+                    },
+                    "name": "gpt-5.5-pro",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5"
+                      ]
+                    },
+                    "name": "gpt-5.5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-nano"
+                      ]
+                    },
+                    "name": "gpt-5.4-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-mini"
+                      ]
+                    },
+                    "name": "gpt-5.4-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4"
+                      ]
+                    },
+                    "name": "gpt-5.4",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.5-flash",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.1-flash-lite",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-31b-it",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-26b-a4b-it",
+                    "provider": "Google Generative AI"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -946,6 +1085,7 @@
                 "display_name": "watsonx Project ID",
                 "dynamic": false,
                 "info": "The project ID associated with the foundation model (IBM watsonx.ai only)",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -967,6 +1107,7 @@
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "stream",
@@ -1039,9 +1180,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-2FN2V",
+        "id": "Agent-s4EYR",
         "measured": {
-          "height": 429,
+          "height": 430,
           "width": 320
         },
         "position": {
@@ -1053,7 +1194,7 @@
       },
       {
         "data": {
-          "id": "Prompt-2lY00",
+          "id": "Prompt-rcsrm",
           "node": {
             "base_classes": [
               "Message"
@@ -1251,9 +1392,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-2lY00",
+        "id": "Prompt-rcsrm",
         "measured": {
-          "height": 449,
+          "height": 428,
           "width": 320
         },
         "position": {
@@ -1265,7 +1406,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-JZAp9",
+          "id": "ChatOutput-btXOD",
           "node": {
             "base_classes": [
               "Message"
@@ -1539,9 +1680,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-JZAp9",
+        "id": "ChatOutput-btXOD",
         "measured": {
-          "height": 204,
+          "height": 206,
           "width": 320
         },
         "position": {
@@ -1553,7 +1694,7 @@
       },
       {
         "data": {
-          "id": "YouTubeTranscripts-fnDOA",
+          "id": "YouTubeTranscripts-xk4T0",
           "node": {
             "base_classes": [
               "Data",
@@ -1576,11 +1717,11 @@
             ],
             "frozen": false,
             "icon": "YouTube",
-            "last_updated": "2025-12-22T21:08:01.050Z",
+            "last_updated": "2026-06-25T20:50:14.163Z",
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "0ed75539d58d",
+              "code_hash": "a4077b038641",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1588,12 +1729,12 @@
                     "version": "2.3.3"
                   },
                   {
-                    "name": "youtube_transcript_api",
-                    "version": "1.2.4"
-                  },
-                  {
                     "name": "lfx",
                     "version": null
+                  },
+                  {
+                    "name": "youtube_transcript_api",
+                    "version": "1.2.4"
                   }
                 ],
                 "total_dependencies": 3
@@ -1659,7 +1800,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import re\n\nimport pandas as pd\nfrom youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled, YouTubeTranscriptApi\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import DropdownInput, IntInput, MultilineInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass YouTubeTranscriptsComponent(Component):\n    \"\"\"A component that extracts spoken content from YouTube videos as transcripts.\"\"\"\n\n    display_name: str = \"YouTube Transcripts\"\n    description: str = \"Extracts spoken content from YouTube videos with multiple output options.\"\n    icon: str = \"YouTube\"\n    name = \"YouTubeTranscripts\"\n\n    inputs = [\n        MultilineInput(\n            name=\"url\",\n            display_name=\"Video URL\",\n            info=\"Enter the YouTube video URL to get transcripts from.\",\n            tool_mode=True,\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_size_seconds\",\n            display_name=\"Chunk Size (seconds)\",\n            value=60,\n            info=\"The size of each transcript chunk in seconds.\",\n        ),\n        DropdownInput(\n            name=\"translation\",\n            display_name=\"Translation Language\",\n            advanced=True,\n            options=[\"\", \"en\", \"es\", \"fr\", \"de\", \"it\", \"pt\", \"ru\", \"ja\", \"ko\", \"hi\", \"ar\", \"id\"],\n            info=\"Translate the transcripts to the specified language. Leave empty for no translation.\",\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"dataframe\", display_name=\"Chunks\", method=\"get_dataframe_output\"),\n        Output(name=\"message\", display_name=\"Transcript\", method=\"get_message_output\"),\n        Output(name=\"data_output\", display_name=\"Transcript + Source\", method=\"get_data_output\"),\n    ]\n\n    def _extract_video_id(self, url: str) -> str:\n        \"\"\"Extract video ID from YouTube URL.\"\"\"\n        patterns = [\n            r\"(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)([^&\\n?#]+)\",\n            r\"youtube\\.com\\/watch\\?.*?v=([^&\\n?#]+)\",\n        ]\n        for pattern in patterns:\n            match = re.search(pattern, url)\n            if match:\n                return match.group(1)\n        msg = f\"Could not extract video ID from URL: {url}\"\n        raise ValueError(msg)\n\n    def _load_transcripts(self, *, as_chunks: bool = True):\n        \"\"\"Internal method to load transcripts from YouTube.\"\"\"\n        try:\n            video_id = self._extract_video_id(self.url)\n        except ValueError as e:\n            msg = f\"Invalid YouTube URL: {e}\"\n            raise ValueError(msg) from e\n\n        try:\n            # Use new v1.0+ API - create instance\n            api = YouTubeTranscriptApi()\n            transcript_list = api.list(video_id)\n\n            # Get transcript in specified language or default to English\n            if self.translation:\n                # Get any available transcript and translate it\n                transcript = transcript_list.find_transcript([\"en\"])\n                transcript = transcript.translate(self.translation)\n            else:\n                # Try to get transcript in available languages\n                try:\n                    transcript = transcript_list.find_transcript([\"en\"])\n                except NoTranscriptFound:\n                    # Try auto-generated English\n                    transcript = transcript_list.find_generated_transcript([\"en\"])\n\n            # Fetch the transcript data\n            transcript_data = api.fetch(transcript.video_id, [transcript.language_code])\n\n        except (TranscriptsDisabled, NoTranscriptFound) as e:\n            error_type = type(e).__name__\n            msg = (\n                f\"Could not retrieve transcripts for video '{video_id}'. \"\n                \"Possible reasons:\\n\"\n                \"1. This video does not have captions/transcripts enabled\\n\"\n                \"2. The video is private, restricted, or deleted\\n\"\n                f\"\\nTechnical error ({error_type}): {e}\"\n            )\n            raise RuntimeError(msg) from e\n        except Exception as e:\n            error_type = type(e).__name__\n            msg = (\n                f\"Could not retrieve transcripts for video '{video_id}'. \"\n                \"Possible reasons:\\n\"\n                \"1. This video does not have captions/transcripts enabled\\n\"\n                \"2. The video is private, restricted, or deleted\\n\"\n                \"3. YouTube is blocking automated requests\\n\"\n                f\"\\nTechnical error ({error_type}): {e}\"\n            )\n            raise RuntimeError(msg) from e\n\n        if as_chunks:\n            # Group into chunks based on chunk_size_seconds\n            return self._chunk_transcript(transcript_data)\n        # Return as continuous text\n        return transcript_data\n\n    def _chunk_transcript(self, transcript_data):\n        \"\"\"Group transcript segments into time-based chunks.\"\"\"\n        chunks = []\n        current_chunk = []\n        chunk_start = 0\n\n        for segment in transcript_data:\n            # Handle both dict (old API) and object (new API) formats\n            segment_start = segment.start if hasattr(segment, \"start\") else segment[\"start\"]\n\n            # If this segment starts beyond the current chunk window, start a new chunk\n            if segment_start - chunk_start >= self.chunk_size_seconds and current_chunk:\n                chunk_text = \" \".join(s.text if hasattr(s, \"text\") else s[\"text\"] for s in current_chunk)\n                chunks.append({\"start\": chunk_start, \"text\": chunk_text})\n                current_chunk = []\n                chunk_start = segment_start\n\n            current_chunk.append(segment)\n\n        # Add the last chunk\n        if current_chunk:\n            chunk_text = \" \".join(s.text if hasattr(s, \"text\") else s[\"text\"] for s in current_chunk)\n            chunks.append({\"start\": chunk_start, \"text\": chunk_text})\n\n        return chunks\n\n    def get_dataframe_output(self) -> DataFrame:\n        \"\"\"Provides transcript output as a DataFrame with timestamp and text columns.\"\"\"\n        try:\n            chunks = self._load_transcripts(as_chunks=True)\n\n            # Create DataFrame with timestamp and text columns\n            data = []\n            for chunk in chunks:\n                start_seconds = int(chunk[\"start\"])\n                start_minutes = start_seconds // 60\n                start_seconds_remainder = start_seconds % 60\n                timestamp = f\"{start_minutes:02d}:{start_seconds_remainder:02d}\"\n                data.append({\"timestamp\": timestamp, \"text\": chunk[\"text\"]})\n\n            return DataFrame(pd.DataFrame(data))\n\n        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:\n            error_msg = f\"Failed to get YouTube transcripts: {exc!s}\"\n            return DataFrame(pd.DataFrame({\"error\": [error_msg]}))\n\n    def get_message_output(self) -> Message:\n        \"\"\"Provides transcript output as continuous text.\"\"\"\n        try:\n            transcript_data = self._load_transcripts(as_chunks=False)\n            # Handle both dict (old API) and object (new API) formats\n            result = \" \".join(\n                segment.text if hasattr(segment, \"text\") else segment[\"text\"] for segment in transcript_data\n            )\n            return Message(text=result)\n\n        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:\n            error_msg = f\"Failed to get YouTube transcripts: {exc!s}\"\n            return Message(text=error_msg)\n\n    def get_data_output(self) -> Data:\n        \"\"\"Creates a structured data object with transcript and metadata.\n\n        Returns a Data object containing transcript text, video URL, and any error\n        messages that occurred during processing. The object includes:\n        - 'transcript': continuous text from the entire video (concatenated if multiple parts)\n        - 'video_url': the input YouTube URL\n        - 'error': error message if an exception occurs\n        \"\"\"\n        default_data = {\"transcript\": \"\", \"video_url\": self.url, \"error\": None}\n\n        try:\n            transcript_data = self._load_transcripts(as_chunks=False)\n            if not transcript_data:\n                default_data[\"error\"] = \"No transcripts found.\"\n                return Data(data=default_data)\n\n            # Combine all transcript segments - handle both dict and object formats\n            full_transcript = \" \".join(\n                segment.text if hasattr(segment, \"text\") else segment[\"text\"] for segment in transcript_data\n            )\n            return Data(data={\"transcript\": full_transcript, \"video_url\": self.url})\n\n        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:\n            default_data[\"error\"] = str(exc)\n            return Data(data=default_data)\n"
+                "value": "import re\n\nimport pandas as pd\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import DropdownInput, IntInput, MultilineInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\nfrom youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled, YouTubeTranscriptApi\n\n\nclass YouTubeTranscriptsComponent(Component):\n    \"\"\"A component that extracts spoken content from YouTube videos as transcripts.\"\"\"\n\n    display_name: str = \"YouTube Transcripts\"\n    description: str = \"Extracts spoken content from YouTube videos with multiple output options.\"\n    icon: str = \"YouTube\"\n    name = \"YouTubeTranscripts\"\n\n    inputs = [\n        MultilineInput(\n            name=\"url\",\n            display_name=\"Video URL\",\n            info=\"Enter the YouTube video URL to get transcripts from.\",\n            tool_mode=True,\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_size_seconds\",\n            display_name=\"Chunk Size (seconds)\",\n            value=60,\n            info=\"The size of each transcript chunk in seconds.\",\n        ),\n        DropdownInput(\n            name=\"translation\",\n            display_name=\"Translation Language\",\n            advanced=True,\n            options=[\"\", \"en\", \"es\", \"fr\", \"de\", \"it\", \"pt\", \"ru\", \"ja\", \"ko\", \"hi\", \"ar\", \"id\"],\n            info=\"Translate the transcripts to the specified language. Leave empty for no translation.\",\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"dataframe\", display_name=\"Chunks\", method=\"get_dataframe_output\"),\n        Output(name=\"message\", display_name=\"Transcript\", method=\"get_message_output\"),\n        Output(name=\"data_output\", display_name=\"Transcript + Source\", method=\"get_data_output\"),\n    ]\n\n    def _extract_video_id(self, url: str) -> str:\n        \"\"\"Extract video ID from YouTube URL.\"\"\"\n        patterns = [\n            r\"(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)([^&\\n?#]+)\",\n            r\"youtube\\.com\\/watch\\?.*?v=([^&\\n?#]+)\",\n        ]\n        for pattern in patterns:\n            match = re.search(pattern, url)\n            if match:\n                return match.group(1)\n        msg = f\"Could not extract video ID from URL: {url}\"\n        raise ValueError(msg)\n\n    def _load_transcripts(self, *, as_chunks: bool = True):\n        \"\"\"Internal method to load transcripts from YouTube.\"\"\"\n        try:\n            video_id = self._extract_video_id(self.url)\n        except ValueError as e:\n            msg = f\"Invalid YouTube URL: {e}\"\n            raise ValueError(msg) from e\n\n        try:\n            # Use new v1.0+ API - create instance\n            api = YouTubeTranscriptApi()\n            transcript_list = api.list(video_id)\n\n            # Get transcript in specified language or default to English\n            if self.translation:\n                # Get any available transcript and translate it\n                transcript = transcript_list.find_transcript([\"en\"])\n                transcript = transcript.translate(self.translation)\n            else:\n                # Try to get transcript in available languages\n                try:\n                    transcript = transcript_list.find_transcript([\"en\"])\n                except NoTranscriptFound:\n                    # Try auto-generated English\n                    transcript = transcript_list.find_generated_transcript([\"en\"])\n\n            # Fetch the transcript data\n            transcript_data = api.fetch(transcript.video_id, [transcript.language_code])\n\n        except (TranscriptsDisabled, NoTranscriptFound) as e:\n            error_type = type(e).__name__\n            msg = (\n                f\"Could not retrieve transcripts for video '{video_id}'. \"\n                \"Possible reasons:\\n\"\n                \"1. This video does not have captions/transcripts enabled\\n\"\n                \"2. The video is private, restricted, or deleted\\n\"\n                f\"\\nTechnical error ({error_type}): {e}\"\n            )\n            raise RuntimeError(msg) from e\n        except Exception as e:\n            error_type = type(e).__name__\n            msg = (\n                f\"Could not retrieve transcripts for video '{video_id}'. \"\n                \"Possible reasons:\\n\"\n                \"1. This video does not have captions/transcripts enabled\\n\"\n                \"2. The video is private, restricted, or deleted\\n\"\n                \"3. YouTube is blocking automated requests\\n\"\n                f\"\\nTechnical error ({error_type}): {e}\"\n            )\n            raise RuntimeError(msg) from e\n\n        if as_chunks:\n            # Group into chunks based on chunk_size_seconds\n            return self._chunk_transcript(transcript_data)\n        # Return as continuous text\n        return transcript_data\n\n    def _chunk_transcript(self, transcript_data):\n        \"\"\"Group transcript segments into time-based chunks.\"\"\"\n        chunks = []\n        current_chunk = []\n        chunk_start = 0\n\n        for segment in transcript_data:\n            # Handle both dict (old API) and object (new API) formats\n            segment_start = segment.start if hasattr(segment, \"start\") else segment[\"start\"]\n\n            # If this segment starts beyond the current chunk window, start a new chunk\n            if segment_start - chunk_start >= self.chunk_size_seconds and current_chunk:\n                chunk_text = \" \".join(s.text if hasattr(s, \"text\") else s[\"text\"] for s in current_chunk)\n                chunks.append({\"start\": chunk_start, \"text\": chunk_text})\n                current_chunk = []\n                chunk_start = segment_start\n\n            current_chunk.append(segment)\n\n        # Add the last chunk\n        if current_chunk:\n            chunk_text = \" \".join(s.text if hasattr(s, \"text\") else s[\"text\"] for s in current_chunk)\n            chunks.append({\"start\": chunk_start, \"text\": chunk_text})\n\n        return chunks\n\n    def get_dataframe_output(self) -> DataFrame:\n        \"\"\"Provides transcript output as a DataFrame with timestamp and text columns.\"\"\"\n        try:\n            chunks = self._load_transcripts(as_chunks=True)\n\n            # Create DataFrame with timestamp and text columns\n            data = []\n            for chunk in chunks:\n                start_seconds = int(chunk[\"start\"])\n                start_minutes = start_seconds // 60\n                start_seconds_remainder = start_seconds % 60\n                timestamp = f\"{start_minutes:02d}:{start_seconds_remainder:02d}\"\n                data.append({\"timestamp\": timestamp, \"text\": chunk[\"text\"]})\n\n            return DataFrame(pd.DataFrame(data))\n\n        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:\n            error_msg = f\"Failed to get YouTube transcripts: {exc!s}\"\n            return DataFrame(pd.DataFrame({\"error\": [error_msg]}))\n\n    def get_message_output(self) -> Message:\n        \"\"\"Provides transcript output as continuous text.\"\"\"\n        try:\n            transcript_data = self._load_transcripts(as_chunks=False)\n            # Handle both dict (old API) and object (new API) formats\n            result = \" \".join(\n                segment.text if hasattr(segment, \"text\") else segment[\"text\"] for segment in transcript_data\n            )\n            return Message(text=result)\n\n        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:\n            error_msg = f\"Failed to get YouTube transcripts: {exc!s}\"\n            return Message(text=error_msg)\n\n    def get_data_output(self) -> Data:\n        \"\"\"Creates a structured data object with transcript and metadata.\n\n        Returns a Data object containing transcript text, video URL, and any error\n        messages that occurred during processing. The object includes:\n        - 'transcript': continuous text from the entire video (concatenated if multiple parts)\n        - 'video_url': the input YouTube URL\n        - 'error': error message if an exception occurs\n        \"\"\"\n        default_data = {\"transcript\": \"\", \"video_url\": self.url, \"error\": None}\n\n        try:\n            transcript_data = self._load_transcripts(as_chunks=False)\n            if not transcript_data:\n                default_data[\"error\"] = \"No transcripts found.\"\n                return Data(data=default_data)\n\n            # Combine all transcript segments - handle both dict and object formats\n            full_transcript = \" \".join(\n                segment.text if hasattr(segment, \"text\") else segment[\"text\"] for segment in transcript_data\n            )\n            return Data(data={\"transcript\": full_transcript, \"video_url\": self.url})\n\n        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:\n            default_data[\"error\"] = str(exc)\n            return Data(data=default_data)\n"
               },
               "tools_metadata": {
                 "_input_type": "ToolsInput",
@@ -1689,8 +1830,8 @@
                         "type": "string"
                       }
                     },
-                    "description": "YouTubeTranscripts. get_dataframe_output - Extracts spoken content from YouTube videos with multiple output options.",
-                    "display_description": "YouTubeTranscripts. get_dataframe_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "description": "Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_description": "Extracts spoken content from YouTube videos with multiple output options.",
                     "display_name": "get_dataframe_output",
                     "name": "get_dataframe_output",
                     "readonly": false,
@@ -1707,8 +1848,8 @@
                         "type": "string"
                       }
                     },
-                    "description": "YouTubeTranscripts. get_message_output - Extracts spoken content from YouTube videos with multiple output options.",
-                    "display_description": "YouTubeTranscripts. get_message_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "description": "Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_description": "Extracts spoken content from YouTube videos with multiple output options.",
                     "display_name": "get_message_output",
                     "name": "get_message_output",
                     "readonly": false,
@@ -1725,8 +1866,8 @@
                         "type": "string"
                       }
                     },
-                    "description": "YouTubeTranscripts. get_data_output - Extracts spoken content from YouTube videos with multiple output options.",
-                    "display_description": "YouTubeTranscripts. get_data_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "description": "Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_description": "Extracts spoken content from YouTube videos with multiple output options.",
                     "display_name": "get_data_output",
                     "name": "get_data_output",
                     "readonly": false,
@@ -1803,9 +1944,9 @@
           "type": "YouTubeTranscripts"
         },
         "dragging": false,
-        "id": "YouTubeTranscripts-fnDOA",
+        "id": "YouTubeTranscripts-xk4T0",
         "measured": {
-          "height": 328,
+          "height": 336,
           "width": 320
         },
         "position": {
@@ -1817,37 +1958,37 @@
       },
       {
         "data": {
-          "id": "note-01q9d",
+          "id": "note-aDZfC",
           "node": {
-            "description": "# 📖 README\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n## Quick start\n- Configure your **Model Provider** with your API credentials.\n- Add your **YouTube Data API v3 key**\n- If you don't have a YoutTube API key, create one in the [Google Cloud Console](https://console.cloud.google.com).\n- Ensure the chat input is a valid YouTube video URL. A sample URL is provided in the chat input component.\n",
+            "description": "# 📺 YouTube Analysis\n\nAnalyze a YouTube video using its comments and transcript — the sentiment of\nthe comments plus the transcript content, combined into one analysis.\n\n## Setup\n1. Agent — add your LLM key (any provider in the Model dropdown).\n2. YouTube components — add your YouTube Data API v3 key (free, Google Cloud Console).\n3. Chat Input — paste a valid YouTube video URL (a sample is already provided).\n\n## How it works\n1. Chat Input → YouTube Comments — fetches the video's comments.\n2. Batch Run → Parser — runs the comments through the model in batches and formats the result.\n3. Prompt → Agent — the Agent (with YouTube Transcripts tool) combines comment analysis + transcript.\n4. Agent → Chat Output — the comprehensive video analysis.\n\n## Run\nPaste a YouTube URL in the chat and run.",
             "display_name": "",
             "documentation": "",
-            "i18n_key": "template_notes.youtube_analysis.8d068d5f",
+            "i18n_key": "template_notes.youtube_analysis.c8787173",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
-        "height": 582,
-        "id": "note-01q9d",
+        "height": 938,
+        "id": "note-aDZfC",
         "measured": {
-          "height": 582,
-          "width": 553
+          "height": 938,
+          "width": 675
         },
         "position": {
-          "x": -499.7725169737987,
-          "y": 5666.258559615042
+          "x": -1042.1213251587017,
+          "y": 5736.605057747812
         },
         "resizing": false,
-        "selected": false,
+        "selected": true,
         "type": "noteNode",
-        "width": 553
+        "width": 675
       },
       {
         "data": {
-          "id": "parser-ogxGV",
+          "id": "parser-TfJyk",
           "node": {
             "base_classes": [
               "Message"
@@ -2024,9 +2165,9 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-ogxGV",
+        "id": "parser-TfJyk",
         "measured": {
-          "height": 361,
+          "height": 330,
           "width": 320
         },
         "position": {
@@ -2038,7 +2179,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-1LEQy",
+          "id": "ChatInput-yUpgD",
           "node": {
             "base_classes": [
               "Message"
@@ -2303,21 +2444,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-1LEQy",
+        "id": "ChatInput-yUpgD",
         "measured": {
-          "height": 204,
+          "height": 206,
           "width": 320
         },
         "position": {
-          "x": -467.5929504081053,
-          "y": 6344.887293468443
+          "x": -320.0922285168137,
+          "y": 6315.387149090185
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "BatchRunComponent-hJ8qJ",
+          "id": "BatchRunComponent-xJe89",
           "node": {
             "base_classes": [
               "DataFrame",
@@ -2343,7 +2484,7 @@
             ],
             "frozen": false,
             "icon": "List",
-            "last_updated": "2025-12-22T21:08:20.144Z",
+            "last_updated": "2026-06-25T20:50:14.449Z",
             "legacy": false,
             "metadata": {
               "code_hash": "1b10e577e096",
@@ -2547,7 +2688,124 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [],
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5-pro"
+                      ]
+                    },
+                    "name": "gpt-5.5-pro",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.5"
+                      ]
+                    },
+                    "name": "gpt-5.5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-nano"
+                      ]
+                    },
+                    "name": "gpt-5.4-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_tokens",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.4-mini"
+                      ]
+                    },
+                    "name": "gpt-5.4-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.5-flash",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3.1-flash-lite",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-31b-it",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "max_tokens_field_name": "max_output_tokens",
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemma-4-26b-a4b-it",
+                    "provider": "Google Generative AI"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -2642,30 +2900,31 @@
           "type": "BatchRunComponent"
         },
         "dragging": false,
-        "id": "BatchRunComponent-hJ8qJ",
+        "id": "BatchRunComponent-xJe89",
         "measured": {
-          "height": 429,
+          "height": 430,
           "width": 320
         },
         "position": {
           "x": 622.635742060747,
           "y": 5919.499445555994
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 191.1479092456134,
-      "y": -3316.287064227974,
-      "zoom": 0.6036468280963493
+      "x": 527.6878061858094,
+      "y": -2468.3941306903503,
+      "zoom": 0.4406758093557343
     }
   },
   "description": "The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.",
   "endpoint_name": null,
-  "id": "ec8fea99-360e-46e0-a4c5-46d10defb57b",
+  "id": "c8731384-fc7e-4d9c-92d9-a9657a1f0593",
   "is_component": false,
-  "last_tested_version": "1.7.0",
+  "last_tested_version": "1.10.0",
+  "locked": false,
   "name": "YouTube Analysis",
   "tags": [
     "agents",

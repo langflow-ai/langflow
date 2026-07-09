@@ -22,8 +22,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 DOCS_BASE = "https://docs.langflow.org/extensions/errors"
-"""Base URL for error reference documentation.  Concrete pages are anchors of
-the form ``#<error-code>`` (e.g. ``#manifest-invalid``).
+"""URL for extension error guidance.  Every ``ref_url`` / CLI ``see:`` line points
+to one page on how to read errors.
 """
 
 
@@ -33,8 +33,7 @@ the form ``#<error-code>`` (e.g. ``#manifest-invalid``).
 
 # Phase-1 error codes.  Each code shipped here MUST have:
 #   1. a branch in ``format_extension_error``,
-#   2. a snapshot test in ``tests/unit/extension/test_errors.py``,
-#   3. a documented reference URL anchor.
+#   2. a snapshot test in ``tests/unit/extension/test_errors.py``.
 #
 # Loader / reload / migration / events codes are added when those subsystems
 # land.
@@ -86,12 +85,32 @@ ERROR_CODES: frozenset[str] = frozenset(
         "seed-directory-not-found",
         "seed-bundle-shadowed",
         "bundle-shadowed",
+        # Manifest-less lfx.bundles root whose entry-point declaration could
+        # not be resolved to a real package directory. Surfaced as a *warning*
+        # (never aborts startup) so a broken third-party declaration degrades
+        # to "that bundle root is skipped".
+        "bundle-discovery-malformed",
+        # lfx.bundles tier intra-tier diagnostics.  Every code here is
+        # warning-only: a broken manifest-less declaration degrades to "that
+        # provider/root is skipped" and never aborts startup.  This is *not* a
+        # full mirror of the inline tier -- there inline-bundle-name-invalid and
+        # inline-path-unreadable are hard errors (ok=False).  Only the duplicate
+        # case lines up: duplicate-lfx-bundles-provider and duplicate-inline-bundle
+        # are both warnings ("first wins"); the name-invalid / root-unreadable
+        # pair is intentionally a warning here where its inline counterpart errors.
+        "bundles-provider-name-invalid",
+        "bundles-root-unreadable",
+        "duplicate-lfx-bundles-provider",
         "duplicate-extension-id",
         # Reload-specific codes
         "reload-in-progress",
         "reload-bundle-not-installed",
         "reload-bundle-name-mismatch",
         "reload-source-missing",
+        # Manifest-less lfx.bundles providers carry no manifest for the
+        # reload pipeline's load_extension stage; hot reload refuses them
+        # with this typed code instead of a misleading manifest-not-found.
+        "reload-manifestless-unsupported",
         # Post-swap hook failures: the registry swap committed but a
         # downstream side-effect (e.g. component cache rebuild) raised.
         # Surfaced on ReloadResult.warnings so the API caller knows the
@@ -108,9 +127,13 @@ ERROR_CODES: frozenset[str] = frozenset(
         # authenticated user; clients that pass ``?keyspace=...`` are
         # rejected so the contract is explicit instead of silently dropped.
         "extension-events-keyspace-forbidden",
+        # Model-provider registration (manifest ``providers[]``). Both are
+        # warning-only: a malformed or colliding provider is skipped so the rest
+        # of the extension still loads.
+        "provider-invalid",
+        "provider-skipped",
     }
 )
-
 
 # ---------------------------------------------------------------------------
 # ExtensionError
@@ -133,7 +156,7 @@ class ExtensionError:
             symbol name).  ``None`` if the error is purely positional.
         hint: Concrete suggestion for how to fix the problem.  Required for
             every code shipped in Phase 1.
-        ref_url: Link to the error reference docs.  Auto-derived from ``code``
+        ref_url: Link to the extension error docs.  Auto-set to :data:`DOCS_BASE`
             when not provided.
     """
 
@@ -153,7 +176,7 @@ class ExtensionError:
             )
             raise ValueError(msg)
         if self.ref_url is None:
-            object.__setattr__(self, "ref_url", f"{DOCS_BASE}#{self.code}")
+            object.__setattr__(self, "ref_url", f"{DOCS_BASE}")
 
     def to_dict(self) -> dict[str, Any]:
         """Serializable representation suitable for HTTP bodies / JSON output."""
@@ -284,6 +307,18 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "Bundle {content!r} is registered from multiple discovery sources; the lower-precedence copy "
         "at {location} is being skipped in favor of the higher-precedence one."
     ),
+    "bundle-discovery-malformed": (
+        "lfx.bundles entry point {content!r} could not be resolved to a package directory: {message}"
+    ),
+    "bundles-provider-name-invalid": (
+        "lfx.bundles provider directory {content!r} (at {location}) is not a valid bundle name; "
+        "bundle names are lowercase snake_case (a-z, 0-9, _), 2-64 characters."
+    ),
+    "bundles-root-unreadable": ("lfx.bundles root {location} could not be enumerated: {message}"),
+    "duplicate-lfx-bundles-provider": (
+        "Provider {content!r} appears in more than one lfx.bundles root; the copy at {location} "
+        "is skipped (the first discovered root wins)."
+    ),
     "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
     "reload-in-progress": (
         "Reload already in progress for bundle {content!r}; refuse to start a second concurrent reload."
@@ -299,6 +334,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "reload-source-missing": (
         "Reload source path {content!r} for bundle {location!r} does not exist or is not a directory."
     ),
+    "reload-manifestless-unsupported": (
+        "Bundle {content!r} comes from a manifest-less lfx.bundles metapackage and cannot be "
+        "hot-reloaded; upgrade the metapackage distribution and restart the process instead."
+    ),
     "reload-post-swap-hook-failed": (
         "Post-swap hook failed for bundle {content!r}; the bundle swap committed but a "
         "downstream side-effect (e.g. component cache rebuild) raised."
@@ -311,6 +350,8 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "The {location} query parameter is not accepted; events are scoped server-side to the "
         "authenticated user (rejected value: {content!r})."
     ),
+    "provider-invalid": ("Model provider {content!r} declared at {location} could not be registered: {message}"),
+    "provider-skipped": ("Model provider {content!r} declared at {location} was skipped: {message}"),
 }
 
 

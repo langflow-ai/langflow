@@ -39,9 +39,8 @@ from uuid import UUID
 
 from lfx.log.logger import logger
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import col
-from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from langflow.services.base import Service
 from langflow.services.database.models.transactions.model import TransactionTable
@@ -320,7 +319,13 @@ class TelemetryWriterService(Service):
         self._prune_stale_foreign_outboxes(outbox_root)
 
         self._engine = self._create_dedicated_engine()
-        self._session_maker = async_sessionmaker(self._engine, class_=SQLModelAsyncSession, expire_on_commit=False)
+        # Use SQLAlchemy's AsyncSession (not SQLModel's). This service issues only
+        # Core-style bulk statements via ``session.execute()`` (Table.insert(),
+        # delete(), select().scalars()); it never needs SQLModel's ``exec()``.
+        # SQLModel's AsyncSession marks ``execute()`` as deprecated, so using it
+        # here floods runtime logs with a multi-line DeprecationWarning on every
+        # batch flush and retention sweep.
+        self._session_maker = async_sessionmaker(self._engine, class_=AsyncSession, expire_on_commit=False)
         self._shutdown_event = asyncio.Event()
         self._writer_task = asyncio.create_task(self._run_writer(), name="telemetry-writer")
         self._sweeper_task = asyncio.create_task(self._run_sweeper(), name="telemetry-sweeper")
@@ -752,13 +757,13 @@ class TelemetryWriterService(Service):
             return
         async with self._session_maker() as session:
             if tx_batch:
-                await session.exec(TransactionTable.__table__.insert(), params=tx_batch)
+                await session.execute(TransactionTable.__table__.insert(), params=tx_batch)
                 for row in tx_batch:
                     flow_id = row.get("flow_id")
                     if flow_id is not None:
                         self._dirty_tx_flows.add(str(flow_id))
             if vb_batch:
-                await session.exec(VertexBuildTable.__table__.insert(), params=vb_batch)
+                await session.execute(VertexBuildTable.__table__.insert(), params=vb_batch)
                 for row in vb_batch:
                     flow_id = row.get("flow_id")
                     if flow_id is not None:
@@ -817,7 +822,7 @@ class TelemetryWriterService(Service):
                         .order_by(col(TransactionTable.timestamp).desc())
                         .limit(max_transactions)
                     )
-                    await session.exec(
+                    await session.execute(
                         delete(TransactionTable).where(
                             TransactionTable.flow_id == flow_id,
                             col(TransactionTable.id).not_in(keep_subq),
@@ -827,7 +832,7 @@ class TelemetryWriterService(Service):
                 for flow_id in vb_flows:
                     vertex_ids = (
                         (
-                            await session.exec(
+                            await session.execute(
                                 select(VertexBuildTable.id).where(VertexBuildTable.flow_id == flow_id).distinct()
                             )
                         )
@@ -847,7 +852,7 @@ class TelemetryWriterService(Service):
                             )
                             .limit(max_per_vertex)
                         )
-                        await session.exec(
+                        await session.execute(
                             delete(VertexBuildTable).where(
                                 VertexBuildTable.flow_id == flow_id,
                                 VertexBuildTable.id == vertex_id,
@@ -863,7 +868,7 @@ class TelemetryWriterService(Service):
                     )
                     .limit(max_vertex_builds)
                 )
-                await session.exec(
+                await session.execute(
                     delete(VertexBuildTable).where(col(VertexBuildTable.build_id).not_in(keep_global_subq))
                 )
                 await session.commit()

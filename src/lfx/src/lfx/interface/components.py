@@ -21,6 +21,7 @@ from lfx.extension import (
     format_extension_error,
     load_dev_extensions,
     load_installed_extensions,
+    load_lfx_bundles_extensions,
     load_seed_extensions,
 )
 from lfx.extension.bundle_registry import BundleRecord, get_default_registry
@@ -394,6 +395,58 @@ def _warm_circular_imports() -> None:
             importlib.import_module(modname)
 
 
+_LFX_BUNDLES_SHIM_MARKER = "# lfx-bundles-shim"
+_LFX_COMPAT_SHIM_MARKER = "# lfx-compat-shim"
+
+
+def _discover_marked_component_dirs(search_paths: list[str], markers: set[str]) -> set[str]:
+    """Top-level ``lfx.components`` subdirs whose ``__init__.py`` starts with a known marker."""
+    marked: set[str] = set()
+    for root in search_paths:
+        root_path = Path(root)
+        if not root_path.is_dir():
+            continue
+        for child in sorted(root_path.iterdir()):
+            init_py = child / "__init__.py"
+            if not (child.is_dir() and init_py.is_file()):
+                continue
+            try:
+                with init_py.open(encoding="utf-8") as f:
+                    head = f.readline()
+            except OSError:
+                continue
+            if any(head.startswith(marker) for marker in markers):
+                marked.add(child.name)
+    return marked
+
+
+def _discover_shimmed_component_dirs(search_paths: list[str]) -> set[str]:
+    """Top-level ``lfx.components`` subdirs that are lfx-bundles import shims.
+
+    A provider consolidated into the lfx-bundles metapackage leaves a one-file
+    shim at ``lfx/components/<provider>/__init__.py`` (first line
+    ``# lfx-bundles-shim``) re-pointing to ``lfx_bundles.<provider>``.  Those
+    components load dynamically at the @official slot via the lfx.bundles
+    discovery path, so the in-tree walk must skip them or each component would
+    be registered twice (once in-tree, once at @official).
+    """
+    return _discover_marked_component_dirs(search_paths, {_LFX_BUNDLES_SHIM_MARKER})
+
+
+def _discover_component_skip_dirs(search_paths: list[str]) -> set[str]:
+    """Top-level ``lfx.components`` subdirs that contain no palette components.
+
+    Besides bundle provider shims, Langflow keeps a few package-rename shims
+    solely for import compatibility (for example ``knowledge_bases`` ->
+    ``files_and_knowledge``). They must stay importable, but the component
+    discovery walk should not treat them as palette categories.
+    """
+    return _discover_marked_component_dirs(
+        search_paths,
+        {_LFX_BUNDLES_SHIM_MARKER, _LFX_COMPAT_SHIM_MARKER},
+    )
+
+
 async def _load_components_dynamically(
     target_modules: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -413,6 +466,10 @@ async def _load_components_dynamically(
         await logger.aerror(f"Failed to import langflow.components package: {e}", exc_info=True)
         return modules_dict
 
+    # Skip compatibility-only packages that should stay importable but should not
+    # be treated as palette categories during the in-tree walk.
+    skip_component_dirs = _discover_component_skip_dirs(list(components_pkg.__path__))
+
     # Collect all module names to process
     module_names = []
     for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
@@ -424,6 +481,11 @@ async def _load_components_dynamically(
         parts = modname.split(".")
         if len(parts) > MIN_MODULE_PARTS:
             component_type = parts[2]
+
+            # Compatibility-only packages are either discovered through their
+            # real extension path or intentionally contain no palette components.
+            if component_type in skip_component_dirs:
+                continue
 
             # Skip disabled components when ASTRA_CLOUD_DISABLE_COMPONENT is true
             if len(parts) >= MIN_MODULE_PARTS_WITH_FILENAME:
@@ -591,13 +653,19 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     """
     try:
         module = importlib.import_module(modname)
+    except ModuleNotFoundError as e:
+        # Expected when a component's optional dependency isn't installed (e.g. litellm and
+        # toolguard are excluded on Python 3.14 images), so a one-line warning is enough --
+        # a full traceback per affected module would flood startup logs for a normal condition.
+        logger.warning(f"Skipping component module {modname}: missing optional dependency ({e.name or e})")
+        return None
     except Exception as e:  # noqa: BLE001
         # Catch all exceptions during import to prevent component failures from crashing startup
         # TODO: Surface these errors to the UI in a friendly manner
         logger.error(f"Failed to import module {modname}: {e}", exc_info=True)
         return None
     # Extract the top-level subpackage name after "lfx.components."
-    # e.g., "lfx.components.Notion.add_content_to_page" -> "Notion"
+    # e.g., "lfx.components.processing.combine_text" -> "processing"
     mod_parts = modname.split(".")
     if len(mod_parts) <= MIN_MODULE_PARTS:
         return None
@@ -733,17 +801,29 @@ def _decorate_template_with_extension(
     bundle: str,
     extension_version: str,
     namespaced_id: str,
+    legacy_name: str | None = None,
 ) -> dict[str, Any]:
     """Stamp the AC-required identity fields onto a frontend-node template.
 
     The ``namespaced_id`` is also written to the template so a consumer that
     only looks at the value (not the dict key) still sees the canonical
     ``ext:<bundle>:<Class>@<slot>`` identifier.
+
+    ``legacy_name`` is the identity the component had in the in-tree palette
+    (the class's ``name`` attribute, falling back to the class name) -- the
+    string saved flows carry as their node ``type``.  In-tree palette entries
+    expose it as the dict key, but ext entries are keyed by ``namespaced_id``,
+    so it must be carried in the value or both alias maps (frontend
+    ``getTemplateAliases``, ``lfx.utils.component_aliases``) lose the only
+    bridge from a pre-move node type like ``AstraDB`` or ``Chroma`` to the
+    current template -- leaving such nodes permanently unresolvable.
     """
     template["extension"] = extension_id
     template["bundle"] = bundle
     template["extension_version"] = extension_version
     template["namespaced_id"] = namespaced_id
+    if legacy_name and not template.get("name"):
+        template["name"] = legacy_name
     return template
 
 
@@ -764,22 +844,58 @@ def _emit_extension_diagnostics(results: list[LoadResult]) -> None:
 # Discovery-source precedence for cross-source bundle-name collisions.
 # Higher in the list wins.  Ordered from most-authoritative (pip-installed
 # distribution = explicit, packaged install) to least (LANGFLOW_COMPONENTS_PATH
-# = loose, legacy custom-components path).  Operators who stage a bundle in
-# multiple places almost always *want* the more-authoritative copy to win;
-# the typed warning is what catches the unintentional case.
-_DISCOVERY_PRECEDENCE: tuple[str, ...] = ("installed", "seed", "dev", "inline")
+# = loose, legacy custom-components path).  ``lfx_bundles`` is the
+# manifest-less metapackage tier: it sits BELOW the two manifest sources
+# (installed > seed) so a graduated ``lfx-<provider>`` shipping a manifest
+# always shadows the same-named provider in the metapackage -- the property
+# that lets a provider graduate with no lockstep release -- and ABOVE the
+# loose dev/inline sources.  Operators who stage a bundle in multiple places
+# almost always *want* the more-authoritative copy to win; the typed warning
+# is what catches the unintentional case.
+_DISCOVERY_PRECEDENCE: tuple[str, ...] = ("installed", "seed", "lfx_bundles", "dev", "inline")
+
+
+def _claimed_official_bundles(
+    extension_results: list[LoadResult],
+    seed_results: list[LoadResult],
+) -> dict[str, tuple[str, str]]:
+    """Map bundle names won by installed/seed sources to ``(kind, path)``.
+
+    Fed to :func:`load_lfx_bundles_extensions` so the manifest-less
+    metapackage tier skips *importing* providers that would lose shadow
+    resolution anyway -- the @official sources share one
+    ``_lfx_ext.official.<bundle>.*`` sys.modules namespace, and a
+    lower-precedence import would overwrite the winner's live modules.
+    Mirrors the winner-picking rule in :func:`_resolve_bundle_shadowing`:
+    only results that actually produced components claim a name, and the
+    first (highest-precedence) claimant wins.
+    """
+    claimed: dict[str, tuple[str, str]] = {}
+    for kind, results in (("installed", extension_results), ("seed", seed_results)):
+        for result in results:
+            if not result.bundle or not result.components or result.bundle in claimed:
+                continue
+            claimed[result.bundle] = (kind, str(result.source_path) if result.source_path else "<unknown>")
+    return claimed
 
 
 def _resolve_bundle_shadowing(
     *,
     extension_results: list[LoadResult],
     seed_results: list[LoadResult],
+    lfx_bundles_results: list[LoadResult],
     dev_results: list[LoadResult],
     inline_results: list[LoadResult],
-) -> tuple[list[LoadResult], list[LoadResult], list[LoadResult], list[LoadResult]]:
+) -> tuple[
+    list[LoadResult],
+    list[LoadResult],
+    list[LoadResult],
+    list[LoadResult],
+    list[LoadResult],
+]:
     """Drop loser components and emit typed shadow warnings on lower-precedence dups.
 
-    Precedence is :data:`_DISCOVERY_PRECEDENCE` (installed > seed > dev > inline).
+    Precedence is :data:`_DISCOVERY_PRECEDENCE` (installed > seed > lfx_bundles > dev > inline).
     For each bundle name claimed by more than one source, the highest-precedence
     source keeps its components; every other source has its ``components`` cleared
     AND gains a typed warning naming the winning source's path so the operator can
@@ -807,6 +923,7 @@ def _resolve_bundle_shadowing(
     sources: dict[str, list[LoadResult]] = {
         "installed": extension_results,
         "seed": seed_results,
+        "lfx_bundles": lfx_bundles_results,
         "dev": dev_results,
         "inline": inline_results,
     }
@@ -867,7 +984,7 @@ def _resolve_bundle_shadowing(
                         location=loser_path,
                         content=result.bundle,
                         hint=(
-                            "Discovery precedence is installed > seed > dev > inline. "
+                            "Discovery precedence is installed > seed > lfx_bundles > dev > inline. "
                             f"Either remove the {kind} copy of this bundle or rename it so each "
                             "bundle name comes from exactly one source."
                         ),
@@ -877,7 +994,7 @@ def _resolve_bundle_shadowing(
             # loops naturally skip this result; the typed warning still emits.
             result.components = []
 
-    return extension_results, seed_results, dev_results, inline_results
+    return extension_results, seed_results, lfx_bundles_results, dev_results, inline_results
 
 
 async def import_extension_components(
@@ -916,6 +1033,24 @@ async def import_extension_components(
     # When neither $LANGFLOW_SEED_DIR is set nor /opt/langflow/bundles
     # exists this is a no-op, so it costs nothing in Mode A.
     seed_results = load_seed_extensions()
+    # Manifest-less lfx.bundles metapackage roots are the third @official
+    # production source (after installed-manifest and seed): a distribution
+    # declaring the ``lfx.bundles`` entry-point ships a package whose
+    # subdirectories are bundles, registered at @official with no manifest.
+    # Loaded here so they enter the same shadow-resolution + registry +
+    # palette pathway; a no-op when no distribution declares the group.
+    #
+    # ``claimed_bundles`` carries the names already won by the two
+    # higher-precedence sources so the metapackage loader never *imports* a
+    # losing copy: all @official sources share the
+    # ``_lfx_ext.official.<bundle>.*`` sys.modules namespace, so importing a
+    # shadowed provider would overwrite the winner's live modules even though
+    # _resolve_bundle_shadowing later drops its components.  This collision is
+    # the expected post-graduation state (standalone lfx-<provider> installed
+    # alongside an older metapackage), not a misconfiguration.
+    lfx_bundles_results = load_lfx_bundles_extensions(
+        claimed_bundles=_claimed_official_bundles(extension_results, seed_results)
+    )
     # Dev extensions registered via ``lfx extension dev`` ship the same v0
     # manifest contract as installed extensions; load them through the
     # @official-slot pathway so they enter the BundleRegistry, expose the
@@ -928,8 +1063,9 @@ async def import_extension_components(
     inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
 
     # Resolve cross-source bundle-name shadowing in a single pass.  Discovery
-    # surfaces four sources -- installed (pip) > seed (filesystem-staged) >
-    # dev (`lfx extension dev`) > inline (LANGFLOW_COMPONENTS_PATH) -- and the
+    # surfaces five sources -- installed (pip) > seed (filesystem-staged) >
+    # lfx_bundles (manifest-less metapackage) > dev (`lfx extension dev`) >
+    # inline (LANGFLOW_COMPONENTS_PATH) -- and the
     # registry is keyed by bundle name.  Without an explicit precedence the
     # registry-population loop would silently overwrite earlier records with
     # later ones (last-wins by iteration order), and the reload endpoint would
@@ -938,17 +1074,28 @@ async def import_extension_components(
     # surface the typed warning before either the registry or the palette
     # mapping is built so the operator sees the shadow once with the actual
     # paths involved.
-    deduped_extension_results, deduped_seed_results, deduped_dev_results, deduped_inline_results = (
-        _resolve_bundle_shadowing(
-            extension_results=extension_results,
-            seed_results=seed_results,
-            dev_results=dev_results,
-            inline_results=inline_results,
-        )
+    (
+        deduped_extension_results,
+        deduped_seed_results,
+        deduped_lfx_bundles_results,
+        deduped_dev_results,
+        deduped_inline_results,
+    ) = _resolve_bundle_shadowing(
+        extension_results=extension_results,
+        seed_results=seed_results,
+        lfx_bundles_results=lfx_bundles_results,
+        dev_results=dev_results,
+        inline_results=inline_results,
     )
 
     _emit_extension_diagnostics(
-        [*deduped_extension_results, *deduped_seed_results, *deduped_dev_results, *deduped_inline_results]
+        [
+            *deduped_extension_results,
+            *deduped_seed_results,
+            *deduped_lfx_bundles_results,
+            *deduped_dev_results,
+            *deduped_inline_results,
+        ]
     )
 
     # Populate the process-default BundleRegistry so the reload endpoint
@@ -965,6 +1112,7 @@ async def import_extension_components(
     all_results = [
         *deduped_extension_results,
         *deduped_seed_results,
+        *deduped_lfx_bundles_results,
         *deduped_dev_results,
         *deduped_inline_results,
     ]
@@ -979,6 +1127,7 @@ async def import_extension_components(
             components=tuple(result.components),
             distribution=result.distribution,
             source_path=result.source_path,
+            manifestless=result.manifestless,
         )
         registry.install_bundle(record)
 
@@ -1014,6 +1163,7 @@ async def import_extension_components(
                 bundle=loaded.bundle,
                 extension_version=loaded.extension_version,
                 namespaced_id=loaded.namespaced_id,
+                legacy_name=getattr(instance, "name", None) or loaded.class_name,
             )
     return components_dict
 
@@ -1060,6 +1210,7 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
             bundle=loaded.bundle,
             extension_version=loaded.extension_version,
             namespaced_id=loaded.namespaced_id,
+            legacy_name=getattr(instance, "name", None) or loaded.class_name,
         )
 
     expected = len(record.components)

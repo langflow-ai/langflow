@@ -565,6 +565,7 @@ def register_all_service_factories() -> None:
     from lfx.services.schema import ServiceType
 
     service_manager = get_service_manager()
+    from lfx.services.executor import factory as executor_factory
     from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.settings import factory as settings_factory
 
@@ -620,6 +621,7 @@ def register_all_service_factories() -> None:
     )
     service_manager.register_factory(authorization_factory.AuthorizationServiceFactory())
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
+    service_manager.register_factory(executor_factory.ExecutorServiceFactory())
     service_manager.set_factory_registered()
 
 
@@ -675,6 +677,23 @@ async def initialize_services(*, fix_migration: bool = False, skip_superuser_set
     if isinstance(cache_service, ExternalAsyncBaseCacheService) and not (await cache_service.is_connected()):
         msg = "Cache service failed to connect to external database"
         raise ConnectionError(msg)
+
+    # Fail fast if the Redis-backed job queue is selected but Redis is unreachable.
+    # Otherwise Langflow boots "fine" and emits confusing connection errors only
+    # when a flow is executed. Only probes when the redis backend is selected, so
+    # the default asyncio backend is unaffected.
+    if get_settings_service().settings.job_queue_type == "redis":
+        from langflow.services.job_queue.factory import JobQueueServiceFactory
+        from langflow.services.job_queue.service import RedisJobQueueService
+
+        queue_service = get_service(ServiceType.JOB_QUEUE_SERVICE, default=JobQueueServiceFactory())
+        if isinstance(queue_service, RedisJobQueueService) and not (await queue_service.is_connected()):
+            msg = (
+                f"Job queue backend 'redis' is selected (LANGFLOW_JOB_QUEUE_TYPE=redis) but Redis is "
+                f"not reachable at {queue_service.connection_target}. Start Redis, fix the "
+                "LANGFLOW_REDIS_QUEUE_* settings, or set LANGFLOW_JOB_QUEUE_TYPE=asyncio."
+            )
+            raise ConnectionError(msg)
 
     # Setup the superuser
     await initialize_database(fix_migration=fix_migration)

@@ -1,0 +1,22 @@
+---
+title: Extension error codes
+slug: /extensions/errors
+---
+
+If you experience an error with extensions, read the `hint` for how to fix the error found in the `location` path.
+
+```text
+error[inline-bundle-name-invalid]: Inline bundle directory 'Notion' does not match ...
+  location: /path/to/components/Notion
+  content:  Notion
+  hint:     Rename the directory to lowercase snake_case starting with a letter, 2-64 characters.
+  see:      https://docs.langflow.org/extensions/errors
+```
+
+Before launching Langflow, run [`lfx extension validate`](/extensions-quickstart) to catch manifest and bundle issues.
+
+## See also
+
+- [Bundle extensions overview](/extensions-overview)
+- [Build your first extension](/extensions-quickstart)
+- [Manifest reference](/extensions-manifest)

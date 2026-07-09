@@ -59,6 +59,33 @@ from langflow.services.deps import (
 # starter projects. We want to load these into the database so that users
 # can use them as a starting point for their own projects.
 
+# Extension components are loaded under the runtime-only ``_lfx_ext.*``
+# sys.modules namespace, so the live template's ``metadata.module`` is not an
+# importable path outside a running extension loader. Persisted starter
+# projects must keep the stable legacy path (``lfx.components.<provider>...``,
+# importable via the bundle shims) -- it is what the migration table and the
+# template tests resolve.
+_RUNTIME_EXT_MODULE_PREFIX = "_lfx_ext."
+
+
+def _merge_node_metadata(current_metadata, latest_metadata):
+    """Return the latest metadata, preserving a stored importable ``module`` path.
+
+    When the live template carries a runtime ``_lfx_ext.*`` module (an ext
+    component) and the node already has a module value, keep the node's --
+    otherwise persisting the runtime namespace breaks every consumer that
+    imports the path.
+    """
+    if not isinstance(latest_metadata, dict):
+        return latest_metadata
+    latest_module = latest_metadata.get("module")
+    current_module = current_metadata.get("module") if isinstance(current_metadata, dict) else None
+    if isinstance(latest_module, str) and latest_module.startswith(_RUNTIME_EXT_MODULE_PREFIX) and current_module:
+        merged = deepcopy(latest_metadata)
+        merged["module"] = current_module
+        return merged
+    return latest_metadata
+
 
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
     all_types_dict_flat = flatten_components_with_aliases(all_types_dict)
@@ -151,6 +178,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 for attr in NODE_FORMAT_ATTRIBUTES:
                     latest_attr_value = latest_node.get(attr)
                     current_attr_value = node_data.get(attr)
+
+                    if attr == "metadata":
+                        latest_attr_value = _merge_node_metadata(current_attr_value, latest_attr_value)
 
                     if (
                         attr in latest_node

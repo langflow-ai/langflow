@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.base.models.model_utils import replace_with_live_models
 from lfx.base.models.unified_models import (
+    get_live_only_providers,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
@@ -17,6 +18,7 @@ from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.authorization import VariableAction, ensure_variable_permission
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
@@ -195,10 +197,42 @@ async def list_models(
         **metadata_filters,
     )
 
+    # Live-discovery-only providers (contributed by extension bundles, e.g. vLLM or
+    # OpenAI Compatible) ship no static catalog rows, so the catalog query above can
+    # never emit them, and replace_with_live_models below only fills providers that
+    # are already configured. Union them in with an empty model list so the Model
+    # Providers dialog can offer their configuration form in the first place; once
+    # configured, replace_with_live_models fills this same entry with the endpoint's
+    # discovered models. Skipped for model_name/metadata queries, which ask about
+    # concrete models rather than which providers exist.
+    if model_name is None and not metadata_filters:
+        provider_metadata = get_model_provider_metadata()
+        listed_providers = {provider_dict.get("provider") for provider_dict in filtered_models}
+        for live_only_provider in get_live_only_providers():
+            if live_only_provider in listed_providers:
+                continue
+            if selected_providers and live_only_provider not in selected_providers:
+                continue
+            filtered_models.append(
+                {
+                    "provider": live_only_provider,
+                    "models": [],
+                    "num_models": 0,
+                    **provider_metadata.get(live_only_provider, {}),
+                }
+            )
+
     # Run before status is computed so live-only providers appended here (e.g. IBM WatsonX,
     # whose static catalog is fully deprecated) still receive is_enabled/is_configured (#13735).
     configured_providers = {p for p, configured in provider_configured_status.items() if configured}
     replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
+
+    # replace_with_live_models iterates every live-capable provider regardless of
+    # the ?provider= filter, so it can append providers the caller excluded (e.g.
+    # a configured OpenRouter appearing in a ?provider=OpenAI response). Re-apply
+    # the filter so the response honors its own contract.
+    if selected_providers:
+        filtered_models = [p for p in filtered_models if p.get("provider") in selected_providers]
 
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")
@@ -593,6 +627,14 @@ async def update_enabled_models(
     Accepts a list of model IDs with their desired enabled status.
     This only affects model-level enablement - provider credentials must still be configured.
     """
+    # Persists the enabled/disabled model lists as the user's own Variables: a
+    # variable WRITE. Enforce so the external access ceiling caps a "viewer";
+    # the owner with no ceiling fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.WRITE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(
@@ -734,6 +776,14 @@ async def set_default_model(
     request: DefaultModelRequest,
 ):
     """Set the default model for the current user."""
+    # Creating/updating the default-model Variable is a variable WRITE. Enforce
+    # so the external access ceiling caps a "viewer"; the owner with no ceiling
+    # fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.WRITE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(
@@ -809,6 +859,14 @@ async def clear_default_model(
     model_type: Annotated[str, Query(description="Type of model: 'language' or 'embedding'")] = "language",
 ):
     """Clear the default model for the current user."""
+    # Deleting the default-model Variable is a variable DELETE. Enforce so the
+    # external access ceiling caps a "viewer"; the owner with no ceiling
+    # fast-paths via owner-override.
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.DELETE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         raise HTTPException(
