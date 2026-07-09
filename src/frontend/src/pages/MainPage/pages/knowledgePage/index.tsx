@@ -22,6 +22,7 @@ export const KnowledgePage = () => {
   const { t } = useTranslation();
   const navigate = useCustomNavigate();
   const drawerRef = useRef<HTMLDivElement>(null);
+  const drawerTriggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -77,6 +78,10 @@ export const KnowledgePage = () => {
   }, [isDrawerOpen]);
 
   const handleKnowledgeBaseSelect = (knowledgeBase: KnowledgeBaseInfo) => {
+    drawerTriggerRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     setSelectedKnowledgeBase(knowledgeBase);
     setIsDrawerOpen(true);
   };
@@ -88,6 +93,11 @@ export const KnowledgePage = () => {
   const closeDrawer = () => {
     setIsDrawerOpen(false);
     setSelectedKnowledgeBase(null);
+    // Restore focus after the drawer unmounts so the trigger is focusable again.
+    requestAnimationFrame(() => {
+      drawerTriggerRef.current?.focus();
+      drawerTriggerRef.current = null;
+    });
   };
 
   const tabProps = {

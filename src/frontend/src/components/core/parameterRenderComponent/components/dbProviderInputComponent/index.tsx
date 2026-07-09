@@ -39,6 +39,8 @@ interface DBProviderInputProps {
   value: AvailableDBProviderId;
   globalVariables: GlobalVariable[];
   disabled?: boolean;
+  /** Accessible name for the combobox trigger (WCAG 4.1.2). */
+  "aria-label"?: string;
   onValueChange: (
     backendType: AvailableDBProviderId,
     backendConfig: Record<string, DBProviderConfigValue>,
@@ -96,6 +98,7 @@ export function DBProviderInput({
   value,
   globalVariables,
   disabled,
+  "aria-label": ariaLabel,
   onValueChange,
 }: DBProviderInputProps) {
   const { t } = useTranslation();
@@ -143,12 +146,14 @@ export function DBProviderInput({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           disabled={disabled}
           variant="primary"
           size="xs"
           role="combobox"
           ref={refButton}
           aria-expanded={open}
+          aria-label={ariaLabel}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",

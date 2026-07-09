@@ -47,6 +47,7 @@ export default function ModelInputComponent({
   inspectionPanel,
   showEmptyState = false,
   modelType: modelTypeProp,
+  "aria-label": ariaLabel,
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
@@ -615,6 +616,7 @@ export default function ModelInputComponent({
               id={id}
               refButton={refButton}
               showEmptyState={showEmptyState}
+              aria-label={ariaLabel}
             />
           </div>
           {showConfigureAffordance && (

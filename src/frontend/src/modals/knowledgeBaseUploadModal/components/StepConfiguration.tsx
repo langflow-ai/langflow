@@ -140,7 +140,10 @@ export function StepConfiguration({
 
         {/* Model Selection */}
         <div className="flex flex-col gap-2 pt-4">
-          <Label className="text-sm font-medium">
+          <Label
+            htmlFor={isAddSourcesMode ? undefined : "kb-embedding-model"}
+            className="text-sm font-medium"
+          >
             {t("knowledge.embeddingModelLabel")}{" "}
             <span className="text-destructive">*</span>
           </Label>
@@ -174,11 +177,16 @@ export function StepConfiguration({
                 options={embeddingModelOptions}
                 placeholder={t("knowledge.embeddingModelPlaceholder")}
                 showEmptyState
+                aria-label={t("knowledge.embeddingModelLabel")}
               />
             </div>
           )}
           {validationErrors.embeddingModel && (
-            <span className="text-xs text-destructive">
+            <span
+              id="kb-embedding-model-error"
+              className="text-xs text-destructive"
+              role="alert"
+            >
               {validationErrors.embeddingModel}
             </span>
           )}
@@ -186,7 +194,7 @@ export function StepConfiguration({
 
         {/* Backend Selection */}
         <div className="flex flex-col gap-2 pt-4">
-          <Label className="text-sm font-medium">
+          <Label htmlFor="kb-db-provider" className="text-sm font-medium">
             {t("knowledge.dbProviderLabel")}{" "}
             <span className="text-destructive">*</span>
           </Label>
@@ -201,6 +209,7 @@ export function StepConfiguration({
               value={backendType}
               globalVariables={globalVariables}
               disabled={isAddSourcesMode}
+              aria-label={t("knowledge.dbProviderLabel")}
               onValueChange={(nextBackendType, nextBackendConfig) => {
                 onBackendChange(nextBackendType, nextBackendConfig);
                 onFieldChange?.();
@@ -211,7 +220,11 @@ export function StepConfiguration({
             {t("knowledge.dbProviderDescription")}
           </span>
           {validationErrors.backend && (
-            <span className="text-xs text-destructive">
+            <span
+              id="kb-backend-error"
+              className="text-xs text-destructive"
+              role="alert"
+            >
               {validationErrors.backend}
             </span>
           )}

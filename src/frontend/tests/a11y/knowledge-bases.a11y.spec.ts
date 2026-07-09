@@ -54,6 +54,9 @@ const KB_LIST_SCENARIOS: A11yScenario[] = [
       await mockKnowledgeBases(page, SEEDED_KNOWLEDGE_BASES);
       await openKnowledgeBasesRoute(page);
       await expect(page.getByTestId("search-kb-input")).toBeVisible();
+      await expect(
+        page.getByRole("textbox", { name: /search knowledge bases/i }),
+      ).toBeVisible();
       await expect(page.getByText("Alpha Knowledge Base")).toBeVisible({
         timeout: TIMEOUTS.standard,
       });
@@ -85,6 +88,12 @@ const KB_CHUNKS_SCENARIOS: A11yScenario[] = [
       await mockChunks(page, SEEDED_CHUNKS_RESPONSE);
       await openChunksRoute(page, "alpha_kb");
       await expect(page.getByTestId("chunks-search-input")).toBeVisible();
+      await expect(
+        page.getByRole("textbox", { name: /search chunks/i }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("combobox", { name: /filter by source type/i }),
+      ).toBeVisible();
       await expect(
         page.getByText(/langflow lets you compose ai workflows/i),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
@@ -195,6 +204,12 @@ test.describe("knowledge bases route accessibility", () => {
       page.getByTestId("btn_delete_delete_confirmation_modal"),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
     await page.runA11yScan("kb-bulk-delete-modal-open");
+
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByTestId("btn_cancel_delete_confirmation_modal"),
+    ).toBeHidden({ timeout: TIMEOUTS.standard });
+    await expect(deleteSelected).toBeFocused({ timeout: TIMEOUTS.standard });
   });
 
   test(
@@ -235,6 +250,14 @@ test.describe("knowledge bases route accessibility", () => {
         page.getByTestId("btn_delete_delete_confirmation_modal"),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
       await page.runA11yScan("kb-delete-modal-open");
+
+      await page.keyboard.press("Escape");
+      await expect(
+        page.getByTestId("btn_cancel_delete_confirmation_modal"),
+      ).toBeHidden({ timeout: TIMEOUTS.standard });
+      await expect(rowActionsTrigger).toBeFocused({
+        timeout: TIMEOUTS.standard,
+      });
     },
   );
 
@@ -247,8 +270,17 @@ test.describe("knowledge bases route accessibility", () => {
     });
 
     await openKnowledgeBaseDrawer(page);
+    const drawer = page.getByTestId("knowledge-base-drawer");
+    await expect(drawer).toBeVisible({ timeout: TIMEOUTS.standard });
+    await expect(drawer).toHaveAttribute("role", "region");
+    await expect(
+      page.getByRole("button", { name: /close details panel/i }),
+    ).toBeFocused({ timeout: TIMEOUTS.standard });
     await settleNetwork(page);
     await page.runA11yScan("kb-drawer-open");
+
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden({ timeout: TIMEOUTS.standard });
   });
 
   test(
@@ -264,25 +296,41 @@ test.describe("knowledge bases route accessibility", () => {
       });
 
       await openKnowledgeBaseDrawer(page);
-      await expect(page.getByText(/succeeded/i).first()).toBeVisible({
-        timeout: TIMEOUTS.standard,
-      });
+      const runButton = page
+        .getByRole("button", { name: /succeeded/i })
+        .first();
+      await expect(runButton).toBeVisible({ timeout: TIMEOUTS.standard });
       await settleNetwork(page);
       await page.runA11yScan("kb-drawer-runs-populated");
 
-      await page
-        .getByText(/succeeded/i)
-        .first()
-        .click();
+      await runButton.click();
+      const runDialog = page.getByRole("dialog", {
+        name: /ingestion run detail/i,
+      });
+      await expect(runDialog).toBeVisible({ timeout: TIMEOUTS.standard });
       await expect(page.getByTestId("run-detail-run-id")).toBeVisible({
         timeout: TIMEOUTS.standard,
       });
+      const closeRun = page.getByRole("button", { name: /close run detail/i });
+      await expect(closeRun).toBeFocused({ timeout: TIMEOUTS.standard });
       await page.runA11yScan("kb-ingestion-run-detail");
+
+      await page.keyboard.press("Tab");
+      await expect(closeRun).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(runDialog).toBeHidden({ timeout: TIMEOUTS.standard });
+      await expect(runButton).toBeFocused({ timeout: TIMEOUTS.standard });
     },
   );
 
   test("scans create-modal step 1 surfaces", RELEASE, async ({ page }) => {
     await openCreateModal(page);
+    await expect(
+      page.getByRole("combobox", { name: /embedding model/i }),
+    ).toBeVisible({ timeout: TIMEOUTS.standard });
+    await expect(
+      page.getByRole("combobox", { name: /db provider/i }),
+    ).toBeVisible();
     await settleNetwork(page);
     await page.runA11yScan("kb-upload-step-configuration");
 
@@ -302,6 +350,13 @@ test.describe("knowledge bases route accessibility", () => {
     });
     await expect(page.getByTestId("kb-run-metadata-value-0")).toBeVisible();
     await page.runA11yScan("kb-upload-metadata-add");
+
+    const addKnowledge = page.getByRole("button", { name: /add knowledge/i });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden({
+      timeout: TIMEOUTS.standard,
+    });
+    await expect(addKnowledge).toBeFocused({ timeout: TIMEOUTS.standard });
   });
 
   test("scans the review & build step (step 2)", RELEASE, async ({ page }) => {
@@ -451,14 +506,29 @@ test.describe("knowledge bases route accessibility", () => {
     async ({ page }) => {
       await openCreateModal(page);
 
-      await page.getByTestId("value-dropdown-kb-embedding-model").click();
+      await expect(
+        page.getByRole("combobox", { name: /embedding model/i }),
+      ).toBeVisible({ timeout: TIMEOUTS.standard });
+      await page.getByRole("combobox", { name: /embedding model/i }).click();
       await expect(
         page.getByTestId("text-embedding-3-small-option"),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
+      await expect(page.getByTestId("manage-model-providers")).toBeVisible();
       await page.runA11yScan("kb-upload-embedding-dropdown");
 
+      await page.getByTestId("manage-model-providers").click();
+      const openaiProvider = page.getByTestId("provider-item-OpenAI");
+      await expect(openaiProvider).toBeVisible({ timeout: TIMEOUTS.standard });
+      await openaiProvider.focus();
+      await expect(openaiProvider).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(openaiProvider).toHaveAttribute("aria-pressed", "true");
+      await page.runA11yScan("kb-upload-manage-providers");
+
       await page.keyboard.press("Escape");
-      await page.getByTestId("value-dropdown-kb-db-provider").click();
+      await expect(openaiProvider).toBeHidden({ timeout: TIMEOUTS.standard });
+
+      await page.getByRole("combobox", { name: /db provider/i }).click();
       await expect(page.getByTestId("chroma-provider-option")).toBeVisible({
         timeout: TIMEOUTS.standard,
       });
@@ -470,11 +540,17 @@ test.describe("knowledge bases route accessibility", () => {
     await openCreateModal(page);
 
     await page.getByTestId("kb-run-metadata-add").click();
-    await page.getByTestId("kb-run-metadata-key-0").fill("BadKey");
+    const keyInput = page.getByTestId("kb-run-metadata-key-0");
+    await keyInput.fill("BadKey");
     await page.getByTestId("kb-run-metadata-value-0").fill("value");
-    await expect(page.getByTestId("kb-run-metadata-error-0")).toBeVisible({
-      timeout: TIMEOUTS.standard,
-    });
+    const error = page.getByTestId("kb-run-metadata-error-0");
+    await expect(error).toBeVisible({ timeout: TIMEOUTS.standard });
+    await expect(error).toHaveAttribute("role", "alert");
+    await expect(keyInput).toHaveAttribute("aria-invalid", "true");
+    await expect(keyInput).toHaveAttribute(
+      "aria-describedby",
+      "kb-run-metadata-error-0",
+    );
     await page.runA11yScan("kb-upload-metadata-error");
   });
 

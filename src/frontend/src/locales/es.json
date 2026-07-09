@@ -2111,5 +2111,11 @@
   "flows.moreOptions": "More options for {{name}}",
   "folder.optionsFor": "Options for {{name}}",
   "paginator.pageLabel": "Page",
-  "flow.flowSettings": "Flow settings"
+  "flow.flowSettings": "Flow settings",
+  "knowledge.searchKnowledgeBases": "Buscar bases de conocimiento",
+  "knowledge.searchChunksLabel": "Buscar fragmentos",
+  "knowledge.metadataKeyLabel": "Clave de metadatos {{index}}",
+  "knowledge.metadataValueLabel": "Valor de metadatos {{index}}",
+  "knowledge.chunksMetadataKeyLabel": "Clave de filtro de metadatos",
+  "knowledge.chunksMetadataValueLabel": "Valor de filtro de metadatos"
 }

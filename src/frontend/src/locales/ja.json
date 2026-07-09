@@ -2111,5 +2111,11 @@
   "flows.moreOptions": "More options for {{name}}",
   "folder.optionsFor": "Options for {{name}}",
   "paginator.pageLabel": "Page",
-  "flow.flowSettings": "Flow settings"
+  "flow.flowSettings": "Flow settings",
+  "knowledge.searchKnowledgeBases": "ナレッジベースを検索",
+  "knowledge.searchChunksLabel": "チャンクを検索",
+  "knowledge.metadataKeyLabel": "メタデータキー {{index}}",
+  "knowledge.metadataValueLabel": "メタデータ値 {{index}}",
+  "knowledge.chunksMetadataKeyLabel": "メタデータフィルターキー",
+  "knowledge.chunksMetadataValueLabel": "メタデータフィルター値"
 }

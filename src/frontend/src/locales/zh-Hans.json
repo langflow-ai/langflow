@@ -2111,5 +2111,11 @@
   "flows.moreOptions": "More options for {{name}}",
   "folder.optionsFor": "Options for {{name}}",
   "paginator.pageLabel": "Page",
-  "flow.flowSettings": "Flow settings"
+  "flow.flowSettings": "Flow settings",
+  "knowledge.searchKnowledgeBases": "搜索知识库",
+  "knowledge.searchChunksLabel": "搜索分块",
+  "knowledge.metadataKeyLabel": "元数据键 {{index}}",
+  "knowledge.metadataValueLabel": "元数据值 {{index}}",
+  "knowledge.chunksMetadataKeyLabel": "元数据筛选键",
+  "knowledge.chunksMetadataValueLabel": "元数据筛选值"
 }

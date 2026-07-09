@@ -24,6 +24,8 @@ export interface MetadataComboboxProps {
   testId: string;
   disabled?: boolean;
   onEnter?: () => void;
+  /** Accessible name for the combobox trigger (WCAG 4.1.2). */
+  "aria-label"?: string;
 }
 
 export const MetadataCombobox = ({
@@ -35,6 +37,7 @@ export const MetadataCombobox = ({
   testId,
   disabled,
   onEnter,
+  "aria-label": ariaLabel,
 }: MetadataComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -71,6 +74,7 @@ export const MetadataCombobox = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-label={ariaLabel ?? placeholder}
           disabled={disabled}
           className="w-full justify-between font-normal"
           data-testid={testId}

@@ -2108,5 +2108,11 @@
   "flow.defaultDescription.57": "Beyond Text Generation - Unleashing Business Opportunities.",
   "flow.defaultDescription.58": "Unlock the Power of AI in Your Business Conversations.",
   "flow.defaultDescription.59": "Crafting Dialogues that Drive Business Success.",
-  "flow.defaultDescription.60": "Engineered for Excellence, Built for Business."
+  "flow.defaultDescription.60": "Engineered for Excellence, Built for Business.",
+  "knowledge.searchKnowledgeBases": "Search knowledge bases",
+  "knowledge.searchChunksLabel": "Search chunks",
+  "knowledge.metadataKeyLabel": "Metadata key {{index}}",
+  "knowledge.metadataValueLabel": "Metadata value {{index}}",
+  "knowledge.chunksMetadataKeyLabel": "Metadata filter key",
+  "knowledge.chunksMetadataValueLabel": "Metadata filter value"
 }

@@ -185,6 +185,7 @@ export const SourceChunksPage = () => {
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   data-testid="chunks-search-input"
+                  aria-label={t("knowledge.searchChunksLabel")}
                 />
               </div>
 
@@ -195,6 +196,7 @@ export const SourceChunksPage = () => {
                 <SelectTrigger
                   className="w-44 shrink-0"
                   data-testid="chunks-source-type-filter"
+                  aria-label={t("knowledge.sourceTypeFilterLabel")}
                 >
                   <SelectValue placeholder={t("knowledge.allSources")} />
                 </SelectTrigger>
