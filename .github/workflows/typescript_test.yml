@@ -489,6 +489,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Download blob reports from GitHub Actions Artifacts
+        # A single shard artifact failing its download (transient artifact
+        # storage errors, seen in practice) must not void the whole
+        # measurement — merge whatever did download.
+        continue-on-error: true
         uses: actions/download-artifact@v7
         with:
           path: all-blob-reports
@@ -500,7 +504,12 @@ jobs:
           PLAYWRIGHT_JSON_OUTPUT_NAME: flaky-report.json
         # Pinned to the repo's Playwright version: blob format is
         # version-sensitive and bare npx would fetch latest.
-        run: npx playwright@1.60.0 merge-reports --reporter json ./all-blob-reports
+        run: |
+          if ! ls ./all-blob-reports/*.zip >/dev/null 2>&1; then
+            echo "No blob reports downloaded; skipping flaky report."
+            exit 0
+          fi
+          npx playwright@1.60.0 merge-reports --reporter json ./all-blob-reports
 
       - name: Upload flaky report
         uses: actions/upload-artifact@v6
