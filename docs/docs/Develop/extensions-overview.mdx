@@ -24,6 +24,8 @@ The following component packages are included with `uv pip install langflow`:
 |---------|----------|
 | `lfx-bundles` | The long tail of provider bundles (vector stores, model providers, search and tool integrations) as a single package. Each provider is one bundle, for example `tavily`, `qdrant`, or `ollama`. Per-provider pip extras carry the third-party SDKs, and the generated `lfx-bundles[all]` extra pulls all of them. |
 | `lfx-openai`, `lfx-anthropic`, `lfx-amazon`, `lfx-datastax`, `lfx-cohere` | Partner providers as standalone packages, each on its own release cadence. |
+| `lfx-openai-compatible` | [OpenAI Compatible](/bundles-openai-compatible) model provider for any OpenAI-compatible endpoint (provider-only; no components) |
+| `lfx-vllm` | [vLLM](/bundles-vllm) model provider for a self-hosted vLLM server (provider-only; no components) |
 | `lfx-arxiv` | [arXiv](/bundles-arxiv) search |
 | `lfx-docling` | [Docling](/bundles-docling) document parsing and chunking |
 | `lfx-duckduckgo` | [DuckDuckGo](/bundles-duckduckgo) web search |

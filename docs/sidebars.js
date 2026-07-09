@@ -487,6 +487,7 @@ module.exports = {
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
             "Components/bundles-openai",
+            "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
             "Components/bundles-oracle",
             "Components/bundles-perplexity",

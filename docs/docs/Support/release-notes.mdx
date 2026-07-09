@@ -73,13 +73,20 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- OpenAI Compatible model provider
+
+    Point Langflow's model provider at any OpenAI-compatible endpoint, and Langflow discovers models live from the `/v1/models` endpoint.
+    These models can power flows, Langflow Assistant, and any component that uses Langflow’s global model providers.
+
+    For more information, see [OpenAI Compatible](/bundles-openai-compatible).
+
 - IBM watsonx Orchestrate: Python 3.14 compatibility
 
     The `ibm-watsonx-orchestrate-core` and `ibm-watsonx-orchestrate-clients` packages are upgraded to version 2.12, which supports Python 3.14.
     IBM watsonx Orchestrate is no longer excluded from Python 3.14 installs.
 
     For more information, see [Deploy flows on watsonx Orchestrate](/deployment-wxo).
-    
+
 - NextPlaid multi-vector bundle
 
     The **NextPlaid** bundle adds two new components for ColBERT-style multi-vector retrieval.
