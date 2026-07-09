@@ -422,6 +422,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
+            # Backfill MCP servers from the legacy per-user JSON file into the
+            # mcp_server table (idempotent + multi-replica-safe; existing file-based
+            # users are migrated to the DB store automatically on upgrade).
+            try:
+                from langflow.api.utils.mcp.backfill import backfill_mcp_servers_from_files
+
+                async with session_scope() as session:
+                    await backfill_mcp_servers_from_files(session)
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Failed to backfill MCP servers from legacy files: {e}")
+
             # Gate: Load flows from directory
             current_time = asyncio.get_event_loop().time()
             if is_step_complete(PreloadStep.FLOWS):
@@ -463,7 +474,10 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
-            mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
+            if get_settings_service().settings.skip_mcp_auto_init:
+                await logger.adebug("Skipping MCP server auto-initialization (skip_mcp_auto_init=True)")
+            else:
+                mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
             async def refresh_models_dev_periodically() -> None:
                 """Hydrate the models.dev catalog at startup and refresh daily.

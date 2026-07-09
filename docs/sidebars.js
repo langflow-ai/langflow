@@ -200,6 +200,7 @@ module.exports = {
             "Develop/extensions-overview",
             "Develop/extensions-quickstart",
             "Develop/extensions-manifest",
+            "Develop/extensions-errors",
           ],
         },
       ],
@@ -347,6 +348,7 @@ module.exports = {
               type: "category",
               label: "Processing",
               items: [
+                "Components/operations",
                 "Components/data-operations",
                 "Components/dataframe-operations",
                 "Components/dynamic-create-data",
