@@ -143,7 +143,8 @@ const Footer: React.FC<{
       {submit ? (
         <div className="flex w-full items-center justify-between">
           {children ?? <div />}
-          <div className="flex items-center gap-3">
+          {/* p-2/-m-2 keeps layout unchanged while giving ring-offset-2 room to paint */}
+          <div className="-m-2 flex items-center gap-3 overflow-visible p-2">
             <DialogClose asChild>
               <Button
                 variant="outline"
@@ -286,7 +287,7 @@ function BaseModal({
     className,
   );
 
-  const formClasses = "flex flex-col flex-1 gap-6 overflow-hidden";
+  const formClasses = "flex min-h-0 flex-col flex-1 gap-6";
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (
