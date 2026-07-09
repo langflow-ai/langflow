@@ -482,7 +482,7 @@ export default function ModelInputComponent({
    * Handles model selection from the dropdown.
    */
   const handleModelSelect = useCallback(
-    (modelName: string) => {
+    (modelName: string, provider?: string) => {
       setConnectionMode(false);
       // Clear the _connection_mode flag from the model field template
       // so the backend resumes normal update_build_config behavior.
@@ -515,7 +515,9 @@ export default function ModelInputComponent({
         }
       }
       const selectedOption = flatOptions.find(
-        (option) => option.name === modelName,
+        (option) =>
+          option.name === modelName &&
+          (!provider || option.provider === provider),
       );
       if (!selectedOption) return;
 

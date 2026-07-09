@@ -9,10 +9,13 @@ import {
 import { cn } from "@/utils/utils";
 import { ModelOption, SelectedModel } from "../types";
 
+export const getModelOptionTestId = (provider: string, modelName: string) =>
+  `${provider}-${modelName}-option`;
+
 interface ModelListProps {
   groupedOptions: Record<string, ModelOption[]>;
   selectedModel: SelectedModel | null;
-  onSelect: (modelName: string) => void;
+  onSelect: (modelName: string, provider: string) => void;
 }
 
 const ModelList = ({
@@ -44,11 +47,11 @@ const ModelList = ({
           </div>
           {models.map((data) => (
             <CommandItem
-              key={data.name}
-              value={data.name}
-              onSelect={() => onSelect(data.name)}
+              key={`${provider}-${data.name}`}
+              value={`${provider}::${data.name}`}
+              onSelect={() => onSelect(data.name, provider)}
               className="w-full items-center rounded-none"
-              data-testid={`${data.name}-option`}
+              data-testid={getModelOptionTestId(provider, data.name)}
             >
               <div className="flex w-full items-center gap-2">
                 <ForwardedIconComponent
@@ -70,7 +73,8 @@ const ModelList = ({
                     name="Check"
                     className={cn(
                       "h-4 w-4 shrink-0 text-primary",
-                      selectedModel?.name === data.name
+                      selectedModel?.name === data.name &&
+                        selectedModel?.provider === provider
                         ? "opacity-100"
                         : "opacity-0",
                     )}
