@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import shutil
 import tempfile
+import warnings
 from pathlib import Path
 from uuid import uuid4
 
@@ -27,6 +28,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 
 class _FakeSettings:
@@ -104,7 +106,7 @@ async def writer_with_engine():
         await conn.run_sync(SQLModel.metadata.create_all)
     writer = _build_writer()
     writer._engine = engine
-    writer._session_maker = async_sessionmaker(engine, expire_on_commit=False)
+    writer._session_maker = async_sessionmaker(engine, class_=SQLModelAsyncSession, expire_on_commit=False)
     writer._started = True
     writer._shutdown_event = asyncio.Event()
     try:
@@ -340,6 +342,21 @@ async def test_flush_inserts_transactions_and_vertex_builds(writer_with_engine) 
     # Sweeper-driven retention requires dirty-flow tracking; flush populates it.
     assert str(flow_id) in writer._dirty_tx_flows
     assert str(flow_id) in writer._dirty_vb_flows
+
+
+async def test_flush_and_retention_do_not_call_deprecated_session_execute(writer_with_engine) -> None:
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.max_transactions_to_keep = 1
+    writer.settings_service.settings.max_vertex_builds_to_keep = 1
+    flow_id = uuid4()
+
+    tx_batch = [_make_transaction_row(flow_id) for _ in range(3)]
+    vb_batch = [_make_vertex_build_row(flow_id, vertex_id="v1") for _ in range(3)]
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message="(?s).*session\\.exec\\(\\).*", category=DeprecationWarning)
+        await writer._flush(tx_batch, vb_batch)
+        await writer._run_retention_pass()
 
 
 async def test_retention_sweep_caps_transactions_per_flow(writer_with_engine) -> None:
@@ -682,7 +699,7 @@ async def test_retention_failure_preserves_dirty_flows(writer_with_engine) -> No
     writer._dirty_tx_flows.add(str(tx_flow))
     writer._dirty_vb_flows.add(str(vb_flow))
 
-    # Wrap the real session_maker so commit raises but execute() works
+    # Wrap the real session_maker so commit raises but exec() works
     # normally — this drives the retention pass through every query and only
     # fails at the commit boundary, which is exactly the scenario the snapshot/
     # restore logic guards against.
@@ -729,7 +746,7 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
         writer.enqueue_transaction(_make_transaction_row(flow_id))
     assert len(writer._tx_buffer) == 20
 
-    # Replace the session_maker with one that hangs forever inside execute,
+    # Replace the session_maker with one that hangs forever inside exec,
     # so the writer is guaranteed to be blocked mid-flush when we cancel.
     hang = asyncio.Event()  # never set
 
@@ -743,7 +760,7 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
         async def __aexit__(self, *_):
             return False
 
-        async def execute(self, *_):
+        async def exec(self, *_, **__):
             await hang.wait()
 
         async def commit(self):

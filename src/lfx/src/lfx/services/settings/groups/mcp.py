@@ -58,6 +58,15 @@ class McpSettings(BaseModel):
     add_projects_to_mcp_servers: bool = True
     """If set to True, newly created projects will be added to the user's MCP servers config automatically."""
 
+    skip_mcp_auto_init: bool = False
+    """If set to True, Langflow skips the background MCP server auto-initialization on startup.
+
+    The startup task reconciles every project's MCP server config, which for apikey/none
+    projects can spawn ``uvx mcp-proxy`` and open an outbound connection. On an offline or
+    firewalled host (or CI) that connect has no bounded timeout and blocks until the OS
+    connect timeout (~127s). Enable this in tests or air-gapped deployments to keep startup
+    local and deterministic."""
+
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""

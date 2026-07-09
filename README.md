@@ -26,6 +26,8 @@
 - **Observability** with LangSmith, LangFuse and other integrations.
 - **Enterprise-ready** security and scalability.
 
+添加说明
+
 ## 🖥️  Langflow Desktop
 
 Langflow Desktop is the easiest way to get started with Langflow. All dependencies are included, so you don't need to manage Python environments or install packages manually.

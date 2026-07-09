@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from lfx.base.mcp.util import DANGEROUS_MCP_ENV_VARS, is_dangerous_mcp_env_var
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from langflow.logging import logger
@@ -46,47 +47,7 @@ DANGEROUS_KEYWORDS = frozenset(
 
 # SECURITY: Environment variables that enable code injection via approved commands.
 # Grouped by attack category. All comparisons are case-insensitive.
-DANGEROUS_ENV_VARS = frozenset(
-    {
-        # -- Shared-object / dylib injection (arbitrary native code execution) --
-        "ld_preload",
-        "ld_library_path",
-        "ld_audit",
-        "dyld_insert_libraries",
-        "dyld_library_path",
-        # -- glibc iconv module injection (loads arbitrary .so via iconv) --
-        "gconv_path",
-        # -- Command resolution override (redirects which binary bash executes) --
-        "path",
-        # -- Shell startup-script injection (bash executes these before the command) --
-        "bash_env",
-        "env",
-        "bash_func_",  # Shellshock-style function export prefix
-        # -- Shell word-splitting / globbing manipulation --
-        "ifs",
-        "cdpath",
-        # -- Node.js code injection --
-        "node_options",
-        "node_extra_ca_certs",
-        # -- Python code injection --
-        "pythonstartup",
-        "pythonpath",
-        # -- Home / config directory redirection (loads attacker-controlled configs) --
-        "home",
-        "xdg_config_home",
-        "xdg_data_home",
-        # -- Temp directory redirection --
-        "tmpdir",
-        "tmp",
-        "temp",
-        # -- DNS / network manipulation --
-        "hostaliases",
-        "localdomain",
-        "res_options",
-        # -- Locale / getconf injection (can load arbitrary .so on some glibc) --
-        "getconf_dir",
-    }
-)
+DANGEROUS_ENV_VARS = DANGEROUS_MCP_ENV_VARS
 
 # SECURITY: Docker-specific arguments that break container isolation
 DOCKER_DANGEROUS_ARGS = frozenset({"--privileged", "--cap-add"})
@@ -268,8 +229,7 @@ class MCPServerConfig(BaseModel):
             return None
 
         for key in v:
-            lower_key = key.lower()
-            if lower_key in DANGEROUS_ENV_VARS or lower_key.startswith("bash_func_"):
+            if is_dangerous_mcp_env_var(key):
                 msg = f"Environment variable '{key}' is not allowed for security reasons"
                 logger.warning("MCP env var rejected: '{}'", key)
                 raise ValueError(msg)

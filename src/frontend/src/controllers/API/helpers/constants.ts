@@ -46,6 +46,7 @@ export const URLs = {
   AGENTIC_CHECK_CONFIG: `agentic/check-config`,
   AGENTIC_FILES: `agentic/files`,
   EXTENSIONS: `extensions`,
+  TRITON_SERVERS: `triton_servers`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

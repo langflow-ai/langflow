@@ -90,6 +90,16 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
+    {
+      title: t("settings.nav.tritonServers"),
+      href: "/settings/triton-servers",
+      icon: (
+        <ForwardedIconComponent
+          name="Nvidia"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
 
     {
       title: t("settings.nav.shortcuts"),

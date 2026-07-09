@@ -1,0 +1,106 @@
+No,Category,Icon Name,Keywords,Library,Import Code,Usage,Best For,Style
+1,Navigation,list,hamburger menu navigation toggle bars,Phosphor,import { List } from '@phosphor-icons/react',<List size={20} weight="regular" />,Mobile navigation drawer toggle sidebar,Outline
+2,Navigation,arrow-left,back previous return navigate,Phosphor,import { ArrowLeft } from '@phosphor-icons/react',<ArrowLeft size={20} weight="regular" />,Back button breadcrumb navigation,Outline
+3,Navigation,arrow-right,next forward continue navigate,Phosphor,import { ArrowRight } from '@phosphor-icons/react',<ArrowRight size={20} weight="regular" />,Forward button next step CTA,Outline
+4,Navigation,caret-down,dropdown expand accordion select,Phosphor,import { CaretDown } from '@phosphor-icons/react',<CaretDown size={20} weight="regular" />,Dropdown toggle accordion header,Outline
+5,Navigation,caret-up,collapse close accordion minimize,Phosphor,import { CaretUp } from '@phosphor-icons/react',<CaretUp size={20} weight="regular" />,Accordion collapse minimize,Outline
+6,Navigation,house,homepage main dashboard start,Phosphor,import { House } from '@phosphor-icons/react',<House size={20} weight="regular" />,Home navigation main page,Outline
+7,Navigation,x,close cancel dismiss remove exit,Phosphor,import { X } from '@phosphor-icons/react',<X size={20} weight="regular" />,Modal close dismiss button,Outline
+8,Navigation,arrow-square-out,open new tab external link,Phosphor,import { ArrowSquareOut } from '@phosphor-icons/react',<ArrowSquareOut size={20} weight="regular" />,External link indicator,Outline
+9,Action,plus,add create new insert,Phosphor,import { Plus } from '@phosphor-icons/react',<Plus size={20} weight="regular" />,Add button create new item,Outline
+10,Action,minus,remove subtract decrease delete,Phosphor,import { Minus } from '@phosphor-icons/react',<Minus size={20} weight="regular" />,Remove item quantity decrease,Outline
+11,Action,trash,delete remove discard bin,Phosphor,import { Trash } from '@phosphor-icons/react',<Trash size={20} weight="regular" />,Delete action destructive,Outline
+12,Action,pencil-simple,pencil modify change update,Phosphor,import { PencilSimple } from '@phosphor-icons/react',<PencilSimple size={20} weight="regular" />,Edit button modify content,Outline
+13,Action,floppy-disk,disk store persist save,Phosphor,import { FloppyDisk } from '@phosphor-icons/react',<FloppyDisk size={20} weight="regular" />,Save button persist changes,Outline
+14,Action,download-simple,export save file download,Phosphor,import { DownloadSimple } from '@phosphor-icons/react',<DownloadSimple size={20} weight="regular" />,Download file export,Outline
+15,Action,upload-simple,import file attach upload,Phosphor,import { UploadSimple } from '@phosphor-icons/react',<UploadSimple size={20} weight="regular" />,Upload file import,Outline
+16,Action,copy,duplicate clipboard paste,Phosphor,import { Copy } from '@phosphor-icons/react',<Copy size={20} weight="regular" />,Copy to clipboard,Outline
+17,Action,share,social distribute send,Phosphor,import { Share } from '@phosphor-icons/react',<Share size={20} weight="regular" />,Share button social,Outline
+18,Action,magnifying-glass,find lookup filter query,Phosphor,import { MagnifyingGlass } from '@phosphor-icons/react',<MagnifyingGlass size={20} weight="regular" />,Search input bar,Outline
+19,Action,funnel,sort refine narrow options,Phosphor,import { Funnel } from '@phosphor-icons/react',<Funnel size={20} weight="regular" />,Filter dropdown sort,Outline
+20,Action,gear,gear cog preferences config,Phosphor,import { Gear } from '@phosphor-icons/react',<Gear size={20} weight="regular" />,Settings page configuration,Outline
+21,Status,check,success done complete verified,Phosphor,import { Check } from '@phosphor-icons/react',<Check size={20} weight="regular" />,Success state checkmark,Outline
+22,Status,check-circle,success verified approved complete,Phosphor,import { CheckCircle } from '@phosphor-icons/react',<CheckCircle size={20} weight="regular" />,Success badge verified,Outline
+23,Status,x-circle,error failed cancel rejected,Phosphor,import { XCircle } from '@phosphor-icons/react',<XCircle size={20} weight="regular" />,Error state failed,Outline
+24,Status,warning,warning caution attention danger,Phosphor,import { Warning } from '@phosphor-icons/react',<Warning size={20} weight="regular" />,Warning message caution,Outline
+25,Status,warning-circle,info notice information help,Phosphor,import { WarningCircle } from '@phosphor-icons/react',<WarningCircle size={20} weight="regular" />,Info notice alert,Outline
+26,Status,info,information help tooltip details,Phosphor,import { Info } from '@phosphor-icons/react',<Info size={20} weight="regular" />,Information tooltip help,Outline
+27,Status,circle-notch,loading spinner processing wait,Phosphor,import { CircleNotch } from '@phosphor-icons/react',<CircleNotch size={20} weight="regular" className="animate-spin" />,Loading state spinner,Outline
+28,Status,clock,time schedule pending wait,Phosphor,import { Clock } from '@phosphor-icons/react',<Clock size={20} weight="regular" />,Pending time schedule,Outline
+29,Communication,envelope,email message inbox letter,Phosphor,import { Envelope } from '@phosphor-icons/react',<Envelope size={20} weight="regular" />,Email contact inbox,Outline
+30,Communication,chat-circle,chat comment bubble conversation,Phosphor,import { ChatCircle } from '@phosphor-icons/react',<ChatCircle size={20} weight="regular" />,Chat comment message,Outline
+31,Communication,phone,call mobile telephone contact,Phosphor,import { Phone } from '@phosphor-icons/react',<Phone size={20} weight="regular" />,Phone contact call,Outline
+32,Communication,paper-plane-tilt,submit dispatch message airplane,Phosphor,import { PaperPlaneTilt } from '@phosphor-icons/react',<PaperPlaneTilt size={20} weight="regular" />,Send message submit,Outline
+33,Communication,bell,notification alert ring reminder,Phosphor,import { Bell } from '@phosphor-icons/react',<Bell size={20} weight="regular" />,Notification bell alert,Outline
+34,User,user,profile account person avatar,Phosphor,import { User } from '@phosphor-icons/react',<User size={20} weight="regular" />,User profile account,Outline
+35,User,users,team group people members,Phosphor,import { Users } from '@phosphor-icons/react',<Users size={20} weight="regular" />,Team group members,Outline
+36,User,user-plus,add invite new member,Phosphor,import { UserPlus } from '@phosphor-icons/react',<UserPlus size={20} weight="regular" />,Add user invite,Outline
+37,User,sign-in,signin authenticate enter,Phosphor,import { SignIn } from '@phosphor-icons/react',<SignIn size={20} weight="regular" />,Login signin,Outline
+38,User,sign-out,signout exit leave logout,Phosphor,import { SignOut } from '@phosphor-icons/react',<SignOut size={20} weight="regular" />,Logout signout,Outline
+39,Media,image,photo picture gallery thumbnail,Phosphor,import { Image } from '@phosphor-icons/react',<Image size={20} weight="regular" />,Image photo gallery,Outline
+40,Media,video,movie film play record,Phosphor,import { Video } from '@phosphor-icons/react',<Video size={20} weight="regular" />,Video player media,Outline
+41,Media,play,start video audio media,Phosphor,import { Play } from '@phosphor-icons/react',<Play size={20} weight="regular" />,Play button video audio,Outline
+42,Media,pause,stop halt video audio,Phosphor,import { Pause } from '@phosphor-icons/react',<Pause size={20} weight="regular" />,Pause button media,Outline
+43,Media,speaker-high,sound audio speaker music,Phosphor,import { SpeakerHigh } from '@phosphor-icons/react',<SpeakerHigh size={20} weight="regular" />,Volume audio sound,Outline
+44,Media,microphone,microphone record voice audio,Phosphor,import { Microphone } from '@phosphor-icons/react',<Microphone size={20} weight="regular" />,Microphone voice record,Outline
+45,Media,camera,photo capture snapshot picture,Phosphor,import { Camera } from '@phosphor-icons/react',<Camera size={20} weight="regular" />,Camera photo capture,Outline
+46,Commerce,shopping-cart,cart checkout basket buy,Phosphor,import { ShoppingCart } from '@phosphor-icons/react',<ShoppingCart size={20} weight="regular" />,Shopping cart e-commerce,Outline
+47,Commerce,shopping-bag,purchase buy store bag,Phosphor,import { ShoppingBag } from '@phosphor-icons/react',<ShoppingBag size={20} weight="regular" />,Shopping bag purchase,Outline
+48,Commerce,credit-card,payment card checkout stripe,Phosphor,import { CreditCard } from '@phosphor-icons/react',<CreditCard size={20} weight="regular" />,Payment credit card,Outline
+49,Commerce,currency-dollar,money price currency cost,Phosphor,import { CurrencyDollar } from '@phosphor-icons/react',<CurrencyDollar size={20} weight="regular" />,Price money currency,Outline
+50,Commerce,tag,label price discount sale,Phosphor,import { Tag } from '@phosphor-icons/react',<Tag size={20} weight="regular" />,Price tag label,Outline
+51,Commerce,gift,present reward bonus offer,Phosphor,import { Gift } from '@phosphor-icons/react',<Gift size={20} weight="regular" />,Gift reward offer,Outline
+52,Commerce,percent,discount sale offer promo,Phosphor,import { Percent } from '@phosphor-icons/react',<Percent size={20} weight="regular" />,Discount percentage sale,Outline
+53,Data,chart-bar,analytics statistics graph metrics,Phosphor,import { ChartBar } from '@phosphor-icons/react',<ChartBar size={20} weight="regular" />,Bar chart analytics,Outline
+54,Data,chart-pie,statistics distribution breakdown,Phosphor,import { ChartPie } from '@phosphor-icons/react',<ChartPie size={20} weight="regular" />,Pie chart distribution,Outline
+55,Data,trend-up,growth increase positive trend,Phosphor,import { TrendUp } from '@phosphor-icons/react',<TrendUp size={20} weight="regular" />,Growth trend positive,Outline
+56,Data,trend-down,decline decrease negative trend,Phosphor,import { TrendDown } from '@phosphor-icons/react',<TrendDown size={20} weight="regular" />,Decline trend negative,Outline
+57,Data,activity,pulse heartbeat monitor live,Phosphor,import { Activity } from '@phosphor-icons/react',<Activity size={20} weight="regular" />,Activity monitor pulse,Outline
+58,Data,database,storage server data backend,Phosphor,import { Database } from '@phosphor-icons/react',<Database size={20} weight="regular" />,Database storage,Outline
+59,Files,file,document page paper doc,Phosphor,import { File } from '@phosphor-icons/react',<File size={20} weight="regular" />,File document,Outline
+60,Files,file-text,document text page article,Phosphor,import { FileText } from '@phosphor-icons/react',<FileText size={20} weight="regular" />,Text document article,Outline
+61,Files,folder,directory organize group files,Phosphor,import { Folder } from '@phosphor-icons/react',<Folder size={20} weight="regular" />,Folder directory,Outline
+62,Files,folder-open,expanded browse files view,Phosphor,import { FolderOpen } from '@phosphor-icons/react',<FolderOpen size={20} weight="regular" />,Open folder browse,Outline
+63,Files,paperclip,attachment attach file link,Phosphor,import { Paperclip } from '@phosphor-icons/react',<Paperclip size={20} weight="regular" />,Attachment paperclip,Outline
+64,Files,link,url hyperlink chain connect,Phosphor,import { Link } from '@phosphor-icons/react',<Link size={20} weight="regular" />,Link URL hyperlink,Outline
+65,Files,clipboard,paste copy buffer notes,Phosphor,import { Clipboard } from '@phosphor-icons/react',<Clipboard size={20} weight="regular" />,Clipboard paste,Outline
+66,Layout,grid-four,tiles gallery layout dashboard,Phosphor,import { GridFour } from '@phosphor-icons/react',<GridFour size={20} weight="regular" />,Grid layout gallery,Outline
+67,Layout,list-bullets,rows table lines items,Phosphor,import { ListBullets } from '@phosphor-icons/react',<ListBullets size={20} weight="regular" />,List view rows,Outline
+68,Layout,columns,layout split dual sidebar,Phosphor,import { Columns } from '@phosphor-icons/react',<Columns size={20} weight="regular" />,Column layout split,Outline
+69,Layout,arrows-out,fullscreen expand enlarge zoom,Phosphor,import { ArrowsOut } from '@phosphor-icons/react',<ArrowsOut size={20} weight="regular" />,Fullscreen maximize,Outline
+70,Layout,arrows-in,reduce shrink collapse exit,Phosphor,import { ArrowsIn } from '@phosphor-icons/react',<ArrowsIn size={20} weight="regular" />,Minimize reduce,Outline
+71,Layout,sidebar,panel drawer navigation menu,Phosphor,import { Sidebar } from '@phosphor-icons/react',<Sidebar size={20} weight="regular" />,Sidebar panel,Outline
+72,Social,heart,like love favorite wishlist,Phosphor,import { Heart } from '@phosphor-icons/react',<Heart size={20} weight="regular" />,Like favorite love,Outline
+73,Social,star,rating review favorite bookmark,Phosphor,import { Star } from '@phosphor-icons/react',<Star size={20} weight="regular" />,Star rating favorite,Outline
+74,Social,thumbs-up,like approve agree positive,Phosphor,import { ThumbsUp } from '@phosphor-icons/react',<ThumbsUp size={20} weight="regular" />,Like approve thumb,Outline
+75,Social,thumbs-down,dislike disapprove disagree negative,Phosphor,import { ThumbsDown } from '@phosphor-icons/react',<ThumbsDown size={20} weight="regular" />,Dislike disapprove,Outline
+76,Social,bookmark,save later favorite mark,Phosphor,import { Bookmark } from '@phosphor-icons/react',<Bookmark size={20} weight="regular" />,Bookmark save,Outline
+77,Social,flag,report mark important highlight,Phosphor,import { Flag } from '@phosphor-icons/react',<Flag size={20} weight="regular" />,Flag report,Outline
+78,Device,device-mobile,mobile phone device touch,Phosphor,import { DeviceMobile } from '@phosphor-icons/react',<DeviceMobile size={20} weight="regular" />,Mobile smartphone,Outline
+79,Device,device-tablet,ipad device touch screen,Phosphor,import { DeviceTablet } from '@phosphor-icons/react',<DeviceTablet size={20} weight="regular" />,Tablet device,Outline
+80,Device,monitor,desktop screen computer display,Phosphor,import { Monitor } from '@phosphor-icons/react',<Monitor size={20} weight="regular" />,Desktop monitor,Outline
+81,Device,laptop,notebook computer portable device,Phosphor,import { Laptop } from '@phosphor-icons/react',<Laptop size={20} weight="regular" />,Laptop computer,Outline
+82,Device,printer,print document output paper,Phosphor,import { Printer } from '@phosphor-icons/react',<Printer size={20} weight="regular" />,Printer print,Outline
+83,Security,lock,secure password protected private,Phosphor,import { Lock } from '@phosphor-icons/react',<Lock size={20} weight="regular" />,Lock secure,Outline
+84,Security,lock-open,open access unsecure public,Phosphor,import { LockOpen } from '@phosphor-icons/react',<LockOpen size={20} weight="regular" />,Unlock open,Outline
+85,Security,shield,protection security safe guard,Phosphor,import { Shield } from '@phosphor-icons/react',<Shield size={20} weight="regular" />,Shield protection,Outline
+86,Security,key,password access unlock login,Phosphor,import { Key } from '@phosphor-icons/react',<Key size={20} weight="regular" />,Key password,Outline
+87,Security,eye,view show visible password,Phosphor,import { Eye } from '@phosphor-icons/react',<Eye size={20} weight="regular" />,Show password view,Outline
+88,Security,eye-slash,hide invisible password hidden,Phosphor,import { EyeSlash } from '@phosphor-icons/react',<EyeSlash size={20} weight="regular" />,Hide password,Outline
+89,Location,map-pin,location marker place address,Phosphor,import { MapPin } from '@phosphor-icons/react',<MapPin size={20} weight="regular" />,Location pin marker,Outline
+90,Location,map,directions navigate geography location,Phosphor,import { Map } from '@phosphor-icons/react',<Map size={20} weight="regular" />,Map directions,Outline
+91,Location,compass,compass direction pointer arrow,Phosphor,import { Compass } from '@phosphor-icons/react',<Compass size={20} weight="regular" />,Navigation compass,Outline
+92,Location,globe,world international global web,Phosphor,import { Globe } from '@phosphor-icons/react',<Globe size={20} weight="regular" />,Globe world,Outline
+93,Time,calendar,date schedule event appointment,Phosphor,import { Calendar } from '@phosphor-icons/react',<Calendar size={20} weight="regular" />,Calendar date,Outline
+94,Time,arrows-clockwise,reload sync update refresh,Phosphor,import { ArrowsClockwise } from '@phosphor-icons/react',<ArrowsClockwise size={20} weight="regular" />,Refresh reload,Outline
+95,Time,arrow-counter-clockwise,undo back revert history,Phosphor,import { ArrowCounterClockwise } from '@phosphor-icons/react',<ArrowCounterClockwise size={20} weight="regular" />,Undo revert,Outline
+96,Time,arrow-clockwise,redo forward repeat history,Phosphor,import { ArrowClockwise } from '@phosphor-icons/react',<ArrowClockwise size={20} weight="regular" />,Redo forward,Outline
+97,Development,code,develop programming syntax html,Phosphor,import { Code } from '@phosphor-icons/react',<Code size={20} weight="regular" />,Code development,Outline
+98,Development,terminal,console cli command shell,Phosphor,import { Terminal } from '@phosphor-icons/react',<Terminal size={20} weight="regular" />,Terminal console,Outline
+99,Development,git-branch,version control branch merge,Phosphor,import { GitBranch } from '@phosphor-icons/react',<GitBranch size={20} weight="regular" />,Git branch,Outline
+100,Development,github-logo,repository code open source,Phosphor,import { GithubLogo } from '@phosphor-icons/react',<GithubLogo size={20} weight="regular" />,GitHub repository,Outline
+101,Style Config,bold-typography-icon-system,"bold typography, editorial, mono label, phosphor, weight regular, minimal, icon+label required, size 20–32",Phosphor (react-native),"import { ArrowRight } from 'phosphor-react-native'","<ArrowRight size={20} weight=""regular"" color={colors.accent} />","Bold Typography Mobile style: weight=""regular"". Size 20px for UI controls, 32px for feature anchors. Icons MUST be paired with a Mono-stack text label (JetBrains Mono). Standalone icons only allowed for standard navigation (e.g., Back arrow). Accent color #FF3D00 only.",Outline
+102,Style Config,cyberpunk-icon-system,"cyberpunk, neon, glow, hud, phosphor, weight regular, accent glow, dark, angular, react native",Phosphor (react-native),"import { Lightning } from 'phosphor-react-native'","<Lightning size={24} weight=""regular"" color={colors.accent} />","Cyberpunk Mobile HUD style: weight=""regular"", color={colors.accent} (#00FF88 Matrix Green). Wrap every icon in a View with shadowColor: colors.accent / shadowOpacity: 0.6 / shadowRadius: 8 to simulate neon glow. Use borderRadius: 0 on wrapper. Avoid rounded icon containers. Always pair icon with data label in JetBrains Mono.",Outline
+103,Style Config,academia-icon-system,"academia, library, brass, ornate, phosphor, weight thin, muted warm, scholarly, mobile",Phosphor (react-native),"import { BookOpen } from 'phosphor-react-native'","<BookOpen size={22} weight=""thin"" color={colors.brass} />","Academia (Scholarly Mobile) style: weight=""thin"" (thin engraved feel), color={colors.brass} (#C9A962). No sharp geometric or tech-inspired icons. Prefer book, scroll, key, quill-type icon metaphors. Wrap in circular View with 1px brass border. Avoid neon or saturated colored icons. All icon-only navigation must have an accessibilityLabel.",Outline
+104,Style Config,web3-bitcoin-icon-system,"web3, bitcoin, defi, crypto, neon orange, holographic, blurview, phosphor, glow, fintech mobile",Phosphor (react-native),"import { TrendUp } from 'phosphor-react-native'","<TrendUp size={24} weight=""regular"" color={colors.bitcoinOrange} />","Bitcoin DeFi Mobile style: weight=""regular"", color={colors.bitcoinOrange} (#F7931A). Wrap icons in circular BlurView (intensity: 20) with 1px borderColor: '#F7931A' border (Holographic Node effect). shadowColor: '#F7931A' / shadowOpacity: 0.4 / shadowRadius: 8. Prefer finance/data icons (TrendUp, Wallet, Shield, Layers). All data icons use JetBrains Mono label.",Outline
+105,Guideline,icon-fallback-rules,"icon fallback, phosphor, heroicons, any icon, extended set","Phosphor (primary) + Heroicons (fallback)","Primary: import { IconName } from '@phosphor-icons/react'. Fallback: import { IconName } from '@heroicons/react/24/outline' or '@heroicons/react/24/solid'.","当默认列表中没有合适图标时：优先继续从 Phosphor 中选择任何语义更贴切的图标（不必局限于本表列出的图标）。若 Phosphor 也无合适图标，可以改用 Heroicons，并在 UI 代码中保持风格统一（线性或填充、圆角程度、笔画粗细等）。","Icon library strategy and fallback rules",Outline

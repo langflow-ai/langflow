@@ -19,7 +19,7 @@ import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
 import type { FlowType } from "@/types/flow";
 import { downloadFlow } from "@/utils/reactflowUtils";
-import { swatchColors } from "@/utils/styleUtils";
+import { gradientIsLight, gradients, swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 import useDescriptionModal from "../../hooks/use-description-modal";
 import { useGetTemplateStyle } from "../../utils/get-template-style";
@@ -31,11 +31,13 @@ const ListComponent = ({
   selected,
   setSelected,
   shiftPressed,
+  view = "list",
 }: {
   flowData: FlowType;
   selected: boolean;
   setSelected: (selected: boolean) => void;
   shiftPressed: boolean;
+  view?: "grid" | "list";
 }) => {
   const { t } = useTranslation();
   const navigate = useCustomNavigate();
@@ -90,6 +92,12 @@ const ListComponent = ({
       : getNumberFromString(flowData.gradient ?? flowData.id)) %
     swatchColors.length;
 
+  const gradientIndex =
+    (flowData.gradient && !isNaN(parseInt(flowData.gradient))
+      ? parseInt(flowData.gradient)
+      : getNumberFromString(flowData.gradient ?? flowData.id)) %
+    gradients.length;
+
   const handleExport = () => {
     if (flowData.is_component) {
       downloadFlow(flowData, flowData.name, flowData.description);
@@ -106,6 +114,106 @@ const ListComponent = ({
   useEffect(() => {
     getIcon().then(setIcon);
   }, [getIcon]);
+
+  if (view === "grid") {
+    const isLight = gradientIsLight[gradientIndex];
+    const textClass = isLight ? "text-black" : "text-white";
+    const descClass = isLight ? "text-black/70" : "text-white/85";
+    const btnClass = isLight
+      ? "text-black/70 hover:bg-black/10 hover:text-black"
+      : "text-white/90 hover:bg-white/20 hover:text-white";
+
+    return (
+      <>
+        <Card
+          key={flowData.id}
+          draggable
+          onDragStart={onDragStart}
+          onClick={handleClick}
+          className={cn(
+            "relative aspect-[1.6/1] overflow-hidden rounded-lg border-none p-2.5",
+            "shadow-md transition-shadow hover:shadow-lg",
+            isComponent ? "cursor-default" : "cursor-pointer",
+            gradients[gradientIndex],
+            textClass,
+          )}
+          data-testid="list-card"
+        >
+          <div className="absolute right-2 top-2 z-20">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="iconSm"
+                  data-testid="home-dropdown-menu"
+                  className={cn("group", btnClass)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ForwardedIconComponent
+                    name="Ellipsis"
+                    aria-hidden="true"
+                    className="h-4 w-4"
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[185px]"
+                sideOffset={5}
+                side="bottom"
+              >
+                <DropdownComponent
+                  flowData={flowData}
+                  setOpenDelete={setOpenDelete}
+                  handleExport={handleExport}
+                  handleEdit={() => {
+                    setOpenSettings(true);
+                  }}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="relative z-10 flex h-full flex-col justify-end">
+            <div data-testid="flow-name-div">
+              <h3
+                className="line-clamp-2 break-words text-sm font-semibold drop-shadow-sm"
+                data-testid={`flow-name-${flowData.id}`}
+              >
+                {flowData.name}
+              </h3>
+            </div>
+            <p
+              className={cn("mt-1 line-clamp-2 break-words text-xs", descClass)}
+              data-testid={`flow-description-${flowData.id}`}
+            >
+              {flowData.description || t("flow.noDescription")}
+            </p>
+          </div>
+        </Card>
+        {openDelete && (
+          <DeleteConfirmationModal
+            open={openDelete}
+            setOpen={setOpenDelete}
+            onConfirm={handleDelete}
+            description={descriptionModal}
+            note={
+              !flowData.is_component ? t("deleteModal.noteMessageHistory") : ""
+            }
+          />
+        )}
+        <ExportModal
+          open={openExportModal}
+          setOpen={setOpenExportModal}
+          flowData={flowData}
+        />
+        <FlowSettingsModal
+          open={openSettings}
+          setOpen={setOpenSettings}
+          flowData={flowData}
+        />
+      </>
+    );
+  }
 
   return (
     <>

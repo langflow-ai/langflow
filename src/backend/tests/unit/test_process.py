@@ -634,6 +634,28 @@ def test_apply_tweaks_blocks_removed_python_code_structured_tool_code():
     assert node["data"]["node"]["template"]["tool_code"]["value"] == "stored_code"
 
 
+def test_apply_tweaks_blocks_csv_agent_dangerous_code_flag():
+    """CSVAgent's LangChain Python-execution opt-in is a sandbox boundary."""
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "CSVAgent",
+            "node": {
+                "template": {
+                    "allow_dangerous_code": {"value": False, "type": "bool"},
+                    "input_value": {"value": "summarize", "type": "str"},
+                }
+            },
+        },
+    }
+    apply_tweaks(node, {"allow_dangerous_code": True, "input_value": "count rows"})
+
+    assert node["data"]["node"]["template"]["allow_dangerous_code"]["value"] is False
+    assert node["data"]["node"]["template"]["input_value"]["value"] == "count rows"
+
+
 def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
     """Smart Transform's 'filter_instruction' drives an eval()'d lambda → blocked.
 

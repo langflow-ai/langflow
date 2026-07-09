@@ -3,11 +3,9 @@ import contextlib
 import inspect
 import json
 import os
-import platform
 import re
 import shlex
 import shutil
-import subprocess
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
 from types import UnionType
@@ -43,8 +41,82 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 
+# SECURITY: Environment variables that enable code injection via approved MCP
+# stdio commands. All comparisons are case-insensitive (see is_dangerous_mcp_env_var).
+#
+# The stdio launcher runs servers with shell=False (no bash -c / cmd /c wrapper;
+# see MCPStdioClient._connect_to_server), which structurally neutralizes the
+# shell-startup vectors below. They are retained as defense-in-depth: a fail-safe
+# if a shell wrapper is ever reintroduced, and to keep write-time validation
+# (MCPServerConfig) aligned with the launch-time backstop. The loader and
+# interpreter entries remain load-bearing regardless of the shell, because the
+# dynamic linker / target interpreter honors them directly.
+DANGEROUS_MCP_ENV_VARS = frozenset(
+    {
+        # -- Loader / interpreter injection (dangerous even with shell=False) --
+        # Shared-object / dylib injection (arbitrary native code in any process)
+        "ld_preload",
+        "ld_library_path",
+        "ld_audit",
+        "dyld_insert_libraries",
+        "dyld_library_path",
+        # glibc iconv module injection (loads arbitrary .so via iconv)
+        "gconv_path",
+        # Command resolution override (redirects which binary is exec'd)
+        "path",
+        # Node.js code injection (honored by the node runtime itself)
+        "node_options",
+        "node_extra_ca_certs",
+        # Python code injection (honored by the python runtime itself)
+        "pythonstartup",
+        "pythonpath",
+        # Home / config directory redirection (loads attacker-controlled configs)
+        "home",
+        "xdg_config_home",
+        "xdg_data_home",
+        # Temp directory redirection
+        "tmpdir",
+        "tmp",
+        "temp",
+        # DNS / network manipulation
+        "hostaliases",
+        "localdomain",
+        "res_options",
+        # Locale / getconf injection (can load arbitrary .so on some glibc)
+        "getconf_dir",
+        # -- Shell-startup vectors (defense-in-depth; inert while shell=False) --
+        # Shell startup, option, and tracing injection
+        "bash_env",
+        "env",
+        "bash_func_",
+        "shellopts",
+        "bashopts",
+        "ps4",
+        # Shell word-splitting / globbing manipulation
+        "ifs",
+        "cdpath",
+    }
+)
+
 # MCP Session Manager constants - lazy loaded
 _mcp_settings_cache: dict[str, Any] = {}
+
+
+def is_dangerous_mcp_env_var(key: str) -> bool:
+    lower_key = key.lower()
+    return lower_key in DANGEROUS_MCP_ENV_VARS or lower_key.startswith("bash_func_")
+
+
+def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
+    if env is None:
+        return {}
+
+    for key in env:
+        if is_dangerous_mcp_env_var(key):
+            msg = f"Environment variable '{key}' is not allowed for MCP stdio servers"
+            raise ValueError(msg)
+
+    return env
 
 
 def _get_mcp_setting(key: str, default: Any = None) -> Any:
@@ -1581,41 +1653,45 @@ class MCPStdioClient:
     async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style).
 
-        .. todo:: Remove the ``bash -c`` / ``cmd /c`` shell wrapper and pass
-           command + args directly to ``StdioServerParameters`` (i.e.
-           ``shell=False`` semantics).  This would eliminate an entire class of
-           injection vectors (shell metacharacters, IFS manipulation,
-           BASH_ENV/BASH_FUNC_* startup injection) and allow removing several
-           entries from ``DANGEROUS_ENV_VARS`` in ``schemas.py``.  Requires:
-           1. Changing the signature to accept ``(command, args)`` separately.
-           2. Updating ``update_tools()`` to stop joining into a shell string.
-           3. Handling multi-word ``command`` config values (e.g.
-              ``"uvx mcp-server-fetch"``) by splitting at the caller.
-           4. Verifying Windows PATH resolution works without ``cmd /c``
-              (e.g. ``.cmd`` wrapper scripts like ``npx.cmd``).
-           5. Replacing the ``|| echo 'Command failed…'`` error-reporting
-              pattern with proper exit-code handling from ``anyio.open_process``.
+        The server process is launched **without a shell** (``shell=False``
+        semantics): ``command_str`` is tokenized with :func:`shlex.split` and
+        the resulting executable + arguments are passed to
+        :class:`~mcp.StdioServerParameters` directly.  The MCP SDK then execs
+        the process via ``anyio.open_process`` on POSIX and
+        ``create_windows_process`` on Windows -- the latter resolving ``.cmd`` /
+        ``.bat`` / ``.exe`` wrappers (e.g. ``npx.cmd``) through ``shutil.which``
+        -- so no ``bash -c`` / ``cmd /c`` wrapper is required on any platform.
+
+        Removing the shell wrapper structurally eliminates the entire class of
+        injection vectors that depend on a shell interpreter starting up:
+        shell metacharacters, ``IFS`` word-splitting, ``CDPATH`` redirection,
+        ``BASH_ENV`` / ``ENV`` / ``BASH_FUNC_*`` startup injection, and
+        ``PS4`` / ``SHELLOPTS`` xtrace abuse.  None of those can fire because no
+        shell is ever spawned.  The :func:`_validate_mcp_stdio_env` backstop
+        still rejects loader and interpreter env vars (``LD_PRELOAD``,
+        ``DYLD_*``, ``GCONV_PATH``, ``PYTHONPATH``, ``NODE_OPTIONS``, ...) which
+        remain dangerous regardless of the shell because they are honored by the
+        dynamic linker or the target interpreter itself.
         """
         from mcp import StdioServerParameters
 
-        command = shlex.split(command_str)
-        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
+        command_parts = shlex.split(command_str)
+        if not command_parts:
+            msg = "MCP stdio command is empty"
+            raise ValueError(msg)
 
-        if platform.system() == "Windows":
-            server_params = StdioServerParameters(
-                command="cmd",
-                args=[
-                    "/c",
-                    f"{subprocess.list2cmdline(command)} || echo Command failed with exit code %errorlevel% 1>&2",
-                ],
-                env=env_data,
-            )
-        else:
-            server_params = StdioServerParameters(
-                command="bash",
-                args=["-c", f"exec {command_str} || echo 'Command failed with exit code $?' >&2"],
-                env=env_data,
-            )
+        safe_env = _validate_mcp_stdio_env(env)
+        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **safe_env}
+
+        # shell=False: exec the binary directly with structured args. The MCP SDK
+        # abstracts the platform differences (POSIX exec vs. Windows executable
+        # resolution), so identical parameters work on every OS and no shell
+        # interpreter is ever interposed between Langflow and the server process.
+        server_params = StdioServerParameters(
+            command=command_parts[0],
+            args=command_parts[1:],
+            env=env_data,
+        )
 
         # Store connection parameters for later use in run_tool
         self._connection_params = server_params

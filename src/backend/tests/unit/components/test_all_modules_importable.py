@@ -55,6 +55,11 @@ class TestAllModulesImportable:
         # 3.14-gating moved with them.
         gated_on_py314 = {
             "altk.ALTKAgentComponent",
+            # CrewAI agent/crew components import litellm transitively, and
+            # litellm is gated off on Python 3.14 until upstream supports it.
+            "crewai.CrewAIAgentComponent",
+            "crewai.HierarchicalCrewComponent",
+            "crewai.SequentialCrewComponent",
         }
         on_py314 = sys.version_info >= (3, 14)
 
@@ -410,6 +415,12 @@ class TestDirectModuleImports:
                         "altk",
                         "langchain_ibm",
                         "ibm_watsonx_ai",
+                        # litellm has no 3.14-compatible release, so it is gated to
+                        # python_version<'3.14'. Its absence surfaces transitively
+                        # via crewai (``from crewai import Agent`` -> litellm) and
+                        # via toolguard (the policies components import it directly).
+                        "litellm",
+                        "toolguard",
                     ]
                 ):
                     return ("skipped", modname, "missing optional dependency")

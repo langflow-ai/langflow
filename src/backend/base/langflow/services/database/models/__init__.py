@@ -25,6 +25,7 @@ from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, M
 from .message import MessageTable
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
+from .triton_server import TritonServer
 from .user import User
 from .variable import Variable
 
@@ -60,6 +61,7 @@ __all__ = [
     "SpanTable",
     "TraceTable",
     "TransactionTable",
+    "TritonServer",
     "User",
     "Variable",
 ]

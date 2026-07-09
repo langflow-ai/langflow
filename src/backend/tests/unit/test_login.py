@@ -1,7 +1,12 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
+from langflow.services.auth.exceptions import InvalidTokenError
 from langflow.services.database.models.user import User
-from langflow.services.deps import get_auth_service, session_scope
+from langflow.services.deps import get_auth_service, get_settings_service, session_scope
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
+from sqlmodel import select
 
 
 @pytest.fixture
@@ -44,9 +49,62 @@ async def test_login_unsuccessful_wrong_password(client, test_user, async_sessio
     assert response.json()["detail"] == "Incorrect username or password"
 
 
+async def test_login_rejects_legacy_default_superuser_password_when_auto_login_enabled(client):
+    settings = get_settings_service()
+    original_auto_login = settings.auth_settings.AUTO_LOGIN
+    original_superuser = settings.auth_settings.SUPERUSER
+    legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    settings.auth_settings.AUTO_LOGIN = True
+    settings.auth_settings.SUPERUSER = DEFAULT_SUPERUSER
+
+    async with session_scope() as session:
+        stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+        user = (await session.exec(stmt)).first()
+        if user is None:
+            user = User(
+                username=DEFAULT_SUPERUSER,
+                password=get_auth_service().get_password_hash(legacy_password),
+                is_active=True,
+                is_superuser=True,
+            )
+            session.add(user)
+            await session.commit()
+        else:
+            user.password = get_auth_service().get_password_hash(legacy_password)
+            user.is_active = True
+            user.is_superuser = True
+            await session.commit()
+
+    try:
+        response = await client.post(
+            "api/v1/login",
+            data={"username": DEFAULT_SUPERUSER, "password": legacy_password},
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Incorrect username or password"
+    finally:
+        settings.auth_settings.AUTO_LOGIN = original_auto_login
+        settings.auth_settings.SUPERUSER = original_superuser
+
+
 async def test_session_endpoint_unauthenticated(client):
     """Test /session endpoint returns authenticated=False for unauthenticated requests."""
     response = await client.get("api/v1/session")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["authenticated"] is False
+    assert data["user"] is None
+    assert data["store_api_key"] is None
+
+
+async def test_session_endpoint_invalid_token_returns_unauthenticated(client):
+    """Test /session endpoint handles invalid tokens as unauthenticated sessions."""
+    auth_service = AsyncMock()
+    auth_service.get_current_user_from_access_token.side_effect = InvalidTokenError("Invalid token")
+
+    with patch("langflow.api.v1.login.get_auth_service", return_value=auth_service):
+        response = await client.get("api/v1/session", headers={"Authorization": "Bearer invalid-token"})
+
     assert response.status_code == 200
     data = response.json()
     assert data["authenticated"] is False

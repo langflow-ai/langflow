@@ -101,6 +101,21 @@ def test_apply_tweaks_blocks_removed_python_code_structured_tool_code():
     assert node["data"]["node"]["template"]["tool_code"]["value"] == "stored_code"
 
 
+def test_apply_tweaks_blocks_csv_agent_dangerous_code_flag():
+    """CSVAgent's LangChain Python-execution opt-in is a sandbox boundary."""
+    node = _template_node(
+        {
+            "allow_dangerous_code": {"value": False, "type": "bool"},
+            "input_value": {"value": "summarize", "type": "str"},
+        },
+        node_type="CSVAgent",
+    )
+    apply_tweaks(node, {"allow_dangerous_code": True, "input_value": "count rows"})
+
+    assert node["data"]["node"]["template"]["allow_dangerous_code"]["value"] is False
+    assert node["data"]["node"]["template"]["input_value"]["value"] == "count rows"
+
+
 def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
     """Smart Transform's filter_instruction drives an eval()'d lambda → blocked; data is not."""
     node = _template_node(
@@ -116,21 +131,32 @@ def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
     assert node["data"]["node"]["template"]["sample_size"]["value"] == 25
 
 
-# The intended code/sandbox inputs for every code-execution component type, kept
-# independently from the production sets so this test acts as a checksum on the
-# comment-only sync between CODE_EXECUTION_COMPONENT_TYPES and
-# CODE_EXECUTION_FIELD_NAMES (see lfx/utils/flow_validation.py). "code" is the
-# conventional exec input that apply_tweaks() blocks globally by name, so it is
-# allowed here without being listed in CODE_EXECUTION_FIELD_NAMES.
+# The intended code/sandbox inputs for code-execution component types that expose
+# such fields in their templates, kept independently from the production sets so
+# this test acts as a checksum on the comment-only sync between
+# CODE_EXECUTION_COMPONENT_TYPES and CODE_EXECUTION_FIELD_NAMES (see
+# lfx/utils/flow_validation.py). "code" is the conventional exec input that
+# apply_tweaks() blocks globally by name, so it is allowed here without being
+# listed in CODE_EXECUTION_FIELD_NAMES.
+#   - CSVAgent: allow_dangerous_code enables LangChain Python execution
 #   - PythonREPLComponent (Python Interpreter): python_code exec + global_imports sandbox
 #   - PythonREPLTool (Python REPL): code exec (global block) + global_imports sandbox
 #   - Smart Transform (LambdaFilterComponent): filter_instruction → eval()'d lambda
 #   - PythonCodeStructuredTool (removed): tool_code exec input, type retained
 _EXPECTED_CODE_FIELDS_BY_TYPE: dict[str, set[str]] = {
+    "CSVAgent": {"allow_dangerous_code"},
     "PythonREPLComponent": {"python_code", "global_imports"},
     "PythonREPLTool": {"code", "global_imports"},
     "Smart Transform": {"filter_instruction"},
     "PythonCodeStructuredTool": {"tool_code"},
+}
+
+# Code-execution components with no tweakable code/sandbox field. They are still
+# blocked on unauthenticated public builds by CODE_EXECUTION_COMPONENT_TYPES.
+_CODE_EXECUTION_TYPES_WITHOUT_TWEAK_CODE_FIELDS = {
+    "CodeActAgentSmolagents",
+    "Cuga",
+    "OpenDsStarAgent",
 }
 
 # Field name globally blocked by apply_tweaks() regardless of component type.
@@ -140,16 +166,17 @@ _GLOBALLY_BLOCKED_FIELD = "code"
 def test_every_code_execution_type_has_registered_code_fields():
     """Tripwire: each registered code-exec type must declare its code fields here.
 
-    Forcing function for the "next person" who adds a fifth code-execution
-    component: adding a type to CODE_EXECUTION_COMPONENT_TYPES without an entry
-    here fails immediately, and the coverage assert below then fails until the
-    type's code input is actually added to CODE_EXECUTION_FIELD_NAMES. This is
-    what keeps the by-name half of the guard from silently going stale, since the
-    component classes themselves aren't importable in this unit env (optional deps).
+    Forcing function for the next code-execution component: adding a type to
+    CODE_EXECUTION_COMPONENT_TYPES without either registered code/sandbox fields
+    or an explicit no-field entry fails immediately. This keeps the by-name half
+    of the guard from silently going stale, since the component classes themselves
+    aren't importable in this unit env (optional deps).
     """
-    assert set(_EXPECTED_CODE_FIELDS_BY_TYPE) == set(CODE_EXECUTION_COMPONENT_TYPES), (
+    expected_component_types = set(_EXPECTED_CODE_FIELDS_BY_TYPE) | _CODE_EXECUTION_TYPES_WITHOUT_TWEAK_CODE_FIELDS
+    assert expected_component_types == set(CODE_EXECUTION_COMPONENT_TYPES), (
         "CODE_EXECUTION_COMPONENT_TYPES changed without updating _EXPECTED_CODE_FIELDS_BY_TYPE. "
-        "Register the new component's code/sandbox input field name(s) so the Tweaks guard covers it."
+        "Register the new component's code/sandbox input field name(s), or explicitly mark it as a "
+        "runtime code-execution component with no tweakable code/sandbox fields."
     )
 
     covered = set(CODE_EXECUTION_FIELD_NAMES) | {_GLOBALLY_BLOCKED_FIELD}

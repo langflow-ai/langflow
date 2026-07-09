@@ -1,0 +1,108 @@
+三个 /api/v1/models 接口获取 embedding 模型的链路分析
+========================================================
+
+(端口 3000 是前端 Vite dev server,它将 /api 代理到后端 7860,实际处理在后端)
+
+一、路由挂载
+-----------
+
+- src/backend/base/langflow/api/router.py:44 定义 router_v1 = APIRouter(prefix="/v1"),并在 :128 用 prefix="/api" 包裹 → 形成 /api/v1
+- router.py:84 执行 router_v1.include_router(models_router)
+- src/backend/base/langflow/api/v1/__init__.py:22 导出 models_router
+- src/backend/base/langflow/api/v1/models.py:24 定义 router = APIRouter(prefix="/models", ...) → 最终路径 /api/v1/models
+
+
+二、三个接口的链路
+-----------------
+
+【接口 1: GET /api/v1/models(含 ?include_deprecated=true)】
+
+入口: list_models (models.py:130-219)
+
+链路:
+1. 解析 query 参数: provider / model_name / model_type / include_unsupported / include_deprecated / 元数据过滤(tool_calling、reasoning 等)
+2. get_enabled_providers(session, current_user) (models.py:239) → 获取已配置凭证的 provider 状态 map
+3. get_enabled_models(session, current_user) (models.py:514) → 获取每个模型的启用状态 map(注意:此处内部会再次拉全量目录)
+4. 若传了 model_type,调 get_default_model(...) (models.py:693) → 读 __default_language_model__ / __default_embedding_model__ 变量
+5. 核心: get_unified_models_detailed(providers, model_name, include_unsupported, include_deprecated, model_type, **metadata_filters) (model_catalog.py:20)
+   - 内部调 get_models_detailed() (provider_queries.py:48) → 返回 _STATIC_MODELS_DETAILED(provider_queries.py:34),若有 models.dev 快照则用 apply_models_dev_overrides 覆盖
+   - include_deprecated=False(默认)时,过滤掉 deprecated=True 的条目 (model_catalog.py:73);include_deprecated=true 则保留
+   - model_type 过滤 (model_catalog.py:80):传 embeddings 只返回 embedding 模型
+   - 按 (is_deprecated, -created_epoch) 排序,前 5 个打 default=True (model_catalog.py:108-123)
+6. replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type) (model_utils.py:727) → 对 LIVE_MODEL_PROVIDERS(Ollama/IBM WatsonX/OpenRouter)与 CONDITIONAL_LIVE_MODEL_PROVIDERS(OpenAI)实时拉取替换静态条目
+7. 给每个 provider 补 is_configured / is_enabled 字段,排序:default 优先 → configured 优先 → 字母序
+
+> 关键: /api/v1/models 不传 model_type 时返回 llm+embeddings 全部;要专取 embedding,前端传 ?model_type=embeddings。include_deprecated 只控制是否暴露 deprecated=True 条目,不影响实时拉取。
+
+
+【接口 2: GET /api/v1/models/enabled_models】
+
+入口: get_enabled_models (models.py:514-581)
+
+链路:
+1. get_unified_models_detailed(include_unsupported=True, include_deprecated=True) → 拉全部模型(含 deprecated/unsupported)作为计算底座
+2. get_enabled_providers(...) → provider 配置状态
+3. replace_with_live_models(all_models_by_provider, current_user.id, configured_providers)(model_type=None → 同时拉 llm + embeddings 实时模型)
+4. _get_disabled_models(...) (models.py:335) → 从 DB 变量 __disabled_models__ 读用户禁用集合
+5. _get_enabled_models(...) (models.py:363) → 从 DB 变量 __enabled_models__ 读用户显式启用的非默认模型集合
+6. 逐模型计算 is_enabled (models.py:556-562):
+     provider 已配置 AND 非 deprecated AND 非 not_supported
+     AND (是 default OR 在 explicitly_enabled_models) AND 不在 disabled_models
+7. 返回 {enabled_models: {provider: {model_name: bool}}};若带 model_names query 参数则按名过滤
+
+> 该接口包含 embedding 模型的启用状态,前端 embedding picker 据此决定可选项。
+
+
+三、Embedding 模型数据来源(三层叠加)
+-------------------------------------
+
+【1) 静态常量 (provider_queries.py:34 _STATIC_MODELS_DETAILED)】
+- OPENAI_EMBEDDING_MODELS_DETAILED (openai_constants.py:175): text-embedding-3-small/large、text-embedding-ada-002, model_type="embeddings"
+- GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED (google_generative_ai_constants.py:156): 含 deprecated 标记(text-embedding-004、embedding-001)
+- OLLAMA_EMBEDDING_MODELS_DETAILED (ollama_constants.py:198)
+- WATSONX_MODELS_DETAILED (watsonx_constants.py, 含 embedding 子集)
+
+【2) models.dev 快照覆盖 (models_dev_catalog.py)】
+- get_models_detailed() (provider_queries.py:48) 调 get_active_snapshot(),有快照则 apply_models_dev_overrides(_STATIC_MODELS_DETAILED, snapshot) 按 provider 整组替换;静态里 models.dev 未覆盖的自定义条目会被 fold 保留(models_dev_catalog.py:402-416)。主要覆盖 OpenAI/Anthropic/Google。
+
+【3) 实时拉取 (model_utils.py replace_with_live_models)】
+- LIVE_MODEL_PROVIDERS = ["Ollama", "IBM WatsonX", "OpenRouter"] (model_metadata.py:58)
+- CONDITIONAL_LIVE_MODEL_PROVIDERS = ["OpenAI"] (model_metadata.py:61)
+- 对每个已配置的 live provider 调 get_live_models_for_provider(user_id, provider, model_type) (model_utils.py:690),embedding 分支:
+  - Ollama: fetch_live_ollama_models(user_id, "embeddings") (model_utils.py:442) → get_ollama_embedding_models(base_url) (model_utils.py:312) → HTTP GET api/tags + 并发 POST api/show,按 embedding capability 过滤(带 30s 列表缓存 + 600s per-model capability 缓存)
+  - IBM WatsonX: fetch_live_watsonx_models(user_id, "embeddings") (model_utils.py:636) → get_watsonx_embedding_models(base_url) (model_utils.py:370) → HTTP GET /ml/v1/foundation_model_specs?filters=function_embedding,!lifecycle_withdrawn:and
+  - OpenRouter: 仅 llm,不返回 embedding
+  - OpenAI(conditional): fetch_live_openai_compatible_models (model_utils.py:487) 仅当用户配置了 OPENAI_BASE_URL 才拉取,且只 llm(model_type != "llm" 直接返回 [])
+
+
+四、各方法作用一览
+-----------------
+
+方法                                            | 位置                          | 作用
+------------------------------------------------|------------------------------|------------------------------------------------------------
+list_models                                     | models.py:130                | /api/v1/models 入口;按 query 过滤目录并补 is_configured/is_enabled
+get_enabled_providers                           | models.py:239                | 检查每个 provider 的必填凭证变量是否都存在(只查存在性,不联机验证)
+get_enabled_models                              | models.py:514                | /api/v1/models/enabled_models 入口;返回每模型启用布尔 map
+get_default_model                               | models.py:693                | 读 __default_language_model__ / __default_embedding_model__ 变量
+_get_disabled_models                            | models.py:335                | 从 DB 变量 __disabled_models__ 读禁用模型 id 集合
+_get_enabled_models                             | models.py:363                | 从 DB 变量 __enabled_models__ 读显式启用的非默认模型 id 集合
+get_unified_models_detailed                     | model_catalog.py:20          | 核心目录过滤:聚合静态+models.dev,按 provider/deprecated/model_type/metadata 过滤、排序、打 default 标
+get_models_detailed                             | provider_queries.py:48       | 返回分组模型元数据(lru_cache);有 models.dev 快照则覆盖静态
+apply_models_dev_overrides                      | models_dev_catalog.py        | 用 models.dev 快照按 provider 整组替换静态列表,并 fold 自定义条目
+replace_with_live_models                        | model_utils.py:727           | 对 live provider 用实时拉取的模型替换静态条目
+get_live_models_for_provider                    | model_utils.py:690           | 分发:按 provider 调对应 fetch_live_*
+fetch_live_ollama_models                        | model_utils.py:442           | 调 Ollama api/tags+api/show 拉模型并按 capability 过滤
+get_ollama_embedding_models                     | model_utils.py:312           | Ollama embedding capability 专用拉取(带缓存)
+fetch_live_watsonx_models                       | model_utils.py:636           | 调 WatsonX foundation_model_specs 拉模型,用静态 catalog 补 tool_calling/deprecated 元数据
+get_watsonx_embedding_models                    | model_utils.py:370           | WatsonX embedding 过滤拉取
+fetch_live_openai_compatible_models             | model_utils.py:487           | 仅当配了 OPENAI_BASE_URL 时拉 /models(只 llm)
+fetch_live_openrouter_models                    | model_utils.py:538           | 用 OpenRouter API key 拉 /models(只 llm)
+create_model_metadata                           | model_metadata.py:26         | 统一构造模型元数据 dict
+_validate_and_get_enabled_providers             | credentials.py:225           | 依据凭证存在性(可选联机验证)返回启用 provider 集合
+validate_model_provider_key                     | credentials.py:397           | 用最小测试调用验证 provider 凭证(给 POST /enabled_models 启用时用)
+
+
+五、关于 Embedding 类映射(运行时实例化用,不在上述接口返回里)
+-------------------------------------------------------------
+
+EMBEDDING_PROVIDER_CLASS_MAPPING (class_registry.py:51) 与 EMBEDDING_PARAM_MAPPINGS (class_registry.py:66) 定义了 provider → LangChain embedding 类名与参数映射(OpenAI/Google/Ollama/WatsonX),供 EmbeddingModelComponent 与 get_embedding_model_options (model_catalog.py:263) 使用——后者是组件 picker 的入口,而非这三个 /models 接口。这三个接口只返回模型目录与启用状态,不返回实例化类信息。

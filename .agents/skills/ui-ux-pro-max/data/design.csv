@@ -1,0 +1,1776 @@
+Bauhaus（包豪斯）
+大胆的几何现代主义，包含圆形、方形和三角形。主色调（红/蓝/黄），边缘鲜明，阴影强烈。功能性与艺术性兼备，带有建构主义的不对称。
+1. 极简主义品牌官网与电商
+2. 工具类与高效率 App
+3. 数字媒体与在线杂志
+
+<design-system>
+Design Style: Bauhaus (Mobile)
+1. Design Philosophy
+The Bauhaus style embodies the revolutionary principle "form follows function" while celebrating pure geometric beauty and primary color theory. On mobile, this translates to tactile constructivism—the screen is a canvas where elements are physically stacked blocks. The aesthetic creates a high-impact, poster-like experience in the palm of the hand: bold, touch-centric, and unapologetically graphic.
+Vibe: Tactile, Constructivist, Geometric, High-Contrast, Bold, Architectural
+Core Concept: The mobile interface is a vertical geometric composition. Scroll views are not just content streams but stacked layers of colored paper and rigid shapes. The limited screen real estate forces a focus on massive typography and distinct color blocking (Red #D02020, Blue #1040C0, Yellow #F0C020). Every tap should feel mechanical and substantial.
+Key Characteristics:
+● Geometric Purity: UI elements are strictly circles (buttons/avatars) or squares (cards/inputs).
+● Tactile Depth: Hard shadows indicate interactivity; elements look "pressable."
+● Color Blocking: distinct screen sections use solid primary colors to separate content without whitespace.
+● Thick Borders: 2px and 3px black borders ensure legibility and distinct separation on small screens.
+● Vertical Rhythm: Strong vertical stacking with deliberate spacing, avoiding clutter.
+● Constructivist Typography: Headlines are massive (text-4xl to text-5xl) relative to screen width, breaking traditional mobile scaling rules.
+● Thumb-Friendly: Interactive zones are large, distinct, and geometrically defined.
+2. Design Token System (The DNA)
+Colors (Single Palette - Light Mode)
+The palette remains strictly Bauhaus primaries, optimized for high contrast outdoors.
+● background: #F0F0F0 (Off-white canvas)
+● foreground: #121212 (Stark Black)
+● primary-red: #D02020 (Bauhaus Red)
+● primary-blue: #1040C0 (Bauhaus Blue)
+● primary-yellow: #F0C020 (Bauhaus Yellow)
+● border: #121212 (Thick, distinct borders)
+● muted: #E0E0E0
+Typography
+● Font Family: 'Outfit' (geometric sans-serif).
+● Font Import: Outfit:wght@400;500;700;900
+● Scaling: Aggressive scaling adapted for vertical viewports.
+    ○ Display: text-4xl → text-5xl (Massive headers taking up 30-40% of screen width)
+    ○ Subheadings: text-xl → text-2xl
+    ○ Body: text-base (16px minimum for legibility)
+    ○ Button Text: text-lg (Large for readability)
+● Weights:
+    ○ Headlines: font-black (900) uppercase, tight tracking (tracking-tighter)
+    ○ Buttons/Nav: font-bold (700) uppercase, wide tracking (tracking-wide)
+    ○ Body: font-medium (500)
+● Line Height: Tight (leading-none) for headlines to save vertical space; leading-relaxed for body text.
+Radius & Border
+● Radius: Strict Binary—rounded-none (0px) for layout blocks, inputs, and cards; rounded-full (9999px) for primary action buttons and avatars.
+● Border Widths:
+    ○ Standard Elements: border-2 (2px)
+    ○ Major Containers/Bottom Nav: border-t-2 or border-3
+    ○ Separators: divide-y-2
+● Border Color: Always #121212 (black).
+Shadows/Effects
+● Hard Offset Shadows (Tactile feedback):
+    ○ Small elements (Tags/Icons): shadow-[2px_2px_0px_0px_black]
+    ○ Buttons/Cards: shadow-[4px_4px_0px_0px_black] (Reduced from web 8px to save screen width)
+    ○ Floating Action Button (FAB): shadow-[5px_5px_0px_0px_black]
+● Touch Feedback: active:translate-x-[2px] active:translate-y-[2px] active:shadow-none (Instant mechanical depression).
+● Patterns:
+    ○ Dot grid backgrounds on "Paper" colored sections (background-size: 16px 16px).
+    ○ Screen transitions: Slide-over with hard black borders.
+3. Component Stylings
+Buttons (Touch Targets)
+● Minimum Size: Height h-12 or h-14 (48px-56px) for thumb accessibility.
+● Variants:
+    ○ Primary (CTA): w-full bg-[#D02020] text-white border-2 border-black shadow-[4px_4px_0px_0px_black]
+    ○ Secondary: w-full bg-[#1040C0] text-white border-2 border-black shadow-[4px_4px_0px_0px_black]
+    ○ Floating Action (FAB): h-14 w-14 rounded-full bg-[#F0C020] border-2 border-black shadow-[4px_4px_0px_0px_black] flex items-center justify-center
+● Shapes: Full-width rectangular buttons (rounded-none) or pill-shaped (rounded-full) for bottom-sticky actions.
+● States: NO hover. Focus on active state (press down effect).
+Cards (Mobile Stack)
+● Base Style: White background, border-2 border-black, shadow-[4px_4px_0px_0px_black], mb-6.
+● Decoration:
+    ○ Geometric badge in top-right: absolute top-0 right-0 h-8 w-8 bg-[#F0C020] border-l-2 border-b-2 border-black flex items-center justify-center.
+● Interaction: Entire card is a touch target. active:translate-x-[1px] active:translate-y-[1px] active:shadow-[2px_2px_0px_0px_black].
+● Content: Image usually takes top half (aspect-video), bold text below.
+Bottom Navigation (The Anchor)
+● Container: fixed bottom-0 w-full bg-white border-t-2 border-black z-50 h-20.
+● Grid: 3 to 5 items equally spaced.
+● Items:
+    ○ Inactive: Black stroke icon, clear background.
+    ○ Active: Icon inside a geometric shape (Square/Circle) with primary color fill (e.g., Red Square context).
+    ○ Label: Tiny uppercase bold text below icon, or icon only for minimalism.
+Inputs & Forms
+● Field: h-12 bg-white border-2 border-black rounded-none px-4 text-black placeholder:text-gray-400 focus:bg-[#FFF9C4] focus:ring-0 focus:border-black.
+● Label: Uppercase bold, mb-1 block.
+● Checkbox: h-6 w-6 appearance-none border-2 border-black bg-white checked:bg-[#1040C0] rounded-none.
+4. Layout & Spacing
+● Container: w-full with px-5 (20px) padding. Max-width constraints removed (fluid mobile).
+● Section Padding:
+    ○ Standard: py-8
+    ○ Hero: pt-12 pb-16
+● Grid Systems:
+    ○ Main Layout: Single column (Stack).
+    ○ Micro-grids: 2-column for stats/gallery (gap-3 or gap-4).
+● Safe Areas: Respect pt-safe (top notch) and pb-safe (bottom home indicator).
+● Dividers: Thick section separators border-b-2 border-black usually paired with a background color change.
+5. Non-Genericness (Bold Choices)
+Mobile Constraints require distinct personality to avoid looking like a wireframe:
+● Full-Screen Color Washes:
+    ○ Onboarding screens: Full solid backgrounds (Red Screen → Blue Screen → Yellow Screen).
+    ○ Success states: Full Yellow background (bg-[#F0C020]) with massive black centered checkmark.
+    ○ Error states: Full Red background (bg-[#D02020]) with white text.
+● Header Identity:
+    ○ Instead of a standard navbar, use a "Bauhaus Header Block": A row containing a Square (Menu), a flexible space for the Title (Left aligned, massive), and a Circle (Profile/Search). All elements separated by vertical borders divide-x-2 border-b-2 border-black.
+● Geometric Lists:
+    ○ List items aren't just text lines. They are alternating geometric bullets: Line 1 uses a ■, Line 2 uses a ●, Line 3 uses a ▲.
+● Rotated "Stickers":
+    ○ "New", "Sale", or Notification badges are rotated -12deg or +12deg, sitting on top of corners to break the rigid grid.
+● Image Filters:
+    ○ Thumbnails: Grayscale + High Contrast.
+    ○ Detail View: Full color, no rounded corners, thick black border.
+6. Icons & Imagery
+● Icon Library: lucide-react-native or similar (Circle, Square, Triangle, Menu, X, ArrowLeft).
+● Icon Style:
+    ○ Stroke: stroke-[2px].
+    ○ Size: w-6 h-6 (standard) or w-8 h-8 (hero actions).
+● Icon Containers:
+    ○ Navigation icons often live inside rigid 48x48px bordered squares.
+    ○ Back buttons are always circular rounded-full with a border.
+● Imagery:
+    ○ Masking: Use CSS clip-paths to crop header images into non-standard shapes (e.g., a trapezoid or a circle cropped at the bottom) within the mobile frame.
+7. Responsive Strategy (Device Sizes)
+● Small Phones (SE/Mini):
+    ○ Reduce display text to text-3xl.
+    ○ Stack stats vertically (1-col).
+    ○ Reduce padding to px-4.
+● Large Phones (Max/Plus):
+    ○ Display text scales to text-5xl.
+    ○ Stats can use 2-col grid.
+    ○ Card images gain more height.
+● Orientation:
+    ○ Portrait (Primary): Vertical stacking.
+    ○ Landscape: Avoid if possible, or split screen 50/50 (Text Left / Image Right).
+8. Animation & Micro-Interactions
+● Feel: Physical, snappy, zero-latency.
+● Duration: duration-150 (Very fast).
+● Easing: ease-in-out (Sharp stops).
+● Interactions:
+    ○ Tap: The element physically depresses (translate X/Y matches shadow size).
+    ○ Drawer Open: Slides in from Left/Right with a solid black border line leading it. No soft fades—it slides like a mechanical door.
+    ○ Toast/Alerts: Drop down from top as a solid geometric block (Yellow/Red) with hard borders, swinging slightly like a hanging sign.
+    ○ Scroll: Sticky headers snap into place instantly.
+</design-system>
+
+
+
+"Monochrome（单色/黑白）
+"一套简洁的编辑设计体系，建立在纯粹的黑白之上。没有点缀色——只有戏剧性的对比、超大衬线字体和精准的几何布局。让人联想到高端时尚专题和建筑作品集。严肃、成熟、毫不掩饰地大胆。
+"1. 极简主义电商与高端奢侈品
+2. 专业创意与文档编辑工具
+3. 数据密集型仪表盘（局部应用）
+4. 实验性与先锋感网站"
+
+<design-system>
+Design Style: Minimalist Monochrome (Mobile)
+Design Philosophy
+Core Principle
+The Pocket Editorial. On mobile, Minimalist Monochrome transforms the screen into a tactile, high-end printed manifesto. It rejects the "app-like" tendency for soft bubbles and friendly gradients. Instead, it offers a stark, vertical journey defined by pure black (#000000), pure white (#FFFFFF), and razor-sharp borders. Every tap is a deliberate decision; every scroll is a flip of a page in a luxury monograph.
+Visual Vibe
+Emotional Keywords: Tactile, Austere, Editorial, Direct, High-Fidelity, Uncompromising, Sharp, Rhythmic.
+This is the visual language of:
+● Mobile typographers and digital brutalism
+● The mobile interfaces of luxury fashion houses (Balenciaga, Zara, SSENSE)
+● Digital exhibitions where the content frames itself
+● High-contrast e-reader aesthetics
+What This Design Is NOT
+● ❌ "App-y" (no cards with drop shadows, no floating bubbles)
+● ❌ Native iOS/Android standard (no system blue, no rounded groups)
+● ❌ Gesture-heavy (interactions are explicit taps, not vague swipes)
+● ❌ Cluttered (one idea per screen view)
+● ❌ Colorful (strictly grayscale)
+The DNA of Minimalist Monochrome (Mobile)
+1. Vertical Linearity
+The mobile screen is a continuous roll of paper. Structure is created not by boxes, but by horizontal lines (rules) that span the full width of the device. Content lives between these lines.
+2. Typography as Interface
+Buttons are often just large words. Navigation is text-based. The serif typeface (Playfair Display) acts as the primary image on the screen. Headlines must be large enough to break words onto new lines, creating graphic shapes.
+3. The "Touch" Inversion
+Since there is no "hover" on mobile, interaction is communicated through inversion. When a user touches a white block, it turns black instantly. This zero-latency binary feedback replaces physical tactility.
+4. Zero Radius, Zero Fluff
+All elements—buttons, images, inputs, modals—have strictly 0px border radius. This sharp geometry cuts through the rounded physical corners of modern smartphones, creating a striking contrast.
+
+Design Token System
+Colors (Strictly Monochrome)
+background:       #FFFFFF (Pure white)
+foreground:       #000000 (Pure black)
+muted:            #F5F5F5 (Off-white for "pressed" states or subtle blocks)
+mutedForeground:  #525252 (Dark gray for metadata)
+border:           #000000 (Black borders - heavy usage)
+borderLight:      #E5E5E5 (Subtle dividers)
+overlay:          #000000 (Full screen menu background)
+
+Rule: No accent colors. The "Active State" is simply the inverse of the "Default State."
+Typography
+Font Stack:
+● Display: "Playfair Display", serif - For all headlines and large numerals.
+● Body: "Source Serif 4", serif - For reading text.
+● UI/Labels: "JetBrains Mono", monospace - For tiny tags, dates, and technical specs.
+Type Scale (Mobile Optimized):
+Note: Sizes are calibrated to feel "massive" on a small screen without breaking layout.
+xs:   0.75rem  (12px) - Metadata / Breadcrumbs
+sm:   0.875rem (14px) - UI Labels / Captions
+base: 1rem     (16px) - Body text (Legibility minimum)
+lg:   1.125rem (18px) - Lead text / Button text
+xl:   1.5rem   (24px) - Section headers
+2xl:  2rem     (32px) - Standard Headlines
+3xl:  2.5rem   (40px) - Hero Sub-text
+4xl:  3rem     (48px) - Major Headlines
+5xl:  4rem     (64px) - "Cover" text (Often wraps)
+6xl:  5rem     (80px) - Numerical statements
+
+Tracking & Leading:
+● Headlines: tracking-tighter (-0.05em) and leading-[0.9]. Text should feel tightly packed.
+● Body: leading-relaxed for readability.
+● Button Text: tracking-widest uppercase.
+Border Radius
+ALL VALUES: 0px
+
+Constraint: Even the bottom sheet (modal) must be square. Even the active state of a tapped element is a sharp rectangle.
+Borders & Lines (The Grid)
+hairline:  1px solid #E5E5E5  (List separators)
+thin:      1px solid #000000  (Standard element borders)
+thick:     2px solid #000000  (Emphasis / Input bottom)
+heavy:     4px solid #000000  (Section dividers)
+
+Usage:
+● Full-Bleed Lines: Borders should often touch the edges of the screen (-mx-4 or -mx-6).
+● Separators: Use border-b black heavily to separate stacked vertical content.
+Shadows
+NONE
+
+Depth is strictly 2D. Layers are defined by opacity (100% vs 0%) or borders, never by shadows.
+Textures & Patterns
+Use subtle noise to simulate high-quality paper texture on mobile backgrounds to avoid a "sterile" feeling.
+Mobile Noise (CSS):
+CSS
+
+background-image: url("data:image/svg+xml,..."); /* Same noise SVG as web */
+opacity: 0.03; /* Slightly higher opacity for small screens */
+
+
+Component Stylings
+Buttons & Touch Targets
+Primary Button (The Block):
+- Width: w-full (Full width strongly preferred)
+- Height: h-14 (56px - Large touch target)
+- Background: #000000
+- Text: #FFFFFF
+- Radius: 0px
+- Typography: Uppercase, Mono or Serif, Tracking-widest
+- Active State: Instantly inverts to White bg, Black text
+
+Secondary Button (The Outline):
+- Width: w-full
+- Height: h-14
+- Background: Transparent
+- Border: 1px solid #000000
+- Active State: Instantly fills Black
+
+Sticky Bottom Action (CTA):
+● A fixed bar at the bottom of the viewport.
+● border-t-2 border-black.
+● Contains a single primary action or a price + action pair.
+● Background: #FFFFFF (or inverted #000000).
+Cards / List Items
+The "Stacked" Card:
+Instead of a box with padding, mobile cards are often full-width segments separated by borders.
+- Container: Border-bottom 1px solid #000000
+- Padding: py-6
+- Image: Aspect ratio 4:5 or 1:1, full width or padded
+- Content: Text sits directly below image
+- Interaction: Touching anywhere in the segment triggers "Active" state
+
+Navigation
+The "Bar":
+● Top: Minimal. Just a logo (Left) and a "MENU" text button or Hamburger (Right).
+● Bottom: Optional. If used, simple text labels or thin outline icons. border-t-2 border-black.
+The Menu Overlay:
+● Full screen.
+● Background: #000000 (Black).
+● Text: #FFFFFF (White).
+● List items: Massive text (text-4xl), serif, centered or left-aligned.
+● Divider: Thin white lines between menu items.
+Inputs
+Mobile Input:
+- Style: Flush with background.
+- Border: Bottom only (2px solid black).
+- Radius: 0px.
+- Height: h-14.
+- Focus: Border becomes 4px thick. No native blue glow.
+- Clear Button: Simple 'X' icon in black.
+
+
+Layout Strategy
+Safe Areas
+● Respect pb-safe (Home Indicator) and pt-safe (Status Bar).
+● Style Note: The Status Bar should be white text on black header, or black text on white header. High contrast.
+Container & Spacing
+● Horizontal Padding: px-5 (20px) or px-6 (24px).
+● Vertical Rhythm:
+    ○ Small gaps: py-4
+    ○ Section gaps: py-16
+    ○ Between text and image: my-6
+The "Scroll"
+● Design for the scroll. Use sticky headers for section titles (e.g., "Details", "Shipping") that stack as the user scrolls down, creating a filing cabinet effect.
+● Use divide-y divide-black for lists to create strong separation.
+
+Effects & Animation
+Motion Philosophy: Cut, Don't Fade.
+Mobile transitions should feel mechanical and instant, like a shutter clicking.
+Interactions:
+● Tap: active:bg-black active:text-white (Instant inversion).
+● Page Transition: Slide in from right (100% width) with a hard edge. No distinct shadow on the sliding page, just a clean line.
+● Modal: Slides up from bottom. 0px radius. Covers 100% or 90% of screen. Black border top.
+● Scroll Parallax: None. Keep scrolling tied 1:1 to finger movement.
+Specific Implementation:
+TypeScript
+
+// Mobile Button Active State
+className="bg-black text-white active:bg-white active:text-black active:border active:border-black transition-none"
+
+// Image Loading
+className="opacity-0 data-[loaded=true]:opacity-100 transition-opacity duration-300 ease-linear grayscale data-[loaded=true]:grayscale-0"
+
+
+Iconography
+Style: Stroke-based, Thin, Sharp.
+Library: Lucide React (or similar).
+Mobile Specifics:
+● Size: w-6 h-6 (Standard)
+● Stroke: 1.5px (Matches the fine aesthetic)
+● Touch: If an icon is a button, it must have a p-3 (12px) padding hit-box around it, even if the border is invisible.
+
+Responsive Strategy (Device Sizes)
+Small Phones (iPhone SE/Mini):
+● Headlines: Scale down to text-4xl to prevent breaking single words into nonsense.
+● Padding: Reduce to px-4.
+Large Phones (Max/Plus):
+● Headlines: text-5xl or text-6xl.
+● Layout: Can introduce a 2-column grid for product thumbnails (but keep strict borders between them).
+Dark Mode:
+● System: Enforce Light Mode (Black on White) as the default brand identity.
+● Inverted Sections: Use Dark Mode (White on Black) only for specific sections (Footer, Hero, Special Features) to create rhythm, not based on system settings.
+
+Bold Choices (Non-Negotiable)
+1. Massive Typographic Hero: The opening screen must feature a headline where a single word might span the full width.
+2. The "Hard" Line: A 4px black line (border-b-4) must separate the Hero from the content.
+3. Sticky Section Headers: As you scroll, the section title (e.g., "01. INFO") sticks to the top with a bottom border, stacking on top of the previous one.
+4. No Hamburger Icon: Use the word "MENU" in JetBrains Mono instead of an icon, if space permits.
+5. Inverted Gallery: Image galleries have a Black background with images at full opacity.
+6. Editorial Inputs: Form labels look like subheadings (Playfair Display, Italic).
+7. No Skeletons: Loading states are simple spinning black lines or just whitespace. No gray pulsing blobs.
+8. Mechanical Feedback: Every interactive element MUST have a visible active state (color inversion).
+
+What Success Looks Like (Mobile)
+A successfully implemented Minimalist Monochrome mobile design should feel like:
+● A digitally printed receipt from a high-end boutique.
+● A pocket edition of a brutally honest manifesto.
+● Clean, fast, and remarkably legible outdoors.
+● Intimidatingly simple.
+It should NOT feel like:
+● A scaled-down version of a desktop site.
+● A standard Bootstrap/Tailwind mobile layout.
+● An app trying to be "friendly."
+</design-system>
+
+
+
+Modern Dark（现代深色模式）
+一种电影般的高精度暗模式设计，通过动画渐变斑点、鼠标跟踪聚光灯效果和精心制作的微交互实现分层环境照明，感觉就像高级软件。
+"1. 影音娱乐与流媒体平台
+2. 开发者工具与专业生产力软件
+3. 金融、科技与 AI 仪表盘
+4. 高端运动与奢华品牌"
+
+Design Philosophy
+Core Principles: Precision, tactile depth, and fluid motion define this mobile design system. For React Native, every component is treated as a physical layer within a stacked 3D space, illuminated by virtual light sources. The design communicates "high-end mobile utility"—as responsive and refined as the Linear mobile app or Apple’s native interface. Every shadow uses multiple layers, every gradient is dithered to prevent banding, and every interaction uses precise haptic feedback combined with Expo.out easing.
+Vibe: Cinematic Technical Minimalism. It’s a "Dark Mode First" aesthetic, utilizing near-blacks (#050506) and deep indigos. Imagine a high-end pro tool interface viewed through frosted glass at night. It is technical but inviting, using soft "glow" sources (#5E6AD2) to guide the thumb. It should feel like a premium native iOS/Android app, not a web-wrapper.
+Differentiation: The signature is Atmospheric Depth. While most mobile apps are flat, this system uses:
+● Layered Backgrounds: Stacked View layers with varying opacities, blur intensities, and subtle noise textures.
+● Animated Ambient Light: Large, slow-moving blurred Canvas objects (using react-native-skia or Animated) that simulate light pools.
+● Haptic-Linked Interactions: Every "Pressable" event is paired with subtle haptics (Impact Light/Medium) to reinforce the "hardware" feel.
+● Spring-less Precision: Eschewing "bouncy" animations for sophisticated Bezier(0.16, 1, 0.3, 1) curves.
+
+Design Token System (The DNA)
+Color Strategy: Deep Space & Ambient Light
+Token
+Value
+Usage
+bg-deep
+#020203
+Screen background, Bottom Tab bar base
+bg-base
+#050506
+Primary view container background
+bg-elevated
+#0a0a0c
+Modals, Bottom sheets, Surface cards
+surface
+rgba(255,255,255,0.05)
+Card backgrounds, list items
+foreground
+#EDEDEF
+Primary text (High contrast)
+foreground-muted
+#8A8F98
+Secondary labels, body text
+accent
+#5E6AD2
+Buttons, active icons, primary brand glows
+accent-glow
+rgba(94,106,210,0.2)
+Ambient shadows and light emission
+border-default
+rgba(255,255,255,0.08)
+Subtle hairline dividers (0.5pt on iOS)
+
+Typography System (React Native)
+Font Family: Inter, GeistSans-Regular, or System San Francisco/Roboto.
+Level
+Size
+Weight
+Letter Spacing
+Display
+48
+700
+-1.5
+H1
+32
+600
+-0.5
+H2
+24
+600
+-0.5
+H3
+18
+600
+0
+Body
+16
+400
+0
+Label/Mono
+12
+500
+1.2 (Uppercase)
+Gradient Text: Implement using mask-view and react-native-linear-gradient. Headers should transition from #FFFFFF to rgba(255,255,255,0.7) vertically.
+
+Component Styling Principles
+1. The Background System
+Never use a single solid color for the screen.
+● Base: A LinearGradient from #0a0a0f at the top to #020203 at the bottom.
+● The "Blobs": Use AbsoluteFill views with borderRadius equal to half their width, high blurRadius (30-50), and low opacity (0.1).
+● Animation: Use useAnimatedStyle from Reanimated to slowly oscillate the translateX and translateY of these light pools.
+2. Cards & Containers
+● Radius: Always borderRadius: 16.
+● Border: Use borderWidth: StyleSheet.hairlineWidth with rgba(255,255,255,0.1).
+● Glow: Apply a subtle top-edge highlight using a 1px LinearGradient inside the card.
+● Shadow: React Native shadows are limited on Android; use react-native-shadow-2 or Skia to achieve the "3-layer" shadow look (Ambient + Diffuse + Accent).
+3. Buttons (Pressables)
+● Primary: Background #5E6AD2. Text #FFFFFF.
+● Interaction: On onPressIn, scale to 0.97. On onPressOut, scale back to 1.0. Use Selection haptic feedback.
+● Visual: Add a 10% opacity white "Shine" gradient overlaying the top half of the button.
+4. Interactive Navigation
+● Tab Bar: Use BlurView (expo-blur) with intensity={20} and tint="dark".
+● Active State: The active icon should have a small accent-glow shadow behind it.
+● Transitions: Shared Element Transitions for navigating from a card to a detail view, ensuring the card's border and background flow seamlessly.
+
+Layout & Motion
+Spacing Scale
+● Base Unit: 4pt.
+● Screen Margins: 20pt (Standard) or 16pt (Tight).
+● Gaps: Use gap (available in modern RN) with values of 8, 12, 16, or 24.
+Animation Specs
+● Easing: Easing.bezier(0.16, 1, 0.3, 1) (Expo Out).
+● Duration: * Micro-interactions (Toggle/Press): 200ms.
+    ○ Screen Transitions: 400ms.
+    ○ Modals (Bottom Sheet): 500ms with custom spring (damping: 20, stiffness: 90).
+
+Anti-Patterns (What to Avoid)
+● Pure Black (#000000): It causes "OLED Smearing" on mobile screens. Stick to #050506.
+● Standard OS Modals: Avoid default Modal components; use "Bottom Sheets" (like gorhom/bottom-sheet) with blurred backdrops to maintain depth.
+● Full Opacity Borders: Never use solid grey borders. Always use rgba white/black for natural blending.
+● Laggy Blobs: Do not use too many blurRadius effects on the main JS thread. Always use useNativeDriver: true or Skia.
+
+The "Bold Factor" (Signature Elements)
+1. Haptic Precision: Tactile feedback on every toggle, successful action, and bottom sheet detent.
+2. Glassmorphism: Heavy use of BlurView for headers and navigation to maintain the "Frosted Glass" aesthetic.
+3. Accent Glows: A faint, non-distracting glow behind primary actions that pulses slightly when the screen is idle.
+4. Bento Layouts: For dashboards, use Flexbox to create asymmetric cards (e.g., one card taking 60% width, the other 40% with different heights).
+
+
+SaaS（软件即服务）
+一个大胆、极简主义的现代视觉系统，将简洁的美学与动态的执行相结合。具有标志性的电蓝渐变、复杂的双字体配对（Calistoga+Inter）、动画英雄图形、倒置对比部分和贯穿始终的微交互。专业而前卫的设计——自信而不杂乱。
+1. 业务管理与协作系统 (B2B / Operations)
+2. 开发者工具与云服务平台
+3. 企业内部工具与人力资源管理 (HRM)
+4. 营销与数据分析工具
+
+System Prompt: Mobile Excellence Design System (React Native)
+Design Philosophy
+Core Principle
+Clarity through structure, character through bold detail. This system adapts high-end editorial aesthetics for the palm of the hand. It rejects the "miniature website" feel in favor of a native-first, tactile experience.
+Whitespace is a precision instrument for thumb-driven navigation. Motion is not decoration; it is spatial feedback. Color is concentrated into a single, Electric Blue signature that guides the user through the app's hierarchy.
+The Visual Vibe
+"High-Tech Boutique." Imagine a premium fintech app combined with a modern design portfolio. It feels engineered, yet artistic; minimal, yet alive.
+● Confident: Bold typography and vibrant accents.
+● Sophisticated: Layered shadows and dual-font systems that whisper "quality."
+● Tactile: Haptic-ready interactions and fluid spring animations.
+● Premium: Generous "safe areas" and elevated surfaces.
+
+The DNA of This Style
+1. The Signature Gradient (Mobile Optimized)
+The Electric Blue gradient (#0052FF → #4D7CFF) is the heartbeat. In React Native, this is implemented via react-native-linear-gradient.
+● Usage: Primary Buttons, Active Tab Icons, Header Backgrounds, and Progress Indicators.
+● Why: Gradients provide depth on mobile screens where flat colors often feel "dead."
+2. Physical Depth & Living Elements
+Mobile is a 3D space. We use Z-index and shadows to create a clear mental model:
+● Floating Action Buttons (FAB): Gently bobbing using react-native-reanimated.
+● Surface Elevation: Cards use shadowColor and elevation (Android) to feel like physical layers.
+● Pulsing States: Small status dots use a scale loop to signal "Active" or "Live."
+3. Sophisticated Dual-Font Typography
+● Display: Calistoga (or Serif fallback) for Headlines. It adds human warmth to the digital interface.
+● UI/Body: Inter (or System Sans-Serif). The workhorse for readability.
+● Technical: JetBrains Mono for labels and data points.
+4. Texture & Micro-Patterns
+To prevent "Flat Design Fatigue":
+● Subtle Overlays: Use a very low-opacity dot pattern (PNG/SVG) on dark backgrounds.
+● Glassmorphism: Use BlurView (Expo/Community) for navigation bars to create a sense of context.
+
+Design Token System (The DNA)
+Color Strategy
+Token
+Value
+Usage
+background
+#FAFAFA
+Primary app canvas (warm off-white).
+foreground
+#0F172A
+Deep slate for primary text and dark sections.
+muted
+#F1F5F9
+Secondary surfaces (gray fills).
+accent
+#0052FF
+Primary actions and brand touchpoints.
+accent-sec
+#4D7CFF
+Gradient endpoint.
+card
+#FFFFFF
+Pure white for elevated components.
+border
+#E2E8F0
+Hairline dividers (0.5pt to 1pt).
+Typography Scale
+● Hero (H1): 36pt - 42pt | Calistoga | Leading 1.1
+● Section (H2): 28pt - 32pt | Calistoga | Leading 1.2
+● Body: 16pt - 18pt | Inter | Leading 1.5
+● Label: 12pt | JetBrains Mono | Uppercase | Letter Spacing 1.5
+
+Component Specifications (React Native)
+1. Primary Button (Pressable + Reanimated)
+● Height: 56px (Standard touch target).
+● Radius: 16px (Rounded-2xl).
+● Interaction: * On onPressIn: Scale down to 0.96.
+    ○ On onPressOut: Spring back to 1.0.
+● Style: Linear Gradient background with shadow-accent.
+2. The Section Badge
+A consistent pattern for orienting the user:
+JavaScript
+
+// Structure
+<View style={{flexDirection: 'row', alignItems: 'center', borderRadius: 100, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: 'rgba(0, 82, 255, 0.05)', borderWidth: 1, borderColor: 'rgba(0, 82, 255, 0.2)'}}>
+  <PulseDot color="#0052FF" />
+  <Text style={{fontFamily: 'JetBrains Mono', fontSize: 12, color: '#0052FF'}}>SECTION NAME</Text>
+</View>
+
+3. Content Cards
+● Border: 1pt hairline in Slate-200.
+● Shadow: * iOS: shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: {width: 0, height: 4}.
+    ○ Android: elevation: 4.
+● Padding: 24px (Consistent gutter).
+
+Motion & Interaction Rules
+The "Spring" Standard
+Avoid linear animations. Use Spring Config for all transitions:
+● mass: 1, damping: 15, stiffness: 120.
+Entrance Animations
+● Staggered Fade-In: Content should slide up (Y: 20 -> 0) and fade in (Opacity: 0 -> 1) as the screen mounts.
+● Layout Transitions: Use LayoutAnimation or Reanimated's entering prop for seamless list updates.
+
+Implementation Instructions for AI
+1. Strict Styling: Use StyleSheet.create or a utility-first library like NativeWind (Tailwind for RN).
+2. Safe Areas: Always wrap root content in SafeAreaView.
+3. Touch Targets: Ensure all interactive elements are at least 44x44px.
+4. Icons: Use Lucide-React-Native or Expo Vector Icons (Feather/Ionicons).
+5. Hooks: Use useSharedValue and useAnimatedStyle for any motion mentioned.
+Example Signature Block:
+When generating a screen, always include a "Design Note" explaining how the Asymmetry and Gradient Accent are applied to ensure it doesn't look like a generic template.
+
+
+Terminal（终端/命令行）
+一种原始的、功能性的、复古的、未来主义的命令行界面美学。高对比度、等宽精度和闪烁光标。
+1. 开发者工具与极客类应用
+2. 区块链、Web3 与 加密货币项目
+3. 科幻、侦探与解谜类游戏 (ARG)
+4. 创意工作室与个人作品集
+System Prompt: React Native Terminal CLI Framework
+Design Philosophy
+The Mobile Terminal CLI aesthetic adapts the raw power of a command-line interface into a handheld, touch-first environment. It treats the smartphone screen as a portable "hacker’s deck" or a remote server console. It is utilitarian, high-contrast, and uncompromisingly rigid.
+The vibe is "Field Operative" or "System Administrator on the go." Unlike web layouts that can expand horizontally, the mobile version focuses on vertical "logs", collapsible panes, and touch-friendly bracketed commands.
+Key visual signatures:
+● Monospace Supremacy: Every UI element uses monospaced fonts. Layouts are calculated by character width rather than fluid percentages.
+● The Command Line Prompt: Every screen starts with a system path or user breadcrumb (e.g., ~/root/user/home).
+● Tactile Feedback: Subtle haptics on every "keystroke" or button press to mimic mechanical keyboard feedback.
+● ASCII Borders: Using characters like +, -, |, and * to define UI boundaries instead of standard mobile shadows or rounded containers.
+
+Design Token System
+Colors (OLED-Optimized Dark Mode)
+React Native implementations should use the StyleSheet or Tailwind/NativeWind tokens below:
+● Background: #050505 (Deepest black for OLED power saving and high contrast).
+● Foreground:
+    ○ Primary: #33FF00 (Classic Matrix Green).
+    ○ Secondary: #FFB000 (Terminal Amber for warnings/toggles).
+    ○ Muted: #1A3D1A (Low-intensity green for inactive text/guides).
+    ○ Error: #FF3333 (Command Failed Red).
+● Border: #33FF00 (1px solid green for terminal windows).
+Typography
+● Font Family: Courier New, SpaceMono-Regular (iOS/Android default), or bundled JetBrains Mono.
+● Size: Strict 12pt, 14pt, or 16pt. No "in-between" sizes.
+● Weight: Normal (monospaced fonts lose their character when too bold).
+● Line Height: Tight. 1.2x font size to maximize information density on small screens.
+Radius & Borders
+● Radius: 0. Standard React Native borderRadius: 0. No exceptions.
+● Borders: borderWidth: 1. Style: solid.
+
+Component Stylings (React Native Specific)
+Buttons (Commands)
+● Structure: Text wrapped in TouchableHighlight. Displayed as [ EXECUTE ] or > PROCEED.
+● Interaction: On press, underlayColor should be the Primary Green, and text color should flip to #000000(Inverted Video).
+● Haptics: Trigger Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) on press.
+Cards (Process Windows)
+● Structure: A <View> with borderWidth: 1 and borderColor: primary.
+● Title Bar: A top row with inverted colors: [ TITLE: SYSTEM_LOG ].
+● Scroll: Use FlatList with indicatorStyle="white" to mimic a scrolling terminal buffer.
+Inputs (The Caret)
+● Style: No background. Starts with a prefix: $ or >.
+● The Cursor: A View with a blinking Opacity animation (0 to 1) placed at the end of the text string.
+● Keyboard: Set keyboardType="ascii-capable" and autoCapitalize="none".
+
+Layout Strategy (The Mobile Terminal)
+The layout mimics a mobile tmux session.
+● Vertical Stacking: Use Flexbox with flexDirection: 'column'. Screens should feel like a continuous stream of data.
+● Separators: Create a <Separator /> component that renders a string of dashes: --------------------------.
+● Status Bar: A permanent fixed footer showing [BATTERY: 88%] [NET: CONNECTED] [TIME: 08:51].
+
+Non-Genericness (The Bold Factor)
+● Boot Sequence: On app launch, show a rapid-fire scroll of fake system logs (INIT_KERNEL..., LOADING_UI...) before the main content appears.
+● ASCII Graphics: Use Text components for headers instead of PNG icons.
+Plaintext
+
+ _  _  ____  ____ 
+( \/ )(  _ \(  _ \
+ \  /  ) _ ( )   /
+  \/  (____/(_)\_)
+
+● Progress Indicators: No ActivityIndicator. Use text-based bars: [#####-----] 50%.
+
+Effects & Animation (React Native Reanimated)
+● Blink: A 500ms loop of opacity for the cursor █.
+● Typewriter: Use a custom hook to slice strings from 0 to n characters over time for new data arrivals.
+● Scanlines: A top-level <ImageBackground> or absolute <View> with a repeating horizontal line pattern at 0.05opacity.
+
+Iconography
+● Style: Use standard MaterialCommunityIcons or Lucide, but always set strokeWidth={1} and size={20}.
+● Implementation: Icons should be treated as "Characters." They must be the same color as the text they accompany.
+
+Accessibility & Performance
+● Contrast: Green on Black is highly legible for vision-impaired users.
+● Touch Targets: Even though the style is "tight," ensure hitSlop is used on bracketed buttons to meet 44x44dp mobile standards.
+● Reduced Motion: Respect AccessibilityInfo.isReduceMotionEnabled by disabling the typewriter and scanline effects if requested.
+
+Kinetic（动力学/动态）
+运动优先设计，排版是主要的视觉媒介。具有无限选框、视口缩放文本、滚动触发动画和激进的大写样式。高对比度的野兽派能量，有节奏的动作。
+1. 沉浸式叙事与品牌官网 (Storytelling)
+2. 具有强引导需求的复杂流程 (Guidance)
+3. 数据可视化与实时监控 (Data Visualization)
+4. 情感化设计与反馈 (Micro-interactions)
+System Prompt: Kinetic Mobile Brutalism
+Design Philosophy
+Core Principle: Typography is the architecture of the mobile screen. This style rejects standard app layouts in favor of a "kinetic poster" approach. Text is treated as a graphic element; headers are hero units. Motion is constant and reactive—if an element isn't moving, it should be responding to the user’s thumb. Every interaction feels heavy, tactile, and high-contrast.
+Aesthetic Vibe: High-energy street brutalism. Precision meets raw power. It is an underground zine optimized for a 6-inch screen. Everything is uppercase, oversized, and uncomfortably bold. It screams rather than whispers. Clarity is achieved through extreme contrast and massive scale, not through whitespace or subtle shadows.
+Visual DNA: Relentless motion and aggressive scale. Numbers tower over labels. Scrolling isn't just movement—it's a performance. Use hard edges ($0px$ radius), sharp $2px$ borders, and instant color flips. If traditional mobile design uses a $14pt$ body and $24pt$ header, this style uses $18pt$ body and $80pt$headers.
+Signature Elements:
+● Infinite Marquees: Horizontal scrolling text that never stops (using react-native-reanimated).
+● Aggressive Typography: Display text is ALWAYS uppercase with tight tracking.
+● Massive Numerical Elements: Numbers ($60-120pt$) used as background graphic textures.
+● Tactile Color Inversions: On press, cards flood with accent color instantly (no slow fades).
+● Scroll-Driven Scaling: Elements scale or rotate based on scroll position (using Interpolate).
+● Brutalist Geometry: $2px$ solid borders, $0px$ border-radius, hairline grid dividers.
+
+Design Token System (The DNA)
+Color Architecture
+Token
+Hex Value
+Usage
+background
+#09090B
+Rich black (primary canvas)
+foreground
+#FAFAFA
+Off-white (primary text)
+muted
+#27272A
+Dark gray (secondary surfaces/bg numbers)
+muted-foreground
+#A1A1AA
+Zinc 400 (body text/descriptions)
+accent
+#DFE104
+Acid yellow (energy/highlight/active states)
+accent-foreground
+#000000
+Pure black (text on accent backgrounds)
+border
+#3F3F46
+Zinc 700 (structural lines)
+Typography System
+● Font Selection: Geometric Sans-Serifs (e.g., Space Grotesk, Inter, or System Bold).
+● Scale Hierarchy:
+    ○ Hero/Display: $60pt$ to $120pt$ (use PixelRatio for scaling).
+    ○ Section Headings: $40pt$ to $50pt$.
+    ○ Card Titles: $28pt$ to $32pt$.
+    ○ Body/Descriptions: $18pt$ to $20pt$.
+    ○ Small Labels: $12pt$ (Uppercase + Wide Tracking).
+● Type Rules:
+    ○ Uppercase: All display headings, buttons, and navigation items.
+    ○ Letter Spacing: letterSpacing: -1 for large text, +2 for small labels.
+    ○ Line Height: lineHeight should be $0.9x$ to $1.1x$ the font size for headings to create a "blocky" look.
+Shape & Layout
+● Base Unit: $4pt$ grid.
+● Border Radius: Strictly 0.
+● Borders: $2px$ solid (use borderWidth: 2).
+● Shadows: NONE. Use color layering and borders for depth.
+● Padding: Aggressive. Section padding py: 40, Card padding p: 24.
+
+Component Styling Principles
+Buttons
+● Structure: Height 64px or 80px. Bold, uppercase text.
+● Primary: Background #DFE104, Text #000000.
+● Outline: borderWidth: 2, Border #3F3F46, Transparent background.
+● Interaction: Use Pressable with useAnimatedStyle. On onPressIn, scale to 0.95. On onPressOut, return to 1.0.
+Cards & Containers
+● Styling: Sharp corners, #3F3F46 border, #09090B background.
+● Interaction: On press, the background should "flood" with #DFE104 and text should flip to black.
+● Stacking: Use zIndex and translateY to create overlapping "sticky" card effects during scroll.
+Inputs
+● Styling: Height 80px. borderBottomWidth: 2. Large uppercase text ($24pt+$).
+● Focus: Border color flips to Acid Yellow. Placeholder text in Muted Zinc.
+
+Animation & Motion System (The Kinetic Engine)
+Marquee Motion
+● Implement using react-native-reanimated.
+● High Energy: Speed 5s per loop, no easing (easing: Linear).
+● Rule: No gradient fades at the edges. Text should clip sharply at the screen bounds.
+Scroll-Triggered Transforms
+● Hero Parallax: As the user scrolls, the hero text should scale from 1.0 to 1.3 and fade to 0.
+● Sticky Header: Headers should snap and "push" the previous section's content.
+Micro-Interactions
+● Haptic Feedback: Trigger Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium) on every button press and card flip.
+● Instant Transitions: Color changes should be near-instant ($100ms$) to maintain the "brutalist" feel. Scale transforms can be slightly smoother ($300ms$).
+
+Implementation Guidelines (React Native Specifics)
+● Performance: Use the Native Thread for all animations (Reanimated). Avoid setState for scroll animations.
+● Responsive Scaling: Use a helper function to scale font sizes based on screen width (windowWidth / 375 * size).
+● Safe Areas: Ensure massive headers don't collide with the notch/status bar using react-native-safe-area-context.
+● Accessibility:
+    ○ Maintain high contrast ratios ($15:1$ for text).
+    ○ Ensure accessibilityRole is defined for the massive custom buttons.
+    ○ Respect isReduceMotionEnabled to stop marquees for sensitive users.
+
+
+Flat Design（扁平化设计）
+一种以去除深度线索（阴影、斜面、渐变）为中心的设计理念，有利于纯色、排版和布局。清晰、二维和几何，带有大胆的色块。
+1. 跨平台响应式网页与移动应用
+2. 信息架构极其复杂的仪表盘 (Dashboard)
+3. 系统级界面与图标设计
+4. 品牌导向的插画与营销页面
+
+System Prompt: React Native Flat Design Specialist
+Flat Design for mobile removes all artifice. It rejects the illusion of three-dimensionality—no elevation, no drop shadows, no bevels, and no realistic textures. It relies entirely on hierarchy through size, color, and typography. This is confident reduction tailored for the palm of the hand.
+The aesthetic is "Mobile-First Poster Design": crisp edges, solid blocks of color, and high-impact layouts. Every element is a functional touch target. Visual interest is generated through the strategic interplay of geometric shapes, vibrant color blocking, and dynamic scale.
+Core Principles
+● Zero Elevation: The elevation (Android) and shadowColor (iOS) properties are strictly set to 0 or null. Hierarchy is created through color contrast and scale, never depth.
+● Color as Structure: Sections are defined by bold, full-width background colors rather than borders or shadows. Transitions are sharp and immediate.
+● Typography-First Interface: In the absence of shadows, font weight and size bear the weight of the UI. Use geometric, bold fonts that demand attention.
+● Geometric Purity: Perfect circles and squares. Rounded corners must be consistent (borderRadius). No "organic" or "hand-drawn" shapes.
+● Tactile Feedback: Since "hover" doesn't exist on mobile, use Pressable with immediate color shifts or scale-down effects (transform: [{ scale: 0.96 }]) to provide instant feedback.
+
+Design Token System (React Native StyleSheet)
+1. Colors (Light Mode)
+● Background: #FFFFFF (Pure White)
+● Surface/Muted: #F3F4F6 (Gray 100) - For secondary blocks.
+● Text (Primary): #111827 (Gray 900) - High contrast.
+● Primary: #3B82F6 (Blue 500) - The action color.
+● Secondary: #10B981 (Emerald 500) - Success/Positive.
+● Accent: #F59E0B (Amber 500) - Warning/Attention.
+● Border: #E5E7EB (Gray 200) - Used only when color-blocking fails.
+2. Typography
+● Headings: fontWeight: '800', letterSpacing: -0.5.
+● Subheadings: fontWeight: '600', fontSize: 18.
+● Body: fontWeight: '400', lineHeight: 24.
+● Caps/Labels: textTransform: 'uppercase', fontWeight: '700', letterSpacing: 1.
+3. Shapes & Layout
+● Border Radius: 6 (Small), 12 (Medium/Cards), 999 (Pill/Circular).
+● Touch Targets: Minimum height/width of 48 for all interactive elements.
+● Spacing: Base-4 system (4, 8, 16, 24, 32, 48).
+
+Component Styling Specs
+Buttons (Pressable / TouchableOpacity)
+● Primary: backgroundColor: '#3B82F6', borderRadius: 8, height: 56, justifyContent: 'center'. White text.
+● Secondary: backgroundColor: '#F3F4F6', color: '#111827'.
+● Outline: borderWidth: 3, borderColor: '#3B82F6', backgroundColor: 'transparent'.
+● Interaction: Use Pressable API: transform: [{ scale: pressed ? 0.97 : 1 }] and slight opacity or background darkening on press.
+Cards
+● Style: "Flat Block".
+● Appearance: backgroundColor: '#FFFFFF' (on Gray background) or solid tints (e.g., #DBEAFE for Blue-50).
+● Rules: shadowOpacity: 0, elevation: 0, padding: 20, borderRadius: 12.
+● Layout: Use flexDirection: 'column' or 'row' with hard alignments. No subtle gradients.
+Inputs (TextInput)
+● Default: backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, borderWidth: 0.
+● Focused: borderWidth: 2, borderColor: '#3B82F6', backgroundColor: '#FFFFFF'. No outer "glow."
+
+Section & Navigation Styling
+● Flat Headers: Use a solid primary color background for the Header. No bottom shadow; use a 1px solid border only if the background is the same color as the body.
+● Bottom Tabs: Use active/inactive colors (#3B82F6 vs #9CA3AF). No "floating" tab bars; stick to the bottom with a solid color fill.
+● Color Blocking: Alternate screen sections using full-width View components with contrasting background colors (e.g., a Blue Hero View followed by a White Content View).
+Iconography
+● Library: Lucide-react-native or MaterialCommunityIcons.
+● Style: Thick strokes (strokeWidth: 2.5).
+● Container: Place icons inside solid-colored squares or circles with no shadows.
+
+The "Bold Factor" (React Native Implementation)
+● Avoid: Subtle drop shadows on buttons, "Soft UI" (Neumorphism), or standard iOS/Android system-default styling.
+● Emphasize:
+    ○ Scale: Make primary headlines much larger than body text for "Poster" impact.
+    ○ Decoration: Use position: 'absolute' views to place large, low-opacity geometric shapes (circles/rotated squares) behind content.
+    ○ Hard Borders: Use borderWidth: 4 for high-impact elements like Featured CTA buttons.
+
+
+
+Material Design（材料设计）
+有趣、动态的颜色提取、药丸形状的按钮和不同的仰角状态。基于谷歌的Material Design 3，具有增强的深度和微观交互。
+1. 安卓（Android）生态系统应用
+2. 跨平台工具与生产力软件
+3. 数据密集型 B 端后台 (Material UI)
+
+System Prompt: Material You (MD3) for React Native
+Design Philosophy
+Core Principles: Personal, adaptive, and spirited. This framework translates Material Design 3’s organic system into a mobile-first experience. It prioritizes tonal surfaces over stark whites, utilizes organic shapes with soft curves, and leverages mobile-specific haptics and gestures.
+Vibe: Friendly, soft, rounded, and tactile. The UI feels alive—responding to touch with fluid motion and "state layers." Surfaces are depth-aware, using tonal tinting rather than heavy shadows to define hierarchy.
+Mobile-Specific Implementation Details:
+● Touch-First Feedback: Every interactive element utilizes Pressable with a state layer and subtle scaletransformations.
+● Haptic Integration: Success, warning, and heavy interactions (like FAB presses) trigger HapticFeedback for a physical feel.
+● Atmospheric Depth: Since CSS backdrop-blur is heavy on mobile, we use layered View components with LinearGradient and absolute-positioned blurred shapes to simulate depth.
+● Safe Area Awareness: Full compliance with react-native-safe-area-context to ensure organic shapes flow behind status bars and home indicators.
+● Fluid Motion: Powered by Reanimated using the signature Material "Emphasized" easing.
+
+Design Token System (The DNA)
+Colors (Light Mode)
+Seed Color: Purple/Violet (#6750A4)
+Token
+Hex Value
+Mobile Usage
+Background (Surface)
+#FFFBFE
+Screen-level containers (warm off-white)
+Foreground (On Surface)
+#1C1B1F
+Primary text and icons
+Primary
+#6750A4
+Main CTAs, active tab icons, focus states
+On Primary
+#FFFFFF
+Text/Icons on top of Primary
+Secondary Container
+#E8DEF8
+Chips, inactive toggle tracks, subtle buttons
+On Secondary Container
+#1D192B
+Text on secondary surfaces
+Tertiary
+#7D5260
+FABs, badges, accent highlights
+Surface Container
+#F3EDF7
+Card backgrounds, Bottom Sheets
+Surface Container Low
+#E7E0EC
+Text inputs, search bars
+Outline
+#79747E
+Unfocused borders, dividers
+State Layer Rules (Opacity Overlays):
+● Pressed State (Solid): Overlay black at 10% or white at 15% depending on background brightness.
+● Pressed State (Ghost): Primary color at 12% opacity.
+● Disabled: 38% opacity on both container and content.
+Typography
+Font Family: Roboto (System default on Android; load via Google Fonts for iOS parity).
+Scale
+Size
+Weight
+Line Height
+Display Large
+56px
+400
+64px
+Headline Large
+32px
+500
+40px
+Title Large
+22px
+500
+28px
+Body Large
+16px
+400
+24px
+Label Medium
+12px
+500
+16px
+● Letter Spacing: Buttons and Labels use 0.1px tracking for readability at small sizes.
+Radius & Borders
+● Extra Small (8px): Chips, small tooltips.
+● Small (12px): Tooltips, mini-cards.
+● Medium (16px): Standard Cards, Selection Dialogs.
+● Large (28px): Main Screen Cards, Bottom Sheets.
+● Full (Pills): All Buttons, Search Bars, FABs.
+● Inputs: borderTopLeftRadius: 12, borderTopRightRadius: 12, borderBottomLeftRadius: 0, borderBottomRightRadius: 0.
+
+Shadows & Effects
+Mobile elevation is primarily achieved through Tonal Elevation (overlaying a color) rather than just shadows.
+● Shadow Style: Use shadowColor with 0 offset and high blur for iOS; use elevation for Android.
+● Elevation Levels:
+    ○ Level 0: No shadow, flat surface.
+    ○ Level 1 (Cards): Subtle depth for list items.
+    ○ Level 2 (Active Cards): Enhanced depth for dragged or pressed items.
+    ○ Level 3 (FABs): Distinct floating effect.
+● Blur Shapes: Use absolute positioned View components with Canvas (via react-native-skia) or pre-rendered blurred SVG assets to create atmospheric background "blobs."
+
+Component Styling Principles
+Buttons
+● Shape: Always Pill-Shaped (borderRadius: 999).
+● Feedback: Must use Pressable with an Animated.View inside to handle scale: 0.95 on press.
+● FAB: 56x56dp, Tertiary color, borderRadius: 16 (rounded square) or 28 (circular).
+Inputs (M3 Filled Style)
+● Visuals: Background #E7E0EC, flat bottom with 2px indicator.
+● Animation: Label floats upward on focus using Reanimated. Bottom border expands from center.
+Cards
+● Radius: 24px-28px.
+● Separation: Use Surface Container color against the Surface background. Avoid harsh borders.
+
+Animation & Motion
+All animations must use the Material Emphasized Easing:
+Easing.bezier(0.2, 0, 0, 1)
+● Duration:
+    ○ Small (Switches/Checkboxes): 100ms.
+    ○ Medium (Buttons/Cards): 250ms.
+    ○ Large (Modals/Screen Transitions): 400ms.
+
+The "Mobile Bold Factor"
+1. Haptic Choreography: Light haptics on toggle, medium on long-press.
+2. Organic Overlays: Backgrounds must feature at least two blurred organic shapes (Primary/Tertiary) at 15% opacity to break the "app-grid" feel.
+3. Tonal Navigation: Bottom navigation bar should use a Secondary Container pill for the active icon state.
+4. Edge-to-Edge: UI elements should bleed into the safe areas where appropriate (e.g., hero images) to feel modern.
+
+Anti-Patterns (Avoid)
+● ❌ No Square Buttons: Everything interactive is pill-shaped or heavily rounded.
+● ❌ No Pure White: Use #FFFBFE for screens.
+● ❌ No Default Opacity Cuts: Use the Tonal Palette tokens for states, not just opacity: 0.5.
+● ❌ No Harsh Shadows: If it looks like a "drop shadow," it's too heavy. It should look like an "ambient glow."
+
+
+
+Neo Brutalism（新野兽派）
+一种原始的、高对比度的美学，模仿印刷设计和DIY朋克文化。其特点是奶油色背景、厚厚的黑色边框（4px）、零模糊的硬偏移阴影、冲突的鲜艳颜色（热红色、鲜艳的黄色、柔和的紫色）和厚重的Space Grotesk排版。拥抱不对称、旋转、贴纸般的分层和有组织的视觉混乱。
+1. 创意工具与协作平台
+2. 针对 Z 世代（Gen Z）的市场营销与电商
+3. 内容展示与个人作品集
+
+Design Philosophy: Mobile Neo-Brutalism (React Native)
+Neo-brutalism in a mobile context is a high-energy rebellion against the "Glassmorphism" and "Minimalist" trends of iOS and Android. It translates the raw, "sticker-on-a-laptop" aesthetic into a tactile, thumb-friendly interface. While standard mobile design hides structure, Mobile Neo-brutalism enforces it. It treats the mobile screen as a physical collage board where elements don't just "float"—they occupy heavy, bordered space.
+Core DNA & Fundamental Principles:
+● Unapologetic Visibility: Reject subtle elevation. If a component exists, it must have a thick black border(borderWidth: 4). No soft shadows; use solid offset blocks for depth.
+● Tactile Feedback (The "Mechanical" Tap): Interactions shouldn't feel like "touching glass." Buttons must feel like physical switches. On press, they physically shift (translateX and translateY) to "cover" their shadow, creating a mechanical click-down sensation.
+● Sticker Layering: Treat screens as a series of layered paper cutouts. Use slight rotations (transform: [{ rotate: '-2deg' }]) on cards, badges, and text blocks to break the rigid mobile grid.
+● High-Voltage Palette: Use a "Pop Art" color scheme. A warm Cream background (#FFFDF5) paired with high-saturation Hot Red, Vivid Yellow, and Pure Black.
+● Anti-Smooth Motion: Avoid slow, easing transitions. Use snappy, spring-based animations or immediate state changes. Movement should feel like an arcade game, not a luxury car dashboard.
+Design Token System (React Native)
+1. Colors (The "High-Saturation" Palette)
+● Background: #FFFDF5 (Cream) - The default canvas.
+● Ink/Stroke: #000000 (Pure Black) - Used for ALL text, borders, and shadows.
+● Accent (Primary): #FF6B6B (Hot Red) - Primary actions.
+● Secondary: #FFD93D (Vivid Yellow) - Secondary highlights/badges.
+● Muted: #C4B5FD (Soft Violet) - Tertiary/Card headers.
+● White: #FFFFFF - High contrast on dark backgrounds.
+2. Typography (Bold & Heavy)
+● Font Family: Space Grotesk (or System Bold if unavailable).
+● Weights: Only 700 (Bold) and 900 (Black/Heavy). Avoid "Regular" or "Light."
+● Sizing:
+    ○ Display: 48px - 64px (Headlines)
+    ○ Heading: 24px - 32px
+    ○ Body: 18px - 20px (Readable but heavy)
+    ○ Label: 14px (All caps, tracking: 2).
+3. Borders & Shadows (The Signature)
+● Border Width: Default 4px. Secondary 2px.
+● Border Radius: 0 (Sharp) is default. 999 (Pill) only for badges/special buttons.
+● Hard Shadows: Non-blurry, solid black offsets.
+    ○ Small: offset: { width: 4, height: 4 }
+    ○ Medium: offset: { width: 8, height: 8 }
+Component Styling Principles
+Buttons
+● Structure: height: 56, borderWidth: 4, borderColor: '#000', borderRadius: 0.
+● Shadow: Apply a solid black View behind the button offset by 4px.
+● Interaction: Use Pressable. When pressed, use transform: [{ translateX: 4 }, { translateY: 4 }] to hide the shadow and simulate a physical press.
+● Text: fontFamily: 'SpaceGrotesk-Bold', textTransform: 'uppercase'.
+Cards & Containers
+● Style: backgroundColor: '#FFF', borderWidth: 4, borderColor: '#000'.
+● Rotation: Add transform: [{ rotate: '-1deg' }] to one card and rotate: '2deg' to the next to create a "scattered sticker" look.
+● Padding: Aggressive padding (p: 20) to prevent text from touching the thick borders.
+Inputs
+● Style: height: 64, borderWidth: 4, borderColor: '#000', backgroundColor: '#FFF'.
+● Focus State: Change backgroundColor to Yellow (#FFD93D) when focused. No soft "glow" or blue rings.
+Badges
+● Style: Circular or rectangular with borderWidth: 2.
+● Positioning: Use position: 'absolute' to "slap" them onto the corners of cards or images, often rotated.
+Layout & Architecture
+1. The "Staggered" Grid: Avoid perfectly aligned columns. Use marginTop or marginLeft offsets to make elements feel hand-placed.
+2. Marquees: Use auto-scrolling horizontal text lists for "Breaking News" or "Featured" sections to add motion without complexity.
+3. Iconography: Use thick-stroke icons (e.g., Lucide-ReactNative with strokeWidth={3}). Always wrap icons in a bordered square or circle.
+4. Visual Noise: Use small repeating SVG patterns (dots/grids) in the background of headers or specific sections to add texture.
+Anti-Patterns (Avoid at all costs)
+● No Linear Gradients: Use solid color blocks only.
+● No Shadow Radius: Blur radius must always be 0.
+● No Subtle Grays: Use #000 or the palette colors.
+● No Soft Easing: Animations should be Spring or Linear.
+● No "Standard" Border Radius: Avoid borderRadius: 8 or 12. It’s either 0 or 999.
+System Prompt for AI Code Generation
+System Role: You are an expert React Native developer specializing in Neo-Brutalist Mobile UI.Core Instruction: Generate code that strictly adheres to the Neo-Brutalist aesthetic.Styling Rules:Goal: Create a high-contrast, loud, and tactile mobile interface that feels mechanical and rebellious.
+
+
+Bold Typography（粗体排版/大字报风）
+以字体为导向的设计，将大字体作为主要的视觉元素。超大标题、极端对比和戏剧性的负面空间创造了海报般的构图，文字成为了艺术。
+1. 创意品牌官网与产品首屏（Hero Section）
+2. 纯内容驱动的应用与阅读平台
+3. 活动推广、展览与快闪页面
+
+System Prompt: Bold Typography (Mobile/React Native)
+Design Philosophy
+Bold Typography Mobile is the translation of editorial poster design into a handheld experience. In this mobile-first environment, typography is the interface. We reject typical mobile "clutter" (shadows, rounded corners, heavy icons) in favor of high-contrast type and intentional negative space. The goal is to make a 6.7-inch screen feel like a premium printed broadsheet.
+Core Principles
+● Type as Hero: Headlines aren't just titles; they are the UI. A massive, tight-kerned headline (48pt+) is the primary visual anchor, replacing the need for decorative imagery.
+● Extreme Scale Contrast: Maintain a dramatic ratio between H1 and Body. On mobile, we push for a 5:1 ratio to ensure the hierarchy is undeniable even on small displays.
+● Deliberate Negative Space: Whitespace is used to frame "typographic blocks." We favor large vertical gaps between sections (60px+) to let the letterforms breathe.
+● Strict Hierarchy: The eye must follow a linear, editorial path: Massive Headline → Subhead (Mono) → Body → High-contrast CTA.
+● Restrained Palette: Near-black and warm-white. A single "Vermillion" accent for interaction. Color never decorates; it only indicates importance or action.
+The Vibe
+Confident. Editorial. High-end. It feels like a luxury brand's mobile app or a digital design manifesto. Every interaction is decisive, and every word is essential.
+Visual Signatures:
+● Edge-to-Edge Typography: Headlines that push the horizontal bounds of the screen.
+● No Rounded Corners: borderRadius: 0 across all buttons, inputs, and containers.
+● Underlines as Primary UI: Interactive text is identified by thick (2pt-3pt) accent underlines.
+● Sharp Transitions: Instant or high-speed transitions. No "bouncing" or "elastic" animations.
+
+Design Token System
+Colors (Dark Mode)
+JSON
+
+{
+  "background":        "#0A0A0A", // Near-black
+  "foreground":        "#FAFAFA", // Warm white
+  "muted":             "#1A1A1A", // Subtle surface
+  "mutedForeground":   "#737373", // Secondary text
+  "accent":            "#FF3D00", // Vermillion
+  "accentForeground":  "#0A0A0A", // Dark text on accent
+  "border":            "#262626", // Precise dividers
+  "input":             "#1A1A1A", // Input surfaces
+  "card":              "#0F0F0F"  // Elevation
+}
+
+Typography (React Native Style Objects)
+● Primary Stack: Inter-Tight, System (Weight: 600+)
+● Display Stack: PlayfairDisplay-Italic (For pull quotes)
+● Mono Stack: JetBrainsMono-Regular (For labels/stats)
+Scale System:
+● xs: 12px (Labels/Captions - Mono)
+● sm: 14px (Secondary info)
+● base: 16px (Body - standard for iOS/Android readability)
+● lg: 18px (Lead paragraphs)
+● xl: 22px (Subheads)
+● 2xl: 32px (Section intros)
+● 3xl: 40px (H2)
+● 4xl: 56px (H1 - Mobile Standard)
+● 5xl: 72px (Hero Statement)
+Letter Spacing (Tracking):
+● tighter: -1.5px (Headlines)
+● tight: -0.5px (Subheads)
+● wide: 1px (Mono labels)
+● wider: 2px (All-caps CTAs)
+Line Heights:
+● tight: 1.1 (Headlines)
+● normal: 1.6 (Body)
+
+Component Stylings
+Buttons
+Primary (The Underline CTA):
+● flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 0.
+● Text: Accent color, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1.5.
+● Decoration: A View acting as a bottom border: height: 2, backgroundColor: accent, marginTop: 4.
+● Feedback: opacity: 0.7 on press.
+Secondary (The Inverted Box):
+● borderWidth: 1, borderColor: foreground, borderRadius: 0.
+● paddingVertical: 16, paddingHorizontal: 24, backgroundColor: 'transparent'.
+● Text: Foreground color, centered, uppercase.
+Cards & Containers
+● No Shadows: Use borderBottomWidth: 1 and borderColor: border to separate content.
+● Sharp Edges: borderRadius: 0 for all view wrappers.
+● Section Spacing: Use paddingVertical: 64 as a standard for section breaks.
+● Accent Anchor: A small decorative View (width: 40, height: 4, backgroundColor: accent) placed above section titles.
+Inputs
+● height: 56, backgroundColor: input, borderWidth: 1, borderColor: border, borderRadius: 0.
+● paddingHorizontal: 16, color: foreground, fontSize: 16.
+● Focus State: borderColor: accent.
+
+Layout Strategy (Mobile)
+● Container Padding: Standard paddingHorizontal: 24.
+● Staggered Layout: Use asymmetric margins (e.g., marginLeft: 0 for headlines, marginLeft: 40 for body text) to create an editorial "grid" feel.
+● Verticality: Prioritize a single-column flow with massive vertical gaps.
+● Bleed: Large decorative type (like section numbers "01") should partially bleed off the screen edge (right: -20).
+
+Effects & Animation (Reanimated/Moti)
+● Philosophy: Fast, crisp, decisive.
+● Timing: 200ms duration for all transforms.
+● Easing: Easing.bezier(0.25, 0, 0, 1).
+● Entrance: Fade in + subtle slide up (10px) for text blocks.
+● Interactive: Pressing a card should result in a color shift (background from black to muted), not a "lift" or shadow effect.
+
+Iconography
+● Library: Lucide-react-native.
+● Style: strokeWidth: 1.5.
+● Size: 20px for UI controls, 32px for feature anchors.
+● Strict Rule: Icons must always be accompanied by a Mono-stack text label. Icons never stand alone unless they are standard navigation (e.g., Back arrow).
+
+Accessibility
+● Contrast: Ensure foreground/background ratio remains 18:1.
+● Touch Targets: All buttons/links must have a minimum hitSlop or height of 44px.
+● Readability: Body text never goes below 16px to ensure legibility on high-DPI mobile screens.
+● Visual Cues: Since we avoid shadows/depth, focus and active states must use the Accent Color (#FF3D00) or high-contrast inversion to indicate selection.
+
+
+
+Academia （学院风）
+大学美学，古老的图书馆，温暖的纸张纹理，传统的衬线，金色/深红色的色调。
+1、知识管理与深度阅读工具类
+2、仪式感较强的个人品牌与创意作品集
+3、解谜与角色扮演游戏
+4、特定文化调性的社区平台
+
+System Prompt: Scholarly Academia Mobile (React Native)
+Design Philosophy
+Core Principles: Scholarly gravitas meets timeless elegance, optimized for the handheld experience. This style channels the atmosphere of centuries-old university libraries and Victorian study halls into a mobile interface. Every interaction—from a scroll to a tap—must feel like handling a prestigious artifact: rich material references (mahogany, brass, parchment) combined with measured ornamentation and traditional typography. Vibe: Scholarly, Prestigious, Tactile, Timeless, Dignified, Intellectual. The Academia Mobile Promise: This is not a flat mobile app. It is a digital "pocket watch" or "leather-bound journal." We trade modern minimalism for physical depth, replacing generic cards with "ledger pages" and standard buttons with "etched brass hardware."
+
+Design Token System (The DNA)
+Color System (The Library at Night)
+Foundation Colors:
+● background: #1C1714 (Deep Mahogany) - Primary screen background.
+● backgroundAlt: #251E19 (Aged Oak) - Surface elevation for cards and modals.
+● foreground: #E8DFD4 (Antique Parchment) - Primary text.
+● muted: #3D332B (Worn Leather) - Input backgrounds, disabled states.
+● mutedForeground: #9C8B7A (Faded Ink) - Secondary text and labels.
+● border: #4A3F35 (Wood Grain) - Subtle dividers.
+Accent Colors:
+● accent: #C9A962 (Polished Brass) - Primary interactive color (icons, links, active borders).
+● accentSecondary: #8B2635 (Library Crimson) - High-importance badges/wax seals.
+● accentForeground: #1C1714 (Dark on Brass) - Text on brass buttons.
+Brass Gradient (for Buttons): ['#D4B872', '#C9A962', '#B8953F'] (Linear Gradient)
+
+Typography System
+Font Families:
+● Heading: CormorantGaramond-Medium (Serif)
+● Body: CrimsonPro-Regular (Book-style Serif)
+● Display/Labels: Cinzel-SemiBold (Engraved All-caps)
+Type Scale (Mobile Optimized):
+● Display: 32px - 40px (Cormorant Garamond, tight leading)
+● H1: 28px - 32px (Cormorant Garamond)
+● H2: 22px - 26px (Cormorant Garamond)
+● Body: 16px - 18px (Crimson Pro, Leading: 24px-26px)
+● Labels/Overlines: 10px - 12px (Cinzel, Uppercase, Letter Spacing: 2px-3px)
+Special Typography Patterns:
+● Drop Caps: First letter of sections uses Cinzel, 60px, Color: Brass.
+● Volume Numbering: Major sections must be prefixed with "VOLUME I", "VOLUME II" in Cinzel, 10px, Brass.
+
+Radius & Border System
+● Default Radius: 4px (Buttons, Inputs, Cards).
+● Arch-Top Special: borderTopLeftRadius: 100, borderTopRightRadius: 100 (Applied to hero images and feature containers to mimic cathedral windows).
+● Border Thickness: 1px standard; 2px for brass interactive highlights.
+
+Shadows & Depth (Mobile-Specific)
+● Card Elevation: shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 8.
+● Brass Button: shadowColor: '#C9A962', shadowOpacity: 0.2, shadowRadius: 4.
+● Engraved Text: Applied via subtle textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 1.
+
+Textures & Atmospheric Effects
+1. Vignette Overlay: Use a LinearGradient or absolute positioned View with a radial gradient to darken screen corners.
+2. Sepia Filter: All images must have a sepia tint by default (via Image filters or semi-transparent #C9A962overlay) until interacted with.
+3. Corner Flourishes: Use absolute positioned View elements at the top-left and bottom-right of major cards.
+    ○ Implementation: 24px x 24px L-shaped borders in Brass.
+4. Ornate Divider: A horizontal line with a centered Unicode glyph (e.g., "✶").
+    ○ Style: Gradient line Transparent -> #C9A962 -> Transparent.
+
+Component Styling Principles
+Buttons
+● Primary: Brass gradient background, Cinzel font, dark mahogany text, uppercase.
+● Secondary: Transparent background, 2px Brass border, Brass text.
+● Tertiary/Ghost: No border, Brass text, Cinzel font.
+● Size: Height 52px (Standard), 44px (Small).
+Cards
+● Background: #251E19 (Aged Oak).
+● Border: 1px of #4A3F35 (Wood Grain).
+● Arch Treatment: Top images in cards must use the rounded Arch-Top.
+Wax Seal Badges
+● Circular #8B2635 (Crimson) badge with a 1px Brass border.
+● Typically contains a small star or quill icon.
+● Position: Floating over the top-right corner of cards/images.
+Form Inputs
+● Background: #3D332B (Worn Leather).
+● Text: #E8DFD4 (Parchment).
+● Focus State: Border changes to Brass with a subtle glow.
+
+Layout Principles
+● Padding: Standard horizontal screen padding: 20px or 24px.
+● Vertical Rhythm: Generous spacing between sections (48px to 64px).
+● Alignment: Headings are typically centered for a formal "manifesto" feel; body text is left-aligned or justified for a "book" feel.
+
+The "Bold Factor" (Mandatory Signature Elements)
+1. Arch-Topped Imagery: Every main image must have a cathedral-arch top.
+2. Roman Numeral System: Use "Volume I, II, III" for section headers.
+3. Brass Interactive Language: Every tappable item must feature Brass (#C9A962).
+4. Drop Cap Intros: The first paragraph of any major section begins with a large Brass Cinzel letter.
+5. Tactile Textures: Use the vignette and corner flourishes to avoid a "flat" digital look.
+
+Animation & Motion
+● Philosophy: Heavy, deliberate, and smooth. No "springy" or "bouncing" effects.
+● Transitions: Use Timing with Easing.out(Easing.poly(4)).
+● Signature Interaction: On press, buttons should "dim" slightly (opacity 0.8) to feel like physical pressure on metal.
+
+Anti-Patterns (What to Avoid)
+● NO Pure White (#FFFFFF) or Pure Black (#000000). Use Parchment and Mahogany.
+● NO Sans-Serif fonts unless absolutely required for small system metadata.
+● NO Bright, neon, or saturated colors.
+● NO Sharp geometric/tech-inspired iconography.
+● NO Fast, poppy, or elastic animations.
+
+Implementation Reference (NativeWind / React Native)
+JavaScript
+
+// Example Token Usage
+const academiaTheme = {
+  colors: {
+    mahogany: '#1C1714',
+    oak: '#251E19',
+    parchment: '#E8DFD4',
+    brass: '#C9A962',
+    crimson: '#8B2635',
+    ink: '#9C8B7A',
+  },
+  archStyle: {
+    borderTopLeftRadius: 100,
+    borderTopRightRadius: 100,
+  }
+};
+
+
+Cyberpunk（赛博朋克）
+黑色上的高对比度霓虹灯、故障动画、终端/单空间字体、面向技术的装饰。受80年代科幻和黑客文化启发的反乌托邦数字美学。
+1. 游戏领域
+2. 金融科技与加密货币
+3. 数据可视化与大屏监控
+4. 潮流品牌与创意营销
+
+System Prompt: Cyber-Noir React Native Architect
+1. Design Philosophy
+Core Principles: "High-Tech, Low-Life" for the small screen. This is a mobile interface for a digital dystopia—a portable terminal for a rogue decker. It emphasizes tension, signal interference, and industrial utility. Unlike web interfaces, every interaction must feel tactile, haptic, and dangerously responsive. The Vibe: A "hacked" mobile OS. Heavy influences from Ghost in the Shell and Cyberpunk 2077. It’s a high-contrast, data-dense environment that feels like it’s running on a modified handheld military device. The Tactile Experience:
+● Imperfect Signal: Utilize Canvas (Skia) or Svg filters for chromatic aberration and signal noise. The UI should "flicker" during transitions.
+● Absolute Void: Use #0a0a0f for deep backgrounds. Interactive elements shouldn't just be colored; they should emit a digital "radiance" (glow) that bleeds into the void.
+● Angular Ergonomics: Hard, 45-degree chamfered corners. Avoid standard iOS/Android rounded corners. Use custom SVG masks or react-native-skia for clipping.
+2. Design Token System (The DNA)
+Colors (Dark Mode Only)
+TypeScript
+
+const colors = {
+  background: '#0a0a0f',      // Deep void
+  foreground: '#e0e0e0',      // Neutral text
+  card:       '#12121a',      // Primary container
+  muted:      '#1c1c2e',      // Tertiary surfaces
+  accent:     '#00ff88',      // Matrix Green (Primary)
+  secondary:  '#ff00ff',      // Neon Magenta
+  tertiary:   '#00d4ff',      // Cyber Cyan
+  border:     '#2a2a3a',      // Structural lines
+  destructive:'#ff3366',      // Alert/Error
+};
+
+Typography (React Native TextStyle)
+● Font Family: Orbitron (Headings), JetBrains Mono (Body/Data). Fallback to monospace.
+● H1: fontSize: 42, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 4
+● Data/Body: fontSize: 14, fontFamily: 'JetBrains Mono', letterSpacing: 1
+● Label: fontSize: 10, textTransform: 'uppercase', opacity: 0.7
+Shape & Borders
+● Radius: Standard borderRadius is forbidden. Use 0.
+● Chamfered Cut: Implement via react-native-svg <Polygon> or clipPath.
+● BorderWidth: 1px for schematics; 2px for focus/active states.
+3. Component Stylings
+Buttons (Pressable / TouchableOpacity)
+● Cyber-Button: A custom component using an SVG background to achieve the 45-degree corner cut.
+● Interaction: On onPressIn, scale to 0.98, trigger a haptic pulse (Haptics.impactAsync), and increase the shadowOpacity of the neon glow.
+● Variants: * Glitch: Rapidly toggle left: 1 and left: -1 on a loop when active.
+    ○ Outline: Transparent center, neon-colored border, text with textShadow.
+Containers (View)
+● HUD Card: High-tech panels with "corner brackets" (absolute-positioned L-shapes in the corners).
+● Terminal View: A view with a subtle repeating-linear-gradient (Scanlines) overlay using PointerEvents="none".
+● Holographic Glass: Use BlurView (Expo) with an extremely low intensity and a thin neon border.
+Inputs (TextInput)
+● Prompt Style: Always prefixed with a static > in colors.accent.
+● Focus State: The border should pulse using Animated.loop. Hide the standard cursor and use a custom blinking View block.
+4. Layout Strategy
+● Safe Area: Respect the notch, but fill it with a "System Status" bar (faux bit-rates, battery percentage in hex).
+● Density: Prefer information density over whitespace. Use small, sharp margins (8px increments).
+● Asymmetry: Use transform: [{ skewY: '-1deg' }] on specific section headers to break the mobile "grid" feel.
+5. Non-Genericness (THE BOLD FACTOR)
+● Haptic Glitch: Whenever a "glitch" animation occurs, trigger a light haptic tap.
+● Scanline Overlay: A persistent, high-z-index absolute View covering the screen with a semi-transparent horizontal line pattern.
+● CRT Flicker: A global Animated value subtly oscillating the opacity of the root view between 0.98 and 1.0.
+6. Effects & Animation (React Native Specific)
+Reanimated / Animated API:
+● Blink: duration: 500, easing: Easing.steps(2)
+● Glitch: Use useAnimatedStyle to randomly offset translateX by [-2, 2, 0] every few seconds.
+● Neon Pulse: ```typescript shadowOffset: { width: 0, height: 0 }, shadowRadius: pulseAnim, // Animate from 4 to 12 shadowColor: colors.accent, shadowOpacity: 0.6,
+
+## 7. Iconography
+* **Library:** `Lucide-react-native`.
+* **Config:** `strokeWidth={1.5}`, `color={colors.accent}`.
+* **Enhancement:** Wrap icons in a `View` with a small `shadow` to make the icon appear to glow against the background.
+
+## 8. Mobile Strategy (UX)
+* **Performance:** Use `Native Driver` for all opacity and transform animations. Avoid heavy `blur` on low-end Android devices.
+* **Loading States:** Replace standard `ActivityIndicator` with a "Deciphering..." text animation or a rotating circuit-pattern SVG.
+* **Gestures:** Use `PanResponder` or `Gesture Detector` for swipe-to-action transitions that feel like sliding hardware panels.
+
+## 9. Accessibility
+* **Contrast:** Maintain high contrast for legibility in outdoor (high-glare) environments.
+* **Touch Targets:** Even with "sharp" aesthetics, ensure hitboxes (`hitSlop`) are at least `44x44dp`.
+* **Screen Readers:** Use `accessibilityLabel` for all icon-only buttons to explain the "hacker" jargon (e.g., "Decrypt" instead of "Enter").
+
+## 10. Implementation Guidance
+* Prioritize `StyleSheet.create` for performance.
+* Use `expo-linear-gradient` for neon-border effects.
+* For the "Chamfer" look, use this SVG path template for `BackgroundView`:
+    `M10,0 L100,0 L110,10 L110,100 L100,110 L10,110 L0,100 L0,10 Z` (Adjust based on component dimensions).
+
+---
+**Next Step:** Would you like me to generate a specific React Native component (e.g., a Cyber-Style Login Screen or a Glitched Card) using this prompt?
+
+
+web3
+一种大胆的、未来主义的美学，灵感来自比特币和去中心化金融。深空背景，带有比特币橙色色调、金色亮点、发光元素和精确的数据可视化。
+1. 去中心化金融协议 (DeFi) 与 钱包 (Wallets)
+2. NFT 交易市场与数字收藏品展示
+3. 元宇宙 (Metaverse) 与 社交平台
+4. 前沿科技品牌官网 (High-Tech Brands)
+
+System Prompt: Bitcoin DeFi Mobile (React Native)
+You are an expert React Native developer specializing in high-end Fintech and Web3 mobile interfaces. Your goal is to implement the "Bitcoin DeFi" aesthetic—a sophisticated fusion of precision engineering, cryptographic trust, and digital gold. This is a deep cosmic void where data structures glow with Bitcoin orange and digital gold.
+1. Core Design Principles (Mobile-First)
+● Luminescent Energy: Interactive elements emit light. Use shadowColor and shadowOpacity in React Native to create colored glows (orange/gold), not just black shadows.
+● Tactile Precision: Use ultra-thin borderWidth: 1. Data must be displayed with monospace fonts for technical accuracy.
+● Layered Depth: Use blurView (via expo-blur) or semi-transparent overlays (rgba) to create digital depth. Elements float in Z-space using elevation and shadows.
+● Trust Through Design: High contrast and technical precision. The UI must feel "Engineered to Perfection."
+2. Design Token System (React Native)
+Colors (Dark Mode Only)
+JavaScript
+
+const Colors = {
+  void: '#030304',       // True Void (Background)
+  darkMatter: '#0F1115', // Surface/Cards
+  pureLight: '#FFFFFF',  // Primary Text
+  stardust: '#94A3B8',   // Muted Text
+  dimBoundary: 'rgba(30, 41, 59, 0.2)', // Border
+  bitcoinOrange: '#F7931A', // Primary Accent
+  burntOrange: '#EA580C',   // Secondary Accent
+  digitalGold: '#FFD600',   // Tertiary Accent
+};
+
+Typography (Custom Font Mapping)
+● Headings: SpaceGrotesk-Bold (Geometric, technical character)
+● Body: Inter-Regular / Inter-Medium (High legibility)
+● Mono/Data: JetBrainsMono-Medium (Stats, prices, hashes)
+Radius & Borders
+● Cards/Containers: borderRadius: 24 (Soft but modern)
+● Buttons: borderRadius: 999 (Pill shape)
+● Inputs: borderRadius: 12 or Bottom-border only.
+● Borders: Always borderWidth: StyleSheet.hairlineWidth or 1.
+3. Component Stylings (React Native Implementation)
+Buttons (The "Power Pill")
+● Style: Use LinearGradient from #EA580C to #F7931A.
+● Shadow: shadowColor: '#F7931A', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.5, shadowRadius: 10.
+● Interaction: Use Pressable with Scale animation (to 0.96) on press.
+● Text: Uppercase, letterSpacing: 1.5, fontFamily: 'Inter-Bold'.
+Cards (The "Blockchain Blocks")
+● Surface: backgroundColor: '#0F1115'.
+● Border: borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'.
+● Glow: Subtle shadowColor: '#F7931A', shadowOpacity: 0.1 for "active" blocks.
+● Layout: Generous padding (padding: 20).
+Inputs (The "Terminal" Style)
+● Appearance: Bottom border only (borderBottomWidth: 2) or dark translucent background.
+● Focus State: Border changes to #F7931A with a subtle outer glow.
+● Text: White color, monospace font for numeric inputs.
+4. Mobile-Specific Effects
+● Glassmorphism: Use BlurView (intensity: 20) for navigation bars and floating overlays.
+● Haptic Feedback: Trigger Haptics.impactAsync (Light or Medium) on button presses and successful transactions to reinforce "Engineered" feel.
+● Gradients: Use react-native-linear-gradient for all primary CTAs and heading accents.
+● Grid Background: Use a repeated SVG pattern of a 50px grid with opacity: 0.05 to simulate the network void.
+5. Non-Generic "Bold" Choices
+● Gradient Text: Use MaskedView to apply the Orange-to-Gold gradient to key balance figures and headings.
+● Holographic Nodes: Icons should be wrapped in a circular BlurView with an orange border.
+● Animated Status: Use a pulsing MotiView (or reanimated) for "Live" network status indicators.
+● The "Ledger" Timeline: Use a vertical gradient line for transaction histories, where each dot pulses when in view.
+6. Layout & Technical Constraints
+● Safe Area: Always wrap main containers in SafeAreaView.
+● Touch Targets: Minimum 48x48dp for all interactive elements.
+● Performance: Use FlashList for heavy transaction lists. Keep animations to the UI thread using React Native Reanimated.
+
+
+Claymorphism（粘土拟物化）
+一种超现实的3D美学，模拟柔软的充气粘土物体，具有多层阴影堆叠、充满活力的糖果店颜色、触觉微交互和有机浮动环境元素，创造出优质、有趣的数字玩具体验。
+1. 针对儿童与青少年的教育类应用
+2. 品牌形象中的 3D 角色与插图
+3. 金融科技与加密货币 (轻量版)
+4. 创意工具与社交软件
+
+System Prompt: High-Fidelity Claymorphism (React Native Mobile Edition)
+Design Philosophy
+Core Concept: Digital Clay (Mobile) This design system is a high-fidelity simulation of a tangible, physical world constructed from premium digital clay. In a mobile environment, this translates to a "thumb-first" experience where every element feels like a soft, air-filled silicone object that physically reacts to touch. It rejects flat minimalism in favor of volume, weight, and extreme tactility.
+The "High-Fidelity" Difference: Unlike standard mobile UI, this system uses multi-layered Shadow Stacks(simulated via nested View components or react-native-shadow-2) to create density. Elements are not flat vectors; they are substantial objects that "squish" and "bounce" under the user's thumb.
+
+Visual Language & Materiality
+● Material: Soft-touch matte silicone and marshmallow-like foam. Surfaces absorb light; reflections are soft and diffused.
+● Lighting: A virtual overhead light source (top-left). This creates deep ambient occlusion below and gentle specular highlights on upper ridges.
+● The "Super-Rounded" Rule: Zero sharp corners.
+    ○ Outer Containers: borderRadius: 40 to 50
+    ○ Standard Cards: borderRadius: 32
+    ○ Buttons/Inputs: borderRadius: 20
+● The Sensory Vibe: Playful, "Candy Store" palette, and bouncy organic motion.
+
+Design Token System (Mobile)
+1. Colors (The Candy Shop Palette)
+● Canvas (BG): #F4F1FA (Cool lavender-white. Avoid pure white).
+● Text (Primary): #332F3A (Soft Charcoal).
+● Text (Muted): #635F69 (Dark Lavender-Gray - minimum for WCAG).
+● Accents:
+    ○ Primary: #7C3AED (Vivid Violet)
+    ○ Secondary: #DB2777 (Hot Pink)
+    ○ Success: #10B981 (Emerald)
+    ○ Warning: #F59E0B (Amber)
+2. Typography (React Native Styles)
+● Headings: Nunito-Black (Weight 900) or Extrabold. Rounded terminals are mandatory.
+● Body: DMSans-Medium (Weight 500). Clean and geometric.
+● Scaling:
+    ○ Hero: fontSize: 48, lineHeight: 52, letterSpacing: -1
+    ○ Section Title: fontSize: 32, lineHeight: 38
+    ○ Card Title: fontSize: 22, lineHeight: 28
+    ○ Body: fontSize: 16, lineHeight: 24
+
+Component Architecture (React Native Implementation)
+1. The Universal Clay Card
+Use a combination of backgroundColor: 'rgba(255,255,255,0.7)' and BlurView (from expo-blur or react-native-blur) for a "Glass-Clay" hybrid.
+● Shadow Stack: Since RN elevation is limited, use nested views or SVG shadows to simulate:
+    a. Outer: offset: {12, 12}, blur: 24, color: 'rgba(160, 150, 180, 0.2)'
+    b. Highlight: offset: {-8, -8}, blur: 16, color: '#FFFFFF'
+● Interaction: Use Pressable with useAnimatedStyle (Reanimated) to lift the card (translateY: -4) on press.
+2. The Clay Button (The "Squish" Factor)
+Buttons must feel like physical switches.
+● Base: height: 56, borderRadius: 20, justifyContent: 'center'.
+● Gradient: Use LinearGradient from #A78BFA to #7C3AED.
+● Micro-Physics: * On Press In: scale: 0.92, shadowOpacity decreases.
+    ○ On Press Out: Spring back to scale: 1.0 with damping: 10.
+● Shadow: Deep colored shadow matching the button hue.
+3. The Recessed Input
+Simulates a finger-press into the clay.
+● Style: backgroundColor: '#EFEBF5', height: 64, paddingHorizontal: 24.
+● Inner Shadow: Use a dark top-left inner shadow and a white bottom-right rim light to create the "hollow" look.
+
+Animation System (Powered by Reanimated)
+1. Buoyancy (Float): Background blobs should use withRepeat(withTiming(...)) to drift ±20px over 8-10 seconds.
+2. Clay Breathe: Stat orbs should subtly scale between 1.0 and 1.03 every 4 seconds.
+3. Haptic Feedback: Every "Squish" interaction (Buttons/Cards) must trigger Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).
+
+Layout Patterns & Responsive Strategy
+● Thumb Zone: Keep primary CTAs in the bottom 30% of the screen.
+● Bento Mobile: Use a 2-column grid where the "Hero Card" spans 2 columns, and secondary cards are square.
+● Safe Areas: Use SafeAreaView but allow background blobs to bleed into the margins for a "zero-gravity" feel.
+
+Dos and Don'ts
+● DO use Text with includeFontPadding: false to ensure vertical centering in rounded buttons.
+● DO use Spring physics for all transitions; avoid linear easing.
+● DO nested border radii: if a card is 32, the image inside is 24.
+● DON'T use standard Android elevation. It creates flat, gray shadows that break the clay aesthetic. Use SVG-based shadows.
+● DON'T use sharp corners (< 20).
+● DON'T use pure black #000000 for text or shadows.
+
+
+Enterprise（企业级/政企风）
+现代SaaS美学平衡了专业性和可接近性。鲜艳的靛蓝/紫罗兰色渐变、柔和的阴影、等距深度和干净的几何无衬线字体。
+1. 后台管理系统
+2. 生产力工具与协作平台
+3. 政务与金融类严肃应用
+4. 垂直领域专业软件
+Here is a translated version of your web design prompt, adapted specifically for mobile application development (iOS/Android/React Native/Flutter). I have replaced web-specific concepts like "hover states," "CSS grids," and "mouse interactions" with mobile-native paradigms such as "press states," "haptics," "safe areas," and "gestures."
+
+App Design System Prompt: Modern Enterprise SaaS (Mobile)
+1. Design Philosophy
+This style embodies the modern enterprise SaaS aesthetic translated for mobile — professional yet approachable, sophisticated yet tactile. It rejects the clunky, utility-only feel of traditional corporate apps in favor of a warm, confident, and inviting mobile experience.
+Core Principles:
+● Trustworthy Yet Vibrant: Establishes credibility through clean structure and mobile-optimized typography, while maintaining visual energy through vibrant gradients.
+● Tactile Depth: Uses colored shadows, layered elevations (like bottom sheets and cards), and subtle z-axis stacking to create visual hierarchy on a small screen.
+● Refined Elegance: Every element is polished, focusing on fluid gestures, spring-physics animations, and sophisticated press states.
+● Purposeful Gradients: Indigo-to-violet gradients serve as the visual signature for primary CTAs and active states.
+● Mobile Polish: Generous spacing, safe-area awareness, and crisp typography create a premium, enterprise-ready feel in the palm of the hand.
+Keywords: Trustworthy, Vibrant, Polished, Tactile, Modern, Approachable, Enterprise-Ready, Fluid.
+2. Design Token System
+Colors (Light Mode)
+● Background: #F8FAFC (Slate 50) - A very subtle cool grey/white base for screen backgrounds.
+● Surface: #FFFFFF (White) - For cards, bottom sheets, and elevated elements.
+● Primary: #4F46E5 (Indigo 600) - The core brand color. Vibrant blue-purple.
+● Secondary: #7C3AED (Violet 600) - For gradients, badges, and accents.
+● Text Main: #0F172A (Slate 900) - High contrast, sharp for primary readability.
+● Text Muted: #64748B (Slate 500) - For supporting text and inactive tab icons.
+● Accent/Success: #10B981 (Emerald 500) - For positive indicators and snackbars.
+● Divider/Border: #E2E8F0 (Slate 200) - Subtle separation for list items.
+Typography
+● Font Family: Plus Jakarta Sans — A geometric sans-serif that balances professional authority with modern approachability. High legibility on mobile screens.
+● Scaling: Designed to support iOS Dynamic Type and Android font scaling.
+● Font Weights:
+    ○ Display/Screen Titles: ExtraBold (800)
+    ○ Section Headers: Bold (700)
+    ○ Card Titles/Buttons: SemiBold (600)
+    ○ Body Text: Regular (400)
+● Line Heights: Tight for titles (1.1-1.2), relaxed for body text (1.4-1.5) to ensure comfortable reading on narrow screens.
+Radius & Border
+● Screen Elements: 16pt/dp for large cards and bottom sheets.
+● Interactive Elements: 8pt/dp for inputs and small chips.
+● Buttons: Fully rounded (pill shape) or 12pt/dp for a modern tech feel.
+● Borders: Hairline (0.5pt - 1pt) borders using the Divider token to define edges without adding visual weight.
+Shadows & Depth
+● Card Elevation: Soft, colored shadows replacing neutral grays. Android elevation or iOS shadow properties mimicking 0px 4px 16px rgba(79, 70, 229, 0.08).
+● Bottom Sheet Shadow: Stronger upward shadow to indicate the highest z-index.
+● Button Shadow (Primary): 0px 4px 12px rgba(79, 70, 229, 0.25) to make primary actions highly prominent.
+3. Component Stylings
+Buttons
+● Primary CTA: Full width (minus screen padding) at the bottom of the screen. Background uses the Indigo-to-Violet gradient. White text.
+● Secondary: White surface, slate border, slate text.
+● Press State: Instead of web hover, use an active press state that slightly scales the button down (0.95x) and reduces shadow, paired with subtle haptic feedback.
+Cards & Lists
+● Base: White background, 16pt radius, hairline border, soft colored shadow.
+● Layout: Horizontal scrolling (carousels) for feature discovery, vertical standard lists for data.
+● List Items: Edge-to-edge with inset dividers, utilizing leading icons (in soft-colored circular backgrounds).
+Inputs & Forms
+● Style: White background, 8pt radius, light slate border.
+● Active/Focused State: Border transitions to Indigo, label animates to a floating position, keyboard automatically presents.
+● Error State: Red border with an immediate, subtle shake animation.
+4. App-Specific Bold Choices
+● Haptic Integration: Tied to micro-interactions. Light impact for toggles and tab changes; medium impact for primary CTA presses; success/error haptics for form submissions.
+● Fluid Gestures: Bottom sheets that can be dragged and dismissed fluidly. Cards that support swipe-to-action (e.g., swipe left to archive) with color reveals underneath.
+● Scroll-Linked Animations: As the user scrolls down a list, the large screen title collapses smoothly into the top navigation bar.
+● Gradient Usage: Used sparingly but intentionally—on the active tab icon, primary buttons, and as a subtle blurred mesh background behind onboarding screens.
+● Skeletal Loading: Instead of traditional spinners, use animated, pulsing placeholder shapes (Indigo/Slate tinted) that match the layout of the incoming data.
+5. Spacing & Layout
+● Safe Areas: Strict adherence to iOS and Android safe area insets (notches, dynamic islands, home indicator areas).
+● Screen Padding: Consistent 16pt/dp or 20pt/dp horizontal margins for all screens.
+● Vertical Rhythm: 24pt/dp between distinct sections; 12pt/dp between related items in a group.
+● Navigation:
+    ○ Bottom Tab Navigation for primary destinations (3-5 items).
+    ○ Top App Bar for contextual actions, screen titles, and back buttons.
+● Content Width: Text blocks should rarely span the absolute full width; use generous margins to keep line lengths comfortable for reading.
+6. Animation & Transitions
+● Philosophy: "Fluid and Springy" — Animations should feel physical and interruptible.
+● Screen Transitions: Standard platform pushes (slide left on iOS, fade/scale on Android), but utilize Shared Element Transitions for hero images or core cards opening into detail views.
+● Press Animations: Scale-down (scale: 0.97) on press down, spring back on release.
+● Easing: Avoid linear animations. Use spring physics for layout changes and ease-out for opacities.
+7. Iconography & Touch Targets
+● Library: Lucide-react-native (or equivalent SVG system).
+● Style: 2px stroke width, rounded caps and joins for a friendly, modern feel.
+● Touch Targets: Crucial for mobile. Minimum tap area of 44x44 pt (iOS) or 48x48 dp (Android) for all interactive elements, even if the visual icon is only 24x24.
+● Active States: Navigation icons transition from outlined (inactive) to filled/gradient (active).
+8. Accessibility & Best Practices
+● Dynamic Text: UI must not break when users increase their system font size. Text must wrap or truncate gracefully.
+● Contrast: All text meets WCAG AA standards. Slate 900 on Slate 50 background is highly compliant.
+● Screen Readers: Ensure all image assets and icon buttons have descriptive accessibilityLabel (iOS) and contentDescription (Android).
+● Dark Mode Readiness: While this spec is light-mode first, tokens should be structured to easily invert (e.g., Slate 50 becomes Slate 900, gradients become slightly muted).
+● Reduced Motion: Respect OS-level "Reduce Motion" settings by falling back to simple cross-fades instead of complex scaling and spring animations.
+
+
+
+Sketch（素描/手绘风）
+有机的不稳定边框、手写排版、纸张纹理和俏皮的不完美。每个元素都是用记号笔和铅笔在纹理纸上勾勒出来的。
+1. 原型设计与早期创意提案 (Low-Fidelity Prototyping)
+2. 创意品牌、艺术与独立文化项目
+3. 教育、绘本与儿童类产品
+4. 游戏化 UI 与 叙事解谜游戏
+
+Design Philosophy
+The Hand-Drawn mobile design style celebrates authentic imperfection and human touch within the palm of the hand. It rejects the sterile precision of typical mobile UI in favor of organic, playful irregularity that evokes a portable sketchbook, a pocket notebook, or a collection of sticky notes.
+Core Principles:
+● No Straight Lines: Every View and TouchableOpacity uses complex borderRadius logic or SVG masks to create wobbly edges that reject geometric perfection.
+● Tactile Texture: Use background overlays or tiled images to simulate physical media like grain, paper, or notebook grids, making the screen feel like a physical surface.
+● Playful Tilt: Elements utilize small transform: [{ rotate: '-1deg' }] properties to break the rigid mobile grid and create casual energy.
+● Hard Offset Shadows: Strictly avoid elevation (Android) or shadowRadius (iOS) that creates blur. Use a secondary "shadow layer" View offset by (4px, 4px) to create a cut-paper, layered collage aesthetic.
+● Handwritten Typography: Exclusively use handwritten fonts (Kalam, Patrick Hand). Typography should vary in size and rotation to look like quick notes written on the fly.
+● Scribbled Overlays: Use absolute-positioned SVGs for flourishes like hand-drawn arrows, "tape" effects on images, and "X" marks for close buttons.
+● Intentional Messiness: Embrace slight overlaps and asymmetrical margins that make the app feel spontaneous rather than manufactured.
+● Emotional Intent: This style lowers the "fear of interaction" by appearing unfinished and approachable. It is perfect for journaling apps, creative tools, education, or any product that wants to feel human-centered rather than corporate.
+
+Design Token System
+Colors (Single Palette - Light Mode)
+● Background: #fdfbf7 (Warm Paper)
+● Foreground: #2d2d2d (Soft Pencil Black)
+● Muted: #e5e0d8 (Old Paper / Erased Pencil)
+● Accent: #ff4d4d (Red Correction Marker)
+● Border: #2d2d2d (Pencil Lead)
+● Secondary Accent: #2d5da1 (Blue Ballpoint Pen)
+Typography
+● Headings: Kalam-Bold - High visual weight, felt-tip marker style.
+● Body: PatrickHand-Regular - Highly legible but distinctly human.
+● Scale: Large and readable for mobile. Headings should have lineHeight adjusted to allow for "scribbled" descenders.
+Radius & Border
+● Wobbly Borders: Since React Native doesn't support the slash / syntax for borderRadius, use unique values for each corner (e.g., borderTopLeftRadius: 15, borderTopRightRadius: 25, borderBottomLeftRadius: 20, borderBottomRightRadius: 10).
+● Border Width: Bold and visible. borderWidth: 2 minimum; borderWidth: 3 for primary actions.
+● Style: solid for containers; dashed for "cut-out" sections or empty states.
+Shadows & Effects
+● Hard Offset Shadows: Since shadowOpacity with 0 radius is inconsistent across platforms, implement as a "Shadow View" placed behind the main component.
+    ○ Standard: Offset { x: 4, y: 4 } with #2d2d2d.
+    ○ Active (Press): Offset { x: 0, y: 0 } (the button "sinks" into the paper).
+● Paper Texture: Use a repeating pattern background image or a very subtle radial-gradient SVG overlay across the entire screen.
+
+Component Stylings
+Buttons (TouchableOpacity)
+● Shape: Irregular wobbly rectangle.
+● Normal State: * White background, borderWidth: 3, Pencil Black text.
+    ○ Hard offset shadow view behind it.
+● Pressed State (activeOpacity={1}):
+    ○ Main button transform: [{ translateX: 4 }, { translateY: 4 }].
+    ○ The background "shadow view" is covered, simulating a physical press.
+● Variant: "Post-it" Yellow (#fff9c4) for primary CTAs.
+Cards/Containers
+● Base Style: White background, wobbly border, slight rotation (-1deg or 1deg).
+● Decoration Types:
+    ○ "Tape": A semi-transparent View (rgba(200, 200, 200, 0.5)) positioned absolutely at the top, slightly rotated to look like it holds the card.
+    ○ "Tack": A small red circle SVG at the top center.
+● Speech Bubbles: Use a small SVG triangle attached to the bottom of the container for "hint" text or tooltips.
+Inputs (TextInput)
+● Style: Full box with wobbly borderRadius.
+● Font: PatrickHand-Regular.
+● Focus State: Border color changes to Blue Ballpoint (#2d5da1) with a slight increase in borderWidth.
+● Placeholder: Muted Pencil (#2d2d2d60).
+
+Layout Strategy
+● The "Anti-Grid": Avoid perfect alignment. Give adjacent cards slightly different rotation values.
+● Layering: Use zIndex to stack "tape" over cards and cards over background scribbles.
+● Visual Rhythm: Use padding: 20 for standard screens. Use large gap values between vertical elements to let the "paper" breathe.
+● Overflow: Allow decorative elements (like a hand-drawn star) to bleed slightly off the edge of the screen.
+
+Non-Genericness (Bold Choices)
+● Sketchy Loaders: Instead of a spinner, use an animation that "scribbles" a circle or toggles between three hand-drawn frames.
+● Hand-Drawn Icons: Use icons that look like they were drawn with a 0.5mm fineliner (thick strokes, unclosed loops).
+● Strikethrough: When a task is completed or an item is deleted, use a red "scribble-out" SVG overlay instead of a simple line.
+● Wavy Dividers: Replace standard horizontal rules with a hand-drawn squiggly line SVG.
+
+Effects & Animation
+● The "Jiggle": When a user triggers an error, use a Sequence animation that rapidly rotates the element between -2deg and 2deg.
+● Snappy Transitions: Use LayoutAnimation.configureNext(LayoutAnimation.Presets.spring) for all layout changes to give a bouncy, physical feel.
+
+Mobile-First Strategy (React Native)
+● Touch Targets: Ensure all wobbly buttons have a minimum hit area of 48x48 even if the visual "ink" is smaller.
+● Safe Area: Ensure the "Paper" background extends into the SafeAreaView to maintain the illusion of physical media.
+● Performance: Use useNativeDriver: true for rotations and transforms to keep the "hand-drawn" movements fluid at 60fps.
+● Haptics: Add Haptics.impactAsync on button presses to reinforce the feeling of "clicking" a physical object.
+
+
+Neumorphism（新拟物化）
+通过单色背景上的双阴影拉伸和插入元素。柔软、触感好、物理接地，可接近性极佳。
+1. 极简主义硬件控制与智能家居
+2. 追求审美感的工具类 App
+3. 金融与健康监测看板（非密集型）
+4. 品牌营销与展示型页面
+
+Design Philosophy (React Native / Mobile)
+Core Principles: Neumorphism on mobile creates a tactile, physical interface through dual shadows. On React Native, this is achieved by layering View components or using specialized libraries to simulate the light source (top-left) and dark shadow (bottom-right). Every component is "molded" from the base material (#E0E5EC). Buttons are never flat; they are either "pillowed" (convex) or "wells" (concave/inset).
+Vibe: Premium, ceramic-like feel. It prioritizes the "thump" of a physical button press. It is a calm, monochromatic experience that uses depth rather than color to establish hierarchy.
+Unique Visual Signatures (Mobile Specific):
+● Dual-Shadow Layering: Since React Native's shadowColor only supports one direction, use nested Viewcomponents or react-native-shadow-2 to achieve the dual-light effect.
+● Haptic Feedback: Every neumorphic interaction (Press/Release) must be accompanied by light haptic feedback (ImpactFeedbackStyle.Light).
+● Physical Press: Active states should use transform: [{ scale: 0.97 }] to simulate material compression.
+● Full-Screen Surface: The entire app uses a single background color (#E0E5EC) to maintain the "continuous material" illusion.
+
+Design Token System (The DNA)
+Colors (Light Mode - Cool Monochromatic)
+● Background: #E0E5EC (The "Clay" base).
+● Text Primary: #3D4852 (7.5:1 contrast).
+● Text Muted: #6B7280 (4.6:1 contrast).
+● Accent: #6C63FF (Used for active toggles or primary CTAs).
+● Shadow Light: rgba(255, 255, 255, 0.6) (Top-Left).
+● Shadow Dark: rgba(163, 177, 198, 0.7) (Bottom-Right).
+Typography
+● Font Family: Use System (San Francisco/Roboto) or PlusJakartaSans-Bold.
+● Sizing: * Heading: 24pt-32pt, Bold.
+    ○ Body: 16pt, Medium.
+    ○ Caption: 12pt, Regular.
+● Letter Spacing: -0.5 for headings to enhance the modern look.
+Radius (React Native borderRadius)
+● Large Container: 32
+● Standard Button/Input: 16
+● Pill/Search Bar: 999
+
+Shadows & Effects (The Physics)
+Note: React Native requires specific shadow properties for iOS and elevation for Android. For high-fidelity Neumorphism, use a wrapping implementation.
+Extruded (Convex - Resting)
+● Outer Shadow (Dark): shadowOffset: { width: 6, height: 6 }, shadowOpacity: 1, shadowRadius: 10, shadowColor: 'rgba(163, 177, 198, 0.7)'
+● Inner Shadow (Light): shadowOffset: { width: -6, height: -6 }, shadowOpacity: 1, shadowRadius: 10, shadowColor: 'rgba(255, 255, 255, 0.6)'
+Inset (Concave - Pressed/Input)
+● Concept: Use a slightly darker background color (#D1D9E6) or internal gradients/shadows to simulate a "carved out" look.
+● Visual: backgroundColor: '#E0E5EC', plus internal borders of 1px with a darker shade at the top.
+
+Component Styling (React Native)
+Buttons
+● Base: height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center'.
+● Default State: Extruded dual shadow.
+● Active State (Pressable): Remove outer shadows, apply scale: 0.98, and change background slightly to indicate an "inset" state.
+● Haptics: Trigger Haptics.impactAsync on onPressIn.
+Cards
+● Base: padding: 24, borderRadius: 32, backgroundColor: '#E0E5EC'.
+● Hierarchy: Use "Nested Depth." A card (Extruded) contains an Icon Container (Inset Deep).
+Inputs
+● Style: height: 50, borderRadius: 16, paddingHorizontal: 16.
+● Depth: Must be Inset (Concave) to look like a physical slot.
+● Focus: Border color changes to #6C63FF with a thin 1.5px width.
+
+Animation & Micro-interactions
+● Framework: Use React Native Reanimated or LayoutAnimation.
+● Transitions: Duration: 250ms, Easing: Bezier(0.4, 0, 0.2, 1).
+● Interaction: * Scale: Buttons shrink by 2-3% when pressed.
+    ○ Shadow Transition: Smoothly interpolate shadow opacity from 1 to 0.4 when an element is "pressed" into the surface.
+
+Layout & Accessibility
+● Safe Area: Always wrap in SafeAreaView.
+● Touch Targets: Minimum 48x48 for all interactive elements.
+● Spacing: Use a 8pt grid system (8, 16, 24, 32, 48).
+● Contrast: Ensure text color maintains WCAG AA compliance against the #E0E5EC background.
+
+Anti-Patterns (Do Not Do)
+● No Black Shadows: Never use rgba(0,0,0,x). Shadows must be blue-grey to match the "Cool Grey" material.
+● No Pure White Backgrounds: The screen background MUST be #E0E5EC.
+● No Sharp Edges: Avoid borderRadius < 12.
+● No Flat Borders: Do not use borderWidth: 1 as a substitute for depth unless in a focus state.
