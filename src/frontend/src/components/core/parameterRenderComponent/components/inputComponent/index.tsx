@@ -281,6 +281,7 @@ export default function InputComponent({
             )}
           >
             <button
+              type="button"
               disabled={disabled}
               onClick={(e) => {
                 if (disabled) return;
@@ -295,6 +296,8 @@ export default function InputComponent({
                 !disabled && "hover:text-foreground",
               )}
               aria-label={t("input.selectOption")}
+              aria-expanded={showOptions}
+              aria-haspopup="listbox"
             >
               <ForwardedIconComponent
                 name={

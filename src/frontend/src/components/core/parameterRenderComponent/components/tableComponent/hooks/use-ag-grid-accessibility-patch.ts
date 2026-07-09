@@ -77,6 +77,28 @@ function patchGridAccessibility(container: HTMLDivElement, tableLabel: string) {
 
     setAttributeIfChanged(row, "tabindex", "0");
   });
+
+  container
+    .querySelectorAll<HTMLInputElement>(
+      '.ag-checkbox-input-wrapper input[type="checkbox"]',
+    )
+    .forEach((checkboxInput) => {
+      const cell = checkboxInput.closest<HTMLElement>(
+        '[role="gridcell"], [role="columnheader"]',
+      );
+      const checkboxLabel = checkboxInput.getAttribute("aria-label");
+      if (!cell || !checkboxLabel) return;
+
+      const valueText =
+        cell
+          .querySelector<HTMLElement>(".ag-cell-value, .ag-header-cell-text")
+          ?.textContent?.trim() || "";
+      const combinedLabel = valueText
+        ? `${valueText}, ${checkboxLabel}`
+        : checkboxLabel;
+
+      setAttributeIfChanged(cell, "aria-label", combinedLabel);
+    });
 }
 
 export function useAgGridAccessibilityPatch(tableLabel: string) {
@@ -120,7 +142,13 @@ export function useAgGridAccessibilityPatch(tableLabel: string) {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["aria-hidden", "class", "role", "tabindex"],
+      attributeFilter: [
+        "aria-hidden",
+        "class",
+        "role",
+        "tabindex",
+        "aria-label",
+      ],
     });
     schedulePatch();
 

@@ -258,14 +258,24 @@ const CustomInputPopover = ({
           role="button"
           tabIndex={disabled ? -1 : 0}
           aria-disabled={disabled}
+          aria-expanded={showOptions}
+          aria-haspopup="listbox"
           onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              if (!nodeStyle && !disabled) {
-                if (e.key === " ") {
-                  e.preventDefault();
-                }
-                setShowOptions(true);
-              }
+            if (nodeStyle || disabled) return;
+
+            const isAnchorTarget = e.target === e.currentTarget;
+            const isEnter = e.key === "Enter";
+            // Only handle Space on the anchor itself so typing spaces in the
+            // nested input is not intercepted.
+            const isSpace =
+              isAnchorTarget && (e.key === " " || e.key === "Spacebar");
+
+            if (isEnter || isSpace) {
+              // Prevent form submit (Enter) and the synthetic click that would
+              // immediately dismiss the modal popover after opening.
+              e.preventDefault();
+              e.stopPropagation();
+              setShowOptions(true);
             }
           }}
         >
@@ -354,6 +364,7 @@ const CustomInputPopover = ({
         align="start"
       >
         <Command
+          label={optionsPlaceholder || "Search options"}
           filter={(value, search) => {
             if (
               value.toLowerCase().includes(search.toLowerCase()) ||
