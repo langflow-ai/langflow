@@ -1,0 +1,7 @@
+### GET request to example server
+GET https://examples.http-client.intellij.net/get
+    ?generated-in=PyCharm
+
+###
+POST https://aifusion.newtouch.com/ai/v1/getModels
+Authorization: Bearer sk-6f39689e25fb8ce02af7b46e0a2677e4

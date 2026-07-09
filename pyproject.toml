@@ -87,6 +87,13 @@ lfx-docling = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
+# Local wheels for this machine's macOS/architecture and exact CPython version only.
+opencv-python = [
+    { path = "/Users/chenzhuanglan/wheelhouse-cp312/opencv_python-4.13.0.92-cp312-cp312-macosx_13_0_x86_64.whl", marker = "sys_platform == 'darwin' and platform_release == '22.6.0' and platform_machine == 'x86_64' and implementation_name == 'cpython' and python_full_version == '3.12.13'" },
+]
+numpy = [
+    { path = "/Users/chenzhuanglan/wheelhouse-cp312/numpy-2.4.6-cp312-cp312-macosx_10_13_x86_64.whl", marker = "sys_platform == 'darwin' and platform_release == '22.6.0' and platform_machine == 'x86_64' and implementation_name == 'cpython' and python_full_version == '3.12.13'" },
+]
 
 [tool.uv.workspace]
 members = [
@@ -150,6 +157,7 @@ nv-ingest = [
 postgresql = [
     "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
     "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+    "psycopg[binary]>=3.2,<4.0",
 ]
 
 [tool.uv]

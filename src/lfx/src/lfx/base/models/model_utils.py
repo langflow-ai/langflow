@@ -492,8 +492,6 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     True: ``/models`` carries no capability data and the OpenAI wire
     format implies tools support.
     """
-    if model_type != "llm":
-        return []
 
     base_url = get_provider_variable_value(user_id, "OPENAI_BASE_URL")
     if not base_url:
@@ -503,36 +501,73 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     api_key = get_provider_variable_value(user_id, "OPENAI_API_KEY")
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
-    try:
-        response = requests.get(
-            f"{base_url.rstrip('/')}/models",
-            headers=headers,
-            timeout=OPENAI_COMPATIBLE_FETCH_TIMEOUT,
-        )
-        response.raise_for_status()
-        payload = response.json()
-    except (requests.RequestException, ValueError) as exc:
-        logger.debug(f"Could not fetch live OpenAI-compatible models from {base_url}: {exc}")
-        return []
 
-    # An arbitrary OpenAI-compatible server may return a non-conforming body
-    # (a bare list, a list of strings, …); treat anything off-spec as "no models".
-    entries = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(entries, list):
-        return []
+    if model_type == "llm":
+        try:
+            response = requests.get(
+                f"{base_url.rstrip('/')}/models",
+                headers=headers,
+                timeout=OPENAI_COMPATIBLE_FETCH_TIMEOUT,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except (requests.RequestException, ValueError) as exc:
+            logger.debug(f"Could not fetch live OpenAI-compatible models from {base_url}: {exc}")
+            return []
 
-    return [
-        create_model_metadata(
-            provider="OpenAI",
-            name=entry["id"],
-            icon="OpenAI",
-            model_type="llm",
-            tool_calling=True,
-            default=index < MIN_DEFAULT_MODELS,
-        )
-        for index, entry in enumerate(entries)
-        if isinstance(entry, dict) and entry.get("id")
-    ]
+        # An arbitrary OpenAI-compatible server may return a non-conforming body
+        # (a bare list, a list of strings, …); treat anything off-spec as "no models".
+        entries = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(entries, list):
+            return []
+
+        return [
+            create_model_metadata(
+                provider="OpenAI",
+                name=entry["id"],
+                icon="OpenAI",
+                model_type="llm",
+                tool_calling=True,
+                default=index < MIN_DEFAULT_MODELS,
+            )
+            for index, entry in enumerate(entries)
+            if isinstance(entry, dict) and entry.get("id")
+        ]
+
+
+    else:
+        try:
+            response = requests.post(
+                f"{base_url.rstrip('/')}/getModels",
+                headers=headers,
+                timeout=OPENAI_COMPATIBLE_FETCH_TIMEOUT,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except (requests.RequestException, ValueError) as exc:
+            logger.debug(f"Could not fetch live OpenAI-compatible embeddings from {base_url}: {exc}")
+            return []
+
+        # An arbitrary OpenAI-compatible server may return a non-conforming body
+        # (a bare list, a list of strings, …); treat anything off-spec as "no models".
+        entries = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(entries, list):
+            return []
+
+        entries = [entry for entry in entries if entry.get("isShow") and entry.get("modelType") == "EMBEDDING"]
+
+        return [
+            create_model_metadata(
+                provider="OpenAI",
+                name=entry["name"],
+                icon="OpenAI",
+                model_type="embeddings",
+                tool_calling=True,
+                default=index < MIN_DEFAULT_MODELS,
+            )
+            for index, entry in enumerate(entries)
+            if isinstance(entry, dict) and entry.get("id")
+        ]
 
 
 def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -714,7 +749,7 @@ def get_live_models_for_provider(
 
 
 def _live_models_to_catalog_shape(live_models: list[dict]) -> list[dict]:
-    """Convert raw live model dicts to the unified catalog shape."""
+    """Convert raw live model d icts to the unified catalog shape."""
     return [
         {
             "model_name": m.get("name"),

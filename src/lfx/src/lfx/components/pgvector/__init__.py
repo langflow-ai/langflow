@@ -3,16 +3,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from lfx.components._importing import import_mod
+from .pgvector_write import PGVectorWriteComponent
 
 if TYPE_CHECKING:
-    from .pgvector import PGVectorStoreComponent
+    from .pgvector import PGVectorStoreComponent, PGVectorWriteComponent
 
 _dynamic_imports = {
     "PGVectorStoreComponent": "pgvector",
+    "PGVectorWriteComponent": "pgvector_write",
 }
 
 __all__ = [
     "PGVectorStoreComponent",
+    "PGVectorWriteComponent",
 ]
 
 
