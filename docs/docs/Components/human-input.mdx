@@ -19,7 +19,7 @@ This example gates a flow with **Approve** and **Reject** branches:
 Optionally, add a custom label, such as **Escalate**.
 Each action adds a matching output handle to the component.
 4. Connect the **Approve** output to the components to run when the request is approved.
-5. Connect the **Reject** output to an alternate path, such as a [**Chat Output** component](/chat-output) that explains the rejection.
+5. Connect the **Reject** output to an alternate path, such as a [**Chat Output** component](./chat-input-and-output) that explains the rejection.
 6. Run the flow in the <Icon name="Play" aria-hidden="true"/> **Playground**. When execution reaches the **Human Input** node, select an action in the approval paneto resume the flow.
 
 :::tip
@@ -33,7 +33,7 @@ If no decision arrives before the configured timeout, Langflow routes to this **
 
 To handle unanswered requests, do the following:
 
-1. In the [component inspection panel](/concepts-components#component-menus), select **Enable Fallback**.
+1. In the [component inspection panel](./concepts-components#component-menus), select **Enable Fallback**.
 2. Set the **Timeout** time.
 3. Connect the **Fallback** output to the logic that should run when the timeout expires.
 
@@ -50,6 +50,6 @@ To handle unanswered requests, do the following:
 
 ## See also
 
-- [Human-in-the-Loop](/human-in-the-loop)
-- [If-Else](/if-else)
-- [Workflow API (Beta)](/workflow-api)
+- [Human-in-the-Loop](./human-in-the-loop)
+- [If-Else](./if-else)
+- [Workflow API (Beta)](./workflow-api)
