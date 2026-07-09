@@ -7,6 +7,9 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
+This page documents Langflow's built-in authentication, including user accounts, Langflow API keys, and the environment variables that control access to your server.
+To connect Langflow to an external identity provider or SSO system, see [SSO and external authentication](./external-authentication).
+
 :::warning
 Never expose Langflow ports directly to the internet without proper security measures.
 Set `LANGFLOW_AUTO_LOGIN=False`, use a non-default `LANGFLOW_SECRET_KEY`, and deploy your Langflow server behind a reverse proxy with authentication enabled.
@@ -150,7 +153,7 @@ This section describes the available authentication configuration variables.
 
 You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository as a template for your own `.env` file.
 
-For JWT authentication configuration, including algorithm selection and key management, see [JWT authentication](/jwt-authentication).
+For JWT token signing configuration, including algorithm selection and key management, see [Configure JWT token signing](#configure-jwt-token-signing).
 
 ### LANGFLOW_AUTO_LOGIN {#langflow-auto-login}
 
@@ -212,7 +215,7 @@ These defaults don't apply when using the Langflow CLI command [`langflow superu
 
 This environment variable stores a secret key used for encrypting sensitive data like API keys and for JWT signing when using the HS256 algorithm.
 Langflow uses the [Fernet](https://pypi.org/project/cryptography/) library for secret key encryption.
-For JWT-specific configuration, see [JWT authentication](/jwt-authentication).
+For JWT-specific configuration, see [Configure JWT token signing](#configure-jwt-token-signing).
 
 If no secret key is provided, Langflow automatically generates one.
 
@@ -297,6 +300,18 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 
 Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
+
+### LANGFLOW_ENABLE_SIGNUP {#langflow-enable-signup}
+
+This variable controls whether public self-registration is allowed at the `POST /api/v1/users/` endpoint.
+
+| Value | Description |
+|-------|-------------|
+| `True` (default) | Anyone can create a new Langflow account by calling the registration endpoint directly. |
+| `False` | Public registration is disabled. Only superusers can create new accounts through the admin interface. |
+
+Self-registration is always disabled when `LANGFLOW_AUTO_LOGIN=True`, because single-user mode has no multi-account concept.
+Superusers can create accounts regardless of this setting.
 
 ### LANGFLOW_API_KEY_SOURCE {#langflow-api-key-source}
 
@@ -457,19 +472,21 @@ SSRF protection prevents requests to internal or private network resources, such
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
+| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `True` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 
 ### Login rate limiting {#login-rate-limiting}
 
-The following environment variables configure IP-based rate limiting on the `/login` endpoint to protect against brute-force attacks.
+The following environment variables configure IP-based rate limiting to protect against brute-force attacks on the `/login` endpoint and abuse of public flow endpoints.
 When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` header.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
+| `LANGFLOW_RATE_LIMIT_ENABLED` | Boolean | `True` | Enable rate limiting globally. Set to `False` to disable all rate limiting (not recommended in production). |
 | `LANGFLOW_RATE_LIMIT_PER_MINUTE` | Integer | `5` | Maximum number of login attempts allowed per minute from a single IP address. |
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
+| `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows run as the flow owner and consume resources, so anonymous callers are rate-limited separately from the `/login` endpoint. |
 
 ### LANGFLOW_WEBHOOK_AUTH_ENABLE {#langflow-webhook-auth-enable}
 
@@ -484,6 +501,206 @@ By default, webhooks require API key authentication with `LANGFLOW_WEBHOOK_AUTH_
 To allow webhooks to run without authentication (not recommended; use only in trusted environments), in your Langflow `.env` file, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=False`.
 
 When webhook authentication is enabled, you must provide a Langflow API key with each webhook request as an HTTP header or query parameter. For more information, see [Require authentication for webhooks](/webhook#require-authentication-for-webhooks).
+
+## Configure JWT token signing {#configure-jwt-token-signing}
+
+Langflow issues short-lived JSON Web Tokens (JWTs) when a user logs in. The default HS256 algorithm works for most deployments. Switch to RS256 or RS512 for production deployments that require asymmetric keys or need to share the public key with other services.
+
+<details closed>
+<summary>About the JWT structure and contents</summary>
+
+When a user logs in at the `/api/v1/login` endpoint, Langflow validates the credentials and creates a JWT containing the user's identity and expiration time. This token is then used for subsequent API requests instead of sending credentials with each request.
+
+A JWT consists of three parts separated by dots (`.`):
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+* The header contains the token type and signing algorithm.
+* The payload contains _claims_ — token data for user information and expiration time.
+* The signature ensures the token hasn't been tampered with.
+
+Each part of the JWT is Base64URL-encoded. You can paste this example JWT to decode the actual JSON data at [jwt.io](https://jwt.io/).
+
+</details>
+
+The following environment variables control JWT signing. `LANGFLOW_SECRET_KEY` is also used for data encryption and is documented separately in [`LANGFLOW_SECRET_KEY`](#langflow-secret-key).
+
+| Variable | Description | Default |
+|---|---|---|
+| `LANGFLOW_ALGORITHM` | JWT signing algorithm: `HS256`, `RS256`, or `RS512` | `HS256` |
+| `LANGFLOW_PRIVATE_KEY` | RSA private key for RS256/RS512 signing | Auto-generated |
+| `LANGFLOW_PUBLIC_KEY` | RSA public key for RS256/RS512 verification | Derived from private key |
+| `LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS` | Access token expiration time | `3600` (1 hour) |
+| `LANGFLOW_REFRESH_TOKEN_EXPIRE_SECONDS` | Refresh token expiration time | `604800` (7 days) |
+
+### HS256 (default)
+
+HS256 is the default JWT algorithm, suitable for single-server deployments.
+Langflow automatically generates and persists a secret key via `LANGFLOW_SECRET_KEY`.
+No configuration is necessary beyond what is already covered in the [`LANGFLOW_SECRET_KEY`](#langflow-secret-key) section above.
+
+To explicitly set the algorithm in your `.env`:
+
+```bash
+LANGFLOW_ALGORITHM=HS256
+LANGFLOW_SECRET_KEY="your-custom-secret-key"
+```
+
+### RS256
+
+RS256 uses an RSA private/public key pair. The private key signs tokens; the public key verifies them. Use RS256 for production deployments or multi-instance setups where you want to share the public key with other services.
+
+To automatically generate a key pair, set the algorithm and Langflow creates and persists the keys in [`LANGFLOW_CONFIG_DIR`](/logging) on startup:
+
+```bash
+LANGFLOW_ALGORITHM=RS256
+```
+
+To supply your own private key (public key is derived automatically):
+
+```bash
+LANGFLOW_ALGORITHM=RS256
+LANGFLOW_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEF...
+-----END PRIVATE KEY-----"
+```
+
+To supply a full key pair:
+
+```bash
+LANGFLOW_ALGORITHM=RS256
+LANGFLOW_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEF...
+-----END PRIVATE KEY-----"
+LANGFLOW_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOC...
+-----END PUBLIC KEY-----"
+```
+
+To generate an RSA key pair manually:
+
+1. Generate a 2048-bit private key:
+   ```bash
+   openssl genrsa -out private_key.pem 2048
+   ```
+
+2. Extract the public key:
+   ```bash
+   openssl rsa -in private_key.pem -pubout -out public_key.pem
+   ```
+
+### RS512
+
+RS512 uses the same RSA key format as RS256 but with SHA-512 hashing for greater cryptographic strength. Key generation and configuration follow the same pattern as RS256 — substitute `RS512` for `RS256` in all the examples above.
+
+### Configure Docker and Kubernetes deployments
+
+**Docker with HS256** — for single-server or development deployments:
+
+```yaml
+services:
+  langflow:
+    image: langflowai/langflow:latest
+    environment:
+      - LANGFLOW_ALGORITHM=HS256
+      - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY}
+    volumes:
+      - langflow_data:/app/langflow
+volumes:
+  langflow_data:
+```
+
+**Docker with RS256** — auto-generated keys (persisted in the volume):
+
+```yaml
+services:
+  langflow:
+    image: langflowai/langflow:latest
+    environment:
+      - LANGFLOW_ALGORITHM=RS256
+    volumes:
+      - langflow_data:/app/langflow
+volumes:
+  langflow_data:
+```
+
+**Docker with RS256** — mount an existing key pair:
+
+```yaml
+services:
+  langflow:
+    image: langflowai/langflow:latest
+    environment:
+      - LANGFLOW_ALGORITHM=RS256
+    volumes:
+      - ./keys/private_key.pem:/app/langflow/private_key.pem:ro
+      - ./keys/public_key.pem:/app/langflow/public_key.pem:ro
+      - langflow_data:/app/langflow
+volumes:
+  langflow_data:
+```
+
+**Kubernetes with RS256** — store keys as Secrets:
+
+```yaml
+# jwt-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: langflow-jwt-keys
+type: Opaque
+stringData:
+  algorithm: "RS256"
+  private-key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvgIBADANBgkqhkiG9w0BAQEF...
+    -----END PRIVATE KEY-----
+  public-key: |
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOC...
+    -----END PUBLIC KEY-----
+---
+# langflow-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langflow
+spec:
+  template:
+    spec:
+      containers:
+        - name: langflow
+          image: langflowai/langflow:latest
+          env:
+            - name: LANGFLOW_ALGORITHM
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-jwt-keys
+                  key: algorithm
+            - name: LANGFLOW_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-jwt-keys
+                  key: private-key
+            - name: LANGFLOW_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-jwt-keys
+                  key: public-key
+```
+
+### Configure token expiration
+
+Access tokens authenticate API requests and typically expire within 15 minutes to 1 hour.
+Refresh tokens obtain new access tokens without requiring the user to log in again and typically expire within 7 to 30 days.
+When an access token expires, the client can use the refresh token to get a new one from `/api/v1/refresh`.
+
+```bash
+LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS=3600    # 1 hour
+LANGFLOW_REFRESH_TOKEN_EXPIRE_SECONDS=604800 # 7 days
+```
 
 ## Start a Langflow server with authentication enabled
 
