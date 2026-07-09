@@ -54,6 +54,8 @@
   "success.flowBuilt": "Flow built successfully",
   "success.changesSaved": "Changes saved successfully",
   "alerts.notificationsTitle": "Notifications",
+  "alerts.clearNotifications": "Clear notifications",
+  "alerts.closeNotifications": "Close notifications",
   "alerts.noChatOutput": "There is no ChatOutput Component in the flow.",
   "alerts.criticalDataWarning": "Warning: Critical data, JSON file may include API keys.",
   "alerts.apiKeyCopied": "API Key copied!",

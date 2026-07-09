@@ -50,6 +50,8 @@
   "alerts.noChatOutput": "该流程中没有 ChatOutput 组件。",
   "alerts.noTemplateVariables": "您的模板中没有变量。",
   "alerts.notificationsTitle": "通知",
+  "alerts.clearNotifications": "清除通知",
+  "alerts.closeNotifications": "关闭通知",
   "apiKey.expirationDate": "到期日期",
   "apiKey.expirationPlaceholder": "永不过期",
   "apiKey.expiry.1month": "从今天起1个月后",
