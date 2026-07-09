@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.0d9d771d.css">
-<script src="/assets/js/runtime~main.c313665b.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.0765a017.js" defer="defer"></script>
 <script src="/assets/js/main.12b252df.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -133,10 +133,10 @@ Additionally, when <a class="" href="/concepts-flows-import">exporting flows</a>
 <ul>
 <li class="">
 <p>If <code>LANGFLOW_AUTO_LOGIN=False</code>, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key for Langflow API requests.
-If <code>false</code>, the Langflow team recommends that you also explicitly set <a href="#langflow-superuser" class=""><code>LANGFLOW_SUPERUSER</code> and <code>LANGFLOW_SUPERUSER_PASSWORD</code></a> to avoid using the insecure default values.</p>
+If <code>false</code>, you must explicitly set <a href="#langflow-superuser" class=""><code>LANGFLOW_SUPERUSER_PASSWORD</code></a> before startup. Set <a href="#langflow-superuser" class=""><code>LANGFLOW_SUPERUSER</code></a> only if you want to override the default superuser username.</p>
 </li>
 <li class="">
-<p>If <code>LANGFLOW_AUTO_LOGIN=True</code> (default), all API requests require authentication with a Langflow API key, but the visual editor automatically signs in all users as superusers, and Langflow uses <em>only</em> the default <a class="" href="/api-keys-and-authentication#langflow-superuser">superuser credentials</a>.
+<p>If <code>LANGFLOW_AUTO_LOGIN=True</code> (default), all API requests require authentication with a Langflow API key, but the visual editor automatically signs in all users as superusers, and Langflow uses the configured superuser username with a configured or generated bootstrap password.
 All users access the same visual editor environment without password protection, they can run all Langflow CLI commands as superusers, and Langflow automatically authenticates internal requests between the backend and frontend based on the users&#x27; superuser privileges.
 If you also want to bypass authentication for Langflow API requests in addition to other bypassed authentication, see <a class="" href="/api-keys-and-authentication#langflow-skip-auth-auto-login"><code>LANGFLOW_SKIP_AUTH_AUTO_LOGIN</code></a>.</p>
 </li>
@@ -160,9 +160,10 @@ For more information, see <a class="" href="/configuration-cli#langflow-superuse
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="langflow-superuser">LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD<a href="#langflow-superuser" class="hash-link" aria-label="Direct link to LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD" title="Direct link to LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD" translate="no">​</a></h3>
 <p>These variables specify the username and password for the Langflow server&#x27;s superuser.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_SUPERUSER=administrator</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_SUPERUSER_PASSWORD=securepassword</span></div></div><br></code></div></div>
-<p>They are required if <code>LANGFLOW_AUTO_LOGIN=False</code>.
-Otherwise, they aren&#x27;t relevant.</p>
-<p>When you <a href="#start-a-langflow-server-with-authentication-enabled" class="">start a Langflow server with authentication enabled</a>, if these variables are required but <em>not</em> set, then Langflow uses the default values of <code>langflow</code> and <code>langflow</code>.
+<p><code>LANGFLOW_SUPERUSER_PASSWORD</code> is required if <code>LANGFLOW_AUTO_LOGIN=False</code>. <code>LANGFLOW_SUPERUSER</code> is optional and defaults to <code>langflow</code>.
+<code>LANGFLOW_SUPERUSER_PASSWORD</code> can&#x27;t use the legacy default value <code>langflow</code>; startup fails closed instead.
+When <code>LANGFLOW_AUTO_LOGIN=True</code>, <code>LANGFLOW_SUPERUSER</code> selects the auto-login account username and <code>LANGFLOW_SUPERUSER_PASSWORD</code> is optional. If the password isn&#x27;t set, Langflow generates an unknown bootstrap password for the auto-login account.</p>
+<p>When you <a href="#start-a-langflow-server-with-authentication-enabled" class="">start a Langflow server with authentication enabled</a>, if the required password is <em>not</em> set, then startup fails instead of creating a default password.
 These defaults don&#x27;t apply when using the Langflow CLI command <a class="" href="/configuration-cli#langflow-superuser"><code>langflow superuser</code></a>.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="langflow-secret-key">LANGFLOW_SECRET_KEY<a href="#langflow-secret-key" class="hash-link" aria-label="Direct link to LANGFLOW_SECRET_KEY" title="Direct link to LANGFLOW_SECRET_KEY" translate="no">​</a></h3>
 <p>This environment variable stores a secret key used for encrypting sensitive data like API keys and for JWT signing when using the HS256 algorithm.
@@ -302,7 +303,7 @@ Additionally, you must sign in as a superuser to manage users and <a href="#crea
 This example focuses on authentication variables.</p>
 </li>
 <li class="">
-<p>Set <code>LANGFLOW_SUPERUSER</code> and <code>LANGFLOW_SUPERUSER_PASSWORD</code> to your desired superuser credentials.</p>
+<p>Set <code>LANGFLOW_SUPERUSER_PASSWORD</code> to your desired superuser password. Optionally set <code>LANGFLOW_SUPERUSER</code> to override the default <code>langflow</code> username.</p>
 <p>For a one-time test, you can use basic credentials like <code>administrator</code> and <code>password</code>.
 Strong, securely-stored credentials are recommended in genuine development and production environments.</p>
 </li>
@@ -318,8 +319,8 @@ Strong, securely-stored credentials are recommended in genuine development and p
 <li class="">
 <p>Start Langflow with the configuration from your <code>.env</code> file:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run --env-file .env</span></div></div><br></code></div></div>
-<p>Starting Langflow with a <code>.env</code> file automatically authenticates you as the superuser set in <code>LANGFLOW_SUPERUSER</code> and <code>LANGFLOW_SUPERUSER_PASSWORD</code>.
-If you don&#x27;t explicitly set these variables, the default values are <code>langflow</code> and <code>langflow</code> for system auto-login.</p>
+<p>Starting Langflow with this <code>.env</code> file creates or uses the configured superuser.
+If <code>LANGFLOW_SUPERUSER_PASSWORD</code> isn&#x27;t set, startup fails instead of creating a default password.</p>
 </li>
 <li class="">
 <p>Verify the server is running. The default location is <code>http://localhost:7860</code>.</p>
@@ -333,7 +334,7 @@ If you don&#x27;t explicitly set these variables, the default values are <code>l
 <p>If you aren&#x27;t using the default location, replace <code>localhost:7860</code> with your server&#x27;s address.</p>
 </li>
 <li class="">
-<p>Log in with the superuser credentials you set in your <code>.env</code> (<code>LANGFLOW_SUPERUSER</code> and <code>LANGFLOW_SUPERUSER_PASSWORD</code>).</p>
+<p>Log in with the superuser credentials from your <code>.env</code>: the <code>LANGFLOW_SUPERUSER</code> username, or <code>langflow</code> if unset, and the <code>LANGFLOW_SUPERUSER_PASSWORD</code> password.</p>
 </li>
 <li class="">
 <p>To manage users on your server, navigate to <code>/admin</code>, such as <code>http://localhost:7860/admin</code>, click your profile icon, and then click <strong>Admin Page</strong>.</p>
