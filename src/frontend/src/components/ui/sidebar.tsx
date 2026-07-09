@@ -265,6 +265,24 @@ const Sidebar = React.forwardRef<
   ) => {
     const { state, setOpen, defaultOpen } = useSidebar();
     const isMobile = useIsMobile();
+    const {
+      "aria-label": ariaLabel,
+      "aria-labelledby": ariaLabelledBy,
+      role,
+    } = props;
+    const SidebarRoot =
+      role === "navigation"
+        ? "nav"
+        : ariaLabel || ariaLabelledBy
+          ? "aside"
+          : "div";
+    const rootProps =
+      role === "navigation" ? { ...props, role: undefined } : props;
+    const contentProps = {
+      ...rootProps,
+      "aria-label": undefined,
+      "aria-labelledby": undefined,
+    };
 
     React.useEffect(() => {
       if (collapsible === "none") {
@@ -286,11 +304,11 @@ const Sidebar = React.forwardRef<
 
     if (collapsible === "none") {
       return (
-        <div
+        <SidebarRoot
           className={cn("group flex h-full flex-col")}
           data-side={side}
           ref={ref}
-          {...props}
+          {...rootProps}
         >
           <div
             data-sidebar="sidebar"
@@ -301,18 +319,21 @@ const Sidebar = React.forwardRef<
           >
             {children}
           </div>
-        </div>
+        </SidebarRoot>
       );
     }
 
     return (
-      <div
+      <SidebarRoot
         ref={ref}
         className="group peer relative block h-full flex-col"
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
         data-side={side}
+        role={role === "navigation" ? undefined : role}
       >
         {/* This is what handles the sidebar gap on desktop */}
         <div
@@ -346,7 +367,7 @@ const Sidebar = React.forwardRef<
             "max-sm:absolute max-sm:h-[100%] max-sm:group-data-[state=expanded]:bg-background/80",
             className,
           )}
-          {...props}
+          {...contentProps}
         >
           <div
             data-sidebar="sidebar"
@@ -360,7 +381,7 @@ const Sidebar = React.forwardRef<
             {children}
           </div>
         </div>
-      </div>
+      </SidebarRoot>
     );
   },
 );

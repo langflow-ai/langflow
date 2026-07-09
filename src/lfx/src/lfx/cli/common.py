@@ -309,7 +309,11 @@ def prepare_graph(graph, verbose_print):
 
 
 async def execute_graph_with_capture(
-    graph, input_value: str | None, session_id: str | None = None, user_id: str | None = None
+    graph,
+    input_value: str | None,
+    session_id: str | None = None,
+    event_manager=None,
+    user_id: str | None = None,
 ):
     """Execute a graph and capture output.
 
@@ -320,6 +324,10 @@ async def execute_graph_with_capture(
             message-store paths (which validate session_id) succeed; an empty or
             whitespace-only string is rejected with ``ValueError`` to surface
             shell/env-var typos (see ``lfx.run._defaults.validate_provided_id``).
+        event_manager: Optional ``EventManager``. When provided it is threaded
+            into the run so components emit token/message/error events to its
+            queue as the run progresses (used by the streaming workflow
+            endpoint). ``None`` keeps the non-streaming behavior.
         user_id: Optional verified caller identity (e.g. forwarded by an edge
             gateway via a verified JWT — see ``lfx.cli.serve_identity``). ``None``
             keeps any ``user_id`` already pinned on the graph, and auto-generates
@@ -364,7 +372,10 @@ async def execute_graph_with_capture(
         results = [
             payload
             async for payload in get_default_coordinator().stream(
-                graph, initial_inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                graph,
+                initial_inputs=inputs,
+                fallback_to_env_vars=fallback_to_env_vars,
+                event_manager=event_manager,
             )
         ]
     except Exception as exc:

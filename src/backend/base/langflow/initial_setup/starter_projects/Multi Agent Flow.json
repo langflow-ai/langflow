@@ -425,7 +425,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -2922,10 +2922,10 @@
             "description": "# 🧩 Multi Agent flow\n\nA three-step chain of specialist Agents that turns a market trend into a development plan. Each Agent passes its result to the next.\n\n## Setup\nAdd your LLM key on each **Agent** (any provider in the Model dropdown).\n\n## How it works\n1. **Innovator** - reads the market trend and proposes a product concept.\n2. **Analyst** - evaluates the concept's market potential, feasibility, and risks.\n3. **Product Manager** - turns it into a simple development and launch plan.\n\n## Run\nType a market trend in the chat (a default one is provided) and run; the final plan appears in Chat Output.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.multi_agent_flow.5a71f2d1",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.multi_agent_flow.5a71f2d1"
+            }
           },
           "type": "note"
         },

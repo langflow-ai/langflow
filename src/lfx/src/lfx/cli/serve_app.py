@@ -38,9 +38,11 @@ from lfx.cli.common import (
 )
 from lfx.cli.runtime_variables import apply_global_vars_to_graph
 from lfx.cli.serve_identity import IdentityConfig, build_identity_verifier
+from lfx.cli.serve_workflow import ServeWorkflowHost
 from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
 from lfx.utils.flow_validation import validate_flow_for_current_settings
+from lfx.workflow.router import create_workflow_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -854,6 +856,15 @@ def create_multi_serve_app(
                 yield f"data: {error_payload}\n\n"
 
             return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+    # V2 workflow contract endpoints (sync + stream), shared with the langflow backend.
+    # Mounted under /api/v2 so the path matches the backend (/api/v2/workflows): a client
+    # switches runtimes by changing the host, not the URL. developer_api_guard=False keeps
+    # serve's surface ungated, and no background job endpoints are registered.
+    app.include_router(
+        create_workflow_router(ServeWorkflowHost(registry, verify_api_key), developer_api_guard=False),
+        prefix="/api/v2",
+    )
 
     return app
 
