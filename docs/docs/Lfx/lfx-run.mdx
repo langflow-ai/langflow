@@ -1,140 +1,20 @@
 ---
-title: Run and serve flows with LFX
+title: Run flows with LFX
 slug: /lfx-run
 ---
 
-LFX provides two commands for running flows: `lfx serve` and `lfx run`.
-
-| Command | Use case |
-|---|---|
-| `lfx serve` | Starts a persistent FastAPI server. Flows are accessible via HTTP at `POST /flows/{flow_id}/run`. |
-| `lfx run` | Executes a flow once and streams the result to `stdout`. |
-
-Both commands accept a `.json` flow file or a `.py` Python script.
-
-## Prerequisites
-
-- [Install LFX](./lfx-install)
-- A flow JSON file. Download the Simple Agent starter flow from the repository:
-
-  ```bash
-  curl -o simple-agent-flow.json "https://raw.githubusercontent.com/langflow-ai/langflow/main/src/backend/base/langflow/initial_setup/starter_projects/Simple%20Agent.json"
-  ```
-
-- The flow's required API keys. The Simple Agent flow uses OpenAI, which requires `OPENAI_API_KEY`.
-
-## Install flow dependencies {#install-dependencies}
-
-`uv pip install lfx` and `uvx lfx` install the LFX engine only. Before running a flow, install the **extensions** that provide the flow's components.
-
-If a component is missing, LFX reports `component-not-found` with a hint naming the bundle to install, for example:
-
-```text
-component-not-found-with-hint: DuckDuckGoSearchComponent not found.
-Hint: try ext:duckduckgo:DuckDuckGoSearchComponent@official
-```
-
-Use the bundle name from the hint to find the pip package in the [Bundle list](./extensions-bundle-list).
-
-For more information, see [Install LFX with bundle components](./lfx-install#install-with-bundle-components).
-
-### Generate requirements.txt
-
-Extension packages cover component code. Some flows still need additional Python packages at runtime (third-party SDKs imported by those components).
-
-To list them from a flow JSON file, use [`lfx requirements`](./lfx-devops-sdk.mdx#generate-requirementstxt-for-flows):
-
-```bash
-lfx requirements simple-agent-flow.json
-```
-
-Install the reported packages in the same environment before running the flow.
-
-## lfx serve {#lfx-serve}
-
-`lfx serve` starts a FastAPI server that exposes your flows as HTTP API endpoints at `POST /flows/{flow_id}/run`.
-
-A `LANGFLOW_API_KEY` is required because `lfx serve` starts a publicly accessible server.
-
-### Start the server
-
-1. Generate a Langflow API key.
-
-   For LFX, generate a secure token locally:
-
-   ```bash
-   uv run python -c "import secrets; print(secrets.token_urlsafe(32))"
-   ```
-
-   This is different from creating an API key through the Langflow UI or CLI, which stores the key in the Langflow database. LFX only needs a secure token string to authenticate requests.
-
-2. Set your environment variables. Use a `.env` file or export directly:
-
-   **`.env` file**:
-
-   ```text
-   LANGFLOW_API_KEY="sk..."
-   OPENAI_API_KEY="sk-..."
-   ```
-
-   **Export**:
-
-   ```bash
-   export LANGFLOW_API_KEY="sk..."
-   export OPENAI_API_KEY="sk-..."
-   ```
-
-3. Start the server with your flow:
-
-   **With a `.env` file**:
-
-   ```bash
-   uv run lfx serve simple-agent-flow.json --env-file .env
-   ```
-
-   **With exported variables**:
-
-   ```bash
-   uv run lfx serve simple-agent-flow.json
-   ```
-
-4. Copy the `flow_id` from the startup output:
-
-   ```
-    LFX Server
-    Flow loaded: simple-agent-flow.json (c1dab29d-3364-58ef-8fef-99311d32ee42)
-    Server:      http://127.0.0.1:8000
-    Run flows at: POST /flows/{flow_id}/run
-    API key:     x-api-key header or ?x-api-key= query parameter
-   ```
-
-### Call the server
-
-In a new terminal, run a test request:
-
-```bash
-export LANGFLOW_API_KEY="sk..."
-export FLOW_ID="c1dab29d-3364-58ef-8fef-99311d32ee42"
-
-curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{"input_value": "Hello, world!"}'
-```
-
-### Serve multiple flows
-
-To serve multiple flows, pass a directory to `lfx serve` to load all `.json` flows at server startup:
-
-```bash
-uv run lfx serve ./flows/
-```
-
-## lfx run {#lfx-run}
+import LfxPrereqs from '@site/docs/_partial-lfx-run-serve-prereqs.mdx';
+import LfxComponentCategories from '@site/docs/_partial-lfx-component-categories.mdx';
 
 `lfx run` executes a flow once and streams the results to `stdout`. No API key is required.
 
-### Run a flow {#run-a-flow}
+To expose flows as HTTP endpoints instead, see [Serve flows with LFX](./lfx-serve).
+
+Both `lfx run` and `lfx serve` accept a `.json` flow file or a `.py` Python script.
+
+<LfxPrereqs />
+
+## Run a flow {#run-a-flow}
 
 To run a flow from a JSON file, run:
 
@@ -147,6 +27,8 @@ Alternatively, use the `--input-value` flag:
 ```bash
 uv run lfx run simple-agent-flow.json --input-value "Hello world"
 ```
+
+### Other ways to provide a flow
 
 To run a flow JSON from `stdin`, run:
 
@@ -179,8 +61,7 @@ uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' \
   --input-value "Hello world"
 ```
 
-
-### Run a flow from a Python script
+## Run a flow from a Python script
 
 In addition to JSON files, `lfx run` accepts `.py` Python scripts that define flows programmatically.
 
@@ -232,8 +113,7 @@ uv run lfx run simple_agent.py "How are you?" --verbose
 
 For more examples, see the [Complete Agent Example on PyPI](https://pypi.org/project/lfx).
 
-
-### lfx run options
+## lfx run options
 
 | Option | Description |
 |---|---|
@@ -249,44 +129,11 @@ For more examples, see the [Complete Agent Example on PyPI](https://pypi.org/pro
 | `-vv` | Show detailed progress and debug information. |
 | `-vvv` | Show full debugging output including component logs. |
 
-## Control which components load
-
-LFX loads all component categories by default. Use environment variables to restrict which categories are available when loading flows.
-
-| Variable | Description |
-|---|---|
-| `LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST` | Comma-separated list of category names to **include**. If empty, all categories are included. |
-| `LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST` | Comma-separated list of category names to **exclude**. Applied after the allowlist. |
-
-Category names are case-insensitive. The virtual keyword `core` in the allowlist or blocklist expands to all core component categories.
-
-
-Component category names don't always match the labels displayed in the Langflow visual editor.
-To view the component categories, see [Bundle list](./extensions-bundle-list).
-
-To restrict components to specific categories:
-
-```bash
-export LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST="openai,anthropic,processing,input_output"
-uv run lfx serve my_flow.json
-```
-
-To exclude specific categories:
-
-```bash
-export LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST="prototypes,langchain_utilities"
-uv run lfx run my_flow.json "Hello"
-```
-
-To allow only core categories:
-
-```bash
-export LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST="core"
-uv run lfx serve my_flow.json
-```
+<LfxComponentCategories />
 
 ## See also
 
+- [Serve flows with LFX](./lfx-serve)
 - [About LFX](./lfx-overview)
 - [Install LFX](./lfx-install)
 - [Flow DevOps Toolkit SDK](./lfx-devops-sdk.mdx)
