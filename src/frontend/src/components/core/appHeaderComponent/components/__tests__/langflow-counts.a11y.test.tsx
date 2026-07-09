@@ -47,19 +47,19 @@ describe("LangflowCounts accessibility", () => {
 
   it("should_expose_github_button_with_accessible_name", () => {
     expect(
-      screen.getByRole("button", { name: /github 1234/i }),
+      screen.getByRole("button", { name: "Go to GitHub repo" }),
     ).toBeInTheDocument();
   });
 
   it("should_expose_discord_button_with_accessible_name", () => {
     expect(
-      screen.getByRole("button", { name: /discord 5678/i }),
+      screen.getByRole("button", { name: "Go to Discord server" }),
     ).toBeInTheDocument();
   });
 
   it("should_hide_github_icon_from_assistive_technology", () => {
     const githubButton = screen.getByRole("button", {
-      name: /github 1234/i,
+      name: "Go to GitHub repo",
     });
     const svg = githubButton.querySelector("svg");
     expect(svg).toHaveAttribute("aria-hidden", "true");
@@ -67,9 +67,14 @@ describe("LangflowCounts accessibility", () => {
 
   it("should_hide_discord_icon_from_assistive_technology", () => {
     const discordButton = screen.getByRole("button", {
-      name: /discord 5678/i,
+      name: "Go to Discord server",
     });
     const svg = discordButton.querySelector("svg");
     expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("should_hide_count_text_from_assistive_technology", () => {
+    expect(screen.getByText("1234")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("5678")).toHaveAttribute("aria-hidden", "true");
   });
 });
