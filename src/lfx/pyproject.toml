@@ -1,6 +1,6 @@
 [project]
 name = "lfx"
-version = "1.10.1"
+version = "1.10.2"
 description = "Langflow Executor - A lightweight CLI tool for executing and serving Langflow AI flows"
 readme = "README.md"
 authors = [
@@ -45,7 +45,7 @@ dependencies = [
     "pypdf>=6.10.0,<7.0.0",
     "cryptography>=48.0.1",
     "ag-ui-protocol>=0.1.10",
-    "langflow-sdk>=0.2.1",
+    "langflow-sdk>=0.2.2",
     "markitdown>=0.1.4,<2.0.0",
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
