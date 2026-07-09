@@ -1,7 +1,7 @@
 """add mcp_server table
 
 Revision ID: 247308ce2598
-Revises: 4f0d2c9a8b7e
+Revises: c3e7a1b9d2f4
 Create Date: 2026-07-06 17:10:00.000000
 
 Phase: EXPAND
@@ -16,7 +16,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "247308ce2598"  # pragma: allowlist secret
-down_revision: str | None = "4f0d2c9a8b7e"  # pragma: allowlist secret
+down_revision: str | None = "c3e7a1b9d2f4"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
