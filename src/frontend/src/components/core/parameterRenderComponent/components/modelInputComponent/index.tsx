@@ -22,6 +22,7 @@ import {
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
+import { matchesModelIdentity } from "./helpers/model-option-identity";
 import { recoverModelOption } from "./helpers/recover-model-option";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import type {
@@ -398,7 +399,9 @@ export default function ModelInputComponent({
       return null;
     }
 
-    const match = flatOptions.find((option) => option.name === currentName);
+    const match = flatOptions.find((option) =>
+      matchesModelIdentity(option, saved),
+    );
     if (match) return match;
 
     // Saved name isn't in the filtered options list — typically because the
@@ -447,7 +450,9 @@ export default function ModelInputComponent({
     let isSavedValueStale = false;
     if (!isEmpty) {
       const saved = value[0];
-      const inOptions = flatOptions.some((opt) => opt.name === saved.name);
+      const inOptions = flatOptions.some((option) =>
+        matchesModelIdentity(option, saved),
+      );
       if (!inOptions && saved.provider) {
         isSavedValueStale =
           providersData?.some(
@@ -514,10 +519,8 @@ export default function ModelInputComponent({
           );
         }
       }
-      const selectedOption = flatOptions.find(
-        (option) =>
-          option.name === modelName &&
-          (!provider || option.provider === provider),
+      const selectedOption = flatOptions.find((option) =>
+        matchesModelIdentity(option, { name: modelName, provider }),
       );
       if (!selectedOption) return;
 

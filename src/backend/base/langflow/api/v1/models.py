@@ -13,6 +13,7 @@ from lfx.base.models.unified_models import (
     get_provider_all_variables,
     get_unified_models_detailed,
 )
+from lfx.base.models.unified_models.credentials import model_status_contains, model_status_key
 from loguru import logger
 from pydantic import BaseModel, field_validator
 
@@ -427,23 +428,73 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
     return set()
 
 
-def _build_model_default_flags() -> dict[str, bool]:
-    """Build a map of model names to their default flag status.
+def _build_model_providers_by_name(
+    all_models_by_provider: list[dict] | None = None,
+) -> dict[str, set[str]]:
+    """Build a catalog index used to migrate legacy bare-name status entries."""
+    if all_models_by_provider is None:
+        all_models_by_provider = get_unified_models_detailed(
+            include_unsupported=True,
+            include_deprecated=True,
+        )
 
-    Returns:
-        Dictionary mapping model names to whether they are default models
-    """
-    all_models_by_provider = get_unified_models_detailed(
-        include_unsupported=True,
-        include_deprecated=True,
-    )
-
-    is_default_model = {}
+    providers_by_name: dict[str, set[str]] = {}
     for provider_dict in all_models_by_provider:
+        provider = provider_dict.get("provider")
+        if not isinstance(provider, str):
+            continue
         for model in provider_dict.get("models", []):
             model_name = model.get("model_name")
+            if isinstance(model_name, str):
+                providers_by_name.setdefault(model_name, set()).add(provider)
+    return providers_by_name
+
+
+def _normalize_model_status_entries(
+    entries: set[str],
+    providers_by_name: dict[str, set[str]],
+) -> set[str]:
+    """Expand known legacy bare names to every matching provider identity.
+
+    Bare entries historically applied globally. Expanding all matching catalog
+    providers preserves that state while allowing the current write to change a
+    single provider. Unknown bare names remain intact for read compatibility.
+    """
+    normalized: set[str] = set()
+    for entry in entries:
+        providers = providers_by_name.get(entry)
+        if providers:
+            normalized.update(model_status_key(provider, entry) for provider in providers)
+        else:
+            normalized.add(entry)
+    return normalized
+
+
+def _build_model_default_flags(
+    all_models_by_provider: list[dict] | None = None,
+) -> dict[str, bool]:
+    """Build a map of provider-qualified model identities to default status.
+
+    Returns:
+        Dictionary mapping provider-qualified model identities to default status
+    """
+    if all_models_by_provider is None:
+        all_models_by_provider = get_unified_models_detailed(
+            include_unsupported=True,
+            include_deprecated=True,
+        )
+
+    is_default_model: dict[str, bool] = {}
+    for provider_dict in all_models_by_provider:
+        provider = provider_dict.get("provider")
+        if not isinstance(provider, str):
+            continue
+        for model in provider_dict.get("models", []):
+            model_name = model.get("model_name")
+            if not isinstance(model_name, str):
+                continue
             is_default = model.get("metadata", {}).get("default", False)
-            is_default_model[model_name] = is_default
+            is_default_model[model_status_key(provider, model_name)] = is_default
 
     return is_default_model
 
@@ -460,21 +511,24 @@ def _update_model_sets(
         updates: List of model status updates from user
         disabled_models: Set of disabled model IDs (modified in place)
         explicitly_enabled_models: Set of explicitly enabled model IDs (modified in place)
-        is_default_model: Map of model names to their default flag status
+        is_default_model: Map of provider-qualified model identities to default status
     """
     for update in updates:
-        model_is_default = is_default_model.get(update.model_id, False)
+        status_key = model_status_key(update.provider, update.model_id)
+        model_is_default = is_default_model.get(status_key, False)
 
         if update.enabled:
             # User wants to enable the model
-            disabled_models.discard(update.model_id)
+            disabled_models.discard(status_key)
             # If it's not a default model, add to explicitly enabled list
             if not model_is_default:
-                explicitly_enabled_models.add(update.model_id)
+                explicitly_enabled_models.add(status_key)
+            else:
+                explicitly_enabled_models.discard(status_key)
         else:
             # User wants to disable the model
-            disabled_models.add(update.model_id)
-            explicitly_enabled_models.discard(update.model_id)
+            disabled_models.add(status_key)
+            explicitly_enabled_models.discard(status_key)
 
 
 async def _save_model_list_variable(
@@ -591,8 +645,8 @@ async def get_enabled_models(
                 provider_status.get(provider, False)
                 and not is_deprecated
                 and not is_not_supported
-                and (is_default or model_name in explicitly_enabled_models)
-                and model_name not in disabled_models
+                and (is_default or model_status_contains(explicitly_enabled_models, provider, model_name))
+                and not model_status_contains(disabled_models, provider, model_name)
             )
             # Store model status per provider (true/false)
             enabled_models[provider][model_name] = is_enabled
@@ -653,8 +707,19 @@ async def update_enabled_models(
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
 
-    # Build map of model names to their default flag
-    is_default_model = _build_model_default_flags()
+    all_models_by_provider = get_unified_models_detailed(
+        include_unsupported=True,
+        include_deprecated=True,
+    )
+    is_default_model = _build_model_default_flags(all_models_by_provider)
+    providers_by_name = _build_model_providers_by_name(all_models_by_provider)
+    # Live/custom models may not be in the static catalog. The provider in this
+    # request still gives a known identity for migrating a matching bare entry.
+    for update in updates:
+        providers_by_name.setdefault(update.model_id, set()).add(update.provider)
+
+    disabled_models = _normalize_model_status_entries(disabled_models, providers_by_name)
+    explicitly_enabled_models = _normalize_model_status_entries(explicitly_enabled_models, providers_by_name)
 
     # Update model sets based on user requests
     # For any model being enabled, validate the provider credentials

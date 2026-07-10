@@ -20,6 +20,18 @@ from .provider_queries import (
     get_provider_all_variables,
 )
 
+MODEL_STATUS_KEY_SEPARATOR = "::"
+
+
+def model_status_key(provider: str, model_name: str) -> str:
+    """Return the stable identity used in persisted model-status variables."""
+    return f"{provider}{MODEL_STATUS_KEY_SEPARATOR}{model_name}"
+
+
+def model_status_contains(entries: set[str], provider: str, model_name: str) -> bool:
+    """Check provider-scoped status while honoring pre-upgrade bare-name entries."""
+    return model_status_key(provider, model_name) in entries or model_name in entries
+
 
 def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
     """Get API key from component input or global variables.
@@ -400,16 +412,23 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         return
 
     first_model = None
+    provider_models: list[dict[str, Any]] = []
     try:
         from .model_catalog import get_unified_models_detailed
 
         models = get_unified_models_detailed(providers=[provider])
         if models and models[0].get("models"):
-            first_model = models[0]["models"][0]["model_name"]
+            provider_models = models[0]["models"]
+            first_model = provider_models[0]["model_name"]
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
     validation_model = model_name or first_model
+    validation_metadata = next(
+        (model.get("metadata", {}) for model in provider_models if model.get("model_name") == validation_model),
+        {},
+    )
+    is_reasoning_model = validation_metadata.get("reasoning", False) is True
 
     # Providers contributed by extension bundles validate through their own
     # callable (registered via provider_registry; imported lazily to avoid an
@@ -449,7 +468,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("OPENAI_API_KEY")
             if not api_key:
                 return
-            llm_kwargs = {"api_key": api_key, "model_name": validation_model, "max_tokens": 1}
+            llm_kwargs = {"api_key": api_key, "model_name": validation_model}
+            if not is_reasoning_model:
+                llm_kwargs["max_tokens"] = 1
             base_url = variables.get("OPENAI_BASE_URL")
             if base_url:
                 from lfx.utils.util import transform_localhost_url
@@ -528,18 +549,27 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 raise ValueError(msg) from e
 
         elif provider == "Azure AI Foundry":
-            from langchain_azure_ai.chat_models import AzureAIOpenAIApiChatModel
+            try:
+                from langchain_azure_ai.chat_models import AzureAIOpenAIApiChatModel
+            except ImportError as e:
+                msg = (
+                    "Azure AI Foundry credential validation requires the "
+                    "'langchain-azure-ai' package, but it is not installed."
+                )
+                raise ValueError(msg) from e
 
             api_key = variables.get("AZURE_AI_FOUNDRY_API_KEY")
             endpoint = variables.get("AZURE_AI_FOUNDRY_ENDPOINT")
             if not api_key or not endpoint or not validation_model:
                 return
-            llm = AzureAIOpenAIApiChatModel(
-                credential=api_key,
-                endpoint=endpoint,
-                model=validation_model,
-                max_tokens=1,
-            )
+            llm_kwargs = {
+                "credential": api_key,
+                "endpoint": endpoint,
+                "model": validation_model,
+            }
+            if not is_reasoning_model:
+                llm_kwargs["max_tokens"] = 1
+            llm = AzureAIOpenAIApiChatModel(**llm_kwargs)
             llm.invoke("test")
 
         elif provider == "Ollama":

@@ -58,7 +58,7 @@ def create_model_metadata(
 LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
 
 # Live only with a custom endpoint configured; empty live fetch keeps the static catalog.
-CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI"]
+CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI", "Azure AI Foundry"]
 
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider

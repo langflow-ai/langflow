@@ -41,10 +41,11 @@ const ModelList = ({
   return (
     <CommandList className="max-h-[300px] overflow-y-auto">
       {Object.entries(groupedOptions).map(([provider, models]) => (
-        <CommandGroup className="p-0" key={provider}>
-          <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center justify-between pr-4">
-            <div className="flex items-center">{provider}</div>
-          </div>
+        <CommandGroup
+          className="p-0 [&_[cmdk-group-heading]]:mx-4 [&_[cmdk-group-heading]]:my-2 [&_[cmdk-group-heading]]:p-0 [&_[cmdk-group-heading]]:font-semibold"
+          heading={provider}
+          key={provider}
+        >
           {models.map((data) => (
             <CommandItem
               key={`${provider}-${data.name}`}

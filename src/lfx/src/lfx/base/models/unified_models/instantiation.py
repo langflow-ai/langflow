@@ -13,7 +13,7 @@ from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
-from .credentials import _fetch_enabled_providers_for_user, _get_model_status
+from .credentials import _fetch_enabled_providers_for_user, _get_model_status, model_status_contains
 from .model_catalog import get_unified_models_detailed
 from .provider_queries import model_provider_metadata
 
@@ -220,9 +220,12 @@ def get_llm(
     # generic ``model``.
     model_name_param = metadata.get("model_name_param") or provider_param_mapping.get("model_param", "model")
 
-    # Check if this is a reasoning model that doesn't support temperature
+    # Reasoning models reject sampling/output-limit kwargs in several provider
+    # SDKs. Raw catalog selections carry ``reasoning`` while enriched options
+    # also carry ``reasoning_models``; support both shapes.
     reasoning_models = metadata.get("reasoning_models", [])
-    if model_name in reasoning_models:
+    is_reasoning_model = metadata.get("reasoning", False) is True or model_name in reasoning_models
+    if is_reasoning_model:
         temperature = None
 
     # Build kwargs dynamically
@@ -236,7 +239,7 @@ def get_llm(
         kwargs["temperature"] = temperature
 
     # Add max_tokens with provider-specific field name (only when a valid integer >= 1)
-    if max_tokens is not None and max_tokens != "":
+    if not is_reasoning_model and max_tokens is not None and max_tokens != "":
         try:
             max_tokens_int = int(max_tokens)
             if max_tokens_int >= 1:
@@ -433,9 +436,9 @@ def _get_provider_enabled_model_names(
         if apply_user_prefs:
             metadata = model_data.get("metadata", {})
             is_default = metadata.get("default", False)
-            if not is_default and model_name not in explicitly_enabled_models:
+            if not is_default and not model_status_contains(explicitly_enabled_models, provider, model_name):
                 continue
-            if model_name in disabled_models:
+            if model_status_contains(disabled_models, provider, model_name):
                 continue
 
         model_names.append(model_name)

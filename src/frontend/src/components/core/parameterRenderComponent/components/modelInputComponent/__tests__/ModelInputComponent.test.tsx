@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { BaseInputProps } from "@/components/core/parameterRenderComponent/types";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { matchesModelIdentity } from "../helpers/model-option-identity";
 import ModelInputComponent from "../index";
 import type { ModelInputComponentType, ModelOption } from "../types";
 
@@ -162,6 +163,23 @@ const mockOptions: ModelOption[] = [
   },
 ];
 
+const duplicateModelOptions: ModelOption[] = [
+  {
+    id: "openai-gpt-4o",
+    name: "gpt-4o",
+    icon: "OpenAI",
+    provider: "OpenAI",
+    metadata: {},
+  },
+  {
+    id: "foundry-gpt-4o",
+    name: "gpt-4o",
+    icon: "Azure",
+    provider: "Azure AI Foundry",
+    metadata: {},
+  },
+];
+
 const defaultProps: BaseInputProps & ModelInputComponentType = {
   id: "test-model-input",
   value: [],
@@ -213,7 +231,64 @@ describe("ModelInputComponent", () => {
     jest.clearAllMocks();
   });
 
+  describe("Model identity", () => {
+    it("distinguishes providers and preserves legacy name-only matching", () => {
+      const openAiOption = { name: "gpt-4o", provider: "OpenAI" };
+
+      expect(
+        matchesModelIdentity(openAiOption, {
+          name: "gpt-4o",
+          provider: "Azure AI Foundry",
+        }),
+      ).toBe(false);
+      expect(matchesModelIdentity(openAiOption, { name: "gpt-4o" })).toBe(true);
+    });
+  });
+
   describe("Rendering", () => {
+    it("keeps the saved provider when providers share a model name", async () => {
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={duplicateModelOptions}
+          value={[duplicateModelOptions[1]]}
+        />,
+      );
+
+      expect(screen.getByTestId("icon-Azure")).toBeInTheDocument();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("combobox"));
+      expect(
+        screen
+          .getByTestId("Azure AI Foundry-gpt-4o-option")
+          .querySelector('[data-testid="icon-Check"]'),
+      ).toHaveClass("opacity-100");
+      expect(
+        screen
+          .getByTestId("OpenAI-gpt-4o-option")
+          .querySelector('[data-testid="icon-Check"]'),
+      ).toHaveClass("opacity-0");
+    });
+
+    it("uses name-only matching for legacy saved values without a provider", () => {
+      const legacyValue = {
+        name: "gpt-4o",
+        icon: "Bot",
+        metadata: {},
+      } as ModelOption;
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={[duplicateModelOptions[0]]}
+          value={[legacyValue]}
+        />,
+      );
+
+      expect(screen.getByTestId("icon-OpenAI")).toBeInTheDocument();
+    });
+
     it("should keep combobox enabled when no options are provided", async () => {
       const user = userEvent.setup();
       renderWithQueryClient(
@@ -280,6 +355,27 @@ describe("ModelInputComponent", () => {
   });
 
   describe("Dropdown Interaction", () => {
+    it("selects the requested provider when providers share a model name", async () => {
+      const handleOnNewValue = jest.fn();
+      const user = userEvent.setup();
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={duplicateModelOptions}
+          value={[duplicateModelOptions[0]]}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+
+      await user.click(screen.getByRole("combobox"));
+      await user.click(screen.getByTestId("Azure AI Foundry-gpt-4o-option"));
+
+      expect(handleOnNewValue).toHaveBeenLastCalledWith({
+        value: [duplicateModelOptions[1]],
+      });
+    });
+
     it("should open dropdown when trigger is clicked", async () => {
       const user = userEvent.setup();
       renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
@@ -306,6 +402,9 @@ describe("ModelInputComponent", () => {
         expect(screen.getByTestId("OpenAI-gpt-4-option")).toBeInTheDocument();
         expect(
           screen.getByTestId("OpenAI-gpt-3.5-turbo-option"),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("group", { name: "OpenAI" }),
         ).toBeInTheDocument();
       });
     });

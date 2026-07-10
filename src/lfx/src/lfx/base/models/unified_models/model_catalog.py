@@ -10,7 +10,7 @@ from lfx.base.models.model_utils import replace_with_live_models
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
-from .credentials import _fetch_enabled_providers_for_user, _get_model_status
+from .credentials import _fetch_enabled_providers_for_user, _get_model_status, model_status_contains
 from .provider_queries import get_models_detailed, model_provider_metadata
 
 if TYPE_CHECKING:
@@ -213,9 +213,9 @@ def get_language_model_options(
             # - If not default and not explicitly enabled, skip it
             # - If in disabled list, skip it
             # - Otherwise, show it
-            if not is_default and model_name not in explicitly_enabled_models:
+            if not is_default and not model_status_contains(explicitly_enabled_models, provider, model_name):
                 continue
-            if model_name in disabled_models:
+            if model_status_contains(disabled_models, provider, model_name):
                 continue
 
             # Get parameter mapping for this provider
@@ -241,11 +241,9 @@ def get_language_model_options(
                 "metadata": option_metadata,
             }
 
-            # Add reasoning models list for OpenAI
-            if provider == "OpenAI" and metadata.get("reasoning"):
-                if "reasoning_models" not in option["metadata"]:
-                    option["metadata"]["reasoning_models"] = []
-                option["metadata"]["reasoning_models"].append(model_name)
+            if metadata.get("reasoning"):
+                option["metadata"]["reasoning"] = True
+                option["metadata"]["reasoning_models"] = [model_name]
 
             # Add provider-specific params from mapping
             if "base_url_param" in param_mapping:
@@ -332,9 +330,9 @@ def get_embedding_model_options(
             # - If not default and not explicitly enabled, skip it
             # - If in disabled list, skip it
             # - Otherwise, show it
-            if not is_default and model_name not in explicitly_enabled_models:
+            if not is_default and not model_status_contains(explicitly_enabled_models, provider, model_name):
                 continue
-            if model_name in disabled_models:
+            if model_status_contains(disabled_models, provider, model_name):
                 continue
 
             # Build the option dict
@@ -395,8 +393,7 @@ def normalize_model_names_to_dicts(
             if "max_tokens_field_name" in provider_meta:
                 runtime_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
 
-            # Add reasoning models list for OpenAI
-            if provider == "OpenAI" and base_metadata.get("reasoning"):
+            if base_metadata.get("reasoning"):
                 runtime_metadata["reasoning_models"] = [model_name]
 
             # Add provider-specific params from mapping
@@ -410,13 +407,18 @@ def normalize_model_names_to_dicts(
             # Merge base metadata with runtime metadata
             full_metadata = {**base_metadata, **runtime_metadata}
 
-            model_lookup[model_name] = {
-                "name": model_name,
-                "icon": icon,
-                "category": provider,
-                "provider": provider,
-                "metadata": full_metadata,
-            }
+            # Catalog order is the backwards-compatibility precedence for bare
+            # model names. Keep the first provider when aliases overlap.
+            model_lookup.setdefault(
+                model_name,
+                {
+                    "name": model_name,
+                    "icon": icon,
+                    "category": provider,
+                    "provider": provider,
+                    "metadata": full_metadata,
+                },
+            )
 
     # Convert string list to dict list
     result = []

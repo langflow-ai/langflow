@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 
 def test_azure_ai_foundry_in_provider_registry():
-    from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
+    from lfx.base.models.model_metadata import CONDITIONAL_LIVE_MODEL_PROVIDERS, MODEL_PROVIDER_METADATA
 
     assert "Azure AI Foundry" in MODEL_PROVIDER_METADATA
+    assert "Azure AI Foundry" in CONDITIONAL_LIVE_MODEL_PROVIDERS
 
 
 def test_azure_ai_foundry_metadata_shape():
@@ -81,6 +83,101 @@ def test_azure_ai_foundry_resolves_to_langchain_azure_ai():
     assert "langchain-azure-ai" in result
 
 
+def test_fetch_live_azure_ai_foundry_models_discovers_deployment_ids():
+    from lfx.base.models import model_utils
+
+    response = MagicMock()
+    response.json.return_value = {
+        "data": [
+            {"id": "team-production-chat", "created": "123"},
+            {"id": "o3-mini", "created": 456},
+            {"id": "  "},
+        ]
+    }
+    variables = {
+        "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
+        "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1/",
+    }
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", side_effect=lambda _user_id, key: variables[key]),
+        patch.object(model_utils.requests, "get", return_value=response) as mock_get,
+    ):
+        models = model_utils.fetch_live_azure_ai_foundry_models("user-1")
+
+    mock_get.assert_called_once_with(
+        "https://example.services.ai.azure.com/openai/v1/models",
+        headers={"api-key": "test-key"},
+        timeout=model_utils.AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+    )
+    assert [model["name"] for model in models] == ["o3-mini", "team-production-chat"]
+    assert models[0]["reasoning"] is True
+    assert models[0]["created"] == 456
+    assert models[1]["tool_calling"] is True
+    assert models[1]["created"] == 123
+
+
+def test_fetch_live_azure_ai_foundry_models_requires_endpoint_and_key():
+    from lfx.base.models import model_utils
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", return_value=None),
+        patch.object(model_utils.requests, "get") as mock_get,
+    ):
+        assert model_utils.fetch_live_azure_ai_foundry_models("user-1") == []
+
+    mock_get.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("payload", "side_effect"),
+    [
+        ({"data": []}, None),
+        ({"data": "not-a-list"}, None),
+        (None, ValueError("malformed JSON")),
+        (None, OSError("network down")),
+    ],
+)
+def test_fetch_live_azure_ai_foundry_models_safely_falls_back(payload, side_effect):
+    from lfx.base.models import model_utils
+
+    response = MagicMock()
+    if side_effect is not None:
+        if isinstance(side_effect, OSError):
+            response.raise_for_status.side_effect = requests.ConnectionError(str(side_effect))
+        else:
+            response.json.side_effect = side_effect
+    else:
+        response.json.return_value = payload
+
+    variables = {
+        "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
+        "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1",
+    }
+    with (
+        patch.object(model_utils, "get_provider_variable_value", side_effect=lambda _user_id, key: variables[key]),
+        patch.object(model_utils.requests, "get", return_value=response),
+    ):
+        assert model_utils.fetch_live_azure_ai_foundry_models("user-1") == []
+
+
+def test_foundry_empty_live_discovery_keeps_static_catalog():
+    from lfx.base.models import model_utils
+
+    seed_models = [{"model_name": "gpt-4o", "metadata": {"default": True}}]
+    provider_models = [{"provider": "Azure AI Foundry", "models": seed_models, "num_models": 1}]
+
+    with patch.object(model_utils, "fetch_live_azure_ai_foundry_models", return_value=[]):
+        result = model_utils.replace_with_live_models(
+            provider_models,
+            user_id="user-1",
+            enabled_providers={"Azure AI Foundry"},
+            model_type="llm",
+        )
+
+    assert result[0]["models"] == seed_models
+
+
 def test_validate_model_provider_key_azure_ai_foundry_success():
     from types import SimpleNamespace
 
@@ -106,7 +203,7 @@ def test_validate_model_provider_key_azure_ai_foundry_success():
         validate_model_provider_key(
             "Azure AI Foundry",
             {
-                "AZURE_AI_FOUNDRY_API_KEY": "test-key",
+                "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
                 "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1",
             },
             model_name="gpt-4o",
