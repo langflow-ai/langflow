@@ -86,49 +86,9 @@ test.describe("data-rich route accessibility", () => {
     },
   );
 
-  test(
-    "scans files page with uploaded files",
-    { tag: ["@release", "@workspace"] },
-    async ({ page }) => {
-      await page.route("**/api/v2/files", async (route) => {
-        await route.fulfill({
-          json: [
-            {
-              id: "a11y-file-1",
-              user_id: "a11y-user",
-              provider: "local",
-              name: "quarterly-report",
-              path: "quarterly-report.pdf",
-              type: "pdf",
-              size: 428032,
-              created_at: "2026-06-01T10:00:00",
-              updated_at: "2026-06-15T13:30:00",
-            },
-            {
-              id: "a11y-file-2",
-              user_id: "a11y-user",
-              provider: "local",
-              name: "customer-import",
-              path: "customer-import.csv",
-              type: "csv",
-              size: 8192,
-              created_at: "2026-06-02T10:00:00",
-              updated_at: "2026-06-16T13:30:00",
-            },
-          ],
-        });
-      });
-
-      await openRoute(page, "/assets/files");
-      await expect(page.getByText("quarterly-report")).toBeVisible({
-        timeout: TIMEOUTS.standard,
-      });
-      await expect(page.getByTestId("search-store-input")).toBeVisible();
-      await waitForNetworkToSettle(page);
-
-      await page.runA11yScan("assets-files-data-rich");
-    },
-  );
+  // NOTE: the files page (/assets/files) has dedicated, full-state coverage in
+  // files.a11y.spec.ts (populated / empty / mobile / selected / actions menu /
+  // delete modal / rename editing + keyboard operability).
 
   test(
     "scans MCP servers page with configured servers",

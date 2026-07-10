@@ -163,8 +163,7 @@ const getAnchorClassName = (
     editNode && "min-h-7 p-0 px-1",
     editNode && disabled && "min-h-5 border-muted",
     disabled && "bg-muted text-muted",
-    isFocused &&
-      "border-foreground ring-1 ring-foreground hover:border-foreground",
+    isFocused && "border-foreground hover:border-foreground",
   );
 };
 

@@ -1,0 +1,140 @@
+---
+title: Run flows with LFX
+slug: /lfx-run
+---
+
+import LfxPrereqs from '@site/docs/_partial-lfx-run-serve-prereqs.mdx';
+import LfxComponentCategories from '@site/docs/_partial-lfx-component-categories.mdx';
+
+`lfx run` executes a flow once and streams the results to `stdout`. No API key is required.
+
+To expose flows as HTTP endpoints instead, see [Serve flows with LFX](./lfx-serve).
+
+Both `lfx run` and `lfx serve` accept a `.json` flow file or a `.py` Python script.
+
+<LfxPrereqs />
+
+## Run a flow {#run-a-flow}
+
+To run a flow from a JSON file, run:
+
+```bash
+uv run lfx run simple-agent-flow.json "Hello world"
+```
+
+Alternatively, use the `--input-value` flag:
+
+```bash
+uv run lfx run simple-agent-flow.json --input-value "Hello world"
+```
+
+### Other ways to provide a flow
+
+To run a flow JSON from `stdin`, run:
+
+```bash
+cat simple-agent-flow.json | uv run lfx run --stdin \
+  --input-value "Hello world" \
+  --format json | jq '.result'
+```
+
+To fetch and run a flow from a remote API, run:
+
+```bash
+curl https://api.example.com/flows/my-agent-flow | uv run lfx run --stdin \
+  --input-value "Hello world"
+```
+
+To modify a flow before running it, for example, to change the model to `gpt-4o`, run:
+
+```bash
+cat simple-agent-flow.json | jq '(.data.nodes[] | select(.data.node.template.model_name.value) | .data.node.template.model_name.value) = "gpt-4o"' | \
+  uv run lfx run --stdin \
+  --input-value "Hello world" \
+  --format json | jq '.result'
+```
+
+To pass a flow JSON directly as a string argument, run:
+
+```bash
+uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' \
+  --input-value "Hello world"
+```
+
+## Run a flow from a Python script
+
+In addition to JSON files, `lfx run` accepts `.py` Python scripts that define flows programmatically.
+
+Create a file called `simple_agent.py`:
+
+```python
+"""A simple agent flow example.
+
+Usage:
+    uv run lfx run simple_agent.py "How are you?"
+"""
+
+import os
+from pathlib import Path
+
+from lfx import components as cp
+from lfx.graph import Graph
+from lfx.log.logger import LogConfig
+
+
+async def get_graph() -> Graph:
+    log_config = LogConfig(
+        log_level="INFO",
+        log_file=Path("langflow.log"),
+    )
+
+    chat_input = cp.ChatInput()
+    agent = cp.AgentComponent()
+    url_component = cp.URLComponent()
+    tools = await url_component.to_toolkit()
+
+    agent.set(
+        model_name="gpt-4.1-mini",
+        agent_llm="OpenAI",
+        api_key=os.getenv("OPENAI_API_KEY"),
+        input_value=chat_input.message_response,
+        tools=tools,
+    )
+    chat_output = cp.ChatOutput().set(input_value=agent.message_response)
+
+    return Graph(chat_input, chat_output, log_config=log_config)
+```
+
+Run the flow:
+
+```bash
+uv run lfx run simple_agent.py "How are you?" --verbose
+```
+
+For more examples, see the [Complete Agent Example on PyPI](https://pypi.org/project/lfx).
+
+## lfx run options
+
+| Option | Description |
+|---|---|
+| `--check-variables` / `--no-check-variables` | Validate the flow's global variables. Default: check. |
+| `--flow-json` | Load inline JSON flow content as a string. |
+| `--format`, `-f` | Output format: `json`, `text`, `message`, or `result`. Default: `json`. |
+| `--input-value` | Input value to pass to the graph. Required with `--stdin` and `--flow-json`. |
+| `--session-id` | Session ID for conversation tracking. Auto-generated if not set. |
+| `--stdin` | Read JSON flow content from `stdin`. |
+| `--timing` | Include detailed timing information in output. |
+| `--upgrade-flow` | Compatibility mode: `check` reports issues and fails; `safe` applies safe upgrades in memory before running. |
+| `--verbose`, `-v` | Show basic progress and diagnostic output. |
+| `-vv` | Show detailed progress and debug information. |
+| `-vvv` | Show full debugging output including component logs. |
+
+<LfxComponentCategories />
+
+## See also
+
+- [Serve flows with LFX](./lfx-serve)
+- [About LFX](./lfx-overview)
+- [Install LFX](./lfx-install)
+- [Flow DevOps Toolkit SDK](./lfx-devops-sdk.mdx)
+- [Extensions overview](./extensions-overview)
