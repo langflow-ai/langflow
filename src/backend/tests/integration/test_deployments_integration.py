@@ -18,6 +18,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentType,
     ItemResult,
 )
+from sqlalchemy import text
 
 pytestmark = pytest.mark.noclient
 
@@ -217,6 +218,129 @@ async def test_list_deployments_db_mode_syncs_display_name(async_session, active
                 deployment_beta.display_name,
                 deployment_gamma.display_name,
             } == {"Agent Alpha", "Agent Beta", "Agent Gamma"}
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_db_mode_filters_by_deployment_type(async_session, active_user):
+    """Type-scoped DB list returns/prunes only matching local types; other types stay untouched."""
+    with patch("langflow.services.utils.FEATURE_FLAGS.wxo_deployments", new=True):
+        register_builtin_adapters()
+
+        project_a = Folder(name=f"project-a-{uuid4()}", user_id=active_user.id)
+        async_session.add(project_a)
+        await async_session.commit()
+
+        provider_account = await create_provider_account(
+            async_session,
+            user_id=active_user.id,
+            name=f"provider-{uuid4()}",
+            provider_key="watsonx-orchestrate",
+            provider_url="https://api.example.com",
+            provider_tenant_id="tenant-1",
+            api_key="secret",  # pragma: allowlist secret
+        )
+
+        agent_known = await create_deployment(
+            async_session,
+            user_id=active_user.id,
+            project_id=project_a.id,
+            deployment_provider_account_id=provider_account.id,
+            resource_key=f"rk-agent-known-{uuid4()}",
+            display_name="Agent Known",
+            deployment_type=DeploymentType.AGENT,
+        )
+        agent_stale = await create_deployment(
+            async_session,
+            user_id=active_user.id,
+            project_id=project_a.id,
+            deployment_provider_account_id=provider_account.id,
+            resource_key=f"rk-agent-stale-{uuid4()}",
+            display_name="Agent Stale",
+            deployment_type=DeploymentType.AGENT,
+        )
+        other_type = await create_deployment(
+            async_session,
+            user_id=active_user.id,
+            project_id=project_a.id,
+            deployment_provider_account_id=provider_account.id,
+            resource_key=f"rk-other-{uuid4()}",
+            display_name="Other Type",
+            deployment_type=DeploymentType.AGENT,
+        )
+        # Second local type outside the enum catalog so filtering is observable
+        # without expanding DeploymentType for production.
+        await async_session.execute(
+            text("UPDATE deployment SET deployment_type = :deployment_type WHERE id = :id"),
+            {"deployment_type": "other", "id": other_type.id.hex},
+        )
+        await async_session.commit()
+        # Avoid ORM refresh of a value outside DeploymentType.
+        async_session.expunge(other_type)
+
+        provider_items_by_resource_key = {
+            agent_known.resource_key: _provider_deployment(
+                agent_known.resource_key,
+                "tech-known",
+                display_name="Agent Known Synced",
+                description="",
+            ),
+        }
+
+        async def mock_fetch_provider_resource_keys(*args, **kwargs):  # noqa: ARG001
+            resource_keys = kwargs.get("resource_keys", [])
+            # Type-scoped sync must only ask the provider about matching local rows.
+            assert set(resource_keys) <= {agent_known.resource_key, agent_stale.resource_key}
+            assert other_type.resource_key not in resource_keys
+            assert kwargs.get("deployment_type") is DeploymentType.AGENT
+            known = {key for key in resource_keys if key in provider_items_by_resource_key}
+            return known, DeploymentListResult(deployments=[provider_items_by_resource_key[key] for key in known])
+
+        with (
+            patch(
+                "langflow.api.v1.mappers.deployments.helpers.fetch_provider_resource_keys",
+                new_callable=AsyncMock,
+                side_effect=mock_fetch_provider_resource_keys,
+            ),
+            patch(
+                "langflow.api.v1.deployments.resolve_deployment_adapter",
+                return_value=SimpleNamespace(),
+            ),
+            patch(
+                "langflow.api.v1.deployments.get_deployment_mapper",
+                return_value=_NoSnapshotBindingMapper(),
+            ),
+            patch(
+                "langflow.api.v1.mappers.deployments.helpers.get_settings_service",
+                return_value=SimpleNamespace(
+                    settings=SimpleNamespace(
+                        deployment_list_sync_batch_size=500,
+                        deployment_list_sync_max_rounds=2,
+                    )
+                ),
+            ),
+        ):
+            response = await list_deployments(
+                provider_id=provider_account.id,
+                session=async_session,
+                current_user=active_user,
+                # size=1 avoids a short-page backfill; this test is about type
+                # filtering + prune, not keyset refill behavior.
+                params=SimpleNamespace(page=1, size=1),
+                deployment_type=DeploymentType.AGENT,
+                load_from_provider=False,
+            )
+
+        assert response.total == 1
+        assert [item.resource_key for item in response.deployments] == [agent_known.resource_key]
+        await async_session.commit()
+
+        assert await get_deployment_db(async_session, user_id=active_user.id, deployment_id=agent_known.id) is not None
+        assert await get_deployment_db(async_session, user_id=active_user.id, deployment_id=agent_stale.id) is None
+        other_still_present = await async_session.execute(
+            text("SELECT 1 FROM deployment WHERE id = :id AND deployment_type = 'other'"),
+            {"id": other_type.id.hex},
+        )
+        assert other_still_present.first() is not None
 
 
 @pytest.mark.asyncio

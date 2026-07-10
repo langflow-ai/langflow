@@ -892,7 +892,9 @@ async def list_deployments_synced(
 
     Each round fetches a candidate window so one provider lookup reconciles
     stale rows beyond the page. Refill rounds seek after the last processed row
-    to avoid corruption to the offset under concurrent deletes.
+    to avoid offset drift under concurrent deletes. After provider sync finishes,
+    any remaining page slots are backfilled from local rows without another
+    provider check (they may be stale).
 
     ``allowed_ids`` is the DB-layer authorization prefilter, threaded into both
     the page query and the total count so a registered authorization plugin can
@@ -915,46 +917,57 @@ async def list_deployments_synced(
     for _ in range(max_sync_rounds):
         if len(accepted) >= size:
             break
-        batch = await list_deployments_page(
-            db,
-            user_id=user_id,
-            deployment_provider_account_id=provider_id,
-            offset=initial_offset if not cursor_created_at else None,
-            limit=sync_batch_size,
-            flow_version_ids=flow_version_ids,
-            project_id=project_id,
-            allowed_ids=allowed_ids,
-            cursor_created_at=cursor_created_at,
-            cursor_exclude_id=cursor_exclude_id,
-        )
-        if not batch:
-            break
+        try:
+            batch = await list_deployments_page(
+                db,
+                user_id=user_id,
+                deployment_provider_account_id=provider_id,
+                offset=initial_offset if cursor_created_at is None else None,
+                limit=sync_batch_size,
+                flow_version_ids=flow_version_ids,
+                project_id=project_id,
+                deployment_type=deployment_type,
+                allowed_ids=allowed_ids,
+                cursor_created_at=cursor_created_at,
+                cursor_exclude_id=cursor_exclude_id,
+            )
+            if not batch:
+                break
 
-        known, provider_view = await fetch_provider_resource_keys(
-            deployment_adapter=deployment_adapter,
-            user_id=user_id,
-            provider_id=provider_id,
-            db=db,
-            resource_keys=[row.resource_key for row, _, _ in batch],
-            deployment_type=deployment_type,
-        )
-        provider_bindings.extend(deployment_mapper.extract_snapshot_bindings(provider_view))
-        provider_data_by_resource_key.update(deployment_mapper.extract_list_item_provider_data(provider_view))
-        provider_metadata_by_resource_key.update(deployment_mapper.extract_metadata_for_list(provider_view))
+            known, provider_view = await fetch_provider_resource_keys(
+                deployment_adapter=deployment_adapter,
+                user_id=user_id,
+                provider_id=provider_id,
+                db=db,
+                resource_keys=[row.resource_key for row, _, _ in batch],
+                deployment_type=deployment_type,
+            )
+            provider_bindings.extend(deployment_mapper.extract_snapshot_bindings(provider_view))
+            provider_data_by_resource_key.update(deployment_mapper.extract_list_item_provider_data(provider_view))
+            provider_metadata_by_resource_key.update(deployment_mapper.extract_metadata_for_list(provider_view))
 
-        last_row = batch[-1][0]
-        cursor_created_at = last_row.created_at
-        cursor_exclude_id = last_row.id
-        for row, attached_count, matched_flow_versions in batch:
-            if row.resource_key not in known:
-                # Provider `known` is type-filtered; skip other local types instead of deleting as stale.
-                if deployment_type is not None and row.deployment_type != deployment_type:
+            last_row = batch[-1][0]
+            cursor_created_at = last_row.created_at
+            cursor_exclude_id = last_row.id
+            for row, attached_count, matched_flow_versions in batch:
+                if row.resource_key not in known:
+                    # Page rows are already type-filtered in SQL when deployment_type
+                    # is set, so provider-unknown rows are safe to prune as stale.
+                    stale_deployment_owner_pairs.append(DeploymentOwnerPair(owner_id=row.user_id, deployment_id=row.id))
                     continue
-                stale_deployment_owner_pairs.append(DeploymentOwnerPair(owner_id=row.user_id, deployment_id=row.id))
-                continue
-            if len(accepted) < size:
-                accepted.append((row, attached_count, matched_flow_versions))
-                accepted_deployment_ids.append(row.id)
+                if len(accepted) < size:
+                    accepted.append((row, attached_count, matched_flow_versions))
+                    accepted_deployment_ids.append(row.id)
+        except Exception:  # noqa: BLE001
+            # Keep the list path alive: return whatever earlier rounds accepted
+            # and still prune confirmed stales once below.
+            logger.warning(
+                "Deployment list sync round failed for provider %s; continuing with %d accepted row(s)",
+                provider_id,
+                len(accepted),
+                exc_info=True,
+            )
+            break
 
     if stale_deployment_owner_pairs:
         logger.warning(
@@ -964,7 +977,7 @@ async def list_deployments_synced(
         )
         await delete_deployments_by_owner_and_ids(db, deployment_owner_pairs=stale_deployment_owner_pairs)
 
-    # Phase 2: metadata and binding-level sync.
+    # Phase 2: metadata and binding-level sync (provider-confirmed rows only).
     if accepted:
         metadata_updates: list[DeploymentMetadataUpdate] = []
         for row, _attached_count, _matched in accepted:
@@ -982,7 +995,8 @@ async def list_deployments_synced(
 
     # Remove stale local attachments based on provider bindings, then recount.
     # Best-effort - provider or DB failures should not block the list response.
-    if accepted:
+    # Only provider-confirmed IDs: backfill rows below are not binding-synced.
+    if accepted_deployment_ids:
         try:
             async with db.begin_nested():
                 await delete_unbound_attachments(
@@ -1005,12 +1019,40 @@ async def list_deployments_synced(
                 exc_info=True,
             )
 
+    # Pad the response page from local rows after all provider sync is done.
+    # These rows may be stale and are not metadata/binding-synced above.
+    remaining = size - len(accepted)
+    if remaining > 0:
+        try:
+            backfill_batch = await list_deployments_page(
+                db,
+                user_id=user_id,
+                deployment_provider_account_id=provider_id,
+                offset=initial_offset if cursor_created_at is None else None,
+                limit=remaining,
+                flow_version_ids=flow_version_ids,
+                project_id=project_id,
+                deployment_type=deployment_type,
+                allowed_ids=allowed_ids,
+                cursor_created_at=cursor_created_at,
+                cursor_exclude_id=cursor_exclude_id,
+            )
+            accepted.extend(backfill_batch)
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Deployment list backfill failed for provider %s; returning %d accepted row(s)",
+                provider_id,
+                len(accepted),
+                exc_info=True,
+            )
+
     total = await count_deployments_by_provider(
         db,
         user_id=user_id,
         deployment_provider_account_id=provider_id,
         flow_version_ids=flow_version_ids,
         project_id=project_id,
+        deployment_type=deployment_type,
         allowed_ids=allowed_ids,
     )
     return accepted, total, provider_data_by_resource_key
