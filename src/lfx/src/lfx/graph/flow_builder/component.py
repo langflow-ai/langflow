@@ -19,11 +19,8 @@ import yaml
 
 from lfx.graph.flow_builder._utils import node_id as _node_id
 
-# Canvas type for user-authored code components. The frontend resolves this in
-# its global template list and exempts it from the "Update available" check
-# (componentsToIgnoreUpdate). User overlay entries are keyed by class name in
-# the registry so the agent can reference them, but their canvas node must wear
-# this type or the frontend flags them as a missing/outdated component.
+# Assistant-generated code components must wear this canvas type so the frontend
+# exempts them from the "Update available" check (componentsToIgnoreUpdate).
 _CUSTOM_COMPONENT_TYPE = "CustomComponent"
 
 
@@ -83,10 +80,8 @@ def _make_node(
     node_data = copy.deepcopy(registry[component_type])
     _normalize_outputs(node_data)
 
-    # User-overlay (assistant-generated) entries are tagged ``custom``. Strip
-    # the internal marker and label the canvas node as CustomComponent so the
-    # frontend treats it like any user-authored component (no spurious
-    # "Update available" badge). Built-ins keep their own type.
+    # Assistant-generated entries are tagged ``custom`` and relabeled
+    # CustomComponent so the frontend skips the "Update available" badge.
     is_custom = bool(node_data.pop("custom", False))
     node_type = _CUSTOM_COMPONENT_TYPE if is_custom else component_type
 
@@ -102,6 +97,43 @@ def _make_node(
             "showNode": True,
         },
     }
+
+
+def sync_dropdown_selected_outputs(flow: dict) -> None:
+    """Pin dropdown-style source nodes to the output their edges actually use.
+
+    A component whose outputs are a single-active dropdown (multiple outputs,
+    none ``group_outputs``) renders one handle at a time. When a built node
+    carries no ``selected_output``, the canvas auto-selects its FIRST output on
+    mount, which clears the other outputs' ``selected`` flag and makes
+    ``cleanEdges`` drop any edge wired from a non-first output (e.g. a loop
+    feedback edge from ``TypeConverter.data_output``). Recording
+    ``selected_output`` = the wired output stops that auto-flip so the edge
+    survives and the node renders the correct handle. Only applied when every
+    outgoing edge of the node uses the same output (no ambiguity). Idempotent.
+    """
+    edges = flow.get("data", {}).get("edges", [])
+    used_outputs: dict[str, set[str]] = {}
+    for edge in edges:
+        source_id = edge.get("source")
+        name = (edge.get("data") or {}).get("sourceHandle", {}).get("name")
+        if source_id and name:
+            used_outputs.setdefault(source_id, set()).add(name)
+
+    for node in flow.get("data", {}).get("nodes", []):
+        wired = used_outputs.get(_node_id(node))
+        if not wired or len(wired) != 1:
+            continue
+        node_config = node.get("data", {}).get("node", {})
+        outputs = node_config.get("outputs")
+        if not isinstance(outputs, list):
+            continue
+        non_group = [o for o in outputs if isinstance(o, dict) and not o.get("group_outputs")]
+        if len(non_group) <= 1:
+            continue
+        wired_name = next(iter(wired))
+        if any(o.get("name") == wired_name for o in non_group):
+            node["data"]["selected_output"] = wired_name
 
 
 def add_component(

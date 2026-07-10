@@ -9,6 +9,7 @@ from langflow.agentic.helpers.error_handling import (
     MAX_ERROR_MESSAGE_LENGTH,
     MIN_MEANINGFUL_PART_LENGTH,
     _truncate_error_message,
+    build_recovered_notice,
     extract_friendly_error,
 )
 
@@ -310,3 +311,41 @@ class TestBugsAndEdgeCases:
         error = "RATE_LIMIT ERROR"
         result = extract_friendly_error(error)
         assert "rate limit" in result.lower()
+
+
+class TestBuildRecoveredNotice:
+    """The non-fatal notice surfaced when a turn recovers from a model error."""
+
+    def test_fallback_notice_names_failed_and_used_models(self):
+        n = build_recovered_notice(
+            "model_fallback",
+            failed_model="glm-5:cloud",
+            raw_error="this model requires a subscription (status code: 403)",
+            used_model="llama3.2:latest",
+        )
+        assert n["type"] == "model_fallback"
+        assert n["failed_model"] == "glm-5:cloud"
+        assert n["used_model"] == "llama3.2:latest"
+        assert n["reason"]  # a friendly, non-empty reason
+        assert "subscription" in n["raw"].lower()
+
+    def test_remediation_notice_omits_used_model_when_same(self):
+        """Remediation retries the SAME model, so used_model must not duplicate it."""
+        n = build_recovered_notice(
+            "model_remediation",
+            failed_model="gpt-5.6",
+            raw_error="tools not supported on /v1/responses",
+            used_model="gpt-5.6",
+        )
+        assert n["type"] == "model_remediation"
+        assert n["failed_model"] == "gpt-5.6"
+        assert "used_model" not in n
+
+    def test_notice_survives_missing_raw_error(self):
+        n = build_recovered_notice("model_fallback", failed_model="x", raw_error=None, used_model="y")
+        assert n["reason"] == "Model error"
+        assert "raw" not in n
+
+    def test_raw_is_truncated(self):
+        n = build_recovered_notice("model_fallback", failed_model="x", raw_error="z" * 900, used_model="y")
+        assert len(n["raw"]) == 500

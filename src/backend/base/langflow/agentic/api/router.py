@@ -31,6 +31,7 @@ from langflow.agentic.services.flow_types import (
 )
 from langflow.agentic.services.provider_service import (
     PREFERRED_PROVIDERS,
+    build_live_only_provider_entries,
     get_default_model,
     get_enabled_providers_for_user,
     list_installed_tool_calling_models,
@@ -249,6 +250,16 @@ async def check_assistant_config(
                     }
                 )
 
+    # Live providers with an all-deprecated static catalog (e.g. IBM WatsonX) are dropped above before their live fetch runs; re-add them from live tool-calling models.
+    if enabled_providers:
+        all_providers.extend(
+            build_live_only_provider_entries(
+                enabled_providers,
+                {p["name"] for p in all_providers},
+                user_id,
+            )
+        )
+
     default_provider = None
     default_model = None
 
@@ -324,6 +335,9 @@ async def assist_stream(
             model_name=ctx.model_name,
             api_key_var=ctx.api_key_name,
             is_disconnected=http_request.is_disconnected,
+            is_superuser=bool(current_user.is_superuser),
+            history_limit=request.history_limit,
+            iterations_limit=request.iterations_limit,
         ),
         media_type="text/event-stream",
         headers={

@@ -23,6 +23,7 @@ from ._state import (
     _emit,
     _ensure_working_flow,
     _load_registry_user_aware,
+    emit_tool_start,
     get_working_flow,
     isolate_flow_run_context,
 )
@@ -118,32 +119,35 @@ class BuildFlowFromSpec(Component):
     ]
 
     def build_flow(self) -> Data:
+        emit_tool_start("build_flow")
         existing = get_working_flow()
         if existing and existing.get("data", {}).get("nodes"):
             node_count = len(existing["data"]["nodes"])
             logger.warning("build_flow called on non-empty canvas (%d nodes) -- replacing", node_count)
 
-        # Pass the user-aware registry so user-registered Components
-        # (created via Layer-2 validated generation) are addressable in
-        # the spec by their class name.
+        # User-aware registry: user-registered Components (Layer-2 validated
+        # generation) stay addressable in the spec by their class name.
         result = build_flow_from_spec(self.spec, registry=_load_registry_user_aware())
         if "error" in result:
             error_msg = f"Flow build failed: {result['error']}"
             if "details" in result:
                 error_msg += f"\nDetails: {result['details']}"
+            # Anti-churn: without this the agent restarts discovery after a
+            # failed build and exhausts its recursion budget (loop_flow eval).
+            error_msg += (
+                "\nCorrect the spec using the error above and call build_flow again NOW — "
+                "do NOT re-run search_components or describe_component for components "
+                "you already inspected this turn."
+            )
             logger.warning("build_flow_from_spec failed: %s", result["error"])
             result["text"] = error_msg
         elif "flow" in result:
             orphan_ids = _find_orphan_nodes(result["flow"])
-            # A single-component flow has no edges by definition — it is a
-            # valid standalone flow (e.g. the agent built one component to
-            # run/inspect), NOT an orphan mistake. Only reject when 2+
-            # nodes exist but wiring is missing.
+            # A single-component flow is a valid standalone build (no edges by
+            # definition) — only reject when 2+ nodes exist but wiring is missing.
             if orphan_ids and result.get("node_count", len(orphan_ids)) > 1:
-                # Reject orphan-bearing flows so the LLM retries instead of
-                # rendering an unconnected component on the user's canvas.
-                # The agent prompt explicitly forbids orphans; this is the
-                # safety net for when it slips through anyway.
+                # Safety net for the prompt-level orphan ban: reject so the LLM
+                # retries instead of rendering an unconnected component.
                 error_msg = (
                     f"Flow build rejected: orphan components with no edges: {orphan_ids}. "
                     "Either wire each component into the flow or remove it from the spec, "
@@ -155,13 +159,8 @@ class BuildFlowFromSpec(Component):
                 f"Flow '{result['name']}' built successfully "
                 f"({result['node_count']} nodes, {result['edge_count']} edges)."
             )
-            # Mutate the EXISTING working-flow dict in place instead of
-            # rebinding the ContextVar. A `.set()` rebind is invisible
-            # across tool-execution contexts, so a later `run_flow` tool
-            # call (different context) would still see the old empty flow
-            # ("There is no flow on the canvas to run"). In-place mutation
-            # of the shared object is visible everywhere — same proven
-            # pattern as `configure_component` (`fb_configure(flow, ...)`).
+            # Mutate the working-flow dict in place: a ContextVar `.set()` rebind is
+            # invisible to sibling tool contexts (run_flow would see the old flow).
             working = _ensure_working_flow()
             working.clear()
             working.update(result["flow"])
@@ -272,21 +271,12 @@ class RunFlow(Component):
         except ImportError:
             user_id = None
 
-        # The run engine (ChatOutput/session) requires a valid UUID flow id;
-        # a non-UUID placeholder makes the run fail with "badly formed
-        # hexadecimal UUID string". Fall back to a fresh uuid4 when the
-        # canvas has no persisted id yet.
+        # The run engine requires a valid UUID flow id ("badly formed hexadecimal
+        # UUID string" otherwise); fall back to a fresh uuid4 when none persisted.
         flow_id = _current_flow_id_var.get() or str(uuid4())
 
-        # The assistant runs with a verified provider/model/api_key. An Agent
-        # that has NO model (LLM forgot to set one) would fail the run with
-        # "No model selected"/"Authentication failed", so fill those in with
-        # the assistant's working credential. But an Agent the user/agent
-        # EXPLICITLY gave a model (e.g. "use gpt-5.4") must KEEP that model on
-        # the canvas — never silently swapped for the assistant's own model.
-        # ``overwrite_existing_model=False`` preserves a set model and only
-        # tops up the credential when the provider matches (see
-        # inject_model_into_flow). Deterministic and LLM-agnostic.
+        # Model-less Agents get the assistant's verified credential, but a model the
+        # user explicitly set must never be swapped (overwrite_existing_model=False).
         try:
             from langflow.agentic.services.agent_run_context import (
                 current_agent_run_model,
@@ -301,10 +291,8 @@ class RunFlow(Component):
             run_provider = run_model.get("provider")
             run_model_name = run_model.get("model_name")
             if req_provider and req_model_name:
-                # The user EXPLICITLY named a model — enforce it on every Agent
-                # (overwrite), so the canvas reflects exactly what they asked for
-                # and never the assistant's own runtime model. This is the fix for
-                # "says gpt-5.4 but the canvas shows gpt-5.5".
+                # User explicitly named a model — enforce it on every Agent so the
+                # canvas never shows the assistant's own runtime model instead.
                 inject_model_into_flow(
                     flow,
                     req_provider,
@@ -328,18 +316,14 @@ class RunFlow(Component):
         result = await run_working_flow(flow_data=flow, flow_id=flow_id, user_id=user_id)
         if "error" in result:
             return Data(data={"error": result["error"], "text": result["error"]})
-        # Deterministic, LLM/language-agnostic signal that the flow ACTUALLY
-        # ran this turn. The streaming generator uses it to apply a built
-        # flow to the canvas (running a flow the user can't see is
-        # contradictory) instead of guessing intent from the prompt wording.
-        # Emitted only on success — a failed run must never claim it ran.
+        # Deterministic "flow actually ran" signal the streaming generator uses to
+        # force the built flow onto the canvas. Success-only: a failed run never claims it ran.
         _emit("flow_ran", flow_id=flow_id)
         text = result.get("result", "")
         metrics = result.get("metrics") or {}
         summary = _format_run_metrics(metrics)
-        # The LLM only reads `text`, so the performance summary must be inline
-        # for the agent to be able to report time/tokens; `metrics` is kept
-        # structured for any programmatic use.
+        # The LLM only reads `text`, so the performance summary must be inline;
+        # `metrics` stays structured for programmatic use.
         text_with_metrics = f"{text}\n\n{summary}" if summary else text
         return Data(data={"text": text_with_metrics, "result": text, "metrics": metrics})
 
@@ -406,18 +390,15 @@ class GenerateComponent(Component):
             user_id = None
             model = {}
 
-        # Give the internal generation sub-flow a valid (ephemeral) flow id
-        # so its tracing doesn't log "Invalid flow_id ... None" and persist
-        # under a sentinel on every component generation.
+        # Ephemeral flow id keeps the sub-flow's tracing from logging
+        # "Invalid flow_id ... None" and persisting under a sentinel.
         from lfx.mcp.tool_cache import reset_tool_cache
 
         flow_id = str(uuid4())
 
         async def _isolated_generation() -> dict:
-            # This nested pipeline drains flow events and resets the
-            # working flow internally. Run it with fresh per-run state so
-            # it can neither steal the parent agent loop's queued events
-            # nor wipe the canvas the agent already built this turn.
+            # Fresh per-run state: the nested pipeline must neither steal the parent
+            # loop's queued events nor wipe the canvas built this turn.
             isolate_flow_run_context()
             reset_tool_cache()
             reset_file_events()
@@ -431,9 +412,8 @@ class GenerateComponent(Component):
                 api_key_var=model.get("api_key_var"),
             )
 
-        # asyncio.create_task runs the coroutine in a COPY of the current
-        # context; ContextVar writes inside it (incl. the isolate/reset
-        # calls above) do not propagate back to the parent agent loop.
+        # create_task copies the context: ContextVar writes inside it
+        # (incl. isolate/reset above) never propagate back to the parent loop.
         result = await asyncio.create_task(_isolated_generation())
 
         if result.get("validated"):
@@ -445,10 +425,8 @@ class GenerateComponent(Component):
             return Data(data={"text": text, "class_name": class_name, "component_code": result.get("component_code")})
 
         err = result.get("validation_error") or result.get("result") or "Component generation failed."
-        # Surface the failure as a structured signal, not just an error string
-        # the agent can bury in prose or paper over by substituting a generic
-        # component. assistant_service drains this and emits a `validation_failed`
-        # progress event so the user is told honestly the component wasn't built.
+        # Structured failure signal (not prose the agent can bury): assistant_service
+        # drains it into a validation_failed progress event for the user.
         try:
             from langflow.agentic.services.component_events import emit_component_generation_failed
 

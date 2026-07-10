@@ -55,16 +55,8 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
     return await handle_call_tool(name, arguments, server)
 
 
-########################################################
-# The transports handle the full ASGI response.
-# FastAPI still expects the endpoint to return
-# a Response, while Starlette's middleware
-# stream validation panics when
-# a http.response.start message
-# is encountered twice within the same stream.
-# This class nullifies the redundant
-# response to end streams gracefully.
-########################################################
+# The MCP transports emit the full ASGI response themselves; returning a real
+# Response would start the stream twice, so this no-op satisfies FastAPI instead.
 class ResponseNoOp(Response):
     async def __call__(self, scope, receive, send) -> None:  # noqa: ARG002
         return
@@ -79,9 +71,6 @@ def find_validation_error(exc):
     return None
 
 
-################################################################################
-# SSE Transport
-################################################################################
 sse = SseServerTransport("/api/v1/mcp/")
 
 
@@ -155,17 +144,15 @@ async def handle_messages(request: Request):
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}") from e
 
 
-################################################################################
-# Streamable HTTP Transport
-################################################################################
 class StreamableHTTP:
-    def __init__(self) -> None:
+    def __init__(self, mcp_server: Server | None = None) -> None:
+        # Default is this module's flows-as-tools server; the agentic MCP passes its own.
+        self._server = mcp_server if mcp_server is not None else server
         self.session_manager: StreamableHTTPSessionManager | None = None
         self._started = False
         self._start_stop_lock = asyncio.Lock()
-        # own the lifecycle of the session manager
-        # inside an asyncio task to ensure that
-        # __aenter__ and __aexit__ happen in the same task
+        # A dedicated task owns the manager lifecycle so __aenter__ and
+        # __aexit__ of its run() context happen in the same task.
         self._mgr_task: asyncio.Task | None = None
         self._mgr_ready: asyncio.Event | None = None
         self._mgr_close: asyncio.Event | None = None
@@ -191,7 +178,7 @@ class StreamableHTTP:
                 await logger.adebug("Streamable HTTP session manager already running; skipping start")
                 return
             try:
-                self.session_manager = StreamableHTTPSessionManager(server, stateless=stateless)
+                self.session_manager = StreamableHTTPSessionManager(self._server, stateless=stateless)
                 self._mgr_ready = asyncio.Event()
                 self._mgr_close = asyncio.Event()
                 self._mgr_task = asyncio.create_task(self._start_session_manager())

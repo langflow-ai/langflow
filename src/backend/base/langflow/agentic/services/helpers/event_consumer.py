@@ -69,8 +69,11 @@ async def consume_streaming_events(
             event_type, data = parse_event_data(event_data)
             if event_type == "token":
                 chunk = data.get("chunk", "")
-                if chunk:
+                # Responses API streams an empty content-block list first; its "[]" stringification would flash before the real text.
+                if chunk and chunk.strip() != "[]":
                     yield ("token", chunk)
+            elif event_type == "tool_start":
+                yield ("tool_start", data)
             elif event_type == "flow_preview":
                 yield ("flow_preview", data)
             elif event_type == "end":

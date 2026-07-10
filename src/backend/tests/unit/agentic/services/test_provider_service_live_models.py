@@ -237,3 +237,85 @@ class TestLiveFetchFailOpen:
         assert candidates
         assert candidates[0] == "llama3.3"
         assert default == "llama3.3"
+
+
+class TestBuildLiveOnlyProviderEntries:
+    """A live provider whose STATIC catalog is empty/all-deprecated (e.g. IBM
+    WatsonX) is dropped by get_unified_models_detailed(include_deprecated=False)
+    before its live fetch runs. This helper re-adds it via a direct live fetch."""
+
+    def test_adds_watsonx_when_only_live_models_exist(self):
+        from langflow.agentic.services.provider_service import build_live_only_provider_entries
+
+        with (
+            patch(f"{MODULE}.list_installed_tool_calling_models") as m_installed,
+            patch(f"{MODULE}.get_default_model") as m_default,
+        ):
+            m_installed.side_effect = lambda p, _uid: (
+                ["meta-llama/llama-3-3-70b-instruct", "mistral-large-2512"] if p == "IBM WatsonX" else []
+            )
+            m_default.return_value = "meta-llama/llama-3-3-70b-instruct"
+
+            entries = build_live_only_provider_entries(
+                enabled_providers=["OpenAI", "IBM WatsonX"],
+                existing_provider_names=set(),
+                user_id="u1",
+            )
+
+        assert len(entries) == 1
+        wx = entries[0]
+        assert wx["name"] == "IBM WatsonX"
+        assert wx["configured"] is True
+        assert wx["default_model"] == "meta-llama/llama-3-3-70b-instruct"
+        assert {m["name"] for m in wx["models"]} == {
+            "meta-llama/llama-3-3-70b-instruct",
+            "mistral-large-2512",
+        }
+
+    def test_skips_provider_already_present(self):
+        from langflow.agentic.services.provider_service import build_live_only_provider_entries
+
+        with patch(f"{MODULE}.list_installed_tool_calling_models") as m_installed:
+            m_installed.return_value = ["x"]
+            entries = build_live_only_provider_entries(
+                enabled_providers=["IBM WatsonX"],
+                existing_provider_names={"IBM WatsonX"},
+                user_id="u1",
+            )
+        assert entries == []
+        m_installed.assert_not_called()
+
+    def test_skips_provider_not_enabled(self):
+        from langflow.agentic.services.provider_service import build_live_only_provider_entries
+
+        entries = build_live_only_provider_entries(
+            enabled_providers=["OpenAI"],
+            existing_provider_names=set(),
+            user_id="u1",
+        )
+        assert entries == []
+
+    def test_skips_live_provider_with_no_installed_models(self):
+        from langflow.agentic.services.provider_service import build_live_only_provider_entries
+
+        with patch(f"{MODULE}.list_installed_tool_calling_models", return_value=[]):
+            entries = build_live_only_provider_entries(
+                enabled_providers=["IBM WatsonX"],
+                existing_provider_names=set(),
+                user_id="u1",
+            )
+        assert entries == []
+
+    def test_default_model_falls_back_to_first_when_catalog_default_absent(self):
+        from langflow.agentic.services.provider_service import build_live_only_provider_entries
+
+        with (
+            patch(f"{MODULE}.list_installed_tool_calling_models", return_value=["ibm/granite-4-h-small"]),
+            patch(f"{MODULE}.get_default_model", return_value="some-model-not-installed"),
+        ):
+            entries = build_live_only_provider_entries(
+                enabled_providers=["IBM WatsonX"],
+                existing_provider_names=set(),
+                user_id="u1",
+            )
+        assert entries[0]["default_model"] == "ibm/granite-4-h-small"

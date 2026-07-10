@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from fastapi import HTTPException
+from lfx.log.logger import logger
 from lfx.mcp.flow_builder_tools import get_working_flow
 
 from langflow.agentic.api.router import _resolve_assistant_context
@@ -24,10 +25,15 @@ from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_storage_service
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+    ProgressCallback = Callable[[dict[str, Any]], Awaitable[None]]
 
 DEFAULT_FLOW_NAME = "Assistant Flow"
 
@@ -124,7 +130,7 @@ def _apply_field_edit(flow_data: dict[str, Any], edit: dict[str, Any]) -> None:
 
 
 async def _consume_stream(
-    stream, initial_data: dict[str, Any] | None
+    stream, initial_data: dict[str, Any] | None, on_progress: ProgressCallback | None = None
 ) -> tuple[_CanvasState, dict[str, Any] | None, str | None, str | None, list[dict[str, Any]]]:
     """Drain the SSE stream into (canvas_state, working_snapshot, result_text, error_text, field_edits).
 
@@ -147,7 +153,14 @@ async def _consume_stream(
             except json.JSONDecodeError:
                 continue
             event_type = event.get("event")
-            if event_type == "flow_update":
+            if event_type == "progress" and on_progress is not None:
+                # Forwarding is best-effort: a broken notification channel must
+                # never abort the assistant run itself.
+                try:
+                    await on_progress(event)
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug(f"Assistant progress forwarding failed; continuing the run: {exc}")
+            elif event_type == "flow_update":
                 canvas.apply(event)
                 if event.get("action") == "edit_field":
                     field_edits.append(event)
@@ -171,12 +184,15 @@ async def run_assistant_and_persist(
     provider: str | None = None,
     model_name: str | None = None,
     session_id: str | None = None,
+    on_progress: ProgressCallback | None = None,
 ) -> dict[str, Any]:
     """Run the assistant against a flow and persist any canvas changes.
 
-    Returns a dict with: ``flow_id``, ``link``, ``result`` (assistant
-    reply text), ``flow_changed``, ``session_id``, ``provider`` and
-    ``model_name``.
+    ``on_progress`` (optional) is awaited with each raw ``progress`` SSE event
+    so callers (e.g. the MCP tool) can stream step updates; failures there are
+    swallowed so they never break the run. Returns a dict with: ``flow_id``,
+    ``link``, ``result`` (assistant reply text), ``flow_changed``,
+    ``session_id``, ``provider`` and ``model_name``.
     """
     flow, created_new = await _ensure_flow(session, user_id, flow_id)
 
@@ -189,6 +205,9 @@ async def run_assistant_and_persist(
         max_retries=None,
     )
     ctx = await _resolve_assistant_context(request, user_id, session)
+    # raw_cause on SSE error details is superuser-only; headless MCP callers
+    # authenticate as a real user, so read the flag from the DB row.
+    acting_user = await session.get(User, user_id)
 
     stream = execute_flow_with_validation_streaming(
         flow_filename=LANGFLOW_ASSISTANT_FLOW,
@@ -201,8 +220,11 @@ async def run_assistant_and_persist(
         model_name=ctx.model_name,
         api_key_var=ctx.api_key_name,
         apply_edits_immediately=True,
+        is_superuser=bool(getattr(acting_user, "is_superuser", False)),
     )
-    canvas, working_snapshot, result_text, error_text, field_edits = await _consume_stream(stream, flow.data)
+    canvas, working_snapshot, result_text, error_text, field_edits = await _consume_stream(
+        stream, flow.data, on_progress
+    )
 
     if canvas.changed:
         flow_data = working_snapshot["data"] if working_snapshot else canvas.data

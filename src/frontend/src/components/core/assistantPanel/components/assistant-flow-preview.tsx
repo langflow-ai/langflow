@@ -5,7 +5,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
 } from "@xyflow/react";
-import { ArrowRight, Check, GitBranch, X } from "lucide-react";
+import { ArrowRight, Check, GitBranch, Undo2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import useFlowStore from "@/stores/flowStore";
 import type { FlowProposalStatus } from "../assistant-panel.types";
@@ -51,6 +51,11 @@ interface AssistantFlowPreviewProps {
    */
   onApply?: (mode: "replace" | "add") => void;
   onDismiss?: () => void;
+  /** Client-side undo: restore the pre-apply canvas snapshot. */
+  onRevert?: () => void;
+  /** A pre-apply snapshot exists, so Revert is offered in the applied state
+   * AND after the card re-enables (pending) so the last apply stays undoable. */
+  canRevert?: boolean;
 }
 
 const defaultNodeStyle = {
@@ -119,6 +124,8 @@ export function AssistantFlowPreview({
   status,
   onApply,
   onDismiss,
+  onRevert,
+  canRevert = false,
 }: AssistantFlowPreviewProps) {
   const [showApproved, setShowApproved] = useState(false);
   const paste = useFlowStore((state) => state.paste);
@@ -148,6 +155,19 @@ export function AssistantFlowPreview({
     setShowApproved(true);
     setTimeout(() => setShowApproved(false), APPROVED_DISPLAY_DURATION_MS);
   }, [flowPreview.flow, paste]);
+
+  const revertButton = (
+    <button
+      type="button"
+      data-testid="assistant-flow-revert-button"
+      className={GHOST_SECONDARY_BUTTON}
+      onClick={() => onRevert?.()}
+      title="Restore the canvas to its state before this flow was applied"
+    >
+      <Undo2 className="h-3.5 w-3.5" />
+      <span>Revert</span>
+    </button>
+  );
 
   return (
     <div className="max-w-[80%] py-1">
@@ -240,15 +260,21 @@ export function AssistantFlowPreview({
             <X className="h-3.5 w-3.5" />
             <span>Dismiss</span>
           </button>
+          {/* After an apply the card re-enables but the last apply stays
+              undoable until the user reverts or applies again. */}
+          {canRevert && revertButton}
         </>
       );
     }
     if (status === "applied") {
       return (
-        <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-accent-emerald-foreground">
-          <Check className="h-3.5 w-3.5" />
-          <span>Added to canvas</span>
-        </div>
+        <>
+          <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-accent-emerald-foreground">
+            <Check className="h-3.5 w-3.5" />
+            <span>Added to canvas</span>
+          </div>
+          {revertButton}
+        </>
       );
     }
     if (status === "dismissed") {

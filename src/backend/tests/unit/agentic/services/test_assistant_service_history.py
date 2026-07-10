@@ -224,3 +224,110 @@ class TestCrossTenantIsolation:
 
         assert "how do I add Memory?" in wrapped
         assert "Conversation history" in wrapped
+
+
+class TestHistoryCostBounds:
+    """The injected history is a per-iteration prompt cost.
+
+    Every agent iteration re-sends it, so injection must be bounded — the
+    buffer may retain MAX_TURNS_PER_SESSION turns, but only HISTORY_TURN_LIMIT
+    of them (each field capped at MAX_TURN_FIELD_CHARS) reach the prompt.
+    """
+
+    def test_inject_history_should_cap_turns_to_history_turn_limit(self, fresh_buffer, monkeypatch):
+        from langflow.agentic.services.assistant_service import inject_conversation_history
+        from langflow.agentic.services.conversation_buffer import HISTORY_TURN_LIMIT
+
+        # Isolate the default cap from an ambient LANGFLOW_ASSISTANT_HISTORY_TURNS.
+        monkeypatch.delenv("LANGFLOW_ASSISTANT_HISTORY_TURNS", raising=False)
+        total = HISTORY_TURN_LIMIT + 3
+        for i in range(total):
+            fresh_buffer.push("alice", "s1", ConversationTurn(user=f"question-{i}", assistant=f"answer-{i}"))
+
+        wrapped = inject_conversation_history(user_id="alice", session_id="s1", input_value="next")
+
+        for i in range(total - HISTORY_TURN_LIMIT):
+            assert f"question-{i}" not in wrapped
+        for i in range(total - HISTORY_TURN_LIMIT, total):
+            assert f"question-{i}" in wrapped
+
+    def test_inject_history_should_truncate_overlong_fields(self, fresh_buffer):
+        from langflow.agentic.services.assistant_service import inject_conversation_history
+        from langflow.agentic.services.conversation_buffer import MAX_TURN_FIELD_CHARS
+
+        long_reply = "x" * (MAX_TURN_FIELD_CHARS * 3)
+        fresh_buffer.push("alice", "s1", ConversationTurn(user="short", assistant=long_reply))
+
+        wrapped = inject_conversation_history(user_id="alice", session_id="s1", input_value="next")
+
+        assert long_reply not in wrapped
+        assert "[truncated]" in wrapped
+        assert len(wrapped) < MAX_TURN_FIELD_CHARS * 2
+
+    def test_history_turn_limit_should_be_env_tunable(self, fresh_buffer, monkeypatch):
+        from langflow.agentic.services.assistant_service import inject_conversation_history
+
+        monkeypatch.setenv("LANGFLOW_ASSISTANT_HISTORY_TURNS", "2")
+        for i in range(5):
+            fresh_buffer.push("alice", "s1", ConversationTurn(user=f"question-{i}", assistant=f"answer-{i}"))
+
+        wrapped = inject_conversation_history(user_id="alice", session_id="s1", input_value="next")
+
+        assert "question-2" not in wrapped
+        assert "question-3" in wrapped
+        assert "question-4" in wrapped
+
+    def test_history_turns_env_zero_should_disable_injection_entirely(self, fresh_buffer, monkeypatch):
+        # limit=0 must mean "no history", not "all history" (turns[-0:] bug).
+        from langflow.agentic.services.assistant_service import inject_conversation_history
+
+        monkeypatch.setenv("LANGFLOW_ASSISTANT_HISTORY_TURNS", "0")
+        for i in range(3):
+            fresh_buffer.push("alice", "s1", ConversationTurn(user=f"question-{i}", assistant=f"answer-{i}"))
+
+        wrapped = inject_conversation_history(user_id="alice", session_id="s1", input_value="next")
+
+        assert wrapped == "next"
+
+    def test_invalid_env_value_should_fall_back_to_default(self, fresh_buffer, monkeypatch):
+        from langflow.agentic.services.assistant_service import inject_conversation_history
+        from langflow.agentic.services.conversation_buffer import HISTORY_TURN_LIMIT
+
+        monkeypatch.setenv("LANGFLOW_ASSISTANT_HISTORY_TURNS", "not-a-number")
+        total = HISTORY_TURN_LIMIT + 2
+        for i in range(total):
+            fresh_buffer.push("alice", "s1", ConversationTurn(user=f"question-{i}", assistant=f"answer-{i}"))
+
+        wrapped = inject_conversation_history(user_id="alice", session_id="s1", input_value="next")
+
+        assert f"question-{total - 1}" in wrapped
+        assert "question-0" not in wrapped
+
+
+class TestHistoryLimitOverride:
+    """The /history command passes an explicit limit that beats the env default."""
+
+    def test_limit_override_caps_injection_regardless_of_env(self, fresh_buffer, monkeypatch):
+        from langflow.agentic.services.assistant_service import inject_conversation_history
+
+        monkeypatch.setenv("LANGFLOW_ASSISTANT_HISTORY_TURNS", "6")
+        for i in range(5):
+            fresh_buffer.push("alice", "s1", ConversationTurn(user=f"q-{i}", assistant=f"a-{i}"))
+
+        wrapped = inject_conversation_history(
+            user_id="alice", session_id="s1", input_value="next", limit_override=2
+        )
+
+        # Only the last 2 turns injected, despite the env allowing 6.
+        assert "q-4" in wrapped
+        assert "q-3" in wrapped
+        assert "q-2" not in wrapped
+
+    def test_limit_override_zero_injects_nothing(self, fresh_buffer):
+        from langflow.agentic.services.assistant_service import inject_conversation_history
+
+        fresh_buffer.push("alice", "s1", ConversationTurn(user="q-0", assistant="a-0"))
+        wrapped = inject_conversation_history(
+            user_id="alice", session_id="s1", input_value="next", limit_override=0
+        )
+        assert wrapped == "next"

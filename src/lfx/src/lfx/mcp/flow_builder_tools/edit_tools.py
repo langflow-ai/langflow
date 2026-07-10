@@ -17,7 +17,14 @@ from lfx.custom import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema import Data
 
-from ._state import _emit, _find_node, _readable_preview, get_working_flow, should_apply_edits_live
+from ._state import (
+    _emit,
+    _find_node,
+    _readable_preview,
+    emit_tool_start,
+    get_working_flow,
+    should_apply_edits_live,
+)
 
 
 def emit_field_edit_proposal(flow: dict, component_id: str, field_name: str, new_value: object) -> bool:
@@ -98,6 +105,7 @@ class ProposeFieldEdit(Component):
     ]
 
     def propose_field_edit(self) -> Data:
+        emit_tool_start("propose_field_edit", component_id=self.component_id, field=self.field_name)
         flow = get_working_flow()
         if flow is None:
             return Data(data={"error": "No flow loaded. Cannot propose edits on an empty canvas."})

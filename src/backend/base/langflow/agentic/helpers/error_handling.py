@@ -10,13 +10,10 @@ if TYPE_CHECKING:
 
 MAX_ERROR_MESSAGE_LENGTH = 150
 MIN_MEANINGFUL_PART_LENGTH = 10
+MAX_RAW_CAUSE_LENGTH = 2000
 
-# Substrings (case-insensitive) that identify a *model unavailable* error
-# — e.g. OpenAI 403 model_not_found ("Project ... does not have access to
-# model ..."), Anthropic equivalent, or a runtime check that flagged the
-# selected model as missing from the provider's catalog. Used by the
-# assistant streamer to decide whether to fall back to the next candidate
-# model on the same provider.
+# Case-insensitive markers of a *model unavailable* error (OpenAI 403 model_not_found,
+# Anthropic equivalent, Ollama not-installed 404 / cloud-only 403) — drives model fallback.
 _MODEL_UNAVAILABLE_MARKERS: tuple[str, ...] = (
     "model_not_found",
     "does not have access to model",
@@ -24,39 +21,64 @@ _MODEL_UNAVAILABLE_MARKERS: tuple[str, ...] = (
     "the model does not exist",
     "model not available",
     "no access to model",
-    # Ollama: not-installed 404 (full suffix so a bad-URL "404 page not found" never matches) + cloud-only 403.
     "not found (status code: 404)",
     "requires a subscription",
 )
 
-ERROR_PATTERNS: list[tuple[list[str], str]] = [
+# (patterns, friendly message, recommendation) — patterns matched case-insensitively.
+# ERROR_PATTERNS below preserves the historical (patterns, message) shape for consumers.
+_ERROR_RULES: list[tuple[list[str], str, str]] = [
     (
         ["recursion limit", "graph_recursion_limit"],
         "The agent ran out of steps before finishing. Try again, or break the request into smaller parts.",
+        "Break the request into smaller parts and try again.",
     ),
     (
         ["error parsing tool call"],
         "The model produced a malformed tool call. This is usually transient — please try again.",
+        "Try again — this failure is usually transient.",
     ),
     (
         ["rate_limit", "rate limit", "429", "consumption_limit"],
         "Rate limit exceeded. Please wait a moment and try again.",
+        "Wait a moment and retry the request.",
     ),
-    (["authentication", "api_key", "unauthorized", "401"], "Authentication failed. Check your API key."),
-    (["quota", "billing", "insufficient"], "API quota exceeded. Please check your account billing."),
-    (["timeout", "timed out"], "Request timed out. Please try again."),
-    (["connection", "network"], "Connection error. Please check your network and try again."),
-    (["500", "internal server error"], "Server error. Please try again later."),
+    (
+        ["authentication", "api_key", "unauthorized", "401"],
+        "Authentication failed. Check your API key.",
+        "Check the API key in Settings → Model Providers.",
+    ),
+    (
+        ["quota", "billing", "insufficient"],
+        "API quota exceeded. Please check your account billing.",
+        "Review your provider account's billing and quota.",
+    ),
+    (
+        ["timeout", "timed out"],
+        "Request timed out. Please try again.",
+        "Try again; if it keeps timing out, check the provider's status.",
+    ),
+    (
+        ["connection", "network"],
+        "Connection error. Please check your network and try again.",
+        "Check your network connection and try again.",
+    ),
+    (
+        ["500", "internal server error"],
+        "Server error. Please try again later.",
+        "Try again later — the provider reported an internal error.",
+    ),
 ]
+
+ERROR_PATTERNS: list[tuple[list[str], str]] = [(patterns, message) for patterns, message, _ in _ERROR_RULES]
 
 
 def extract_friendly_error(error_msg: str) -> str:
     """Convert technical API errors into user-friendly messages."""
     error_lower = error_msg.lower()
 
-    # Pydantic schema validation errors — checked BEFORE the generic pattern loop
-    # so a message like "HTTPException 500: 1 validation error for InputSchema..."
-    # is not masked by the "500" → "Server error" fallback.
+    # Checked BEFORE the pattern loop so "HTTPException 500: 1 validation error for
+    # InputSchema..." is not masked by the "500" → "Server error" fallback.
     schema_error_terms = ("validation error for", "input should be a valid", "pydantic.validationerror")
     if any(term in error_lower for term in schema_error_terms):
         return (
@@ -75,11 +97,8 @@ def extract_friendly_error(error_msg: str) -> str:
     if "content" in error_lower and any(term in error_lower for term in ["filter", "policy", "safety"]):
         return "Request blocked by content policy. Please modify your prompt."
 
-    # Bug 4 [P2] — preserve diagnostic context. Many ``FlowExecutionError``s
-    # arrive wrapped as ``"Error building Component X: <real cause>"``. The
-    # default colon-split truncation would return the wrapper prefix and
-    # discard the actually useful detail (PR-12575 Bug 4). Try to surface
-    # the deepest meaningful cause before falling back to plain truncation.
+    # PR-12575 Bug 4 — surface the deepest meaningful cause before plain truncation,
+    # so "Error building Component X: <real cause>" doesn't collapse to the wrapper.
     deep_cause = _extract_deepest_meaningful_cause(error_msg)
     if deep_cause:
         return _truncate_error_message(deep_cause)
@@ -87,15 +106,10 @@ def extract_friendly_error(error_msg: str) -> str:
     return _truncate_error_message(error_msg)
 
 
-# Matches a Python-repr or JSON-style ``'message': '...'`` / ``"message": "..."``
-# value as it appears in provider client error reprs (OpenAI, Anthropic, etc.).
+# Python-repr / JSON ``'message': '...'`` value as it appears in provider client error reprs.
 _PROVIDER_MESSAGE_RE = re.compile(r"""['"]message['"]\s*:\s*['"]([^'"]+)['"]""")
-# Generic wrapper prefixes whose body up to the first ``:`` is uninformative
-# on its own — without unwrapping, the default colon-split truncation in
-# ``_truncate_error_message`` returns just the wrapper (e.g. ``"Error
-# building Component"`` / ``"Error running graph"``) and discards the
-# underlying cause. Each entry must be a literal prefix the message lstrips
-# to; the cause is the substring after the first ``:``.
+# Wrapper prefixes whose body up to the first ``:`` is uninformative on its own;
+# the actionable cause is the substring after the first colon.
 _WRAPPER_PREFIXES: tuple[str, ...] = (
     "Error building Component",
     "Error running graph",
@@ -111,13 +125,8 @@ def _extract_deepest_meaningful_cause(error_msg: str) -> str | None:
            single most actionable string the user can read.
         2. If the message is wrapped with one of the known prefixes
            (``Error building Component X: …``, ``Error running graph: …``)
-           — return the part after the first colon (the underlying error
-           the wrapper was trying to report). Recurse until no more
-           wrappers match so nested wrappers (``Error running graph:
-           Error building Component X: <real cause>``) fully unwrap to
-           the root cause. Without this, the default colon-split
-           truncation returns just the outer wrapper and the user sees
-           something useless like ``"Error running graph"``.
+           — return the part after the first colon, recursing until no more
+           wrappers match so nested wrappers fully unwrap to the root cause.
 
     Returns None when neither pattern applies so callers fall back to the
     existing truncation behavior (zero behavior change for unwrapped errors).
@@ -128,16 +137,12 @@ def _extract_deepest_meaningful_cause(error_msg: str) -> str | None:
 
     current = error_msg
     unwrapped: str | None = None
-    # Bounded loop: each iteration must strip at least one wrapper prefix
-    # AND the remaining cause must be >= MIN_MEANINGFUL_PART_LENGTH. The
-    # bound (5) is paranoia — real-world stacks rarely wrap more than 2
-    # deep — but it guarantees this never loops on a pathological input.
+    # Bounded to 5 unwraps as paranoia against pathological input; real stacks rarely wrap >2 deep.
     for _ in range(5):
         stripped_msg = current.lstrip()
         if ":" not in current or not any(stripped_msg.startswith(prefix) for prefix in _WRAPPER_PREFIXES):
             break
-        # ``partition(":")`` keeps any embedded colons inside the cause (so
-        # ``Error code: 403`` stays readable).
+        # partition keeps embedded colons inside the cause (e.g. "Error code: 403").
         _wrapper, _, cause = current.partition(":")
         cause = cause.strip()
         if len(cause) < MIN_MEANINGFUL_PART_LENGTH:
@@ -160,6 +165,54 @@ def _truncate_error_message(error_msg: str) -> str:
                 return stripped
 
     return f"{error_msg[:MAX_ERROR_MESSAGE_LENGTH]}..."
+
+
+_COMPONENT_WRAPPER_RE = re.compile(r"Error building Component ([^:\n]+):")
+_TOOL_NAME_RE = re.compile(r"""tool ['"]([\w.\- ]+)['"]""", re.IGNORECASE)
+
+
+def get_error_recommendation(error_msg: str) -> str | None:
+    """Return the recommended next step for a known error category, else None."""
+    error_lower = error_msg.lower()
+    for patterns, _message, recommendation in _ERROR_RULES:
+        if any(pattern in error_lower or pattern in error_msg for pattern in patterns):
+            return recommendation
+    return None
+
+
+def build_error_detail(
+    raw_error: str | None, *, step: str | None = None, include_raw_cause: bool = False
+) -> dict[str, str] | None:
+    """Build the additive ``detail`` object for the SSE error event.
+
+    Fields (all optional): ``step`` (last progress step emitted),
+    ``component_id`` / ``tool`` (when extractable from the raw message),
+    ``raw_cause`` (pre-truncation error, capped at ``MAX_RAW_CAUSE_LENGTH``),
+    ``recommendation`` (mapped from the known error categories).
+    Returns None when there is nothing to report so the ``error`` event
+    payload stays byte-identical for every current case.
+
+    SECURITY: ``raw_cause`` is the raw internal error — the string
+    FlowExecutionError deliberately keeps out of public HTTP detail. It is
+    emitted only when ``include_raw_cause=True`` (caller verified the
+    requesting user is a superuser); every other field stays for everyone.
+    """
+    detail: dict[str, str] = {}
+    if step:
+        detail["step"] = step
+    if raw_error:
+        component_match = _COMPONENT_WRAPPER_RE.search(raw_error)
+        if component_match:
+            detail["component_id"] = component_match.group(1).strip()
+        tool_match = _TOOL_NAME_RE.search(raw_error)
+        if tool_match:
+            detail["tool"] = tool_match.group(1).strip()
+        if include_raw_cause:
+            detail["raw_cause"] = raw_error[:MAX_RAW_CAUSE_LENGTH]
+        recommendation = get_error_recommendation(raw_error)
+        if recommendation:
+            detail["recommendation"] = recommendation
+    return detail or None
 
 
 def is_model_unavailable_error(error_msg: str | None) -> bool:
@@ -201,3 +254,26 @@ def format_models_exhausted_message(provider: str, tried_models: Iterable[str]) 
         f"Configure access to one of these models in your {provider} account, "
         f"or switch to a different provider in Settings → Model Providers."
     )
+
+
+def build_recovered_notice(
+    kind: str,
+    failed_model: str | None,
+    raw_error: str | None,
+    used_model: str | None,
+) -> dict[str, str]:
+    """Shape a non-fatal "your model failed, the turn recovered" notice.
+
+    Emitted on the complete event so the UI can show an (i) instead of hiding a
+    silent background swap. ``kind`` is ``model_fallback`` (swapped to another
+    model) or ``model_remediation`` (retried the same model with adjusted params).
+    """
+    reason = extract_friendly_error(raw_error) if raw_error else "Model error"
+    notice: dict[str, str] = {"type": kind, "reason": reason}
+    if failed_model:
+        notice["failed_model"] = failed_model
+    if used_model and used_model != failed_model:
+        notice["used_model"] = used_model
+    if raw_error:
+        notice["raw"] = raw_error[:500]
+    return notice

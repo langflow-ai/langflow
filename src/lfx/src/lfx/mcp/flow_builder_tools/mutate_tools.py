@@ -24,6 +24,7 @@ from ._state import (
     _ensure_working_flow,
     _find_node,
     _load_registry_user_aware,
+    emit_tool_start,
     node_existed_at_start,
     should_apply_edits_live,
     should_propose_existing_edits,
@@ -52,6 +53,7 @@ class AddComponent(Component):
     ]
 
     def add_component(self) -> Data:
+        emit_tool_start("add_component", component_type=self.component_type)
         registry = _load_registry_user_aware()
         flow = _ensure_working_flow()
         try:
@@ -86,6 +88,7 @@ class RemoveComponent(Component):
     ]
 
     def remove_component(self) -> Data:
+        emit_tool_start("remove_component", component_id=self.component_id)
         flow = _ensure_working_flow()
         try:
             fb_remove_component(flow, self.component_id)
@@ -189,6 +192,7 @@ class ConnectComponents(Component):
     def connect_components(self) -> Data:
         # B3: model-input mirroring + selected-output reconciliation live in
         # module-private helpers above so this orchestrator stays flat (CC ≤ 3).
+        emit_tool_start("connect_components", source_id=self.source_id, target_id=self.target_id)
         flow = _ensure_working_flow()
         try:
             fb_add_connection(flow, self.source_id, self.source_output, self.target_id, self.target_input)
@@ -232,6 +236,7 @@ class ConfigureComponent(Component):
     ]
 
     def configure_component(self) -> Data:
+        emit_tool_start("configure_component", component_id=self.component_id)
         flow = _ensure_working_flow()
 
         # Accept params as dict (from tool framework) or JSON string

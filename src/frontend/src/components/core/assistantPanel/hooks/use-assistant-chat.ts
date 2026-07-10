@@ -1,4 +1,5 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
+import { cloneDeep } from "lodash";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ShortUniqueId from "short-unique-id";
@@ -18,26 +19,34 @@ import type {
   AssistantMessage,
   AssistantModel,
 } from "../assistant-panel.types";
+import { commandAckMessages } from "./command-ack";
+import { applyFlowProposalToCanvas } from "../helpers/apply-flow-proposal";
 import { applyFlowUpdate as applyFlowUpdateImpl } from "../helpers/apply-flow-update";
 import {
   buildRefinementInput,
   buildTaskFromEvent,
+  inProgressTaskFromEvent,
 } from "../helpers/assistant-event-mappers";
-import { mergeFlowIntoCanvas } from "../helpers/merge-flow-into-canvas";
+import {
+  parseHistoryCommand,
+  readHistoryLimit,
+  writeHistoryLimit,
+} from "./history-storage";
+import {
+  parseIterationsCommand,
+  readIterationsLimit,
+  writeIterationsLimit,
+} from "./iterations-storage";
 import { readSkipAll, writeSkipAll } from "./skip-all-storage";
+import type { UseAssistantChatReturn } from "./use-assistant-chat.types";
 
 const uid = new ShortUniqueId();
 const AGENTIC_SESSION_PREFIX = "agentic_";
 const SKIP_ALL_COMMAND = "/skip-all";
 const SKIP_ALL_APPROVAL_TEXT =
   "User approved the plan. Proceed with the build.";
-// Backend protocol string (never user-authored). Sent as a silent
-// continuation turn once the user resolves a man-in-the-loop edit diff
-// card with at least one applied change, so the agent's "execution stack"
-// survives the approval boundary and it can finish the rest of the
-// original request (e.g. running the flow). Must stay byte-identical to
-// `EDIT_CONTINUATION_INPUT` in
-// src/backend/base/langflow/agentic/services/flow_types.py.
+// Backend protocol string (never user-authored) — the silent continuation turn after
+// an applied edit; must stay byte-identical to EDIT_CONTINUATION_INPUT in flow_types.py.
 const EDIT_CONTINUATION_INPUT =
   "The proposed canvas edits were applied. Continue with the remaining steps of my previous request (for example, running the flow). If editing was the entire request, just confirm briefly.";
 
@@ -58,64 +67,8 @@ async function fireSessionReset(sessionId: string): Promise<void> {
   }
 }
 
-interface UseAssistantChatReturn {
-  messages: AssistantMessage[];
-  sessionId: string;
-  isProcessing: boolean;
-  currentStep: AgenticStepType | null;
-  handleSend: (
-    content: string,
-    model: AssistantModel | null,
-    options?: { silent?: boolean },
-  ) => Promise<void>;
-  handleApprove: (messageId: string, componentCode?: string) => Promise<void>;
-  handleUpdateFlowAction: (
-    messageId: string,
-    actionId: string,
-    status: "applied" | "dismissed",
-  ) => Promise<void>;
-  handleApplyFlowProposal: (
-    messageId: string,
-    mode?: "replace" | "add",
-  ) => void;
-  handleDismissFlowProposal: (messageId: string) => void;
-  handleApprovePlan: (messageId: string) => Promise<void>;
-  handleDismissPlan: (messageId: string) => void;
-  handleResetPlan: (messageId: string) => void;
-  /**
-   * Mark the component validation gate as acknowledged on the message.
-   * Persisted across remounts so panel close/reopen doesn't bring the
-   * loading card back after the user already pressed Continue.
-   */
-  handleAcknowledgeValidation: (messageId: string) => void;
-  /**
-   * True while a previously-proposed plan has been dismissed by the user and
-   * is awaiting refinement. The UI uses this to swap the input placeholder
-   * and amber the plan card.
-   */
-  isRefiningPlan: boolean;
-  /**
-   * Persistent power-user preference: when true, every gate that would
-   * otherwise require an explicit Continue click auto-approves. Restored
-   * from localStorage on mount.
-   */
-  skipAll: boolean;
-  /** Flip the skipAll preference and persist the change. */
-  toggleSkipAll: () => void;
-  handleRetry: (messageId: string) => void;
-  handleStopGeneration: () => void;
-  handleClearHistory: () => void;
-  loadSession: (id: string, msgs: AssistantMessage[]) => void;
-}
-
-// Known size debt: this hook is over the 500-line ceiling. The bulk is
-// `handleSend` (~390 lines) — the SSE pump that interleaves token streaming,
-// flow events, plan/file events, retry handling, and cancellation. Cleaving
-// it further requires a state-machine refactor (or moving each SSE event
-// class into its own reducer-style handler with shared context), which is a
-// dedicated piece of work — out of scope for the cosmetic / UX pass that
-// introduced this comment. Helpers already lifted: `applyFlowUpdate`,
-// `buildTaskFromEvent`, `buildRefinementInput`.
+// Known size debt: `handleSend` (~390 lines, the SSE pump) keeps this hook over
+// the ceiling; splitting it needs a dedicated state-machine refactor.
 export function useAssistantChat(): UseAssistantChatReturn {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
@@ -123,29 +76,22 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const [currentStep, setCurrentStep] = useState<AgenticStepType | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastModelRef = useRef<AssistantModel | null>(null);
-  // Per-send flag: once a `set_flow` event arrives, subsequent non-`edit_field`
-  // events must be buffered too (defensive against mixed runs). Reset at the
-  // start of every handleSend to avoid leaking state across requests.
+  // After a set_flow, buffer subsequent events (mixed-run defense); reset per send.
   const proposalPendingRef = useRef<boolean>(false);
-  // Holds the markdown of the LAST plan the user dismissed-but-not-reset, so
-  // the next handleSend can re-inject it as context for the LLM. One-shot:
-  // cleared by handleResetPlan, by a fresh propose_plan event, and on
-  // session boundaries (handleClearHistory, loadSession).
+  // Last dismissed-not-reset plan markdown, re-injected as context by next send.
   const dismissedPlanMarkdownRef = useRef<string | null>(null);
   const [isRefiningPlan, setIsRefiningPlan] = useState<boolean>(false);
-  // Initialized from localStorage so a power user's preference survives
-  // page reloads and new sessions. The ref tracks the latest value for
-  // event-handler closures that captured the initial state.
+  // localStorage-backed; the ref keeps the latest value visible to closures.
   const [skipAll, setSkipAll] = useState<boolean>(() => readSkipAll());
   const skipAllRef = useRef<boolean>(skipAll);
   skipAllRef.current = skipAll;
-  // Queues an assistant-message id that needs auto-approve once the
-  // current stream's onComplete drains. Using a ref (not state) keeps
-  // the value visible to event handlers in the same tick.
+  // `/history N` memory window; null = backend defaults. Ref for same-tick reads.
+  const historyLimitRef = useRef<number | null>(readHistoryLimit());
+  // `/iterations N` step budget; null = backend default (30). Ref for same-tick reads.
+  const iterationsLimitRef = useRef<number | null>(readIterationsLimit());
+  // Auto-approve queue: a ref so handlers see the value in the same tick.
   const autoApprovePlanRef = useRef<string | null>(null);
-  // Lazy reference to handleApprovePlan, defined later in this hook. We
-  // can't include it as a dep of handleSend (circular), so we capture
-  // its latest identity via assign-after-declare below.
+  // Lazy ref: a direct handleSend dep on handleApprovePlan would be circular.
   const handleApprovePlanRef = useRef<((id: string) => Promise<void>) | null>(
     null,
   );
@@ -154,33 +100,17 @@ export function useAssistantChat(): UseAssistantChatReturn {
   );
   const [sessionId, setSessionId] = useState<string>(sessionIdRef.current);
 
-  // WS-3 / RC-3: components are session-scoped, NOT wiped on mount.
-  // A panel re-open / page reload must keep the user's generated
-  // components alive so a component made in one turn is still usable in
-  // the next request (report #3, screenshot 2). The registry is wiped
-  // ONLY on an explicit New session (`handleClearHistory`) — never here.
-  // `loadSession` also does not wipe (user is continuing prior work).
+  // WS-3 / RC-3: components are session-scoped; only New session wipes them.
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const addComponent = useAddComponent();
   const saveFlow = useSaveFlow();
-  // Assistant-message ids that already fired their edit-approval
-  // continuation. A ref (not state) so the guard is visible synchronously
-  // within the same tick the diff card is resolved.
+  // Ids whose continuation already fired; a ref for synchronous visibility.
   const continuedEditMsgIds = useRef<Set<string>>(new Set());
   const { mutateAsync: validateComponent } = usePostValidateComponentCode();
-  // ReactFlow caches handle positions per node. When we mutate node data
-  // that changes which handles are rendered or their position (e.g. flipping
-  // _connectionMode on a ModelInput, switching selected_output, replacing a
-  // node via set_flow), we MUST notify ReactFlow so existing edges find
-  // their endpoints — otherwise the edge stays in state but renders as
-  // disconnected.
+  // ReactFlow caches handle positions; un-notified mutations disconnect edges.
   const updateNodeInternals = useUpdateNodeInternals();
-  // Live-canvas SSE applier. Delegated to a pure helper so the hook keeps a
-  // single responsibility (streaming + message state) and so the per-event
-  // switch can grow without dragging this file over the size limit. The
-  // empty dep list mirrors xyflow's contract that `updateNodeInternals` is a
-  // stable reference for the component's lifetime.
+  // Pure-helper delegation; deps rely on xyflow's stable updateNodeInternals.
   const applyFlowUpdate = useCallback(
     (event: AgenticFlowUpdateEvent) => {
       applyFlowUpdateImpl(event, updateNodeInternals);
@@ -212,50 +142,55 @@ export function useAssistantChat(): UseAssistantChatReturn {
         reuseAssistantMessageId?: string;
       },
     ) => {
-      // ``internal`` bypasses the processing guard so the skip-all bridge
-      // can chain a second backend call without waiting for isProcessing
-      // to flip false (which would visually unmount the loading state).
+      // ``internal`` bypasses the processing guard to avoid the unmount blink.
       if (!options?.internal && isProcessing) return;
-      // ``silent`` skips appending a visible user message but still adds
-      // the assistant message slot needed as anchor for streaming events.
-      // ``reuseAssistantMessageId`` goes one step further: it skips
-      // creating a new message entirely and resets the existing slot in
-      // place. Together with silent+internal these make the skip-all
-      // auto-approval invisible to the user — one continuous "streaming"
-      // message across two backend turns.
+      // ``silent`` hides the user message; ``reuseAssistantMessageId`` resets a slot.
       const silent = options?.silent === true;
       const reuseId = options?.reuseAssistantMessageId;
 
-      // Local slash command: toggles the persistent skip-all preference
-      // and emits an inline info message. Exact match only — typing
-      // "/skip-all please" is a real prompt that happens to start with
-      // those tokens and must reach the backend.
+      // Exact match only: "/skip-all please" is a real prompt for the backend.
       if (content.trim() === SKIP_ALL_COMMAND) {
         const next = !skipAllRef.current;
         skipAllRef.current = next;
         setSkipAll(next);
         writeSkipAll(next);
-        const echoUserId = uid.randomUUID(10);
-        const ackId = uid.randomUUID(10);
         const announcement = next
           ? "Skip-all mode enabled. Plans, flow proposals, and validated components will be approved automatically."
           : "Skip-all mode disabled. Plans, flow proposals, and validated components will wait for your Continue click.";
         setMessages((prev) => [
           ...prev,
-          {
-            id: echoUserId,
-            role: "user",
-            content,
-            timestamp: new Date(),
-            status: "complete",
-          },
-          {
-            id: ackId,
-            role: "assistant",
-            content: announcement,
-            timestamp: new Date(),
-            status: "complete",
-          },
+          ...commandAckMessages(content, announcement),
+        ]);
+        return;
+      }
+
+      // `/history N` sets the memory window; local command, never sent.
+      const historyCmd = parseHistoryCommand(content, historyLimitRef.current);
+      if (historyCmd) {
+        if (historyCmd.changed) {
+          historyLimitRef.current = historyCmd.limit;
+          writeHistoryLimit(historyCmd.limit);
+        }
+        setMessages((prev) => [
+          ...prev,
+          ...commandAckMessages(content, historyCmd.announcement),
+        ]);
+        return;
+      }
+
+      // `/iterations N` sets the Agent step budget; local command, never sent.
+      const iterationsCmd = parseIterationsCommand(
+        content,
+        iterationsLimitRef.current,
+      );
+      if (iterationsCmd) {
+        if (iterationsCmd.changed) {
+          iterationsLimitRef.current = iterationsCmd.limit;
+          writeIterationsLimit(iterationsCmd.limit);
+        }
+        setMessages((prev) => [
+          ...prev,
+          ...commandAckMessages(content, iterationsCmd.announcement),
         ]);
         return;
       }
@@ -284,9 +219,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
       };
 
       if (reuseId) {
-        // Reset the existing slot so turn 2's events overwrite the
-        // planning preamble. Status stays "streaming" so the rich
-        // loading state never unmounts.
+        // Reset the slot in place ("streaming" keeps the loader mounted);
+        // clearing inProgressTask/reverted stops a prior turn bleeding in.
         updateMessage(reuseId, () => ({
           content: "",
           status: "streaming" as const,
@@ -294,6 +228,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
           error: undefined,
           pendingPlanProposal: undefined,
           planProposalStatus: undefined,
+          inProgressTask: undefined,
+          reverted: undefined,
           hidden: false,
         }));
       } else {
@@ -306,20 +242,13 @@ export function useAssistantChat(): UseAssistantChatReturn {
       setIsProcessing(true);
       proposalPendingRef.current = false;
 
-      // If the user dismissed a prior plan and is now sending a refinement,
-      // re-inject the dismissed plan markdown as context so the LLM (which
-      // has no server-side conversation history) knows it is replanning.
-      // The delimiter framing tells the LLM the block is quoted prior
-      // context, not new instructions.
+      // Re-inject the dismissed plan — the LLM has no server-side history.
       const stashedPlan = dismissedPlanMarkdownRef.current;
       const inputValue = stashedPlan
         ? buildRefinementInput(stashedPlan, content)
         : content;
 
-      // Abort any still-in-flight stream before starting a new one.
-      // internal:true sends (skip-all bridge / edit-continuation) bypass
-      // the isProcessing guard, so without this the previous SSE reader
-      // is leaked and two pumps mutate the same message concurrently.
+      // Abort in-flight streams: a leaked SSE reader would mutate the same message.
       abortControllerRef.current?.abort();
       abortControllerRef.current = new AbortController();
 
@@ -334,6 +263,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
             provider: model?.provider,
             model_name: model?.name,
             session_id: sessionIdRef.current,
+            history_limit: historyLimitRef.current ?? undefined,
+            iterations_limit: iterationsLimitRef.current ?? undefined,
           },
           {
             onProgress: (event) => {
@@ -345,8 +276,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
 
               setCurrentStep(event.step);
               updateMessage(assistantMessageId, (msg) => ({
-                // A retry restarts generation; the failed attempt's partial
-                // output (often a leaked tool-call fragment) must not linger.
+                // A retry restarts generation; stale partial output must not linger.
                 ...(event.step === "retrying" ? { content: "" } : {}),
                 progress: {
                   step: event.step,
@@ -354,8 +284,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
                   maxAttempts: event.max_attempts,
                   message: event.message,
                   error: event.error,
-                  // Preserve componentCode and className from previous
-                  // progress if the new event doesn't include them
+                  // Preserve componentCode/className when the new event omits them
                   className: event.class_name ?? msg.progress?.className,
                   componentCode:
                     event.component_code ?? msg.progress?.componentCode,
@@ -385,6 +314,10 @@ export function useAssistantChat(): UseAssistantChatReturn {
               }));
             },
             onFlowUpdate: (event) => {
+              // Tool result delivered — retire the in-progress spinner row.
+              updateMessage(assistantMessageId, () => ({
+                inProgressTask: undefined,
+              }));
               if (event.action === "edit_field") {
                 updateMessage(assistantMessageId, (msg) => ({
                   flowActions: [
@@ -410,42 +343,32 @@ export function useAssistantChat(): UseAssistantChatReturn {
                 return;
               }
               if (event.action === "propose_plan") {
-                // BUILD-mode planning gate: the agent emits a markdown plan
-                // and stops. Canvas is untouched — the user must Continue
-                // (triggers handleApprovePlan) or Dismiss (handleDismissPlan)
-                // before the agent moves on to search/describe/build_flow.
-                // A fresh plan supersedes any stashed dismissed plan: the
-                // refinement was consumed and replanned, so the prior
-                // context must not pile up onto the next handleSend.
+                // Planning gate: canvas untouched; a fresh plan supersedes the stash.
                 dismissedPlanMarkdownRef.current = null;
                 setIsRefiningPlan(false);
                 if (skipAllRef.current) {
-                  // Skip-all bridge: queue the auto-approve. Clear the
-                  // preamble the LLM streamed before the tool call so the
-                  // chat reads as one continuous "Generating flow…" until
-                  // turn 2 fills the slot with the actual result.
+                  // Skip-all: queue auto-approve and clear the streamed preamble.
                   autoApprovePlanRef.current = assistantMessageId;
-                  updateMessage(assistantMessageId, () => ({ content: "" }));
+                  updateMessage(assistantMessageId, () => ({
+                    content: "",
+                    inProgressTask: undefined,
+                  }));
                   return;
                 }
                 const markdown =
                   typeof event.markdown === "string" ? event.markdown : "";
+                // Clear inProgressTask: the agent is only planning, so no build
+                // spinner must linger next to the plan card.
                 updateMessage(assistantMessageId, () => ({
                   pendingPlanProposal: { markdown },
                   planProposalStatus: "pending" as const,
+                  inProgressTask: undefined,
                 }));
                 return;
               }
               if (event.action === "set_flow") {
                 if (skipAllRef.current || event.auto_apply === true) {
-                  // Skip-all OR a compound-pipeline auto-apply (the user
-                  // explicitly asked to clear+replace the canvas): apply
-                  // directly using the event
-                  // payload — no proposal-card state, no setTimeout/queue
-                  // race. The earlier "queue and drain in onComplete"
-                  // approach was vulnerable to a stale-closure read of
-                  // `messages` when set_flow arrived in the *second* turn
-                  // of an auto-approved plan.
+                  // Direct apply — the queue-and-drain approach hit a stale-closure race.
                   applyFlowUpdate({
                     event: "flow_update",
                     action: "set_flow",
@@ -453,9 +376,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
                   });
                   return;
                 }
-                // Build-from-scratch path: buffer the entire flow into a
-                // proposal the user must Accept/Dismiss. Canvas stays
-                // untouched until handleApplyFlowProposal replays it.
+                // Buffer as a proposal; canvas untouched until the user applies it.
                 proposalPendingRef.current = true;
                 const flow = (event.flow ?? {}) as Record<string, unknown>;
                 const data = (flow.data ?? {}) as {
@@ -474,10 +395,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
                 }));
                 return;
               }
-              // Incremental edits — once a proposal is pending in this send,
-              // buffer subsequent events into tailUpdates (defensive: the
-              // agent prompt forbids mixed runs, but we don't want partial
-              // canvas state if it happens). Otherwise apply live.
+              // Proposal pending: buffer later events to avoid partial canvas state.
               if (proposalPendingRef.current) {
                 updateMessage(assistantMessageId, (msg) =>
                   msg.pendingFlowProposal
@@ -495,10 +413,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
                 return;
               }
               applyFlowUpdate(event);
-              // Surface the incremental mutation as a checklist entry the
-              // user can see in the chat. Dedup against the latest entry
-              // with the same (action, identity) so SSE replays don't
-              // produce phantom duplicates.
+              // Checklist entry; dedup so SSE replays don't duplicate rows.
               const newTask = buildTaskFromEvent(event);
               if (newTask) {
                 updateMessage(assistantMessageId, (msg) => {
@@ -518,9 +433,14 @@ export function useAssistantChat(): UseAssistantChatReturn {
                 });
               }
             },
+            onToolStart: (event) => {
+              // Latest tool_start wins; matching flow_update (or run end) retires it.
+              updateMessage(assistantMessageId, () => ({
+                inProgressTask: inProgressTaskFromEvent(event),
+              }));
+            },
             onFileWritten: (event) => {
-              // Append a WrittenFile entry for each successful write/edit so
-              // the message can render one card per file in arrival order.
+              // One WrittenFile entry per successful write/edit, in arrival order.
               updateMessage(assistantMessageId, (msg) => ({
                 writtenFiles: [
                   ...(msg.writtenFiles ?? []),
@@ -537,13 +457,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
             onComplete: (event) => {
               const planMsgId = autoApprovePlanRef.current;
               if (planMsgId) {
-                // Skip-all bridge: turn 1 completed and we have a queued
-                // auto-approve. Do NOT mark the slot complete or reset
-                // isProcessing/currentStep — that would unmount the rich
-                // loading state and idle the input placeholder, which is
-                // exactly the blink the user reported. Chain straight
-                // into turn 2; ``internal: true`` on the next handleSend
-                // skips the processing guard.
+                // Chain into turn 2 without resetting state (avoids the UI blink).
                 autoApprovePlanRef.current = null;
                 setTimeout(() => {
                   handleApprovePlanRef.current?.(planMsgId);
@@ -552,11 +466,9 @@ export function useAssistantChat(): UseAssistantChatReturn {
               }
               updateMessage(assistantMessageId, () => ({
                 status: "complete" as const,
+                inProgressTask: undefined,
                 content: event.data.result || "",
-                // Whether approving a man-in-the-loop edit on THIS message
-                // should fire the continuation turn (a deferred run/test was
-                // requested). A pure edit leaves this false so approving it
-                // does NOT spawn a redundant second message.
+                // Pure edits stay false so approval doesn't spawn a second message.
                 continuationExpected: event.data.continuation_expected === true,
                 result: {
                   content: event.data.result || "",
@@ -567,16 +479,14 @@ export function useAssistantChat(): UseAssistantChatReturn {
                   validationAttempts: event.data.validation_attempts,
                   validationError: event.data.validation_error,
                 },
-                // Per-turn LLM cost reported by the backend. Stored in the
-                // message so panel close/reopen still shows the badge.
-                // Duration is converted to milliseconds to match the units
-                // ``MessageMetadata`` (the playground renderer reused here)
-                // expects in its ``duration`` prop.
+                // Kept on the message for reopen; duration in ms for MessageMetadata.
                 usage: event.data.usage,
                 duration:
                   typeof event.data.duration_seconds === "number"
                     ? event.data.duration_seconds * 1000
                     : undefined,
+                restoreVersionId: event.data.restore_version_id,
+                notices: event.data.notices,
               }));
               setCurrentStep(null);
               setIsProcessing(false);
@@ -585,6 +495,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
               updateMessage(assistantMessageId, () => ({
                 status: "error" as const,
                 error: event.message,
+                errorDetail: event.detail,
               }));
               setCurrentStep(null);
               setIsProcessing(false);
@@ -593,6 +504,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
               updateMessage(assistantMessageId, () => ({
                 status: "cancelled" as const,
                 progress: undefined,
+                inProgressTask: undefined,
               }));
               setCurrentStep(null);
               setIsProcessing(false);
@@ -679,14 +591,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
         ),
       }));
 
-      // Edit-approval continuation ("execution stack"): the diff card is a
-      // man-in-the-loop gate. Once every action on this message has left
-      // "pending" with >=1 applied, the agent's deferred steps (e.g. the
-      // run the user also asked for) must resume. The backend reads the
-      // working flow from the DB by flow_id, so the canvas MUST be
-      // persisted BEFORE the continuation turn or the run would see the
-      // pre-edit value. Fires exactly once per message; a dismiss-only
-      // resolution does not continue (the change was rejected).
+      // All resolved with >=1 applied: save (backend reads DB) then resume.
       const msg = messages.find((m) => m.id === messageId);
       const actions = (msg?.flowActions ?? []).map((a) =>
         a.id === actionId ? { ...a, status } : a,
@@ -695,9 +600,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
       const stillPending = actions.some((a) => a.status === "pending");
       const anyApplied = actions.some((a) => a.status === "applied");
       if (stillPending || !anyApplied) return;
-      // Only resume when the original request actually deferred a step
-      // (e.g. "...and run it"). A pure edit must NOT spawn a second
-      // assistant message — backend computes this deterministically.
+      // A pure edit (no deferred "...and run it" step) must NOT spawn a
+      // second assistant message — the backend computes this flag.
       if (!msg?.continuationExpected) return;
       if (continuedEditMsgIds.current.has(messageId)) return;
       if (!lastModelRef.current) return;
@@ -718,83 +622,55 @@ export function useAssistantChat(): UseAssistantChatReturn {
       const proposal = message?.pendingFlowProposal;
       if (!proposal) return;
 
-      if (mode === "add") {
-        // Additive: merge the proposal into the current canvas state.
-        // ID collisions are remapped, edges are rewritten to follow the
-        // remap, and positions are offset to the right of the existing
-        // bounding box so the new flow doesn't overlap.
-        const store = useFlowStore.getState();
-        const flow = proposal.flow as {
-          data?: { nodes?: unknown[]; edges?: unknown[] };
-        };
-        const proposalNodes =
-          (flow.data?.nodes as Array<{
-            id: string;
-            position: { x: number; y: number };
-          }>) ?? [];
-        const proposalEdges =
-          (flow.data?.edges as Array<{
-            id: string;
-            source: string;
-            target: string;
-          }>) ?? [];
-        const merged = mergeFlowIntoCanvas(
-          store.nodes as Array<{
-            id: string;
-            position: { x: number; y: number };
-          }>,
-          store.edges as Array<{
-            id: string;
-            source: string;
-            target: string;
-          }>,
-          { nodes: proposalNodes, edges: proposalEdges },
-        );
-        store.setNodes(merged.nodes as never[]);
-        store.setEdges(merged.edges as never[]);
-      } else {
-        // Replace (legacy default): destructive overwrite via the
-        // existing set_flow path. Tail updates still replay in order.
-        applyFlowUpdate({
-          event: "flow_update",
-          action: "set_flow",
-          flow: proposal.flow,
-        });
-      }
-      for (const tail of proposal.tailUpdates ?? []) {
-        applyFlowUpdate(tail);
-      }
+      // Snapshot the canvas BEFORE mutating so Revert can restore this exact
+      // state and re-enable the Add/Replace actions (client-side undo).
+      const preApply = useFlowStore.getState();
+      const snapshot = {
+        nodes: cloneDeep(preApply.nodes) as unknown[],
+        edges: cloneDeep(preApply.edges) as unknown[],
+      };
 
-      // Keep ``pendingFlowProposal`` on the message — the preview card
-      // continues to render in the muted "applied" state, mirroring the
-      // component-generation flow where the result card stays after Add to
-      // Canvas. Clearing the proposal here would erase the visual record of
-      // what the user accepted.
+      applyFlowProposalToCanvas(proposal, mode, updateNodeInternals);
+
+      // Confirm ("Added to canvas"), then re-enable Add/Replace after 3s while
+      // keeping the snapshot so the last apply stays undoable via the pending card.
       updateMessage(messageId, () => ({
         flowProposalStatus: "applied" as const,
+        flowProposalSnapshot: snapshot,
+        reverted: false,
       }));
-
-      // Revert to ``pending`` after the success badge has been on screen
-      // long enough to register — lets the user re-apply the same proposal
-      // (e.g., they edited the canvas and want to overwrite it again).
-      // Matches the 3s pattern used by the legacy "Add to Flow" path.
       setTimeout(() => {
         updateMessage(messageId, (msg) =>
-          // Only revert if the message is still in "applied" state. If the
-          // user already dismissed or sent a new request, leave it alone.
           msg.flowProposalStatus === "applied"
             ? { flowProposalStatus: "pending" }
             : {},
         );
       }, 3000);
     },
-    [messages, applyFlowUpdate, updateMessage],
+    [messages, updateMessage, updateNodeInternals],
+  );
+
+  const handleRevertFlowProposal = useCallback(
+    (messageId: string) => {
+      const message = messages.find((m) => m.id === messageId);
+      const snapshot = message?.flowProposalSnapshot;
+      if (!snapshot) return;
+      // Restore atomically (same path as apply so loop/dynamic edges redraw) and
+      // clear the snapshot so the card returns to the initial pending state.
+      useFlowStore
+        .getState()
+        .setNodesAndEdges(snapshot.nodes as never[], snapshot.edges as never[]);
+      updateMessage(messageId, () => ({
+        flowProposalStatus: "pending" as const,
+        flowProposalSnapshot: undefined,
+      }));
+    },
+    [messages, updateMessage],
   );
 
   const handleDismissFlowProposal = useCallback(
     (messageId: string) => {
-      // Same rationale as apply: keep the proposal data so the card can
-      // render its muted "Dismissed" state instead of disappearing.
+      // Keep the proposal data so the card renders muted instead of vanishing.
       updateMessage(messageId, () => ({
         flowProposalStatus: "dismissed" as const,
       }));
@@ -804,11 +680,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
 
   const handleApprovePlan = useCallback(
     async (messageId: string) => {
-      // Continue on the planning gate. The manual click path marks the
-      // card "approved" (badge visible) and starts a fresh turn. The
-      // skip-all auto-approve path reuses the SAME assistant message
-      // slot (no second bubble) and skips the processing guard so the
-      // bridge is invisible to the user.
+      // Manual click marks the card approved + fresh turn; skip-all reuses
+      // the SAME message slot so the auto-approve bridge is invisible.
       if (!lastModelRef.current) return;
       if (skipAllRef.current) {
         await handleSend(SKIP_ALL_APPROVAL_TEXT, lastModelRef.current, {
@@ -835,11 +708,16 @@ export function useAssistantChat(): UseAssistantChatReturn {
     [updateMessage],
   );
 
+  const handleMarkReverted = useCallback(
+    (messageId: string) => {
+      updateMessage(messageId, () => ({ reverted: true }));
+    },
+    [updateMessage],
+  );
+
   const handleDismissPlan = useCallback((messageId: string) => {
-    // Dismiss transitions the card to "refining": the markdown stays on
-    // the message (card keeps rendering) and is stashed so the user's
-    // next handleSend re-injects it as prior-context for the agent.
-    // The user is in control — we do NOT auto-send anything here.
+    // Dismiss = "refining": stash the markdown for re-injection on the next
+    // handleSend; the user stays in control (nothing auto-sends here).
     setMessages((prev) => {
       const target = prev.find((m) => m.id === messageId);
       const markdown = target?.pendingPlanProposal?.markdown ?? "";
@@ -866,9 +744,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
 
   const handleResetPlan = useCallback(
     (messageId: string) => {
-      // Reset closes the planning gate entirely. The stash is dropped so
-      // the next handleSend does NOT re-inject the prior plan, and the
-      // card flips to the muted "Dismissed" terminal state.
+      // Reset closes the gate: drop the stash (no re-injection) and flip
+      // the card to the muted "Dismissed" terminal state.
       dismissedPlanMarkdownRef.current = null;
       setIsRefiningPlan(false);
       updateMessage(messageId, () => ({
@@ -931,6 +808,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
     handleApprove,
     handleUpdateFlowAction,
     handleApplyFlowProposal,
+    handleRevertFlowProposal,
     handleDismissFlowProposal,
     handleApprovePlan,
     handleDismissPlan,
@@ -940,6 +818,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
     skipAll,
     toggleSkipAll,
     handleRetry,
+    handleMarkReverted,
     handleStopGeneration,
     handleClearHistory,
     loadSession,

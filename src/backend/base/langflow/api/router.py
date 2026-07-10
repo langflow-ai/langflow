@@ -96,18 +96,8 @@ router_v1.include_router(authz_teams_router)
 router_v1.include_router(authz_me_router)
 
 
-# Extension reload is Mode A (local-dev / pip-installed) only.  The route is
-# always mounted; a per-request guard in ``langflow.api.v1.extensions`` reads
-# the live ``settings.enable_extension_reload`` and returns 404 when the flag
-# is off, which means the route is indistinguishable from "not mounted" on
-# production deployments that leave it unset.
-#
-# Mounting unconditionally avoids the import-time / env-file ordering
-# coupling: ``langflow.__main__`` imports ``setup_app`` (and hence this
-# router module) before ``load_dotenv(env_file)`` runs, so any module-level
-# read of ``LANGFLOW_ENABLE_EXTENSION_RELOAD`` would miss the value supplied
-# via ``--env-file``.  The runtime guard sees the post-env-file value
-# because it executes per-request, after settings have been built.
+# Mounted unconditionally: this module imports before load_dotenv(env_file), so the
+# per-request guard in api.v1.extensions reads the live flag and 404s when it is off.
 router_v1.include_router(extensions_router)
 include_deployment_router(router_v1)
 
@@ -117,10 +107,12 @@ def _include_agentic_router():
     from langflow.agentic.api.files_router import router as agentic_files_router
     from langflow.agentic.api.router import router as agentic_router
     from langflow.agentic.api.sessions_router import router as agentic_sessions_router
+    from langflow.api.v1.agentic_mcp import router as agentic_mcp_router
 
     router_v1.include_router(agentic_router)
     router_v1.include_router(agentic_files_router)
     router_v1.include_router(agentic_sessions_router)
+    router_v1.include_router(agentic_mcp_router)
 
 
 _include_agentic_router()
@@ -129,13 +121,8 @@ router_v2.include_router(files_router_v2)
 router_v2.include_router(mcp_router_v2)
 router_v2.include_router(registration_router_v2)
 
-# POST /api/v2/workflows runs through the shared lfx router bound to the
-# langflow host. ``supports_background=True`` lets the background-submit branch
-# dispatch to the host; ``auto_register_job_routes=False`` suppresses the lfx
-# generic GET-status/POST-stop routes so the langflow durable router below owns
-# them (one handler per method+path). ``developer_api_guard=False`` because the
-# authenticated langflow v2 router has never carried a developer-api gate; the
-# default-off setting would otherwise 403 every authenticated request.
+# Shared lfx router bound to the langflow host; job-status routes stay with the
+# durable router below, and no developer-api guard (it would 403 authed requests).
 _workflow_host = LangflowWorkflowHost()
 assert isinstance(_workflow_host, WorkflowHost)  # noqa: S101
 router_v2.include_router(

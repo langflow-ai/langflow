@@ -28,6 +28,65 @@ from lfx.utils.constants import (
 )
 
 
+class TestLegacyUntaggedContentBlocks:
+    """Stored/legacy content blocks may lack the ``type`` discriminator.
+
+    A DB row (or a v1 wire-shape re-store) can carry a bare text block
+    ``{"text": ...}`` with no ``type`` field. ``Message.create(**row)`` on
+    memory reload MUST tolerate it (infer ``text``) instead of raising a
+    ``union_tag_not_found`` ValidationError — otherwise every subsequent turn
+    in the session crashes when the agent reloads its history.
+    """
+
+    def test_should_parse_untagged_text_block(self):
+        msg = Message(content_blocks=[{"text": "Oi! Como posso ajudar?"}])
+        assert len(msg.content_blocks) == 1
+        assert isinstance(msg.content_blocks[0], TextContent)
+        assert msg.content_blocks[0].type == "text"
+        assert msg.content_blocks[0].text == "Oi! Como posso ajudar?"
+
+    def test_should_still_parse_untagged_group_block(self):
+        # Non-regression: the group (title+contents) legacy shape already worked.
+        msg = Message(content_blocks=[{"title": "Agent Steps", "contents": []}])
+        assert isinstance(msg.content_blocks[0], ContentBlock)
+        assert msg.content_blocks[0].type == "group"
+
+    def test_should_parse_mixed_untagged_and_tagged_blocks(self):
+        msg = Message(
+            content_blocks=[
+                {"title": "Agent Steps", "contents": []},
+                {"text": "final answer"},
+                {"type": "text", "text": "already tagged"},
+            ]
+        )
+        assert [b.type for b in msg.content_blocks] == ["group", "text", "text"]
+
+
+class TestContentTypeDiscriminatorSurvivesSerialization:
+    """The ``type`` discriminator must survive every serialization mode.
+
+    ``TextContent(text=...)`` leaves ``type`` at its default, so it is NOT in
+    ``model_fields_set``. A ``model_dump(exclude_unset=True)`` (used by the
+    message-update path) therefore dropped it, persisting a bare ``{"text": ...}``
+    that later fails ``union_tag_not_found`` on reload. The discriminator must
+    always be emitted.
+    """
+
+    def test_exclude_unset_keeps_type(self):
+        assert TextContent(text="hi").model_dump(exclude_unset=True)["type"] == "text"
+
+    def test_exclude_defaults_keeps_type(self):
+        assert TextContent(text="hi").model_dump(exclude_defaults=True)["type"] == "text"
+
+    def test_serialized_block_round_trips_through_message(self):
+        # The exact failure cycle: dump a text block with exclude_unset, then
+        # reload it as a Message — must not raise.
+        dumped = TextContent(text="final answer").model_dump(exclude_unset=True)
+        msg = Message(content_blocks=[dumped])
+        assert msg.content_blocks[0].type == "text"
+        assert msg.content_blocks[0].text == "final answer"
+
+
 class TestMessageConstruction:
     """Tests for constructing Message objects with the new content_blocks-first model."""
 

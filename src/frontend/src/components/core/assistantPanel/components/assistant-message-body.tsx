@@ -19,6 +19,7 @@ import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import type { AssistantMessage } from "../assistant-panel.types";
 import { ChatMarkdown } from "../helpers/chat-markdown";
 import { AssistantComponentResult } from "./assistant-component-result";
+import { AssistantErrorDetails } from "./assistant-error-details";
 import { AssistantFileCard } from "./assistant-file-card";
 import { FlowEditCarousel } from "./assistant-flow-edit-card";
 import { AssistantFlowPreview } from "./assistant-flow-preview";
@@ -26,9 +27,8 @@ import { AssistantLoadingState } from "./assistant-loading-state";
 import { AssistantPlanCard } from "./assistant-plan-card";
 import { AssistantValidationFailed } from "./assistant-validation-failed";
 
-// Auto-dismiss the validation gate after this many milliseconds with the
-// message in a terminal completed state, so the loading card never gets
-// stuck if the user walks away without clicking Continue.
+// Auto-dismiss the validation gate after this long in a terminal state, so the
+// loading card never gets stuck if the user walks away without clicking Continue.
 const VALIDATION_GATE_AUTO_DISMISS_MS = 30000;
 
 export interface AssistantMessageBodyProps {
@@ -44,6 +44,7 @@ export interface AssistantMessageBodyProps {
     status: "applied" | "dismissed",
   ) => void;
   onApplyFlowProposal?: (messageId: string, mode?: "replace" | "add") => void;
+  onRevertFlowProposal?: (messageId: string) => void;
   onDismissFlowProposal?: (messageId: string) => void;
   onApprovePlan?: (messageId: string) => void;
   onDismissPlan?: (messageId: string) => void;
@@ -62,6 +63,7 @@ export function AssistantMessageBody({
   onApprove,
   onUpdateFlowAction,
   onApplyFlowProposal,
+  onRevertFlowProposal,
   onDismissFlowProposal,
   onApprovePlan,
   onDismissPlan,
@@ -77,10 +79,8 @@ export function AssistantMessageBody({
     message.result?.validated === false && message.result?.validationError;
   const hasWrittenFiles = (message.writtenFiles?.length ?? 0) > 0;
 
-  // skip-all: pre-set the gate to "complete" so the result card renders
-  // immediately. ``validationAcknowledged`` is the persisted twin — set
-  // once the user clicked Continue (or the 30s timeout fired) so the gate
-  // doesn't reappear on remount (panel close+reopen).
+  // skip-all pre-sets the gate to "complete"; validationAcknowledged is the
+  // persisted twin so the gate doesn't reappear on remount (panel close+reopen).
   const [validationAnimationComplete, setValidationAnimationComplete] =
     useState(() => skipApprovalGate || Boolean(message.validationAcknowledged));
 
@@ -117,13 +117,8 @@ export function AssistantMessageBody({
     validationAnimationComplete,
   ]);
 
-  // Show detailed loading state during component generation. Keep showing
-  // it until the validation animation completes.
-  //
-  // manage_files path: NO Continue gate. The card jumps straight to its
-  // final state when the file is ready — the agent's text response gives
-  // the user enough context, and a Continue button just adds friction for
-  // a non-destructive action.
+  // Detailed loading state during component generation, until the validation
+  // animation completes. manage_files skips the gate — non-destructive action.
   const showLoadingState =
     (isGeneratingCode && message.progress) ||
     ((hasValidatedResult || hasValidationError) &&
@@ -143,7 +138,12 @@ export function AssistantMessageBody({
 
   if (message.status === "error" && message.error) {
     return (
-      <p className="text-sm font-normal text-destructive">{message.error}</p>
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-normal text-destructive">{message.error}</p>
+        {message.errorDetail && (
+          <AssistantErrorDetails detail={message.errorDetail} />
+        )}
+      </div>
     );
   }
 
@@ -211,9 +211,8 @@ export function AssistantMessageBody({
     );
   }
 
-  // BUILD-mode planning gate: agent emitted a propose_plan event with a
-  // markdown summary. The user clicks Continue (resumes the agent via a
-  // new user turn) or Dismiss (types refinement feedback, agent replans).
+  // BUILD-mode planning gate: propose_plan markdown behind Continue (resume
+  // via a new user turn) / Dismiss (user types refinement, agent replans).
   if (message.planProposalStatus && message.pendingPlanProposal) {
     return (
       <div className="flex flex-col gap-3">
@@ -229,9 +228,8 @@ export function AssistantMessageBody({
     );
   }
 
-  // Gated flow proposal: agent built a new flow from scratch via set_flow.
-  // Show the preview behind a Continue/Dismiss gate so the user can refuse
-  // a destructive canvas replacement.
+  // Gated flow proposal: a from-scratch set_flow previews behind Continue/
+  // Dismiss so the user can refuse a destructive canvas replacement.
   if (message.flowProposalStatus && message.pendingFlowProposal) {
     const proposalPreview = {
       flow: message.pendingFlowProposal.flow,
@@ -251,15 +249,16 @@ export function AssistantMessageBody({
           flowPreview={proposalPreview}
           status={message.flowProposalStatus}
           onApply={(mode) => onApplyFlowProposal?.(message.id, mode)}
+          onRevert={() => onRevertFlowProposal?.(message.id)}
+          canRevert={Boolean(message.flowProposalSnapshot)}
           onDismiss={() => onDismissFlowProposal?.(message.id)}
         />
       </div>
     );
   }
 
-  // Once applied, pendingFlowProposal is cleared and only flowProposalStatus
-  // remains. Render the muted applied-state card from message.flowPreview
-  // (legacy field carried for serialized sessions) if present.
+  // Once applied, only flowProposalStatus remains — render the muted applied-
+  // state card from message.flowPreview (legacy field for serialized sessions).
   if (message.flowPreview) {
     const cleanContent = message.content
       ?.replace(/```flow_json[\s\S]*?```/gi, "")

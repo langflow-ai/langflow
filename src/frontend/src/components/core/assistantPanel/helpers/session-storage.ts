@@ -37,7 +37,7 @@ export function serializeMessages(
   messages: AssistantMessage[],
 ): SerializedAssistantMessage[] {
   return messages.map((msg) => {
-    const { timestamp, progress, result, ...rest } = msg;
+    const { timestamp, progress, result, inProgressTask, ...rest } = msg;
     const serialized: SerializedAssistantMessage = {
       ...rest,
       timestamp: timestamp.toISOString(),
@@ -49,6 +49,11 @@ export function serializeMessages(
     };
     if (result) {
       serialized.result = result;
+    }
+    // The spinner row is transient — persisting it stuck restored sessions.
+    // Error messages keep it on purpose (frozen "where it stopped" row).
+    if (msg.status === "error" && inProgressTask) {
+      serialized.inProgressTask = inProgressTask;
     }
     return serialized;
   });

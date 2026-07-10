@@ -14,6 +14,7 @@ from lfx.cli.script_loader import extract_structured_result
 from lfx.events.event_manager import EventManager, create_default_event_manager
 from lfx.execution import get_default_coordinator
 from lfx.log.logger import logger
+from lfx.mcp.flow_builder_tools import set_tool_start_listener
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.flow_validation import CustomComponentValidationError
 
@@ -42,6 +43,9 @@ async def _run_graph_with_events(
 ) -> None:
     """Execute graph and store result, signaling completion via queue."""
     try:
+        # Live tool-start bridge: canvas-mutating flow-builder tools announce the
+        # moment they START through the same queue tokens use (deque drains can't).
+        set_tool_start_listener(lambda payload: event_manager.send_event(event_type="tool_start", data=payload))
         if user_id:
             graph.user_id = user_id
         if session_id:
@@ -71,6 +75,9 @@ async def _run_graph_with_events(
         execution_result.error = e
         logger.error(f"Flow execution error: {e}")
     finally:
+        # The listener closes over this run's event_manager — clear it so
+        # later work on the same context can't forward onto a finished run.
+        set_tool_start_listener(None)
         await event_queue.put(None)
 
 
@@ -174,6 +181,7 @@ async def execute_flow_file_streaming(
 
     Yields events as they occur:
     - ("token", chunk): Token chunk from LLM streaming
+    - ("tool_start", data): A canvas-mutating tool began executing
     - ("end", result): Final result when flow completes
     - ("cancelled", {}): Flow was cancelled
 
@@ -235,6 +243,8 @@ async def execute_flow_file_streaming(
         async for event_type, chunk in consume_streaming_events(event_queue, is_disconnected, cancel_event):
             if event_type == "token":
                 yield ("token", chunk)
+            elif event_type == "tool_start":
+                yield ("tool_start", chunk)
             elif event_type == "flow_preview":
                 yield ("flow_preview", chunk)
             elif event_type == "end":
@@ -259,9 +269,8 @@ async def execute_flow_file_streaming(
 
     if execution_result.has_error:
         logger.error(f"Flow execution error: {execution_result.error}")
-        # Raise a FlowExecutionError that keeps the raw error internal:
-        # the public `detail` stays generic so no stack traces leak to HTTP clients,
-        # while internal callers read `original_error_message` to build friendly UX.
+        # Public `detail` stays generic (no stack-trace leak to HTTP clients);
+        # internal callers read `original_error_message` for friendly UX.
         raise FlowExecutionError(
             original_error_message=str(execution_result.error),
         ) from execution_result.error

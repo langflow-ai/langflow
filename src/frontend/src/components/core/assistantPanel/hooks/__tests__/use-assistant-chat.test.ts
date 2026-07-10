@@ -47,6 +47,7 @@ jest.mock("@/stores/flowsManagerStore", () => {
 // jest.fn() spies so tests can verify whether the canvas was mutated.
 const mockSetNodes = jest.fn();
 const mockSetEdges = jest.fn();
+const mockSetNodesAndEdges = jest.fn();
 const mockPaste = jest.fn();
 let _mockNodes: unknown[] = [];
 let _mockEdges: unknown[] = [];
@@ -56,6 +57,7 @@ jest.mock("@/stores/flowStore", () => {
   const state = {
     setNodes: (...args: unknown[]) => mockSetNodes(...args),
     setEdges: (...args: unknown[]) => mockSetEdges(...args),
+    setNodesAndEdges: (...args: unknown[]) => mockSetNodesAndEdges(...args),
     paste: (...args: unknown[]) => mockPaste(...args),
     get nodes() {
       return mockGetNodes();
@@ -596,6 +598,54 @@ describe("useAssistantChat", () => {
       expect(assistantMsg?.planProposalStatus).toBe("pending");
     });
 
+    it("should_clear_inProgressTask_when_propose_plan_arrives_after_tool_start", async () => {
+      // Regression: a build spinner (tool_start) set before the plan proposal
+      // lingered next to the plan card while the agent was only planning.
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onToolStart({ event: "tool_start", tool: "build_flow" });
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "propose_plan",
+            markdown: "## Plan",
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build me a big flow", TEST_MODEL);
+      });
+
+      const assistantMsg = result.current.messages.find(
+        (m) => m.role === "assistant",
+      );
+      expect(assistantMsg?.planProposalStatus).toBe("pending");
+      expect(assistantMsg?.inProgressTask).toBeUndefined();
+    });
+
+    it("should_keep_inProgressTask_while_building_including_after_summary_tokens", async () => {
+      // The build spinner is the single indicator: it must persist through the
+      // streamed summary and only retire on flow_update / complete.
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onToolStart({ event: "tool_start", tool: "build_flow" });
+          callbacks.onToken({ event: "token", chunk: "Built a flow" });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build a loop flow", TEST_MODEL);
+      });
+
+      const assistantMsg = result.current.messages.find(
+        (m) => m.role === "assistant",
+      );
+      expect(assistantMsg?.content).toBe("Built a flow");
+      expect(assistantMsg?.inProgressTask?.tool).toBe("build_flow");
+    });
+
     it("should_not_mutate_canvas_when_propose_plan_event_arrives", async () => {
       // Plan events are purely advisory — they must NOT touch the canvas.
       mockPostAssistStream.mockImplementation(
@@ -963,16 +1013,16 @@ describe("useAssistantChat", () => {
       });
       const msg = result.current.messages[1];
 
-      mockSetNodes.mockClear();
+      mockSetNodesAndEdges.mockClear();
 
       act(() => {
         result.current.handleApplyFlowProposal(msg.id, "replace");
       });
 
-      // Replace path: setNodes called with a plain array equal to the
-      // proposal's nodes (no merge logic, just overwrite).
-      expect(mockSetNodes).toHaveBeenCalled();
-      const firstCallArg = mockSetNodes.mock.calls[0][0];
+      // Replace path: setNodesAndEdges called atomically with the proposal's
+      // nodes (no merge logic, just overwrite).
+      expect(mockSetNodesAndEdges).toHaveBeenCalled();
+      const firstCallArg = mockSetNodesAndEdges.mock.calls[0][0];
       expect(Array.isArray(firstCallArg)).toBe(true);
       expect((firstCallArg as Array<{ id: string }>).map((n) => n.id)).toEqual(
         FRESH_FLOW.data.nodes.map((n) => n.id),
@@ -998,13 +1048,13 @@ describe("useAssistantChat", () => {
       });
       const msg = result.current.messages[1];
 
-      mockSetNodes.mockClear();
+      mockSetNodesAndEdges.mockClear();
 
       act(() => {
         result.current.handleApplyFlowProposal(msg.id);
       });
 
-      const firstCallArg = mockSetNodes.mock.calls[0][0];
+      const firstCallArg = mockSetNodesAndEdges.mock.calls[0][0];
       expect(Array.isArray(firstCallArg)).toBe(true);
     });
 
@@ -1029,21 +1079,128 @@ describe("useAssistantChat", () => {
       });
       const msg = result.current.messages[1];
 
-      mockSetNodes.mockClear();
-      mockSetEdges.mockClear();
+      mockSetNodesAndEdges.mockClear();
 
       act(() => {
         result.current.handleApplyFlowProposal(msg.id, "add");
       });
 
-      // Merge path: setNodes called with a plain array equal to the
-      // concatenation of existing + proposal (with offset/remap applied
-      // by the helper). Length must be existing.length + proposal.length.
-      expect(mockSetNodes).toHaveBeenCalled();
-      const arg = mockSetNodes.mock.calls[0][0] as Array<{ id: string }>;
+      // Merge path: setNodesAndEdges called atomically with existing + proposal
+      // (offset/remap applied by the helper). Length = existing + proposal.
+      expect(mockSetNodesAndEdges).toHaveBeenCalled();
+      const arg = mockSetNodesAndEdges.mock.calls[0][0] as Array<{
+        id: string;
+      }>;
       expect(Array.isArray(arg)).toBe(true);
       expect(arg).toHaveLength(1 + FRESH_FLOW.data.nodes.length);
       expect(arg[0].id).toBe("Existing-1");
+    });
+  });
+
+  describe("flow proposal revert (client-side undo)", () => {
+    const PROPOSAL_FLOW = {
+      name: "Proposed Flow",
+      data: {
+        nodes: [{ id: "ChatInput-new", position: { x: 0, y: 0 } }],
+        edges: [] as unknown[],
+      },
+    };
+    const primeProposal = async (result: {
+      current: ReturnType<typeof useAssistantChat>;
+    }) => {
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: PROPOSAL_FLOW,
+          });
+        },
+      );
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+      return result.current.messages[1];
+    };
+
+    it("should_snapshot_pre_apply_canvas_and_restore_it_on_revert", async () => {
+      // The canvas the user had before clicking Add/Replace — Revert must
+      // restore exactly this, atomically, and re-enable the apply buttons.
+      _mockNodes = [{ id: "Before-1", position: { x: 0, y: 0 } }];
+      _mockEdges = [{ id: "be1", source: "Before-1", target: "Before-1" }];
+
+      const { result } = renderHook(() => useAssistantChat());
+      const msg = await primeProposal(result);
+
+      act(() => {
+        result.current.handleApplyFlowProposal(msg.id, "replace");
+      });
+
+      const applied = result.current.messages.find((m) => m.id === msg.id);
+      expect(applied?.flowProposalStatus).toBe("applied");
+      expect(applied?.flowProposalSnapshot).toEqual({
+        nodes: [{ id: "Before-1", position: { x: 0, y: 0 } }],
+        edges: [{ id: "be1", source: "Before-1", target: "Before-1" }],
+      });
+
+      mockSetNodesAndEdges.mockClear();
+      act(() => {
+        result.current.handleRevertFlowProposal(msg.id);
+      });
+
+      expect(mockSetNodesAndEdges).toHaveBeenCalledWith(
+        [{ id: "Before-1", position: { x: 0, y: 0 } }],
+        [{ id: "be1", source: "Before-1", target: "Before-1" }],
+      );
+      const reverted = result.current.messages.find((m) => m.id === msg.id);
+      // Add/Replace re-enabled — back to the pending proposal actions.
+      expect(reverted?.flowProposalStatus).toBe("pending");
+    });
+
+    it("should_re_enable_add_after_3s_but_keep_the_snapshot_for_revert", async () => {
+      // After the "Added to canvas" confirmation the card flips back to pending
+      // (Add/Replace re-enabled) yet KEEPS the snapshot so Revert stays offered.
+      jest.useFakeTimers();
+      _mockNodes = [{ id: "Before-1", position: { x: 0, y: 0 } }];
+      _mockEdges = [];
+      const { result } = renderHook(() => useAssistantChat());
+      const msg = await primeProposal(result);
+
+      act(() => {
+        result.current.handleApplyFlowProposal(msg.id, "replace");
+      });
+      expect(
+        result.current.messages.find((m) => m.id === msg.id)
+          ?.flowProposalStatus,
+      ).toBe("applied");
+
+      act(() => {
+        jest.advanceTimersByTime(3000);
+      });
+
+      const after = result.current.messages.find((m) => m.id === msg.id);
+      expect(after?.flowProposalStatus).toBe("pending");
+      expect(after?.flowProposalSnapshot).toBeDefined();
+      jest.useRealTimers();
+    });
+
+    it("should_clear_the_snapshot_on_revert_so_the_card_returns_to_initial", async () => {
+      _mockNodes = [{ id: "Before-1", position: { x: 0, y: 0 } }];
+      _mockEdges = [];
+      const { result } = renderHook(() => useAssistantChat());
+      const msg = await primeProposal(result);
+
+      act(() => {
+        result.current.handleApplyFlowProposal(msg.id, "replace");
+      });
+      act(() => {
+        result.current.handleRevertFlowProposal(msg.id);
+      });
+
+      const reverted = result.current.messages.find((m) => m.id === msg.id);
+      expect(reverted?.flowProposalStatus).toBe("pending");
+      // No snapshot → the pending card shows no Revert (back to initial state).
+      expect(reverted?.flowProposalSnapshot).toBeUndefined();
     });
   });
 
@@ -1204,20 +1361,58 @@ describe("useAssistantChat", () => {
       });
 
       const messageId = result.current.messages[1].id;
-      expect(mockSetNodes).not.toHaveBeenCalled();
+      expect(mockSetNodesAndEdges).not.toHaveBeenCalled();
 
       await act(async () => {
         result.current.handleApplyFlowProposal(messageId);
       });
 
-      expect(mockSetNodes).toHaveBeenCalled();
-      expect(mockSetEdges).toHaveBeenCalled();
+      expect(mockSetNodesAndEdges).toHaveBeenCalled();
       const msg = result.current.messages.find((m) => m.id === messageId);
       expect(msg?.flowProposalStatus).toBe("applied");
       // Spec: keep ``pendingFlowProposal`` on the message so the preview
       // card can render the muted "applied" state — matches the component
       // result card that stays visible after Add to Canvas.
       expect(msg?.pendingFlowProposal).toBeDefined();
+    });
+
+    it("should_clear_reverted_when_proposal_is_reapplied", async () => {
+      // Regression: the "Reverted" marker stuck forever. Re-applying the same
+      // proposal mutates the canvas anew, so Revert must be offered again.
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: SAMPLE_FLOW,
+          });
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "Flow built", validated: true, has_flow: true },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build chatbot", TEST_MODEL);
+      });
+
+      const messageId = result.current.messages[1].id;
+
+      act(() => {
+        result.current.handleMarkReverted(messageId);
+      });
+      expect(
+        result.current.messages.find((m) => m.id === messageId)?.reverted,
+      ).toBe(true);
+
+      await act(async () => {
+        result.current.handleApplyFlowProposal(messageId);
+      });
+      expect(
+        result.current.messages.find((m) => m.id === messageId)?.reverted,
+      ).toBe(false);
     });
 
     it("should_keep_pendingFlowProposal_without_touching_canvas_when_dismissed", async () => {

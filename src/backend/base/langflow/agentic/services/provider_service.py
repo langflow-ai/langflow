@@ -181,6 +181,42 @@ def get_default_model(provider: str, user_id: UUID | str | None = None) -> str |
     return catalog_default
 
 
+def build_live_only_provider_entries(
+    enabled_providers: list[str],
+    existing_provider_names: set[str],
+    user_id: UUID | str | None,
+) -> list[dict]:
+    """Config entries for enabled live providers the static-catalog filter dropped.
+
+    ``get_unified_models_detailed(include_deprecated=False)`` omits a provider whose
+    static catalog is empty or all-deprecated (e.g. IBM WatsonX, whose bundled
+    models are all deprecated), so the check-config loop never reaches that
+    provider's live fetch. Those providers still expose live, currently-available
+    tool-calling models — fetch them directly here so the assistant offers them
+    instead of hiding the provider.
+    """
+    entries: list[dict] = []
+    for provider in LIVE_MODEL_PROVIDERS:
+        if provider not in enabled_providers or provider in existing_provider_names:
+            continue
+        installed = list_installed_tool_calling_models(provider, user_id)
+        if not installed:
+            continue
+        model_list = [{"name": name, "display_name": name} for name in installed]
+        default_model = get_default_model(provider, user_id)
+        if default_model not in {m["name"] for m in model_list}:
+            default_model = model_list[0]["name"]
+        entries.append(
+            {
+                "name": provider,
+                "configured": True,
+                "default_model": default_model,
+                "models": model_list,
+            }
+        )
+    return entries
+
+
 def get_provider_model_candidates(provider: str, user_id: UUID | str | None = None) -> list[str]:
     """Return the ordered model candidates the assistant may try on this provider.
 

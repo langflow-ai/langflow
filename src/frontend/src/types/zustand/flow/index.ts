@@ -146,6 +146,7 @@ export type FlowStoreType = {
   setEdges: (
     update: EdgeType[] | ((oldState: EdgeType[]) => EdgeType[]),
   ) => void;
+  setNodesAndEdges: (nodes: AllNodeType[], edges: EdgeType[]) => void;
   setNode: (
     id: string,
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),

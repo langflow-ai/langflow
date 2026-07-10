@@ -1,11 +1,30 @@
 import { render, screen } from "@testing-library/react";
-import type { BuildTask } from "../../assistant-panel.types";
+import type {
+  BuildTask,
+  InProgressBuildTask,
+} from "../../assistant-panel.types";
 import { AssistantBuildTasks } from "../assistant-build-tasks";
+
+jest.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: { type: "3rdParty", init: jest.fn() },
+}));
 
 function makeTask(overrides: Partial<BuildTask>): BuildTask {
   return {
     action: "add_component",
     receivedAt: 1,
+    ...overrides,
+  };
+}
+
+function makeInProgress(
+  overrides: Partial<InProgressBuildTask> = {},
+): InProgressBuildTask {
+  return {
+    tool: "add_component",
+    componentType: "ChatInput",
+    receivedAt: 2,
     ...overrides,
   };
 }
@@ -88,5 +107,119 @@ describe("AssistantBuildTasks", () => {
     expect(
       container.querySelector(".text-accent-emerald-foreground"),
     ).not.toBeNull();
+  });
+
+  describe("in-progress row", () => {
+    it("should_render_a_spinner_row_while_a_tool_is_executing", () => {
+      const { container } = render(
+        <AssistantBuildTasks tasks={[]} inProgressTask={makeInProgress()} />,
+      );
+      expect(
+        screen.getByTestId("assistant-build-task-in-progress"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("assistant.buildTasks.inProgress.adding"),
+      ).toBeInTheDocument();
+      expect(container.querySelector(".animate-spin")).not.toBeNull();
+    });
+
+    it("should_render_completed_tasks_and_the_in_progress_row_together", () => {
+      render(
+        <AssistantBuildTasks
+          tasks={[
+            makeTask({ action: "add_component", componentType: "ChatInput" }),
+          ]}
+          inProgressTask={makeInProgress({
+            tool: "connect_components",
+            componentType: undefined,
+          })}
+        />,
+      );
+      expect(screen.getByText(/Added ChatInput/i)).toBeInTheDocument();
+      expect(
+        screen.getByText("assistant.buildTasks.inProgress.wiring"),
+      ).toBeInTheDocument();
+    });
+
+    it("should_not_render_the_row_when_no_tool_is_in_progress", () => {
+      render(
+        <AssistantBuildTasks
+          tasks={[makeTask({ action: "configure", componentId: "Agent-xyz" })]}
+        />,
+      );
+      expect(
+        screen.queryByTestId("assistant-build-task-in-progress"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should_freeze_with_an_alert_icon_instead_of_a_spinner_on_error", () => {
+      const { container } = render(
+        <AssistantBuildTasks
+          tasks={[]}
+          inProgressTask={makeInProgress()}
+          hasError
+        />,
+      );
+      expect(
+        screen.getByText("assistant.buildTasks.inProgress.adding"),
+      ).toBeInTheDocument();
+      expect(container.querySelector(".animate-spin")).toBeNull();
+      expect(container.querySelector(".text-destructive")).not.toBeNull();
+    });
+
+    it("should_fall_back_to_the_backend_label_for_unknown_tools", () => {
+      render(
+        <AssistantBuildTasks
+          tasks={[]}
+          inProgressTask={makeInProgress({
+            tool: "future_tool",
+            label: "Doing something new",
+          })}
+        />,
+      );
+      expect(screen.getByText("Doing something new")).toBeInTheDocument();
+    });
+
+    it("should_use_the_i18n_label_for_use_template", () => {
+      render(
+        <AssistantBuildTasks
+          tasks={[]}
+          inProgressTask={makeInProgress({
+            tool: "use_template",
+            label: "Applying template Memory Chatbot",
+            componentType: undefined,
+          })}
+        />,
+      );
+      expect(
+        screen.getByText("assistant.buildTasks.inProgress.applyingTemplate"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("i18n key coverage", () => {
+    const locales = ["de", "en", "es", "fr", "ja", "pt", "zh-Hans"];
+
+    it.each(locales)(
+      "locale %s has every inProgress key used by the component",
+      (locale) => {
+        // Divergence guard: a key missing in one language is a bug.
+        const messages = require(`@/locales/${locale}.json`);
+        const requiredKeys = [
+          "assistant.buildTasks.inProgress.adding",
+          "assistant.buildTasks.inProgress.removing",
+          "assistant.buildTasks.inProgress.wiring",
+          "assistant.buildTasks.inProgress.configuring",
+          "assistant.buildTasks.inProgress.buildingFlow",
+          "assistant.buildTasks.inProgress.proposingEdit",
+          "assistant.buildTasks.inProgress.applyingTemplate",
+          "assistant.buildTasks.inProgress.working",
+          "assistant.buildTasks.inProgress.component",
+        ];
+        for (const key of requiredKeys) {
+          expect(messages[key]).toBeTruthy();
+        }
+      },
+    );
   });
 });

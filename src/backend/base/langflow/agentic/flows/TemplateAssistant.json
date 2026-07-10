@@ -2384,7 +2384,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
-                "value": 15
+                "value": 30
               },
               "max_output_tokens": {
                 "_input_type": "IntInput",
