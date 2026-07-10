@@ -367,4 +367,59 @@ test.describe("files route accessibility", () => {
       expect(mouseOutlineStyle).toBe("none");
     },
   );
+
+  test(
+    "returns focus to the upload button after the file picker closes (keyboard)",
+    { tag: ["@release", "@workspace"] },
+    async ({ page }) => {
+      await openFilesRoute(page);
+
+      // Dismissing the native picker without a file must not drop focus to
+      // <body> — keyboard focus returns to the "Upload Files" trigger so the
+      // user keeps their place (WCAG 2.4.3). Handling the chooser with no files
+      // stands in for pressing Esc to cancel.
+      const uploadBtn = page.getByTestId("upload-file-btn");
+      await uploadBtn.focus();
+      page.once("filechooser", (fc) => {
+        fc.setFiles([]).catch(() => {});
+      });
+      await page.keyboard.press("Enter");
+
+      await expect
+        .poll(
+          async () =>
+            page.evaluate(
+              () => document.activeElement?.getAttribute("data-testid") ?? "",
+            ),
+          { timeout: TIMEOUTS.standard },
+        )
+        .toBe("upload-file-btn");
+    },
+  );
+
+  test(
+    "does not steal focus back to the upload button on mouse activation",
+    { tag: ["@release", "@workspace"] },
+    async ({ page }) => {
+      await openFilesRoute(page);
+
+      // Mouse clicks still blur the trigger so its tooltip doesn't linger after
+      // the picker closes (#13178); the keyboard focus-restore must not undo it.
+      const uploadBtn = page.getByTestId("upload-file-btn");
+      page.once("filechooser", (fc) => {
+        fc.setFiles([]).catch(() => {});
+      });
+      await uploadBtn.click();
+
+      await expect
+        .poll(
+          async () =>
+            page.evaluate(
+              () => document.activeElement?.getAttribute("data-testid") ?? "",
+            ),
+          { timeout: TIMEOUTS.standard },
+        )
+        .not.toBe("upload-file-btn");
+    },
+  );
 });

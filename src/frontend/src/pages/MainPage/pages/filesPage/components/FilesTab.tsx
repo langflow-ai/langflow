@@ -348,8 +348,19 @@ const FilesTab = ({
         <Button
           className="!px-3 md:!px-4 md:!pl-3.5"
           onClick={async (e) => {
-            e.currentTarget.blur();
+            const button = e.currentTarget;
+            // Keyboard-activated clicks report detail === 0. For mouse clicks
+            // we blur to dismiss the lingering tooltip (#13178); for keyboard
+            // we must return focus to the trigger after the native file picker
+            // closes so focus isn't dropped to <body> (WCAG 2.4.3).
+            const keyboardActivated = e.detail === 0;
+            if (!keyboardActivated) {
+              button.blur();
+            }
             await handleUpload();
+            if (keyboardActivated) {
+              button.focus();
+            }
           }}
           id="upload-file-btn"
           data-testid="upload-file-btn"
