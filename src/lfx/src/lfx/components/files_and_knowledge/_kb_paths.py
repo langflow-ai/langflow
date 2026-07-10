@@ -27,6 +27,15 @@ from lfx.services.deps import get_settings_service
 _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
 
 
+class KBKeyDecryptError(Exception):
+    """The stored embedding API key could not be decrypted.
+
+    Raised when ``load_kb_metadata`` is called with ``require_api_key=True``
+    and the Fernet decrypt fails — almost always because the server's
+    SECRET_KEY changed after the key was stored.
+    """
+
+
 def get_knowledge_bases_root_path() -> Path:
     """Lazily resolve the configured KB root directory."""
     global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
@@ -46,12 +55,22 @@ def reset_knowledge_bases_root_path_cache() -> None:
     _KNOWLEDGE_BASES_ROOT_PATH = None
 
 
-def load_kb_metadata(kb_path: Path, *, log_label: str) -> dict[str, Any]:
+def load_kb_metadata(
+    kb_path: Path,
+    *,
+    log_label: str,
+    require_api_key: bool = False,
+) -> dict[str, Any]:
     """Load ``embedding_metadata.json`` from a KB directory.
 
     Returns ``{}`` on missing file / invalid JSON. ``log_label`` is used in log
     messages instead of the on-disk path so usernames (sometimes emails) are
     not leaked into log streams.
+
+    When *require_api_key* is ``True`` and the stored ``api_key`` cannot be
+    decrypted (typically a SECRET_KEY mismatch), raises ``KBKeyDecryptError``
+    instead of silently returning ``api_key=None``.  Callers that only need
+    non-secret metadata (listing, inspection) should leave it ``False``.
     """
     metadata: dict[str, Any] = {}
     metadata_file = kb_path / "embedding_metadata.json"
@@ -70,6 +89,16 @@ def load_kb_metadata(kb_path: Path, *, log_label: str) -> dict[str, Any]:
         try:
             metadata["api_key"] = decrypt_api_key(metadata["api_key"], get_settings_service())
         except (InvalidToken, TypeError, ValueError) as e:
-            logger.error("Could not decrypt API key for %s. Provide it manually. Error: %s", log_label, e)
+            if require_api_key:
+                msg = (
+                    f"Cannot decrypt the stored embedding API key for {log_label}. "
+                    "This usually means the server's SECRET_KEY changed after the "
+                    "key was saved. To recover, supply the embedding provider API "
+                    "key on the component's 'Embedding Provider API Key' input and "
+                    "re-run ingestion — the key will be re-encrypted with the "
+                    "current SECRET_KEY."
+                )
+                raise KBKeyDecryptError(msg) from e
+            logger.warning("Could not decrypt API key for %s (non-critical path). Error: %s", log_label, e)
             metadata["api_key"] = None
     return metadata
