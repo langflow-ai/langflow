@@ -15,9 +15,7 @@
           "id": "ChatInput-ISZ2I",
           "type": "ChatInput",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -62,9 +60,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__",
                 "hidden": false,
                 "options": null,
@@ -98,9 +94,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -201,10 +195,7 @@
                 "external_options": {},
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -224,9 +215,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -249,9 +238,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -307,12 +294,7 @@
           "id": "LoopComponent-IfTX4",
           "type": "LoopComponent",
           "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame",
-              "JSON",
-              "Table"
-            ],
+            "base_classes": ["Data", "DataFrame", "JSON", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -320,9 +302,7 @@
             "display_name": "Loop",
             "documentation": "https://docs.langflow.org/loop",
             "edited": false,
-            "field_order": [
-              "data"
-            ],
+            "field_order": ["data"],
             "frozen": false,
             "icon": "infinity",
             "legacy": false,
@@ -347,17 +327,12 @@
                 "cache": true,
                 "display_name": "Item",
                 "group_outputs": true,
-                "loop_types": [
-                  "Message"
-                ],
+                "loop_types": ["Message"],
                 "method": "item_output",
                 "name": "item",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": [
-                  "Data",
-                  "JSON"
-                ],
+                "types": ["Data", "JSON"],
                 "value": "__UNDEFINED__",
                 "hidden": false,
                 "options": null,
@@ -372,10 +347,7 @@
                 "name": "done",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": [
-                  "DataFrame",
-                  "Table"
-                ],
+                "types": ["DataFrame", "Table"],
                 "value": "__UNDEFINED__",
                 "hidden": false,
                 "options": null,
@@ -409,12 +381,7 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Data to iterate over. Accepts DataFrame, Table, Data, or Message.",
-                "input_types": [
-                  "DataFrame",
-                  "Table",
-                  "Data",
-                  "Message"
-                ],
+                "input_types": ["DataFrame", "Table", "Data", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "data",
@@ -447,9 +414,7 @@
           "id": "ParserComponent-qss57",
           "type": "ParserComponent",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -457,12 +422,7 @@
             "display_name": "Parser",
             "documentation": "https://docs.langflow.org/parser",
             "edited": false,
-            "field_order": [
-              "input_data",
-              "mode",
-              "pattern",
-              "sep"
-            ],
+            "field_order": ["input_data", "mode", "pattern", "sep"],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -491,9 +451,7 @@
                 "name": "parsed_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__",
                 "hidden": false,
                 "options": null,
@@ -527,12 +485,7 @@
                 "display_name": "JSON or Table",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": [
-                  "DataFrame",
-                  "Table",
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["DataFrame", "Table", "Data", "JSON"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -553,10 +506,7 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
+                "options": ["Parser", "Stringify"],
                 "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -577,9 +527,7 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -604,9 +552,7 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -642,11 +588,7 @@
           "id": "TypeConverterComponent-NPX6M",
           "type": "TypeConverterComponent",
           "node": {
-            "base_classes": [
-              "JSON",
-              "Message",
-              "Table"
-            ],
+            "base_classes": ["JSON", "Message", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -654,11 +596,7 @@
             "display_name": "Type Convert",
             "documentation": "https://docs.langflow.org/type-convert",
             "edited": false,
-            "field_order": [
-              "input_data",
-              "auto_parse",
-              "output_type"
-            ],
+            "field_order": ["input_data", "auto_parse", "output_type"],
             "frozen": false,
             "icon": "repeat",
             "legacy": false,
@@ -691,9 +629,7 @@
                 "name": "message_output",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__",
                 "hidden": false,
                 "options": null,
@@ -708,9 +644,7 @@
                 "name": "data_output",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__",
                 "hidden": false,
                 "options": null,
@@ -725,9 +659,7 @@
                 "name": "dataframe_output",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__",
                 "hidden": false,
                 "options": null,
@@ -808,11 +740,7 @@
                 "dynamic": false,
                 "info": "Select the desired output data type",
                 "name": "output_type",
-                "options": [
-                  "Message",
-                  "JSON",
-                  "Table"
-                ],
+                "options": ["Message", "JSON", "Table"],
                 "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -845,9 +773,7 @@
           "id": "ChatOutput-iR2Ie",
           "type": "ChatOutput",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -901,9 +827,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__",
                 "hidden": false,
                 "options": null,
@@ -957,9 +881,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -982,9 +904,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1037,10 +957,7 @@
                 "external_options": {},
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -1060,9 +977,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1085,9 +1000,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1141,19 +1054,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-ISZ2I",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "data",
             "id": "LoopComponent-IfTX4",
-            "inputTypes": [
-              "DataFrame",
-              "Table",
-              "Data",
-              "Message"
-            ],
+            "inputTypes": ["DataFrame", "Table", "Data", "Message"],
             "type": "other"
           }
         },
@@ -1172,20 +1078,12 @@
             "dataType": "LoopComponent",
             "id": "LoopComponent-IfTX4",
             "name": "item",
-            "output_types": [
-              "Data",
-              "JSON"
-            ]
+            "output_types": ["Data", "JSON"]
           },
           "targetHandle": {
             "fieldName": "input_data",
             "id": "ParserComponent-qss57",
-            "inputTypes": [
-              "DataFrame",
-              "Table",
-              "Data",
-              "JSON"
-            ],
+            "inputTypes": ["DataFrame", "Table", "Data", "JSON"],
             "type": "other"
           }
         },
@@ -1204,20 +1102,12 @@
             "dataType": "ParserComponent",
             "id": "ParserComponent-qss57",
             "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_data",
             "id": "TypeConverterComponent-NPX6M",
-            "inputTypes": [
-              "Message",
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table"
-            ],
+            "inputTypes": ["Message", "Data", "JSON", "DataFrame", "Table"],
             "type": "other"
           }
         },
@@ -1236,18 +1126,13 @@
             "dataType": "TypeConverterComponent",
             "id": "TypeConverterComponent-NPX6M",
             "name": "data_output",
-            "output_types": [
-              "JSON"
-            ]
+            "output_types": ["JSON"]
           },
           "targetHandle": {
             "dataType": "LoopComponent",
             "id": "LoopComponent-IfTX4",
             "name": "item",
-            "output_types": [
-              "Data",
-              "Message"
-            ]
+            "output_types": ["Data", "Message"]
           }
         },
         "id": "reactflow__edge-TypeConverterComponent-NPX6M{\u0153dataType\u0153:\u0153TypeConverterComponent\u0153,\u0153id\u0153:\u0153TypeConverterComponent-NPX6M\u0153,\u0153name\u0153:\u0153data_output\u0153,\u0153output_types\u0153:[\u0153JSON\u0153]}-LoopComponent-IfTX4{\u0153dataType\u0153:\u0153LoopComponent\u0153,\u0153id\u0153:\u0153LoopComponent-IfTX4\u0153,\u0153name\u0153:\u0153item\u0153,\u0153output_types\u0153:[\u0153Data\u0153,\u0153Message\u0153]}",
@@ -1265,21 +1150,12 @@
             "dataType": "LoopComponent",
             "id": "LoopComponent-IfTX4",
             "name": "done",
-            "output_types": [
-              "DataFrame",
-              "Table"
-            ]
+            "output_types": ["DataFrame", "Table"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-iR2Ie",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "other"
           }
         },

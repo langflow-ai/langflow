@@ -74,7 +74,11 @@ describe("AssistantModelNotice", () => {
 
   it("uses the remediation string when the model was retried, not swapped", () => {
     const notices: NoticeType[] = [
-      { type: "model_remediation", reason: "tools unsupported", failed_model: "gpt-5.6" },
+      {
+        type: "model_remediation",
+        reason: "tools unsupported",
+        failed_model: "gpt-5.6",
+      },
     ];
     render(<AssistantModelNotice notices={notices} />);
     const content = screen.getByTestId("tooltip-content").textContent ?? "";
