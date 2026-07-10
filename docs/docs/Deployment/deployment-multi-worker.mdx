@@ -273,6 +273,17 @@ See [Troubleshoot multi-worker deployments](./troubleshoot#multi-worker-deployme
 | `LANGFLOW_REDIS_QUEUE_POLLING_WATCHDOG_INTERVAL_S` | `15.0` | How often in seconds the watchdog scans for stale jobs. Lower values reclaim resources faster at the cost of more Redis reads. |
 | `LANGFLOW_GUNICORN_PRELOAD` | `False` | **Experimental.** Loads the app in the Gunicorn master process before workers fork, reducing per-worker startup overhead. Pairs well with `LANGFLOW_WORKERS`. Non-Windows only. |
 
+:::note
+Rate limit counters are stored _per-process_ by default.
+To share counters across all workers, point `LANGFLOW_RATE_LIMIT_STORAGE_URI` at the same Redis instance:
+
+```text
+LANGFLOW_RATE_LIMIT_STORAGE_URI=redis://your-redis-host:6379/2
+```
+
+For more information, see [Login rate limiting](/api-keys-and-authentication#login-rate-limiting).
+:::
+
 ## Monitor the job queue
 
 The `GET /monitor/job_queue` endpoint returns a metrics snapshot for the running worker. It requires superuser authentication and returns HTTP 403 otherwise.

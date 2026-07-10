@@ -21,7 +21,15 @@ This guide will help you get LangFlow up and running using Docker and Docker Com
    cd langflow/docker_example
    ```
 
-3. Run the Docker Compose file:
+3. Create a `.env` file with the LangFlow admin password:
+
+   ```sh
+   LANGFLOW_SUPERUSER_PASSWORD=replace-with-a-strong-password
+   ```
+
+   The default admin username is `langflow`.
+
+4. Run the Docker Compose file:
 
    ```sh
    docker compose up
@@ -40,6 +48,7 @@ The `langflow` service uses the `langflowai/langflow:latest` Docker image and ex
 Environment variables:
 
 - `LANGFLOW_DATABASE_URL`: The connection string for the PostgreSQL database.
+- `LANGFLOW_SUPERUSER_PASSWORD`: The initial admin password. This value is required in `.env`.
 - `LANGFLOW_CONFIG_DIR`: The directory where LangFlow stores logs, file storage, monitor data, and secret keys.
 
 Volumes:

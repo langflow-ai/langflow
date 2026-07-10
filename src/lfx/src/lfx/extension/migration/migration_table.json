@@ -242,6 +242,16 @@
       "added_in": "1.11.0"
     },
     {
+      "import_path": "lfx.components.tools.tavily_search_tool.TavilySearchToolComponent",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.tools.TavilySearchToolComponent",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
       "bare_class_name": "WikidataComponent",
       "target": "ext:wikipedia:WikidataComponent@official",
       "added_in": "1.11.0"
@@ -4799,6 +4809,66 @@
     {
       "legacy_slot": "ext:vlmrun:VLMRunTranscription@official-pre-a",
       "target": "ext:vlmrun:VLMRunTranscription@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "PaddleOCRComponent",
+      "target": "ext:paddle:PaddleOCRComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.paddle.paddleocr.PaddleOCRComponent",
+      "target": "ext:paddle:PaddleOCRComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.paddle.PaddleOCRComponent",
+      "target": "ext:paddle:PaddleOCRComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:paddle:PaddleOCRComponent@official-pre-a",
+      "target": "ext:paddle:PaddleOCRComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "EmpirioLabsModelComponent",
+      "target": "ext:empiriolabs:EmpirioLabsModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.empiriolabs.empiriolabs.EmpirioLabsModelComponent",
+      "target": "ext:empiriolabs:EmpirioLabsModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.empiriolabs.EmpirioLabsModelComponent",
+      "target": "ext:empiriolabs:EmpirioLabsModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:empiriolabs:EmpirioLabsModelComponent@official-pre-a",
+      "target": "ext:empiriolabs:EmpirioLabsModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "EmpirioLabsImageGenerationComponent",
+      "target": "ext:empiriolabs:EmpirioLabsImageGenerationComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.empiriolabs.empiriolabs_image_generation.EmpirioLabsImageGenerationComponent",
+      "target": "ext:empiriolabs:EmpirioLabsImageGenerationComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.empiriolabs.EmpirioLabsImageGenerationComponent",
+      "target": "ext:empiriolabs:EmpirioLabsImageGenerationComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:empiriolabs:EmpirioLabsImageGenerationComponent@official-pre-a",
+      "target": "ext:empiriolabs:EmpirioLabsImageGenerationComponent@official",
       "added_in": "1.11.0"
     }
   ],

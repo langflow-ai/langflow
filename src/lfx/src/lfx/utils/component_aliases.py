@@ -9,6 +9,8 @@ from typing import Any
 # `name`, and `display_name`.
 LEGACY_TYPE_ALIASES: dict[str, str] = {
     "Prompt": "Prompt Template",
+    "TavilyAISearch": "ext:tavily:TavilySearchComponent@official",
+    "TavilySearchToolComponent": "ext:tavily:TavilySearchComponent@official",
     "parser": "ParserComponent",
 }
 

@@ -9,6 +9,7 @@ import {
   SimpleSidebar,
   SimpleSidebarProvider,
 } from "@/components/ui/simple-sidebar";
+import { PermissionsProvider } from "@/contexts/permissionsContext";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
@@ -302,53 +303,69 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 setSlidingContainerOpen(true);
               }}
             >
-              <SidebarProvider
-                width="17.5rem"
-                defaultOpen={!isMobile}
-                segmentedSidebar={ENABLE_NEW_SIDEBAR}
+              <div
+                className="contents"
+                inert={isSlidingContainerOpen && isFullscreen}
+                aria-hidden={isSlidingContainerOpen && isFullscreen}
               >
-                {/* Assistant Panel — single instance, mounted INSIDE the
+                <SidebarProvider
+                  width="17.5rem"
+                  defaultOpen={!isMobile}
+                  segmentedSidebar={ENABLE_NEW_SIDEBAR}
+                >
+                  {/* Assistant Panel — single instance, mounted INSIDE the
                     SidebarProvider so it can read sidebar open state via
                     ``useSidebar`` and shift its horizontal position when the
                     sidebar slides off-canvas. */}
-                <AssistantPanel
-                  isOpen={assistantOpen}
-                  onClose={() => setAssistantOpen(false)}
-                />
-                <FlowSearchProvider>
-                  {/* FlowSidebarComponent - stays in place. Wrapped in a
+                  <AssistantPanel
+                    isOpen={assistantOpen}
+                    onClose={() => setAssistantOpen(false)}
+                  />
+                  <FlowSearchProvider>
+                    {/* FlowSidebarComponent - stays in place. Wrapped in a
                       ``display: none`` container while the welcome is open
                       so it never paints on first render (and never flashes
                       while the welcome's open-effect catches up). The
                       wrapper uses ``display: contents`` when visible so it
                       doesn't break the parent flex layout. */}
-                  {!view && (
-                    <div
-                      style={{
-                        display: isWelcomeOpen ? "none" : "contents",
-                      }}
-                    >
-                      <FlowSidebarComponent isLoading={isLoading} />
-                    </div>
-                  )}
-
-                  <main
-                    className={cn(
-                      "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
-                      isSlidingContainerOpen &&
-                        !isFullscreen &&
-                        "rounded-xl m-2 mr-0",
+                    {!view && (
+                      <div
+                        style={{
+                          display: isWelcomeOpen ? "none" : "contents",
+                        }}
+                      >
+                        <FlowSidebarComponent isLoading={isLoading} />
+                      </div>
                     )}
-                  >
-                    <div className="h-full w-full">
-                      <FlowPageMainContent
-                        flowId={id}
-                        setIsLoading={setIsLoading}
-                      />
-                    </div>
-                  </main>
-                </FlowSearchProvider>
-              </SidebarProvider>
+
+                    <main
+                      className={cn(
+                        "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
+                        isSlidingContainerOpen &&
+                          !isFullscreen &&
+                          "rounded-xl m-2 mr-0",
+                      )}
+                    >
+                      <div className="h-full w-full">
+                        <PermissionsProvider
+                          resourceType="flow"
+                          resourceIds={currentFlow?.id ? [currentFlow.id] : []}
+                          domain={
+                            currentFlow?.folder_id
+                              ? `project:${currentFlow.folder_id}`
+                              : undefined
+                          }
+                        >
+                          <FlowPageMainContent
+                            flowId={id}
+                            setIsLoading={setIsLoading}
+                          />
+                        </PermissionsProvider>
+                      </div>
+                    </main>
+                  </FlowSearchProvider>
+                </SidebarProvider>
+              </div>
               <SimpleSidebar resizable={!isFullscreen} className="h-full">
                 <FlowPageSlidingContainerContent
                   isFullscreen={isFullscreen}

@@ -29,6 +29,7 @@ from lfx.cli.script_loader import (
     find_graph_variable,
     load_graph_from_script,
 )
+from lfx.execution import get_default_coordinator
 from lfx.load import load_flow_from_json
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars
 from lfx.schema.schema import InputValueRequest
@@ -308,7 +309,11 @@ def prepare_graph(graph, verbose_print):
 
 
 async def execute_graph_with_capture(
-    graph, input_value: str | None, session_id: str | None = None, user_id: str | None = None
+    graph,
+    input_value: str | None,
+    session_id: str | None = None,
+    event_manager=None,
+    user_id: str | None = None,
 ):
     """Execute a graph and capture output.
 
@@ -319,6 +324,10 @@ async def execute_graph_with_capture(
             message-store paths (which validate session_id) succeed; an empty or
             whitespace-only string is rejected with ``ValueError`` to surface
             shell/env-var typos (see ``lfx.run._defaults.validate_provided_id``).
+        event_manager: Optional ``EventManager``. When provided it is threaded
+            into the run so components emit token/message/error events to its
+            queue as the run progresses (used by the streaming workflow
+            endpoint). ``None`` keeps the non-streaming behavior.
         user_id: Optional verified caller identity (e.g. forwarded by an edge
             gateway via a verified JWT — see ``lfx.cli.serve_identity``). ``None``
             keeps any ``user_id`` already pinned on the graph, and auto-generates
@@ -360,7 +369,15 @@ async def execute_graph_with_capture(
     try:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
-        results = [result async for result in graph.async_start(inputs, fallback_to_env_vars=fallback_to_env_vars)]
+        results = [
+            payload
+            async for payload in get_default_coordinator().stream(
+                graph,
+                initial_inputs=inputs,
+                fallback_to_env_vars=fallback_to_env_vars,
+                event_manager=event_manager,
+            )
+        ]
     except Exception as exc:
         # Capture any error output that was written to stderr
         error_output = captured_stderr.getvalue()

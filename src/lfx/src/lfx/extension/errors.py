@@ -22,8 +22,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 DOCS_BASE = "https://docs.langflow.org/extensions/errors"
-"""Base URL for error reference documentation.  Concrete pages are anchors of
-the form ``#<error-code>`` (e.g. ``#manifest-invalid``).
+"""URL for extension error guidance.  Every ``ref_url`` / CLI ``see:`` line points
+to one page on how to read errors.
 """
 
 
@@ -33,8 +33,7 @@ the form ``#<error-code>`` (e.g. ``#manifest-invalid``).
 
 # Phase-1 error codes.  Each code shipped here MUST have:
 #   1. a branch in ``format_extension_error``,
-#   2. a snapshot test in ``tests/unit/extension/test_errors.py``,
-#   3. a documented reference URL anchor.
+#   2. a snapshot test in ``tests/unit/extension/test_errors.py``.
 #
 # Loader / reload / migration / events codes are added when those subsystems
 # land.
@@ -128,9 +127,13 @@ ERROR_CODES: frozenset[str] = frozenset(
         # authenticated user; clients that pass ``?keyspace=...`` are
         # rejected so the contract is explicit instead of silently dropped.
         "extension-events-keyspace-forbidden",
+        # Model-provider registration (manifest ``providers[]``). Both are
+        # warning-only: a malformed or colliding provider is skipped so the rest
+        # of the extension still loads.
+        "provider-invalid",
+        "provider-skipped",
     }
 )
-
 
 # ---------------------------------------------------------------------------
 # ExtensionError
@@ -153,7 +156,7 @@ class ExtensionError:
             symbol name).  ``None`` if the error is purely positional.
         hint: Concrete suggestion for how to fix the problem.  Required for
             every code shipped in Phase 1.
-        ref_url: Link to the error reference docs.  Auto-derived from ``code``
+        ref_url: Link to the extension error docs.  Auto-set to :data:`DOCS_BASE`
             when not provided.
     """
 
@@ -173,7 +176,7 @@ class ExtensionError:
             )
             raise ValueError(msg)
         if self.ref_url is None:
-            object.__setattr__(self, "ref_url", f"{DOCS_BASE}#{self.code}")
+            object.__setattr__(self, "ref_url", f"{DOCS_BASE}")
 
     def to_dict(self) -> dict[str, Any]:
         """Serializable representation suitable for HTTP bodies / JSON output."""
@@ -347,6 +350,8 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "The {location} query parameter is not accepted; events are scoped server-side to the "
         "authenticated user (rejected value: {content!r})."
     ),
+    "provider-invalid": ("Model provider {content!r} declared at {location} could not be registered: {message}"),
+    "provider-skipped": ("Model provider {content!r} declared at {location} was skipped: {message}"),
 }
 
 

@@ -2,11 +2,12 @@
   "data": {
     "edges": [
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-k48NL",
+            "id": "ChatInput-z2rit",
             "name": "message",
             "output_types": [
               "Message"
@@ -14,18 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "Knowledge-kgwih",
+            "id": "Knowledge-Y8gm2",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-k48NL{œdataTypeœ:œChatInputœ,œidœ:œChatInput-k48NLœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Knowledge-kgwih{œfieldNameœ:œsearch_queryœ,œidœ:œKnowledge-kgwihœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-k48NL",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-k48NLœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Knowledge-kgwih",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKnowledge-kgwihœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-z2rit{œdataTypeœ:œChatInputœ,œidœ:œChatInput-z2ritœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Knowledge-Y8gm2{œfieldNameœ:œsearch_queryœ,œidœ:œKnowledge-Y8gm2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-z2rit",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-z2ritœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Knowledge-Y8gm2",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKnowledge-Y8gm2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -33,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Knowledge",
-            "id": "Knowledge-kgwih",
+            "id": "Knowledge-Y8gm2",
             "name": "retrieve_data",
             "output_types": [
               "Table"
@@ -41,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-KBRET",
+            "id": "parser-h3mx9",
             "inputTypes": [
               "DataFrame",
               "Table",
@@ -51,12 +53,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__Knowledge-kgwih{œdataTypeœ:œKnowledgeœ,œidœ:œKnowledge-kgwihœ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œTableœ]}-parser-KBRET{œfieldNameœ:œinput_dataœ,œidœ:œparser-KBRETœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Knowledge-Y8gm2{œdataTypeœ:œKnowledgeœ,œidœ:œKnowledge-Y8gm2œ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œTableœ]}-parser-h3mx9{œfieldNameœ:œinput_dataœ,œidœ:œparser-h3mx9œ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Knowledge-kgwih",
-        "sourceHandle": "{œdataTypeœ: œKnowledgeœ, œidœ: œKnowledge-kgwihœ, œnameœ: œretrieve_dataœ, œoutput_typesœ: [œTableœ]}",
-        "target": "parser-KBRET",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-KBRETœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
+        "source": "Knowledge-Y8gm2",
+        "sourceHandle": "{œdataTypeœ: œKnowledgeœ, œidœ: œKnowledge-Y8gm2œ, œnameœ: œretrieve_dataœ, œoutput_typesœ: [œTableœ]}",
+        "target": "parser-h3mx9",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-h3mx9œ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -64,7 +66,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-KBRET",
+            "id": "parser-h3mx9",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -72,7 +74,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-OG4M9",
+            "id": "ChatOutput-QRg8s",
             "inputTypes": [
               "Data",
               "JSON",
@@ -83,30 +85,30 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__parser-KBRET{œdataTypeœ:œparserœ,œidœ:œparser-KBRETœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-OG4M9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-OG4M9œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-parser-h3mx9{œdataTypeœ:œparserœ,œidœ:œparser-h3mx9œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-QRg8s{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-QRg8sœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "parser-KBRET",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-KBRETœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-OG4M9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-OG4M9œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "parser-h3mx9",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-h3mx9œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-QRg8s",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-QRg8sœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-6CE3d",
+          "id": "note-TPGxS",
           "node": {
-            "description": "# 📖 README\nA stand-alone component handles the retrieval of ingested knowledge from existing knowledge bases. To retrieve knowledge:\n\n1. Select your knowledge base from the Knowledge Base dropdown. If you do not see it, choose \"Refresh List\".\n2. (Optional) Enter a Search Query to be performed against the knowledge base.\n\nNote that by default, 5 results are returned, which can be configured by clicking Controls at the top of the component.\n",
+            "description": "# 🔎 Knowledge Retrieval\n\nRun a semantic search against a **Knowledge Base** and return the matching passages — **pure retrieval, no LLM** (the output is the raw retrieved text, not a generated answer). Use it to inspect what your KB returns, or as a building block for a RAG flow.\n\n> **Prerequisite:** you need a Knowledge Base that already has data in it. Create and populate one under **Knowledge Bases**, or ingest documents with another flow first.\n\n## Setup\n1. **Knowledge** node → pick your Knowledge Base from the dropdown (click **Refresh List** if it's not shown).\n2. (Optional) set a default **Search Query**.\n\n## Use\nOpen the **Playground**, type a query → the flow returns the top matching passages (default **5**, configurable under **Controls**).\n\n## How it works\n1. **Chat Input → Knowledge (Retrieve)** — semantic search over the KB.\n2. **Parser → Chat Output** — formats the retrieved passages as readable text.",
             "display_name": "",
             "documentation": "",
-            "i18n_key": "template_notes.knowledge_base.009432e2",
+            "i18n_key": "template_notes.knowledge_retrieval.7b546850",
             "template": {}
           },
           "type": "note"
         },
         "dragging": false,
         "height": 384,
-        "id": "note-6CE3d",
+        "id": "note-TPGxS",
         "measured": {
           "height": 384,
           "width": 371
@@ -124,7 +126,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-k48NL",
+          "id": "ChatInput-z2rit",
           "node": {
             "base_classes": [
               "Message"
@@ -148,7 +150,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.7.0",
+            "lf_version": "1.10.1rc3",
             "metadata": {
               "code_hash": "7a26c54d89ed",
               "dependencies": {
@@ -282,7 +284,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "IBM Acquires DataStax"
+                "value": ""
               },
               "sender": {
                 "advanced": true,
@@ -364,9 +366,9 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-k48NL",
+        "id": "ChatInput-z2rit",
         "measured": {
-          "height": 204,
+          "height": 207,
           "width": 320
         },
         "position": {
@@ -378,7 +380,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-OG4M9",
+          "id": "ChatOutput-QRg8s",
           "node": {
             "base_classes": [
               "Message"
@@ -403,7 +405,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.5.0.post1",
+            "lf_version": "1.10.1rc3",
             "metadata": {
               "code_hash": "84009527d08c",
               "dependencies": {
@@ -414,7 +416,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -647,13 +649,13 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-OG4M9",
+        "id": "ChatOutput-QRg8s",
         "measured": {
-          "height": 48,
+          "height": 52,
           "width": 192
         },
         "position": {
-          "x": 1460.0,
+          "x": 1460,
           "y": -202.42300688367868
         },
         "selected": false,
@@ -661,7 +663,7 @@
       },
       {
         "data": {
-          "id": "Knowledge-kgwih",
+          "id": "Knowledge-Y8gm2",
           "node": {
             "base_classes": [
               "DataFrame",
@@ -691,8 +693,9 @@
             ],
             "frozen": false,
             "icon": "database",
-            "last_updated": "2025-08-26T16:19:16.681Z",
+            "last_updated": "2026-06-23T21:35:05.715Z",
             "legacy": false,
+            "lf_version": "1.10.1rc3",
             "metadata": {
               "code_hash": "37863c267333",
               "dependencies": {
@@ -792,7 +795,7 @@
                 "dynamic": true,
                 "info": "Overrides global provider settings. Leave blank to use your pre-configured API Key.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "override_skip": false,
                 "password": true,
@@ -983,7 +986,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": null
+                "value": ""
               },
               "metadata_filter": {
                 "_input_type": "MessageTextInput",
@@ -1103,9 +1106,9 @@
           "type": "Knowledge"
         },
         "dragging": false,
-        "id": "Knowledge-kgwih",
+        "id": "Knowledge-Y8gm2",
         "measured": {
-          "height": 329,
+          "height": 427,
           "width": 320
         },
         "position": {
@@ -1117,7 +1120,7 @@
       },
       {
         "data": {
-          "id": "parser-KBRET",
+          "id": "parser-h3mx9",
           "node": {
             "base_classes": [
               "Message"
@@ -1140,7 +1143,7 @@
             "icon": "braces",
             "key": "parser",
             "legacy": false,
-            "lf_version": "1.9.0",
+            "lf_version": "1.10.1rc3",
             "metadata": {
               "code_hash": "cda7b997a730",
               "dependencies": {
@@ -1294,30 +1297,31 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-KBRET",
+        "id": "parser-h3mx9",
         "measured": {
           "height": 331,
           "width": 320
         },
         "position": {
-          "x": 1050.0,
-          "y": -260.0
+          "x": 1050,
+          "y": -260
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 90.80151692622985,
-      "y": 591.5552904741861,
-      "zoom": 1.0053880437940252
+      "x": 179.2944878249807,
+      "y": 646.84684188382,
+      "zoom": 1.1297718192692228
     }
   },
   "description": "An example of performing a vector search against data in a Knowledge Base to retrieve relevant documents.",
   "endpoint_name": null,
-  "id": "e262d49f-c800-4962-948b-c94f79eb5fb8",
+  "id": "b93df672-5078-44dd-be58-470a115cc716",
   "is_component": false,
-  "last_tested_version": "1.5.0.post2",
-  "name": "Knowledge Base",
+  "last_tested_version": "1.10.1rc3",
+  "locked": false,
+  "name": "Knowledge Retrieval",
   "tags": []
 }

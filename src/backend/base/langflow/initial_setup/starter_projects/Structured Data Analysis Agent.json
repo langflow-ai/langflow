@@ -7,29 +7,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileDescriptionGeneratorComponent",
-            "id": "FileDescriptionGeneratorComponent-KlX5t",
+            "id": "FileDescriptionGeneratorComponent-oTrJn",
             "name": "descriptions",
-            "output_types": [
-              "JSON"
-            ]
+            "output_types": ["JSON"]
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "Chroma-eSDtr",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Table"
-            ],
+            "id": "Chroma-eMTbF",
+            "inputTypes": ["Data", "DataFrame", "Table"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileDescriptionGeneratorComponent-KlX5t{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-KlX5tœ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}-Chroma-eSDtr{œfieldNameœ:œingest_dataœ,œidœ:œChroma-eSDtrœ,œinputTypesœ:[œDataœ,œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileDescriptionGeneratorComponent-oTrJn{œdataTypeœ:œFileDescriptionGeneratorComponentœ,œidœ:œFileDescriptionGeneratorComponent-oTrJnœ,œnameœ:œdescriptionsœ,œoutput_typesœ:[œJSONœ]}-Chroma-eMTbF{œfieldNameœ:œingest_dataœ,œidœ:œChroma-eMTbFœ,œinputTypesœ:[œDataœ,œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileDescriptionGeneratorComponent-KlX5t",
-        "sourceHandle": "{œdataTypeœ: œFileDescriptionGeneratorComponentœ, œidœ: œFileDescriptionGeneratorComponent-KlX5tœ, œnameœ: œdescriptionsœ, œoutput_typesœ: [œJSONœ]}",
-        "target": "Chroma-eSDtr",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œChroma-eSDtrœ, œinputTypesœ: [œDataœ, œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "FileDescriptionGeneratorComponent-oTrJn",
+        "sourceHandle": "{œdataTypeœ: œFileDescriptionGeneratorComponentœ, œidœ: œFileDescriptionGeneratorComponent-oTrJnœ, œnameœ: œdescriptionsœ, œoutput_typesœ: [œJSONœ]}",
+        "target": "Chroma-eMTbF",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œChroma-eMTbFœ, œinputTypesœ: [œDataœ, œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -37,27 +31,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "Chroma",
-            "id": "Chroma-e3Qmg",
+            "id": "Chroma-IkIQx",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "OpenDsStarAgent-diy3H",
-            "inputTypes": [
-              "Tool"
-            ],
+            "id": "OpenDsStarAgent-CYVYX",
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Chroma-e3Qmg{œdataTypeœ:œChromaœ,œidœ:œChroma-e3Qmgœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-diy3H{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-diy3Hœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Chroma-IkIQx{œdataTypeœ:œChromaœ,œidœ:œChroma-IkIQxœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-CYVYX{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-CYVYXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Chroma-e3Qmg",
-        "sourceHandle": "{œdataTypeœ: œChromaœ, œidœ: œChroma-e3Qmgœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "OpenDsStarAgent-diy3H",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-diy3Hœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "Chroma-IkIQx",
+        "sourceHandle": "{œdataTypeœ: œChromaœ, œidœ: œChroma-IkIQxœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "OpenDsStarAgent-CYVYX",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-CYVYXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -65,27 +55,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-AVUXl",
+            "id": "ChatInput-zSTGd",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenDsStarAgent-diy3H",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenDsStarAgent-CYVYX",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-AVUXl{œdataTypeœ:œChatInputœ,œidœ:œChatInput-AVUXlœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenDsStarAgent-diy3H{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-diy3Hœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-zSTGd{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zSTGdœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenDsStarAgent-CYVYX{œfieldNameœ:œinput_valueœ,œidœ:œOpenDsStarAgent-CYVYXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-AVUXl",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-AVUXlœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenDsStarAgent-diy3H",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenDsStarAgent-diy3Hœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-zSTGd",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-zSTGdœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenDsStarAgent-CYVYX",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenDsStarAgent-CYVYXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -93,31 +79,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenDsStarAgent",
-            "id": "OpenDsStarAgent-diy3H",
+            "id": "OpenDsStarAgent-CYVYX",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-JKfIb",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "id": "ChatOutput-JmTk1",
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenDsStarAgent-diy3H{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-diy3Hœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JKfIb{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JKfIbœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenDsStarAgent-CYVYX{œdataTypeœ:œOpenDsStarAgentœ,œidœ:œOpenDsStarAgent-CYVYXœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JmTk1{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JmTk1œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenDsStarAgent-diy3H",
-        "sourceHandle": "{œdataTypeœ: œOpenDsStarAgentœ, œidœ: œOpenDsStarAgent-diy3Hœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-JKfIb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JKfIbœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "OpenDsStarAgent-CYVYX",
+        "sourceHandle": "{œdataTypeœ: œOpenDsStarAgentœ, œidœ: œOpenDsStarAgent-CYVYXœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-JmTk1",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JmTk1œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -125,27 +103,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileContentRetriever",
-            "id": "FileContentRetriever-xvvaL",
+            "id": "FileContentRetriever-Yhfgz",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "OpenDsStarAgent-diy3H",
-            "inputTypes": [
-              "Tool"
-            ],
+            "id": "OpenDsStarAgent-CYVYX",
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileContentRetriever-xvvaL{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-xvvaLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-diy3H{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-diy3Hœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileContentRetriever-Yhfgz{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-Yhfgzœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-CYVYX{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-CYVYXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileContentRetriever-xvvaL",
-        "sourceHandle": "{œdataTypeœ: œFileContentRetrieverœ, œidœ: œFileContentRetriever-xvvaLœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "OpenDsStarAgent-diy3H",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-diy3Hœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "FileContentRetriever-Yhfgz",
+        "sourceHandle": "{œdataTypeœ: œFileContentRetrieverœ, œidœ: œFileContentRetriever-Yhfgzœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "OpenDsStarAgent-CYVYX",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-CYVYXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -153,15 +127,13 @@
         "data": {
           "sourceHandle": {
             "dataType": "Chroma",
-            "id": "Chroma-eSDtr",
+            "id": "Chroma-eMTbF",
             "name": "search_results",
-            "output_types": [
-              "JSON"
-            ]
+            "output_types": ["JSON"]
           },
           "targetHandle": {
             "fieldName": "inputs",
-            "id": "MergeFlows-FmEAa",
+            "id": "MergeFlows-TfkV5",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -173,12 +145,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Chroma-eSDtr{œdataTypeœ:œChromaœ,œidœ:œChroma-eSDtrœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}-MergeFlows-FmEAa{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-FmEAaœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Chroma-eMTbF{œdataTypeœ:œChromaœ,œidœ:œChroma-eMTbFœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}-MergeFlows-TfkV5{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-TfkV5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Chroma-eSDtr",
-        "sourceHandle": "{œdataTypeœ: œChromaœ, œidœ: œChroma-eSDtrœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œJSONœ]}",
-        "target": "MergeFlows-FmEAa",
-        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œMergeFlows-FmEAaœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ, œToolœ, œJSONœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "Chroma-eMTbF",
+        "sourceHandle": "{œdataTypeœ: œChromaœ, œidœ: œChroma-eMTbFœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œJSONœ]}",
+        "target": "MergeFlows-TfkV5",
+        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œMergeFlows-TfkV5œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ, œToolœ, œJSONœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -186,15 +158,13 @@
         "data": {
           "sourceHandle": {
             "dataType": "FileContentRetriever",
-            "id": "FileContentRetriever-8adbK",
+            "id": "FileContentRetriever-353E9",
             "name": "content",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "inputs",
-            "id": "MergeFlows-FmEAa",
+            "id": "MergeFlows-TfkV5",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -206,12 +176,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FileContentRetriever-8adbK{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-8adbKœ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}-MergeFlows-FmEAa{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-FmEAaœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FileContentRetriever-353E9{œdataTypeœ:œFileContentRetrieverœ,œidœ:œFileContentRetriever-353E9œ,œnameœ:œcontentœ,œoutput_typesœ:[œMessageœ]}-MergeFlows-TfkV5{œfieldNameœ:œinputsœ,œidœ:œMergeFlows-TfkV5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ,œToolœ,œJSONœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FileContentRetriever-8adbK",
-        "sourceHandle": "{œdataTypeœ: œFileContentRetrieverœ, œidœ: œFileContentRetriever-8adbKœ, œnameœ: œcontentœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "MergeFlows-FmEAa",
-        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œMergeFlows-FmEAaœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ, œToolœ, œJSONœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "FileContentRetriever-353E9",
+        "sourceHandle": "{œdataTypeœ: œFileContentRetrieverœ, œidœ: œFileContentRetriever-353E9œ, œnameœ: œcontentœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "MergeFlows-TfkV5",
+        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œMergeFlows-TfkV5œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ, œToolœ, œJSONœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -219,27 +189,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaModel",
-            "id": "OllamaModel-ufg6D",
+            "id": "OllamaModel-7LbmX",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "FileDescriptionGeneratorComponent-KlX5t",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "id": "FileDescriptionGeneratorComponent-oTrJn",
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaModel-ufg6D{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-ufg6Dœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-FileDescriptionGeneratorComponent-KlX5t{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-KlX5tœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaModel-7LbmX{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-7LbmXœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-FileDescriptionGeneratorComponent-oTrJn{œfieldNameœ:œllmœ,œidœ:œFileDescriptionGeneratorComponent-oTrJnœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaModel-ufg6D",
-        "sourceHandle": "{œdataTypeœ: œOllamaModelœ, œidœ: œOllamaModel-ufg6Dœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "FileDescriptionGeneratorComponent-KlX5t",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œFileDescriptionGeneratorComponent-KlX5tœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OllamaModel-7LbmX",
+        "sourceHandle": "{œdataTypeœ: œOllamaModelœ, œidœ: œOllamaModel-7LbmXœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "FileDescriptionGeneratorComponent-oTrJn",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œFileDescriptionGeneratorComponent-oTrJnœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -247,27 +213,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaModel",
-            "id": "OllamaModel-ufg6D",
+            "id": "OllamaModel-7LbmX",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "OpenDsStarAgent-diy3H",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "id": "OpenDsStarAgent-CYVYX",
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaModel-ufg6D{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-ufg6Dœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-OpenDsStarAgent-diy3H{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-diy3Hœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaModel-7LbmX{œdataTypeœ:œOllamaModelœ,œidœ:œOllamaModel-7LbmXœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-OpenDsStarAgent-CYVYX{œfieldNameœ:œllmœ,œidœ:œOpenDsStarAgent-CYVYXœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaModel-ufg6D",
-        "sourceHandle": "{œdataTypeœ: œOllamaModelœ, œidœ: œOllamaModel-ufg6Dœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "OpenDsStarAgent-diy3H",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œOpenDsStarAgent-diy3Hœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OllamaModel-7LbmX",
+        "sourceHandle": "{œdataTypeœ: œOllamaModelœ, œidœ: œOllamaModel-7LbmXœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "OpenDsStarAgent-CYVYX",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œOpenDsStarAgent-CYVYXœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -275,27 +237,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaEmbeddings",
-            "id": "OllamaEmbeddings-IWEAn",
+            "id": "OllamaEmbeddings-zAbkk",
             "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
+            "output_types": ["Embeddings"]
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "Chroma-eSDtr",
-            "inputTypes": [
-              "Embeddings"
-            ],
+            "id": "Chroma-eMTbF",
+            "inputTypes": ["Embeddings"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaEmbeddings-IWEAn{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-IWEAnœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-eSDtr{œfieldNameœ:œembeddingœ,œidœ:œChroma-eSDtrœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaEmbeddings-zAbkk{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-zAbkkœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-eMTbF{œfieldNameœ:œembeddingœ,œidœ:œChroma-eMTbFœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaEmbeddings-IWEAn",
-        "sourceHandle": "{œdataTypeœ: œOllamaEmbeddingsœ, œidœ: œOllamaEmbeddings-IWEAnœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "Chroma-eSDtr",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œChroma-eSDtrœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OllamaEmbeddings-zAbkk",
+        "sourceHandle": "{œdataTypeœ: œOllamaEmbeddingsœ, œidœ: œOllamaEmbeddings-zAbkkœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "Chroma-eMTbF",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œChroma-eMTbFœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -303,27 +261,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "OllamaEmbeddings",
-            "id": "OllamaEmbeddings-IWEAn",
+            "id": "OllamaEmbeddings-zAbkk",
             "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
+            "output_types": ["Embeddings"]
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "Chroma-e3Qmg",
-            "inputTypes": [
-              "Embeddings"
-            ],
+            "id": "Chroma-IkIQx",
+            "inputTypes": ["Embeddings"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OllamaEmbeddings-IWEAn{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-IWEAnœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-e3Qmg{œfieldNameœ:œembeddingœ,œidœ:œChroma-e3Qmgœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OllamaEmbeddings-zAbkk{œdataTypeœ:œOllamaEmbeddingsœ,œidœ:œOllamaEmbeddings-zAbkkœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-Chroma-IkIQx{œfieldNameœ:œembeddingœ,œidœ:œChroma-IkIQxœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OllamaEmbeddings-IWEAn",
-        "sourceHandle": "{œdataTypeœ: œOllamaEmbeddingsœ, œidœ: œOllamaEmbeddings-IWEAnœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "Chroma-e3Qmg",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œChroma-e3Qmgœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OllamaEmbeddings-zAbkk",
+        "sourceHandle": "{œdataTypeœ: œOllamaEmbeddingsœ, œidœ: œOllamaEmbeddings-zAbkkœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "Chroma-IkIQx",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œChroma-IkIQxœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -331,29 +285,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-YFbyd",
+            "id": "File-jKAIS",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "file_data",
-            "id": "FileDescriptionGeneratorComponent-KlX5t",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "id": "FileDescriptionGeneratorComponent-oTrJn",
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-YFbyd{œdataTypeœ:œFileœ,œidœ:œFile-YFbydœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileDescriptionGeneratorComponent-KlX5t{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-KlX5tœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-jKAIS{œdataTypeœ:œFileœ,œidœ:œFile-jKAISœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileDescriptionGeneratorComponent-oTrJn{œfieldNameœ:œfile_dataœ,œidœ:œFileDescriptionGeneratorComponent-oTrJnœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-YFbyd",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-YFbydœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "FileDescriptionGeneratorComponent-KlX5t",
-        "targetHandle": "{œfieldNameœ: œfile_dataœ, œidœ: œFileDescriptionGeneratorComponent-KlX5tœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "File-jKAIS",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-jKAISœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "FileDescriptionGeneratorComponent-oTrJn",
+        "targetHandle": "{œfieldNameœ: œfile_dataœ, œidœ: œFileDescriptionGeneratorComponent-oTrJnœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -361,67 +309,55 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-YFbyd",
+            "id": "File-jKAIS",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "file_data",
-            "id": "FileContentRetriever-8adbK",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "id": "FileContentRetriever-353E9",
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-YFbyd{œdataTypeœ:œFileœ,œidœ:œFile-YFbydœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileContentRetriever-8adbK{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-8adbKœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-jKAIS{œdataTypeœ:œFileœ,œidœ:œFile-jKAISœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-FileContentRetriever-353E9{œfieldNameœ:œfile_dataœ,œidœ:œFileContentRetriever-353E9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-YFbyd",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-YFbydœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "FileContentRetriever-8adbK",
-        "targetHandle": "{œfieldNameœ: œfile_dataœ, œidœ: œFileContentRetriever-8adbKœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "File-jKAIS",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-jKAISœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "FileContentRetriever-353E9",
+        "targetHandle": "{œfieldNameœ: œfile_dataœ, œidœ: œFileContentRetriever-353E9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "SaveToFile",
-            "id": "SaveToFile-bKzdF",
+            "id": "SaveToFile-9FQfI",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "OpenDsStarAgent-diy3H",
-            "inputTypes": [
-              "Tool"
-            ],
+            "id": "OpenDsStarAgent-CYVYX",
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
-        "id": "xy-edge__SaveToFile-bKzdF{œdataTypeœ:œSaveToFileœ,œidœ:œSaveToFile-bKzdFœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-diy3H{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-diy3Hœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-SaveToFile-9FQfI{œdataTypeœ:œSaveToFileœ,œidœ:œSaveToFile-9FQfIœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-OpenDsStarAgent-CYVYX{œfieldNameœ:œtoolsœ,œidœ:œOpenDsStarAgent-CYVYXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "SaveToFile-bKzdF",
-        "sourceHandle": "{œdataTypeœ: œSaveToFileœ, œidœ: œSaveToFile-bKzdFœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "OpenDsStarAgent-diy3H",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-diy3Hœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "SaveToFile-9FQfI",
+        "sourceHandle": "{œdataTypeœ: œSaveToFileœ, œidœ: œSaveToFile-9FQfIœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "OpenDsStarAgent-CYVYX",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œOpenDsStarAgent-CYVYXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "OpenDsStarAgent-diy3H",
+          "id": "OpenDsStarAgent-CYVYX",
           "node": {
-            "base_classes": [
-              "Message",
-              "Runnable"
-            ],
+            "base_classes": ["Message", "Runnable"],
             "beta": true,
             "conditional_paths": [],
             "custom_fields": {},
@@ -464,7 +400,7 @@
                   },
                   {
                     "name": "OpenDsStar",
-                    "version": "1.0.26"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
@@ -483,9 +419,7 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -497,9 +431,7 @@
                 "name": "agent",
                 "selected": "Runnable",
                 "tool_mode": false,
-                "types": [
-                  "Runnable"
-                ],
+                "types": ["Runnable"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -514,9 +446,7 @@
                 "display_name": "Agent Description",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -541,10 +471,7 @@
                 "display_name": "Chat Memory",
                 "dynamic": false,
                 "info": "This input stores the chat history, allowing the agent to remember previous conversations.",
-                "input_types": [
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["Data", "JSON"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "chat_history",
@@ -588,10 +515,7 @@
                 "external_options": {},
                 "info": "Code execution mode: 'stepwise' executes each step separately, 'full' executes all steps together",
                 "name": "code_mode",
-                "options": [
-                  "stepwise",
-                  "full"
-                ],
+                "options": ["stepwise", "full"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -658,9 +582,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "Message or query to send to the agent",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -683,9 +605,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "Language model to use for the OpenDsStar agent",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "llm",
@@ -731,9 +651,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to customize agent behavior",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -756,9 +674,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -800,7 +716,7 @@
           "type": "OpenDsStarAgent"
         },
         "dragging": false,
-        "id": "OpenDsStarAgent-diy3H",
+        "id": "OpenDsStarAgent-CYVYX",
         "measured": {
           "height": 311,
           "width": 320
@@ -814,11 +730,9 @@
       },
       {
         "data": {
-          "id": "FileDescriptionGeneratorComponent-KlX5t",
+          "id": "FileDescriptionGeneratorComponent-oTrJn",
           "node": {
-            "base_classes": [
-              "JSON"
-            ],
+            "base_classes": ["JSON"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -863,9 +777,7 @@
                 "name": "descriptions",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -950,7 +862,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "ibm-granite/granite-embedding-english-r2"
+                "value": ""
               },
               "file_data": {
                 "_input_type": "HandleInput",
@@ -958,11 +870,7 @@
                 "display_name": "File Data",
                 "dynamic": false,
                 "info": "Output from a Read File component.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_data",
@@ -982,9 +890,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "LLM used to generate file descriptions.",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "llm",
@@ -1025,7 +931,7 @@
           "type": "FileDescriptionGeneratorComponent"
         },
         "dragging": false,
-        "id": "FileDescriptionGeneratorComponent-KlX5t",
+        "id": "FileDescriptionGeneratorComponent-oTrJn",
         "measured": {
           "height": 245,
           "width": 320
@@ -1039,11 +945,9 @@
       },
       {
         "data": {
-          "id": "File-YFbyd",
+          "id": "File-jKAIS",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1080,7 +984,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-04-20T07:47:59.723Z",
+            "last_updated": "2026-06-26T12:13:07.091Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -1101,7 +1005,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": "2.198.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -1120,9 +1024,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1294,9 +1196,7 @@
                 "display_name": "Doc Key",
                 "dynamic": false,
                 "info": "The key to use for the DoclingDocument column.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1340,11 +1240,7 @@
                 "display_name": "Server File Path",
                 "dynamic": false,
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
-                "input_types": [
-                  "Data",
-                  "JSON",
-                  "Message"
-                ],
+                "input_types": ["Data", "JSON", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_path",
@@ -1491,10 +1387,7 @@
                 "external_options": {},
                 "info": "OCR engine to use. Only available when pipeline is set to 'standard'.",
                 "name": "ocr_engine",
-                "options": [
-                  "None",
-                  "easyocr"
-                ],
+                "options": ["None", "easyocr"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -1587,10 +1480,7 @@
                 "external_options": {},
                 "info": "Docling pipeline to use",
                 "name": "pipeline",
-                "options": [
-                  "standard",
-                  "vlm"
-                ],
+                "options": ["standard", "vlm"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -1756,7 +1646,7 @@
           "type": "File"
         },
         "dragging": false,
-        "id": "File-YFbyd",
+        "id": "File-jKAIS",
         "measured": {
           "height": 276,
           "width": 320
@@ -1770,11 +1660,9 @@
       },
       {
         "data": {
-          "id": "ChatInput-AVUXl",
+          "id": "ChatInput-zSTGd",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1820,9 +1708,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1853,9 +1739,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1956,10 +1840,7 @@
                 "external_options": {},
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -1979,9 +1860,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2004,9 +1883,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2051,7 +1928,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-AVUXl",
+        "id": "ChatInput-zSTGd",
         "measured": {
           "height": 52,
           "width": 192
@@ -2065,11 +1942,9 @@
       },
       {
         "data": {
-          "id": "ChatOutput-JKfIb",
+          "id": "ChatOutput-JmTk1",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2101,7 +1976,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -2124,9 +1999,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2177,9 +2050,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2202,9 +2073,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2257,10 +2126,7 @@
                 "external_options": {},
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -2280,9 +2146,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2305,9 +2169,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2352,7 +2214,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-JKfIb",
+        "id": "ChatOutput-JmTk1",
         "measured": {
           "height": 52,
           "width": 192
@@ -2366,21 +2228,21 @@
       },
       {
         "data": {
-          "id": "note-DsHst",
+          "id": "note-qnCin",
           "node": {
             "description": "# Ingestion Pipeline",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.3446a14b",
             "template": {
-              "backgroundColor": "lime"
+              "backgroundColor": "neutral"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 949,
-        "id": "note-DsHst",
+        "id": "note-qnCin",
         "measured": {
           "height": 949,
           "width": 1357
@@ -2396,28 +2258,28 @@
       },
       {
         "data": {
-          "id": "note-5faev",
+          "id": "note-9ftWr",
           "node": {
             "description": "# Agent Inference",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.7b7d9bd3",
             "template": {
-              "backgroundColor": "blue"
+              "backgroundColor": "neutral"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 1152,
-        "id": "note-5faev",
+        "id": "note-9ftWr",
         "measured": {
           "height": 1152,
           "width": 1362
         },
         "position": {
-          "x": -1095.5537981537923,
-          "y": -1708.5035516553303
+          "x": -1103.3619301614613,
+          "y": -1696.7913536438268
         },
         "resizing": false,
         "selected": false,
@@ -2426,21 +2288,21 @@
       },
       {
         "data": {
-          "id": "note-Qe7Hw",
+          "id": "note-FkADH",
           "node": {
             "description": "## About OpenDsStar and structured data analysis\n\n**OpenDsStar — Structured Data Agent 📚**\n\n[OpenDsStar](https://github.com/IBM/OpenDsStar) is an open-source implementation of the [DS-Star](https://arxiv.org/abs/2509.21825) agent. It keeps the core DS-Star workflow of planning, code generation, execution, debugging, and verification, while using a more practical tool-centric architecture that improves modularity, extensibility, and execution efficiency.\n\nThis Langflow template applies OpenDsStar to **structured data analysis** over tabular datasets such as **CSV, Excel, Parquet, JSON, and TSV**. It enables natural-language exploration, retrieval, and reasoning over uploaded structured data.\n",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.92198b6b",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 340,
-        "id": "note-Qe7Hw",
+        "id": "note-FkADH",
         "measured": {
           "height": 340,
           "width": 898
@@ -2456,21 +2318,21 @@
       },
       {
         "data": {
-          "id": "note-mVdEY",
+          "id": "note-c9x8h",
           "node": {
             "description": "# Models",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.a04f95c8",
             "template": {
-              "backgroundColor": "rose"
+              "backgroundColor": "neutral"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 1018,
-        "id": "note-mVdEY",
+        "id": "note-c9x8h",
         "measured": {
           "height": 1018,
           "width": 421
@@ -2486,28 +2348,28 @@
       },
       {
         "data": {
-          "id": "note-udjse",
+          "id": "note-t6CBQ",
           "node": {
             "description": "# Data",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.9dae882d",
             "template": {
-              "backgroundColor": "amber"
+              "backgroundColor": "neutral"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 479,
-        "id": "note-udjse",
+        "id": "note-t6CBQ",
         "measured": {
           "height": 479,
           "width": 410
         },
         "position": {
-          "x": -1657.8978983511809,
-          "y": -2699.247589674194
+          "x": -1685.8095137354312,
+          "y": -2730.39698285083
         },
         "resizing": false,
         "selected": false,
@@ -2516,12 +2378,9 @@
       },
       {
         "data": {
-          "id": "Chroma-eSDtr",
+          "id": "Chroma-eMTbF",
           "node": {
-            "base_classes": [
-              "JSON",
-              "Table"
-            ],
+            "base_classes": ["JSON", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2551,7 +2410,7 @@
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
-              "code_hash": "05b7abde2cd0",
+              "code_hash": "da092fac5125",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2564,7 +2423,7 @@
                   },
                   {
                     "name": "typing_extensions",
-                    "version": "4.15.0"
+                    "version": "4.16.0"
                   },
                   {
                     "name": "chromadb",
@@ -2591,9 +2450,7 @@
                 "name": "search_results",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2605,9 +2462,7 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2734,7 +2589,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "bool",
-                "value": false
+                "value": "False"
               },
               "code": {
                 "advanced": true,
@@ -2752,7 +2607,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from copy import deepcopy\nfrom typing import TYPE_CHECKING\n\nfrom langchain_chroma import Chroma\nfrom lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.utils import chroma_collection_to_data\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput\nfrom lfx.schema.data import Data\nfrom typing_extensions import override\n\nif TYPE_CHECKING:\n    from lfx.schema.dataframe import DataFrame\n\n\nclass ChromaVectorStoreComponent(LCVectorStoreComponent):\n    \"\"\"Chroma Vector Store with search capabilities.\"\"\"\n\n    display_name: str = \"Chroma DB\"\n    description: str = \"Chroma Vector Store with search capabilities\"\n    name = \"Chroma\"\n    icon = \"Chroma\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            value=\"langflow\",\n        ),\n        StrInput(\n            name=\"persist_directory\",\n            display_name=\"Persist Directory\",\n        ),\n        *LCVectorStoreComponent.inputs,\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"]),\n        StrInput(\n            name=\"chroma_server_cors_allow_origins\",\n            display_name=\"Server CORS Allow Origins\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"chroma_server_host\",\n            display_name=\"Server Host\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_http_port\",\n            display_name=\"Server HTTP Port\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_grpc_port\",\n            display_name=\"Server gRPC Port\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"chroma_server_ssl_enabled\",\n            display_name=\"Server SSL Enabled\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"allow_duplicates\",\n            display_name=\"Allow Duplicates\",\n            advanced=True,\n            info=\"If false, will not add documents that are already in the Vector Store.\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=10,\n        ),\n        IntInput(\n            name=\"limit\",\n            display_name=\"Limit\",\n            advanced=True,\n            info=\"Limit the number of records to compare when Allow Duplicates is False.\",\n        ),\n    ]\n\n    @override\n    @check_cached_vector_store\n    def build_vector_store(self) -> Chroma:\n        \"\"\"Builds the Chroma object.\"\"\"\n        try:\n            from langchain_chroma import Chroma\n        except ImportError as e:\n            msg = \"Could not import Chroma integration package. Please install it with `pip install langchain-chroma`.\"\n            raise ImportError(msg) from e\n        client = None\n        if self.chroma_server_host:\n            try:\n                from chromadb import HttpClient\n            except ImportError as e:\n                msg = \"Could not import chromadb. Please install it with `pip install chromadb`.\"\n                raise ImportError(msg) from e\n            client = HttpClient(\n                host=self.chroma_server_host,\n                port=self.chroma_server_http_port or 8000,\n                ssl=bool(self.chroma_server_ssl_enabled),\n            )\n\n        # Check persist_directory and expand it if it is a relative path\n        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None\n\n        from chromadb.errors import ChromaError\n\n        try:\n            chroma = Chroma(\n                persist_directory=persist_directory,\n                client=client,\n                embedding_function=self.embedding,\n                collection_name=self.collection_name,\n                **chroma_langchain_collection_kwargs(),\n            )\n        except Exception as e:\n            if isinstance(e, ChromaError):\n                if not persist_directory and client is None:\n                    msg = \"Chroma DB failed to initialize. Please set a 'Persist Directory' path (e.g., './chroma_db').\"\n                elif not persist_directory:\n                    msg = f\"Chroma DB failed to initialize in server mode: {e}.\"\n                else:\n                    msg = (\n                        f\"Chroma DB failed at '{persist_directory}': {e}. \"\n                        \"If you deleted the database, restart the server and re-run ingestion.\"\n                    )\n                raise RuntimeError(msg) from e  # noqa: TRY004\n            raise\n\n        self._add_documents_to_vector_store(chroma)\n        limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n        self.status = chroma_collection_to_data(chroma.get(limit=limit))\n        return chroma\n\n    def _add_documents_to_vector_store(self, vector_store: \"Chroma\") -> None:\n        \"\"\"Adds documents to the Vector Store.\"\"\"\n        ingest_data: list | Data | DataFrame = self.ingest_data\n        if not ingest_data:\n            self.status = \"\"\n            return\n\n        # Convert DataFrame to Data if needed using parent's method\n        ingest_data = self._prepare_ingest_data()\n\n        stored_documents_without_id = []\n        if self.allow_duplicates:\n            stored_data = []\n        else:\n            limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n            stored_data = chroma_collection_to_data(vector_store.get(limit=limit))\n            for value in deepcopy(stored_data):\n                del value.id\n                stored_documents_without_id.append(value)\n\n        documents = []\n        for _input in ingest_data or []:\n            if isinstance(_input, Data):\n                if _input not in stored_documents_without_id:\n                    documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents and self.embedding is not None:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            # Filter complex metadata to prevent ChromaDB errors\n            try:\n                from langchain_community.vectorstores.utils import filter_complex_metadata\n\n                filtered_documents = filter_complex_metadata(documents)\n                vector_store.add_documents(filtered_documents)\n            except ImportError:\n                self.log(\"Warning: Could not import filter_complex_metadata. Adding documents without filtering.\")\n                vector_store.add_documents(documents)\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n"
+                "value": "from copy import deepcopy\nfrom typing import TYPE_CHECKING\n\nfrom langchain_chroma import Chroma\nfrom lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.user_scoping import runtime_user_id, scoped_collection_name\nfrom lfx.base.vectorstores.utils import chroma_collection_to_data\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput\nfrom lfx.schema.data import Data\nfrom typing_extensions import override\n\nif TYPE_CHECKING:\n    from lfx.schema.dataframe import DataFrame\n\n\nclass ChromaVectorStoreComponent(LCVectorStoreComponent):\n    \"\"\"Chroma Vector Store with search capabilities.\"\"\"\n\n    display_name: str = \"Chroma DB\"\n    description: str = \"Chroma Vector Store with search capabilities\"\n    name = \"Chroma\"\n    icon = \"Chroma\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            value=\"langflow\",\n        ),\n        StrInput(\n            name=\"persist_directory\",\n            display_name=\"Persist Directory\",\n        ),\n        *LCVectorStoreComponent.inputs,\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"]),\n        StrInput(\n            name=\"chroma_server_cors_allow_origins\",\n            display_name=\"Server CORS Allow Origins\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"chroma_server_host\",\n            display_name=\"Server Host\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_http_port\",\n            display_name=\"Server HTTP Port\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_grpc_port\",\n            display_name=\"Server gRPC Port\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"chroma_server_ssl_enabled\",\n            display_name=\"Server SSL Enabled\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"allow_duplicates\",\n            display_name=\"Allow Duplicates\",\n            advanced=True,\n            info=\"If false, will not add documents that are already in the Vector Store.\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=10,\n        ),\n        IntInput(\n            name=\"limit\",\n            display_name=\"Limit\",\n            advanced=True,\n            info=\"Limit the number of records to compare when Allow Duplicates is False.\",\n        ),\n    ]\n\n    @override\n    @check_cached_vector_store\n    def build_vector_store(self) -> Chroma:\n        \"\"\"Builds the Chroma object.\"\"\"\n        try:\n            from langchain_chroma import Chroma\n        except ImportError as e:\n            msg = \"Could not import Chroma integration package. Please install it with `pip install langchain-chroma`.\"\n            raise ImportError(msg) from e\n        client = None\n        if self.chroma_server_host:\n            try:\n                from chromadb import HttpClient\n            except ImportError as e:\n                msg = \"Could not import chromadb. Please install it with `pip install chromadb`.\"\n                raise ImportError(msg) from e\n            client = HttpClient(\n                host=self.chroma_server_host,\n                port=self.chroma_server_http_port or 8000,\n                ssl=bool(self.chroma_server_ssl_enabled),\n            )\n\n        # Check persist_directory and expand it if it is a relative path\n        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None\n\n        # Scope the collection name by runtime user for local stores so two users\n        # sharing the same persist_directory + collection_name cannot read each\n        # other's documents. Remote/server-backed stores are left untouched.\n        collection_name = self.collection_name\n        if client is None:\n            collection_name = scoped_collection_name(collection_name, runtime_user_id(self))\n\n        from chromadb.errors import ChromaError\n\n        try:\n            chroma = Chroma(\n                persist_directory=persist_directory,\n                client=client,\n                embedding_function=self.embedding,\n                collection_name=collection_name,\n                **chroma_langchain_collection_kwargs(),\n            )\n        except Exception as e:\n            if isinstance(e, ChromaError):\n                if not persist_directory and client is None:\n                    msg = \"Chroma DB failed to initialize. Please set a 'Persist Directory' path (e.g., './chroma_db').\"\n                elif not persist_directory:\n                    msg = f\"Chroma DB failed to initialize in server mode: {e}.\"\n                else:\n                    msg = (\n                        f\"Chroma DB failed at '{persist_directory}': {e}. \"\n                        \"If you deleted the database, restart the server and re-run ingestion.\"\n                    )\n                raise RuntimeError(msg) from e  # noqa: TRY004\n            raise\n\n        self._add_documents_to_vector_store(chroma)\n        limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n        self.status = chroma_collection_to_data(chroma.get(limit=limit))\n        return chroma\n\n    def _add_documents_to_vector_store(self, vector_store: \"Chroma\") -> None:\n        \"\"\"Adds documents to the Vector Store.\"\"\"\n        ingest_data: list | Data | DataFrame = self.ingest_data\n        if not ingest_data:\n            self.status = \"\"\n            return\n\n        # Convert DataFrame to Data if needed using parent's method\n        ingest_data = self._prepare_ingest_data()\n\n        stored_documents_without_id = []\n        if self.allow_duplicates:\n            stored_data = []\n        else:\n            limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n            stored_data = chroma_collection_to_data(vector_store.get(limit=limit))\n            for value in deepcopy(stored_data):\n                del value.id\n                stored_documents_without_id.append(value)\n\n        documents = []\n        for _input in ingest_data or []:\n            if isinstance(_input, Data):\n                if _input not in stored_documents_without_id:\n                    documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents and self.embedding is not None:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            # Filter complex metadata to prevent ChromaDB errors\n            try:\n                from langchain_community.vectorstores.utils import filter_complex_metadata\n\n                filtered_documents = filter_complex_metadata(documents)\n                vector_store.add_documents(filtered_documents)\n            except ImportError:\n                self.log(\"Warning: Could not import filter_complex_metadata. Adding documents without filtering.\")\n                vector_store.add_documents(documents)\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n"
               },
               "collection_name": {
                 "_input_type": "StrInput",
@@ -2781,9 +2636,7 @@
                 "display_name": "Embedding",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Embeddings"
-                ],
+                "input_types": ["Embeddings"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "embedding",
@@ -2803,11 +2656,7 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Table"
-                ],
+                "input_types": ["Data", "DataFrame", "Table"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -2888,9 +2737,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2917,10 +2764,7 @@
                 "external_options": {},
                 "info": "",
                 "name": "search_type",
-                "options": [
-                  "Similarity",
-                  "MMR"
-                ],
+                "options": ["Similarity", "MMR"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -2962,7 +2806,7 @@
           "type": "Chroma"
         },
         "dragging": false,
-        "id": "Chroma-eSDtr",
+        "id": "Chroma-eMTbF",
         "measured": {
           "height": 459,
           "width": 320
@@ -2976,12 +2820,9 @@
       },
       {
         "data": {
-          "id": "Chroma-e3Qmg",
+          "id": "Chroma-IkIQx",
           "node": {
-            "base_classes": [
-              "JSON",
-              "Table"
-            ],
+            "base_classes": ["JSON", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3008,11 +2849,11 @@
             ],
             "frozen": false,
             "icon": "Chroma",
-            "last_updated": "2026-04-20T07:47:59.724Z",
+            "last_updated": "2026-06-26T12:13:06.969Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
-              "code_hash": "05b7abde2cd0",
+              "code_hash": "da092fac5125",
               "dependencies": {
                 "dependencies": [
                   {
@@ -3025,7 +2866,7 @@
                   },
                   {
                     "name": "typing_extensions",
-                    "version": "4.15.0"
+                    "version": "4.16.0"
                   },
                   {
                     "name": "chromadb",
@@ -3056,9 +2897,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3185,7 +3024,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "bool",
-                "value": false
+                "value": "False"
               },
               "code": {
                 "advanced": true,
@@ -3203,7 +3042,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from copy import deepcopy\nfrom typing import TYPE_CHECKING\n\nfrom langchain_chroma import Chroma\nfrom lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.utils import chroma_collection_to_data\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput\nfrom lfx.schema.data import Data\nfrom typing_extensions import override\n\nif TYPE_CHECKING:\n    from lfx.schema.dataframe import DataFrame\n\n\nclass ChromaVectorStoreComponent(LCVectorStoreComponent):\n    \"\"\"Chroma Vector Store with search capabilities.\"\"\"\n\n    display_name: str = \"Chroma DB\"\n    description: str = \"Chroma Vector Store with search capabilities\"\n    name = \"Chroma\"\n    icon = \"Chroma\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            value=\"langflow\",\n        ),\n        StrInput(\n            name=\"persist_directory\",\n            display_name=\"Persist Directory\",\n        ),\n        *LCVectorStoreComponent.inputs,\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"]),\n        StrInput(\n            name=\"chroma_server_cors_allow_origins\",\n            display_name=\"Server CORS Allow Origins\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"chroma_server_host\",\n            display_name=\"Server Host\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_http_port\",\n            display_name=\"Server HTTP Port\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_grpc_port\",\n            display_name=\"Server gRPC Port\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"chroma_server_ssl_enabled\",\n            display_name=\"Server SSL Enabled\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"allow_duplicates\",\n            display_name=\"Allow Duplicates\",\n            advanced=True,\n            info=\"If false, will not add documents that are already in the Vector Store.\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=10,\n        ),\n        IntInput(\n            name=\"limit\",\n            display_name=\"Limit\",\n            advanced=True,\n            info=\"Limit the number of records to compare when Allow Duplicates is False.\",\n        ),\n    ]\n\n    @override\n    @check_cached_vector_store\n    def build_vector_store(self) -> Chroma:\n        \"\"\"Builds the Chroma object.\"\"\"\n        try:\n            from langchain_chroma import Chroma\n        except ImportError as e:\n            msg = \"Could not import Chroma integration package. Please install it with `pip install langchain-chroma`.\"\n            raise ImportError(msg) from e\n        client = None\n        if self.chroma_server_host:\n            try:\n                from chromadb import HttpClient\n            except ImportError as e:\n                msg = \"Could not import chromadb. Please install it with `pip install chromadb`.\"\n                raise ImportError(msg) from e\n            client = HttpClient(\n                host=self.chroma_server_host,\n                port=self.chroma_server_http_port or 8000,\n                ssl=bool(self.chroma_server_ssl_enabled),\n            )\n\n        # Check persist_directory and expand it if it is a relative path\n        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None\n\n        from chromadb.errors import ChromaError\n\n        try:\n            chroma = Chroma(\n                persist_directory=persist_directory,\n                client=client,\n                embedding_function=self.embedding,\n                collection_name=self.collection_name,\n                **chroma_langchain_collection_kwargs(),\n            )\n        except Exception as e:\n            if isinstance(e, ChromaError):\n                if not persist_directory and client is None:\n                    msg = \"Chroma DB failed to initialize. Please set a 'Persist Directory' path (e.g., './chroma_db').\"\n                elif not persist_directory:\n                    msg = f\"Chroma DB failed to initialize in server mode: {e}.\"\n                else:\n                    msg = (\n                        f\"Chroma DB failed at '{persist_directory}': {e}. \"\n                        \"If you deleted the database, restart the server and re-run ingestion.\"\n                    )\n                raise RuntimeError(msg) from e  # noqa: TRY004\n            raise\n\n        self._add_documents_to_vector_store(chroma)\n        limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n        self.status = chroma_collection_to_data(chroma.get(limit=limit))\n        return chroma\n\n    def _add_documents_to_vector_store(self, vector_store: \"Chroma\") -> None:\n        \"\"\"Adds documents to the Vector Store.\"\"\"\n        ingest_data: list | Data | DataFrame = self.ingest_data\n        if not ingest_data:\n            self.status = \"\"\n            return\n\n        # Convert DataFrame to Data if needed using parent's method\n        ingest_data = self._prepare_ingest_data()\n\n        stored_documents_without_id = []\n        if self.allow_duplicates:\n            stored_data = []\n        else:\n            limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n            stored_data = chroma_collection_to_data(vector_store.get(limit=limit))\n            for value in deepcopy(stored_data):\n                del value.id\n                stored_documents_without_id.append(value)\n\n        documents = []\n        for _input in ingest_data or []:\n            if isinstance(_input, Data):\n                if _input not in stored_documents_without_id:\n                    documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents and self.embedding is not None:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            # Filter complex metadata to prevent ChromaDB errors\n            try:\n                from langchain_community.vectorstores.utils import filter_complex_metadata\n\n                filtered_documents = filter_complex_metadata(documents)\n                vector_store.add_documents(filtered_documents)\n            except ImportError:\n                self.log(\"Warning: Could not import filter_complex_metadata. Adding documents without filtering.\")\n                vector_store.add_documents(documents)\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n"
+                "value": "from copy import deepcopy\nfrom typing import TYPE_CHECKING\n\nfrom langchain_chroma import Chroma\nfrom lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.user_scoping import runtime_user_id, scoped_collection_name\nfrom lfx.base.vectorstores.utils import chroma_collection_to_data\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput\nfrom lfx.schema.data import Data\nfrom typing_extensions import override\n\nif TYPE_CHECKING:\n    from lfx.schema.dataframe import DataFrame\n\n\nclass ChromaVectorStoreComponent(LCVectorStoreComponent):\n    \"\"\"Chroma Vector Store with search capabilities.\"\"\"\n\n    display_name: str = \"Chroma DB\"\n    description: str = \"Chroma Vector Store with search capabilities\"\n    name = \"Chroma\"\n    icon = \"Chroma\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            value=\"langflow\",\n        ),\n        StrInput(\n            name=\"persist_directory\",\n            display_name=\"Persist Directory\",\n        ),\n        *LCVectorStoreComponent.inputs,\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"]),\n        StrInput(\n            name=\"chroma_server_cors_allow_origins\",\n            display_name=\"Server CORS Allow Origins\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"chroma_server_host\",\n            display_name=\"Server Host\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_http_port\",\n            display_name=\"Server HTTP Port\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_grpc_port\",\n            display_name=\"Server gRPC Port\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"chroma_server_ssl_enabled\",\n            display_name=\"Server SSL Enabled\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"allow_duplicates\",\n            display_name=\"Allow Duplicates\",\n            advanced=True,\n            info=\"If false, will not add documents that are already in the Vector Store.\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=10,\n        ),\n        IntInput(\n            name=\"limit\",\n            display_name=\"Limit\",\n            advanced=True,\n            info=\"Limit the number of records to compare when Allow Duplicates is False.\",\n        ),\n    ]\n\n    @override\n    @check_cached_vector_store\n    def build_vector_store(self) -> Chroma:\n        \"\"\"Builds the Chroma object.\"\"\"\n        try:\n            from langchain_chroma import Chroma\n        except ImportError as e:\n            msg = \"Could not import Chroma integration package. Please install it with `pip install langchain-chroma`.\"\n            raise ImportError(msg) from e\n        client = None\n        if self.chroma_server_host:\n            try:\n                from chromadb import HttpClient\n            except ImportError as e:\n                msg = \"Could not import chromadb. Please install it with `pip install chromadb`.\"\n                raise ImportError(msg) from e\n            client = HttpClient(\n                host=self.chroma_server_host,\n                port=self.chroma_server_http_port or 8000,\n                ssl=bool(self.chroma_server_ssl_enabled),\n            )\n\n        # Check persist_directory and expand it if it is a relative path\n        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None\n\n        # Scope the collection name by runtime user for local stores so two users\n        # sharing the same persist_directory + collection_name cannot read each\n        # other's documents. Remote/server-backed stores are left untouched.\n        collection_name = self.collection_name\n        if client is None:\n            collection_name = scoped_collection_name(collection_name, runtime_user_id(self))\n\n        from chromadb.errors import ChromaError\n\n        try:\n            chroma = Chroma(\n                persist_directory=persist_directory,\n                client=client,\n                embedding_function=self.embedding,\n                collection_name=collection_name,\n                **chroma_langchain_collection_kwargs(),\n            )\n        except Exception as e:\n            if isinstance(e, ChromaError):\n                if not persist_directory and client is None:\n                    msg = \"Chroma DB failed to initialize. Please set a 'Persist Directory' path (e.g., './chroma_db').\"\n                elif not persist_directory:\n                    msg = f\"Chroma DB failed to initialize in server mode: {e}.\"\n                else:\n                    msg = (\n                        f\"Chroma DB failed at '{persist_directory}': {e}. \"\n                        \"If you deleted the database, restart the server and re-run ingestion.\"\n                    )\n                raise RuntimeError(msg) from e  # noqa: TRY004\n            raise\n\n        self._add_documents_to_vector_store(chroma)\n        limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n        self.status = chroma_collection_to_data(chroma.get(limit=limit))\n        return chroma\n\n    def _add_documents_to_vector_store(self, vector_store: \"Chroma\") -> None:\n        \"\"\"Adds documents to the Vector Store.\"\"\"\n        ingest_data: list | Data | DataFrame = self.ingest_data\n        if not ingest_data:\n            self.status = \"\"\n            return\n\n        # Convert DataFrame to Data if needed using parent's method\n        ingest_data = self._prepare_ingest_data()\n\n        stored_documents_without_id = []\n        if self.allow_duplicates:\n            stored_data = []\n        else:\n            limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n            stored_data = chroma_collection_to_data(vector_store.get(limit=limit))\n            for value in deepcopy(stored_data):\n                del value.id\n                stored_documents_without_id.append(value)\n\n        documents = []\n        for _input in ingest_data or []:\n            if isinstance(_input, Data):\n                if _input not in stored_documents_without_id:\n                    documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents and self.embedding is not None:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            # Filter complex metadata to prevent ChromaDB errors\n            try:\n                from langchain_community.vectorstores.utils import filter_complex_metadata\n\n                filtered_documents = filter_complex_metadata(documents)\n                vector_store.add_documents(filtered_documents)\n            except ImportError:\n                self.log(\"Warning: Could not import filter_complex_metadata. Adding documents without filtering.\")\n                vector_store.add_documents(documents)\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n"
               },
               "collection_name": {
                 "_input_type": "StrInput",
@@ -3232,9 +3071,7 @@
                 "display_name": "Embedding",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Embeddings"
-                ],
+                "input_types": ["Embeddings"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "embedding",
@@ -3254,11 +3091,7 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Table"
-                ],
+                "input_types": ["Data", "DataFrame", "Table"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -3339,9 +3172,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3368,10 +3199,7 @@
                 "external_options": {},
                 "info": "",
                 "name": "search_type",
-                "options": [
-                  "Similarity",
-                  "MMR"
-                ],
+                "options": ["Similarity", "MMR"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -3440,9 +3268,7 @@
                     "name": "search_documents",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "search_documents"
-                    ]
+                    "tags": ["search_documents"]
                   },
                   {
                     "args": {
@@ -3453,15 +3279,13 @@
                         "type": "string"
                       }
                     },
-                    "description": "Performs semantic similarity search in the vector store to find relevant documents/files and returns results as a pandas DataFrame. Input: A natural language search query (str). Returns: A DataFrame with columns from the matched documents' metadata and content. The 'text' column always contains document content. Other columns depend on indexed metadata. IMPORTANT: Check available columns with df.columns before accessing specific fields. Common metadata columns include: 'file_path', 'source', 'page', etc. Use standard pandas operations (.shape, .columns, .head(), etc.) on the result.",
-                    "display_description": "Performs semantic similarity search in the vector store to find relevant documents/files and returns results as a pandas DataFrame. Input: A natural language search query (str). Returns: A DataFrame with columns from the matched documents' metadata and content. The 'text' column always contains document content. Other columns depend on indexed metadata. IMPORTANT: Check available columns with df.columns before accessing specific fields. Common metadata columns include: 'file_path', 'source', 'page', etc. Use standard pandas operations (.shape, .columns, .head(), etc.) on the result.",
+                    "description": "Chroma Vector Store with search capabilities",
+                    "display_description": "Chroma Vector Store with search capabilities",
                     "display_name": "as_dataframe",
                     "name": "as_dataframe",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "as_dataframe"
-                    ]
+                    "tags": ["as_dataframe"]
                   }
                 ]
               }
@@ -3473,9 +3297,9 @@
           "type": "Chroma"
         },
         "dragging": false,
-        "id": "Chroma-e3Qmg",
+        "id": "Chroma-IkIQx",
         "measured": {
-          "height": 457,
+          "height": 463,
           "width": 320
         },
         "position": {
@@ -3487,12 +3311,9 @@
       },
       {
         "data": {
-          "id": "FileContentRetriever-8adbK",
+          "id": "FileContentRetriever-353E9",
           "node": {
-            "base_classes": [
-              "Message",
-              "Table"
-            ],
+            "base_classes": ["Message", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3500,11 +3321,7 @@
             "display_name": "File Content Retriever",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "file_data",
-              "persistent_dir",
-              "file_path"
-            ],
+            "field_order": ["file_data", "persistent_dir", "file_path"],
             "frozen": false,
             "icon": "file-text",
             "legacy": false,
@@ -3538,9 +3355,7 @@
                 "name": "content",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3552,9 +3367,7 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3585,11 +3398,7 @@
                 "display_name": "File Data",
                 "dynamic": false,
                 "info": "Output from a Read File component.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_data",
@@ -3609,9 +3418,7 @@
                 "display_name": "File Path",
                 "dynamic": false,
                 "info": "The full file path as a string (e.g., '/path/to/file.csv'). Do not pass search results or other objects.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3657,7 +3464,7 @@
           "type": "FileContentRetriever"
         },
         "dragging": false,
-        "id": "FileContentRetriever-8adbK",
+        "id": "FileContentRetriever-353E9",
         "measured": {
           "height": 365,
           "width": 320
@@ -3671,12 +3478,9 @@
       },
       {
         "data": {
-          "id": "FileContentRetriever-xvvaL",
+          "id": "FileContentRetriever-Yhfgz",
           "node": {
-            "base_classes": [
-              "Message",
-              "Table"
-            ],
+            "base_classes": ["Message", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3684,14 +3488,10 @@
             "display_name": "File Content Retriever",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "file_data",
-              "persistent_dir",
-              "file_path"
-            ],
+            "field_order": ["file_data", "persistent_dir", "file_path"],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-04-20T07:47:59.725Z",
+            "last_updated": "2026-06-26T12:13:06.970Z",
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
@@ -3727,9 +3527,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3760,11 +3558,7 @@
                 "display_name": "File Data",
                 "dynamic": false,
                 "info": "Output from a Read File component.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_data",
@@ -3784,9 +3578,7 @@
                 "display_name": "File Path",
                 "dynamic": false,
                 "info": "The full file path as a string (e.g., '/path/to/file.csv'). Do not pass search results or other objects.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3859,9 +3651,7 @@
                     "name": "retrieve_content",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "retrieve_content"
-                    ]
+                    "tags": ["retrieve_content"]
                   },
                   {
                     "args": {
@@ -3878,9 +3668,7 @@
                     "name": "retrieve_content_as_dataframe",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "retrieve_content_as_dataframe"
-                    ]
+                    "tags": ["retrieve_content_as_dataframe"]
                   }
                 ]
               }
@@ -3892,9 +3680,9 @@
           "type": "FileContentRetriever"
         },
         "dragging": false,
-        "id": "FileContentRetriever-xvvaL",
+        "id": "FileContentRetriever-Yhfgz",
         "measured": {
-          "height": 391,
+          "height": 397,
           "width": 320
         },
         "position": {
@@ -3906,11 +3694,9 @@
       },
       {
         "data": {
-          "id": "MergeFlows-FmEAa",
+          "id": "MergeFlows-TfkV5",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3918,9 +3704,7 @@
             "display_name": "Merge Flows",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "inputs"
-            ],
+            "field_order": ["inputs"],
             "frozen": false,
             "icon": "git-merge",
             "legacy": false,
@@ -3950,9 +3734,7 @@
                 "name": "done",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -4011,7 +3793,7 @@
           "type": "MergeFlows"
         },
         "dragging": false,
-        "id": "MergeFlows-FmEAa",
+        "id": "MergeFlows-TfkV5",
         "measured": {
           "height": 185,
           "width": 320
@@ -4025,14 +3807,9 @@
       },
       {
         "data": {
-          "id": "OllamaModel-ufg6D",
+          "id": "OllamaModel-7LbmX",
           "node": {
-            "base_classes": [
-              "JSON",
-              "LanguageModel",
-              "Message",
-              "Table"
-            ],
+            "base_classes": ["JSON", "LanguageModel", "Message", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -4072,9 +3849,7 @@
             ],
             "frozen": false,
             "icon": "Ollama",
-            "last_updated": "2026-04-20T07:47:59.727Z",
             "legacy": false,
-            "lf_version": "1.8.1",
             "metadata": {
               "code_hash": "6659bea0701d",
               "dependencies": {
@@ -4114,9 +3889,7 @@
                 "name": "text_output",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -4128,9 +3901,7 @@
                 "name": "model_output",
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -4142,9 +3913,7 @@
                 "name": "data_output",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -4156,9 +3925,7 @@
                 "name": "dataframe_output",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -4272,10 +4039,7 @@
                 "display_name": "Format",
                 "dynamic": false,
                 "info": "Specify the format of the output.",
-                "input_types": [
-                  "DataFrame",
-                  "Table"
-                ],
+                "input_types": ["DataFrame", "Table"],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "format",
@@ -4307,13 +4071,7 @@
                     "display_name": "Type",
                     "edit_mode": "inline",
                     "name": "type",
-                    "options": [
-                      "str",
-                      "int",
-                      "float",
-                      "bool",
-                      "dict"
-                    ],
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "type": "str"
                   },
                   {
@@ -4322,10 +4080,7 @@
                     "display_name": "As List",
                     "edit_mode": "inline",
                     "name": "multiple",
-                    "options": [
-                      "True",
-                      "False"
-                    ],
+                    "options": ["True", "False"],
                     "type": "boolean"
                   }
                 ],
@@ -4351,9 +4106,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4400,11 +4153,7 @@
                 "external_options": {},
                 "info": "Enable/disable Mirostat sampling for controlling perplexity.",
                 "name": "mirostat",
-                "options": [
-                  "Disabled",
-                  "Mirostat",
-                  "Mirostat 2.0"
-                ],
+                "options": ["Disabled", "Mirostat", "Mirostat 2.0"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -4591,9 +4340,7 @@
                 "display_name": "Stop Tokens",
                 "dynamic": false,
                 "info": "Comma-separated list of tokens to signal the model to stop generating text.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4636,9 +4383,7 @@
                 "display_name": "System",
                 "dynamic": false,
                 "info": "System to use for generating text.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4663,9 +4408,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4690,9 +4433,7 @@
                 "display_name": "Tags",
                 "dynamic": false,
                 "info": "Comma-separated list of tags to add to the run trace.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4745,9 +4486,7 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "Template to use for generating text.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4873,7 +4612,7 @@
           "type": "OllamaModel"
         },
         "dragging": false,
-        "id": "OllamaModel-ufg6D",
+        "id": "OllamaModel-7LbmX",
         "measured": {
           "height": 538,
           "width": 320
@@ -4887,11 +4626,9 @@
       },
       {
         "data": {
-          "id": "OllamaEmbeddings-IWEAn",
+          "id": "OllamaEmbeddings-zAbkk",
           "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
+            "base_classes": ["Embeddings"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -4899,16 +4636,10 @@
             "display_name": "Ollama Embeddings",
             "documentation": "https://python.langchain.com/docs/integrations/text_embedding/ollama",
             "edited": false,
-            "field_order": [
-              "model_name",
-              "base_url",
-              "api_key"
-            ],
+            "field_order": ["model_name", "base_url", "api_key"],
             "frozen": false,
             "icon": "Ollama",
-            "last_updated": "2026-04-20T07:47:59.728Z",
             "legacy": false,
-            "lf_version": "1.8.1",
             "metadata": {
               "code_hash": "9ba9e798bf19",
               "dependencies": {
@@ -4948,9 +4679,7 @@
                 "name": "embeddings",
                 "selected": "Embeddings",
                 "tool_mode": true,
-                "types": [
-                  "Embeddings"
-                ],
+                "types": ["Embeddings"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -5026,6 +4755,7 @@
                 "dynamic": false,
                 "external_options": {},
                 "info": "",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [],
                 "options_metadata": [],
@@ -5041,7 +4771,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": "granite-embedding:latest"
+                "value": ""
               }
             },
             "tool_mode": false
@@ -5050,7 +4780,7 @@
           "type": "OllamaEmbeddings"
         },
         "dragging": false,
-        "id": "OllamaEmbeddings-IWEAn",
+        "id": "OllamaEmbeddings-zAbkk",
         "measured": {
           "height": 289,
           "width": 320
@@ -5064,21 +4794,21 @@
       },
       {
         "data": {
-          "id": "note-G4CUO",
+          "id": "note-xPy9b",
           "node": {
             "description": "## How the flow works\n\nThis flow is organized into four color-coded sections:\n\n**Data (Yellow)**  \nUpload one or more structured data files that you want the agent to analyze.\n\n**Models (Pink)**  \nConfigure a language model for reasoning and description generation, and an embedding model for indexing and retrieval.\n\n**Ingestion Pipeline (Green)**  \nThe ingestion flow reads uploaded files, generates semantic descriptions for them, stores those descriptions in a vector database, and prepares file retrieval data for later use.\n\n**Agent Inference (Blue)**  \nDuring chat, the OpenDsStar agent reuses the ingested vector data and file retrieval data through tools. It searches for relevant files, retrieves their contents when needed, reasons over the data, and returns an answer.\n\nIn short: **upload files → ingest and index them → reuse the ingested data at query time → analyze and answer**\n",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.19ed76ef",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 652,
-        "id": "note-G4CUO",
+        "id": "note-xPy9b",
         "measured": {
           "height": 652,
           "width": 901
@@ -5094,21 +4824,21 @@
       },
       {
         "data": {
-          "id": "note-xrAfT",
+          "id": "note-v8fAB",
           "node": {
             "description": "## Setup\n\n**Configure the models**  \nSet a language model and an embedding model in the **Models** section.\n\n**Configure persistent storage correctly**  \nThis flow uses both the **Vector Store** and the **File Content Retriever** twice:\n- once in the **Ingestion Pipeline**\n- again in **Agent Inference**, where they are used as tools over the ingested data\n\nSet the directories as follows:\n- both **Vector Store** components should use the **same Persistent Directory**\n- both **File Content Retriever** components should use the **same Persistent Directory**\n- the **Vector Store** directory and the **File Content Retriever** directory should be **different**\n\nThis allows the ingestion and inference stages to share the same stored vector data and file retrieval data, while keeping those two storage layers separate.",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.15d8f11d",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 633,
-        "id": "note-xrAfT",
+        "id": "note-v8fAB",
         "measured": {
           "height": 633,
           "width": 896
@@ -5124,21 +4854,21 @@
       },
       {
         "data": {
-          "id": "note-l9vuw",
+          "id": "note-JgV9B",
           "node": {
             "description": "## How to run it\n\n**Upload your files**  \nAdd one or more structured data files in the **Data** section.\n\n**Run the ingestion pipeline**  \nExecute the ingestion flow so each file is processed, described, and indexed.\n\n**Open the chat / playground**  \nStart the agent flow and ask questions in plain English.\n\n**Analyze your data**  \nThe agent will use the ingested vector store and file retrieval tools to find relevant files, access their contents, and answer based on the uploaded data.\n",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.0eba650b",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 429,
-        "id": "note-l9vuw",
+        "id": "note-JgV9B",
         "measured": {
           "height": 429,
           "width": 895
@@ -5154,21 +4884,21 @@
       },
       {
         "data": {
-          "id": "note-2Di5A",
+          "id": "note-QqpFM",
           "node": {
             "description": "## Notes\n\n- The **Write File** tool is also included, allowing the agent to create structured output files such as **CSV, Excel, or JSON** with analysis results.  \n  (e.g. *Create a CSV with all Airbnb listings in NYC that cost less than 300 USD per night.*)\n- Using the **Write File** tool, code agents can also save plots as **HTML** files when requested.  \n  (e.g. *Create a plot of house price vs. review score for all Airbnb listings in the Upper East Side, and save it as an HTML file.*)",
             "display_name": "",
             "documentation": "",
             "i18n_key": "template_notes.structured_data_analysis_agent.338d3972",
             "template": {
-              "backgroundColor": "neutral"
+              "backgroundColor": "blue"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 251,
-        "id": "note-2Di5A",
+        "id": "note-QqpFM",
         "measured": {
           "height": 251,
           "width": 895
@@ -5184,11 +4914,9 @@
       },
       {
         "data": {
-          "id": "SaveToFile-bKzdF",
+          "id": "SaveToFile-9FQfI",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -5215,10 +4943,10 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-04-20T07:48:20.704Z",
+            "last_updated": "2026-06-26T12:13:06.974Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "837120b2e497",
+              "code_hash": "bc4520fdbd6f",
               "dependencies": {
                 "dependencies": [
                   {
@@ -5231,7 +4959,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -5247,7 +4975,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.197.0"
+                    "version": "2.198.0"
                   }
                 ],
                 "total_dependencies": 7
@@ -5270,9 +4998,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -5433,7 +5159,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import json\nfrom collections.abc import AsyncIterator, Iterator\nfrom pathlib import Path\nfrom typing import Any\n\nimport orjson\nimport pandas as pd\nfrom fastapi import UploadFile\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.custom import Component\nfrom lfx.inputs import SortableListInput\nfrom lfx.inputs.inputs import DataFrameInput\nfrom lfx.io import BoolInput, DropdownInput, SecretStrInput, StrInput\nfrom lfx.schema import Data, DataFrame, Message\nfrom lfx.services.deps import get_settings_service, get_storage_service, session_scope\nfrom lfx.template.field.base import Output\nfrom lfx.utils.validate_cloud import is_astra_cloud_environment\n\n\ndef _get_storage_location_options():\n    \"\"\"Get storage location options, filtering out Local if in Astra cloud environment.\"\"\"\n    all_options = [{\"name\": \"AWS\", \"icon\": \"Amazon\"}, {\"name\": \"Google Drive\", \"icon\": \"google\"}]\n    if is_astra_cloud_environment():\n        return all_options\n    return [{\"name\": \"Local\", \"icon\": \"hard-drive\"}, *all_options]\n\n\ndef _get_default_storage_location() -> list[dict[str, str]]:\n    \"\"\"Return the default storage selection for the component template.\"\"\"\n    return [_get_storage_location_options()[0]]\n\n\ndef _is_default_storage(storage_name: str) -> bool:\n    \"\"\"Check whether a storage type is the default selection.\"\"\"\n    return _get_default_storage_location()[0][\"name\"] == storage_name\n\n\nclass SaveToFileComponent(Component):\n    display_name = \"Write File\"\n    description = (\n        \"Save data to a file. \"\n        \"Arguments: 'input' — the content to save (pass a DataFrame directly, or a JSON string \"\n        \"for tabular data, or plain text for messages); \"\n        \"'file_name' — the name to save as, without extension (e.g. 'report'); \"\n        \"'file_format' — output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (optional). \"\n        \"Returns a confirmation with the file path or URL.\"\n    )\n    documentation: str = \"https://docs.langflow.org/write-file\"\n    icon = \"file-text\"\n    name = \"SaveToFile\"\n\n    # File format options for different storage types\n    LOCAL_DATA_FORMAT_CHOICES = [\"csv\", \"excel\", \"json\", \"markdown\"]\n    LOCAL_MESSAGE_FORMAT_CHOICES = [\"txt\", \"html\", \"json\", \"markdown\"]\n    AWS_FORMAT_CHOICES = [\n        \"txt\",\n        \"json\",\n        \"csv\",\n        \"xml\",\n        \"html\",\n        \"md\",\n        \"yaml\",\n        \"log\",\n        \"tsv\",\n        \"jsonl\",\n        \"parquet\",\n        \"xlsx\",\n        \"zip\",\n    ]\n    GDRIVE_FORMAT_CHOICES = [\"txt\", \"html\", \"json\", \"csv\", \"xlsx\", \"slides\", \"docs\", \"jpg\", \"mp3\"]\n\n    inputs = [\n        SortableListInput(\n            name=\"storage_location\",\n            display_name=\"Storage Location\",\n            placeholder=\"Select Location\",\n            info=\"Choose where to save the file.\",\n            options=_get_storage_location_options(),\n            real_time_refresh=True,\n            limit=1,\n            value=_get_default_storage_location(),\n            advanced=True,\n        ),\n        # Common inputs\n        DataFrameInput(\n            name=\"input\",\n            display_name=\"File Content\",\n            info=(\n                \"The content to save. Accepts a DataFrame, Data, or Message object directly. \"\n                'Can also accept a JSON string (e.g. \\'[{\"col1\": \"val1\"}]\\') which will be '\n                \"parsed into a DataFrame, or plain text which will be saved as a Message.\"\n            ),\n            input_types=[\"Data\", \"JSON\", \"DataFrame\", \"Table\", \"Message\"],\n            required=True,\n            tool_mode=True,\n        ),\n        StrInput(\n            name=\"file_name\",\n            display_name=\"File Name\",\n            info=\"File name without extension (e.g. 'report'). Extension is added automatically.\",\n            required=True,\n            show=True,\n            tool_mode=True,\n        ),\n        StrInput(\n            name=\"file_format\",\n            display_name=\"File Format (Tool)\",\n            info=\"Output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown'. Overrides pre-configured format.\",\n            required=False,\n            show=False,\n            tool_mode=True,\n        ),\n        BoolInput(\n            name=\"append_mode\",\n            display_name=\"Append\",\n            info=(\n                \"Append to file if it exists (only for Local storage with plain text formats). \"\n                \"Not supported for cloud storage (AWS/Google Drive).\"\n            ),\n            value=False,\n            show=_is_default_storage(\"Local\"),\n        ),\n        # Format inputs (dynamic based on storage location)\n        DropdownInput(\n            name=\"local_format\",\n            display_name=\"File Format\",\n            options=list(dict.fromkeys(LOCAL_DATA_FORMAT_CHOICES + LOCAL_MESSAGE_FORMAT_CHOICES)),\n            info=\"Select the file format for local storage.\",\n            value=\"json\",\n            show=_is_default_storage(\"Local\"),\n        ),\n        DropdownInput(\n            name=\"aws_format\",\n            display_name=\"File Format\",\n            options=AWS_FORMAT_CHOICES,\n            info=\"Select the file format for AWS S3 storage.\",\n            value=\"txt\",\n            show=_is_default_storage(\"AWS\"),\n        ),\n        DropdownInput(\n            name=\"gdrive_format\",\n            display_name=\"File Format\",\n            options=GDRIVE_FORMAT_CHOICES,\n            info=\"Select the file format for Google Drive storage.\",\n            value=\"txt\",\n            show=_is_default_storage(\"Google Drive\"),\n        ),\n        # AWS S3 specific inputs\n        SecretStrInput(\n            name=\"aws_access_key_id\",\n            display_name=\"AWS Access Key ID\",\n            info=\"AWS Access key ID.\",\n            show=_is_default_storage(\"AWS\"),\n            advanced=not _is_default_storage(\"AWS\"),\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"aws_secret_access_key\",\n            display_name=\"AWS Secret Key\",\n            info=\"AWS Secret Key.\",\n            show=_is_default_storage(\"AWS\"),\n            advanced=not _is_default_storage(\"AWS\"),\n            required=True,\n        ),\n        StrInput(\n            name=\"bucket_name\",\n            display_name=\"S3 Bucket Name\",\n            info=\"Enter the name of the S3 bucket.\",\n            show=_is_default_storage(\"AWS\"),\n            advanced=not _is_default_storage(\"AWS\"),\n            required=True,\n        ),\n        StrInput(\n            name=\"aws_region\",\n            display_name=\"AWS Region\",\n            info=\"AWS region (e.g., us-east-1, eu-west-1).\",\n            show=_is_default_storage(\"AWS\"),\n            advanced=not _is_default_storage(\"AWS\"),\n        ),\n        StrInput(\n            name=\"s3_prefix\",\n            display_name=\"S3 Prefix\",\n            info=\"Prefix for all files in S3.\",\n            show=_is_default_storage(\"AWS\"),\n            advanced=not _is_default_storage(\"AWS\"),\n        ),\n        # Google Drive specific inputs\n        SecretStrInput(\n            name=\"service_account_key\",\n            display_name=\"GCP Credentials Secret Key\",\n            info=\"Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).\",\n            show=_is_default_storage(\"Google Drive\"),\n            advanced=not _is_default_storage(\"Google Drive\"),\n            required=True,\n        ),\n        StrInput(\n            name=\"folder_id\",\n            display_name=\"Google Drive Folder ID\",\n            info=(\n                \"The Google Drive folder ID where the file will be uploaded. \"\n                \"The folder must be shared with the service account email.\"\n            ),\n            required=True,\n            show=_is_default_storage(\"Google Drive\"),\n            advanced=not _is_default_storage(\"Google Drive\"),\n        ),\n    ]\n\n    outputs = [Output(display_name=\"File Path\", name=\"message\", method=\"save_to_file\")]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Update build configuration to show/hide fields based on storage location selection.\"\"\"\n        # Update options dynamically based on cloud environment\n        # This ensures options are refreshed when build_config is updated\n        if \"storage_location\" in build_config:\n            updated_options = _get_storage_location_options()\n            build_config[\"storage_location\"][\"options\"] = updated_options\n\n        # When tool_mode is toggled, hide storage-specific format dropdowns\n        # (the agent uses the unified file_format input instead)\n        if field_name == \"tool_mode\":\n            format_fields = [\"local_format\", \"aws_format\", \"gdrive_format\"]\n            for f_name in format_fields:\n                if f_name in build_config:\n                    build_config[f_name][\"show\"] = not bool(field_value)\n            return build_config\n\n        if field_name != \"storage_location\":\n            return build_config\n\n        # Extract selected storage location\n        selected = [location[\"name\"] for location in field_value] if isinstance(field_value, list) else []\n\n        # Hide all dynamic fields first\n        dynamic_fields = [\n            \"file_name\",  # Common fields (input is always visible)\n            \"append_mode\",\n            \"local_format\",\n            \"aws_format\",\n            \"gdrive_format\",\n            \"aws_access_key_id\",\n            \"aws_secret_access_key\",\n            \"bucket_name\",\n            \"aws_region\",\n            \"s3_prefix\",\n            \"service_account_key\",\n            \"folder_id\",\n        ]\n\n        for f_name in dynamic_fields:\n            if f_name in build_config:\n                build_config[f_name][\"show\"] = False\n\n        # Show fields based on selected storage location\n        is_tool_mode = build_config.get(\"tools_metadata\", {}).get(\"show\", False)\n\n        if len(selected) == 1:\n            location = selected[0]\n\n            # Show file_name when any storage location is selected\n            if \"file_name\" in build_config:\n                build_config[\"file_name\"][\"show\"] = True\n\n            # Show append_mode only for Local storage (not supported for cloud storage)\n            if \"append_mode\" in build_config:\n                build_config[\"append_mode\"][\"show\"] = location == \"Local\"\n\n            if location == \"Local\":\n                if \"local_format\" in build_config:\n                    build_config[\"local_format\"][\"show\"] = not is_tool_mode\n\n            elif location == \"AWS\":\n                aws_fields = [\n                    \"aws_format\",\n                    \"aws_access_key_id\",\n                    \"aws_secret_access_key\",\n                    \"bucket_name\",\n                    \"aws_region\",\n                    \"s3_prefix\",\n                ]\n                for f_name in aws_fields:\n                    if f_name in build_config:\n                        show = f_name != \"aws_format\" or not is_tool_mode\n                        build_config[f_name][\"show\"] = show\n                        build_config[f_name][\"advanced\"] = False\n\n            elif location == \"Google Drive\":\n                gdrive_fields = [\"gdrive_format\", \"service_account_key\", \"folder_id\"]\n                for f_name in gdrive_fields:\n                    if f_name in build_config:\n                        show = f_name != \"gdrive_format\" or not is_tool_mode\n                        build_config[f_name][\"show\"] = show\n                        build_config[f_name][\"advanced\"] = False\n\n        return build_config\n\n    async def save_to_file(self) -> Message:\n        \"\"\"Save the input to a file and upload it, returning a confirmation message.\"\"\"\n        # Validate inputs\n        if not self.file_name:\n            msg = \"File name must be provided.\"\n            raise ValueError(msg)\n        if not self._get_input_type():\n            msg = \"Input type is not set.\"\n            raise ValueError(msg)\n\n        # Get selected storage location\n        storage_location = self._get_selected_storage_location()\n        if not storage_location:\n            msg = \"Storage location must be selected.\"\n            raise ValueError(msg)\n\n        # Check if Local storage is disabled in cloud environment\n        if storage_location == \"Local\" and is_astra_cloud_environment():\n            msg = \"Local storage is not available in cloud environment. Please use AWS or Google Drive.\"\n            raise ValueError(msg)\n\n        # Route to appropriate save method based on storage location\n        if storage_location == \"Local\":\n            return await self._save_to_local()\n        if storage_location == \"AWS\":\n            return await self._save_to_aws()\n        if storage_location == \"Google Drive\":\n            return await self._save_to_google_drive()\n        msg = f\"Unsupported storage location: {storage_location}\"\n        raise ValueError(msg)\n\n    def _get_input_type(self) -> str:\n        \"\"\"Determine the input type based on the provided input.\"\"\"\n        # Use exact type checking (type() is) instead of isinstance() to avoid inheritance issues.\n        # Since Message inherits from Data, isinstance(message, Data) would return True for Message objects,\n        # causing Message inputs to be incorrectly identified as Data type.\n        if type(self.input) is DataFrame:\n            return \"DataFrame\"\n        if type(self.input) is Message:\n            return \"Message\"\n        if type(self.input) is Data:\n            return \"Data\"\n        # When invoked by a code agent (e.g. OpenDsStar), the input may be a raw\n        # pandas DataFrame rather than Langflow's DataFrame wrapper.\n        if isinstance(self.input, pd.DataFrame):\n            self.input = DataFrame(self.input)\n            return \"DataFrame\"\n        # When invoked as a tool, the agent passes a string. Try to parse it as\n        # tabular JSON (list of objects) → DataFrame, otherwise wrap as Message.\n        if isinstance(self.input, str):\n            self.input = self._coerce_string_input(self.input)\n            return self._get_input_type()\n        msg = f\"Unsupported input type: {type(self.input)}\"\n        raise ValueError(msg)\n\n    def _coerce_string_input(self, value: str) -> DataFrame | Message:\n        \"\"\"Convert a raw string (from agent tool call) into a DataFrame or Message.\n\n        Tries to parse as JSON first — a list of objects or a single object becomes\n        a DataFrame. Anything else is wrapped in a Message.\n        \"\"\"\n        try:\n            parsed = json.loads(value)\n            if isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):\n                return DataFrame(pd.DataFrame(parsed))\n            if isinstance(parsed, dict):\n                return DataFrame(pd.DataFrame([parsed]))\n        except (json.JSONDecodeError, ValueError):\n            pass\n        return Message(text=value)\n\n    def _get_default_format(self) -> str:\n        \"\"\"Return the default file format based on input type.\"\"\"\n        if self._get_input_type() == \"DataFrame\":\n            return \"csv\"\n        if self._get_input_type() == \"Data\":\n            return \"json\"\n        if self._get_input_type() == \"Message\":\n            return \"json\"\n        return \"json\"  # Fallback\n\n    def _adjust_file_path_with_format(self, path: Path, fmt: str) -> Path:\n        \"\"\"Adjust the file path to include the correct extension.\"\"\"\n        file_extension = path.suffix.lower().lstrip(\".\")\n        if fmt == \"excel\":\n            return Path(f\"{path}.xlsx\").expanduser() if file_extension not in [\"xlsx\", \"xls\"] else path\n        return Path(f\"{path}.{fmt}\").expanduser() if file_extension != fmt else path\n\n    def _is_plain_text_format(self, fmt: str) -> bool:\n        \"\"\"Check if a file format is plain text (supports appending).\"\"\"\n        plain_text_formats = [\"txt\", \"json\", \"markdown\", \"md\", \"csv\", \"xml\", \"html\", \"yaml\", \"log\", \"tsv\", \"jsonl\"]\n        return fmt.lower() in plain_text_formats\n\n    async def _upload_file(self, file_path: Path) -> None:\n        \"\"\"Upload the saved file using the upload_user_file service.\"\"\"\n        from langflow.api.v2.files import upload_user_file\n        from langflow.services.database.models.user.crud import get_user_by_id\n\n        # Ensure the file exists\n        if not file_path.exists():\n            msg = f\"File not found: {file_path}\"\n            raise FileNotFoundError(msg)\n\n        # Upload the file - always use append=False because the local file already contains\n        # the correct content (either new or appended locally)\n        with file_path.open(\"rb\") as f:\n            async with session_scope() as db:\n                if not self.user_id:\n                    msg = \"User ID is required for file saving.\"\n                    raise ValueError(msg)\n                current_user = await get_user_by_id(db, self.user_id)\n\n                await upload_user_file(\n                    file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),\n                    session=db,\n                    current_user=current_user,\n                    storage_service=get_storage_service(),\n                    settings_service=get_settings_service(),\n                    append=False,\n                )\n\n    def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:\n        \"\"\"Save a DataFrame to the specified file format.\"\"\"\n        append_mode = getattr(self, \"append_mode\", False)\n        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)\n\n        if fmt == \"csv\":\n            dataframe.to_csv(path, index=False, mode=\"a\" if should_append else \"w\", header=not should_append)\n        elif fmt == \"excel\":\n            dataframe.to_excel(path, index=False, engine=\"openpyxl\")\n        elif fmt == \"json\":\n            if should_append:\n                # Read and parse existing JSON\n                existing_data = []\n                try:\n                    existing_content = path.read_text(encoding=\"utf-8\").strip()\n                    if existing_content:\n                        parsed = json.loads(existing_content)\n                        # Handle case where existing content is a single object\n                        if isinstance(parsed, dict):\n                            existing_data = [parsed]\n                        elif isinstance(parsed, list):\n                            existing_data = parsed\n                except (json.JSONDecodeError, FileNotFoundError):\n                    # Treat parse errors or missing file as empty array\n                    existing_data = []\n\n                # Append new data\n                new_records = json.loads(dataframe.to_json(orient=\"records\"))\n                existing_data.extend(new_records)\n\n                # Write back as a single JSON array\n                path.write_text(json.dumps(existing_data, indent=2), encoding=\"utf-8\")\n            else:\n                dataframe.to_json(path, orient=\"records\", indent=2)\n        elif fmt == \"markdown\":\n            content = dataframe.to_markdown(index=False)\n            if should_append:\n                path.write_text(path.read_text(encoding=\"utf-8\") + \"\\n\\n\" + content, encoding=\"utf-8\")\n            else:\n                path.write_text(content, encoding=\"utf-8\")\n        else:\n            msg = f\"Unsupported DataFrame format: {fmt}\"\n            raise ValueError(msg)\n        action = \"appended to\" if should_append else \"saved successfully as\"\n        return f\"DataFrame {action} '{path}'\"\n\n    def _save_data(self, data: Data, path: Path, fmt: str) -> str:\n        \"\"\"Save a Data object to the specified file format.\"\"\"\n        append_mode = getattr(self, \"append_mode\", False)\n        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)\n\n        if fmt == \"csv\":\n            pd.DataFrame(data.data).to_csv(\n                path,\n                index=False,\n                mode=\"a\" if should_append else \"w\",\n                header=not should_append,\n            )\n        elif fmt == \"excel\":\n            pd.DataFrame(data.data).to_excel(path, index=False, engine=\"openpyxl\")\n        elif fmt == \"json\":\n            new_data = jsonable_encoder(data.data)\n            if should_append:\n                # Read and parse existing JSON\n                existing_data = []\n                try:\n                    existing_content = path.read_text(encoding=\"utf-8\").strip()\n                    if existing_content:\n                        parsed = json.loads(existing_content)\n                        # Handle case where existing content is a single object\n                        if isinstance(parsed, dict):\n                            existing_data = [parsed]\n                        elif isinstance(parsed, list):\n                            existing_data = parsed\n                except (json.JSONDecodeError, FileNotFoundError):\n                    # Treat parse errors or missing file as empty array\n                    existing_data = []\n\n                # Append new data\n                if isinstance(new_data, list):\n                    existing_data.extend(new_data)\n                else:\n                    existing_data.append(new_data)\n\n                # Write back as a single JSON array\n                path.write_text(json.dumps(existing_data, indent=2), encoding=\"utf-8\")\n            else:\n                content = orjson.dumps(new_data, option=orjson.OPT_INDENT_2).decode(\"utf-8\")\n                path.write_text(content, encoding=\"utf-8\")\n        elif fmt == \"markdown\":\n            content = pd.DataFrame(data.data).to_markdown(index=False)\n            if should_append:\n                path.write_text(path.read_text(encoding=\"utf-8\") + \"\\n\\n\" + content, encoding=\"utf-8\")\n            else:\n                path.write_text(content, encoding=\"utf-8\")\n        else:\n            msg = f\"Unsupported Data format: {fmt}\"\n            raise ValueError(msg)\n        action = \"appended to\" if should_append else \"saved successfully as\"\n        return f\"Data {action} '{path}'\"\n\n    async def _save_message(self, message: Message, path: Path, fmt: str) -> str:\n        \"\"\"Save a Message to the specified file format, handling async iterators.\"\"\"\n        content = \"\"\n        if message.text is None:\n            content = \"\"\n        elif isinstance(message.text, AsyncIterator):\n            async for item in message.text:\n                content += str(item) + \" \"\n            content = content.strip()\n        elif isinstance(message.text, Iterator):\n            content = \" \".join(str(item) for item in message.text)\n        else:\n            content = str(message.text)\n\n        append_mode = getattr(self, \"append_mode\", False)\n        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)\n\n        if fmt in (\"txt\", \"html\"):\n            if should_append:\n                path.write_text(path.read_text(encoding=\"utf-8\") + \"\\n\" + content, encoding=\"utf-8\")\n            else:\n                path.write_text(content, encoding=\"utf-8\")\n        elif fmt == \"json\":\n            new_message = {\"message\": content}\n            if should_append:\n                # Read and parse existing JSON\n                existing_data = []\n                try:\n                    existing_content = path.read_text(encoding=\"utf-8\").strip()\n                    if existing_content:\n                        parsed = json.loads(existing_content)\n                        # Handle case where existing content is a single object\n                        if isinstance(parsed, dict):\n                            existing_data = [parsed]\n                        elif isinstance(parsed, list):\n                            existing_data = parsed\n                except (json.JSONDecodeError, FileNotFoundError):\n                    # Treat parse errors or missing file as empty array\n                    existing_data = []\n\n                # Append new message\n                existing_data.append(new_message)\n\n                # Write back as a single JSON array\n                path.write_text(json.dumps(existing_data, indent=2), encoding=\"utf-8\")\n            else:\n                path.write_text(json.dumps(new_message, indent=2), encoding=\"utf-8\")\n        elif fmt == \"markdown\":\n            md_content = f\"**Message:**\\n\\n{content}\"\n            if should_append:\n                path.write_text(path.read_text(encoding=\"utf-8\") + \"\\n\\n\" + md_content, encoding=\"utf-8\")\n            else:\n                path.write_text(md_content, encoding=\"utf-8\")\n        else:\n            msg = f\"Unsupported Message format: {fmt}\"\n            raise ValueError(msg)\n        action = \"appended to\" if should_append else \"saved successfully as\"\n        return f\"Message {action} '{path}'\"\n\n    def _get_selected_storage_location(self) -> str:\n        \"\"\"Get the selected storage location from the SortableListInput.\"\"\"\n        if hasattr(self, \"storage_location\") and self.storage_location:\n            if isinstance(self.storage_location, list) and len(self.storage_location) > 0:\n                return self.storage_location[0].get(\"name\", \"\")\n            if isinstance(self.storage_location, dict):\n                return self.storage_location.get(\"name\", \"\")\n        return \"\"\n\n    def _get_file_format_for_location(self, location: str) -> str:\n        \"\"\"Get the appropriate file format based on storage location.\n\n        If the agent set file_format via tool mode, that takes priority.\n        \"\"\"\n        agent_format = getattr(self, \"file_format\", None)\n        if agent_format:\n            return agent_format\n        if location == \"Local\":\n            return getattr(self, \"local_format\", None) or self._get_default_format()\n        if location == \"AWS\":\n            return getattr(self, \"aws_format\", \"txt\")\n        if location == \"Google Drive\":\n            return getattr(self, \"gdrive_format\", \"txt\")\n        return self._get_default_format()\n\n    async def _save_to_local(self) -> Message:\n        \"\"\"Save file to local storage (original functionality).\"\"\"\n        file_format = self._get_file_format_for_location(\"Local\")\n\n        # Validate file format based on input type\n        allowed_formats = (\n            self.LOCAL_MESSAGE_FORMAT_CHOICES if self._get_input_type() == \"Message\" else self.LOCAL_DATA_FORMAT_CHOICES\n        )\n        if file_format not in allowed_formats:\n            msg = f\"Invalid file format '{file_format}' for {self._get_input_type()}. Allowed: {allowed_formats}\"\n            raise ValueError(msg)\n\n        # Prepare file path\n        file_path = Path(self.file_name).expanduser()\n        if not file_path.parent.exists():\n            file_path.parent.mkdir(parents=True, exist_ok=True)\n        file_path = self._adjust_file_path_with_format(file_path, file_format)\n\n        # Save the input to file based on type\n        if self._get_input_type() == \"DataFrame\":\n            confirmation = self._save_dataframe(self.input, file_path, file_format)\n        elif self._get_input_type() == \"Data\":\n            confirmation = self._save_data(self.input, file_path, file_format)\n        elif self._get_input_type() == \"Message\":\n            confirmation = await self._save_message(self.input, file_path, file_format)\n        else:\n            msg = f\"Unsupported input type: {self._get_input_type()}\"\n            raise ValueError(msg)\n\n        # Upload the saved file\n        await self._upload_file(file_path)\n\n        # Return the final file path and confirmation message\n        final_path = Path.cwd() / file_path if not file_path.is_absolute() else file_path\n        return Message(text=f\"{confirmation} at {final_path}\")\n\n    async def _save_to_aws(self) -> Message:\n        \"\"\"Save file to AWS S3 using S3 functionality.\"\"\"\n        import os\n\n        import boto3\n\n        from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials\n\n        # Get AWS credentials from component inputs or fall back to environment variables\n        aws_access_key_id = getattr(self, \"aws_access_key_id\", None)\n        if aws_access_key_id and hasattr(aws_access_key_id, \"get_secret_value\"):\n            aws_access_key_id = aws_access_key_id.get_secret_value()\n        if not aws_access_key_id:\n            aws_access_key_id = os.getenv(\"AWS_ACCESS_KEY_ID\")\n\n        aws_secret_access_key = getattr(self, \"aws_secret_access_key\", None)\n        if aws_secret_access_key and hasattr(aws_secret_access_key, \"get_secret_value\"):\n            aws_secret_access_key = aws_secret_access_key.get_secret_value()\n        if not aws_secret_access_key:\n            aws_secret_access_key = os.getenv(\"AWS_SECRET_ACCESS_KEY\")\n\n        bucket_name = getattr(self, \"bucket_name\", None)\n        if not bucket_name:\n            # Try to get from storage service settings\n            settings = get_settings_service().settings\n            bucket_name = settings.object_storage_bucket_name\n\n        # Validate AWS credentials\n        if not aws_access_key_id:\n            msg = (\n                \"AWS Access Key ID is required for S3 storage. Provide it as a component input \"\n                \"or set AWS_ACCESS_KEY_ID environment variable.\"\n            )\n            raise ValueError(msg)\n        if not aws_secret_access_key:\n            msg = (\n                \"AWS Secret Key is required for S3 storage. Provide it as a component input \"\n                \"or set AWS_SECRET_ACCESS_KEY environment variable.\"\n            )\n            raise ValueError(msg)\n        if not bucket_name:\n            msg = (\n                \"S3 Bucket Name is required for S3 storage. Provide it as a component input \"\n                \"or set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable.\"\n            )\n            raise ValueError(msg)\n\n        # Validate AWS credentials\n        validate_aws_credentials(self)\n\n        # Create S3 client\n        s3_client = create_s3_client(self)\n        client_config: dict[str, Any] = {\n            \"aws_access_key_id\": str(aws_access_key_id),\n            \"aws_secret_access_key\": str(aws_secret_access_key),\n        }\n\n        # Get region from component input, environment variable, or settings\n        aws_region = getattr(self, \"aws_region\", None)\n        if not aws_region:\n            aws_region = os.getenv(\"AWS_DEFAULT_REGION\") or os.getenv(\"AWS_REGION\")\n        if aws_region:\n            client_config[\"region_name\"] = str(aws_region)\n\n        s3_client = boto3.client(\"s3\", **client_config)\n\n        # Extract content\n        content = self._extract_content_for_upload()\n        file_format = self._get_file_format_for_location(\"AWS\")\n\n        # Generate file path\n        file_path = f\"{self.file_name}.{file_format}\"\n        if hasattr(self, \"s3_prefix\") and self.s3_prefix:\n            file_path = f\"{self.s3_prefix.rstrip('/')}/{file_path}\"\n\n        # Create temporary file\n        import tempfile\n\n        with tempfile.NamedTemporaryFile(\n            mode=\"w\", encoding=\"utf-8\", suffix=f\".{file_format}\", delete=False\n        ) as temp_file:\n            temp_file.write(content)\n            temp_file_path = temp_file.name\n\n        try:\n            # Upload to S3\n            s3_client.upload_file(temp_file_path, bucket_name, file_path)\n            s3_url = f\"s3://{bucket_name}/{file_path}\"\n            return Message(text=f\"File successfully uploaded to {s3_url}\")\n        finally:\n            # Clean up temp file\n            if Path(temp_file_path).exists():\n                Path(temp_file_path).unlink()\n\n    async def _save_to_google_drive(self) -> Message:\n        \"\"\"Save file to Google Drive using Google Drive functionality.\"\"\"\n        import tempfile\n\n        from googleapiclient.http import MediaFileUpload\n\n        from lfx.base.data.cloud_storage_utils import create_google_drive_service\n\n        # Validate Google Drive credentials\n        if not getattr(self, \"service_account_key\", None):\n            msg = \"GCP Credentials Secret Key is required for Google Drive storage\"\n            raise ValueError(msg)\n        if not getattr(self, \"folder_id\", None):\n            msg = \"Google Drive Folder ID is required for Google Drive storage\"\n            raise ValueError(msg)\n\n        # Create Google Drive service with full drive scope (needed for folder operations)\n        drive_service, credentials = create_google_drive_service(\n            self.service_account_key, scopes=[\"https://www.googleapis.com/auth/drive\"], return_credentials=True\n        )\n\n        # Extract content and format\n        content = self._extract_content_for_upload()\n        file_format = self._get_file_format_for_location(\"Google Drive\")\n\n        # Handle special Google Drive formats\n        if file_format in [\"slides\", \"docs\"]:\n            return await self._save_to_google_apps(drive_service, credentials, content, file_format)\n\n        # Create temporary file\n        file_path = f\"{self.file_name}.{file_format}\"\n        with tempfile.NamedTemporaryFile(\n            mode=\"w\",\n            encoding=\"utf-8\",\n            suffix=f\".{file_format}\",\n            delete=False,\n        ) as temp_file:\n            temp_file.write(content)\n            temp_file_path = temp_file.name\n\n        try:\n            # Upload to Google Drive\n            # Note: We skip explicit folder verification since it requires broader permissions.\n            # If the folder doesn't exist or isn't accessible, the create() call will fail with a clear error.\n            file_metadata = {\"name\": file_path, \"parents\": [self.folder_id]}\n            media = MediaFileUpload(temp_file_path, resumable=True)\n\n            try:\n                uploaded_file = (\n                    drive_service.files().create(body=file_metadata, media_body=media, fields=\"id\").execute()\n                )\n            except Exception as e:\n                msg = (\n                    f\"Unable to upload file to Google Drive folder '{self.folder_id}'. \"\n                    f\"Error: {e!s}. \"\n                    \"Please ensure: 1) The folder ID is correct, 2) The folder exists, \"\n                    \"3) The service account has been granted access to this folder.\"\n                )\n                raise ValueError(msg) from e\n\n            file_id = uploaded_file.get(\"id\")\n            file_url = f\"https://drive.google.com/file/d/{file_id}/view\"\n            return Message(text=f\"File successfully uploaded to Google Drive: {file_url}\")\n        finally:\n            # Clean up temp file\n            if Path(temp_file_path).exists():\n                Path(temp_file_path).unlink()\n\n    async def _save_to_google_apps(self, drive_service, credentials, content: str, app_type: str) -> Message:\n        \"\"\"Save content to Google Apps (Slides or Docs).\"\"\"\n        import time\n\n        if app_type == \"slides\":\n            from googleapiclient.discovery import build\n\n            slides_service = build(\"slides\", \"v1\", credentials=credentials)\n\n            file_metadata = {\n                \"name\": self.file_name,\n                \"mimeType\": \"application/vnd.google-apps.presentation\",\n                \"parents\": [self.folder_id],\n            }\n\n            created_file = drive_service.files().create(body=file_metadata, fields=\"id\").execute()\n            presentation_id = created_file[\"id\"]\n\n            time.sleep(2)  # Wait for file to be available  # noqa: ASYNC251\n\n            presentation = slides_service.presentations().get(presentationId=presentation_id).execute()\n            slide_id = presentation[\"slides\"][0][\"objectId\"]\n\n            # Add content to slide\n            requests = [\n                {\n                    \"createShape\": {\n                        \"objectId\": \"TextBox_01\",\n                        \"shapeType\": \"TEXT_BOX\",\n                        \"elementProperties\": {\n                            \"pageObjectId\": slide_id,\n                            \"size\": {\n                                \"height\": {\"magnitude\": 3000000, \"unit\": \"EMU\"},\n                                \"width\": {\"magnitude\": 6000000, \"unit\": \"EMU\"},\n                            },\n                            \"transform\": {\n                                \"scaleX\": 1,\n                                \"scaleY\": 1,\n                                \"translateX\": 1000000,\n                                \"translateY\": 1000000,\n                                \"unit\": \"EMU\",\n                            },\n                        },\n                    }\n                },\n                {\"insertText\": {\"objectId\": \"TextBox_01\", \"insertionIndex\": 0, \"text\": content}},\n            ]\n\n            slides_service.presentations().batchUpdate(\n                presentationId=presentation_id, body={\"requests\": requests}\n            ).execute()\n            file_url = f\"https://docs.google.com/presentation/d/{presentation_id}/edit\"\n\n        elif app_type == \"docs\":\n            from googleapiclient.discovery import build\n\n            docs_service = build(\"docs\", \"v1\", credentials=credentials)\n\n            file_metadata = {\n                \"name\": self.file_name,\n                \"mimeType\": \"application/vnd.google-apps.document\",\n                \"parents\": [self.folder_id],\n            }\n\n            created_file = drive_service.files().create(body=file_metadata, fields=\"id\").execute()\n            document_id = created_file[\"id\"]\n\n            time.sleep(2)  # Wait for file to be available  # noqa: ASYNC251\n\n            # Add content to document\n            requests = [{\"insertText\": {\"location\": {\"index\": 1}, \"text\": content}}]\n            docs_service.documents().batchUpdate(documentId=document_id, body={\"requests\": requests}).execute()\n            file_url = f\"https://docs.google.com/document/d/{document_id}/edit\"\n\n        return Message(text=f\"File successfully created in Google {app_type.title()}: {file_url}\")\n\n    def _extract_content_for_upload(self) -> str:\n        \"\"\"Extract content from input for upload to cloud services.\"\"\"\n        if self._get_input_type() == \"DataFrame\":\n            return self.input.to_csv(index=False)\n        if self._get_input_type() == \"Data\":\n            if hasattr(self.input, \"data\") and self.input.data:\n                if isinstance(self.input.data, dict):\n                    import json\n\n                    return json.dumps(self.input.data, indent=2, ensure_ascii=False)\n                return str(self.input.data)\n            return str(self.input)\n        if self._get_input_type() == \"Message\":\n            return str(self.input.text) if self.input.text else str(self.input)\n        return str(self.input)\n"
+                "value": "import json\nfrom collections.abc import AsyncIterator, Iterator\nfrom pathlib import Path, PurePath, PureWindowsPath\nfrom typing import Any\n\nimport orjson\nimport pandas as pd\nfrom fastapi import UploadFile\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.custom import Component\nfrom lfx.inputs import SortableListInput\nfrom lfx.inputs.inputs import DataFrameInput\nfrom lfx.io import BoolInput, DropdownInput, SecretStrInput, StrInput\nfrom lfx.schema import Data, DataFrame, Message\nfrom lfx.services.deps import get_settings_service, get_storage_service, session_scope\nfrom lfx.template.field.base import Output\nfrom lfx.utils.validate_cloud import is_astra_cloud_environment\n\n\ndef _get_storage_location_options():\n    \"\"\"Get storage location options, filtering out Local if in Astra cloud environment.\"\"\"\n    all_options = [{\"name\": \"AWS\", \"icon\": \"Amazon\"}, {\"name\": \"Google Drive\", \"icon\": \"google\"}]\n    if is_astra_cloud_environment():\n        return all_options\n    return [{\"name\": \"Local\", \"icon\": \"hard-drive\"}, *all_options]\n\n\ndef _get_default_storage_location() -> list[dict[str, str]]:\n    \"\"\"Return the default storage selection for the component template.\"\"\"\n    return [_get_storage_location_options()[0]]\n\n\ndef _is_default_storage(storage_name: str) -> bool:\n    \"\"\"Check whether a storage type is the default selection.\"\"\"\n    return _get_default_storage_location()[0][\"name\"] == storage_name\n\n\nclass SaveToFileComponent(Component):\n    display_name = \"Write File\"\n    description = (\n        \"Save data to a file. \"\n        \"Arguments: 'input' — the content to save (pass a DataFrame directly, or a JSON string \"\n        \"for tabular data, or plain text for messages); \"\n        \"'file_name' — the name to save as, without extension (e.g. 'report'); \"\n        \"'file_format' — output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown' (optional). \"\n        \"Returns a confirmation with the file path or URL.\"\n    )\n    documentation: str = \"https://docs.langflow.org/write-file\"\n    icon = \"file-text\"\n    name = \"SaveToFile\"\n\n    # File format options for different storage types\n    LOCAL_DATA_FORMAT_CHOICES = [\"csv\", \"excel\", \"json\", \"markdown\"]\n    LOCAL_MESSAGE_FORMAT_CHOICES = [\"txt\", \"html\", \"json\", \"markdown\"]\n    AWS_FORMAT_CHOICES = [\n        \"txt\",\n        \"json\",\n        \"csv\",\n        \"xml\",\n        \"html\",\n        \"md\",\n        \"yaml\",\n        \"log\",\n        \"tsv\",\n        \"jsonl\",\n        \"parquet\",\n        \"xlsx\",\n        \"zip\",\n    ]\n    GDRIVE_FORMAT_CHOICES = [\"txt\", \"html\", \"json\", \"csv\", \"xlsx\", \"slides\", \"docs\", \"jpg\", \"mp3\"]\n\n    inputs = [\n        SortableListInput(\n            name=\"storage_location\",\n            display_name=\"Storage Location\",\n            placeholder=\"Select Location\",\n            info=\"Choose where to save the file.\",\n            options=_get_storage_location_options(),\n            real_time_refresh=True,\n            limit=1,\n            value=_get_default_storage_location(),\n            advanced=True,\n        ),\n        # Common inputs\n        DataFrameInput(\n            name=\"input\",\n            display_name=\"File Content\",\n            info=(\n                \"The content to save. Accepts a DataFrame, Data, or Message object directly. \"\n                'Can also accept a JSON string (e.g. \\'[{\"col1\": \"val1\"}]\\') which will be '\n                \"parsed into a DataFrame, or plain text which will be saved as a Message.\"\n            ),\n            input_types=[\"Data\", \"JSON\", \"DataFrame\", \"Table\", \"Message\"],\n            required=True,\n            tool_mode=True,\n        ),\n        StrInput(\n            name=\"file_name\",\n            display_name=\"File Name\",\n            info=\"File name without extension (e.g. 'report'). Extension is added automatically.\",\n            required=True,\n            show=True,\n            tool_mode=True,\n        ),\n        StrInput(\n            name=\"file_format\",\n            display_name=\"File Format (Tool)\",\n            info=\"Output format: 'csv', 'json', 'txt', 'html', 'excel', 'markdown'. Overrides pre-configured format.\",\n            required=False,\n            show=False,\n            tool_mode=True,\n        ),\n        BoolInput(\n            name=\"append_mode\",\n            display_name=\"Append\",\n            info=(\n                \"Append to file if it exists (only for Local storage with plain text formats). \"\n                \"Not supported for cloud storage (AWS/Google Drive).\"\n            ),\n            value=False,\n            show=_is_default_storage(\"Local\"),\n        ),\n        # Format inputs (dynamic based on storage location)\n        DropdownInput(\n            name=\"local_format\",\n            display_name=\"File Format\",\n            options=list(dict.fromkeys(LOCAL_DATA_FORMAT_CHOICES + LOCAL_MESSAGE_FORMAT_CHOICES)),\n            info=\"Select the file format for local storage.\",\n            value=\"json\",\n            show=_is_default_storage(\"Local\"),\n        ),\n        DropdownInput(\n            name=\"aws_format\",\n            display_name=\"File Format\",\n            options=AWS_FORMAT_CHOICES,\n            info=\"Select the file format for AWS S3 storage.\",\n            value=\"txt\",\n            show=_is_default_storage(\"AWS\"),\n        ),\n        DropdownInput(\n            name=\"gdrive_format\",\n            display_name=\"File Format\",\n            options=GDRIVE_FORMAT_CHOICES,\n            info=\"Select the file format for Google Drive storage.\",\n            value=\"txt\",\n            show=_is_default_storage(\"Google Drive\"),\n        ),\n        # AWS S3 specific inputs\n        SecretStrInput(\n            name=\"aws_access_key_id\",\n            display_name=\"AWS Access Key ID\",\n            info=\"AWS Access key ID.\",\n            show=_is_default_storage(\"AWS\"),\n            advanced=not _is_default_storage(\"AWS\"),\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"aws_secret_access_key\",\n            display_name=\"AWS Secret Key\",\n            info=\"AWS Secret Key.\",\n            show=_is_default_storage(\"AWS\"),\n            advanced=not _is_default_storage(\"AWS\"),\n            required=True,\n        ),\n        StrInput(\n            name=\"bucket_name\",\n            display_name=\"S3 Bucket Name\",\n            info=\"Enter the name of the S3 bucket.\",\n            show=_is_default_storage(\"AWS\"),\n            advanced=not _is_default_storage(\"AWS\"),\n            required=True,\n        ),\n        StrInput(\n            name=\"aws_region\",\n            display_name=\"AWS Region\",\n            info=\"AWS region (e.g., us-east-1, eu-west-1).\",\n            show=_is_default_storage(\"AWS\"),\n            advanced=not _is_default_storage(\"AWS\"),\n        ),\n        StrInput(\n            name=\"s3_prefix\",\n            display_name=\"S3 Prefix\",\n            info=\"Prefix for all files in S3.\",\n            show=_is_default_storage(\"AWS\"),\n            advanced=not _is_default_storage(\"AWS\"),\n        ),\n        # Google Drive specific inputs\n        SecretStrInput(\n            name=\"service_account_key\",\n            display_name=\"GCP Credentials Secret Key\",\n            info=\"Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).\",\n            show=_is_default_storage(\"Google Drive\"),\n            advanced=not _is_default_storage(\"Google Drive\"),\n            required=True,\n        ),\n        StrInput(\n            name=\"folder_id\",\n            display_name=\"Google Drive Folder ID\",\n            info=(\n                \"The Google Drive folder ID where the file will be uploaded. \"\n                \"The folder must be shared with the service account email.\"\n            ),\n            required=True,\n            show=_is_default_storage(\"Google Drive\"),\n            advanced=not _is_default_storage(\"Google Drive\"),\n        ),\n    ]\n\n    outputs = [Output(display_name=\"File Path\", name=\"message\", method=\"save_to_file\")]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Update build configuration to show/hide fields based on storage location selection.\"\"\"\n        # Update options dynamically based on cloud environment\n        # This ensures options are refreshed when build_config is updated\n        if \"storage_location\" in build_config:\n            updated_options = _get_storage_location_options()\n            build_config[\"storage_location\"][\"options\"] = updated_options\n\n        # When tool_mode is toggled, hide storage-specific format dropdowns\n        # (the agent uses the unified file_format input instead)\n        if field_name == \"tool_mode\":\n            format_fields = [\"local_format\", \"aws_format\", \"gdrive_format\"]\n            for f_name in format_fields:\n                if f_name in build_config:\n                    build_config[f_name][\"show\"] = not bool(field_value)\n            return build_config\n\n        if field_name != \"storage_location\":\n            return build_config\n\n        # Extract selected storage location\n        selected = [location[\"name\"] for location in field_value] if isinstance(field_value, list) else []\n\n        # Hide all dynamic fields first\n        dynamic_fields = [\n            \"file_name\",  # Common fields (input is always visible)\n            \"append_mode\",\n            \"local_format\",\n            \"aws_format\",\n            \"gdrive_format\",\n            \"aws_access_key_id\",\n            \"aws_secret_access_key\",\n            \"bucket_name\",\n            \"aws_region\",\n            \"s3_prefix\",\n            \"service_account_key\",\n            \"folder_id\",\n        ]\n\n        for f_name in dynamic_fields:\n            if f_name in build_config:\n                build_config[f_name][\"show\"] = False\n\n        # Show fields based on selected storage location\n        is_tool_mode = build_config.get(\"tools_metadata\", {}).get(\"show\", False)\n\n        if len(selected) == 1:\n            location = selected[0]\n\n            # Show file_name when any storage location is selected\n            if \"file_name\" in build_config:\n                build_config[\"file_name\"][\"show\"] = True\n\n            # Show append_mode only for Local storage (not supported for cloud storage)\n            if \"append_mode\" in build_config:\n                build_config[\"append_mode\"][\"show\"] = location == \"Local\"\n\n            if location == \"Local\":\n                if \"local_format\" in build_config:\n                    build_config[\"local_format\"][\"show\"] = not is_tool_mode\n\n            elif location == \"AWS\":\n                aws_fields = [\n                    \"aws_format\",\n                    \"aws_access_key_id\",\n                    \"aws_secret_access_key\",\n                    \"bucket_name\",\n                    \"aws_region\",\n                    \"s3_prefix\",\n                ]\n                for f_name in aws_fields:\n                    if f_name in build_config:\n                        show = f_name != \"aws_format\" or not is_tool_mode\n                        build_config[f_name][\"show\"] = show\n                        build_config[f_name][\"advanced\"] = False\n\n            elif location == \"Google Drive\":\n                gdrive_fields = [\"gdrive_format\", \"service_account_key\", \"folder_id\"]\n                for f_name in gdrive_fields:\n                    if f_name in build_config:\n                        show = f_name != \"gdrive_format\" or not is_tool_mode\n                        build_config[f_name][\"show\"] = show\n                        build_config[f_name][\"advanced\"] = False\n\n        return build_config\n\n    async def save_to_file(self) -> Message:\n        \"\"\"Save the input to a file and upload it, returning a confirmation message.\"\"\"\n        # Validate inputs\n        if not self.file_name:\n            msg = \"File name must be provided.\"\n            raise ValueError(msg)\n        if not self._get_input_type():\n            msg = \"Input type is not set.\"\n            raise ValueError(msg)\n\n        # Get selected storage location\n        storage_location = self._get_selected_storage_location()\n        if not storage_location:\n            msg = \"Storage location must be selected.\"\n            raise ValueError(msg)\n\n        # Check if Local storage is disabled in cloud environment\n        if storage_location == \"Local\" and is_astra_cloud_environment():\n            msg = \"Local storage is not available in cloud environment. Please use AWS or Google Drive.\"\n            raise ValueError(msg)\n\n        # Route to appropriate save method based on storage location\n        if storage_location == \"Local\":\n            return await self._save_to_local()\n        if storage_location == \"AWS\":\n            return await self._save_to_aws()\n        if storage_location == \"Google Drive\":\n            return await self._save_to_google_drive()\n        msg = f\"Unsupported storage location: {storage_location}\"\n        raise ValueError(msg)\n\n    def _get_input_type(self) -> str:\n        \"\"\"Determine the input type based on the provided input.\"\"\"\n        # Use exact type checking (type() is) instead of isinstance() to avoid inheritance issues.\n        # Since Message inherits from Data, isinstance(message, Data) would return True for Message objects,\n        # causing Message inputs to be incorrectly identified as Data type.\n        if type(self.input) is DataFrame:\n            return \"DataFrame\"\n        if type(self.input) is Message:\n            return \"Message\"\n        if type(self.input) is Data:\n            return \"Data\"\n        # When invoked by a code agent (e.g. OpenDsStar), the input may be a raw\n        # pandas DataFrame rather than Langflow's DataFrame wrapper.\n        if isinstance(self.input, pd.DataFrame):\n            self.input = DataFrame(self.input)\n            return \"DataFrame\"\n        # When invoked as a tool, the agent passes a string. Try to parse it as\n        # tabular JSON (list of objects) → DataFrame, otherwise wrap as Message.\n        if isinstance(self.input, str):\n            self.input = self._coerce_string_input(self.input)\n            return self._get_input_type()\n        msg = f\"Unsupported input type: {type(self.input)}\"\n        raise ValueError(msg)\n\n    def _coerce_string_input(self, value: str) -> DataFrame | Message:\n        \"\"\"Convert a raw string (from agent tool call) into a DataFrame or Message.\n\n        Tries to parse as JSON first — a list of objects or a single object becomes\n        a DataFrame. Anything else is wrapped in a Message.\n        \"\"\"\n        try:\n            parsed = json.loads(value)\n            if isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):\n                return DataFrame(pd.DataFrame(parsed))\n            if isinstance(parsed, dict):\n                return DataFrame(pd.DataFrame([parsed]))\n        except (json.JSONDecodeError, ValueError):\n            pass\n        return Message(text=value)\n\n    def _get_default_format(self) -> str:\n        \"\"\"Return the default file format based on input type.\"\"\"\n        if self._get_input_type() == \"DataFrame\":\n            return \"csv\"\n        if self._get_input_type() == \"Data\":\n            return \"json\"\n        if self._get_input_type() == \"Message\":\n            return \"json\"\n        return \"json\"  # Fallback\n\n    def _adjust_file_path_with_format(self, path: Path, fmt: str) -> Path:\n        \"\"\"Adjust the file path to include the correct extension.\"\"\"\n        file_extension = path.suffix.lower().lstrip(\".\")\n        if fmt == \"excel\":\n            return Path(f\"{path}.xlsx\").expanduser() if file_extension not in [\"xlsx\", \"xls\"] else path\n        return Path(f\"{path}.{fmt}\").expanduser() if file_extension != fmt else path\n\n    def _get_safe_local_file_name(self) -> str:\n        \"\"\"Return a local file basename, rejecting paths before any file access.\"\"\"\n        file_name = str(self.file_name).strip()\n        if not file_name:\n            msg = \"File name must be provided.\"\n            raise ValueError(msg)\n\n        local_path = PurePath(file_name)\n        windows_path = PureWindowsPath(file_name)\n        path_parts = (*local_path.parts, *windows_path.parts)\n\n        if (\n            \"\\x00\" in file_name\n            or local_path.is_absolute()\n            or windows_path.is_absolute()\n            or windows_path.drive\n            or len(local_path.parts) != 1\n            or len(windows_path.parts) != 1\n            or any(part in {\"\", \".\", \"..\"} for part in path_parts)\n        ):\n            msg = \"Local file name must be a file name only, without paths or parent directory references.\"\n            raise ValueError(msg)\n\n        return file_name\n\n    def _is_plain_text_format(self, fmt: str) -> bool:\n        \"\"\"Check if a file format is plain text (supports appending).\"\"\"\n        plain_text_formats = [\"txt\", \"json\", \"markdown\", \"md\", \"csv\", \"xml\", \"html\", \"yaml\", \"log\", \"tsv\", \"jsonl\"]\n        return fmt.lower() in plain_text_formats\n\n    async def _upload_file(self, file_path: Path) -> None:\n        \"\"\"Upload the saved file using the upload_user_file service.\"\"\"\n        from langflow.api.v2.files import upload_user_file\n        from langflow.services.database.models.user.crud import get_user_by_id\n\n        # Ensure the file exists\n        if not file_path.exists():\n            msg = f\"File not found: {file_path}\"\n            raise FileNotFoundError(msg)\n\n        # Upload the file - always use append=False because the local file already contains\n        # the correct content (either new or appended locally)\n        with file_path.open(\"rb\") as f:\n            async with session_scope() as db:\n                if not self.user_id:\n                    msg = \"User ID is required for file saving.\"\n                    raise ValueError(msg)\n                current_user = await get_user_by_id(db, self.user_id)\n\n                await upload_user_file(\n                    file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),\n                    session=db,\n                    current_user=current_user,\n                    storage_service=get_storage_service(),\n                    settings_service=get_settings_service(),\n                    append=False,\n                )\n\n    def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:\n        \"\"\"Save a DataFrame to the specified file format.\"\"\"\n        append_mode = getattr(self, \"append_mode\", False)\n        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)\n\n        if fmt == \"csv\":\n            dataframe.to_csv(path, index=False, mode=\"a\" if should_append else \"w\", header=not should_append)\n        elif fmt == \"excel\":\n            dataframe.to_excel(path, index=False, engine=\"openpyxl\")\n        elif fmt == \"json\":\n            if should_append:\n                # Read and parse existing JSON\n                existing_data = []\n                try:\n                    existing_content = path.read_text(encoding=\"utf-8\").strip()\n                    if existing_content:\n                        parsed = json.loads(existing_content)\n                        # Handle case where existing content is a single object\n                        if isinstance(parsed, dict):\n                            existing_data = [parsed]\n                        elif isinstance(parsed, list):\n                            existing_data = parsed\n                except (json.JSONDecodeError, FileNotFoundError):\n                    # Treat parse errors or missing file as empty array\n                    existing_data = []\n\n                # Append new data\n                new_records = json.loads(dataframe.to_json(orient=\"records\"))\n                existing_data.extend(new_records)\n\n                # Write back as a single JSON array\n                path.write_text(json.dumps(existing_data, indent=2), encoding=\"utf-8\")\n            else:\n                dataframe.to_json(path, orient=\"records\", indent=2)\n        elif fmt == \"markdown\":\n            content = dataframe.to_markdown(index=False)\n            if should_append:\n                path.write_text(path.read_text(encoding=\"utf-8\") + \"\\n\\n\" + content, encoding=\"utf-8\")\n            else:\n                path.write_text(content, encoding=\"utf-8\")\n        else:\n            msg = f\"Unsupported DataFrame format: {fmt}\"\n            raise ValueError(msg)\n        action = \"appended to\" if should_append else \"saved successfully as\"\n        return f\"DataFrame {action} '{path}'\"\n\n    def _save_data(self, data: Data, path: Path, fmt: str) -> str:\n        \"\"\"Save a Data object to the specified file format.\"\"\"\n        append_mode = getattr(self, \"append_mode\", False)\n        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)\n\n        if fmt == \"csv\":\n            pd.DataFrame(data.data).to_csv(\n                path,\n                index=False,\n                mode=\"a\" if should_append else \"w\",\n                header=not should_append,\n            )\n        elif fmt == \"excel\":\n            pd.DataFrame(data.data).to_excel(path, index=False, engine=\"openpyxl\")\n        elif fmt == \"json\":\n            new_data = jsonable_encoder(data.data)\n            if should_append:\n                # Read and parse existing JSON\n                existing_data = []\n                try:\n                    existing_content = path.read_text(encoding=\"utf-8\").strip()\n                    if existing_content:\n                        parsed = json.loads(existing_content)\n                        # Handle case where existing content is a single object\n                        if isinstance(parsed, dict):\n                            existing_data = [parsed]\n                        elif isinstance(parsed, list):\n                            existing_data = parsed\n                except (json.JSONDecodeError, FileNotFoundError):\n                    # Treat parse errors or missing file as empty array\n                    existing_data = []\n\n                # Append new data\n                if isinstance(new_data, list):\n                    existing_data.extend(new_data)\n                else:\n                    existing_data.append(new_data)\n\n                # Write back as a single JSON array\n                path.write_text(json.dumps(existing_data, indent=2), encoding=\"utf-8\")\n            else:\n                content = orjson.dumps(new_data, option=orjson.OPT_INDENT_2).decode(\"utf-8\")\n                path.write_text(content, encoding=\"utf-8\")\n        elif fmt == \"markdown\":\n            content = pd.DataFrame(data.data).to_markdown(index=False)\n            if should_append:\n                path.write_text(path.read_text(encoding=\"utf-8\") + \"\\n\\n\" + content, encoding=\"utf-8\")\n            else:\n                path.write_text(content, encoding=\"utf-8\")\n        else:\n            msg = f\"Unsupported Data format: {fmt}\"\n            raise ValueError(msg)\n        action = \"appended to\" if should_append else \"saved successfully as\"\n        return f\"Data {action} '{path}'\"\n\n    async def _save_message(self, message: Message, path: Path, fmt: str) -> str:\n        \"\"\"Save a Message to the specified file format, handling async iterators.\"\"\"\n        content = \"\"\n        stream = message.text_stream if hasattr(message, \"text_stream\") else None\n        if stream is not None and isinstance(stream, AsyncIterator):\n            async for item in stream:\n                content += str(item) + \" \"\n            content = content.strip()\n        elif stream is not None and isinstance(stream, Iterator):\n            content = \" \".join(str(item) for item in stream)\n        else:\n            content = str(message.text)\n\n        append_mode = getattr(self, \"append_mode\", False)\n        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)\n\n        if fmt in (\"txt\", \"html\"):\n            if should_append:\n                path.write_text(path.read_text(encoding=\"utf-8\") + \"\\n\" + content, encoding=\"utf-8\")\n            else:\n                path.write_text(content, encoding=\"utf-8\")\n        elif fmt == \"json\":\n            new_message = {\"message\": content}\n            if should_append:\n                # Read and parse existing JSON\n                existing_data = []\n                try:\n                    existing_content = path.read_text(encoding=\"utf-8\").strip()\n                    if existing_content:\n                        parsed = json.loads(existing_content)\n                        # Handle case where existing content is a single object\n                        if isinstance(parsed, dict):\n                            existing_data = [parsed]\n                        elif isinstance(parsed, list):\n                            existing_data = parsed\n                except (json.JSONDecodeError, FileNotFoundError):\n                    # Treat parse errors or missing file as empty array\n                    existing_data = []\n\n                # Append new message\n                existing_data.append(new_message)\n\n                # Write back as a single JSON array\n                path.write_text(json.dumps(existing_data, indent=2), encoding=\"utf-8\")\n            else:\n                path.write_text(json.dumps(new_message, indent=2), encoding=\"utf-8\")\n        elif fmt == \"markdown\":\n            md_content = f\"**Message:**\\n\\n{content}\"\n            if should_append:\n                path.write_text(path.read_text(encoding=\"utf-8\") + \"\\n\\n\" + md_content, encoding=\"utf-8\")\n            else:\n                path.write_text(md_content, encoding=\"utf-8\")\n        else:\n            msg = f\"Unsupported Message format: {fmt}\"\n            raise ValueError(msg)\n        action = \"appended to\" if should_append else \"saved successfully as\"\n        return f\"Message {action} '{path}'\"\n\n    def _get_selected_storage_location(self) -> str:\n        \"\"\"Get the selected storage location from the SortableListInput.\"\"\"\n        if hasattr(self, \"storage_location\") and self.storage_location:\n            if isinstance(self.storage_location, list) and len(self.storage_location) > 0:\n                return self.storage_location[0].get(\"name\", \"\")\n            if isinstance(self.storage_location, dict):\n                return self.storage_location.get(\"name\", \"\")\n        return \"\"\n\n    def _get_file_format_for_location(self, location: str) -> str:\n        \"\"\"Get the appropriate file format based on storage location.\n\n        If the agent set file_format via tool mode, that takes priority.\n        \"\"\"\n        agent_format = getattr(self, \"file_format\", None)\n        if agent_format:\n            return agent_format\n        if location == \"Local\":\n            return getattr(self, \"local_format\", None) or self._get_default_format()\n        if location == \"AWS\":\n            return getattr(self, \"aws_format\", \"txt\")\n        if location == \"Google Drive\":\n            return getattr(self, \"gdrive_format\", \"txt\")\n        return self._get_default_format()\n\n    async def _save_to_local(self) -> Message:\n        \"\"\"Save file to local storage (original functionality).\"\"\"\n        file_format = self._get_file_format_for_location(\"Local\")\n\n        # Validate file format based on input type\n        allowed_formats = (\n            self.LOCAL_MESSAGE_FORMAT_CHOICES if self._get_input_type() == \"Message\" else self.LOCAL_DATA_FORMAT_CHOICES\n        )\n        if file_format not in allowed_formats:\n            msg = f\"Invalid file format '{file_format}' for {self._get_input_type()}. Allowed: {allowed_formats}\"\n            raise ValueError(msg)\n\n        # Prepare file path\n        file_path = Path(self._get_safe_local_file_name())\n        file_path = self._adjust_file_path_with_format(file_path, file_format)\n\n        # Save the input to file based on type\n        if self._get_input_type() == \"DataFrame\":\n            confirmation = self._save_dataframe(self.input, file_path, file_format)\n        elif self._get_input_type() == \"Data\":\n            confirmation = self._save_data(self.input, file_path, file_format)\n        elif self._get_input_type() == \"Message\":\n            confirmation = await self._save_message(self.input, file_path, file_format)\n        else:\n            msg = f\"Unsupported input type: {self._get_input_type()}\"\n            raise ValueError(msg)\n\n        # Upload the saved file\n        await self._upload_file(file_path)\n\n        # Return the final file path and confirmation message\n        final_path = Path.cwd() / file_path if not file_path.is_absolute() else file_path\n        return Message(text=f\"{confirmation} at {final_path}\")\n\n    async def _save_to_aws(self) -> Message:\n        \"\"\"Save file to AWS S3 using S3 functionality.\"\"\"\n        import os\n\n        import boto3\n\n        from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials\n\n        # Get AWS credentials from component inputs or fall back to environment variables\n        aws_access_key_id = getattr(self, \"aws_access_key_id\", None)\n        if aws_access_key_id and hasattr(aws_access_key_id, \"get_secret_value\"):\n            aws_access_key_id = aws_access_key_id.get_secret_value()\n        if not aws_access_key_id:\n            aws_access_key_id = os.getenv(\"AWS_ACCESS_KEY_ID\")\n\n        aws_secret_access_key = getattr(self, \"aws_secret_access_key\", None)\n        if aws_secret_access_key and hasattr(aws_secret_access_key, \"get_secret_value\"):\n            aws_secret_access_key = aws_secret_access_key.get_secret_value()\n        if not aws_secret_access_key:\n            aws_secret_access_key = os.getenv(\"AWS_SECRET_ACCESS_KEY\")\n\n        bucket_name = getattr(self, \"bucket_name\", None)\n        if not bucket_name:\n            # Try to get from storage service settings\n            settings = get_settings_service().settings\n            bucket_name = settings.object_storage_bucket_name\n\n        # Validate AWS credentials\n        if not aws_access_key_id:\n            msg = (\n                \"AWS Access Key ID is required for S3 storage. Provide it as a component input \"\n                \"or set AWS_ACCESS_KEY_ID environment variable.\"\n            )\n            raise ValueError(msg)\n        if not aws_secret_access_key:\n            msg = (\n                \"AWS Secret Key is required for S3 storage. Provide it as a component input \"\n                \"or set AWS_SECRET_ACCESS_KEY environment variable.\"\n            )\n            raise ValueError(msg)\n        if not bucket_name:\n            msg = (\n                \"S3 Bucket Name is required for S3 storage. Provide it as a component input \"\n                \"or set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable.\"\n            )\n            raise ValueError(msg)\n\n        # Validate AWS credentials\n        validate_aws_credentials(self)\n\n        # Create S3 client\n        s3_client = create_s3_client(self)\n        client_config: dict[str, Any] = {\n            \"aws_access_key_id\": str(aws_access_key_id),\n            \"aws_secret_access_key\": str(aws_secret_access_key),\n        }\n\n        # Get region from component input, environment variable, or settings\n        aws_region = getattr(self, \"aws_region\", None)\n        if not aws_region:\n            aws_region = os.getenv(\"AWS_DEFAULT_REGION\") or os.getenv(\"AWS_REGION\")\n        if aws_region:\n            client_config[\"region_name\"] = str(aws_region)\n\n        s3_client = boto3.client(\"s3\", **client_config)\n\n        # Extract content\n        content = self._extract_content_for_upload()\n        file_format = self._get_file_format_for_location(\"AWS\")\n\n        # Generate file path\n        file_path = f\"{self.file_name}.{file_format}\"\n        if hasattr(self, \"s3_prefix\") and self.s3_prefix:\n            file_path = f\"{self.s3_prefix.rstrip('/')}/{file_path}\"\n\n        # Create temporary file\n        import tempfile\n\n        with tempfile.NamedTemporaryFile(\n            mode=\"w\", encoding=\"utf-8\", suffix=f\".{file_format}\", delete=False\n        ) as temp_file:\n            temp_file.write(content)\n            temp_file_path = temp_file.name\n\n        try:\n            # Upload to S3\n            s3_client.upload_file(temp_file_path, bucket_name, file_path)\n            s3_url = f\"s3://{bucket_name}/{file_path}\"\n            return Message(text=f\"File successfully uploaded to {s3_url}\")\n        finally:\n            # Clean up temp file\n            if Path(temp_file_path).exists():\n                Path(temp_file_path).unlink()\n\n    async def _save_to_google_drive(self) -> Message:\n        \"\"\"Save file to Google Drive using Google Drive functionality.\"\"\"\n        import tempfile\n\n        from googleapiclient.http import MediaFileUpload\n\n        from lfx.base.data.cloud_storage_utils import create_google_drive_service\n\n        # Validate Google Drive credentials\n        if not getattr(self, \"service_account_key\", None):\n            msg = \"GCP Credentials Secret Key is required for Google Drive storage\"\n            raise ValueError(msg)\n        if not getattr(self, \"folder_id\", None):\n            msg = \"Google Drive Folder ID is required for Google Drive storage\"\n            raise ValueError(msg)\n\n        # Create Google Drive service with full drive scope (needed for folder operations)\n        drive_service, credentials = create_google_drive_service(\n            self.service_account_key, scopes=[\"https://www.googleapis.com/auth/drive\"], return_credentials=True\n        )\n\n        # Extract content and format\n        content = self._extract_content_for_upload()\n        file_format = self._get_file_format_for_location(\"Google Drive\")\n\n        # Handle special Google Drive formats\n        if file_format in [\"slides\", \"docs\"]:\n            return await self._save_to_google_apps(drive_service, credentials, content, file_format)\n\n        # Create temporary file\n        file_path = f\"{self.file_name}.{file_format}\"\n        with tempfile.NamedTemporaryFile(\n            mode=\"w\",\n            encoding=\"utf-8\",\n            suffix=f\".{file_format}\",\n            delete=False,\n        ) as temp_file:\n            temp_file.write(content)\n            temp_file_path = temp_file.name\n\n        try:\n            # Upload to Google Drive\n            # Note: We skip explicit folder verification since it requires broader permissions.\n            # If the folder doesn't exist or isn't accessible, the create() call will fail with a clear error.\n            file_metadata = {\"name\": file_path, \"parents\": [self.folder_id]}\n            media = MediaFileUpload(temp_file_path, resumable=True)\n\n            try:\n                uploaded_file = (\n                    drive_service.files().create(body=file_metadata, media_body=media, fields=\"id\").execute()\n                )\n            except Exception as e:\n                msg = (\n                    f\"Unable to upload file to Google Drive folder '{self.folder_id}'. \"\n                    f\"Error: {e!s}. \"\n                    \"Please ensure: 1) The folder ID is correct, 2) The folder exists, \"\n                    \"3) The service account has been granted access to this folder.\"\n                )\n                raise ValueError(msg) from e\n\n            file_id = uploaded_file.get(\"id\")\n            file_url = f\"https://drive.google.com/file/d/{file_id}/view\"\n            return Message(text=f\"File successfully uploaded to Google Drive: {file_url}\")\n        finally:\n            # Clean up temp file\n            if Path(temp_file_path).exists():\n                Path(temp_file_path).unlink()\n\n    async def _save_to_google_apps(self, drive_service, credentials, content: str, app_type: str) -> Message:\n        \"\"\"Save content to Google Apps (Slides or Docs).\"\"\"\n        import time\n\n        if app_type == \"slides\":\n            from googleapiclient.discovery import build\n\n            slides_service = build(\"slides\", \"v1\", credentials=credentials)\n\n            file_metadata = {\n                \"name\": self.file_name,\n                \"mimeType\": \"application/vnd.google-apps.presentation\",\n                \"parents\": [self.folder_id],\n            }\n\n            created_file = drive_service.files().create(body=file_metadata, fields=\"id\").execute()\n            presentation_id = created_file[\"id\"]\n\n            time.sleep(2)  # Wait for file to be available  # noqa: ASYNC251\n\n            presentation = slides_service.presentations().get(presentationId=presentation_id).execute()\n            slide_id = presentation[\"slides\"][0][\"objectId\"]\n\n            # Add content to slide\n            requests = [\n                {\n                    \"createShape\": {\n                        \"objectId\": \"TextBox_01\",\n                        \"shapeType\": \"TEXT_BOX\",\n                        \"elementProperties\": {\n                            \"pageObjectId\": slide_id,\n                            \"size\": {\n                                \"height\": {\"magnitude\": 3000000, \"unit\": \"EMU\"},\n                                \"width\": {\"magnitude\": 6000000, \"unit\": \"EMU\"},\n                            },\n                            \"transform\": {\n                                \"scaleX\": 1,\n                                \"scaleY\": 1,\n                                \"translateX\": 1000000,\n                                \"translateY\": 1000000,\n                                \"unit\": \"EMU\",\n                            },\n                        },\n                    }\n                },\n                {\"insertText\": {\"objectId\": \"TextBox_01\", \"insertionIndex\": 0, \"text\": content}},\n            ]\n\n            slides_service.presentations().batchUpdate(\n                presentationId=presentation_id, body={\"requests\": requests}\n            ).execute()\n            file_url = f\"https://docs.google.com/presentation/d/{presentation_id}/edit\"\n\n        elif app_type == \"docs\":\n            from googleapiclient.discovery import build\n\n            docs_service = build(\"docs\", \"v1\", credentials=credentials)\n\n            file_metadata = {\n                \"name\": self.file_name,\n                \"mimeType\": \"application/vnd.google-apps.document\",\n                \"parents\": [self.folder_id],\n            }\n\n            created_file = drive_service.files().create(body=file_metadata, fields=\"id\").execute()\n            document_id = created_file[\"id\"]\n\n            time.sleep(2)  # Wait for file to be available  # noqa: ASYNC251\n\n            # Add content to document\n            requests = [{\"insertText\": {\"location\": {\"index\": 1}, \"text\": content}}]\n            docs_service.documents().batchUpdate(documentId=document_id, body={\"requests\": requests}).execute()\n            file_url = f\"https://docs.google.com/document/d/{document_id}/edit\"\n\n        return Message(text=f\"File successfully created in Google {app_type.title()}: {file_url}\")\n\n    def _extract_content_for_upload(self) -> str:\n        \"\"\"Extract content from input for upload to cloud services.\"\"\"\n        if self._get_input_type() == \"DataFrame\":\n            return self.input.to_csv(index=False)\n        if self._get_input_type() == \"Data\":\n            if hasattr(self.input, \"data\") and self.input.data:\n                if isinstance(self.input.data, dict):\n                    import json\n\n                    return json.dumps(self.input.data, indent=2, ensure_ascii=False)\n                return str(self.input.data)\n            return str(self.input)\n        if self._get_input_type() == \"Message\":\n            return str(self.input.text) if self.input.text else str(self.input)\n        return str(self.input)\n"
               },
               "file_format": {
                 "_input_type": "StrInput",
@@ -5568,14 +5294,7 @@
                 "external_options": {},
                 "info": "Select the file format for local storage.",
                 "name": "local_format",
-                "options": [
-                  "csv",
-                  "excel",
-                  "json",
-                  "markdown",
-                  "txt",
-                  "html"
-                ],
+                "options": ["csv", "excel", "json", "markdown", "txt", "html"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -5717,9 +5436,7 @@
                     "name": "save_to_file",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "save_to_file"
-                    ]
+                    "tags": ["save_to_file"]
                   }
                 ]
               }
@@ -5730,9 +5447,9 @@
           "type": "SaveToFile"
         },
         "dragging": false,
-        "id": "SaveToFile-bKzdF",
+        "id": "SaveToFile-9FQfI",
         "measured": {
-          "height": 360,
+          "height": 366,
           "width": 320
         },
         "position": {
@@ -5744,19 +5461,17 @@
       }
     ],
     "viewport": {
-      "x": 2446.8013029446956,
-      "y": 1039.768883065371,
-      "zoom": 0.8299651427607107
+      "x": 869.4771349310664,
+      "y": 991.3086766369322,
+      "zoom": 0.37308739340651753
     }
   },
   "description": "A complete workflow for structured data analysis using the OpenDsStar agent. OpenDsStar is an open-source implementation of the DS-Star agent, with several deliberate design enhancements, and can be used effectively for structured data analysis tasks",
   "endpoint_name": null,
-  "id": "fa740253-a012-4c25-8e8e-cf9985d8a785",
+  "id": "d7d2d5cd-e195-4328-ac1a-b8e7dbf03c9d",
   "is_component": false,
-  "last_tested_version": "1.9.0",
+  "last_tested_version": "1.10.1",
   "locked": false,
   "name": "Structured Data Analysis Agent",
-  "tags": [
-    "agents"
-  ]
+  "tags": ["agents"]
 }

@@ -3,6 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+import { openFlowCard } from "../../utils/flow/open-flow-card";
 
 test(
   "curl_api_generation",
@@ -60,7 +61,7 @@ test(
     expect(oldValue).not.toBe(newValue);
     expect(clipboardContent2.length).toBeGreaterThan(clipboardContent.length);
     await awaitBootstrapTest(page, { skipModal: true });
-    await page.getByText(TEXTS.templateBasicPrompting).first().click();
+    await openFlowCard(page, TEXTS.templateBasicPrompting);
     await page.getByTestId("publish-button").click();
     await page.getByTestId("api-access-item").click();
     expect(

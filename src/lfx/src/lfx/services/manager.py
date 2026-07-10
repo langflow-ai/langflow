@@ -314,6 +314,12 @@ class ServiceManager:
 
         self.services = {}
         self.factories = {}
+        # ``teardown`` empties the factory registry, so the "registered" flag has
+        # to drop too: get_service() re-registers factories only when
+        # are_factories_registered() is False. Leaving it set after a teardown
+        # makes the next lookup skip re-registration and raise
+        # NoFactoryRegisteredError.
+        self.factory_registered = False
 
         if raise_on_error and errors:
             names = ", ".join(name for name, _ in errors)

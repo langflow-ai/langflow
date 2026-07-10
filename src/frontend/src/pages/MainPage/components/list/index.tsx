@@ -107,6 +107,8 @@ const ListComponent = ({
   };
 
   const [icon, setIcon] = useState<string>("");
+  const flowNameId = `flow-name-${flowData.id}`;
+  const openActionLabelId = `flow-open-action-${flowData.id}`;
 
   useEffect(() => {
     getIcon().then(setIcon);
@@ -118,22 +120,36 @@ const ListComponent = ({
         key={flowData.id}
         draggable={canMove}
         onDragStart={onDragStart}
-        onClick={handleClick}
-        className={`flex flex-row bg-background ${
+        className={`relative flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
         } group justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted`}
         data-testid="list-card"
       >
+        {!isComponent && (
+          <>
+            <button
+              type="button"
+              className="absolute inset-0 z-0 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={handleClick}
+              aria-labelledby={`${openActionLabelId} ${flowNameId}`}
+              data-testid="list-card-open-button"
+            />
+            <span id={openActionLabelId} className="sr-only">
+              {t("flows.openFlow")}
+            </span>
+          </>
+        )}
         <div
           className={`flex min-w-0 ${
             isComponent ? "cursor-default" : "cursor-pointer"
-          } items-center gap-4`}
+          } pointer-events-none relative z-10 items-center gap-4`}
         >
-          <div className="group/checkbox relative flex items-center">
+          <div className="group/checkbox pointer-events-auto relative flex items-center">
             <div
               className={cn(
                 "z-20 flex w-0 items-center transition-all duration-300",
                 selected && "w-10",
+                "group-focus-within/checkbox:w-10",
               )}
             >
               <Checkbox
@@ -141,10 +157,12 @@ const ListComponent = ({
                 onCheckedChange={(checked) => setSelected(checked as boolean)}
                 onClick={(e) => e.stopPropagation()}
                 className={cn(
-                  "ml-2 transition-opacity focus-visible:ring-0",
-                  !selected && "opacity-0 group-hover/checkbox:opacity-100",
+                  "ml-2 transition-opacity",
+                  !selected &&
+                    "opacity-0 group-hover/checkbox:opacity-100 group-focus-within/checkbox:opacity-100",
                 )}
                 data-testid={`checkbox-${flowData.id}`}
+                aria-label={t("flows.selectFlow", { name: flowData.name })}
               />
             </div>
             <div
@@ -172,7 +190,8 @@ const ListComponent = ({
               >
                 <span
                   className="truncate"
-                  data-testid={`flow-name-${flowData.id}`}
+                  data-testid={flowNameId}
+                  id={flowNameId}
                 >
                   {flowData.name}
                 </span>
@@ -188,14 +207,15 @@ const ListComponent = ({
           </div>
         </div>
 
-        <div className="ml-5 flex items-center gap-2">
+        <div className="pointer-events-none relative z-10 ml-5 flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="iconMd"
                 data-testid="home-dropdown-menu"
-                className="group"
+                className="pointer-events-auto group"
+                aria-label={t("flows.moreOptions", { name: flowData.name })}
               >
                 <ForwardedIconComponent
                   name="Ellipsis"

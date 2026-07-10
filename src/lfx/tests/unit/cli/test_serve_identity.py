@@ -909,6 +909,67 @@ class TestServeAppIdentityEndpoints:
         assert resp.status_code != 401
         assert captured["user_id"] == "kong-user-7"
 
+    def test_workflow_invalid_token_rejected_before_execution(self, real_graph, verifier):
+        """POST /workflows must enforce the identity mode like /flows/{id}/run (no bypass)."""
+        run = MagicMock()
+        client = _client_with_verifier(real_graph, verifier)
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": API_KEY}),
+            patch("lfx.workflow.router.run_graph_internal", run),
+        ):
+            resp = client.post(
+                "/api/v2/workflows",
+                json={"flow_id": FLOW_ID, "input_value": "hi", "mode": "sync"},
+                headers={"x-api-key": API_KEY, "Authorization": "Bearer garbage.token.here"},
+            )
+        assert resp.status_code == 401
+        run.assert_not_called()
+
+    def test_workflow_sync_threads_identity(self, real_graph, verifier, keypair):
+        captured: dict = {}
+
+        async def mock_run(graph, flow_id, **_kwargs):  # noqa: ARG001
+            captured["user_id"] = graph.user_id
+            return [], "sess"
+
+        token = _sign(keypair, {"email": "carol@example.com"})
+        client = _client_with_verifier(real_graph, verifier)
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": API_KEY}),
+            patch("lfx.workflow.router.run_graph_internal", mock_run),
+        ):
+            resp = client.post(
+                "/api/v2/workflows",
+                json={"flow_id": FLOW_ID, "input_value": "hi", "mode": "sync"},
+                headers={"x-api-key": API_KEY, "Authorization": f"Bearer {token}"},
+            )
+        assert resp.status_code != 401
+        assert captured["user_id"] == "carol@example.com"
+
+    def test_workflow_stream_threads_identity(self, real_graph, verifier, keypair):
+        captured: dict = {}
+
+        async def mock_execute(graph, input_value, session_id=None, user_id=None, event_manager=None):  # noqa: ARG001
+            captured["user_id"] = user_id
+            return [], ""
+
+        token = _sign(keypair, {"email": "dave@example.com"})
+        client = _client_with_verifier(real_graph, verifier)
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": API_KEY}),
+            patch("lfx.workflow.router.execute_graph_with_capture", mock_execute),
+            client.stream(
+                "POST",
+                "/api/v2/workflows",
+                json={"flow_id": FLOW_ID, "input_value": "hi", "mode": "stream"},
+                headers={"x-api-key": API_KEY, "Authorization": f"Bearer {token}"},
+            ) as resp,
+        ):
+            assert resp.status_code == 200
+            for _ in resp.iter_bytes():
+                pass
+        assert captured["user_id"] == "dave@example.com"
+
 
 class TestExecuteGraphUserIdThreading:
     """The user_id contract in execute_graph_with_capture.

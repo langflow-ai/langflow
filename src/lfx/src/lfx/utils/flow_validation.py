@@ -40,6 +40,10 @@ class PublicFlowValidationError(CustomComponentValidationError):
 # unauthenticated public path — authenticated builds are unaffected.
 CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
     {
+        "CSVAgent",  # LangChain CSV agent can execute Python when allow_dangerous_code is enabled
+        "CodeActAgentSmolagents",  # smolagents CodeAgent executes model-generated code
+        "Cuga",  # CUGA agent executes model-generated Python via its built-in executor
+        "OpenDsStarAgent",  # OpenDsStar data-science agent executes model-generated Python
         "PythonCodeStructuredTool",  # legacy raw exec() (component removed; type retained to block stored code)
         "PythonREPLComponent",  # "Python Interpreter"
         "PythonREPLTool",  # legacy "Python REPL" tool
@@ -52,20 +56,23 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
 # (StrInput / MultilineInput → template type "str"), so the field-type=="code" guard
 # in apply_tweaks() does NOT catch them; the Tweaks API must additionally refuse to
 # override them by name on a code-execution node. Kept beside
-# CODE_EXECUTION_COMPONENT_TYPES so the two consumers stay in sync — adding a new
-# code-execution component means registering both its type above and its code input
-# here. This sync is enforced by test_every_code_execution_type_has_registered_code_fields
-# in test_process.py, which fails if a new type is added without its code field. The
-# conventional "code" field name is blocked globally in apply_tweaks() and so is
-# intentionally omitted here.
+# CODE_EXECUTION_COMPONENT_TYPES so the two consumers stay in sync when a component
+# has tweakable code/sandbox inputs. Components that execute runtime/model-generated
+# code without such a template field still belong in CODE_EXECUTION_COMPONENT_TYPES,
+# but do not need entries here. This sync is enforced by
+# test_every_code_execution_type_has_registered_code_fields in test_process.py.
+# The conventional "code" field name is blocked globally in apply_tweaks() and so
+# is intentionally omitted here.
 #   - python_code:        Python Interpreter (PythonREPLComponent) exec input
 #   - tool_code:          removed PythonCodeStructuredTool exec input (type retained)
 #   - filter_instruction: Smart Transform instruction → LLM-generated, eval()'d lambda
 #   - global_imports:     import allow-list that populates the exec() namespace; the
 #                         documented sandbox boundary (powerful modules must be opted
 #                         into here), so it must not be widened via tweaks
+#   - allow_dangerous_code: CSVAgent switch that enables LangChain Python execution
 CODE_EXECUTION_FIELD_NAMES: frozenset[str] = frozenset(
     {
+        "allow_dangerous_code",
         "python_code",
         "tool_code",
         "filter_instruction",
@@ -659,9 +666,9 @@ def validate_public_flow_no_code_execution(target: Mapping[str, Any] | Any | Non
     Two classes of component are rejected on that path:
 
     * Direct code execution (``CODE_EXECUTION_COMPONENT_TYPES``) — the Python
-      interpreter/REPL components, the legacy Python Code Structured tool and
-      the Smart Transform lambda — which run user- or model-supplied code
-      (report H1-3754930).
+      interpreter/REPL components, the legacy Python Code Structured tool,
+      Smart Transform lambda and code-capable agent components — which run
+      user- or model-supplied code (reports H1-3754930 and H1-3813558).
     * Flow invocation (``FLOW_REFERENCE_COMPONENT_TYPES``) — Run Flow, Sub Flow
       and Flow as Tool — which load and execute *another* saved owner flow by
       id/name at runtime. That referenced flow is read straight from the

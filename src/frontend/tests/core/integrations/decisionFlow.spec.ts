@@ -15,7 +15,7 @@ import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should create a flow with decision",
-  { tag: ["@release", "@components", "@workflow"] },
+  { tag: ["@release", "@components"] },
 
   async ({ page }) => {
     test.skip(
