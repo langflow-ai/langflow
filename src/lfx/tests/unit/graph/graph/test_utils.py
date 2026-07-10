@@ -1038,12 +1038,14 @@ class TestFindCycleVerticesDifferential:
     def test_self_loop_is_a_cycle_of_one(self):
         assert sorted(utils.find_cycle_vertices([("A", "A"), ("A", "B")])) == ["A"]
 
-    @pytest.mark.parametrize("seed", range(100))
+    @pytest.mark.parametrize("seed", range(300))
     def test_matches_reachability_oracle_on_random_graphs(self, seed):
         rng = random.Random(seed)  # noqa: S311 - deterministic test-data generation, not cryptographic
-        n = rng.randint(1, 15)
+        # Larger/denser than the fixed cases to stress the iterative work-stack and
+        # lowlink handling harder than a second same-class implementation would.
+        n = rng.randint(1, 40)
         # Dense enough to create SCCs, and deliberately allows self-loops and parallel edges.
-        num_edges = rng.randint(0, n * 3)
+        num_edges = rng.randint(0, n * 4)
         edges = [(rng.randrange(n), rng.randrange(n)) for _ in range(num_edges)]
         expected = _cycle_vertices_by_reachability(edges)
         result = sorted(utils.find_cycle_vertices(edges))
