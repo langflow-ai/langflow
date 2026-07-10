@@ -220,16 +220,13 @@ def get_llm(
     # generic ``model``.
     model_name_param = metadata.get("model_name_param") or provider_param_mapping.get("model_param", "model")
 
-    # Why: Reasoning models reject sampling and output-limit kwargs across
-    # provider SDKs (OpenAI o/gpt-5, Anthropic extended thinking, Google
-    # thinking, Azure Foundry reasoning deployments). Catalog metadata marks
-    # these with ``reasoning: True``; enriched UI options also carry
-    # ``reasoning_models``. Drop both ``temperature`` and ``max_tokens`` for
-    # any such model — do not remap via ``max_tokens_field_name``. OpenAI's
-    # provider metadata still maps to ``max_tokens`` (not
-    # ``max_completion_tokens``), so remapping would still send a rejected
-    # field; omitting the cap matches the prior OpenAI-only temperature
-    # suppression and avoids silent SDK errors on upgrade.
+    # Reasoning models commonly reject sampling parameters such as
+    # ``temperature``. Catalog metadata marks these with ``reasoning: True``;
+    # enriched UI options also carry ``reasoning_models``. Keep the user's
+    # explicit token cap, though: provider clients either accept the configured
+    # ``max_tokens_field_name`` directly or normalize it to the provider's wire
+    # format (for example, ChatOpenAI maps ``max_tokens`` to
+    # ``max_completion_tokens`` for reasoning models).
     reasoning_models = metadata.get("reasoning_models", [])
     is_reasoning_model = metadata.get("reasoning", False) is True or model_name in reasoning_models
     if is_reasoning_model:
@@ -246,7 +243,7 @@ def get_llm(
         kwargs["temperature"] = temperature
 
     # Add max_tokens with provider-specific field name (only when a valid integer >= 1)
-    if not is_reasoning_model and max_tokens is not None and max_tokens != "":
+    if max_tokens is not None and max_tokens != "":
         try:
             max_tokens_int = int(max_tokens)
             if max_tokens_int >= 1:

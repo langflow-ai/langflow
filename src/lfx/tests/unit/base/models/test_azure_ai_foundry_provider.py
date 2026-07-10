@@ -182,24 +182,22 @@ def test_foundry_empty_live_discovery_keeps_static_catalog():
 def test_validate_model_provider_key_azure_ai_foundry_success():
     from types import SimpleNamespace
 
+    from lfx.base.models import model_utils
     from lfx.base.models.unified_models import validate_model_provider_key
 
-    calls = []
-
-    class FakeFoundryChatModel:
-        def __init__(self, **kwargs):
-            calls.append(kwargs)
-
-        def invoke(self, _prompt):
-            return "ok"
-
-    fake_chat_models = SimpleNamespace(AzureAIOpenAIApiChatModel=FakeFoundryChatModel)
-    with patch.dict(
-        "sys.modules",
-        {
-            "langchain_azure_ai": SimpleNamespace(chat_models=fake_chat_models),
-            "langchain_azure_ai.chat_models": fake_chat_models,
-        },
+    response = MagicMock(status_code=200)
+    response.json.return_value = {"data": []}
+    fake_chat_models = SimpleNamespace(AzureAIOpenAIApiChatModel=object)
+    with (
+        patch.dict(
+            "sys.modules",
+            {
+                "langchain_azure_ai": SimpleNamespace(chat_models=fake_chat_models),
+                "langchain_azure_ai.chat_models": fake_chat_models,
+            },
+        ),
+        patch("lfx.base.models.unified_models.model_catalog.get_unified_models_detailed", return_value=[]),
+        patch.object(model_utils.requests, "get", return_value=response) as mock_get,
     ):
         validate_model_provider_key(
             "Azure AI Foundry",
@@ -207,16 +205,56 @@ def test_validate_model_provider_key_azure_ai_foundry_success():
                 "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
                 "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1",
             },
-            model_name="gpt-4o",
         )
 
-    assert calls[0] == {
-        "credential": "test-key",
-        "endpoint": "https://example.services.ai.azure.com/openai/v1",
-        "model": "gpt-4o",
-        "max_tokens": 1,
-        "request_timeout": 10.0,
-    }
+    mock_get.assert_called_once_with(
+        "https://example.services.ai.azure.com/openai/v1/models",
+        headers={"api-key": "test-key"},
+        timeout=model_utils.AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+        allow_redirects=False,
+    )
+
+
+@pytest.mark.parametrize("failure", ["connection", "timeout", "http", "malformed"], ids=str)
+def test_validate_model_provider_key_azure_ai_foundry_rejects_failed_model_listing(failure):
+    from types import SimpleNamespace
+
+    from lfx.base.models import model_utils
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    response = MagicMock(status_code=200)
+    response.json.return_value = {"data": []}
+    side_effect = None
+    if failure == "connection":
+        side_effect = requests.ConnectionError("connection refused")
+    elif failure == "timeout":
+        side_effect = requests.Timeout("request timed out")
+    elif failure == "http":
+        response.status_code = 503
+        response.raise_for_status.side_effect = requests.HTTPError("503 Service Unavailable", response=response)
+    else:
+        response.json.return_value = {"data": "not-a-list"}
+
+    fake_chat_models = SimpleNamespace(AzureAIOpenAIApiChatModel=object)
+    with (
+        patch.dict(
+            "sys.modules",
+            {
+                "langchain_azure_ai": SimpleNamespace(chat_models=fake_chat_models),
+                "langchain_azure_ai.chat_models": fake_chat_models,
+            },
+        ),
+        patch("lfx.base.models.unified_models.model_catalog.get_unified_models_detailed", return_value=[]),
+        patch.object(model_utils.requests, "get", return_value=response, side_effect=side_effect),
+        pytest.raises(ValueError, match="Azure AI Foundry"),
+    ):
+        validate_model_provider_key(
+            "Azure AI Foundry",
+            {
+                "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
+                "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1",
+            },
+        )
 
 
 def _build_azure_ai_foundry_model_selection() -> list[dict]:

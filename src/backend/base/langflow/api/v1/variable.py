@@ -59,7 +59,10 @@ async def _cleanup_model_list_variable(
 
     # Parse current models
     try:
-        current_models = set(json.loads(model_list_var.value))
+        parsed_value = json.loads(model_list_var.value)
+        current_models = (
+            {str(item) for item in parsed_value if isinstance(item, str)} if isinstance(parsed_value, list) else set()
+        )
     except (json.JSONDecodeError, TypeError):
         current_models = set()
 

@@ -92,3 +92,36 @@ async def test_provider_cleanup_migrates_legacy_entries_before_removing_target_p
         "Anthropic::claude-3-5-sonnet-latest",
         "unknown-legacy-model",
     }
+
+
+async def test_provider_cleanup_ignores_non_string_model_entries():
+    variable_id = uuid4()
+    variable_service = SimpleNamespace(
+        get_variable_object=AsyncMock(
+            return_value=SimpleNamespace(
+                id=variable_id,
+                value=json.dumps(
+                    [
+                        "OpenAI::custom-deployment",
+                        7,
+                        "Anthropic::claude-3-5-sonnet-latest",
+                    ]
+                ),
+            )
+        ),
+        update_variable_fields=AsyncMock(),
+        delete_variable=AsyncMock(),
+    )
+
+    await _cleanup_model_list_variable(
+        variable_service,
+        uuid4(),
+        "__disabled_models__",
+        "OpenAI",
+        build_model_providers_by_name(CATALOG_WITH_SHARED_ALIAS),
+        session=SimpleNamespace(),
+    )
+
+    variable_service.delete_variable.assert_not_awaited()
+    update = variable_service.update_variable_fields.await_args.kwargs["variable"]
+    assert json.loads(update.value) == ["Anthropic::claude-3-5-sonnet-latest"]

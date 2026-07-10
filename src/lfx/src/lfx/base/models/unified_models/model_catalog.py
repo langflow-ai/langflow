@@ -241,9 +241,9 @@ def get_language_model_options(
                 "metadata": option_metadata,
             }
 
-            # Why: Propagate catalog ``reasoning`` for every provider (not just
-            # OpenAI) so get_llm can drop temperature/max_tokens consistently.
-            # See instantiation.get_llm reasoning comment for the SDK rationale.
+            # Propagate catalog ``reasoning`` for every provider (not just
+            # OpenAI) so get_llm can suppress unsupported sampling parameters
+            # consistently while preserving independently supported token caps.
             if metadata.get("reasoning"):
                 option["metadata"]["reasoning"] = True
                 option["metadata"]["reasoning_models"] = [model_name]

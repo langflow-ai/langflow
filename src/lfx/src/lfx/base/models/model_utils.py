@@ -488,6 +488,36 @@ AZURE_AI_FOUNDRY_FETCH_TIMEOUT = 10.0
 AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
 
 
+def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str) -> list[dict]:
+    """Request model entries from a Foundry OpenAI-compatible endpoint.
+
+    Args:
+        endpoint: Configured Foundry OpenAI-compatible endpoint.
+        api_key: Foundry resource API key.
+
+    Returns:
+        Raw model entries from the response's ``data`` field.
+
+    Raises:
+        requests.RequestException: If the endpoint cannot be reached or returns an HTTP error.
+        TypeError: If the endpoint returns a malformed payload.
+        ValueError: If the endpoint returns invalid JSON.
+    """
+    response = requests.get(
+        f"{endpoint.rstrip('/')}/models",
+        headers={"api-key": api_key},
+        timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+        allow_redirects=False,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    raw_models = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(raw_models, list):
+        msg = f"Unexpected Azure AI Foundry /models payload (data is {type(raw_models).__name__})"
+        raise TypeError(msg)
+    return raw_models
+
+
 def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
     """Fetch models from a custom OpenAI-compatible endpoint (OPENAI_BASE_URL).
 
@@ -558,7 +588,6 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
     if not endpoint or not api_key:
         return []
 
-    url = f"{endpoint.rstrip('/')}/models"
     try:
         # Why: Foundry's OpenAI-compatible surface accepts API keys via the
         # ``api-key`` header (Microsoft Foundry REST / Azure OpenAI docs).
@@ -566,25 +595,10 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
         # allow_redirects=False keeps the api-key header from following an
         # off-origin redirect (SSRF/header-smuggling posture; host allowlisting
         # remains a shared follow-up with other OpenAI-compatible fetchers).
-        response = requests.get(
-            url,
-            headers={"api-key": api_key},
-            timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
-            allow_redirects=False,
-        )
-        response.raise_for_status()
-        payload = response.json()
+        raw_models = request_azure_ai_foundry_model_entries(endpoint, api_key)
     except (requests.RequestException, TypeError, ValueError) as exc:
         status_code = getattr(getattr(exc, "response", None), "status_code", None)
         logger.warning("Could not fetch Azure AI Foundry deployments (status=%s): %s", status_code, exc)
-        return []
-
-    raw_models = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(raw_models, list):
-        logger.warning(
-            "Unexpected Azure AI Foundry /models payload (data is %s)",
-            type(raw_models).__name__,
-        )
         return []
 
     known_by_name = {model["name"]: model for model in AZURE_AI_FOUNDRY_MODELS_DETAILED}

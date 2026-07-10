@@ -457,7 +457,6 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         "Anthropic",
         "Google Generative AI",
         "IBM WatsonX",
-        "Azure AI Foundry",
     ]:
         return
 
@@ -558,25 +557,24 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 )
                 raise ValueError(msg) from e
 
-            from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
+            if AzureAIOpenAIApiChatModel is None:
+                msg = "Azure AI Foundry model support is unavailable."
+                raise ValueError(msg)
+
+            from lfx.base.models.model_utils import request_azure_ai_foundry_model_entries
 
             api_key = variables.get("AZURE_AI_FOUNDRY_API_KEY")
             endpoint = variables.get("AZURE_AI_FOUNDRY_ENDPOINT")
-            if not api_key or not endpoint or not validation_model:
+            if not api_key or not endpoint:
                 return
-            llm_kwargs = {
-                "credential": api_key,
-                "endpoint": endpoint,
-                "model": validation_model,
-                # Validation runs synchronously in the variable-save request;
-                # bound connection/read time so a blackholed endpoint cannot
-                # stall the worker (matches live-discovery timeout).
-                "request_timeout": AZURE_AI_FOUNDRY_REQUEST_TIMEOUT,
-            }
-            if not is_reasoning_model:
-                llm_kwargs["max_tokens"] = 1
-            llm = AzureAIOpenAIApiChatModel(**llm_kwargs)
-            llm.invoke("test")
+            try:
+                # Validate the submitted connection without assuming the user
+                # deployed one of Langflow's seed model names.
+                request_azure_ai_foundry_model_entries(endpoint, api_key)
+            except Exception as e:
+                msg = f"Could not validate Azure AI Foundry credentials: {e!s}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
 
         elif provider == "Ollama":
             import requests

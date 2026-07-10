@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -65,7 +64,7 @@ def test_legacy_name_normalization_preserves_first_provider():
     assert normalized[0]["provider"] == "OpenAI"
 
 
-def test_reasoning_model_instantiation_omits_temperature_and_max_tokens():
+def test_reasoning_model_instantiation_omits_temperature_and_preserves_max_tokens():
     from lfx.base.models import unified_models as unified_models_module
     from lfx.base.models.unified_models.instantiation import get_llm
 
@@ -94,17 +93,16 @@ def test_reasoning_model_instantiation_omits_temperature_and_max_tokens():
         get_llm(selection, user_id="user-1", temperature=0.7, max_tokens=25)
 
     assert "temperature" not in captured
-    assert "max_tokens" not in captured
+    assert captured["max_tokens"] == 25
     assert captured["request_timeout"] == 10.0
 
 
-def test_openai_reasoning_instantiation_omits_temperature_and_max_tokens():
-    """OpenAI reasoning path must stay aligned with the cross-provider rule.
+def test_openai_reasoning_instantiation_omits_temperature_and_preserves_max_tokens():
+    """OpenAI reasoning models keep the caller's explicit output limit.
 
-    Why: get_llm drops temperature and max_tokens for any metadata.reasoning
-    model. OpenAI provider metadata still maps the token cap to ``max_tokens``
-    (not ``max_completion_tokens``), so remapping would still send a rejected
-    field — omitting both is intentional and must not regress.
+    ChatOpenAI normalizes ``max_tokens`` to ``max_completion_tokens`` for
+    reasoning models, so Langflow must forward the configured cap instead of
+    silently discarding it.
     """
     from lfx.base.models import unified_models as unified_models_module
     from lfx.base.models.unified_models.instantiation import get_llm
@@ -130,41 +128,8 @@ def test_openai_reasoning_instantiation_omits_temperature_and_max_tokens():
         get_llm(selection, user_id="user-1", temperature=0.7, max_tokens=25)
 
     assert "temperature" not in captured
-    assert "max_tokens" not in captured
+    assert captured["max_tokens"] == 25
     assert "max_completion_tokens" not in captured
-
-
-def test_foundry_reasoning_validation_omits_max_tokens():
-    from lfx.base.models.unified_models.credentials import validate_model_provider_key
-
-    captured: dict = {}
-
-    class FakeFoundryChatModel:
-        def __init__(self, **kwargs):
-            captured.update(kwargs)
-
-        def invoke(self, _prompt):
-            return "ok"
-
-    fake_chat_models = SimpleNamespace(AzureAIOpenAIApiChatModel=FakeFoundryChatModel)
-    with patch.dict(
-        sys.modules,
-        {
-            "langchain_azure_ai": SimpleNamespace(chat_models=fake_chat_models),
-            "langchain_azure_ai.chat_models": fake_chat_models,
-        },
-    ):
-        validate_model_provider_key(
-            "Azure AI Foundry",
-            {
-                "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
-                "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1",
-            },
-            model_name="o3-mini",
-        )
-
-    assert "max_tokens" not in captured
-    assert captured["request_timeout"] == 10.0
 
 
 def test_foundry_validation_fails_when_sdk_is_missing():
