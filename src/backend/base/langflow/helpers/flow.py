@@ -51,12 +51,14 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
         raise ValueError(msg) from e
 
 
-async def list_flows_by_flow_folder(
+async def _list_flows_in_flow_folder(
     *,
-    user_id: str | None = None,
-    flow_id: str | None = None,
-    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006
+    user_id: str | None,
+    flow_id: str | None,
+    order_params: dict | None,
+    a2a_only: bool,
 ) -> list[Data]:
+    """Query flows sharing ``flow_id``'s folder, optionally only those published as A2A agents."""
     if not user_id:
         msg = "Session is invalid"
         raise ValueError(msg)
@@ -78,6 +80,8 @@ async def list_flows_by_flow_folder(
                 .where(Flow.user_id == uuid_user_id)
                 .where(Flow.id != uuid_flow_id)
             )
+            if a2a_only:
+                stmt = stmt.where(Flow.a2a_enabled == True)  # noqa: E712
             # sort flows by the specified column and direction
             if order_params is not None:
                 sort_col = getattr(Flow, order_params.get("column", "updated_at"), Flow.updated_at)
@@ -87,8 +91,18 @@ async def list_flows_by_flow_folder(
             flows = (await session.exec(stmt)).all()
             return [Data(data=dict(flow._mapping)) for flow in flows]  # noqa: SLF001
     except Exception as e:
-        msg = f"Error listing flows: {e}"
+        msg = f"Error listing {'A2A agents' if a2a_only else 'flows'}: {e}"
         raise ValueError(msg) from e
+
+
+async def list_flows_by_flow_folder(
+    *,
+    user_id: str | None = None,
+    flow_id: str | None = None,
+    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006
+) -> list[Data]:
+    """List the user's other flows in the same folder as ``flow_id``."""
+    return await _list_flows_in_flow_folder(user_id=user_id, flow_id=flow_id, order_params=order_params, a2a_only=False)
 
 
 async def list_a2a_agents_by_flow_folder(
@@ -103,36 +117,7 @@ async def list_a2a_agents_by_flow_folder(
     as A2A agents (``a2a_enabled``), so the A2A Agent component offers only real agents to call
     internally, not every flow (that would just be Run Flow).
     """
-    if not user_id:
-        msg = "Session is invalid"
-        raise ValueError(msg)
-    if not flow_id:
-        msg = "Flow ID is required"
-        raise ValueError(msg)
-    try:
-        async with session_scope() as session:
-            uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
-            uuid_flow_id = UUID(flow_id) if isinstance(flow_id, str) else flow_id
-            flow_ = aliased(Flow)  # flow table alias, used to retrieve the folder
-            stmt = (
-                select(Flow.id, Flow.name, Flow.updated_at)
-                .join(flow_, Flow.folder_id == flow_.folder_id)
-                .where(flow_.id == uuid_flow_id)
-                .where(flow_.user_id == uuid_user_id)
-                .where(Flow.user_id == uuid_user_id)
-                .where(Flow.id != uuid_flow_id)
-                .where(Flow.a2a_enabled == True)  # noqa: E712
-            )
-            if order_params is not None:
-                sort_col = getattr(Flow, order_params.get("column", "updated_at"), Flow.updated_at)
-                sort_dir = SORT_DISPATCHER.get(order_params.get("direction", "desc"), desc)
-                stmt = stmt.order_by(sort_dir(sort_col))
-
-            flows = (await session.exec(stmt)).all()
-            return [Data(data=dict(flow._mapping)) for flow in flows]  # noqa: SLF001
-    except Exception as e:
-        msg = f"Error listing A2A agents: {e}"
-        raise ValueError(msg) from e
+    return await _list_flows_in_flow_folder(user_id=user_id, flow_id=flow_id, order_params=order_params, a2a_only=True)
 
 
 async def list_flows_by_folder_id(
