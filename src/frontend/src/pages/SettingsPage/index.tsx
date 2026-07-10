@@ -95,7 +95,7 @@ export default function SettingsPage(): JSX.Element {
       href: "/settings/triton-servers",
       icon: (
         <ForwardedIconComponent
-          name="Nvidia"
+          name="NVIDIA"
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
