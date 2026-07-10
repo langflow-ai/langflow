@@ -301,3 +301,6 @@ whitesource/
 /.codex
 
 .agents
+
+error.txt
+WORK_PLAN.md
