@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from pydantic import field_validator, model_validator
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, UniqueConstraint
-from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
+from sqlmodel import Column, DateTime, Field, Relationship, SQLModel
 from typing_extensions import Self
 
 from langflow.schema.serialize import UUIDstr
@@ -17,6 +17,7 @@ from langflow.services.database.models.deployment_provider_account.utils import 
 )
 from langflow.services.database.utils import (
     normalize_string_or_none,
+    utc_now,
     validate_non_empty_string,
 )
 
@@ -97,13 +98,19 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     # MUST be stored encrypted; the CRUD layer encrypts via auth_utils before writing
     # and the Read schema intentionally excludes this field.
     api_key: str = Field(description="Provider credential material. Stored encrypted; never returned in API responses.")
+    # Column-level Python default/onupdate (not server_default=func.now()):
+    # on SQLite, func.now() stores second-level precision. When that value is
+    # loaded into Python and SQLAlchemy later sends it as a query parameter,
+    # it is formatted with microseconds — stored column text vs the parameter
+    # then diverge. Field stays default=None so the ORM attribute is unset
+    # until flush; SQLAlchemy fills via Column default.
     created_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+        sa_column=Column(DateTime(timezone=True), default=utc_now, nullable=False),
     )
     updated_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
+        sa_column=Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False),
     )
 
     user: "User" = Relationship(back_populates="deployment_provider_accounts")
