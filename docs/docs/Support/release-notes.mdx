@@ -61,7 +61,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Upcoming breaking change: bundle separation
 
     Langflow 1.10.x introduced the Extension bundles model.
-    In future releases, bundle separation will extend to more component providers.
+    In Langflow 1.11.x and future releases, bundle separation extends to more component providers.
 
     Saved flows continue to open normally, but the following may require manual updates before upgrading:
 
@@ -69,7 +69,13 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     - External tooling that reads component type identifiers from raw flow JSON.
     - Custom deployment scripts that install or pin individual component packages.
 
-    For more information, see [Langflow Extensions overview](../Develop/extensions-overview.mdx).
+    For more information, see [Langflow Extensions overview](./extensions-overview).
+
+- PyTorch components are opt-in by default
+
+    **CUGA**, **Code Agents**, and **Docling** local conversion are excluded from the default `uv pip install langflow` installation because they require PyTorch.
+
+    To install these components, see [Torch opt-in installs](./components-bundle-components#torch-opt-in).
 
 ### New features and enhancements
 
@@ -93,6 +99,21 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The **Paddle** bundle (`lfx-paddle`) adds a **PaddleOCR** component that calls the PaddleOCR AI Studio Job API for layout-aware document parsing into Markdown.
 
     For more information, see [Paddle bundle](./bundles-paddle).
+    
+- LFX is now engine-only
+
+    `uv pip install lfx` now installs the LFX executor only, with no bundle components included.
+    `uv pip install langflow` is unchanged.
+    This only affects users who install `lfx` directly.
+
+    If you install `lfx` directly and your flows use bundle components, install the required packages in the same environment.
+
+    About 70 long-tail providers ship in the `lfx-bundles` metapackage.
+    Install one provider with `uv pip install "lfx-bundles[<bundle-name>]"`, or install every long-tail provider with `uv pip install "lfx[bundles]"`.
+    Graduated providers, such as OpenAI, Anthropic, Cohere, and Exa, ship as individual packages and are installed separately with `uv pip install lfx-<provider>`.
+
+    All bundles remain included in `uv pip install langflow` as explicit dependencies.
+    For more information, see [Extensions overview](./extensions-overview).
 
 ## 1.10.x
 
