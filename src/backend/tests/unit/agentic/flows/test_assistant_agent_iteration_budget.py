@@ -9,8 +9,7 @@ token spend per attempt on hosted models -- was accepted deliberately, and a per
 ``/iterations N`` command lets a user tune it further (1-200) without editing the flows.
 
 This test is a tripwire: any future change to the pinned budget must be a conscious
-decision that also updates ``ASSISTANT_ITERATION_BUDGET`` here (and re-runs the eval
-suite for a cost/pass-rate check).
+decision that also updates ``ASSISTANT_ITERATION_BUDGET`` here.
 """
 
 import json
