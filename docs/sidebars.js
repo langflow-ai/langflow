@@ -115,8 +115,16 @@ module.exports = {
       label: "Develop",
       className: "sidebar-category-with-icon sidebar-icon-code",
       items: [
-        "Develop/api-keys-and-authentication",
-        "Develop/jwt-authentication",
+        {
+          type: "category",
+          label: "Authentication and authorization",
+          items: [
+            "Develop/authentication-overview",
+            "Develop/api-keys-and-authentication",
+            "Develop/external-authentication",
+            "Develop/authorization",
+          ],
+        },
         "Develop/install-custom-dependencies",
         "Develop/configuration-global-variables",
         "Develop/environment-variables",
@@ -187,15 +195,6 @@ module.exports = {
           type: "doc",
           id: "Develop/configuration-cli",
           label: "Use the Langflow CLI"
-        },
-        {
-          type: "category",
-          label: "Bundle extensions",
-          items: [
-            "Develop/extensions-overview",
-            "Develop/extensions-quickstart",
-            "Develop/extensions-manifest",
-          ],
         },
       ],
     },
@@ -300,11 +299,6 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Deployment/deployment-lfx-compatibility",
-          label: "LFX and Langflow version compatibility",
-        },
-        {
-          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },
@@ -312,6 +306,48 @@ module.exports = {
           type: "doc",
           id: "Deployment/security",
           label: "Security",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "LFX",
+      className: "sidebar-category-with-icon sidebar-icon-terminal",
+      items: [
+        {
+          type: "doc",
+          id: "Lfx/lfx-overview",
+          label: "About LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-install",
+          label: "Install LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-run",
+          label: "Run flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-serve",
+          label: "Serve flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-mcp",
+          label: "Build flows with the LFX MCP server"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-devops-sdk",
+          label: "Flow DevOps Toolkit SDK"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-compatibility",
+          label: "LFX and Langflow version compatibility"
         },
       ],
     },
@@ -498,6 +534,17 @@ module.exports = {
             "Components/bundles-xai",
           ],
         },
+        {
+          type: "category",
+          label: "Extensions",
+          items: [
+            "Lfx/extensions-overview",
+            "Lfx/extensions-bundle-list",
+            "Lfx/extensions-quickstart",
+            "Lfx/extensions-manifest",
+            "Lfx/extensions-errors",
+          ],
+        },
         "Components/components-custom-components",
       ],
     },
@@ -515,11 +562,6 @@ module.exports = {
           type: "doc",
           id: "API-Reference/typescript-client",
           label: "Use the TypeScript client"
-        },
-        {
-          type: "doc",
-          id: "API-Reference/flow-devops-sdk",
-          label: "Flow DevOps Toolkit SDK",
         },
         {
           type: "doc",
