@@ -10,9 +10,9 @@ headers = {"Content-Type": "application/json", "x-api-key": api_key}
 
 payload = {
     "flow_id": flow_id,
-    "background": False,
-    "stream": False,
-    "inputs": {},
+    "input_value": "what is 2+2",
+    "session_id": "session-123",
+    "mode": "sync",
     "globals": {
         "FILENAME": "relatório—final.pdf",
         "OWNER_NAME": "José",
