@@ -1,0 +1,69 @@
+---
+title: Latitude
+slug: /integrations-latitude
+description: Instrument Langflow with the Traceloop SDK and export traces to Latitude using OpenTelemetry.
+---
+
+[Latitude](https://latitude.so) is an open-source platform for observing, evaluating, and improving production AI agents.
+Its ingestion endpoint speaks standard OpenTelemetry (OTLP over HTTP), so Langflow traces flow in without a vendor-specific library.
+
+This guide demonstrates how to export Langflow traces to Latitude using the Traceloop SDK, which Langflow includes for OpenTelemetry instrumentation.
+Once traces arrive, you can inspect, search, and evaluate every flow run in Latitude.
+
+## Prerequisites
+
+- A [Latitude account](https://console.latitude.so/login) and project (or a [self-hosted Latitude](https://docs.latitude.so) instance)
+- A Latitude API key, created from your project settings
+- [Install Langflow](/get-started-installation)
+
+## Configure environment variables
+
+1. In the root folder of your Langflow application, edit your existing Langflow `.env` file or create a new one.
+
+2. Enter the following environment variables, and then replace the placeholders with the values for your Latitude project:
+
+   ```text
+   TRACELOOP_API_KEY=tl_dummy_1234567890abcdef1234567890abcdef
+   TRACELOOP_BASE_URL=https://ingest.latitude.so
+   TRACELOOP_HEADERS="Authorization=Bearer YOUR_LATITUDE_API_KEY,X-Latitude-Project=YOUR_PROJECT_SLUG"
+   OTEL_EXPORTER_OTLP_INSECURE=false
+   ```
+
+   Set the necessary values for each environment variable:
+
+   - **`TRACELOOP_API_KEY`**: Required to initialize the Traceloop SDK.
+   Because traces are exported directly to Latitude rather than to Traceloop's cloud, you can proceed with the placeholder value shown above.
+
+   - **`TRACELOOP_BASE_URL`**: The Latitude ingestion base URL, `https://ingest.latitude.so`.
+   The SDK exports traces to the standard OTLP path, so spans are sent to `https://ingest.latitude.so/v1/traces`.
+
+   - **`TRACELOOP_HEADERS`**: The authentication headers that Latitude requires.
+   Replace `YOUR_LATITUDE_API_KEY` with an API key from your Latitude project settings, and `YOUR_PROJECT_SLUG` with your project slug, which is visible in the project settings or URL.
+
+   - **`OTEL_EXPORTER_OTLP_INSECURE`**: Security setting for OpenTelemetry Protocol connections.
+   Set to `false` for secure HTTPS connections, which is required for the hosted Latitude endpoint.
+   Set to `true` only for an insecure HTTP endpoint during local development.
+
+## Start Langflow with Traceloop environment variables
+
+Launch your Langflow application with your `.env` file:
+
+```bash
+uv run langflow run --env-file .env
+```
+
+The Traceloop SDK automatically begins instrumenting your flows and exporting traces to Latitude.
+
+## Verify the integration
+
+To verify that observability is working correctly:
+
+1. Run a flow in Langflow to generate traffic.
+2. Open your project in the [Latitude dashboard](https://console.latitude.so/login).
+3. Open the traces view to see the Langflow run, with spans for each component, model call, and tool call, including inputs, outputs, latency, and token usage.
+
+## See also
+
+* [Latitude documentation](https://docs.latitude.so)
+* [Latitude OpenTelemetry exporter](https://docs.latitude.so/telemetry/otel-exporter)
+* [Traceloop documentation](https://www.traceloop.com/docs/introduction)
