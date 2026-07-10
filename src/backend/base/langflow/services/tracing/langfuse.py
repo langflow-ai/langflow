@@ -229,12 +229,21 @@ def _root_run_reparenting_handler_cls(base_cls: type) -> type:
             super().__init__(**kwargs)
             self._otel_parent = otel_parent
 
-        def __deepcopy__(self, memo: dict) -> "Any":
-            """Return self: the wrapped langfuse client is a keyword-only singleton and not deep-copyable, and langflow deep-copies flow state around the Agent build."""
+        def __deepcopy__(self, memo: dict[int, Any]) -> Any:
+            """Return self instead of a copy.
+
+            The base CallbackHandler holds a LangfuseResourceManager whose
+            keyword-only ``__new__`` cannot be reconstructed during deepcopy
+            (raises ``__new__() missing required keyword arguments``), and
+            langflow deep-copies flow state around the Agent build. The handler
+            keeps no per-invocation mutable state, so sharing it across
+            concurrent calls is safe. See issues #13965 / #13429 (same
+            workaround in flow_loader.py).
+            """
             memo[id(self)] = self
             return self
 
-        def __copy__(self) -> "Any":
+        def __copy__(self) -> Any:
             return self
 
         def _reparent(self, method_name: str, args: tuple, kwargs: dict, parent_run_id: UUID | None):

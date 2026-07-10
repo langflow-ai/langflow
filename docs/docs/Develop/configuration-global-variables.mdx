@@ -164,6 +164,106 @@ You can edit the variables in your Langflow **Settings** if you want to configur
 Global variables sourced from the environment are assigned the **Credential** type, which masks the values in the visual editor.
 However, Langflow automatically encrypts _all_ global variables stored in the database.
 
+## Store global variables in Kubernetes secrets {#kubernetes-secrets}
+
+By default, Langflow stores global variables encrypted in its database at `langflow.db`.
+When running Langflow in Kubernetes, you can switch to storing global variables in [Kubernetes Secrets](https://kubernetes.io/docs/concepts/configuration/secret/), to keep sensitive credentials out of the Langflow database entirely.
+
+When Kubernetes secrets are enabled, each user's global variables are stored in a dedicated `Opaque` Secret in the `langflow` namespace, named after the user's UUID.
+Credentials are stored with a `credential_` prefix on the secret key.
+
+### Prerequisites
+
+* Langflow running inside a Kubernetes cluster. See [Kubernetes deployment](/deployment-kubernetes-dev).
+
+### Grant Langflow permission to manage Kubernetes Secrets
+
+:::tip
+If you're deploying with the [Langflow Helm chart](https://github.com/langflow-ai/langflow-helm-charts), the chart creates a `ServiceAccount` automatically. Skip the `ServiceAccount` block above, and set `subjects[0].name` in the `RoleBinding` to the name of the Helm-generated `ServiceAccount` instead. To find the `ServiceAccount` name, run `kubectl get serviceaccount -n langflow`.
+:::
+
+1. Create a manifest for the `ServiceAccount`, `Role`, and `RoleBinding` resources, and save it as `langflow-rbac.yaml`:
+
+   ```yaml
+   apiVersion: v1
+   kind: ServiceAccount
+   metadata:
+     name: langflow
+     namespace: langflow
+   ---
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: Role
+   metadata:
+     name: langflow-secret-manager
+     namespace: langflow
+   rules:
+     - apiGroups: [""]
+       resources: ["secrets"]
+       verbs: ["get", "create", "update", "patch", "delete"]
+   ---
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: RoleBinding
+   metadata:
+     name: langflow-secret-manager
+     namespace: langflow
+   subjects:
+     - kind: ServiceAccount
+       name: langflow
+       namespace: langflow
+   roleRef:
+     kind: Role
+     name: langflow-secret-manager
+     apiGroup: rbac.authorization.k8s.io
+   ```
+
+2. Apply the resources to your cluster:
+   ```bash
+   kubectl apply -f langflow-rbac.yaml
+   ```
+
+3. Set `serviceAccountName` and the `LANGFLOW_VARIABLE_STORE` environment variable in your Deployment:
+
+   ```yaml
+   spec:
+     serviceAccountName: langflow
+     containers:
+       - name: langflow
+         image: langflowai/langflow:latest
+         env:
+           - name: LANGFLOW_VARIABLE_STORE
+             value: "kubernetes"
+   ```
+
+4. To apply the updated Deployment, and then confirm the pod found the service account, run:
+
+   ```bash
+   kubectl apply -f langflow-deployment.yaml
+   kubectl describe pod -n langflow -l app.kubernetes.io/name=langflow | grep "Service Account"
+   ```
+
+5. Log in to Langflow, navigate to **Settings** > **Global Variables**, and then create a global variable.
+
+6. To confirm that Langflow created a corresponding Kubernetes Secret, run:
+
+    ```bash
+    kubectl get secrets -n langflow
+    ```
+
+    The output should include a Secret named after the user's UUID.
+
+7. Inspect the Secret's keys to confirm your variable was stored, replacing **YOUR_USER_ID** with the user's UUID:
+
+    ```bash
+    kubectl get secret uuid-YOUR_USER_ID -n langflow -o jsonpath='{.data}' | python3 -m json.tool
+    ```
+
+    Credential-type variables appear with a `credential_` prefix.
+    Generic-type variables use the variable name directly as the key.
+
+    :::warning
+    Do not read or modify Secret values directly with `kubectl`. Editing Secrets outside of Langflow can cause variables to become unreadable.
+    :::
+
 ## Disallow global variables from the environment
 
 If you want to explicitly prevent Langflow from sourcing global variables from the environment, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES=False` in your `.env` file.
