@@ -39,8 +39,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 ## Core components and bundles
 
 :::tip
-The Langflow documentation doesn't list all bundles or components in bundles.
-For the most accurate and up-to-date list of bundles and components for your version of Langflow, check <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
+For the most accurate and up-to-date list of components within each bundle for your version of Langflow, check <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
 
 If you can't find a component that you used in an earlier version of Langflow, it may have been removed or marked as a [legacy component](#legacy-bundles).
 :::
@@ -50,6 +49,20 @@ Langflow offers generic <Icon name="Component" aria-hidden="true" /> **Core comp
 If you are looking for a specific service or integration, you can <Icon name="Search" aria-hidden="true" /> **Search** components in the visual editor.
 
 If all else fails, you can always create your own [custom components](/components-custom-components).
+
+## Install bundle components {#bundle-install}
+
+`uv pip install langflow` includes most provider bundles automatically.
+
+If you install `lfx` directly or need to add bundles to an existing environment, see [Install LFX with bundle components](./lfx-install#install-with-bundle-components).
+
+### Torch opt-in installs {#torch-opt-in}
+
+The default `uv pip install langflow` and `uv pip install lfx[bundles]` installations do not install components that require the PyTorch dependency.
+
+As of Langflow 1.11.x, this list includes **CUGA**, **Code Agents**, and the **Docling** local parser.
+
+To install PyTorch and the additional components, in your Langflow virtual environment, run `uv pip install "lfx-bundles[all]"`.
 
 ## Legacy bundles
 
@@ -239,11 +252,6 @@ It accepts the following parameters:
 | message_history | BaseChatMessageHistory  | Output parameter. An instance of ZepChatMessageHistory for the session. |
 
 </details>
-
-## See also
-
-* [LangWatch observability and evaluation](/integrations-langwatch)
-
 
 
 <!-- Not documented but in Langflow as of 1.5.11 -->
