@@ -18,7 +18,9 @@ describe("parseIterationsCommand", () => {
   it("resets with off/default/reset", () => {
     for (const w of ["off", "default", "reset"]) {
       const r = parseIterationsCommand(`/iterations ${w}`, 60);
-      expect(r).toEqual(expect.objectContaining({ limit: null, changed: true }));
+      expect(r).toEqual(
+        expect.objectContaining({ limit: null, changed: true }),
+      );
     }
   });
 

@@ -14,7 +14,9 @@ describe("parseHistoryCommand", () => {
   it("clears with off/all/clear", () => {
     for (const w of ["off", "all", "clear"]) {
       const r = parseHistoryCommand(`/history ${w}`, 5);
-      expect(r).toEqual(expect.objectContaining({ limit: null, changed: true }));
+      expect(r).toEqual(
+        expect.objectContaining({ limit: null, changed: true }),
+      );
     }
   });
 
