@@ -13,7 +13,7 @@ from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
-from .credentials import _fetch_enabled_providers_for_user, _get_model_status
+from .credentials import _fetch_enabled_providers_for_user, _get_model_status, model_status_contains
 from .model_catalog import get_unified_models_detailed
 from .provider_queries import model_provider_metadata
 
@@ -220,9 +220,16 @@ def get_llm(
     # generic ``model``.
     model_name_param = metadata.get("model_name_param") or provider_param_mapping.get("model_param", "model")
 
-    # Check if this is a reasoning model that doesn't support temperature
+    # Reasoning models commonly reject sampling parameters such as
+    # ``temperature``. Catalog metadata marks these with ``reasoning: True``;
+    # enriched UI options also carry ``reasoning_models``. Keep the user's
+    # explicit token cap, though: provider clients either accept the configured
+    # ``max_tokens_field_name`` directly or normalize it to the provider's wire
+    # format (for example, ChatOpenAI maps ``max_tokens`` to
+    # ``max_completion_tokens`` for reasoning models).
     reasoning_models = metadata.get("reasoning_models", [])
-    if model_name in reasoning_models:
+    is_reasoning_model = metadata.get("reasoning", False) is True or model_name in reasoning_models
+    if is_reasoning_model:
         temperature = None
 
     # Build kwargs dynamically
@@ -340,6 +347,20 @@ def get_llm(
                 default_headers[header_name] = value
         if default_headers:
             kwargs["default_headers"] = default_headers
+    elif provider == "Azure AI Foundry":
+        from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
+
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        endpoint_value = provider_vars.get("AZURE_AI_FOUNDRY_ENDPOINT") or _env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT")
+        if not endpoint_value:
+            msg = (
+                "Azure AI Foundry endpoint is required. Configure AZURE_AI_FOUNDRY_ENDPOINT "
+                "in Settings → Model Providers or set the environment variable."
+            )
+            raise ValueError(msg)
+        kwargs["endpoint"] = endpoint_value
+        # Bound hung/blackholed endpoints the same way live discovery does.
+        kwargs["request_timeout"] = AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
     elif is_registered(provider):
         # Bundle-contributed provider: apply its declared connection variables
         # (base_url, attribution headers, etc.) generically from its metadata.
@@ -423,9 +444,9 @@ def _get_provider_enabled_model_names(
         if apply_user_prefs:
             metadata = model_data.get("metadata", {})
             is_default = metadata.get("default", False)
-            if not is_default and model_name not in explicitly_enabled_models:
+            if not is_default and not model_status_contains(explicitly_enabled_models, provider, model_name):
                 continue
-            if model_name in disabled_models:
+            if model_status_contains(disabled_models, provider, model_name):
                 continue
 
         model_names.append(model_name)
