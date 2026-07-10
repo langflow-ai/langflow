@@ -165,6 +165,70 @@ async def test_local_deployment_queries_filter_project_and_flow_versions(async_s
 
 
 @pytest.mark.asyncio
+async def test_local_deployment_queries_filter_deployment_type(async_session: AsyncSession):
+    """list/count honor deployment_type so type-scoped sync can prune safely."""
+    from sqlalchemy import text
+
+    user, provider_account, project_a, _project_b = await _seed_user_provider_and_projects(async_session)
+
+    dep_agent = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-agent-{uuid4()}",
+        display_name="Agent",
+        deployment_type=DeploymentType.AGENT,
+    )
+    dep_other = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-other-{uuid4()}",
+        display_name="Other",
+        deployment_type=DeploymentType.AGENT,
+    )
+    # Seed a second local type outside the enum catalog so filtering is observable
+    # without expanding DeploymentType for production.
+    await async_session.execute(
+        text("UPDATE deployment SET deployment_type = :deployment_type WHERE id = :id"),
+        {"deployment_type": "other", "id": dep_other.id.hex},
+    )
+    await async_session.commit()
+    async_session.expunge(dep_other)
+
+    page = await list_deployments_page(
+        async_session,
+        user_id=user.id,
+        deployment_provider_account_id=provider_account.id,
+        offset=0,
+        limit=10,
+        deployment_type=DeploymentType.AGENT,
+    )
+    count = await count_deployments_by_provider(
+        async_session,
+        user_id=user.id,
+        deployment_provider_account_id=provider_account.id,
+        deployment_type=DeploymentType.AGENT,
+    )
+    assert count == 1
+    assert [row.id for row, _, _ in page] == [dep_agent.id]
+
+    unfiltered_count = await count_deployments_by_provider(
+        async_session,
+        user_id=user.id,
+        deployment_provider_account_id=provider_account.id,
+    )
+    assert unfiltered_count == 2
+    other_still_present = await async_session.execute(
+        text("SELECT 1 FROM deployment WHERE id = :id AND deployment_type = 'other'"),
+        {"id": dep_other.id.hex},
+    )
+    assert other_still_present.first() is not None
+
+
+@pytest.mark.asyncio
 async def test_create_deployment_stores_microsecond_precision_on_sqlite(async_session: AsyncSession):
     """ORM creates must write DateTime bind strings, not SQLite whole-second now()."""
     from sqlalchemy import text
@@ -188,3 +252,149 @@ async def test_create_deployment_stores_microsecond_precision_on_sqlite(async_se
     ).one()
     assert "." in row[0], f"created_at missing fractional seconds: {row[0]}"
     assert "." in row[1], f"updated_at missing fractional seconds: {row[1]}"
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_page_keyset_tiebreaks_on_identical_created_at(
+    async_session: AsyncSession,
+):
+    """Identical created_at values require the id tie-break for the next page."""
+    from datetime import datetime, timezone
+
+    from langflow.services.database.models.deployment.model import Deployment
+    from sqlmodel import col, update
+
+    user, provider_account, project_a, _project_b = await _seed_user_provider_and_projects(async_session)
+
+    newer = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-newer-{uuid4()}",
+        display_name="Newer",
+        deployment_type=DeploymentType.AGENT,
+    )
+    older = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-older-{uuid4()}",
+        display_name="Older",
+        deployment_type=DeploymentType.AGENT,
+    )
+    same_second = datetime(2026, 7, 9, 21, 0, 0, tzinfo=timezone.utc)
+    await async_session.execute(
+        update(Deployment).where(col(Deployment.id).in_([newer.id, older.id])).values(created_at=same_second)
+    )
+    await async_session.commit()
+    async_session.expunge(newer)
+    async_session.expunge(older)
+
+    page1 = await list_deployments_page(
+        async_session,
+        user_id=user.id,
+        deployment_provider_account_id=provider_account.id,
+        offset=0,
+        limit=1,
+    )
+    assert len(page1) == 1
+    cursor_row = page1[0][0]
+    assert cursor_row.created_at is not None
+    assert cursor_row.created_at.microsecond == 0
+
+    page2 = await list_deployments_page(
+        async_session,
+        user_id=user.id,
+        deployment_provider_account_id=provider_account.id,
+        limit=1,
+        cursor_created_at=cursor_row.created_at,
+        cursor_exclude_id=cursor_row.id,
+    )
+    assert len(page2) == 1
+    assert page2[0][0].id != cursor_row.id
+    assert {page1[0][0].id, page2[0][0].id} == {newer.id, older.id}
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_page_keyset_after_rewriting_whole_second_sqlite_strings(
+    async_session: AsyncSession,
+):
+    """Legacy whole-second SQLite strings must keyset correctly after DateTime rewrite."""
+    import importlib
+
+    from sqlalchemy import text
+
+    mig = importlib.import_module("langflow.alembic.versions.a8f3c2d1e4b5_rewrite_deployment_sqlite_timestamps")
+
+    user, provider_account, project_a, _project_b = await _seed_user_provider_and_projects(async_session)
+
+    newer = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-newer-{uuid4()}",
+        display_name="Newer",
+        deployment_type=DeploymentType.AGENT,
+    )
+    older = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-older-{uuid4()}",
+        display_name="Older",
+        deployment_type=DeploymentType.AGENT,
+    )
+    # Reproduce the historical SQLite store shape (no fractional seconds).
+    await async_session.execute(
+        text("UPDATE deployment SET created_at = '2026-07-09 21:00:00' WHERE id IN (:a, :b)"),
+        {"a": newer.id.hex, "b": older.id.hex},
+    )
+    await async_session.commit()
+
+    raw = (
+        await async_session.execute(
+            text("SELECT quote(created_at) FROM deployment WHERE id = :id"),
+            {"id": newer.id.hex},
+        )
+    ).one()
+    assert raw[0] == "'2026-07-09 21:00:00'"
+
+    # Without rewrite, keyset would re-include the cursor via string '<'.
+    conn = await async_session.connection()
+    await conn.run_sync(
+        lambda sync_conn: mig._rewrite_table_timestamps(sync_conn, "deployment", ("created_at", "updated_at"))
+    )
+    await async_session.commit()
+    async_session.expunge(newer)
+    async_session.expunge(older)
+
+    rewritten = (
+        await async_session.execute(
+            text("SELECT quote(created_at) FROM deployment WHERE id = :id"),
+            {"id": newer.id.hex},
+        )
+    ).one()
+    assert rewritten[0] == "'2026-07-09 21:00:00.000000'"
+
+    page1 = await list_deployments_page(
+        async_session,
+        user_id=user.id,
+        deployment_provider_account_id=provider_account.id,
+        offset=0,
+        limit=1,
+    )
+    cursor_row = page1[0][0]
+    page2 = await list_deployments_page(
+        async_session,
+        user_id=user.id,
+        deployment_provider_account_id=provider_account.id,
+        limit=1,
+        cursor_created_at=cursor_row.created_at,
+        cursor_exclude_id=cursor_row.id,
+    )
+    assert page2[0][0].id != cursor_row.id
+    assert {page1[0][0].id, page2[0][0].id} == {newer.id, older.id}

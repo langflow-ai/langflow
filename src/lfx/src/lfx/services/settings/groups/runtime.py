@@ -111,6 +111,10 @@ class RuntimeSettings(BaseModel):
     and result in a slow API response from Langflow to the requestor. Thus, it
     is recommended to make the batch size larger than the requested page size
     to Langflow to reduce the number of provider API calls.
+
+    Do not set this above the provider API's limit for ID-filtered list calls.
+    watsonx Orchestrate docs do not currently document such a limit; keep the
+    value within whatever limit your provider enforces in practice.
     """
 
     deployment_list_sync_max_rounds: int = Field(default=2, ge=1)

@@ -612,13 +612,13 @@ class TestListDeploymentsSynced:
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
-    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=2)
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
     @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
-    async def test_mismatched_type_not_in_known_skips_without_deleting(
+    async def test_forwards_deployment_type_to_page_count_and_provider(
         self,
         mock_list,
         mock_fetch,
@@ -627,23 +627,15 @@ class TestListDeploymentsSynced:
         mock_count_attachments,
         mock_count,
     ):
-        """Row not in known but with a different local type is skipped, not deleted.
+        """Type-scoped lists push deployment_type into DB page/count and provider lookup."""
+        from langflow.api.v1.mappers.deployments.helpers import DeploymentType, list_deployments_synced
 
-        The provider was filtered by type, so absence only means the type didn't
-        match — the resource may still exist on the provider.
-        """
         row_match = _mock_deployment_row("rk-1", deployment_type="agent")
-        row_other = _mock_deployment_row("rk-2", deployment_type="other")
-        mock_list.side_effect = [
-            [(row_match, 0, []), (row_other, 0, [])],
-            [],
-        ]
-        # Provider filtered by "agent" — only rk-1 returned
+        mock_list.side_effect = [[(row_match, 0, [])], []]
         mock_fetch.return_value = ({"rk-1"}, _mock_provider_view([SimpleNamespace(id="rk-1")]))
         mock_count_attachments.return_value = {row_match.id: 0}
         db = _mock_async_db()
-
-        from langflow.api.v1.mappers.deployments.helpers import DeploymentType, list_deployments_synced
+        deployment_type = DeploymentType("agent")
 
         accepted, _, _ = await list_deployments_synced(
             deployment_adapter=AsyncMock(),
@@ -653,15 +645,16 @@ class TestListDeploymentsSynced:
             db=db,
             page=1,
             size=10,
-            deployment_type=DeploymentType("agent"),
+            deployment_type=deployment_type,
         )
 
-        assert len(accepted) == 1
-        assert accepted[0][0] is row_match
-        # rk-2 was NOT deleted — just skipped
+        assert [row.resource_key for row, _, _ in accepted] == ["rk-1"]
+        assert mock_list.call_args_list[0].kwargs["deployment_type"] is deployment_type
+        assert mock_list.call_args_list[1].kwargs["deployment_type"] is deployment_type  # backfill
+        assert mock_fetch.await_args.kwargs["deployment_type"] is deployment_type
+        assert mock_count.await_args.kwargs["deployment_type"] is deployment_type
         mock_delete.assert_not_awaited()
         mock_delete_unbound.assert_awaited_once()
-        mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=0)
@@ -757,7 +750,7 @@ class TestListDeploymentsSynced:
         """Only two sync rounds run: initial fetch + one refill."""
         stale_1 = _mock_deployment_row("rk-stale-1")
         stale_2 = _mock_deployment_row("rk-stale-2")
-        mock_list.side_effect = [[(stale_1, 0, [])], [(stale_2, 0, [])]]
+        mock_list.side_effect = [[(stale_1, 0, [])], [(stale_2, 0, [])], []]
         mock_fetch.return_value = (set(), None)  # never known
         db = AsyncMock()
 
@@ -775,18 +768,73 @@ class TestListDeploymentsSynced:
         )
 
         assert accepted == []
-        assert mock_list.call_count == 2
-        first_call, second_call = mock_list.call_args_list
+        assert mock_list.call_count == 3  # two sync rounds + empty backfill probe
+        first_call, second_call, backfill_call = mock_list.call_args_list
         assert first_call.kwargs["offset"] == 0
         assert second_call.kwargs["offset"] is None
         assert first_call.kwargs["cursor_created_at"] is None
         assert first_call.kwargs["cursor_exclude_id"] is None
         assert second_call.kwargs["cursor_created_at"] == stale_1.created_at
         assert second_call.kwargs["cursor_exclude_id"] == stale_1.id
+        assert backfill_call.kwargs["cursor_created_at"] == stale_2.created_at
+        assert backfill_call.kwargs["cursor_exclude_id"] == stale_2.id
         mock_delete.assert_awaited_once_with(
             db,
             deployment_owner_pairs=[(stale_1.user_id, stale_1.id), (stale_2.user_id, stale_2.id)],
         )
+        mock_count.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_continues_list_path_when_later_provider_round_fails(
+        self,
+        mock_list,
+        mock_fetch,
+        mock_delete,
+        mock_delete_unbound,
+        mock_count_attachments,
+        mock_count,
+    ):
+        """A failed refill logs and stops rounds; earlier work completes and backfill may fill the page."""
+        good = _mock_deployment_row("rk-good")
+        stale = _mock_deployment_row("rk-stale")
+        refill = _mock_deployment_row("rk-refill")
+        # Round 2 lists refill then fails provider check before advancing the cursor,
+        # so backfill re-reads from after `stale` and can include refill unverified.
+        mock_list.side_effect = [[(good, 0, []), (stale, 0, [])], [(refill, 0, [])], [(refill, 2, [])]]
+        mock_fetch.side_effect = [
+            ({"rk-good"}, _mock_provider_view([SimpleNamespace(id="rk-good")])),
+            RuntimeError("provider unavailable"),
+        ]
+        mock_count_attachments.return_value = {good.id: 0}
+        db = _mock_async_db()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, _, _ = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=_NoSnapshotBindingMapper(),
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=db,
+            page=1,
+            size=2,
+            deployment_type=None,
+        )
+
+        assert [row.resource_key for row, _, _ in accepted] == ["rk-good", "rk-refill"]
+        assert accepted[1][1] == 2
+        mock_delete.assert_awaited_once_with(
+            db,
+            deployment_owner_pairs=[(stale.user_id, stale.id)],
+        )
+        mock_delete_unbound.assert_awaited_once()
+        assert mock_delete_unbound.await_args.kwargs["deployment_ids"] == [good.id]
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -917,7 +965,7 @@ class TestListDeploymentsSynced:
             deployment_type=None,
         )
 
-        assert mock_list.call_args.kwargs["limit"] == 42
+        assert mock_list.call_args_list[0].kwargs["limit"] == 42
         mock_fetch.assert_not_awaited()
         mock_count.assert_awaited_once()
 
@@ -930,7 +978,7 @@ class TestListDeploymentsSynced:
         """The configured max_sync_rounds caps the number of sync rounds."""
         self._sync_settings.deployment_list_sync_max_rounds = 3
         stale_rows = [_mock_deployment_row(f"rk-stale-{i}") for i in range(3)]
-        mock_list.side_effect = [[(row, 0, [])] for row in stale_rows]
+        mock_list.side_effect = [[(row, 0, [])] for row in stale_rows] + [[]]
         mock_fetch.return_value = (set(), None)
         db = AsyncMock()
 
@@ -948,7 +996,7 @@ class TestListDeploymentsSynced:
         )
 
         assert accepted == []
-        assert mock_list.call_count == 3
+        assert mock_list.call_count == 4  # three sync rounds + empty backfill probe
         assert mock_list.call_args_list[0].kwargs["offset"] == 0
         assert mock_list.call_args_list[1].kwargs["offset"] is None
         assert mock_list.call_args_list[2].kwargs["offset"] is None
@@ -958,6 +1006,8 @@ class TestListDeploymentsSynced:
         assert mock_list.call_args_list[1].kwargs["cursor_exclude_id"] == stale_rows[0].id
         assert mock_list.call_args_list[2].kwargs["cursor_created_at"] == stale_rows[1].created_at
         assert mock_list.call_args_list[2].kwargs["cursor_exclude_id"] == stale_rows[1].id
+        assert mock_list.call_args_list[3].kwargs["cursor_created_at"] == stale_rows[2].created_at
+        assert mock_list.call_args_list[3].kwargs["cursor_exclude_id"] == stale_rows[2].id
         mock_delete.assert_awaited_once_with(
             db,
             deployment_owner_pairs=[(row.user_id, row.id) for row in stale_rows],
@@ -983,8 +1033,8 @@ class TestListDeploymentsSynced:
         """When the DB tracks fewer rows than the candidate batch, all are synced in one round."""
         owner = uuid4()
         rows = [_mock_deployment_row(f"rk-{i}", user_id=owner) for i in range(3)]
-        # DB returns all 3 in one call, then nothing — no padding, no second fetch.
-        mock_list.side_effect = [[(r, 0, []) for r in rows], []]
+        # DB returns all 3 in one call, then empty sync refill + empty backfill probe.
+        mock_list.side_effect = [[(r, 0, []) for r in rows], [], []]
         mock_fetch.return_value = (
             {r.resource_key for r in rows},
             _mock_provider_view([SimpleNamespace(id=r.resource_key) for r in rows]),
@@ -1007,7 +1057,7 @@ class TestListDeploymentsSynced:
 
         assert [row.resource_key for row, _, _ in accepted] == ["rk-0", "rk-1", "rk-2"]
         assert total == 3
-        assert mock_list.call_count == 2  # one candidate fetch + one empty refill probe
+        assert mock_list.call_count == 3  # candidate fetch + empty sync refill + empty backfill
         mock_delete.assert_not_awaited()
         mock_delete_unbound.assert_awaited_once()
         mock_count.assert_awaited_once()
@@ -1054,6 +1104,64 @@ class TestListDeploymentsSynced:
         assert [row.resource_key for row, _, _ in accepted] == ["rk-good"]
         mock_delete.assert_awaited_once_with(db, deployment_owner_pairs=[(owner, stale.id)])
         mock_delete_unbound.assert_awaited_once()
+        mock_count.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=2)
+    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_backfills_page_with_unverified_local_rows_after_sync_rounds(
+        self,
+        mock_list,
+        mock_fetch,
+        mock_delete,
+        mock_delete_unbound,
+        mock_count_attachments,
+        mock_count,
+    ):
+        """When sync rounds leave the page short, local rows backfill without provider checks."""
+        self._sync_settings.deployment_list_sync_max_rounds = 1
+        owner = uuid4()
+        good = _mock_deployment_row("rk-good", user_id=owner)
+        stale = _mock_deployment_row("rk-stale", user_id=owner)
+        backfill = _mock_deployment_row("rk-backfill", user_id=owner)
+        mock_list.side_effect = [
+            [(good, 0, []), (stale, 0, [])],  # sync round
+            [(backfill, 3, [])],  # unverified backfill
+        ]
+        mock_fetch.return_value = ({"rk-good"}, _mock_provider_view([SimpleNamespace(id="rk-good")]))
+        mock_count_attachments.return_value = {good.id: 0}
+        db = _mock_async_db()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, _, provider_data = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=_NoSnapshotBindingMapper(),
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=db,
+            page=1,
+            size=2,
+            deployment_type=None,
+        )
+
+        assert [row.resource_key for row, _, _ in accepted] == ["rk-good", "rk-backfill"]
+        assert accepted[1][1] == 3  # backfill keeps local attachment count
+        assert "rk-backfill" not in provider_data
+        mock_delete.assert_awaited_once_with(db, deployment_owner_pairs=[(owner, stale.id)])
+        # Binding sync runs before backfill, so only provider-confirmed rows are targeted.
+        mock_delete_unbound.assert_awaited_once()
+        assert mock_delete_unbound.await_args.kwargs["deployment_ids"] == [good.id]
+        assert mock_list.call_count == 2
+        backfill_call = mock_list.call_args_list[1]
+        assert backfill_call.kwargs["offset"] is None
+        assert backfill_call.kwargs["cursor_created_at"] == stale.created_at
+        assert backfill_call.kwargs["cursor_exclude_id"] == stale.id
+        assert backfill_call.kwargs["limit"] == 1
         mock_count.assert_awaited_once()
 
 
@@ -2912,6 +3020,26 @@ class TestDeploymentCrud:
         assert "deployment.id" in statement_text
 
     @pytest.mark.asyncio
+    async def test_list_deployments_page_applies_deployment_type_filter(self):
+        from langflow.api.v1.mappers.deployments.helpers import DeploymentType
+        from langflow.services.database.models.deployment.crud import list_deployments_page
+
+        db = _CaptureDb(_FakeAllResult([]))
+
+        rows = await list_deployments_page(
+            db,
+            user_id=uuid4(),
+            deployment_provider_account_id=uuid4(),
+            offset=0,
+            limit=10,
+            deployment_type=DeploymentType.AGENT,
+        )
+
+        assert rows == []
+        statement_text = str(db.statements[0]).lower()
+        assert "deployment_type" in statement_text
+
+    @pytest.mark.asyncio
     async def test_list_deployments_page_rejects_offset_with_seek_cursor(self):
         from langflow.services.database.models.deployment.crud import list_deployments_page
 
@@ -2924,6 +3052,18 @@ class TestDeploymentCrud:
                 limit=10,
                 cursor_created_at=datetime.now(timezone.utc),
                 cursor_exclude_id=uuid4(),
+            )
+
+    @pytest.mark.asyncio
+    async def test_list_deployments_page_requires_offset_or_seek_cursor(self):
+        from langflow.services.database.models.deployment.crud import list_deployments_page
+
+        with pytest.raises(ValueError, match="either offset or cursor_created_at"):
+            await list_deployments_page(
+                _CaptureDb(_FakeAllResult([])),
+                user_id=uuid4(),
+                deployment_provider_account_id=uuid4(),
+                limit=10,
             )
 
     @pytest.mark.asyncio
@@ -2948,6 +3088,23 @@ class TestDeploymentCrud:
         assert "delete from deployment" in deployment_delete
         assert "user_id" in deployment_delete
         assert "id" in deployment_delete
+
+    @pytest.mark.asyncio
+    async def test_delete_deployments_by_owner_and_ids_unknown_rowcount(self):
+        from langflow.services.database.models.deployment.crud import (
+            UNKNOWN_DELETE_COUNT,
+            delete_deployments_by_owner_and_ids,
+        )
+
+        db = _CaptureDb(SimpleNamespace(rowcount=None))
+
+        deleted = await delete_deployments_by_owner_and_ids(
+            db,
+            deployment_owner_pairs=[(uuid4(), uuid4())],
+        )
+
+        assert deleted is UNKNOWN_DELETE_COUNT
+        assert not isinstance(deleted, int)
 
 
 class TestFlowVersionDeploymentAttachmentCrud:
