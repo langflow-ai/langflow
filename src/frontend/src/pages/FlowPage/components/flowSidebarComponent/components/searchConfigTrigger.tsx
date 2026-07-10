@@ -23,6 +23,7 @@ export const SearchConfigTrigger = ({
           onClick={() => setShowConfig(!showConfig)}
           className="hover:text-primary text-muted-foreground"
           style={{ padding: "0px" }}
+          aria-label={t("sidebar.componentSettings")}
         >
           <ForwardedIconComponent name="Settings2" className="h-4 w-4" />
         </Button>

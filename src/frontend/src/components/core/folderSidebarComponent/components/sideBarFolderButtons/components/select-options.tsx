@@ -52,16 +52,17 @@ export const SelectOptions = ({
           styleClasses="z-50"
         >
           <SelectTrigger
-            className="w-fit"
+            className="h-6 w-6 min-h-[24px] min-w-[24px]"
             id={`options-trigger-${item.name}`}
             data-testid={
               "more-options-button" + `_${convertTestName(item?.name ?? "")}`
             }
+            aria-label={t("folder.optionsFor", { name: item.name })}
           >
             <IconComponent
               name={"MoreHorizontal"}
               className={cn(
-                `w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:block group-hover/menu-button:text-foreground`,
+                `w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:block group-hover/menu-button:text-foreground group-focus-within/menu-button:block group-focus-within/menu-button:text-foreground`,
                 checkPathName(item.id!) ? "block" : "hidden",
               )}
             />

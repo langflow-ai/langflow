@@ -4,9 +4,14 @@ import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
+import {
+  appendErrorSuggestion,
+  getRequiredFieldError,
+} from "@/utils/authErrorMessages";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -22,6 +27,7 @@ import type {
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const { password, username } = inputState;
 
@@ -55,16 +61,40 @@ export default function LoginPage(): JSX.Element {
       onError: (error) => {
         setErrorData({
           title: t("errors.signin"),
-          list: [error["response"]["data"]["detail"]],
+          list: [
+            appendErrorSuggestion(
+              extractApiErrorMessage(
+                error as Parameters<typeof extractApiErrorMessage>[0],
+                t("errors.signin"),
+              ),
+              t("errors.signinSuggestion", {
+                defaultValue:
+                  "Check your username and password, then try again.",
+              }),
+            ),
+          ],
         });
       },
     });
   }
 
+  const usernameError = getRequiredFieldError(
+    submitAttempted,
+    username,
+    t("auth.usernameRequired"),
+  );
+  const passwordError = getRequiredFieldError(
+    submitAttempted,
+    password,
+    t("auth.passwordRequired"),
+  );
+
   return (
     <Form.Root
+      onInvalidCapture={() => setSubmitAttempted(true)}
       onSubmit={(event) => {
-        if (password === "") {
+        setSubmitAttempted(true);
+        if (username.trim() === "" || password.trim() === "") {
           event.preventDefault();
           return;
         }
@@ -85,36 +115,57 @@ export default function LoginPage(): JSX.Element {
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
-              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+              <label
+                htmlFor="login-username"
+                className={`flex items-center gap-1 overflow-hidden ${
+                  usernameError ? "label-invalid" : ""
+                }`}
+              >
                 <span className="truncate">{t("auth.usernameLabel")}</span>
                 <span className="shrink-0 font-medium text-destructive">*</span>
-              </Form.Label>
+              </label>
 
-              <Form.Control asChild>
-                <Input
-                  type="username"
-                  allowAutofill
-                  onChange={({ target: { value } }) => {
-                    handleInput({ target: { name: "username", value } });
-                  }}
-                  value={username}
-                  className="w-full"
-                  required
-                  placeholder={t("auth.usernamePlaceholder")}
-                />
-              </Form.Control>
+              <Input
+                id="login-username"
+                name="username"
+                type="text"
+                allowAutofill
+                autoComplete="username"
+                onChange={({ target: { value } }) => {
+                  handleInput({ target: { name: "username", value } });
+                }}
+                value={username}
+                className="w-full"
+                required
+                aria-describedby={
+                  usernameError ? "login-username-error" : undefined
+                }
+                aria-invalid={Boolean(usernameError)}
+                placeholder={t("auth.usernamePlaceholder")}
+              />
 
-              <Form.Message match="valueMissing" className="field-invalid">
-                {t("auth.usernameRequired")}
-              </Form.Message>
+              {usernameError && (
+                <p
+                  id="login-username-error"
+                  role="alert"
+                  className="field-invalid"
+                >
+                  {usernameError}
+                </p>
+              )}
             </Form.Field>
           </div>
           <div className="mb-3 w-full">
             <Form.Field name="password">
-              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+              <label
+                htmlFor="form-login-password"
+                className={`flex items-center gap-1 overflow-hidden ${
+                  passwordError ? "label-invalid" : ""
+                }`}
+              >
                 <span className="truncate">{t("auth.passwordLabel")}</span>
                 <span className="shrink-0 font-medium text-destructive">*</span>
-              </Form.Label>
+              </label>
 
               <InputComponent
                 onChange={(value) => {
@@ -125,13 +176,26 @@ export default function LoginPage(): JSX.Element {
                 allowAutofill
                 password={true}
                 required
+                id="login-password"
+                inputProps={{
+                  "aria-describedby": passwordError
+                    ? "login-password-error"
+                    : undefined,
+                  "aria-invalid": Boolean(passwordError) || undefined,
+                }}
                 placeholder={t("auth.passwordPlaceholder")}
                 className="w-full"
               />
 
-              <Form.Message className="field-invalid" match="valueMissing">
-                {t("auth.passwordRequired")}
-              </Form.Message>
+              {passwordError && (
+                <p
+                  id="login-password-error"
+                  role="alert"
+                  className="field-invalid"
+                >
+                  {passwordError}
+                </p>
+              )}
             </Form.Field>
           </div>
           <div className="w-full">

@@ -12,7 +12,7 @@ import orjson
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import (
     add_code_field_to_build_config,
@@ -24,6 +24,7 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.interface.components import component_cache
 from lfx.log.logger import logger
+from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
 from lfx.utils.flow_validation import (
@@ -440,6 +441,36 @@ async def simple_run_flow_task(
         return None
 
 
+def _v1_run_response(response: RunResponse) -> JSONResponse:
+    """Serialize a RunResponse with content_blocks projected to the v1 shape.
+
+    The /run result holds Messages whose content_blocks serialize through the
+    shared (v2) Message serializer, so project them at this v1 boundary to keep
+    the release-1.11.0 wire shape. The live objects and the v2 path are untouched.
+    """
+    return JSONResponse(content=project_payload_to_v1(jsonable_encoder(response)))
+
+
+def _project_run_event(value):
+    """Project a /run stream event's content_blocks to the v1 shape.
+
+    Covers add_message events and the final ``end`` result (which nests messages)
+    before they reach a v1 client. The v2 path drains a different queue and never
+    passes through here. The substring guard skips events that carry no
+    content_blocks (tokens, ...).
+    """
+    if not isinstance(value, (bytes, bytearray)):
+        return value
+    raw = value.decode("utf-8")
+    if "content_blocks" not in raw:
+        return value
+    try:
+        event = json.loads(raw.rstrip("\n"))
+    except (ValueError, TypeError):
+        return value
+    return (json.dumps(project_payload_to_v1(event)) + "\n\n").encode("utf-8")
+
+
 async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
     """Consumes events from a queue and yields them to the client while tracking timing metrics.
 
@@ -465,7 +496,7 @@ async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio
         if value is None:
             break
         get_time = time.time()
-        yield value
+        yield _project_run_event(value)
         get_time_yield = time.time()
         client_consumed_queue.put_nowait(event_id)
         await logger.adebug(
@@ -744,7 +775,7 @@ async def _run_flow_internal(
         )
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
-    return result
+    return _v1_run_response(result)
 
 
 @router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
@@ -932,7 +963,14 @@ async def webhook_events_stream(
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=SSE_HEARTBEAT_TIMEOUT_SECONDS)
                     event_type = event["event"]
-                    event_data = json.dumps(event["data"])
+                    payload = event["data"]
+                    # add_message carries message.model_dump(), which holds the new
+                    # content_blocks union at both the top level and the nested Data
+                    # mirror. Project both to the v1 shape for this v1 SSE, matching
+                    # the build stream and /run.
+                    if event_type == "add_message":
+                        payload = project_payload_to_v1(payload)
+                    event_data = json.dumps(payload)
                     yield f"event: {event_type}\ndata: {event_data}\n\n"
                 except asyncio.TimeoutError:
                     yield f"event: heartbeat\ndata: {json.dumps({'timestamp': time.time()})}\n\n"
@@ -1185,7 +1223,7 @@ async def experimental_run_flow(
     except (RuntimeError, ValueError, OSError):
         await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
-    return RunResponse(outputs=task_result, session_id=session_id)
+    return _v1_run_response(RunResponse(outputs=task_result, session_id=session_id))
 
 
 @router.post(

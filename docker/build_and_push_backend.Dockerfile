@@ -8,7 +8,11 @@
 ################################
 # BUILDER
 ################################
-FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
+FROM ghcr.io/astral-sh/uv:latest AS uv_installer
+FROM registry.access.redhat.com/ubi10/python-314-minimal AS builder
+USER root
+COPY --from=uv_installer /uv /usr/local/bin/uv
+COPY --from=uv_installer /uvx /usr/local/bin/uvx
 
 WORKDIR /app
 
@@ -16,15 +20,12 @@ WORKDIR /app
 ENV RUSTFLAGS='--cfg reqwest_unstable'
 
 # Install build dependencies
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y \
-        build-essential \
+RUN microdnf install -y tar xz \
+        gcc gcc-c++ make python3.14-devel \
         gcc \
         git \
         curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && microdnf clean all
 
 # Copy only backend source (excludes frontend)
 COPY ./src/backend ./src/backend
@@ -35,6 +36,9 @@ COPY ./src/sdk ./src/sdk
 # Using uv pip instead of uv sync to avoid workspace complexities
 RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV BASH_ENV="" \
+    ENV="" \
+    PROMPT_COMMAND=""
 ENV VIRTUAL_ENV="/app/.venv"
 
 # Install langflow-base with all extras except dev (which includes Playwright).
@@ -52,25 +56,23 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 # RUNTIME
 ################################
-FROM python:3.14-slim-trixie AS runtime
-
+FROM registry.access.redhat.com/ubi10/python-314-minimal AS runtime
+USER root
 # Install minimal runtime dependencies
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y \
+RUN microdnf update -y \
+    && microdnf install -y tar xz \
         curl \
         git \
-        libpq5 \
+        libpq \
         gnupg \
-        xz-utils \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+        xz tar \
+    && microdnf clean all
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # Install Node.js (required for npx-based MCP stdio servers)
-RUN ARCH=$(dpkg --print-architecture) \
-    && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
-       elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
+RUN ARCH=$(uname -m) \
+    && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
+       elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
                     | sed -nE "s/.*node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-${NODE_ARCH}\.tar\.xz.*/\1/p" \
@@ -85,6 +87,9 @@ RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
 # Copy only the virtual environment
 COPY --from=builder --chown=1000:0 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV BASH_ENV="" \
+    ENV="" \
+    PROMPT_COMMAND=""
 
 # Create home directory and ensure proper ownership
 # The user needs write access to /app/data (home) and /app (workdir).
@@ -111,5 +116,6 @@ WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
+ENV LANGFLOW_AUTO_LOGIN=false
 
 CMD ["python", "-m", "langflow", "run", "--backend-only"]

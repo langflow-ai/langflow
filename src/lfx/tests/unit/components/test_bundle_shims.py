@@ -199,6 +199,15 @@ def test_walk_skip_detects_every_shim() -> None:
     assert detected == {d.name for d in SHIM_DIRS}
 
 
+def test_component_walk_skip_includes_compat_shims() -> None:
+    """Compatibility-only packages stay importable but do not become palette categories."""
+    from lfx.interface.components import _discover_component_skip_dirs
+
+    detected = _discover_component_skip_dirs([str(COMPONENTS_DIR)])
+    assert {d.name for d in SHIM_DIRS}.issubset(detected)
+    assert "knowledge_bases" in detected
+
+
 # ---------------------------------------------------------------------------
 # Mechanism tests against a synthetic shim (hermetic)
 # ---------------------------------------------------------------------------

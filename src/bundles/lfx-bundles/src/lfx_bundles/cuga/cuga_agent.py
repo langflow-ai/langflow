@@ -45,7 +45,19 @@ def set_advanced_true(component_input):
     return component_input
 
 
-MODEL_PROVIDERS_LIST = ["OpenAI"]
+MODEL_PROVIDERS_LIST = [provider for provider in ("OpenAI",) if provider in MODEL_PROVIDERS_DICT]
+DEFAULT_MODEL_PROVIDER = MODEL_PROVIDERS_LIST[0] if MODEL_PROVIDERS_LIST else "Custom"
+
+
+def _provider_input_fields() -> list[Any]:
+    return [
+        input_field for provider in MODEL_PROVIDERS_LIST for input_field in MODEL_PROVIDERS_DICT[provider]["inputs"]
+    ]
+
+
+def _provider_options_metadata() -> list[dict[str, str]]:
+    return [MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA] + [{"icon": "brain"}]
+
 
 _CUGA_CODE_AGENT_GUARD_ATTR = "_langflow_code_agent_guard_installed"
 
@@ -110,12 +122,12 @@ class CugaComponent(ToolCallingAgentComponent):
             display_name="Model Provider",
             info="The provider of the language model that the agent will use to generate responses.",
             options=[*MODEL_PROVIDERS_LIST, "Custom"],
-            value="OpenAI",
+            value=DEFAULT_MODEL_PROVIDER,
             real_time_refresh=True,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
+            options_metadata=_provider_options_metadata(),
         ),
-        *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
+        *_provider_input_fields(),
         MultilineInput(
             name="instructions",
             display_name="Instructions",
@@ -496,13 +508,11 @@ class CugaComponent(ToolCallingAgentComponent):
                 raise TypeError(msg)
             self.tools.append(current_date_tool)
 
-        # --- ADDED LOGGING START ---
         logger.debug("[CUGA] Retrieved agent requirements: LLM, chat history, and tools.")
         logger.debug(f"[CUGA] LLM model: {self.model_name}")
         logger.debug(f"[CUGA] Number of chat history messages: {len(self.chat_history)}")
         logger.debug(f"[CUGA] Tools available: {[tool.name for tool in self.tools]}")
         logger.debug(f"[CUGA] metadata: {[tool.metadata for tool in self.tools]}")
-        # --- ADDED LOGGING END ---
 
         return llm_model, self.chat_history, self.tools
 
@@ -522,9 +532,8 @@ class CugaComponent(ToolCallingAgentComponent):
         logger.debug(f"[CUGA] input_value type: {type(self.input_value)}")
         logger.debug(f"[CUGA] input_value id: {getattr(self.input_value, 'id', None)}")
 
-        # Scope by flow_id (issue #13059): the ad-hoc MemoryComponent used previously
-        # had no _vertex, so it could not see the running flow's flow_id and emitted
-        # an unscoped query. The helper also honors n_messages == 0 as "disabled".
+        # Scope by flow_id (issue #13059): the previous ad-hoc MemoryComponent had no _vertex,
+        # so it emitted an unscoped query. The helper also honors n_messages == 0 as "disabled".
         messages = await aget_agent_chat_history(
             session_id=str(self.graph.session_id),
             flow_id=getattr(self.graph, "flow_id", None),

@@ -18,6 +18,7 @@ import { useStreamingMessage } from "../hooks/use-streaming-message";
 import {
   getContentBlockLoadingState,
   getContentBlockState,
+  resolveContentBlockLayout,
 } from "../utils/content-blocks";
 import { convertFiles } from "../utils/convert-files";
 import { formatSeconds } from "../utils/format";
@@ -128,6 +129,21 @@ export const BotMessage = memo(
         ? persistedDuration
         : liveDisplayTime;
 
+    // A message with token usage should still surface the MessageMetadata
+    // pill even when no duration was recorded (e.g. v2 runs that didn't
+    // emit ``build_duration``, historical messages restored from DB).
+    // Without this the user would never see "X tokens" for those.
+    const totalTokens = chat.properties?.usage?.total_tokens;
+    const hasUsage = typeof totalTokens === "number" && totalTokens > 0;
+    const showMetadata = displayTime > 0 || hasUsage;
+
+    const { displayedContentBlocks, showBubbleBody } =
+      resolveContentBlockLayout(
+        chat.content_blocks ?? [],
+        chat.message?.toString(),
+        Boolean(editMessage),
+      );
+
     return (
       <>
         <div className="w-full word-break-break-word mt-2">
@@ -148,7 +164,10 @@ export const BotMessage = memo(
                   }
                 >
                   <div className="flex h-5 w-5 items-center justify-center">
-                    <LangflowLogo className="h-4 w-4 text-black" />
+                    <LangflowLogo
+                      className="h-4 w-4 text-black"
+                      aria-hidden="true"
+                    />
                   </div>
                 </div>
               )}
@@ -169,13 +188,15 @@ export const BotMessage = memo(
                       <span>
                         {t("chat.runningStatus")} {formatSeconds(displayTime)}
                       </span>
-                    ) : !thinkingActive && displayTime > 0 ? (
+                    ) : !thinkingActive && showMetadata ? (
                       <>
-                        <span className="text-muted-foreground">
-                          {t("chat.finishedIn")}
-                        </span>
+                        {displayTime > 0 && (
+                          <span className="text-muted-foreground">
+                            {t("chat.finishedIn")}
+                          </span>
+                        )}
                         <MessageMetadata
-                          duration={displayTime}
+                          duration={displayTime > 0 ? displayTime : undefined}
                           usage={chat.properties?.usage ?? undefined}
                           timestamp={chat.timestamp}
                         />
@@ -184,11 +205,11 @@ export const BotMessage = memo(
                   </span>
                 </div>
 
-                {((chat.content_blocks && chat.content_blocks.length > 0) ||
+                {(displayedContentBlocks.length > 0 ||
                   (isBuilding && lastMessage)) && (
                   <ContentBlockDisplay
                     playgroundPage={playgroundPage}
-                    contentBlocks={chat.content_blocks || []}
+                    contentBlocks={displayedContentBlocks}
                     isLoading={getContentBlockLoadingState(
                       chat,
                       isBuilding,
@@ -200,51 +221,54 @@ export const BotMessage = memo(
                   />
                 )}
 
-                <div className="form-modal-chat-text-position flex-grow mt-2">
-                  <div className="form-modal-chat-text">
-                    <div className="flex w-full flex-col">
-                      <div
-                        className="flex w-full flex-col dark:text-white"
-                        data-testid="div-chat-message"
-                      >
+                {showBubbleBody && (
+                  <div className="form-modal-chat-text-position flex-grow mt-2">
+                    <div className="form-modal-chat-text">
+                      <div className="flex w-full flex-col">
                         <div
-                          data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
-                          className="flex w-full flex-col"
+                          className="flex w-full flex-col dark:text-white"
+                          data-testid="div-chat-message"
                         >
-                          {(chatMessage === "" || (isEmpty && !isStreaming)) &&
-                          isBuilding &&
-                          lastMessage ? (
-                            <IconComponent
-                              name="MoreHorizontal"
-                              className="h-8 w-8 animate-pulse"
-                            />
-                          ) : (
-                            <div className="w-full">
-                              {editMessage ? (
-                                <EditMessageField
-                                  key={`edit-message-${chat.id}`}
-                                  message={decodedMessage}
-                                  onEdit={handleEditMessage}
-                                  onCancel={() => setEditMessage(false)}
-                                />
-                              ) : (
-                                <>
-                                  <CustomMarkdownField
-                                    isAudioMessage={isAudioMessage}
-                                    chat={chat}
-                                    isEmpty={isEmpty && !isStreaming}
-                                    chatMessage={decodedMessage}
-                                    editedFlag={editedFlag}
+                          <div
+                            data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
+                            className="flex w-full flex-col"
+                          >
+                            {(chatMessage === "" ||
+                              (isEmpty && !isStreaming)) &&
+                            isBuilding &&
+                            lastMessage ? (
+                              <IconComponent
+                                name="MoreHorizontal"
+                                className="h-8 w-8 animate-pulse"
+                              />
+                            ) : (
+                              <div className="w-full">
+                                {editMessage ? (
+                                  <EditMessageField
+                                    key={`edit-message-${chat.id}`}
+                                    message={decodedMessage}
+                                    onEdit={handleEditMessage}
+                                    onCancel={() => setEditMessage(false)}
                                   />
-                                </>
-                              )}
-                            </div>
-                          )}
+                                ) : (
+                                  <>
+                                    <CustomMarkdownField
+                                      isAudioMessage={isAudioMessage}
+                                      chat={chat}
+                                      isEmpty={isEmpty && !isStreaming}
+                                      chatMessage={decodedMessage}
+                                      editedFlag={editedFlag}
+                                    />
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from langchain_chroma import Chroma
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from lfx.base.vectorstores.user_scoping import runtime_user_id, scoped_collection_name
 from lfx.base.vectorstores.utils import chroma_collection_to_data
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
 from lfx.schema.data import Data
@@ -111,6 +112,13 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         # Check persist_directory and expand it if it is a relative path
         persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None
 
+        # Scope the collection name by runtime user for local stores so two users
+        # sharing the same persist_directory + collection_name cannot read each
+        # other's documents. Remote/server-backed stores are left untouched.
+        collection_name = self.collection_name
+        if client is None:
+            collection_name = scoped_collection_name(collection_name, runtime_user_id(self))
+
         from chromadb.errors import ChromaError
 
         try:
@@ -118,7 +126,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 persist_directory=persist_directory,
                 client=client,
                 embedding_function=self.embedding,
-                collection_name=self.collection_name,
+                collection_name=collection_name,
                 **chroma_langchain_collection_kwargs(),
             )
         except Exception as e:
