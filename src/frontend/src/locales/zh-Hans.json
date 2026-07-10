@@ -683,6 +683,7 @@
   "fileManager.uploadOrImport": "上传或导入文件",
   "files.cancel": "取消",
   "files.columnModified": "已修改",
+  "files.columnActions": "操作",
   "files.columnName": "名称",
   "files.columnSize": "大小",
   "files.columnType": "类型",
