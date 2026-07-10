@@ -116,6 +116,21 @@ describe("ProviderListItem", () => {
 
       expect(onSelect).toHaveBeenCalledWith(mockEnabledProvider);
     });
+
+    it("should call onSelect from keyboard activation", async () => {
+      const onSelect = jest.fn();
+      const user = userEvent.setup();
+
+      render(<ProviderListItem {...defaultProps} onSelect={onSelect} />);
+
+      const item = screen.getByRole("button", { name: /OpenAI/i });
+      await user.tab();
+      expect(item).toHaveFocus();
+
+      await user.keyboard("{Enter}");
+
+      expect(onSelect).toHaveBeenCalledWith(mockEnabledProvider);
+    });
   });
 
   describe("Enabled/Disabled State", () => {

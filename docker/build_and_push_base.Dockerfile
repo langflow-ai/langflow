@@ -127,6 +127,18 @@ ENV BASH_ENV="" \
 # /app/langflow/secret_key. See https://github.com/langflow-ai/langflow/issues/10437
 RUN mkdir -p /app/langflow && chown -R 1000:0 /app/langflow && chmod -R g+rwX /app/langflow
 
+# Give the runtime user (uid 1000) a writable npm cache. The image ships Node so
+# users can spawn stdio MCP servers via `npx`, but on the ubi10 base
+# HOME=/opt/app-root/src is not owned by uid 1000, so npx otherwise fails with
+# `EACCES` on ~/.npm/_cacache and stdio MCP servers never list any tools. Pin
+# npm's cache to a uid-1000-owned dir (immune to the base image's HOME) and hand
+# ownership of the default HOME cache to the runtime user as a fallback.
+# See https://github.com/langflow-ai/langflow/pull/13893 (ubi10 base change).
+ENV NPM_CONFIG_CACHE=/app/.npm
+RUN mkdir -p /app/.npm /opt/app-root/src/.npm \
+    && chown -R 1000:0 /app/.npm /opt/app-root/src/.npm \
+    && chmod -R g+rwX /app/.npm /opt/app-root/src/.npm
+
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
 LABEL org.opencontainers.image.licenses=MIT
