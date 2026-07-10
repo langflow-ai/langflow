@@ -53,6 +53,8 @@
   "alerts.clearNotifications": "通知をクリア",
   "alerts.closeNotifications": "通知を閉じる",
   "apiKey.expirationDate": "有効期限",
+  "apiKey.copy": "APIキーをコピー",
+  "apiKey.generated": "生成されたAPIキー",
   "apiKey.expirationPlaceholder": "有効期限なし",
   "apiKey.expiry.1month": "今日から1ヶ月後",
   "apiKey.expiry.1week": "今日から1週間後",
@@ -269,6 +271,7 @@
   "common.hide": "非表示",
   "common.langflowLogo": "Langflowのロゴ",
   "common.langflowLogoDark": "Langflow ロゴ（ダーク）",
+  "common.loading": "読み込み中",
   "common.langflowLogoLight": "Langflow ロゴライト",
   "common.optional": "オプション",
   "common.retry": "再試行",
@@ -1894,6 +1897,10 @@
   "success.versionRestored": "復元されたバージョン",
   "success.versionSaved": "バージョンが保存されました",
   "table.addRow": "新しい行を追加する",
+  "table.dataTable": "データテーブル",
+  "table.endFocusBoundary": "{{tableLabel}} の終了フォーカス境界",
+  "table.rows": "{{tableLabel}} の行",
+  "table.startFocusBoundary": "{{tableLabel}} の開始フォーカス境界",
   "table.deleteSelected": "選択した項目を削除する",
   "table.duplicateSelected": "選択した項目を複製する",
   "table.firstPage": "最初のページ",
@@ -2098,5 +2105,7 @@
   "flows.moreOptions": "More options for {{name}}",
   "folder.optionsFor": "Options for {{name}}",
   "paginator.pageLabel": "Page",
-  "flow.flowSettings": "Flow settings"
+  "flow.flowSettings": "Flow settings",
+  "files.actionsMenu": "{{name}} のファイル操作",
+  "mcp.servers.actionsMenu": "{{name}} の操作"
 }
