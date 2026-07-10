@@ -1,0 +1,46 @@
+import Admonition from '@theme/Admonition';
+
+export const GraduatedBundleInstall = ({ packageName }) => {
+  const providers = {
+    'amazon':             { name: 'Amazon Bedrock',  coreSupport: true  },
+    'anthropic':          { name: 'Anthropic',       coreSupport: true  },
+    'arxiv':              { name: 'arXiv Search',    coreSupport: false },
+    'cohere':             { name: 'Cohere',          coreSupport: true  },
+    'datastax':           { name: 'DataStax',        coreSupport: false },
+    'docling':            { name: 'Docling',         coreSupport: false },
+    'duckduckgo':         { name: 'DuckDuckGo Search', coreSupport: false },
+    'empiriolabs':        { name: 'EmpirioLabs',     coreSupport: false },
+    'exa':                { name: 'Exa',             coreSupport: false },
+    'firecrawl':          { name: 'Firecrawl',       coreSupport: false },
+    'ibm':                { name: 'IBM',             coreSupport: true  },
+    'nextplaid':          { name: 'NextPlaid',       coreSupport: false },
+    'openai':             { name: 'OpenAI',          coreSupport: true  },
+    'openai-compatible':  { name: 'OpenAI Compatible', coreSupport: false },
+    'oracle':             { name: 'Oracle',          coreSupport: false },
+    'paddle':             { name: 'PaddleOCR',       coreSupport: false },
+    'vllm':               { name: 'vLLM',            coreSupport: false },
+  };
+
+  const { name, coreSupport } = providers[packageName] ?? { name: packageName, coreSupport: false };
+
+  return (
+    <Admonition type="tip">
+      {coreSupport && (
+        <p>
+          Basic {name} support is available in all Langflow installations through the core <strong>Language Model</strong> component.
+          This bundle adds an enhanced {name} component with additional provider-specific parameters.
+        </p>
+      )}
+      <p>
+        If you installed <code>lfx</code> directly (not as part of <code>langflow</code>), install the {name} bundle separately:
+      </p>
+      <ol>
+        <li>Run <code>uv pip install lfx-{packageName}</code>.</li>
+        <li>Restart Langflow.</li>
+        <li>To confirm the bundle loaded, run <code>lfx extension list</code>.</li>
+      </ol>
+      <p>If you installed Langflow with <code>uv pip install langflow</code>, these bundle components are already included.</p>
+      <p>For more information, see <a href="./lfx-install#install-with-bundle-components">Install LFX with bundle components</a>.</p>
+    </Admonition>
+  );
+};

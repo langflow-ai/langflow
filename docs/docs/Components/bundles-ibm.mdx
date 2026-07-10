@@ -8,28 +8,14 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
 import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="ibm" />
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
 The **IBM** bundle provides access to IBM watsonx.ai models for text and embedding generation, plus an IBM Db2 Vector Store.
 These components require an IBM watsonx.ai deployment with API credentials, and/or a reachable IBM Db2 instance with the `ibm-db` driver.
-
-## Install the IBM bundle
-
-The **IBM** bundle is included in the `lfx-ibm` Extension bundle, which is installed automatically as part of `uv pip install langflow`.
-
-If you need to install it separately, run:
-
-```bash
-uv pip install lfx-ibm
-uv run langflow run
-```
-
-To verify the bundle is loaded in your environment:
-
-```bash
-lfx extension list
-```
 
 ## IBM watsonx.ai
 
