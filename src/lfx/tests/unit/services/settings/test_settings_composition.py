@@ -83,6 +83,7 @@ EXPECTED_FIELDS = {
     "mcp_server_enabled",
     "mcp_server_enable_progress_notifications",
     "add_projects_to_mcp_servers",
+    "skip_mcp_auto_init",
     "mcp_composer_enabled",
     "mcp_composer_version",
     # TelemetrySettings
@@ -361,6 +362,7 @@ def test_yaml_round_trip():
         ("LANGFLOW_PROMETHEUS_ENABLED", "true", "prometheus_enabled", True),
         ("LANGFLOW_PROMETHEUS_PORT", "9999", "prometheus_port", 9999),
         ("LANGFLOW_MCP_SERVER_ENABLED", "false", "mcp_server_enabled", False),
+        ("LANGFLOW_SKIP_MCP_AUTO_INIT", "true", "skip_mcp_auto_init", True),
         ("LANGFLOW_DO_NOT_TRACK", "true", "do_not_track", True),
         ("LANGFLOW_DEV", "true", "dev", True),
         ("LANGFLOW_BACKEND_ONLY", "true", "backend_only", True),

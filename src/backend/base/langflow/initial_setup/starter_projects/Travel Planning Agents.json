@@ -504,7 +504,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",
@@ -788,7 +788,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "markitdown",
@@ -3291,7 +3291,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "lfx",
@@ -3609,10 +3609,10 @@
             "description": "# ✈️ Travel Planning Agents\n\nA team of three **Agents** plans a trip end to end: one researches the destination on the web, one drafts the itinerary, and one works out the budget.\n\n## Setup\nAdd your LLM key on each of the three **Agents** (Model dropdown). **Web Search**, **URL** and **Calculator** tools need no key.\n\n## How it works\n1. **Chat Input → Research Agent** (+ **Web Search**) - gathers current info about the destination.\n2. **→ Itinerary Agent** (+ **URL**) - reads relevant pages and drafts the plan.\n3. **→ Budget Agent** (+ **Calculator**) - estimates costs and finalizes the trip.\n4. **→ Chat Output** - the complete travel plan.\n\n## Run\nOpen **Playground**, describe your trip (destination, dates, budget, interests), and run.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.travel_planning_agents.fcc662a4",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.travel_planning_agents.fcc662a4"
+            }
           },
           "type": "note"
         },

@@ -2949,7 +2949,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": "4.15.0"
                   },
                   {
                     "name": "lfx",
@@ -3267,10 +3267,10 @@
             "description": "# 🔗 Sequential Tasks Agents\n\nThree agents working in sequence - each does one task and passes its result to the next.\n\n## Setup\nAdd your LLM key on each **Agent**. The **Web Search** tool needs no key.\n\n## How it works\n1. **Research Agent** (Web Search) - gathers information on your topic.\n2. **Analysis Agent** - analyzes the findings and draws conclusions.\n3. **Writer Agent** - synthesizes research + analysis into a final report.\n\n## Run\nType a topic or question in the chat and run; the final report appears in Chat Output.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.sequential_tasks_agents.4b51b574",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.sequential_tasks_agents.4b51b574"
+            }
           },
           "type": "note"
         },
@@ -3331,7 +3331,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.138.0"
+                    "version": "0.139.0"
                   },
                   {
                     "name": "lfx",

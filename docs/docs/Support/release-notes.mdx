@@ -73,12 +73,19 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
-- AG-UI streaming for the Workflow API
+- AG-UI compatible streaming for the Workflow API
 
     The v2 [Workflow API](/workflow-api) now supports streaming with the [AG-UI (Agent–User Interaction) protocol](https://docs.ag-ui.com/introduction) streaming format.
 
     For more information, see [Workflow API (Beta)](/workflow-api#stream-with-ag-ui).
 
+- IBM watsonx Orchestrate: Python 3.14 compatibility
+
+    The `ibm-watsonx-orchestrate-core` and `ibm-watsonx-orchestrate-clients` packages are upgraded to version 2.12, which supports Python 3.14.
+    IBM watsonx Orchestrate is no longer excluded from Python 3.14 installs.
+
+    For more information, see [Deploy flows on watsonx Orchestrate](/deployment-wxo).
+    
 - NextPlaid multi-vector bundle
 
     The **NextPlaid** bundle adds two new components for ColBERT-style multi-vector retrieval.

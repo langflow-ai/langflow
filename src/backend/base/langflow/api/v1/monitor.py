@@ -227,6 +227,8 @@ async def get_messages(
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    limit: Annotated[int | None, Query(ge=0)] = None,
+    offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[MessageResponse]:
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
@@ -255,8 +257,12 @@ async def get_messages(
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
         if order_by:
-            order_col = getattr(MessageTable, order_by).asc()
+            order_col = getattr(MessageTable, order_by).desc()
             stmt = stmt.order_by(order_col)
+        if limit:
+            stmt = stmt.limit(limit)
+        if offset:
+            stmt = stmt.offset(offset)
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
     except Exception as e:
@@ -520,6 +526,8 @@ async def get_shared_messages(
     source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
     session_id: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    limit: Annotated[int | None, Query(ge=0)] = None,
+    offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[MessageResponse]:
     """Get messages for a shared/public flow, scoped to the authenticated user.
 
@@ -540,8 +548,12 @@ async def get_shared_messages(
         if order_by:
             if order_by not in allowed_order_fields:
                 raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by).asc()
+            order_col = getattr(MessageTable, order_by).desc()
             stmt = stmt.order_by(order_col)
+        if limit:
+            stmt = stmt.limit(limit)
+        if offset:
+            stmt = stmt.offset(offset)
 
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
