@@ -1,6 +1,9 @@
 """Unit tests for component index system."""
 
+import asyncio
 import hashlib
+import threading
+import time
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -8,6 +11,7 @@ import orjson
 import pytest
 from lfx.interface.components import (
     _get_cache_path,
+    _load_components_dynamically,
     _parse_dev_mode,
     _read_component_index,
     _save_generated_index,
@@ -352,6 +356,108 @@ class TestImportLangflowComponents:
         assert "category1" in result["components"]
         # In dev mode, we don't save to cache
         assert not mock_save.called
+
+    async def test_dynamic_load_respects_max_workers(self, monkeypatch):
+        """Test dynamic loading limits concurrent component imports."""
+        monkeypatch.setenv("LANGFLOW_COMPONENT_LOAD_MAX_WORKERS", "1")
+        active_workers = 0
+        max_active_workers = 0
+        worker_lock = threading.Lock()
+
+        def process_module(modname):
+            nonlocal active_workers, max_active_workers
+            with worker_lock:
+                active_workers += 1
+                max_active_workers = max(max_active_workers, active_workers)
+            try:
+                time.sleep(0.02)
+                category = modname.rsplit(".", 1)[-1]
+                return category, {f"{category}_component": {"template": {}}}
+            finally:
+                with worker_lock:
+                    active_workers -= 1
+
+        with (
+            patch("lfx.interface.components._discover_component_skip_dirs", return_value=set()),
+            patch("lfx.interface.components._process_single_module", side_effect=process_module),
+            patch("lfx.interface.components._warm_circular_imports"),
+            patch(
+                "lfx.interface.components.pkgutil.walk_packages",
+                return_value=[
+                    (None, "lfx.components.category1", False),
+                    (None, "lfx.components.category2", False),
+                ],
+            ),
+        ):
+            result = await _load_components_dynamically()
+
+        assert max_active_workers == 1
+        assert set(result) == {"category1", "category2"}
+
+    @pytest.mark.parametrize("value", ["invalid", "0", "-1"])
+    async def test_dynamic_load_warns_and_uses_default_for_invalid_max_workers(self, monkeypatch, value):
+        """Test invalid worker limits fall back to the existing executor."""
+        monkeypatch.setenv("LANGFLOW_COMPONENT_LOAD_MAX_WORKERS", value)
+
+        async def run_inline(func, *args):
+            return func(*args)
+
+        with (
+            patch("lfx.interface.components._discover_component_skip_dirs", return_value=set()),
+            patch("lfx.interface.components._process_single_module") as mock_process,
+            patch("lfx.interface.components._warm_circular_imports"),
+            patch("lfx.interface.components.asyncio.to_thread", side_effect=run_inline) as mock_to_thread,
+            patch("lfx.interface.components.logger.warning") as mock_warning,
+            patch(
+                "lfx.interface.components.pkgutil.walk_packages",
+                return_value=[(None, "lfx.components.category1", False)],
+            ),
+        ):
+            mock_process.return_value = ("category1", {"component": {"template": {}}})
+            result = await _load_components_dynamically()
+
+        assert set(result) == {"category1"}
+        assert mock_to_thread.await_count == 1
+        mock_warning.assert_called_once_with(
+            "Ignoring LANGFLOW_COMPONENT_LOAD_MAX_WORKERS: expected a positive integer"
+        )
+
+    async def test_dynamic_load_cancellation_does_not_block_event_loop(self, monkeypatch):
+        """Test cancellation does not wait for active component imports."""
+        monkeypatch.setenv("LANGFLOW_COMPONENT_LOAD_MAX_WORKERS", "1")
+        worker_started = threading.Event()
+        release_worker = threading.Event()
+
+        def process_module(_modname):
+            worker_started.set()
+            release_worker.wait(timeout=1)
+            return "category1", {"component": {"template": {}}}
+
+        with (
+            patch("lfx.interface.components._discover_component_skip_dirs", return_value=set()),
+            patch("lfx.interface.components._process_single_module", side_effect=process_module),
+            patch("lfx.interface.components._warm_circular_imports"),
+            patch(
+                "lfx.interface.components.pkgutil.walk_packages",
+                return_value=[(None, "lfx.components.category1", False)],
+            ),
+        ):
+            load_task = asyncio.create_task(_load_components_dynamically())
+            for _ in range(100):
+                if worker_started.is_set():
+                    break
+                await asyncio.sleep(0.01)
+            assert worker_started.is_set()
+
+            started_at = time.monotonic()
+            load_task.cancel()
+            try:
+                with pytest.raises(asyncio.CancelledError):
+                    await load_task
+            finally:
+                release_worker.set()
+
+        assert time.monotonic() - started_at < 0.25
 
     async def test_import_with_builtin_index(self, monkeypatch):
         """Test import with valid built-in index."""
