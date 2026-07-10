@@ -3,7 +3,9 @@ title: Manifest reference
 slug: /extensions-manifest
 ---
 
-This page is the reference for the `extension.json` manifest the Langflow Extension loader consumes.
+This page is the reference for the `extension.json` manifest used by manifest-shipping extensions, including curated packages and graduated standalone packages.
+
+The `lfx-bundles` metapackage uses manifest-less discovery through the `lfx.bundles` group and does not use `extension.json`.
 
 The canonical JSON Schema lives at [`https://schemas.langflow.org/extension/v1.json`](https://schemas.langflow.org/extension/v1.json) and is generated from the Pydantic model at [`lfx.extension.manifest.ExtensionManifest`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/extension/manifest.py).
 
@@ -130,6 +132,7 @@ Run `lfx extension validate <path>` to see every error as a structured object wi
 
 ## See also
 
-- [Bundle extensions overview](./extensions-overview)
+- [Extensions overview](./extensions-overview)
 - [Build your first extension](./extensions-quickstart)
+- [About LFX](./lfx-overview)
 - [Extension error codes](./extensions/errors)
