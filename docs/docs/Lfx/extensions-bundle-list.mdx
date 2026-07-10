@@ -24,6 +24,7 @@ These providers ship as their own pip packages, each on its own release cadence.
 | [`docling`](/bundles-docling) (Docling) | `uv pip install lfx-docling` |
 | [`duckduckgo`](/bundles-duckduckgo) (DuckDuckGo) | `uv pip install lfx-duckduckgo` |
 | `empiriolabs` (EmpirioLabs) | `uv pip install lfx-empiriolabs` |
+| [`exa`](/bundles-exa) (Exa) | `uv pip install lfx-exa` |
 | [`firecrawl`](/bundles-firecrawl) (Firecrawl) | `uv pip install lfx-firecrawl` |
 | [`ibm`](/bundles-ibm) (IBM) | `uv pip install lfx-ibm` |
 | `nextplaid` (NextPlaid) | `uv pip install lfx-nextplaid` |
@@ -36,8 +37,9 @@ These providers ship as their own pip packages, each on its own release cadence.
 ## Long-tail bundles (`lfx-bundles`)
 
 These providers ship inside the `lfx-bundles` metapackage.
-Install all of them with `uv pip install lfx-bundles` or `uv pip install "lfx[bundles]"`.
-Install one provider with `uv pip install "lfx-bundles[<bundle>]"`.
+Install one provider (with its SDK dependencies) with `uv pip install "lfx-bundles[<bundle>]"`.
+Install every long-tail provider with `uv pip install "lfx[bundles]"` or `uv pip install "lfx-bundles[all]"`.
+Bare `uv pip install lfx-bundles` registers the provider code only; add a per-provider extra when you need that provider's third-party SDK.
 
 | Bundle | Install command |
 | --- | --- |
@@ -61,7 +63,6 @@ Install one provider with `uv pip install "lfx-bundles[<bundle>]"`.
 | [`cuga`](/bundles-cuga) (CUGA) | `uv pip install "lfx-bundles[cuga]"` |
 | [`deepseek`](/bundles-deepseek) (DeepSeek) | `uv pip install "lfx-bundles[deepseek]"` |
 | [`elastic`](/bundles-elastic) (Elastic) | `uv pip install "lfx-bundles[elastic]"` |
-| [`exa`](/bundles-exa) (Exa) | `uv pip install "lfx-bundles[exa]"` |
 | [`faiss`](/bundles-faiss) (FAISS) | `uv pip install "lfx-bundles[faiss]"` |
 | `git` | `uv pip install "lfx-bundles[git]"` |
 | [`glean`](/bundles-glean) (Glean) | `uv pip install "lfx-bundles[glean]"` |

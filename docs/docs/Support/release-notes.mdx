@@ -69,7 +69,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     - External tooling that reads component type identifiers from raw flow JSON.
     - Custom deployment scripts that install or pin individual component packages.
 
-    For more information, see [Langflow Extensions overview](/extensions-overview).
+    For more information, see [Langflow Extensions overview](./extensions-overview).
 
 - PyTorch components are opt-in by default
 
@@ -100,13 +100,14 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     `uv pip install langflow` is unchanged.
     This only affects users who install `lfx` directly.
 
-    If you install `lfx` directly and your flows use bundle components, you need to install the required bundles in the same environment using `uv pip install lfx-bundles`.
+    If you install `lfx` directly and your flows use bundle components, install the required packages in the same environment.
 
-    45 long-tail providers ship as a single `lfx-bundles` metapackage, and are installed all at once with `uv pip install lfx-bundles`.
-    Six partner providers (OpenAI, Anthropic, Amazon, Cohere, DataStax, and Firecrawl) ship as individual packages, and are installed separately with `uv pip install lfx-<provider>`.
+    About 70 long-tail providers ship in the `lfx-bundles` metapackage.
+    Install one provider with `uv pip install "lfx-bundles[<bundle-name>]"`, or install every long-tail provider with `uv pip install "lfx[bundles]"`.
+    Graduated providers, such as OpenAI, Anthropic, Cohere, and Exa, ship as individual packages and are installed separately with `uv pip install lfx-<provider>`.
 
     All bundles remain included in `uv pip install langflow` as explicit dependencies.
-    For more information, see [Extensions overview](/extensions-overview).
+    For more information, see [Extensions overview](./extensions-overview).
 
 ## 1.10.x
 

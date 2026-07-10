@@ -4,17 +4,11 @@
 
 If your flows use bundle components, install the required packages in the same virtual environment.
 
-Some components require an additional [torch opt-in installation](/components-bundle-components#torch-opt-in).
+Some components require an additional [torch opt-in installation](./components-bundle-components#torch-opt-in).
 
-_Long-tail bundles_ are third-party provider integrations like vector stores or model providers that are shipped together in the `lfx-bundles` package.
+_Long-tail bundles_ are third-party provider integrations like vector stores or model providers that ship together in the `lfx-bundles` package.
 
-_Standalone bundles_ are high-traffic partner providers with their own release cadences, such as OpenAI and Anthropic.
-
-To install all long-tail bundles:
-
-```bash
-uv pip install lfx-bundles
-```
+_Standalone bundles_ are graduated providers with their own release cadences, such as OpenAI, Anthropic, and Exa.
 
 To install one long-tail provider:
 
@@ -22,11 +16,14 @@ To install one long-tail provider:
 uv pip install "lfx-bundles[<bundle>]"
 ```
 
-Alternatively, install LFX and all long-tail bundles together:
+To install every long-tail provider:
 
 ```bash
 uv pip install "lfx[bundles]"
 ```
+
+`lfx[bundles]` is equivalent to `lfx` plus `lfx-bundles[all]`.
+It does **not** install graduated standalone packages such as `lfx-openai`.
 
 To install a standalone provider package:
 
