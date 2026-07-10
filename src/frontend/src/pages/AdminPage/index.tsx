@@ -396,11 +396,14 @@ export default function AdminPage() {
                                     {t("admin.editUserConfirmContent")}
                                   </span>
                                 </ConfirmationModal.Content>
-                                <ConfirmationModal.Trigger>
+                                <ConfirmationModal.Trigger
+                                  ariaLabel={`${t("admin.columnActive")} — ${user.username}`}
+                                  ariaPressed={user.is_active}
+                                >
                                   <div className="flex w-fit">
                                     <CheckBoxDiv
                                       checked={user.is_active}
-                                      aria-label={`${t("admin.columnActive")} — ${user.username}`}
+                                      presentational
                                     />
                                   </div>
                                 </ConfirmationModal.Trigger>
@@ -429,11 +432,14 @@ export default function AdminPage() {
                               <ConfirmationModal.Content>
                                 <span>{t("admin.editUserConfirmContent")}</span>
                               </ConfirmationModal.Content>
-                              <ConfirmationModal.Trigger>
+                              <ConfirmationModal.Trigger
+                                ariaLabel={`${t("admin.columnSuperuser")} — ${user.username}`}
+                                ariaPressed={user.is_superuser}
+                              >
                                 <div className="flex w-fit">
                                   <CheckBoxDiv
                                     checked={user.is_superuser}
-                                    aria-label={`${t("admin.columnSuperuser")} — ${user.username}`}
+                                    presentational
                                   />
                                 </div>
                               </ConfirmationModal.Trigger>
@@ -454,7 +460,7 @@ export default function AdminPage() {
                             }
                           </TableCell>
                           <TableCell className="flex w-[100px] py-2 text-right">
-                            <div className="flex">
+                            <div className="flex items-center gap-2">
                               <UserManagementModal
                                 title={t("admin.editTitle")}
                                 titleHeader={`${user.id}`}
@@ -471,11 +477,15 @@ export default function AdminPage() {
                                   content={t("admin.editTitle")}
                                   side="top"
                                 >
-                                  <IconComponent
-                                    name="Pencil"
-                                    className="h-4 w-4 cursor-pointer"
-                                    ariaLabel={`${t("admin.editTitle")} — ${user.username}`}
-                                  />
+                                  {/* 24x24 min target (WCAG 2.5.8) with the
+                                      icon centered inside. */}
+                                  <div className="flex h-6 w-6 items-center justify-center">
+                                    <IconComponent
+                                      name="Pencil"
+                                      className="h-4 w-4 cursor-pointer"
+                                      ariaLabel={`${t("admin.editTitle")} — ${user.username}`}
+                                    />
+                                  </div>
                                 </ShadTooltip>
                               </UserManagementModal>
 
@@ -499,11 +509,15 @@ export default function AdminPage() {
                                   </span>
                                 </ConfirmationModal.Content>
                                 <ConfirmationModal.Trigger>
-                                  <IconComponent
-                                    name="Trash2"
-                                    className="ml-3 h-4 w-4 cursor-pointer"
-                                    ariaLabel={`${t("admin.deleteTitle")} — ${user.username}`}
-                                  />
+                                  {/* 24x24 min target (WCAG 2.5.8) with the
+                                      icon centered inside. */}
+                                  <div className="flex h-6 w-6 items-center justify-center">
+                                    <IconComponent
+                                      name="Trash2"
+                                      className="h-4 w-4 cursor-pointer"
+                                      ariaLabel={`${t("admin.deleteTitle")} — ${user.username}`}
+                                    />
+                                  </div>
                                 </ConfirmationModal.Trigger>
                               </ConfirmationModal>
                             </div>

@@ -118,6 +118,27 @@ test.describe("admin page accessibility", () => {
   );
 
   test(
+    "scans new user modal in dark mode",
+    { tag: ["@release", "@api", "@database"] },
+    async ({ page }) => {
+      await forceTheme(page, true);
+      await loginAsAdmin(page);
+      await gotoAdminPage(page);
+      await expect(page.locator("body")).toHaveClass(/dark/);
+
+      await page.getByRole("button", { name: /new user/i }).click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toBeVisible();
+      await expect(
+        dialog.getByRole("button", { name: /^Save$/ }),
+      ).toBeVisible();
+      await page.runA11yScan("admin-new-user-modal-dark", {
+        colorScheme: "dark",
+      });
+    },
+  );
+
+  test(
     "scans admin page in dark mode",
     { tag: ["@release", "@api", "@database"] },
     async ({ page }) => {

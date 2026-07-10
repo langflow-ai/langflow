@@ -63,142 +63,148 @@ async function forceLightTheme(page: LangflowPage) {
   });
 }
 
+// State drivers navigate to a surface and drive it into the state to scan.
+// They are theme-agnostic (the theme is forced by the caller before goto), so
+// each state runs in BOTH light and dark below — IBM color-contrast checks are
+// theme-dependent, so both modes must be scanned.
+async function driveLoginEmpty(page: LangflowPage) {
+  await disableAutoLogin(page);
+  await page.goto("/login");
+  await disableAnimations(page);
+  await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+}
+
+async function driveLoginValidation(page: LangflowPage) {
+  await disableAutoLogin(page);
+  await page.goto("/login");
+  await disableAnimations(page);
+  await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await expect(page.getByRole("alert").first()).toBeVisible();
+}
+
+async function driveLoginErrorToast(page: LangflowPage) {
+  await disableAutoLogin(page);
+  await mockLoginError(page);
+  await page.goto("/login");
+  await disableAnimations(page);
+  await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+  await page.getByRole("textbox", { name: /^Username \*$/ }).fill("alice");
+  await page.getByLabel(/^Password/).fill("wrong-password");
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await expect(page.getByText("Error signing in")).toBeVisible();
+  await expect(
+    page.getByText(
+      "Incorrect username or password. Check your username and password, then try again.",
+    ),
+  ).toBeVisible();
+}
+
+async function driveSignupEmpty(page: LangflowPage) {
+  await disableAutoLogin(page);
+  await page.goto("/signup");
+  await disableAnimations(page);
+  await expect(page.getByRole("button", { name: /sign up/i })).toBeVisible();
+}
+
+async function driveSignupMismatch(page: LangflowPage) {
+  await disableAutoLogin(page);
+  await page.goto("/signup");
+  await disableAnimations(page);
+  await expect(page.getByRole("button", { name: /sign up/i })).toBeVisible();
+  await page.getByLabel(/^Password/).fill("first-password");
+  await page.getByLabel(/^Confirm your password/).fill("second-password");
+  await page.getByLabel(/^Confirm your password/).blur();
+  await expect(page.getByText(/Passwords do not match/)).toContainText(
+    "Passwords do not match",
+  );
+}
+
+async function driveSignupErrorToast(page: LangflowPage) {
+  await disableAutoLogin(page);
+  await mockSignupError(page);
+  await page.goto("/signup");
+  await disableAnimations(page);
+  await expect(page.getByRole("button", { name: /sign up/i })).toBeVisible();
+  await page.getByRole("textbox", { name: /^Username \*$/ }).fill("alice");
+  await page.getByLabel(/^Password/).fill("same-password");
+  await page.getByLabel(/^Confirm your password/).fill("same-password");
+  await page.getByRole("button", { name: /sign up/i }).click();
+  await expect(page.getByText("Error signing up")).toBeVisible();
+  await expect(
+    page.getByText(
+      "This username is unavailable. Use a different username or contact an administrator if you already have an account.",
+    ),
+  ).toBeVisible();
+}
+
+async function driveAdminLoginEmpty(page: LangflowPage) {
+  await disableAutoLogin(page);
+  await page.goto("/login/admin");
+  await disableAnimations(page);
+  await expect(page.getByRole("button", { name: /login/i })).toBeVisible();
+}
+
+async function driveAdminLoginErrorToast(page: LangflowPage) {
+  await disableAutoLogin(page);
+  await mockLoginError(page);
+  await page.goto("/login/admin");
+  await disableAnimations(page);
+  await expect(page.getByRole("button", { name: /login/i })).toBeVisible();
+  await page.getByPlaceholder(/^Username$/).fill("alice");
+  await page.getByPlaceholder(/^Password$/).fill("wrong-password");
+  await page.getByRole("button", { name: /login/i }).click();
+  await expect(page.getByText("Error signing in")).toBeVisible();
+  await expect(page.getByText("Incorrect username or password.")).toBeVisible();
+}
+
+const AUTH_STATES: Array<{
+  label: string;
+  drive: (page: LangflowPage) => Promise<void>;
+}> = [
+  { label: "auth-login-empty", drive: driveLoginEmpty },
+  { label: "auth-login-validation", drive: driveLoginValidation },
+  { label: "auth-login-error-toast", drive: driveLoginErrorToast },
+  { label: "auth-signup-empty", drive: driveSignupEmpty },
+  { label: "auth-signup-mismatch", drive: driveSignupMismatch },
+  { label: "auth-signup-error-toast", drive: driveSignupErrorToast },
+  { label: "auth-admin-login-empty", drive: driveAdminLoginEmpty },
+  { label: "auth-admin-login-error-toast", drive: driveAdminLoginErrorToast },
+];
+
+const THEMES: Array<{
+  name: "light" | "dark";
+  force: (page: LangflowPage) => Promise<void>;
+  suffix: string;
+  scanOptions?: { colorScheme: "dark" };
+}> = [
+  { name: "light", force: forceLightTheme, suffix: "" },
+  {
+    name: "dark",
+    force: forceDarkTheme,
+    suffix: "-dark",
+    scanOptions: { colorScheme: "dark" },
+  },
+];
+
 test.describe("auth page accessibility", () => {
-  test("scans empty login", { tag: ["@release"] }, async ({ page }) => {
-    await forceLightTheme(page);
-    await disableAutoLogin(page);
-
-    await page.goto("/login");
-    await disableAnimations(page);
-    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
-    await page.runA11yScan("auth-login-empty");
-  });
-
-  test("scans login validation", { tag: ["@release"] }, async ({ page }) => {
-    await forceLightTheme(page);
-    await disableAutoLogin(page);
-
-    await page.goto("/login");
-    await disableAnimations(page);
-    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await expect(page.getByRole("alert").first()).toBeVisible();
-    await page.runA11yScan("auth-login-validation");
-  });
-
-  test("scans login error toast", { tag: ["@release"] }, async ({ page }) => {
-    await forceLightTheme(page);
-    await disableAutoLogin(page);
-    await mockLoginError(page);
-
-    await page.goto("/login");
-    await disableAnimations(page);
-    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
-    await page.getByRole("textbox", { name: /^Username \*$/ }).fill("alice");
-    await page.getByLabel(/^Password/).fill("wrong-password");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await expect(page.getByText("Error signing in")).toBeVisible();
-    await expect(
-      page.getByText(
-        "Incorrect username or password. Check your username and password, then try again.",
-      ),
-    ).toBeVisible();
-    await page.runA11yScan("auth-login-error-toast");
-  });
-
-  test("scans empty signup", { tag: ["@release"] }, async ({ page }) => {
-    await forceLightTheme(page);
-    await disableAutoLogin(page);
-    await page.goto("/signup");
-    await disableAnimations(page);
-    await expect(page.getByRole("button", { name: /sign up/i })).toBeVisible();
-    await page.runA11yScan("auth-signup-empty");
-  });
-
-  test(
-    "scans signup password mismatch",
-    { tag: ["@release"] },
-    async ({ page }) => {
-      await forceLightTheme(page);
-      await disableAutoLogin(page);
-
-      await page.goto("/signup");
-      await disableAnimations(page);
-      await expect(
-        page.getByRole("button", { name: /sign up/i }),
-      ).toBeVisible();
-      await page.getByLabel(/^Password/).fill("first-password");
-      await page.getByLabel(/^Confirm your password/).fill("second-password");
-      await page.getByLabel(/^Confirm your password/).blur();
-      await expect(page.getByText(/Passwords do not match/)).toContainText(
-        "Passwords do not match",
+  for (const theme of THEMES) {
+    for (const state of AUTH_STATES) {
+      test(
+        `scans ${state.label} (${theme.name})`,
+        { tag: ["@release"] },
+        async ({ page }) => {
+          await theme.force(page);
+          await state.drive(page);
+          if (theme.name === "dark") {
+            await expect(page.locator("body")).toHaveClass(/dark/);
+          }
+          await page.runA11yScan(
+            `${state.label}${theme.suffix}`,
+            theme.scanOptions,
+          );
+        },
       );
-      await page.runA11yScan("auth-signup-mismatch");
-    },
-  );
-
-  test("scans signup error toast", { tag: ["@release"] }, async ({ page }) => {
-    await forceLightTheme(page);
-    await disableAutoLogin(page);
-    await mockSignupError(page);
-
-    await page.goto("/signup");
-    await disableAnimations(page);
-    await expect(page.getByRole("button", { name: /sign up/i })).toBeVisible();
-    await page.getByRole("textbox", { name: /^Username \*$/ }).fill("alice");
-    await page.getByLabel(/^Password/).fill("same-password");
-    await page.getByLabel(/^Confirm your password/).fill("same-password");
-    await page.getByRole("button", { name: /sign up/i }).click();
-    await expect(page.getByText("Error signing up")).toBeVisible();
-    await expect(
-      page.getByText(
-        "This username is unavailable. Use a different username or contact an administrator if you already have an account.",
-      ),
-    ).toBeVisible();
-    await page.runA11yScan("auth-signup-error-toast");
-  });
-
-  test("scans empty admin login", { tag: ["@release"] }, async ({ page }) => {
-    await forceLightTheme(page);
-    await disableAutoLogin(page);
-
-    await page.goto("/login/admin");
-    await disableAnimations(page);
-    await expect(page.getByRole("button", { name: /login/i })).toBeVisible();
-    await page.runA11yScan("auth-admin-login-empty");
-  });
-
-  test(
-    "scans admin login error toast",
-    { tag: ["@release"] },
-    async ({ page }) => {
-      await forceLightTheme(page);
-      await disableAutoLogin(page);
-      await mockLoginError(page);
-
-      await page.goto("/login/admin");
-      await disableAnimations(page);
-      await expect(page.getByRole("button", { name: /login/i })).toBeVisible();
-      await page.getByPlaceholder(/^Username$/).fill("alice");
-      await page.getByPlaceholder(/^Password$/).fill("wrong-password");
-      await page.getByRole("button", { name: /login/i }).click();
-      await expect(page.getByText("Error signing in")).toBeVisible();
-      await expect(
-        page.getByText("Incorrect username or password."),
-      ).toBeVisible();
-      await page.runA11yScan("auth-admin-login-error-toast");
-    },
-  );
-
-  test("scans login in dark mode", { tag: ["@release"] }, async ({ page }) => {
-    await forceDarkTheme(page);
-    await disableAutoLogin(page);
-
-    await page.goto("/login");
-    await disableAnimations(page);
-    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
-    await expect(page.locator("body")).toHaveClass(/dark/);
-
-    await page.runA11yScan("auth-login-dark-empty", { colorScheme: "dark" });
-  });
+    }
+  }
 });
