@@ -3,10 +3,10 @@ title: Pre-warm LFX with lfx prewarm
 slug: /lfx-prewarm
 ---
 
-`lfx prewarm` pre-warms core component imports and, optionally, specific flows before a Gunicorn `--preload` fork or a Firecracker VM snapshot. Warmed memory is shared copy-on-write across forked workers, so the first request after a restore skips the cold lazy-import cost entirely.
+`lfx prewarm` pre-warms core component imports and, optionally, specific flows so the first build or run after a fork or snapshot skips the cold lazy-import cost.
 
 :::note
-`lfx prewarm` has no benefit for single-shot `lfx run` invocations. Its value is realized when combined with Gunicorn `--preload` (fork workers from a warm master process) or Firecracker VM snapshots (restore workers with warmed memory), both of which are covered in a follow-on release.
+`lfx prewarm` has no benefit for single-shot `lfx run` invocations. Use it in a long-lived process when you intend to fork workers or capture a warm snapshot.
 :::
 
 ## How prewarming works
@@ -27,7 +27,8 @@ The table below shows measured timings for a simple input → output flow in a c
 | Run | 2.6 ms | 1.9 ms | ~1× |
 | Total per request | 4709 ms | 66 ms | 71× |
 
-These numbers represent the upper bound of what prewarming can deliver. Flows that use components with non-core imports (the majority of provider-specific components) will still incur those import costs on first execution, reducing the effective speedup.
+These numbers represent the upper bound of what prewarming can deliver.
+Flows that use components with non-core imports will still incur those import costs on first execution, reducing the effective speedup.
 
 ## Usage
 
@@ -38,11 +39,8 @@ lfx prewarm
 # Warm core imports and a specific flow
 lfx prewarm --flow my-flow.json
 
-# Warm and freeze the heap for copy-on-write sharing (Firecracker / Gunicorn --preload)
+# Warm and freeze the heap for copy-on-write sharing across forks
 lfx prewarm --freeze
-
-# Warm a flow and fully execute it (Firecracker only — leaves connections open, not fork-safe)
-lfx prewarm --flow my-flow.json --unsafe-run-may-leak-connections
 ```
 
 ## Options
@@ -52,22 +50,11 @@ lfx prewarm --flow my-flow.json --unsafe-run-may-leak-connections
 | `--flow` | Path to a flow JSON file to warm. Can be repeated for multiple flows. |
 | `--freeze` | Call `gc.freeze()` after warming to enable copy-on-write heap sharing across forks. |
 | `--skip-run` | Skip the hermetic warm-up run (imports only). |
-| `--unsafe-run-may-leak-connections` | Fully execute each `--flow` (maximum warmth). Intentionally leaves connections open for Firecracker snapshots. **Not safe before a Gunicorn fork.** |
+| `--unsafe-run-may-leak-connections` | Fully execute each `--flow` (maximum warmth). Leaves live connections and is **not fork-safe**. |
 | `--verbose` | Print per-component import results and timing. |
-
-## Fork safety
-
-When `--unsafe-run-may-leak-connections` is used, the prewarm run may leave open network connections or background threads. LFX detects this state and emits a warning to `stderr`:
-
-```
-warning: fork-unsafe — ghost connections detected: [...]
-```
-
-This is expected and intentional for Firecracker snapshot targets, where the connections are captured as part of the snapshot. It is **not safe** before a Gunicorn `--preload` fork, where inherited file descriptors from the master process are shared across all workers.
-
-Use the default (no `--unsafe-run`) path for Gunicorn preloading. Reserve `--unsafe-run-may-leak-connections` for Firecracker snapshot workflows only.
 
 ## See also
 
 - [About LFX](./lfx-overview)
 - [Run flows with LFX](./lfx-run)
+- [Serve flows with LFX](./lfx-serve)
