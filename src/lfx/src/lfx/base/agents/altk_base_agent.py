@@ -22,7 +22,7 @@ from pydantic import Field
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
-from lfx.base.agents.utils import data_to_messages, get_chat_output_sender_name
+from lfx.base.agents.utils import data_to_messages, get_chat_output_sender_name, resolve_agent_verbose
 from lfx.components.models_and_agents import AgentComponent
 from lfx.log.logger import logger
 from lfx.memory import delete_message
@@ -303,7 +303,9 @@ class ALTKBaseAgentComponent(AgentComponent):
         else:
             # note the tools are not required to run the agent, hence the validation removed.
             handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
-            verbose = hasattr(self, "verbose") and self.verbose
+            # Gate LangChain's stdout chain markers on LANGCHAIN_VERBOSE (off by default)
+            # rather than the always-True component input. See resolve_agent_verbose().
+            verbose = resolve_agent_verbose()
             max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,

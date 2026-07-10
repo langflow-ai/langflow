@@ -103,3 +103,19 @@ This jump can affect existing dependency pins in unexpected ways:
 | `lfx>=0.5` (no upper bound) | Upgrades automatically to 1.10.0 on the next install. |
 
 Going forward, pin with `lfx~=1.10.0` so you receive compatible patches without silently crossing minor lines.
+
+## Engine-only LFX and `lfx[bundles]`
+
+`pip install lfx` installs the engine only — no component bundles.
+For headless or serverless deployments that execute flows using provider components without the full Langflow server, install the long-tail bundle package alongside the engine:
+
+```bash
+uv pip install "lfx[bundles]"
+```
+
+This is equivalent to installing `lfx` plus `lfx-bundles[all]`, including the torch-pulling long-tail providers **CUGA** and **Code Agents**.
+It does **not** install graduated standalone packages such as `lfx-openai` or `lfx-exa`.
+`uv pip install langflow` instead depends on `lfx-bundles[all-no-torch]` plus the individual `lfx-*` packages, so Langflow stays torch-free by default.
+For a slimmer image, install only the provider packages a deployment actually executes, for example `uv pip install lfx lfx-openai "lfx-bundles[qdrant]"`.
+There is intentionally no `lfx[all]` extra, because that is equivalent to `uv pip install langflow`.
+Some components require a [torch opt-in install](./components-bundle-components#torch-opt-in).

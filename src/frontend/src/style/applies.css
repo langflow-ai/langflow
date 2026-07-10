@@ -1240,7 +1240,7 @@ input[type="password"]::-ms-clear {
     @apply top-[-23px];
   }
   .popover-input {
-    @apply h-fit w-fit flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:border-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply h-fit w-fit flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .beta-badge {
@@ -1293,14 +1293,6 @@ input[type="password"]::-ms-clear {
 
   .btn-playground-actions {
     @apply flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all;
-  }
-
-  .no-focus-visible {
-    @apply focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0;
-    --tw-ring-offset-width: none !important;
-    --tw-ring-shadow: none !important;
-    --tw-ring-offset-shadow: none !important;
-    --tw-ring-color: none !important;
   }
 
   .helper-lines {

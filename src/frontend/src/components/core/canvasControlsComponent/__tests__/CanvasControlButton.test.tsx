@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
+import type { ComponentProps, ReactNode } from "react";
 import CanvasControlButton from "../CanvasControlButton";
 
 // ControlButton renders the real DOM <button> and spreads its props, so we can
 // assert exactly which attributes (title / aria-label) reach the element.
 jest.mock("@xyflow/react", () => ({
-  ControlButton: ({ children, ...props }: any) => (
+  ControlButton: ({ children, ...props }: ComponentProps<"button">) => (
     <button type="button" {...props}>
       {children}
     </button>
@@ -15,7 +16,13 @@ jest.mock("@xyflow/react", () => ({
 // confirm the button's label is surfaced through it (and only it).
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
-  default: ({ content, children }: any) => (
+  default: ({
+    content,
+    children,
+  }: {
+    content?: string;
+    children?: ReactNode;
+  }) => (
     <div data-testid="shad-tooltip" data-content={content}>
       {children}
     </div>
@@ -24,7 +31,9 @@ jest.mock("@/components/common/shadTooltipComponent", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name }: any) => <div data-testid={`icon-${name}`} />,
+  default: ({ name }: { name?: string }) => (
+    <div data-testid={`icon-${name}`} />
+  ),
 }));
 
 // Regression coverage for the duplicate sidebar tooltip bug: the control nav

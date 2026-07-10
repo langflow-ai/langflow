@@ -7,9 +7,9 @@ import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
-import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
 
-<PartialLfxBundlesInstall />
+<GraduatedBundleInstall packageName="nextplaid" />
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
@@ -17,27 +17,10 @@ The **NextPlaid** bundle provides multi-vector ColBERT-style retrieval for Langf
 NextPlaid stores each document as a matrix of token embeddings, which enables higher retrieval quality on semantic search tasks through ColBERT-style late interaction with MaxSim scoring.
 For more information on multi-vector embeddings, see the [langchain-plaid](https://github.com/meetdoshi90/langchain-plaid) package that this bundle is built on.
 
-## Install the NextPlaid bundle
-
 The bundle includes two components:
 
 * **NextPlaid**: vector store component backed by a running NextPlaid server.
 * **vLLM Multivector Embeddings**: generates the multi-vector token embeddings required by NextPlaid.
-
-The **NextPlaid** bundle is included in the `lfx-nextplaid` Extension bundle, which is installed automatically as part of `uv pip install langflow`.
-
-If you need to install it separately, run:
-
-```bash
-uv pip install lfx-nextplaid
-uv run langflow run
-```
-
-To verify the bundle is loaded in your environment:
-
-```bash
-lfx extension list
-```
 
 ## NextPlaid
 

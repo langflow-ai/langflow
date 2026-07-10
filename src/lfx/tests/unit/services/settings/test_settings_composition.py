@@ -83,6 +83,7 @@ EXPECTED_FIELDS = {
     "mcp_server_enabled",
     "mcp_server_enable_progress_notifications",
     "add_projects_to_mcp_servers",
+    "skip_mcp_auto_init",
     "mcp_composer_enabled",
     "mcp_composer_version",
     # TelemetrySettings
@@ -133,6 +134,7 @@ EXPECTED_FIELDS = {
     "dev",
     "event_delivery",
     "worker_timeout",
+    "workflow_execution_timeout",
     "public_flow_cleanup_interval",
     "public_flow_expiration",
     "webhook_polling_interval",
@@ -150,6 +152,7 @@ EXPECTED_FIELDS = {
     # ---- Added in 1.10.0, folded into the mixins during the release back-merge ----
     # PathSettings
     "kb_allowed_folder_roots",
+    "directory_component_allowed_roots",
     # McpSettings
     "mcp_tool_execution_timeout",
     "mcp_servers_locked",
@@ -161,6 +164,7 @@ EXPECTED_FIELDS = {
     "rate_limit_per_minute",
     "rate_limit_storage_uri",
     "rate_limit_trust_proxy",
+    "public_flow_rate_limit_per_minute",
     "custom_component_admin_only",
     "allow_components_paths_override",
     # RuntimeSettings
@@ -176,6 +180,7 @@ EXPECTED_FIELDS = {
     "redis_queue_polling_stale_threshold_s",
     "redis_queue_polling_watchdog_interval_s",
     "max_ingestion_timeout_secs",
+    "executor_kind",
     # UiSettings
     "embedded_mode",
     "hide_getting_started_progress",
@@ -195,6 +200,9 @@ EXPECTED_FIELDS = {
     "telemetry_writer_size_strategy",
     "telemetry_writer_batch_size_bytes",
     "telemetry_writer_max_queue_bytes",
+    # ---- Added in 1.10.1 ----
+    # SecuritySettings
+    "allow_public_custom_components",
 }
 
 
@@ -354,6 +362,7 @@ def test_yaml_round_trip():
         ("LANGFLOW_PROMETHEUS_ENABLED", "true", "prometheus_enabled", True),
         ("LANGFLOW_PROMETHEUS_PORT", "9999", "prometheus_port", 9999),
         ("LANGFLOW_MCP_SERVER_ENABLED", "false", "mcp_server_enabled", False),
+        ("LANGFLOW_SKIP_MCP_AUTO_INIT", "true", "skip_mcp_auto_init", True),
         ("LANGFLOW_DO_NOT_TRACK", "true", "do_not_track", True),
         ("LANGFLOW_DEV", "true", "dev", True),
         ("LANGFLOW_BACKEND_ONLY", "true", "backend_only", True),

@@ -1,9 +1,13 @@
 :::tip
-If you installed `lfx` directly with `uv pip install lfx`, install the `lfx-bundles` package to use these components:
+If you installed `lfx` directly with `uv pip install lfx`, install this provider from the long-tail metapackage:
 
 ```bash
-uv pip install lfx-bundles
+uv pip install "lfx-bundles[<bundle>]"
 ```
 
-If you installed Langflow with `uv pip install langflow`, all bundle components are already included.
+Replace `<bundle>` with this page's provider name, for example `qdrant`.
+To install every long-tail provider at once, run `uv pip install "lfx[bundles]"`.
+See the [Bundle list](./extensions-bundle-list) for the exact extra name.
+
+If you installed Langflow with `uv pip install langflow`, these bundle components are already included.
 :::

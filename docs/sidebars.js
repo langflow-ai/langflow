@@ -115,8 +115,16 @@ module.exports = {
       label: "Develop",
       className: "sidebar-category-with-icon sidebar-icon-code",
       items: [
-        "Develop/api-keys-and-authentication",
-        "Develop/jwt-authentication",
+        {
+          type: "category",
+          label: "Authentication and authorization",
+          items: [
+            "Develop/authentication-overview",
+            "Develop/api-keys-and-authentication",
+            "Develop/external-authentication",
+            "Develop/authorization",
+          ],
+        },
         "Develop/install-custom-dependencies",
         "Develop/configuration-global-variables",
         "Develop/environment-variables",
@@ -323,13 +331,18 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Lfx/lfx-serve",
+          label: "Serve flows with LFX"
+        },
+        {
+          type: "doc",
           id: "Lfx/lfx-prewarm",
           label: "Pre-warm LFX"
         },
         {
           type: "doc",
           id: "Lfx/lfx-mcp",
-          label: "LFX MCP server"
+          label: "Build flows with the LFX MCP server"
         },
         {
           type: "doc",
@@ -370,6 +383,7 @@ module.exports = {
               type: "category",
               label: "Processing",
               items: [
+                "Components/operations",
                 "Components/data-operations",
                 "Components/dataframe-operations",
                 "Components/dynamic-create-data",
@@ -480,6 +494,7 @@ module.exports = {
             "Components/bundles-docling",
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
+            "Components/bundles-empiriolabs",
             "Components/bundles-exa",
             "Components/bundles-faiss",
             "Components/bundles-files-ingestion",
@@ -505,6 +520,7 @@ module.exports = {
             "Components/bundles-ollama",
             "Components/bundles-openai",
             "Components/bundles-openrouter",
+            "Components/bundles-oracle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",
@@ -525,11 +541,13 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Bundle extensions",
+          label: "Extensions",
           items: [
             "Lfx/extensions-overview",
+            "Lfx/extensions-bundle-list",
             "Lfx/extensions-quickstart",
             "Lfx/extensions-manifest",
+            "Lfx/extensions-errors",
           ],
         },
         "Components/components-custom-components",
