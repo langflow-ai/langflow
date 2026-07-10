@@ -1007,6 +1007,7 @@
   "knowledge.column.name": "名前",
   "knowledge.column.size": "サイズ",
   "knowledge.column.status": "状況",
+  "knowledge.column.actions": "アクション",
   "knowledge.column.vectorStore": "ベクターストア",
   "knowledge.columnConfiguration": "カラムの構成",
   "knowledge.columnEmbeddingDescription": "この列の埋め込みを作成する",

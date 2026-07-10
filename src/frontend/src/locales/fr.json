@@ -1007,6 +1007,7 @@
   "knowledge.column.name": "Nom",
   "knowledge.column.size": "Taille",
   "knowledge.column.status": "Statut",
+  "knowledge.column.actions": "Actions",
   "knowledge.column.vectorStore": "Magasin Vector",
   "knowledge.columnConfiguration": "Configuration des colonnes",
   "knowledge.columnEmbeddingDescription": "Créer des représentations pour cette colonne",

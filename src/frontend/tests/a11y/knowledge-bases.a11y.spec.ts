@@ -649,6 +649,220 @@ test.describe("knowledge bases route accessibility", () => {
       await page.runA11yScan("kb-review-multifile");
     },
   );
+
+  test("scans populated table on mobile width", RELEASE, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockKnowledgeBases(page, SEEDED_KNOWLEDGE_BASES);
+    await openKnowledgeBasesRoute(page);
+    await expect(page.getByText("Alpha Knowledge Base")).toBeVisible({
+      timeout: TIMEOUTS.standard,
+    });
+    await settleNetwork(page);
+    await page.runA11yScan("kb-mobile-data-rich");
+  });
+
+  test(
+    "opens row actions menu with the keyboard and restores focus on close",
+    RELEASE,
+    async ({ page }) => {
+      await mockKnowledgeBases(page, SEEDED_KNOWLEDGE_BASES);
+      await openKnowledgeBasesRoute(page);
+      await disableAnimations(page);
+      await expect(page.getByText("Alpha Knowledge Base")).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+
+      // Focus the actions cell itself (not an inner button) so Enter is handled
+      // by onCellKeyDown — same pattern as files/api-keys (WCAG 2.1.1).
+      const actionsCell = page
+        .locator(
+          '.ag-center-cols-container [role="gridcell"][col-id="actions"]',
+        )
+        .first();
+      await expect(actionsCell).toBeVisible();
+      await actionsCell.evaluate((element) => {
+        (element as HTMLElement).focus();
+      });
+      await expect
+        .poll(async () =>
+          page.evaluate(() => document.activeElement?.getAttribute("col-id")),
+        )
+        .toBe("actions");
+
+      // Enter on the actions cell opens the dropdown (WCAG 2.1.1).
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("menu")).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+
+      // Escape closes and returns focus to the (real button) trigger.
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("menu")).toBeHidden({
+        timeout: TIMEOUTS.standard,
+      });
+      const focusedName = await page.evaluate(
+        () => document.activeElement?.getAttribute("aria-label") ?? "",
+      );
+      expect(focusedName).toMatch(/Actions for/);
+    },
+  );
+
+  test(
+    "shows a visible focus ring on grid cells for keyboard but not mouse",
+    RELEASE,
+    async ({ page }) => {
+      await mockKnowledgeBases(page, SEEDED_KNOWLEDGE_BASES);
+      await openKnowledgeBasesRoute(page);
+      await expect(page.getByText("Alpha Knowledge Base")).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+
+      // WCAG 2.4.7: keyboard navigation must show a visible focus ring. The
+      // borderless knowledge table hides AG Grid's default cell outline, so this
+      // guards the :focus-visible restore on .ag-knowledge-table.
+      await page.getByTestId("search-kb-input").focus();
+      for (let i = 0; i < 12; i++) {
+        const onCell = await page.evaluate(() =>
+          document.activeElement?.classList.contains("ag-cell"),
+        );
+        if (onCell) break;
+        await page.keyboard.press("Tab");
+      }
+      const keyboardFocus = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        if (!el?.classList.contains("ag-cell")) return null;
+        const cs = getComputedStyle(el);
+        return {
+          style: cs.outlineStyle,
+          hasWidth: parseFloat(cs.outlineWidth) > 0,
+        };
+      });
+      expect(keyboardFocus).toEqual({ style: "solid", hasWidth: true });
+
+      // A mouse click resolves to :focus (not :focus-visible), so no ring shows.
+      await page
+        .locator(
+          '.ag-center-cols-container .ag-row [role="gridcell"][col-id="size"]',
+        )
+        .first()
+        .click();
+      const mouseOutlineStyle = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        return el ? getComputedStyle(el).outlineStyle : null;
+      });
+      expect(mouseOutlineStyle).toBe("none");
+    },
+  );
+
+  test(
+    "exits the table with a single Tab from the last cell",
+    RELEASE,
+    async ({ page }) => {
+      await mockKnowledgeBases(page, SEEDED_KNOWLEDGE_BASES);
+      await openKnowledgeBasesRoute(page);
+      await expect(page.getByText("Alpha Knowledge Base")).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+
+      // Focus the cell chrome (not an inner button) so Tab is handled by the
+      // grid's tabToNextCell hook rather than native in-cell button tabbing.
+      // Use the last row so Tab exits the grid instead of moving to the next row.
+      const lastCell = page
+        .locator(
+          '.ag-center-cols-container [role="gridcell"][col-id="actions"]',
+        )
+        .last();
+      await expect(lastCell).toBeVisible();
+      await lastCell.evaluate((element) => {
+        (element as HTMLElement).focus();
+      });
+
+      await page.keyboard.press("Tab");
+      await page.waitForTimeout(50);
+
+      const activeElement = await page.evaluate(() => {
+        const element = document.activeElement as HTMLElement | null;
+        return {
+          tagName: element?.tagName.toLowerCase() ?? "",
+          testId: element?.getAttribute("data-testid") ?? null,
+          role: element?.getAttribute("role") ?? null,
+          isGridCell: element?.getAttribute("role") === "gridcell",
+          className: String(element?.className ?? ""),
+        };
+      });
+
+      expect(activeElement.isGridCell, "focus should leave the grid body").toBe(
+        false,
+      );
+      expect(
+        activeElement.tagName,
+        "a single Tab should reach the next control, not dead-stop on <body>",
+      ).not.toBe("body");
+    },
+  );
+
+  test(
+    "re-enters the table on reverse tab without trapping on body",
+    RELEASE,
+    async ({ page }) => {
+      await mockKnowledgeBases(page, SEEDED_KNOWLEDGE_BASES);
+      await openKnowledgeBasesRoute(page);
+      await expect(page.getByText("Alpha Knowledge Base")).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+
+      // Enter the grid from the search field (the control immediately before it),
+      // then Shift+Tab back out. Reverse tabbing must not trap by oscillating
+      // onto <body> (WCAG 2.1.2) — the regression an inert/disabled pagination
+      // panel caused on other AG Grid pages.
+      await page.getByTestId("search-kb-input").focus();
+
+      let enteredGrid = false;
+      for (let index = 0; index < 12; index += 1) {
+        await page.keyboard.press("Tab");
+        await page.waitForTimeout(20);
+        enteredGrid = await page.evaluate(() =>
+          Boolean(
+            document.activeElement?.closest(
+              '[role="treegrid"], .ag-root-wrapper',
+            ),
+          ),
+        );
+        if (enteredGrid) break;
+      }
+      expect(enteredGrid, "Tab from search should enter the data table").toBe(
+        true,
+      );
+
+      const escaped: boolean[] = [];
+      for (let index = 0; index < 6; index += 1) {
+        await page.keyboard.press("Shift+Tab");
+        await page.waitForTimeout(40);
+        const snapshot = await page.evaluate(() => {
+          const element = document.activeElement as HTMLElement | null;
+          return {
+            tagName: element?.tagName.toLowerCase() ?? "",
+            testId: element?.getAttribute("data-testid") ?? null,
+            inGrid: Boolean(
+              element?.closest('[role="treegrid"], .ag-root-wrapper'),
+            ),
+          };
+        });
+        escaped.push(snapshot.tagName !== "body");
+        // Once we're back on the search field, reverse entry succeeded.
+        if (snapshot.testId === "search-kb-input") break;
+      }
+
+      expect(
+        escaped.every(Boolean),
+        "reverse tab must never land on <body>",
+      ).toBe(true);
+      expect(
+        escaped.some(Boolean),
+        "reverse tab must progress without a keyboard trap",
+      ).toBe(true);
+    },
+  );
 });
 
 test.describe("knowledge base chunks page accessibility", () => {

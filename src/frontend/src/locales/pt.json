@@ -1007,6 +1007,7 @@
   "knowledge.column.name": "Nome",
   "knowledge.column.size": "Tamanho",
   "knowledge.column.status": "Estado",
+  "knowledge.column.actions": "Ações",
   "knowledge.column.vectorStore": "Loja Vector",
   "knowledge.columnConfiguration": "Configuração da coluna",
   "knowledge.columnEmbeddingDescription": "Criar representações para esta coluna",

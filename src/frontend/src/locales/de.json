@@ -1007,6 +1007,7 @@
   "knowledge.column.name": "Ihren Namen",
   "knowledge.column.size": "Größe",
   "knowledge.column.status": "Status",
+  "knowledge.column.actions": "Aktionen",
   "knowledge.column.vectorStore": "Vektor-Shop",
   "knowledge.columnConfiguration": "Spaltenkonfiguration",
   "knowledge.columnEmbeddingDescription": "Einbettungen für diese Spalte erstellen",

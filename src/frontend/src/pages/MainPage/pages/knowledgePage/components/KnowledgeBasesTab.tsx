@@ -261,27 +261,44 @@ const KnowledgeBasesTab = ({
     }
   };
 
+  // AG Grid navigates cell-by-cell and never focuses the action button inside a
+  // cell, so keyboard users can't open the row actions menu. Open it when
+  // Enter/Space is pressed while the actions cell is focused (WCAG 2.1.1).
   const handleCellKeyDown = (event: CellKeyDownEvent<KnowledgeBaseInfo>) => {
     const keyboardEvent = event.event as KeyboardEvent | undefined;
-    if (!keyboardEvent || keyboardEvent.key !== "Enter") return;
-
-    const target = keyboardEvent.target as HTMLElement | null;
-    if (target?.closest("button, a, input, [role='menuitem']")) return;
+    if (!keyboardEvent) return;
 
     if (event.column?.getColId() === "actions") {
-      const cellEl = (event.event?.target as HTMLElement | null)?.closest(
-        ".ag-cell",
-      );
-
-      const control = cellEl?.querySelector<HTMLElement>(
-        "button:not([disabled]), a[href]",
-      );
-      if (control) {
-        keyboardEvent.preventDefault();
-        requestAnimationFrame(() => control.focus());
+      if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") {
+        return;
       }
+      const target = keyboardEvent.target as HTMLElement | null;
+      // The key was already re-dispatched onto the trigger button: let Radix's
+      // own keyboard handler open the menu and don't recurse.
+      if (target?.tagName === "BUTTON") {
+        return;
+      }
+      const actionsButton = target
+        ?.closest?.('[role="gridcell"]')
+        ?.querySelector<HTMLElement>('[data-testid="kb-row-actions-trigger"]');
+      if (!actionsButton) {
+        return;
+      }
+      keyboardEvent.preventDefault();
+      actionsButton.focus();
+      actionsButton.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: keyboardEvent.key,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
       return;
     }
+
+    if (keyboardEvent.key !== "Enter") return;
+    const target = keyboardEvent.target as HTMLElement | null;
+    if (target?.closest("button, a, input, [role='menuitem']")) return;
 
     if (onRowClick && event.data) {
       keyboardEvent.preventDefault();

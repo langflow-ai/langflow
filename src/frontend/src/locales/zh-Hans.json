@@ -1007,6 +1007,7 @@
   "knowledge.column.name": "名称",
   "knowledge.column.size": "大小",
   "knowledge.column.status": "状态",
+  "knowledge.column.actions": "操作",
   "knowledge.column.vectorStore": "向量商店",
   "knowledge.columnConfiguration": "列配置",
   "knowledge.columnEmbeddingDescription": "为该列创建嵌入向量",

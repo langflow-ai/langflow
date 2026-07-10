@@ -929,6 +929,7 @@
   "knowledge.column.avgChunkSize": "Avg Chunk Size",
   "knowledge.column.vectorStore": "Vector Store",
   "knowledge.column.status": "Status",
+  "knowledge.column.actions": "Actions",
   "knowledge.action.updateKnowledge": "Update Knowledge",
   "knowledge.action.viewChunks": "View Chunks",
   "knowledge.action.stopIngestion": "Stop Ingestion",

@@ -338,7 +338,10 @@ export const createKnowledgeBaseColumns = (
       },
     },
     {
-      headerName: "",
+      // Named for AT (WCAG 4.1.2 / IBM aria_accessiblename_exists); visually
+      // hidden via ag-sr-only-header so the header stays blank.
+      headerName: t("knowledge.column.actions"),
+      headerClass: "ag-sr-only-header",
       field: "actions",
       width: 110,
       minWidth: 110,
