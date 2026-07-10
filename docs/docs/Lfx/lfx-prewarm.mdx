@@ -9,16 +9,15 @@ slug: /lfx-prewarm
 `lfx prewarm` has no benefit for single-shot `lfx run` invocations. Use it in a long-lived process when you intend to fork workers or capture a warm snapshot.
 :::
 
-## How prewarming works
-
 Prewarming works in two layers:
 
-- **Core import warm-up** — imports the built-in component classes and runs a small hermetic flow (no network, no threads) to prime the graph execution machinery.
-- **Flow warm-up** — builds or fully executes a specific flow JSON to maximize warmth for that flow.
+Core import warm-up imports the built-in component classes and runs a small flow with no network or threads to prime the graph execution machinery.
+
+Flow warm-up builds or fully executes a specific flow JSON to maximize warmth for that flow.
 
 ## Performance
 
-The table below shows measured timings for a simple input → output flow in a completely fresh environment with no cached imports.
+The table below shows measured timings for a simple flow in a completely fresh environment with no cached imports.
 
 | Phase | Cold (median) | Prewarmed (median) | Speedup |
 |---|---|---|---|
@@ -30,7 +29,7 @@ The table below shows measured timings for a simple input → output flow in a c
 These numbers represent the upper bound of what prewarming can deliver.
 Flows that use components with non-core imports will still incur those import costs on first execution, reducing the effective speedup.
 
-## Usage
+## lfx prewarm commands
 
 ```bash
 # Warm core imports only
