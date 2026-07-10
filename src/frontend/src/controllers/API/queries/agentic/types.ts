@@ -80,8 +80,6 @@ export interface AssistantModelNotice {
   failed_model?: string;
   /** The model that actually produced the answer (fallback only). */
   used_model?: string;
-  /** Raw error (superuser detail), capped server-side. */
-  raw?: string;
 }
 
 export interface AgenticFlowPreviewEvent {

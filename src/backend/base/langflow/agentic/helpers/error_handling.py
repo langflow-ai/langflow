@@ -274,6 +274,4 @@ def build_recovered_notice(
         notice["failed_model"] = failed_model
     if used_model and used_model != failed_model:
         notice["used_model"] = used_model
-    if raw_error:
-        notice["raw"] = raw_error[:500]
     return notice

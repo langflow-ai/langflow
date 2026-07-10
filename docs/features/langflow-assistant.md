@@ -61,8 +61,11 @@
 > error was only logged and the swap was invisible. The backend now collects
 > these into `recovered_notices` and emits them on the `complete` event as the
 > additive `data.notices` (each: `{type: model_fallback|model_remediation,
-> reason, failed_model, used_model?, raw}`, built by `build_recovered_notice` in
-> `helpers/error_handling.py`). The assistant message renders an amber (i)
+> reason, failed_model, used_model?}`, built by `build_recovered_notice` in
+> `helpers/error_handling.py`). The raw internal error is deliberately NOT
+> included — the notice ships to every client on the `complete` event, so it
+> stays behind the same no-leak invariant as the superuser-gated error
+> `raw_cause`. The assistant message renders an amber (i)
 > (`assistant-model-notice.tsx`) next to the per-turn metadata badge; hovering
 > explains "Model X failed (reason); used Y instead." i18n in all 7 locales.
 > Verified live: `glm-5:cloud` → 403 → fallback to `gpt-oss:20b`, notice emitted,

@@ -327,7 +327,9 @@ class TestBuildRecoveredNotice:
         assert n["failed_model"] == "glm-5:cloud"
         assert n["used_model"] == "llama3.2:latest"
         assert n["reason"]  # a friendly, non-empty reason
-        assert "subscription" in n["raw"].lower()
+        # Security: the raw internal error must never ride the notice (it goes to
+        # every client on the complete event, bypassing the raw_cause superuser gate).
+        assert "raw" not in n
 
     def test_remediation_notice_omits_used_model_when_same(self):
         """Remediation retries the SAME model, so used_model must not duplicate it."""
@@ -346,6 +348,9 @@ class TestBuildRecoveredNotice:
         assert n["reason"] == "Model error"
         assert "raw" not in n
 
-    def test_raw_is_truncated(self):
+    def test_raw_internal_error_is_never_leaked(self):
+        """Even a long raw provider error must not appear in the notice — the notice
+        goes to every client on the complete event; only the friendly reason ships."""
         n = build_recovered_notice("model_fallback", failed_model="x", raw_error="z" * 900, used_model="y")
-        assert len(n["raw"]) == 500
+        assert "raw" not in n
+        assert n["reason"]
