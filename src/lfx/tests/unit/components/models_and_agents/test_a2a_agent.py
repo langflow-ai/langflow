@@ -272,3 +272,85 @@ async def test_external_card_preview_bad_url_no_crash(monkeypatch):
     assert build_config["agent_card"]["value"] == {}
     # No card, so the display field stays hidden.
     assert build_config["agent_card"]["show"] is False
+
+
+# --- The card fetch is bounded ----------------------------------------------
+
+
+class _OversizedCardHandler(BaseHTTPRequestHandler):
+    """Serves a card far past the fetch cap. Subclasses toggle whether the size is declared."""
+
+    declare_length = True
+
+    def do_GET(self):
+        if self.path != "/.well-known/agent-card.json":
+            self.send_response(404)
+            self.end_headers()
+            return
+        blob = b'{"name":"Huge","description":"' + b"a" * (600 * 1024) + b'"}'
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        if self.declare_length:
+            self.send_header("Content-Length", str(len(blob)))
+        self.end_headers()
+        self.wfile.write(blob)
+
+    def log_message(self, *args):
+        pass
+
+
+class _DeclaredOversizedHandler(_OversizedCardHandler):
+    declare_length = True
+
+
+class _UndeclaredOversizedHandler(_OversizedCardHandler):
+    """No Content-Length, so only the streaming byte cap can stop the read."""
+
+    declare_length = False
+
+
+class _HandlerServer:
+    def __init__(self, handler):
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+    @property
+    def port(self):
+        return self.httpd.server_address[1]
+
+
+@pytest.mark.parametrize("handler", [_DeclaredOversizedHandler, _UndeclaredOversizedHandler])
+async def test_external_card_preview_rejects_oversized_card(monkeypatch, handler):
+    """A card past the size cap degrades to no preview instead of being buffered and parsed.
+
+    Covers both guards: the declared Content-Length early-out, and the streaming byte cap for a
+    response that never declares its size.
+    """
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    with _HandlerServer(handler) as server:
+        url = f"http://127.0.0.1:{server.port}"
+        component = A2AAgentComponent(mode="External", agent_url=url, input_value="hi")
+        build_config = {"agent_card": {}}
+        await component._apply_external_card(build_config, url)
+
+    assert build_config["agent_card"]["value"] == {}
+    assert build_config["agent_card"]["show"] is False
+
+
+def test_card_payload_clips_untrusted_strings():
+    """Card text is remote input, so it is bounded before it reaches build_config and the editor."""
+    card = {"name": "N" * 900, "description": "D" * 900}
+    payload = A2AAgentComponent._card_payload(card)
+
+    assert len(payload["title"]) <= 500
+    assert len(payload["sections"][0]["text"]) <= 500

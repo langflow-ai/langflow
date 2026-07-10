@@ -1206,34 +1206,88 @@ async def test_durable_store_roundtrips_on_real_migrated_db():
 # --- A2A Agent component: Internal mode (in-process) -------------------------
 
 
+async def _create_named_agent(user_id, *, name, folder_id, data, a2a_enabled=True):
+    """Create an agent-typed flow with a known name in a folder; returns its id as a string."""
+    async with session_scope() as session:
+        flow = Flow(
+            name=name,
+            data=data,
+            user_id=user_id,
+            flow_type=FlowType.AGENT,
+            a2a_enabled=a2a_enabled,
+            folder_id=folder_id,
+        )
+        session.add(flow)
+        await session.commit()
+        await session.refresh(flow)
+        return str(flow.id)
+
+
+def _internal_component(active_user, caller_id, agent_name, input_value="ping from internal mode"):
+    """An A2A component in Internal mode, wired with the caller context the runtime provides."""
+    from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent
+
+    component = A2AAgentComponent(mode="Internal", agent_name_selected=agent_name, input_value=input_value)
+    component._user_id = active_user.id
+    # The calling flow. Outside a graph this is the attribute the component itself falls back to.
+    component._frontend_node_flow_id = str(caller_id)
+    return component
+
+
 async def test_a2a_component_internal_mode_runs_selected_agent(client: AsyncClient, active_user, echo_flow_data):  # noqa: ARG001 - client boots the app/services
     """The A2A component in Internal mode runs a published in-project agent in-process and returns its reply.
 
     This is the single-process integration test for internal mode: the agent flow and the run share
     the test DB, so there is no cross-connection staleness. Mirrors what Run Flow does under the hood.
     """
-    from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent
+    folder_id = await _create_folder(active_user.id, auth_settings=None)
+    caller_id = await _create_flow(active_user.id, data=echo_flow_data, a2a_enabled=False, folder_id=folder_id)
+    await _create_named_agent(active_user.id, name="Internal Echo Target", folder_id=folder_id, data=echo_flow_data)
 
-    async with session_scope() as session:
-        agent = Flow(
-            name="Internal Echo Target",
-            data=echo_flow_data,
-            user_id=active_user.id,
-            flow_type=FlowType.AGENT,
-            a2a_enabled=True,
-        )
-        session.add(agent)
-        await session.commit()
-
-    component = A2AAgentComponent(
-        mode="Internal",
-        agent_name_selected="Internal Echo Target",
-        input_value="ping from internal mode",
-    )
-    component._user_id = active_user.id
+    component = _internal_component(active_user, caller_id, "Internal Echo Target")
 
     message = await component.send_to_agent()
     assert "ping from internal mode" in message.text
+
+
+async def test_a2a_component_internal_mode_rejects_unpublished_agent(client: AsyncClient, active_user, echo_flow_data):  # noqa: ARG001 - client boots the app/services
+    """An agent unpublished after it was picked is refused at run time, not silently run."""
+    folder_id = await _create_folder(active_user.id, auth_settings=None)
+    caller_id = await _create_flow(active_user.id, data=echo_flow_data, a2a_enabled=False, folder_id=folder_id)
+    await _create_named_agent(
+        active_user.id, name="Unpublished Agent", folder_id=folder_id, data=echo_flow_data, a2a_enabled=False
+    )
+
+    component = _internal_component(active_user, caller_id, "Unpublished Agent")
+
+    with pytest.raises(ValueError, match="not published as an A2A agent"):
+        await component.send_to_agent()
+
+
+async def test_a2a_component_internal_mode_resolves_by_flow_id(client: AsyncClient, active_user, echo_flow_data):  # noqa: ARG001 - client boots the app/services
+    """An agent renamed after it was picked still runs, because the dropdown recorded its flow id."""
+    folder_id = await _create_folder(active_user.id, auth_settings=None)
+    caller_id = await _create_flow(active_user.id, data=echo_flow_data, a2a_enabled=False, folder_id=folder_id)
+    agent_id = await _create_named_agent(active_user.id, name="Original Name", folder_id=folder_id, data=echo_flow_data)
+    async with session_scope() as session:
+        agent = await session.get(Flow, uuid.UUID(agent_id))
+        agent.name = "Renamed Agent"
+        session.add(agent)
+        await session.commit()
+
+    component = _internal_component(active_user, caller_id, "Original Name", input_value="ping")
+
+    # The stale name matches nothing published now, so a name-only lookup is refused, not guessed.
+    with pytest.raises(ValueError, match="not published as an A2A agent"):
+        await component.send_to_agent()
+
+    # With options_metadata carrying the id, the pick still resolves and runs.
+    field = component._inputs["agent_name_selected"]
+    field.options = ["Original Name"]
+    field.options_metadata = [{"id": agent_id}]
+
+    message = await component.send_to_agent()
+    assert "ping" in message.text
 
 
 async def test_list_a2a_agents_by_flow_folder_only_returns_enabled(client: AsyncClient, active_user, echo_flow_data):  # noqa: ARG001 - client boots the app/services

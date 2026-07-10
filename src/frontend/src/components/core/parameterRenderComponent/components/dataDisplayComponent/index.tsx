@@ -62,38 +62,26 @@ function monogramOf(title: string): string {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
-// Toned pill styling. Accent uses the subject's derived hue; muted leans on theme tokens.
-function toneStyle(
-  tone: Tone | undefined,
-  hue: number,
-): CSSProperties | undefined {
-  switch (tone) {
-    case "accent":
-      return {
-        color: `hsl(${hue} 62% 55%)`,
-        borderColor: `hsl(${hue} 55% 50% / 0.35)`,
-        backgroundColor: `hsl(${hue} 55% 50% / 0.10)`,
-      };
-    case "success":
-      return {
-        color: "hsl(150 52% 45%)",
-        borderColor: "hsl(150 45% 45% / 0.35)",
-        backgroundColor: "hsl(150 45% 45% / 0.10)",
-      };
-    case "warning":
-      return {
-        color: "hsl(38 78% 50%)",
-        borderColor: "hsl(38 75% 50% / 0.35)",
-        backgroundColor: "hsl(38 75% 50% / 0.10)",
-      };
-    default:
-      return undefined; // muted -> tokens via className
-  }
+// Semantic tones come from theme tokens. The accent tone is the subject's hue, derived from its
+// name, so it can only be an inline style: no static token can express a per-subject color.
+const TONE_CLASS: Partial<Record<Tone, string>> = {
+  success:
+    "border-accent-emerald/40 bg-accent-emerald/20 text-accent-emerald-foreground",
+  warning:
+    "border-accent-amber/40 bg-accent-amber/20 text-accent-amber-foreground",
+};
+
+function accentStyle(hue: number): CSSProperties {
+  return {
+    color: `hsl(${hue} 62% 55%)`,
+    borderColor: `hsl(${hue} 55% 50% / 0.35)`,
+    backgroundColor: `hsl(${hue} 55% 50% / 0.10)`,
+  };
 }
 
 const SectionLabel = ({ children }: { children: ReactNode }) =>
   children ? (
-    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+    <div className="text-xxs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
       {children}
     </div>
   ) : null;
@@ -109,12 +97,16 @@ function Pill({
   tone?: Tone;
   hue: number;
 }) {
-  const style = toneStyle(tone, hue);
+  const style = tone === "accent" ? accentStyle(hue) : undefined;
+  const toneClass = tone ? TONE_CLASS[tone] : undefined;
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-        !style && "border-border bg-muted/40 text-muted-foreground",
+        toneClass,
+        !style &&
+          !toneClass &&
+          "border-border bg-muted/40 text-muted-foreground",
       )}
       style={style}
     >
@@ -160,7 +152,7 @@ function SectionBody({ section, hue }: { section: Section; hue: number }) {
                 )}
                 {field.required && (
                   <span
-                    className="ml-auto inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide"
+                    className="ml-auto inline-flex items-center gap-1.5 text-xxs font-semibold uppercase tracking-wide"
                     style={{ color: accentSolid }}
                   >
                     <span
@@ -292,19 +284,22 @@ export default function DataDisplayComponent({
           <div className="flex min-w-0 items-center gap-3">
             <span
               aria-hidden
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold"
               style={{
+                // The monogram sits on a saturated gradient in both themes, so its foreground is a
+                // near-white tint of the same derived hue rather than a theme token.
+                color: `hsl(${hue} 90% 96%)`,
                 backgroundImage: `linear-gradient(135deg, hsl(${hue} 78% 62%), hsl(${(hue + 42) % 360} 74% 50%))`,
                 boxShadow: `0 4px 12px -3px hsl(${hue} 70% 45% / 0.5)`,
               }}
             >
               {monogram}
             </span>
-            <span className="truncate text-[17px] font-semibold text-foreground">
+            <span className="truncate text-lg font-semibold text-foreground">
               {title}
             </span>
             {payload.version && (
-              <span className="shrink-0 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <span className="shrink-0 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xxs font-medium text-muted-foreground">
                 v{payload.version}
               </span>
             )}

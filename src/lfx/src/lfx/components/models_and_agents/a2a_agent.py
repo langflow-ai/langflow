@@ -7,6 +7,7 @@ direction, letting a flow call out to any spec-compliant A2A agent via the a2a-s
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -34,6 +35,17 @@ DEFAULT_TIMEOUT = 60.0
 # Cap aggregated reply size so a chatty/streaming agent can't make us buffer unbounded text.
 MAX_A2A_RESPONSE_CHARS = 100_000
 _CARD_SUFFIX = "/.well-known/agent-card.json"
+# A spec-compliant agent card is a few KB. Refuse to buffer or parse anything pathological: the
+# card comes from a remote server we don't trust.
+_MAX_CARD_BYTES = 256 * 1024
+# Card strings land in build_config and are rendered in the editor, so clip them too.
+_MAX_CARD_TEXT = 500
+
+
+def _clip(value: object, limit: int = _MAX_CARD_TEXT) -> str:
+    """Coerce untrusted card content to a bounded string."""
+    text = str(value)
+    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 def _agent_base_url(url: str | None) -> str:
@@ -258,6 +270,23 @@ class A2AAgentComponent(Component):
             {"id": str(agent.data["id"]), "updated_at": agent.data.get("updated_at")} for agent in agents
         ]
 
+    def _selected_agent_flow_id(self) -> str | None:
+        """Resolve the dropdown pick to a flow id via options_metadata, since names are not unique."""
+        field = self._inputs.get("agent_name_selected")
+        options = list(getattr(field, "options", None) or [])
+        metadata = list(getattr(field, "options_metadata", None) or [])
+        if self.agent_name_selected in options:
+            index = options.index(self.agent_name_selected)
+            if index < len(metadata):
+                return str(metadata[index].get("id") or "") or None
+        return None
+
+    @staticmethod
+    def _agent_id_by_name(published: list[Any], agent_name: str) -> str | None:
+        """Fall back for flows saved before the dropdown recorded ids: only an unambiguous name wins."""
+        matches = [agent for agent in published if agent.data.get("name") == agent_name]
+        return str(matches[0].data["id"]) if len(matches) == 1 else None
+
     async def _apply_external_card(self, build_config: dotdict, url: str | None) -> None:
         """On URL change, fetch the remote agent's card; show the display only if one comes back."""
         card = await self._fetch_card(url) if url and str(url).startswith("http") else None
@@ -277,21 +306,29 @@ class A2AAgentComponent(Component):
             return None
         try:
             client = build_a2a_client(base, validated_ips, api_key=self.api_key, timeout=15)
-            async with client:
-                response = await client.get(f"{base}{_CARD_SUFFIX}")
+            async with client, client.stream("GET", f"{base}{_CARD_SUFFIX}") as response:
                 if response.status_code != httpx.codes.OK:
                     return None
-                data = response.json()
-                # A spec-compliant card is a JSON object; anything else degrades to no preview.
-                return data if isinstance(data, dict) else None
-        except Exception:  # noqa: BLE001 - a bad/unreachable url degrades to no preview
+                # Bound the read: trust neither the declared length nor the actual stream.
+                declared = response.headers.get("content-length")
+                if declared is not None and int(declared) > _MAX_CARD_BYTES:
+                    return None
+                body = bytearray()
+                async for chunk in response.aiter_bytes():
+                    body.extend(chunk)
+                    if len(body) > _MAX_CARD_BYTES:
+                        return None
+            data = json.loads(bytes(body))
+            # A spec-compliant card is a JSON object; anything else degrades to no preview.
+            return data if isinstance(data, dict) else None
+        except Exception:  # noqa: BLE001 - a bad/unreachable/oversized url degrades to no preview
             return None
 
     @staticmethod
     def _card_payload(card: dict) -> dict:
         """Build the structured data-display payload (identity + chips + sections) from an agent card."""
-        name = str(card.get("name") or "Agent")
-        version = str(card.get("version") or "")
+        name = _clip(card.get("name") or "Agent")
+        version = _clip(card.get("version") or "")
 
         # Quick-facts chips under the header. Auth leads (accent + icon) since it's decision-critical;
         # capabilities and transport/protocol follow as muted context.
@@ -305,13 +342,13 @@ class A2AAgentComponent(Component):
         if capabilities.get("pushNotifications"):
             chips.append({"label": "Push notifications", "tone": "muted"})
         if transport := card.get("preferredTransport"):
-            chips.append({"label": str(transport), "tone": "muted"})
+            chips.append({"label": _clip(transport, 40), "tone": "muted"})
         if protocol := card.get("protocolVersion"):
-            chips.append({"label": f"A2A {protocol}", "tone": "muted"})
+            chips.append({"label": f"A2A {_clip(protocol, 20)}", "tone": "muted"})
 
         sections: list[dict] = []
         if description := card.get("description"):
-            sections.append({"heading": "Description", "text": str(description)})
+            sections.append({"heading": "Description", "text": _clip(description)})
 
         # The card comes from a remote server, so tolerate malformed skill/schema shapes.
         skills = [skill for skill in (card.get("skills") or []) if isinstance(skill, dict)]
@@ -323,15 +360,15 @@ class A2AAgentComponent(Component):
         properties = properties if isinstance(properties, dict) else {}
         if properties:
             fields = [
-                {"name": str(key), "type": str((spec or {}).get("type") or ""), "required": key in required}
+                {"name": _clip(key, 80), "type": _clip((spec or {}).get("type") or "", 40), "required": key in required}
                 for key, spec in properties.items()
             ]
             sections.append({"heading": "Sends", "fields": fields})
 
         skill_cards = [
             {
-                "title": str(skill.get("name") or skill.get("id") or "skill"),
-                "description": str(skill.get("description") or ""),
+                "title": _clip(skill.get("name") or skill.get("id") or "skill", 80),
+                "description": _clip(skill.get("description") or ""),
             }
             for skill in skills
         ]
@@ -356,9 +393,21 @@ class A2AAgentComponent(Component):
             msg = "Select an A2A agent to call."
             raise ValueError(msg)
 
-        # The dropdown only offers a2a_enabled agents from the caller's folder; we resolve the
-        # pick by name here. A same-named flow elsewhere is a rare ambiguity we accept for now.
-        flow = await get_flow_by_id_or_name(user_id=self.user_id, flow_name=agent_name)
+        # The pick is stored as a name, but the target can be renamed or unpublished between editing
+        # and running. Re-resolve it against the agents published right now, preferring the flow id
+        # the dropdown recorded, so a same-named flow can't be called by accident and an unpublished
+        # one is refused instead of silently run.
+        published = await self.alist_a2a_agents_by_flow_folder()
+        published_ids = {str(agent.data["id"]) for agent in published}
+        flow_id = self._selected_agent_flow_id() or self._agent_id_by_name(published, agent_name)
+        if flow_id is None or flow_id not in published_ids:
+            msg = (
+                f"Agent flow '{agent_name}' is not published as an A2A agent in this project. "
+                "Turn on 'Serve as an A2A agent' for it, or select another agent."
+            )
+            raise ValueError(msg)
+
+        flow = await get_flow_by_id_or_name(user_id=self.user_id, flow_id=flow_id)
         if not flow or not flow.data:
             msg = f"Agent flow '{agent_name}' could not be found."
             raise ValueError(msg)
