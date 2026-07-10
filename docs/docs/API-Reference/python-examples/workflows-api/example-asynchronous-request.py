@@ -10,9 +10,9 @@ headers = {"Content-Type": "application/json", "x-api-key": api_key}
 
 payload = {
     "flow_id": flow_id,
-    "background": True,
-    "stream": False,
-    "inputs": {},
+    "input_value": "Process this in the background",
+    "session_id": "session-456",
+    "mode": "background",
 }
 
 response = requests.post(f"{base}/api/v2/workflows", headers=headers, json=payload, timeout=60)
