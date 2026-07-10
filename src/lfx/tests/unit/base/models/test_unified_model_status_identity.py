@@ -95,6 +95,43 @@ def test_reasoning_model_instantiation_omits_temperature_and_max_tokens():
 
     assert "temperature" not in captured
     assert "max_tokens" not in captured
+    assert captured["request_timeout"] == 10.0
+
+
+def test_openai_reasoning_instantiation_omits_temperature_and_max_tokens():
+    """OpenAI reasoning path must stay aligned with the cross-provider rule.
+
+    Why: get_llm drops temperature and max_tokens for any metadata.reasoning
+    model. OpenAI provider metadata still maps the token cap to ``max_tokens``
+    (not ``max_completion_tokens``), so remapping would still send a rejected
+    field — omitting both is intentional and must not regress.
+    """
+    from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.unified_models.instantiation import get_llm
+
+    captured: dict = {}
+
+    class FakeChatOpenAI:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    selection = [
+        {
+            "name": "o1",
+            "provider": "OpenAI",
+            "metadata": {"reasoning": True, "max_tokens_field_name": "max_tokens"},
+        }
+    ]
+    with (
+        patch.object(unified_models_module, "get_api_key_for_provider", return_value="test-key"),
+        patch.object(unified_models_module, "get_model_class", return_value=FakeChatOpenAI),
+        patch.object(unified_models_module, "get_all_variables_for_provider", return_value={}),
+    ):
+        get_llm(selection, user_id="user-1", temperature=0.7, max_tokens=25)
+
+    assert "temperature" not in captured
+    assert "max_tokens" not in captured
+    assert "max_completion_tokens" not in captured
 
 
 def test_foundry_reasoning_validation_omits_max_tokens():
@@ -127,6 +164,7 @@ def test_foundry_reasoning_validation_omits_max_tokens():
         )
 
     assert "max_tokens" not in captured
+    assert captured["request_timeout"] == 10.0
 
 
 def test_foundry_validation_fails_when_sdk_is_missing():

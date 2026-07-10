@@ -558,6 +558,8 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 )
                 raise ValueError(msg) from e
 
+            from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
+
             api_key = variables.get("AZURE_AI_FOUNDRY_API_KEY")
             endpoint = variables.get("AZURE_AI_FOUNDRY_ENDPOINT")
             if not api_key or not endpoint or not validation_model:
@@ -566,6 +568,10 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 "credential": api_key,
                 "endpoint": endpoint,
                 "model": validation_model,
+                # Validation runs synchronously in the variable-save request;
+                # bound connection/read time so a blackholed endpoint cannot
+                # stall the worker (matches live-discovery timeout).
+                "request_timeout": AZURE_AI_FOUNDRY_REQUEST_TIMEOUT,
             }
             if not is_reasoning_model:
                 llm_kwargs["max_tokens"] = 1

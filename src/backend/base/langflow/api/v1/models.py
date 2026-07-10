@@ -54,30 +54,6 @@ def get_provider_from_variable_name(variable_name: str) -> str | None:
     return None
 
 
-def get_model_names_for_provider(provider: str) -> set[str]:
-    """Get all model names for a given provider.
-
-    Args:
-        provider: The provider name (e.g., "OpenAI")
-
-    Returns:
-        A set of model names for that provider
-    """
-    models_by_provider = get_unified_models_detailed(
-        providers=[provider],
-        include_unsupported=True,
-        include_deprecated=True,
-    )
-
-    model_names = set()
-    for provider_dict in models_by_provider:
-        if provider_dict.get("provider") == provider:
-            for model in provider_dict.get("models", []):
-                model_names.add(model.get("model_name"))
-
-    return model_names
-
-
 class ModelStatusUpdate(BaseModel):
     """Request model for updating model enabled status."""
 
@@ -428,7 +404,7 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
     return set()
 
 
-def _build_model_providers_by_name(
+def build_model_providers_by_name(
     all_models_by_provider: list[dict] | None = None,
 ) -> dict[str, set[str]]:
     """Build a catalog index used to migrate legacy bare-name status entries."""
@@ -450,7 +426,7 @@ def _build_model_providers_by_name(
     return providers_by_name
 
 
-def _normalize_model_status_entries(
+def normalize_model_status_entries(
     entries: set[str],
     providers_by_name: dict[str, set[str]],
 ) -> set[str]:
@@ -712,14 +688,14 @@ async def update_enabled_models(
         include_deprecated=True,
     )
     is_default_model = _build_model_default_flags(all_models_by_provider)
-    providers_by_name = _build_model_providers_by_name(all_models_by_provider)
+    providers_by_name = build_model_providers_by_name(all_models_by_provider)
     # Live/custom models may not be in the static catalog. The provider in this
     # request still gives a known identity for migrating a matching bare entry.
     for update in updates:
         providers_by_name.setdefault(update.model_id, set()).add(update.provider)
 
-    disabled_models = _normalize_model_status_entries(disabled_models, providers_by_name)
-    explicitly_enabled_models = _normalize_model_status_entries(explicitly_enabled_models, providers_by_name)
+    disabled_models = normalize_model_status_entries(disabled_models, providers_by_name)
+    explicitly_enabled_models = normalize_model_status_entries(explicitly_enabled_models, providers_by_name)
 
     # Update model sets based on user requests
     # For any model being enabled, validate the provider credentials

@@ -9,9 +9,9 @@ import pytest
 from langflow.api.v1.models import (
     ModelStatusUpdate,
     _build_model_default_flags,
-    _build_model_providers_by_name,
-    _normalize_model_status_entries,
     _update_model_sets,
+    build_model_providers_by_name,
+    normalize_model_status_entries,
 )
 from langflow.api.v1.variable import _cleanup_model_list_variable
 
@@ -32,7 +32,7 @@ CATALOG_WITH_SHARED_ALIAS = [
 
 def test_model_defaults_and_updates_are_provider_qualified():
     default_flags = _build_model_default_flags(CATALOG_WITH_SHARED_ALIAS)
-    providers_by_name = _build_model_providers_by_name(CATALOG_WITH_SHARED_ALIAS)
+    providers_by_name = build_model_providers_by_name(CATALOG_WITH_SHARED_ALIAS)
 
     assert default_flags == {
         "OpenAI::gpt-4o-mini": False,
@@ -41,7 +41,7 @@ def test_model_defaults_and_updates_are_provider_qualified():
 
     # A pre-upgrade bare entry applied to both providers. On the next write it
     # is expanded before changing only the provider the user toggled.
-    disabled_models = _normalize_model_status_entries({"gpt-4o-mini"}, providers_by_name)
+    disabled_models = normalize_model_status_entries({"gpt-4o-mini"}, providers_by_name)
     explicitly_enabled_models: set[str] = set()
     _update_model_sets(
         [ModelStatusUpdate(provider="OpenAI", model_id="gpt-4o-mini", enabled=True)],
@@ -74,7 +74,7 @@ async def test_provider_cleanup_migrates_legacy_entries_before_removing_target_p
         update_variable_fields=AsyncMock(),
         delete_variable=AsyncMock(),
     )
-    providers_by_name = _build_model_providers_by_name(CATALOG_WITH_SHARED_ALIAS)
+    providers_by_name = build_model_providers_by_name(CATALOG_WITH_SHARED_ALIAS)
 
     await _cleanup_model_list_variable(
         variable_service,

@@ -484,6 +484,8 @@ OPENROUTER_FETCH_TIMEOUT = 10.0
 OPENAI_COMPATIBLE_FETCH_TIMEOUT = 10.0
 
 AZURE_AI_FOUNDRY_FETCH_TIMEOUT = 10.0
+# Shared wall-clock bound for Foundry HTTP (discovery) and SDK (validate/get_llm).
+AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
 
 
 def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -558,10 +560,17 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
 
     url = f"{endpoint.rstrip('/')}/models"
     try:
+        # Why: Foundry's OpenAI-compatible surface accepts API keys via the
+        # ``api-key`` header (Microsoft Foundry REST / Azure OpenAI docs).
+        # ``Authorization: Bearer`` is for Entra ID tokens, not resource keys.
+        # allow_redirects=False keeps the api-key header from following an
+        # off-origin redirect (SSRF/header-smuggling posture; host allowlisting
+        # remains a shared follow-up with other OpenAI-compatible fetchers).
         response = requests.get(
             url,
             headers={"api-key": api_key},
             timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+            allow_redirects=False,
         )
         response.raise_for_status()
         payload = response.json()

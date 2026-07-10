@@ -109,6 +109,7 @@ def test_fetch_live_azure_ai_foundry_models_discovers_deployment_ids():
         "https://example.services.ai.azure.com/openai/v1/models",
         headers={"api-key": "test-key"},
         timeout=model_utils.AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+        allow_redirects=False,
     )
     assert [model["name"] for model in models] == ["o3-mini", "team-production-chat"]
     assert models[0]["reasoning"] is True
@@ -214,6 +215,7 @@ def test_validate_model_provider_key_azure_ai_foundry_success():
         "endpoint": "https://example.services.ai.azure.com/openai/v1",
         "model": "gpt-4o",
         "max_tokens": 1,
+        "request_timeout": 10.0,
     }
 
 
@@ -255,6 +257,7 @@ def test_get_llm_wires_azure_ai_foundry_endpoint_and_credential():
     assert captured_kwargs["model"] == "gpt-4o"
     assert captured_kwargs["credential"] == "test-key"
     assert captured_kwargs["endpoint"] == "https://example.services.ai.azure.com/openai/v1"
+    assert captured_kwargs["request_timeout"] == 10.0
 
 
 def test_get_llm_azure_ai_foundry_requires_endpoint():

@@ -15,9 +15,9 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.models import (
     DISABLED_MODELS_VAR,
     ENABLED_MODELS_VAR,
-    _build_model_providers_by_name,
-    _normalize_model_status_entries,
+    build_model_providers_by_name,
     get_provider_from_variable_name,
+    normalize_model_status_entries,
 )
 from langflow.api.v1.schemas.deployments import DetectVarsRequest, DetectVarsResponse
 from langflow.services.authorization import VariableAction, ensure_variable_permission
@@ -66,7 +66,7 @@ async def _cleanup_model_list_variable(
     # Migrate known legacy bare names first so shared aliases retain the other
     # provider identities, then remove only the deleted provider's qualified
     # entries (including live/custom deployment names absent from the catalog).
-    normalized_models = _normalize_model_status_entries(current_models, providers_by_name)
+    normalized_models = normalize_model_status_entries(current_models, providers_by_name)
     provider_prefix = f"{provider}::"
     filtered_models = {model for model in normalized_models if not model.startswith(provider_prefix)}
 
@@ -101,7 +101,7 @@ async def _cleanup_provider_models(
 ) -> None:
     """Clean up disabled and enabled model lists for a deleted provider credential."""
     try:
-        providers_by_name = _build_model_providers_by_name()
+        providers_by_name = build_model_providers_by_name()
     except ValueError:
         logger.exception("Provider model retrieval failed")
         return

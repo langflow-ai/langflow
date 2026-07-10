@@ -220,9 +220,16 @@ def get_llm(
     # generic ``model``.
     model_name_param = metadata.get("model_name_param") or provider_param_mapping.get("model_param", "model")
 
-    # Reasoning models reject sampling/output-limit kwargs in several provider
-    # SDKs. Raw catalog selections carry ``reasoning`` while enriched options
-    # also carry ``reasoning_models``; support both shapes.
+    # Why: Reasoning models reject sampling and output-limit kwargs across
+    # provider SDKs (OpenAI o/gpt-5, Anthropic extended thinking, Google
+    # thinking, Azure Foundry reasoning deployments). Catalog metadata marks
+    # these with ``reasoning: True``; enriched UI options also carry
+    # ``reasoning_models``. Drop both ``temperature`` and ``max_tokens`` for
+    # any such model — do not remap via ``max_tokens_field_name``. OpenAI's
+    # provider metadata still maps to ``max_tokens`` (not
+    # ``max_completion_tokens``), so remapping would still send a rejected
+    # field; omitting the cap matches the prior OpenAI-only temperature
+    # suppression and avoids silent SDK errors on upgrade.
     reasoning_models = metadata.get("reasoning_models", [])
     is_reasoning_model = metadata.get("reasoning", False) is True or model_name in reasoning_models
     if is_reasoning_model:
@@ -344,6 +351,8 @@ def get_llm(
         if default_headers:
             kwargs["default_headers"] = default_headers
     elif provider == "Azure AI Foundry":
+        from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
+
         provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
         endpoint_value = provider_vars.get("AZURE_AI_FOUNDRY_ENDPOINT") or _env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT")
         if not endpoint_value:
@@ -353,6 +362,8 @@ def get_llm(
             )
             raise ValueError(msg)
         kwargs["endpoint"] = endpoint_value
+        # Bound hung/blackholed endpoints the same way live discovery does.
+        kwargs["request_timeout"] = AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
     elif is_registered(provider):
         # Bundle-contributed provider: apply its declared connection variables
         # (base_url, attribution headers, etc.) generically from its metadata.
