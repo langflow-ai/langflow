@@ -2124,7 +2124,7 @@
   "knowledge.metadataKeyLabel": "Clave de metadatos {{index}}",
   "knowledge.metadataValueLabel": "Valor de metadatos {{index}}",
   "knowledge.chunksMetadataKeyLabel": "Clave de filtro de metadatos",
-  "knowledge.chunksMetadataValueLabel": "Valor de filtro de metadatos"
+  "knowledge.chunksMetadataValueLabel": "Valor de filtro de metadatos",
   "files.actionsMenu": "Acciones de archivo para {{name}}",
   "mcp.servers.actionsMenu": "Acciones para {{name}}"
 }

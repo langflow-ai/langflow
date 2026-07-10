@@ -2124,7 +2124,7 @@
   "knowledge.metadataKeyLabel": "元数据键 {{index}}",
   "knowledge.metadataValueLabel": "元数据值 {{index}}",
   "knowledge.chunksMetadataKeyLabel": "元数据筛选键",
-  "knowledge.chunksMetadataValueLabel": "元数据筛选值"
+  "knowledge.chunksMetadataValueLabel": "元数据筛选值",
   "files.actionsMenu": "{{name}} 的文件操作",
   "mcp.servers.actionsMenu": "{{name}} 的操作"
 }

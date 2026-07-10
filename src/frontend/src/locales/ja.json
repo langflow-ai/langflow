@@ -2124,7 +2124,7 @@
   "knowledge.metadataKeyLabel": "メタデータキー {{index}}",
   "knowledge.metadataValueLabel": "メタデータ値 {{index}}",
   "knowledge.chunksMetadataKeyLabel": "メタデータフィルターキー",
-  "knowledge.chunksMetadataValueLabel": "メタデータフィルター値"
+  "knowledge.chunksMetadataValueLabel": "メタデータフィルター値",
   "files.actionsMenu": "{{name}} のファイル操作",
   "mcp.servers.actionsMenu": "{{name}} の操作"
 }
