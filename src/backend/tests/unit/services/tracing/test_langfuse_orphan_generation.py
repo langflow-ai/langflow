@@ -163,8 +163,9 @@ class TestRootRunReparentingHandler:
         assert not ctx.is_valid
 
     def test_handler_is_deepcopy_and_copy_safe(self):
-        """The handler must survive ``copy.deepcopy`` / ``copy.copy`` by returning
-        itself, never recursing into the langfuse client.
+        """Survive ``copy.deepcopy`` / ``copy.copy`` by returning self.
+
+        The handler never recurses into the langfuse client.
 
         Langflow deep-copies flow/graph state (restore-point snapshots, working-flow
         copies, component build). The real langfuse ``CallbackHandler`` / ``Langfuse``

@@ -1,5 +1,6 @@
 """Flow data preparation and model injection."""
 
+import contextlib
 import copy
 import json
 import logging
@@ -325,10 +326,8 @@ def load_and_prepare_flow(
     if provider_vars:
         raw_iterations = provider_vars.get("ITERATIONS_LIMIT")
         if raw_iterations not in (None, ""):
-            try:
+            with contextlib.suppress(TypeError, ValueError):
                 flow_data = inject_iterations_into_flow(flow_data, int(raw_iterations))
-            except (TypeError, ValueError):
-                pass
 
     flow_data = inject_lfx_components_path(flow_data)
     flow_data = inject_assistant_fs_root(flow_data)

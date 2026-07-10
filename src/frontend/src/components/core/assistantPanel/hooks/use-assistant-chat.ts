@@ -19,7 +19,6 @@ import type {
   AssistantMessage,
   AssistantModel,
 } from "../assistant-panel.types";
-import { commandAckMessages } from "./command-ack";
 import { applyFlowProposalToCanvas } from "../helpers/apply-flow-proposal";
 import { applyFlowUpdate as applyFlowUpdateImpl } from "../helpers/apply-flow-update";
 import {
@@ -27,6 +26,7 @@ import {
   buildTaskFromEvent,
   inProgressTaskFromEvent,
 } from "../helpers/assistant-event-mappers";
+import { commandAckMessages } from "./command-ack";
 import {
   parseHistoryCommand,
   readHistoryLimit,

@@ -88,9 +88,9 @@ async def test_message_response_does_not_retry_unrelated_errors():
             patch.object(AgentComponent, "_inject_dynamic_prompt_values", return_value=""),
             patch.object(AgentComponent, "set", new=MagicMock()),
             patch.object(AgentComponent, "run_agent", new=run_agent),
+            pytest.raises(RuntimeError, match="rate limit"),
         ):
-            with pytest.raises(RuntimeError, match="rate limit"):
-                await agent.message_response()
+            await agent.message_response()
 
         assert run_agent.await_count == 1
         assert model_remediation.cached_overrides("OpenAI", "gpt-5.6") == {}

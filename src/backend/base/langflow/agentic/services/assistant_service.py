@@ -575,7 +575,8 @@ async def execute_flow_with_validation_streaming(
     # Set before the agent loop on canvas-mutating intents; read by _complete so the
     # frontend can offer "revert to before this turn" (additive SSE field).
     restore_version_id: str | None = None
-    # Non-fatal model errors the turn recovered from (fallback/remediation), surfaced by _complete so a silent background swap shows an (i) instead of hiding.
+    # Non-fatal model errors the turn recovered from (fallback/remediation), surfaced by _complete
+    # so a silent background swap shows an (i) instead of hiding.
     recovered_notices: list[dict[str, str]] = []
 
     def _accumulate(tokens: dict[str, int] | None, *, phase: str | None = None) -> None:

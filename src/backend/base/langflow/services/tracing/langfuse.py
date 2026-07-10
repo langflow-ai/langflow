@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import threading
 from collections import OrderedDict
@@ -69,10 +70,19 @@ def _get_or_create_shared_client(config: dict) -> Langfuse:
 
 
 def _reset_shared_client_for_tests() -> None:
-    """Test-only hook: clear the cached client so each test gets a fresh mock."""
+    """Test-only hook: clear the cached client so each test gets a fresh mock.
+
+    Also clears the langfuse SDK's own process-global resource-manager registry
+    (keyed by public_key); without it a prior test's client leaks into the next —
+    e.g. a real-SDK test resolves to a stale manager with no in-memory exporter.
+    """
     with _SharedClient.lock:
         _SharedClient.client = None
         _SharedClient.key = None
+    with contextlib.suppress(Exception):
+        from langfuse._client.resource_manager import LangfuseResourceManager
+
+        LangfuseResourceManager._instances.clear()
 
 
 def normalize_langfuse_trace_id(trace_id: UUID | str | None) -> str | None:
@@ -294,7 +304,8 @@ class LangFuseTracer(BaseTracer):
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.trace_id = trace_id
-        # ``user_id`` stays the authenticated user (drives ``trace.userId``); the optional ``tracing_user_id`` is stamped into metadata as ``langflow.tracing_user_id`` instead of overriding it (#9505).
+        # ``user_id`` stays the authenticated user (drives ``trace.userId``); ``tracing_user_id`` is
+        # stamped into metadata as ``langflow.tracing_user_id`` instead of overriding it (#9505).
         self.user_id = user_id
         self.tracing_user_id = tracing_user_id
         self.session_id = session_id

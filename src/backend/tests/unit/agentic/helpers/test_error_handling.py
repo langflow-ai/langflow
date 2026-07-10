@@ -349,8 +349,10 @@ class TestBuildRecoveredNotice:
         assert "raw" not in n
 
     def test_raw_internal_error_is_never_leaked(self):
-        """Even a long raw provider error must not appear in the notice — the notice
-        goes to every client on the complete event; only the friendly reason ships."""
+        """The raw provider error must never appear in the notice.
+
+        The notice goes to every client on the complete event; only the friendly reason ships.
+        """
         n = build_recovered_notice("model_fallback", failed_model="x", raw_error="z" * 900, used_model="y")
         assert "raw" not in n
         assert n["reason"]

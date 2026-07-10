@@ -250,7 +250,8 @@ async def check_assistant_config(
                     }
                 )
 
-    # Live providers with an all-deprecated static catalog (e.g. IBM WatsonX) are dropped above before their live fetch runs; re-add them from live tool-calling models.
+    # Live providers with an all-deprecated static catalog (e.g. IBM WatsonX) are dropped above
+    # before their live fetch runs; re-add them from live tool-calling models.
     if enabled_providers:
         all_providers.extend(
             build_live_only_provider_entries(

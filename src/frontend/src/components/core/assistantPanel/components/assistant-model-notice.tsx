@@ -44,7 +44,7 @@ export function AssistantModelNotice({ notices }: AssistantModelNoticeProps) {
   return (
     <ShadTooltip content={content} side="bottom">
       <span
-        className="inline-flex cursor-help items-center text-amber-500"
+        className="inline-flex cursor-help items-center text-accent-amber-foreground"
         aria-label={t("assistant.modelNotice.ariaLabel")}
         data-testid="assistant-model-notice"
       >
