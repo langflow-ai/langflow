@@ -15,9 +15,11 @@ export const AnimatedConditional = ({
 
   return (
     <motion.div
+      aria-hidden={!isOpen}
       initial={{ width: isOpen ? widthValue : 0 }}
       animate={{ width: isOpen ? widthValue : 0 }}
       exit={{ width: 0 }}
+      inert={!isOpen}
       transition={{
         duration: 0.3,
         ease: "easeInOut",

@@ -391,7 +391,17 @@ def _build_fake_server() -> SimpleNamespace:
 
 async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
     """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock."""
-    flow = SimpleNamespace(id="flow-id-1", name="my_flow", folder_id=None, data={"nodes": [], "edges": []})
+    # ``user_id`` matches the current user (see ``current_user_ctx`` below) so the
+    # owner-override path in ``ensure_flow_permission`` is exercised; ``workspace_id``
+    # is read by the same guard. ``data`` feeds the HITL support gate.
+    flow = SimpleNamespace(
+        id="flow-id-1",
+        name="my_flow",
+        folder_id=None,
+        user_id="user-1",
+        workspace_id=None,
+        data={"nodes": [], "edges": []},
+    )
 
     async def fake_get_flow_snake_case(*_args, **_kwargs):
         return flow
@@ -538,6 +548,10 @@ async def test_handle_call_tool_blocks_hitl_flow(monkeypatch):
         id="flow-hitl",
         name="HITL Tools",
         folder_id=None,
+        # Owner of the flow (matches current_user_ctx below) so ensure_flow_permission's
+        # owner-override path passes and the run reaches the HITL support gate.
+        user_id="user-1",
+        workspace_id=None,
         data={
             "nodes": [
                 {

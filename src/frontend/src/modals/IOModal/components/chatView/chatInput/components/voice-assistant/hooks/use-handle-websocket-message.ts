@@ -1,5 +1,6 @@
-import i18n from "@/i18n";
 import { BuildStatus } from "@/constants/enums";
+import i18n from "@/i18n";
+import type { VertexBuildTypeAPI } from "@/types/api";
 import { base64ToFloat32Array } from "../helpers/utils";
 
 export const useHandleWebsocketMessage = (
@@ -17,7 +18,7 @@ export const useHandleWebsocketMessage = (
   setStatus: React.Dispatch<React.SetStateAction<string>>,
   messagesStore,
   setEdges,
-  addDataToFlowPool: (data: any, nodeId: string) => void,
+  addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => void,
   updateEdgesRunningByNodes: (nodeIds: string[], isRunning: boolean) => void,
   updateBuildStatus: (nodeIds: string[], status: BuildStatus) => void,
   hasOpenAIAPIKey: boolean,

@@ -78,7 +78,7 @@ test.describe("Session Deletion Data Leakage Fix", () => {
 
   test(
     "should prevent data leakage when default session is deleted and recreated",
-    { tag: ["@release", "@regression"] },
+    { tag: ["@release"] },
     async ({ page }) => {
       skipIfMissing.openAiKey();
       await awaitBootstrapTest(page);
@@ -143,7 +143,7 @@ test.describe("Session Deletion Data Leakage Fix", () => {
 
   test(
     "should clear LLM context when session is deleted",
-    { tag: ["@release", "@regression"] },
+    { tag: ["@release"] },
     async ({ page }) => {
       skipIfMissing.openAiKey();
       await awaitBootstrapTest(page);

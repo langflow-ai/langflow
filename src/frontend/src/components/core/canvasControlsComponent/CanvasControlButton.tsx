@@ -11,6 +11,7 @@ type CanvasControlButtonProps = {
   backgroundClasses?: string;
   iconClasses?: string;
   testId?: string;
+  navItemId?: string;
 };
 
 export const CanvasControlButton = ({
@@ -21,14 +22,16 @@ export const CanvasControlButton = ({
   backgroundClasses,
   iconClasses,
   testId,
+  navItemId,
 }: CanvasControlButtonProps): JSX.Element => {
   return (
     <ControlButton
       data-testid={testId}
-      className="group !h-8 !w-8 rounded !p-0"
+      data-sidebar-collapsed-nav-item={navItemId}
+      className="group !h-8 !w-8 rounded !p-0 focus-visible:!outline focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-current"
       onClick={onClick}
       disabled={disabled}
-      title={testId?.replace(/_/g, " ")}
+      aria-label={tooltipText}
     >
       <ShadTooltip content={tooltipText} side="right">
         <div

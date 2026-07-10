@@ -7,6 +7,7 @@
 
 import { updateMessage } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import { queryClient } from "@/contexts";
+import i18n from "@/i18n";
 import useFlowStore from "@/stores/flowStore";
 import { useHitlStore } from "@/stores/hitlStore";
 import { useMessagesStore } from "@/stores/messagesStore";
@@ -163,7 +164,7 @@ export function injectHumanInputCard(
     return;
   }
   const block: ContentBlock = {
-    title: "Human input required",
+    title: i18n.t("humanInput.required"),
     contents: [content],
     allow_markdown: true,
     component: "HumanInput",

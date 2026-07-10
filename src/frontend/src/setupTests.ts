@@ -1,5 +1,8 @@
 // Jest setup file for testing environment
 import "@testing-library/jest-dom";
+import { toHaveNoViolations } from "jest-axe";
+
+expect.extend(toHaveNoViolations);
 
 // Mock ResizeObserver if not available in test environment
 global.ResizeObserver = jest.fn().mockImplementation(() => ({

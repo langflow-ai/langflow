@@ -979,6 +979,11 @@ class MCPToolsComponent(ComponentWithCache):
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
                 output = await exec_tool.coroutine(**unflattened_kwargs)
+                if getattr(output, "isError", False):
+                    # isError=True is a FAILED call; treating its content as data makes it look successful.
+                    error_text = " ".join(str(item.model_dump().get("text") or "") for item in output.content).strip()
+                    msg = f"MCP tool '{self.tool}' failed: {error_text or 'no error detail provided'}"
+                    raise ValueError(msg)
                 tool_content = []
                 for item in output.content:
                     item_dict = item.model_dump()

@@ -41,10 +41,16 @@ class LiveFrame:
     milestone it is the row's ``job_events.seq``; for an ephemeral frame it is
     the seq of the most recent durable milestone (so ordering stays monotonic).
     ``data`` is the already-formatted SSE frame bytes.
+
+    ``durable`` says whether this frame has a ``job_events`` row of its own.
+    Only durable frames can come back from a replay, so only they are
+    seq-deduped on reattach; ephemeral frames share the preceding milestone's
+    seq and would otherwise be mistaken for replays of it.
     """
 
     seq: int
     data: bytes
+    durable: bool = True
 
 
 ReadDurable = Callable[[int], Awaitable[list[LiveFrame]]]
@@ -195,9 +201,10 @@ class InMemoryLiveBus:
                             continue
                     if item is _CLOSED:
                         return
-                    if item.seq <= highest:
-                        continue
-                    highest = item.seq
+                    if item.durable:
+                        if item.seq <= highest:
+                            continue
+                        highest = item.seq
                     yield item
             finally:
                 self._drop_queue(job_id, queue)

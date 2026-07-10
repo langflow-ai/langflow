@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { cn } from "@/utils/utils";
 
@@ -10,11 +11,12 @@ export function ActionPickerAddButton({
   onClick: () => void;
   testId?: string;
 }): JSX.Element {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
       disabled={disabled}
-      aria-label="Add user action"
+      aria-label={t("actionPicker.addAction")}
       data-testid={`actionpicker-add-${testId ?? ""}`}
       onClick={onClick}
       className={cn(

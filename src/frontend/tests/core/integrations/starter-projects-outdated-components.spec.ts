@@ -1,0 +1,109 @@
+import { expect, test } from "../../fixtures";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { openTemplatesModal } from "../../utils/flow/new-project-flow";
+
+// The starter-project templates are checked for outdated components in four
+// quarters so the work parallelizes across CI shards and each test stays under
+// the 12-minute attempt budget. Splitting by test (not by file) keeps that
+// parallelism while collapsing the four near-identical shard copies into one.
+const QUARTERS = ["first", "second", "third", "fourth"];
+
+QUARTERS.forEach((label, quarter) => {
+  test(
+    `user should be able to use the ${label} quarter of starter projects without any outdated components on the flow`,
+    { tag: ["@release", "@components"] },
+    async ({ page }) => {
+      test.skip(
+        process.platform === "win32",
+        "Flaky on Windows CI runners due to template-load workload; outdated-component check is OS-agnostic and covered by Linux/macOS runs",
+      );
+
+      await awaitBootstrapTest(page);
+
+      const templatesData: Array<{ index: number; name: string | null }> = [];
+      let numberOfOutdatedComponents = 0;
+
+      await page.getByTestId("side_nav_options_all-templates").click();
+      // Avoid waitForLoadState("networkidle"): persistent connections
+      // (MCP refresh, websockets) keep network busy and force the full 30s
+      // timeout on every iteration. The toBeVisible() below already
+      // auto-waits for actual readiness.
+      await expect(page.getByTestId("text_card_container").first()).toBeVisible(
+        { timeout: 20000 },
+      );
+
+      const numberOfTemplates = await page
+        .getByTestId("text_card_container")
+        .count();
+
+      const start = Math.ceil((numberOfTemplates * quarter) / 4);
+      const end = Math.ceil((numberOfTemplates * (quarter + 1)) / 4);
+
+      console.log(
+        `Total templates: ${numberOfTemplates}, Testing from ${start} to ${end - 1} (${label} quarter)`,
+      );
+
+      for (let i = start; i < end; i++) {
+        const templateCard = page.getByTestId("text_card_container").nth(i);
+        await expect(templateCard).toBeVisible({ timeout: 10000 });
+        const exampleName = await templateCard.getAttribute("role");
+        templatesData.push({ index: i, name: exampleName });
+      }
+
+      console.log(
+        "Templates to test:",
+        templatesData.map((t) => `${t.index}: ${t.name}`).join(", "),
+      );
+
+      for (let idx = 0; idx < templatesData.length; idx++) {
+        const template = templatesData[idx];
+        console.log(`Testing template ${template.index}: ${template.name}`);
+
+        // First iteration: the templates modal is already open from the
+        // data-collection step above, so skip the homepage round-trip.
+        // Subsequent iterations: navigate back from the previous flow via
+        // chevron-left instead of page.goto("/"). page.goto forces a full SPA
+        // bundle re-execution which was the dominant per-iteration cost on
+        // Linux CI and pushed shard 38 past its 12-minute attempt budget.
+        if (idx > 0) {
+          await page.getByTestId("icon-ChevronLeft").first().click();
+          await expect(page.getByTestId("mainpage_title")).toBeVisible({
+            timeout: 30000,
+          });
+          // TIMEOUTS.long: two shard workers share one SQLite backend, and
+          // each iteration's placeholder-flow create/delete churn can queue
+          // the "New Flow" POST behind the 30s busy_timeout. A standard (30s)
+          // wait expires exactly when the lock clears — see nightly run
+          // 28833493062 ("database is locked" + welcome/modal race timeout).
+          await openTemplatesModal(page, { modalTimeout: TIMEOUTS.long });
+          await page.waitForLoadState("domcontentloaded");
+          await page.getByTestId("side_nav_options_all-templates").click();
+          await expect(
+            page.getByTestId("text_card_container").first(),
+          ).toBeVisible({ timeout: 20000 });
+        }
+
+        const targetTemplate = page
+          .getByTestId("text_card_container")
+          .nth(template.index);
+        await expect(targetTemplate).toBeVisible({ timeout: 15000 });
+        await targetTemplate.click();
+
+        await expect(
+          page.locator('[data-testid="div-generic-node"]').first(),
+        ).toBeVisible({ timeout: 25000 });
+
+        const updateButtonCount = await page
+          .getByTestId("update-all-button")
+          .count();
+        if (updateButtonCount > 0) {
+          console.error(`Outdated component on template: ${template.name}`);
+          numberOfOutdatedComponents++;
+        }
+      }
+
+      expect(numberOfOutdatedComponents).toBe(0);
+    },
+  );
+});

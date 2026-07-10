@@ -62,6 +62,15 @@ describe("ActionPickerComponent add flow", () => {
     ).toBeInTheDocument();
   });
 
+  it("should size the naming input to fit its full placeholder", () => {
+    renderAdding(baseProps);
+    const input = screen.getByTestId("action-add-input") as HTMLInputElement;
+    // The input must derive its width from the placeholder (HTML size attribute, locale-proof)
+    // rather than a fixed w-* class that overrides it and cuts the text to "Name this actio…".
+    expect(input.size).toBeGreaterThanOrEqual(input.placeholder.length);
+    expect(input.className).not.toMatch(/\bw-\d+\b/);
+  });
+
   it("should add the typed action on Enter and stop adding", () => {
     const handleOnNewValue = jest.fn();
     renderAdding({ ...baseProps, handleOnNewValue });

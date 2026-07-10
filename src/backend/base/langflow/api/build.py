@@ -11,6 +11,7 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.graph.vertex.base import Vertex
 from lfx.log.logger import logger
+from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from sqlmodel import select
 
@@ -55,6 +56,34 @@ from langflow.services.telemetry.schema import (
 # the polling-watchdog activity key. Exposed at module scope so tests can
 # patch it down for fast verification of the heartbeat task itself.
 STREAMING_ACTIVITY_REFRESH_S = 10.0
+
+
+def _project_event_to_v1(raw: str) -> str:
+    """Render an ``add_message`` event's content_blocks/text to the v1 shape.
+
+    The v1 build stream ships ``message.model_dump()`` raw, which carries the new
+    content_blocks union. Re-project it to the release-1.11.0 shape before it
+    reaches a v1 client, so the v1 SSE stays byte-compatible. The v2 (AG-UI) path
+    drains a different queue and never passes through here. The substring guard
+    skips the JSON round-trip for every non-add_message event (tokens, vertex
+    builds, end, ...).
+    """
+    if "add_message" not in raw:
+        return raw
+    body = raw.rstrip("\n")
+    try:
+        event = json.loads(body)
+    except (ValueError, TypeError):
+        return raw
+    data = event.get("data")
+    if event.get("event") != "add_message" or not isinstance(data, dict) or "content_blocks" not in data:
+        return raw
+    # ``message.model_dump()`` carries content_blocks at BOTH ``data.content_blocks``
+    # and ``data.data.content_blocks`` (Message subclasses Data, so the dump mirrors
+    # it). Recurse over the whole payload so every copy is projected to the v1 shape
+    # and the co-located non-string text is coerced, matching what /run already does.
+    event["data"] = project_payload_to_v1(data)
+    return json.dumps(event) + "\n\n"
 
 
 def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
@@ -254,7 +283,7 @@ async def get_flow_events_response(
                     # Include the end event
                     events.append(None)
                     break
-                events.append(value.decode("utf-8"))
+                events.append(_project_event_to_v1(value.decode("utf-8")))
 
             # If no events were available, wait for one (with timeout)
             if not events:
@@ -265,7 +294,7 @@ async def get_flow_events_response(
                         event_task.cancel()
                     event_manager.on_end(data={})
                 else:
-                    events.append(value.decode("utf-8"))
+                    events.append(_project_event_to_v1(value.decode("utf-8")))
 
             # Return as NDJSON format - each line is a complete JSON object
             content = "\n".join([event for event in events if event is not None])
@@ -345,7 +374,7 @@ async def create_flow_response(
                     if value is None:
                         break
                     get_time = time.time()
-                    yield value.decode("utf-8")
+                    yield _project_event_to_v1(value.decode("utf-8"))
                     await logger.adebug(f"Event {event_id} consumed in {get_time - put_time:.4f}s")
                 except Exception as exc:  # noqa: BLE001
                     await logger.aexception(f"Error consuming event: {exc}")
@@ -483,11 +512,14 @@ async def generate_flow_events(
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
-            # Apply request tweaks to the built graph. The sync path applies tweaks before Graph
-            # construction; the streaming/background path builds from the DB (or request data), so
-            # tweaks must be applied here or they are silently dropped. ``update_raw_params`` is used
-            # rather than the lfx ``process_tweaks_on_graph`` helper because that helper only sets
-            # ``vertex.params`` and does not persist the override to runtime.
+            # Apply request tweaks to the built graph. The sync path applies
+            # tweaks before Graph construction; the streaming/background path
+            # builds from the DB (or request data), so tweaks must be applied
+            # to the built graph here or they are silently dropped. We use
+            # ``update_raw_params`` rather than the lfx ``process_tweaks_on_graph``
+            # helper because that helper only sets ``vertex.params`` and does not
+            # persist the override to runtime (mirrors the workaround in
+            # ``lfx.base.tools.run_flow._process_tweaks_on_graph``).
             if tweaks:
                 for vertex in graph.vertices:
                     if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):

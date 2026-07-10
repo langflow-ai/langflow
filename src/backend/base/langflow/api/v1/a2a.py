@@ -264,7 +264,7 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
     # can't drift from the CLI resume loop; see lfx.run.hitl.resume_graph_with_decision.
     graph = resume_graph_with_decision(checkpoint, store, pending.get("request_id"), decision)
 
-    from langflow.api.v2.workflow import EXECUTION_TIMEOUT
+    from langflow.api.v2.workflow_execution import _resolve_execution_timeout
     from langflow.processing.process import run_graph_internal
 
     try:
@@ -276,7 +276,7 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
                 inputs=[],
                 outputs=graph.get_terminal_nodes(),
             ),
-            timeout=EXECUTION_TIMEOUT,
+            timeout=_resolve_execution_timeout(),
         )
     except GraphPausedException as exc:
         # Paused again (multi-step HITL): the new checkpoint is already saved under this run_id.

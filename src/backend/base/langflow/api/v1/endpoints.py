@@ -12,7 +12,7 @@ import orjson
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import (
     add_code_field_to_build_config,
@@ -24,12 +24,14 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.interface.components import component_cache
 from lfx.log.logger import logger
+from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     code_hash_matches_any_template,
     get_component_hash_lookups_for_validation,
+    get_trusted_code_for_validation,
 )
 from sqlmodel import select
 
@@ -62,6 +64,10 @@ from langflow.services.auth.utils import (
     get_optional_user,
 )
 from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization.access_ceiling import (
+    external_access_allows,
+    get_current_external_access_context,
+)
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
@@ -437,6 +443,36 @@ async def simple_run_flow_task(
         return None
 
 
+def _v1_run_response(response: RunResponse) -> JSONResponse:
+    """Serialize a RunResponse with content_blocks projected to the v1 shape.
+
+    The /run result holds Messages whose content_blocks serialize through the
+    shared (v2) Message serializer, so project them at this v1 boundary to keep
+    the release-1.11.0 wire shape. The live objects and the v2 path are untouched.
+    """
+    return JSONResponse(content=project_payload_to_v1(jsonable_encoder(response)))
+
+
+def _project_run_event(value):
+    """Project a /run stream event's content_blocks to the v1 shape.
+
+    Covers add_message events and the final ``end`` result (which nests messages)
+    before they reach a v1 client. The v2 path drains a different queue and never
+    passes through here. The substring guard skips events that carry no
+    content_blocks (tokens, ...).
+    """
+    if not isinstance(value, (bytes, bytearray)):
+        return value
+    raw = value.decode("utf-8")
+    if "content_blocks" not in raw:
+        return value
+    try:
+        event = json.loads(raw.rstrip("\n"))
+    except (ValueError, TypeError):
+        return value
+    return (json.dumps(project_payload_to_v1(event)) + "\n\n").encode("utf-8")
+
+
 async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
     """Consumes events from a queue and yields them to the client while tracking timing metrics.
 
@@ -462,7 +498,7 @@ async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio
         if value is None:
             break
         get_time = time.time()
-        yield value
+        yield _project_run_event(value)
         get_time_yield = time.time()
         client_consumed_queue.put_nowait(event_id)
         await logger.adebug(
@@ -743,7 +779,7 @@ async def _run_flow_internal(
         )
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
-    return result
+    return _v1_run_response(result)
 
 
 @router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
@@ -931,7 +967,14 @@ async def webhook_events_stream(
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=SSE_HEARTBEAT_TIMEOUT_SECONDS)
                     event_type = event["event"]
-                    event_data = json.dumps(event["data"])
+                    payload = event["data"]
+                    # add_message carries message.model_dump(), which holds the new
+                    # content_blocks union at both the top level and the nested Data
+                    # mirror. Project both to the v1 shape for this v1 SSE, matching
+                    # the build stream and /run.
+                    if event_type == "add_message":
+                        payload = project_payload_to_v1(payload)
+                    event_data = json.dumps(payload)
                     yield f"event: {event_type}\ndata: {event_data}\n\n"
                 except asyncio.TimeoutError:
                     yield f"event: heartbeat\ndata: {json.dumps({'timestamp': time.time()})}\n\n"
@@ -1189,7 +1232,7 @@ async def experimental_run_flow(
     except (RuntimeError, ValueError, OSError):
         await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
-    return RunResponse(outputs=task_result, session_id=session_id)
+    return _v1_run_response(RunResponse(outputs=task_result, session_id=session_id))
 
 
 @router.post(
@@ -1235,6 +1278,7 @@ async def get_task_status(_task_id: str) -> TaskStatusResponse:
 async def create_upload_file(
     file: UploadFile,
     flow: Annotated[Flow, Depends(get_flow)],
+    current_user: CurrentActiveUser,
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
     """Upload a file for a specific flow (Deprecated).
@@ -1246,6 +1290,17 @@ async def create_upload_file(
     ``/api/v1/files/upload/{flow_id}`` so authenticated callers can't fill
     disk through this route either.
     """
+    # Writing a file to a flow's storage is a flow mutation: enforce WRITE so
+    # the external access ceiling (e.g. a "viewer") cannot upload via this
+    # deprecated route. Mirrors the non-deprecated twin in files.py.
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.WRITE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     try:
         max_file_size_upload = settings_service.settings.max_file_size_upload
     except Exception as exc:
@@ -1282,6 +1337,19 @@ async def custom_component(
     user: CurrentActiveUser,
     request: Request,
 ) -> CustomComponentResponse:
+    # Building a custom component instantiates (and partially executes) posted
+    # code. That is a create/write-class action, so enforce the external access
+    # ceiling directly: a "viewer" external identity is denied while
+    # editor/admin (and all non-external users) pass unchanged. This route is
+    # not tied to a single owned resource, so the deny-only primitive is used
+    # instead of an ``ensure_*_permission`` guard.
+    external_context = get_current_external_access_context()
+    if external_context is not None and not external_access_allows("create", external_context):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="External credentials do not allow this action",
+        )
+
     settings_service = get_settings_service()
     settings = settings_service.settings
     all_known = None
@@ -1316,7 +1384,21 @@ async def custom_component(
             detail="Custom component creation is disabled",
         )
 
-    component = Component(_code=raw_code.code)
+    # In restricted mode the request only reached here by matching a known
+    # template hash. That hash is a truncated digest, so a second-preimage
+    # collision could clear the gate with attacker-controlled bytes. Execute
+    # the server's trusted copy keyed by the same hash instead of the client
+    # bytes, and fail closed if no trusted source can be recovered.
+    effective_code = raw_code.code
+    if _requires_component_hash_lookups(settings, user):
+        effective_code = get_trusted_code_for_validation(raw_code.code)
+        if effective_code is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled",
+            )
+
+    component = Component(_code=effective_code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
     if raw_code.frontend_node is not None:
@@ -1357,6 +1439,17 @@ async def custom_component_update(
         HTTPException: If an error occurs during component building or updating.
         SerializationError: If serialization of the updated component node fails.
     """
+    # Updating a custom component instantiates (and partially executes) posted
+    # code, a create/write-class action. Enforce the external access ceiling
+    # directly so a "viewer" external identity is denied; editor/admin (and all
+    # non-external users) pass unchanged. Same action string as ``custom_component``.
+    external_context = get_current_external_access_context()
+    if external_context is not None and not external_access_allows("create", external_context):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="External credentials do not allow this action",
+        )
+
     settings_service = get_settings_service()
     all_known = None
     if _requires_component_hash_lookups(settings_service.settings, user):
@@ -1388,8 +1481,21 @@ async def custom_component_update(
             detail="Custom component creation is disabled",
         )
 
+    # In restricted mode the request only reached here by matching a known
+    # template hash. Because that hash is a truncated digest, execute the
+    # server's trusted copy keyed by the same hash rather than the client
+    # bytes (defeats a hash collision), failing closed if it can't be found.
+    effective_code = code_request.code
+    if _requires_component_hash_lookups(settings_service.settings, user):
+        effective_code = get_trusted_code_for_validation(code_request.code)
+        if effective_code is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled",
+            )
+
     try:
-        component = Component(_code=code_request.code)
+        component = Component(_code=effective_code)
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
@@ -1437,7 +1543,16 @@ async def custom_component_update(
             field_name=code_request.field,
         )
         if "code" not in updated_build_config or not updated_build_config.get("code", {}).get("value"):
-            updated_build_config = add_code_field_to_build_config(updated_build_config, code_request.code)
+            updated_build_config = add_code_field_to_build_config(updated_build_config, effective_code)
+        else:
+            # Never echo client bytes back in restricted mode. A colliding
+            # payload may have cleared the truncated-hash gate, but the server
+            # executed its trusted copy (``effective_code``); the returned node
+            # must carry that trusted code too, otherwise the attacker bytes
+            # could be persisted into a saved flow and later exec'd on the
+            # build path. In the default (unrestricted) mode ``effective_code``
+            # is ``code_request.code``, so this is a no-op.
+            updated_build_config["code"]["value"] = effective_code
         component_node["template"] = updated_build_config
 
         if isinstance(cc_instance, Component):
