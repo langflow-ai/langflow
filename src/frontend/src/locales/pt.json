@@ -51,6 +51,8 @@
   "alerts.noTemplateVariables": "Seu modelo não contém nenhuma variável.",
   "alerts.notificationsTitle": "Notificações",
   "apiKey.expirationDate": "data de expiração",
+  "apiKey.copy": "Copiar chave de API",
+  "apiKey.generated": "Chave de API gerada",
   "apiKey.expirationPlaceholder": "Sem expiração",
   "apiKey.expiry.1month": "Daqui a um mês",
   "apiKey.expiry.1week": "Daqui a uma semana",
@@ -267,6 +269,7 @@
   "common.hide": "Ocultar",
   "common.langflowLogo": "Logotipo da Langflow",
   "common.langflowLogoDark": "Logotipo Langflow Escuro",
+  "common.loading": "Carregando",
   "common.langflowLogoLight": "Logotipo Langflow Light",
   "common.optional": "opcional",
   "common.retry": "Tentar novamente",
@@ -1892,6 +1895,10 @@
   "success.versionRestored": "Versão restaurada",
   "success.versionSaved": "Versão salva",
   "table.addRow": "Adicionar uma nova linha",
+  "table.dataTable": "Tabela de dados",
+  "table.endFocusBoundary": "Limite final de foco de {{tableLabel}}",
+  "table.rows": "Linhas de {{tableLabel}}",
+  "table.startFocusBoundary": "Limite inicial de foco de {{tableLabel}}",
   "table.deleteSelected": "Excluir itens selecionados",
   "table.duplicateSelected": "Duplicar os itens selecionados",
   "table.firstPage": "Primeira página",
@@ -2096,5 +2103,7 @@
   "flows.moreOptions": "More options for {{name}}",
   "folder.optionsFor": "Options for {{name}}",
   "paginator.pageLabel": "Page",
-  "flow.flowSettings": "Flow settings"
+  "flow.flowSettings": "Flow settings",
+  "files.actionsMenu": "Ações do arquivo para {{name}}",
+  "mcp.servers.actionsMenu": "Ações para {{name}}"
 }

@@ -229,6 +229,18 @@ def _root_run_reparenting_handler_cls(base_cls: type) -> type:
             super().__init__(**kwargs)
             self._otel_parent = otel_parent
 
+        def __deepcopy__(self, memo: dict[int, Any]) -> Any:
+            # LangfuseResourceManager (held internally by the base CallbackHandler)
+            # does not support deepcopy: its __new__ requires explicit credentials
+            # that are unavailable during object reconstruction, causing:
+            #   LangfuseResourceManager.new() missing required keyword arguments
+            # The handler holds no per-invocation mutable state, so returning
+            # self instead of a true copy is safe even when tools share it across
+            # concurrent calls. See https://github.com/langflow-ai/langflow/issues/13965
+            # and the same workaround in flow_loader.py (issue #13429).
+            memo[id(self)] = self
+            return self
+
         def _reparent(self, method_name: str, args: tuple, kwargs: dict, parent_run_id: UUID | None):
             bound = getattr(super(), method_name)
             if parent_run_id is None and self._otel_parent is not None:

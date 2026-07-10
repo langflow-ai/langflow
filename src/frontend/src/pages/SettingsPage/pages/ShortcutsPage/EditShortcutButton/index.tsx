@@ -146,6 +146,21 @@ export default function EditShortcutButton({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest("button, input, textarea, select, a")
+      ) {
+        return;
+      }
+      if (e.key === "Tab") {
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        editCombination();
+        return;
+      }
       e.preventDefault();
       let fixedKey = e.key;
       if (e.key?.toLowerCase() === "control") {
@@ -168,7 +183,7 @@ export default function EditShortcutButton({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [key, setKey]);
+  }, [key, setKey, editCombination]);
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-small" disable={disable}>
