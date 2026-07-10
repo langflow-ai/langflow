@@ -273,7 +273,7 @@ describe("updateMessage — streaming token preservation (UI-014)", () => {
     expect(updated).toHaveLength(1);
     expect(updated![0].content_blocks).toBeDefined();
     expect(updated![0].content_blocks).toHaveLength(1);
-    expect(updated![0].content_blocks![0].contents[0]).toMatchObject({
+    expect(updated![0].content_blocks![0].contents![0]).toMatchObject({
       type: "tool_use",
       name: "fetch_pokemon",
     });
