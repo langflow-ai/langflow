@@ -19,7 +19,7 @@ from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .ingestion_run import IngestionRun, IngestionRunStatus
-from .jobs import Job
+from .jobs import ExecutionSignal, Job, JobEvent, SignalType
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
@@ -41,6 +41,7 @@ __all__ = [
     "CasbinRule",
     "Deployment",
     "DeploymentProviderAccount",
+    "ExecutionSignal",
     "File",
     "Flow",
     "FlowVersion",
@@ -49,6 +50,7 @@ __all__ = [
     "IngestionRun",
     "IngestionRunStatus",
     "Job",
+    "JobEvent",
     "KnowledgeBaseRecord",
     "KnowledgeBaseStatus",
     "MCPServer",
@@ -59,6 +61,7 @@ __all__ = [
     "MessageTable",
     "SSOConfig",
     "SSOUserProfile",
+    "SignalType",
     "SpanTable",
     "TraceTable",
     "TransactionTable",
