@@ -432,4 +432,215 @@ test.describe("Global variables route accessibility", () => {
       await page.runA11yScan("settings-global-variables-multi-row-selected");
     },
   );
+
+  test(
+    "opens edit modal from a focused row with Enter",
+    { tag: ["@release", "@workspace"] },
+    async ({ page }) => {
+      await openGlobalVariablesRoute(page);
+
+      // Focus a data cell without relying on a prior open/close cycle (that
+      // race left the dialog mounted on Escape in CI).
+      const nameCell = page
+        .locator(
+          '.ag-center-cols-container .ag-row [role="gridcell"][col-id="name"]',
+        )
+        .filter({ hasText: "DEFAULT_MODEL" })
+        .first();
+      await nameCell.click({ position: { x: 4, y: 4 } });
+      // Row click opens the edit modal; dismiss it, then re-focus the cell.
+      await expect(page.getByRole("dialog")).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toHaveCount(0, {
+        timeout: TIMEOUTS.standard,
+      });
+      // Closing the edit modal must return focus to the cell that opened it
+      // (WCAG 2.4.3) — do not require a manual re-focus before Enter.
+      await expect
+        .poll(
+          async () =>
+            page.evaluate(
+              () =>
+                document.activeElement?.getAttribute("col-id") ??
+                document.activeElement
+                  ?.closest("[col-id]")
+                  ?.getAttribute("col-id") ??
+                "",
+            ),
+          { timeout: TIMEOUTS.standard },
+        )
+        .toBe("name");
+
+      await page.keyboard.press("Enter");
+      await expect(
+        page.getByRole("dialog", { name: "Update Variable" }),
+      ).toBeVisible({ timeout: TIMEOUTS.standard });
+    },
+  );
+
+  test(
+    "restores focus to the last table cell after edit modal closes",
+    { tag: ["@release", "@workspace"] },
+    async ({ page }) => {
+      await openGlobalVariablesRoute(page);
+
+      const nameCell = page
+        .locator(
+          '.ag-center-cols-container .ag-row [role="gridcell"][col-id="name"]',
+        )
+        .filter({ hasText: "DEFAULT_MODEL" })
+        .first();
+      await nameCell.click({ position: { x: 4, y: 4 } });
+      await expect(
+        page.getByRole("dialog", { name: "Update Variable" }),
+      ).toBeVisible({ timeout: TIMEOUTS.standard });
+
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toHaveCount(0, {
+        timeout: TIMEOUTS.standard,
+      });
+
+      await expect
+        .poll(
+          async () =>
+            page.evaluate(() => {
+              const el = document.activeElement as HTMLElement | null;
+              if (!el) return "";
+              if (el.getAttribute("col-id") === "name") return "name";
+              return (
+                el
+                  .closest('[role="gridcell"][col-id="name"]')
+                  ?.getAttribute("col-id") ?? ""
+              );
+            }),
+          { timeout: TIMEOUTS.standard },
+        )
+        .toBe("name");
+    },
+  );
+
+  test(
+    "toggles row selection with Space without opening the edit modal",
+    { tag: ["@release", "@workspace"] },
+    async ({ page }) => {
+      await openGlobalVariablesRoute(page);
+
+      const row = page
+        .locator(".ag-center-cols-container .ag-row")
+        .filter({ hasText: "DEFAULT_MODEL" })
+        .first();
+      const nameCell = row.locator('[role="gridcell"][col-id="name"]');
+
+      // Focus the name cell via the grid without leaving a stuck dialog:
+      // select via checkbox first (does not open edit), then move to the name cell.
+      await row.locator(".ag-selection-checkbox").click();
+      await expect(row).toHaveAttribute("aria-selected", "true");
+      await nameCell.click({ position: { x: 4, y: 4 } });
+      await expect(page.getByRole("dialog")).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toHaveCount(0, {
+        timeout: TIMEOUTS.standard,
+      });
+      await nameCell.focus();
+
+      // Space while selected → deselect
+      await page.keyboard.press(" ");
+      await expect(row).toHaveAttribute("aria-selected", "false", {
+        timeout: TIMEOUTS.standard,
+      });
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(page.getByTestId("delete-row-button")).toBeDisabled();
+
+      // Space again → select
+      await page.keyboard.press(" ");
+      await expect(row).toHaveAttribute("aria-selected", "true", {
+        timeout: TIMEOUTS.standard,
+      });
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(page.getByTestId("delete-row-button")).toBeEnabled({
+        timeout: TIMEOUTS.standard,
+      });
+    },
+  );
+
+  test(
+    "create modal is named by its visible title",
+    { tag: ["@release", "@workspace"] },
+    async ({ page }) => {
+      await openGlobalVariablesRoute(page);
+      await openCreateModal(page);
+
+      await expect(
+        page.getByRole("dialog", { name: "Create Variable" }),
+      ).toBeVisible();
+      await expect(page.getByText("Dialog", { exact: true })).toHaveCount(0);
+    },
+  );
+
+  test(
+    "tabs from Name directly onto the Value input",
+    { tag: ["@release", "@workspace"] },
+    async ({ page }) => {
+      await openGlobalVariablesRoute(page);
+      await openCreateModal(page);
+
+      const nameInput = page
+        .getByRole("dialog")
+        .getByRole("textbox", { name: /Name/i });
+      await nameInput.focus();
+      await page.keyboard.press("Tab");
+
+      const focusedTestId = await page.evaluate(
+        () => document.activeElement?.getAttribute("data-testid") ?? "",
+      );
+      // Credential value uses InputComponent; its input test id is the
+      // popover-anchor id. Must not land on the wrapper anchor button.
+      expect(focusedTestId).toBe(
+        "popover-anchor-global-variable-value-credential",
+      );
+      expect(focusedTestId).not.toContain("anchor-popover");
+    },
+  );
+
+  test(
+    "restores focus to Apply to Fields after Esc closes the popover",
+    { tag: ["@release", "@workspace"] },
+    async ({ page }) => {
+      await openGlobalVariablesRoute(page);
+      await openCreateModal(page);
+
+      const applyTrigger = page.getByTestId(
+        "anchor-popover-anchor-apply-to-fields",
+      );
+      await applyTrigger.focus();
+      await page.keyboard.press("Enter");
+      await expect(
+        page.getByRole("dialog").getByPlaceholder("Fields"),
+      ).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+
+      await page.keyboard.press("Escape");
+      await expect(
+        page.getByRole("dialog").getByPlaceholder("Fields"),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("dialog", { name: "Create Variable" }),
+      ).toBeVisible();
+
+      await expect
+        .poll(
+          async () =>
+            page.evaluate(
+              () => document.activeElement?.getAttribute("data-testid") ?? "",
+            ),
+          { timeout: TIMEOUTS.standard },
+        )
+        .toBe("anchor-popover-anchor-apply-to-fields");
+    },
+  );
 });

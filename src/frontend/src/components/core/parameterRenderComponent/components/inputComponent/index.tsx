@@ -162,8 +162,10 @@ export default function InputComponent({
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
   inspectionPanel = false,
+  ariaLabelledBy,
 }: InputComponentType & {
   disabledOptions?: Record<string, string>;
+  ariaLabelledBy?: string;
 }): JSX.Element {
   const { t } = useTranslation();
   const [pwdVisible, setPwdVisible] = useState(false);
@@ -266,6 +268,7 @@ export default function InputComponent({
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
               inspectionPanel={inspectionPanel}
+              ariaLabelledBy={ariaLabelledBy}
             />
           )}
         </>

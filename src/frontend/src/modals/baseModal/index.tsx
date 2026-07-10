@@ -261,6 +261,15 @@ function BaseModal({
 
   const { minWidth, height } = switchCaseModalSize(size);
 
+  // BaseModal.Header renders DialogTitle/Description inside its own component
+  // body, so DialogContent's child-tree scan cannot see them and would inject a
+  // VisuallyHidden "Dialog" title that steals aria-labelledby. Skip that
+  // fallback whenever a Header is present.
+  const hideTitleFallback = !!headerChild;
+  const hideDescriptionFallback =
+    React.isValidElement(headerChild) &&
+    !!(headerChild.props as { description?: unknown }).description;
+
   useEffect(() => {
     if (onChangeOpenModal) {
       onChangeOpenModal(open);
@@ -322,6 +331,8 @@ function BaseModal({
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}
+              hideTitle={hideTitleFallback}
+              hideDescription={hideDescriptionFallback}
             >
               {onSubmit ? (
                 <Form.Root
@@ -345,6 +356,8 @@ function BaseModal({
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}
+              hideTitle={hideTitleFallback}
+              hideDescription={hideDescriptionFallback}
             >
               {onSubmit ? (
                 <Form.Root

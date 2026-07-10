@@ -27,6 +27,29 @@ describe("InputComponent — options popover keyboard", () => {
       within(screen.getByRole("listbox")).getByText("System Message"),
     ).toBeInTheDocument();
   });
+
+  it("does not put a password field wrapper in the tab order", () => {
+    render(
+      <InputComponent
+        id="secret-value"
+        password
+        nodeStyle
+        value=""
+        placeholder="Enter a value"
+        onChange={() => {}}
+        ariaLabelledBy="secret-value-label"
+      />,
+    );
+
+    const anchor = screen.getByTestId("anchor-popover-anchor-secret-value");
+    expect(anchor).not.toHaveAttribute("role", "button");
+    expect(anchor).not.toHaveAttribute("tabindex", "0");
+    expect(anchor).not.toHaveAttribute("aria-labelledby");
+    expect(screen.getByPlaceholderText("Enter a value")).toHaveAttribute(
+      "aria-labelledby",
+      "secret-value-label",
+    );
+  });
 });
 
 describe("InputComponent — FormInputBranch folder-rename synth event", () => {

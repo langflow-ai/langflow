@@ -244,8 +244,11 @@ export default function GlobalVariableModal({
           </div>
 
           <div className="space-y-2" id="global-variable-modal-inputs">
-            <Label>{t("globalVars.modal.nameLabel")}</Label>
+            <Label htmlFor="global-variable-name">
+              {t("globalVars.modal.nameLabel")}
+            </Label>
             <Input
+              id="global-variable-name"
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder={t("globalVars.modal.namePlaceholder")}
@@ -257,18 +260,25 @@ export default function GlobalVariableModal({
             className="m-0 space-y-2"
             tabIndex={-1}
           >
-            <Label>{t("globalVars.modal.valueLabel")}</Label>
+            <Label id="global-variable-value-credential-label">
+              {t("globalVars.modal.valueLabel")}
+            </Label>
             <InputComponent
               password
+              id="global-variable-value-credential"
               value={value}
               onChange={(e) => setValue(e)}
               placeholder={t("globalVars.modal.valuePlaceholder")}
               nodeStyle
+              ariaLabelledBy="global-variable-value-credential-label"
             />
           </TabsContent>
           <TabsContent value="Generic" className="m-0 space-y-2" tabIndex={-1}>
-            <Label>{t("globalVars.modal.valueLabel")}</Label>
+            <Label htmlFor="global-variable-value-generic">
+              {t("globalVars.modal.valueLabel")}
+            </Label>
             <Input
+              id="global-variable-value-generic"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder={t("globalVars.modal.valuePlaceholder")}
@@ -276,7 +286,9 @@ export default function GlobalVariableModal({
           </TabsContent>
 
           <div className="space-y-2">
-            <Label>{t("globalVars.modal.applyToFieldsLabel")}</Label>
+            <Label id="global-variable-apply-to-fields-label">
+              {t("globalVars.modal.applyToFieldsLabel")}
+            </Label>
             <InputComponent
               setSelectedOptions={(value) => setFields(value)}
               selectedOptions={fields}
@@ -286,6 +298,7 @@ export default function GlobalVariableModal({
               id="apply-to-fields"
               popoverWidth="29rem"
               optionsPlaceholder="Fields"
+              ariaLabelledBy="global-variable-apply-to-fields-label"
             />
             <div className="text-xs text-muted-foreground">
               {t("globalVars.modal.applyToFieldsHint")}
