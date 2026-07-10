@@ -329,7 +329,7 @@ module.exports = {
         {
           type: "doc",
           id: "Lfx/lfx-mcp",
-          label: "LFX MCP server"
+          label: "Build flows with the LFX MCP server"
         },
         {
           type: "doc",
