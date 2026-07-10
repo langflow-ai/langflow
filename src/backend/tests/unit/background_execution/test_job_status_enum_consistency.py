@@ -18,9 +18,9 @@ If/when the three are consolidated into a single canonical enum, delete this tes
 
 from __future__ import annotations
 
+from langflow.services.database.models.jobs.model import JobStatus as DbJobStatus
 from lfx.schema.workflow import JobStatus as SchemaJobStatus
 from lfx.services.durable.models import JobStatus as DurableJobStatus
-from langflow.services.database.models.jobs.model import JobStatus as DbJobStatus
 
 
 def _members(enum_cls) -> set[tuple[str, str]]:
@@ -33,8 +33,7 @@ def test_all_job_status_definitions_have_identical_members():
     db = _members(DbJobStatus)
 
     assert schema == durable, (
-        "JobStatus drift between lfx.schema.workflow and lfx.services.durable.models: "
-        f"{schema ^ durable}"
+        f"JobStatus drift between lfx.schema.workflow and lfx.services.durable.models: {schema ^ durable}"
     )
     assert schema == db, (
         "JobStatus drift between lfx.schema.workflow and the DB model "
