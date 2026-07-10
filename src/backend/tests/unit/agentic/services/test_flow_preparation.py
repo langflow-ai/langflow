@@ -638,8 +638,18 @@ class TestInjectHistoryLimitIntoFlow:
         from langflow.agentic.services.flow_preparation import inject_history_limit_into_flow
 
         flow = self._flow_with_agent(20)
-        assert inject_history_limit_into_flow(flow, None)["data"]["nodes"][1]["data"]["node"]["template"]["n_messages"]["value"] == 20
-        assert inject_history_limit_into_flow(flow, -1)["data"]["nodes"][1]["data"]["node"]["template"]["n_messages"]["value"] == 20
+        assert (
+            inject_history_limit_into_flow(flow, None)["data"]["nodes"][1]["data"]["node"]["template"]["n_messages"][
+                "value"
+            ]
+            == 20
+        )
+        assert (
+            inject_history_limit_into_flow(flow, -1)["data"]["nodes"][1]["data"]["node"]["template"]["n_messages"][
+                "value"
+            ]
+            == 20
+        )
 
     def test_should_skip_agent_without_n_messages_field(self):
         from langflow.agentic.services.flow_preparation import inject_history_limit_into_flow

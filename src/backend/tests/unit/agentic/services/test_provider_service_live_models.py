@@ -242,7 +242,8 @@ class TestLiveFetchFailOpen:
 class TestBuildLiveOnlyProviderEntries:
     """A live provider whose STATIC catalog is empty/all-deprecated (e.g. IBM
     WatsonX) is dropped by get_unified_models_detailed(include_deprecated=False)
-    before its live fetch runs. This helper re-adds it via a direct live fetch."""
+    before its live fetch runs. This helper re-adds it via a direct live fetch.
+    """
 
     def test_adds_watsonx_when_only_live_models_exist(self):
         from langflow.agentic.services.provider_service import build_live_only_provider_entries

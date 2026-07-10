@@ -314,9 +314,7 @@ class TestHistoryLimitOverride:
         for i in range(5):
             fresh_buffer.push("alice", "s1", ConversationTurn(user=f"q-{i}", assistant=f"a-{i}"))
 
-        wrapped = inject_conversation_history(
-            user_id="alice", session_id="s1", input_value="next", limit_override=2
-        )
+        wrapped = inject_conversation_history(user_id="alice", session_id="s1", input_value="next", limit_override=2)
 
         # Only the last 2 turns injected, despite the env allowing 6.
         assert "q-4" in wrapped
@@ -327,7 +325,5 @@ class TestHistoryLimitOverride:
         from langflow.agentic.services.assistant_service import inject_conversation_history
 
         fresh_buffer.push("alice", "s1", ConversationTurn(user="q-0", assistant="a-0"))
-        wrapped = inject_conversation_history(
-            user_id="alice", session_id="s1", input_value="next", limit_override=0
-        )
+        wrapped = inject_conversation_history(user_id="alice", session_id="s1", input_value="next", limit_override=0)
         assert wrapped == "next"

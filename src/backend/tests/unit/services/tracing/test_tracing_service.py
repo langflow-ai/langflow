@@ -372,7 +372,8 @@ async def test_get_langchain_callbacks(tracing_service):
 @pytest.mark.asyncio
 async def test_get_langchain_callbacks_skips_a_failing_tracer(tracing_service):
     """A tracer whose callback creation raises (e.g. partial Langfuse creds)
-    must be skipped, not crash the run — the healthy tracers still contribute."""
+    must be skipped, not crash the run — the healthy tracers still contribute.
+    """
     await tracing_service.start_tracers(uuid.uuid4(), "run", "u", "s", "p")
     trace_context = trace_context_var.get()
 
