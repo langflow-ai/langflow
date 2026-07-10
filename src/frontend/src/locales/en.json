@@ -952,6 +952,7 @@
   "files.columnType": "Type",
   "files.columnSize": "Size",
   "files.columnModified": "Modified",
+  "files.columnActions": "Actions",
   "files.rename": "Rename",
   "files.download": "Download",
   "files.duplicate": "Duplicate",
