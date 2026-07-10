@@ -16,10 +16,12 @@ worker that received it; the durable STOP signal is still recorded.
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from fastapi import HTTPException, Request, status
+from starlette.responses import StreamingResponse
 
 from lfx.cli.serve_workflow import ServeWorkflowHost
 from lfx.graph.checkpoint.resume import _unbuild_needed_dropped_producers
@@ -54,17 +56,38 @@ from lfx.workflow.converters import (
     create_job_response,
     workflow_response_from_output_events,
 )
-from lfx.workflow.router import create_workflow_router
+from lfx.workflow.router import _format_sse, create_workflow_router
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
     from pathlib import Path
 
     from fastapi import APIRouter
 
+    from lfx.services.durable.models import DurableEvent
     from lfx.workflow.converters import ParsedWorkflowRun
     from lfx.workflow.host import ResolvedFlow
 
 _NON_TERMINAL = {DurableJobStatus.QUEUED, DurableJobStatus.IN_PROGRESS, DurableJobStatus.SUSPENDED}
+# The events stream tails only while the job is active; SUSPENDED replays and ends
+# there (like the langflow backend), and the client reconnects after a resume.
+_STREAMING_ACTIVE = {DurableJobStatus.QUEUED, DurableJobStatus.IN_PROGRESS}
+_EVENT_POLL_INTERVAL_S = 0.1
+
+
+def _parse_last_event_id(raw: str | None) -> int:
+    """Parse the ``Last-Event-ID`` header into a seq cursor; unparseable -> 0 (replay all)."""
+    if not raw:
+        return 0
+    try:
+        return max(int(raw), 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _sse_for(event: DurableEvent) -> bytes:
+    """Frame one durable event as an SSE message keyed by its seq (for Last-Event-ID)."""
+    return _format_sse(json.dumps({"event": event.event_type, "data": event.payload, "seq": event.seq}), event.seq)
 
 
 def _job_not_found(job_id: str) -> HTTPException:
@@ -157,6 +180,38 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
                 detail={"error": "No pending human input", "code": "NO_PENDING_REQUEST", "job_id": job_id},
             )
         return pending
+
+    async def stream_events(self, job_id: str, *, last_event_id: str | None) -> StreamingResponse:
+        """Replay the durable event log as SSE, tailing until the run ends or suspends.
+
+        Backs the advertised ``links.events`` URL: events are read from the job's
+        ``job_events`` log after ``Last-Event-ID`` and streamed with the seq as the
+        SSE id, so a reconnect resumes exactly where it left off.
+        """
+        if await self.jobs.get_job(job_id) is None:
+            raise _job_not_found(job_id)
+        return StreamingResponse(
+            self._event_frames(job_id, after_seq=_parse_last_event_id(last_event_id)),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    async def _event_frames(self, job_id: str, *, after_seq: int) -> AsyncIterator[bytes]:
+        seq = after_seq
+        while True:
+            events = await self.jobs.read_events(job_id, after_seq=seq)
+            for event in events:
+                yield _sse_for(event)
+            if events:
+                seq = events[-1].seq
+            job = await self.jobs.get_job(job_id)
+            if job is None or job.status not in _STREAMING_ACTIVE:
+                # Status flips only after its terminal/pause event is appended, so a
+                # final drain catches an event written between the read above and now.
+                for event in await self.jobs.read_events(job_id, after_seq=seq):
+                    yield _sse_for(event)
+                return
+            await asyncio.sleep(_EVENT_POLL_INTERVAL_S)
 
     async def resume_job(self, job_id: str, request: WorkflowResumeRequest) -> WorkflowResumeResponse:
         job = await self.jobs.get_job(job_id)
@@ -277,6 +332,11 @@ def _register_resume_routes(router: APIRouter, host: DurableServeWorkflowHost) -
     async def pending_request(job_id: str, http_request: Request):
         await host.resolve_caller(http_request)
         return await host.pending_request(job_id)
+
+    @router.get("/{job_id}/events", response_model=None, summary="Re-attach to a background run (v2 SSE)")
+    async def stream_events(job_id: str, http_request: Request):
+        await host.resolve_caller(http_request)
+        return await host.stream_events(job_id, last_event_id=http_request.headers.get("Last-Event-ID"))
 
 
 def create_durable_workflow_router(registry, verify_api_key, *, db_path: Path) -> APIRouter:
