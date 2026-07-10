@@ -19,6 +19,8 @@ from fastapi import BackgroundTasks, Request
 from fastapi.sse import format_sse_event
 from lfx.log.logger import logger
 from lfx.schema.workflow import JobId, JobStatus, WorkflowJobResponse
+from lfx.services.database.models.flow import FlowRead
+from lfx.services.database.models.user import UserRead
 from lfx.workflow.adapters import (
     StreamAdapterContext,
     StreamEvent,
@@ -33,8 +35,6 @@ from langflow.exceptions.api import (
     WorkflowResourceError,
     WorkflowServiceUnavailableError,
 )
-from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service, get_queue_service
 
 

@@ -5,13 +5,13 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.log.logger import logger
+from lfx.services.database.models.user import User
 from lfx.services.deps import get_settings_service
 from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.v2.mcp import get_server_list, update_server
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_variable_service
 from langflow.services.schema import ServiceType
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE

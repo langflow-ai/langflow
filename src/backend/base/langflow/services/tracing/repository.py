@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.traces.model import (
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.traces import (
     SpanStatus,
     SpanTable,
     TraceListResponse,
@@ -28,6 +28,7 @@ from langflow.services.database.models.traces.model import (
     TraceSummaryRead,
     TraceTable,
 )
+
 from langflow.services.deps import session_scope
 from langflow.services.tracing.formatting import (
     TraceSummaryData,

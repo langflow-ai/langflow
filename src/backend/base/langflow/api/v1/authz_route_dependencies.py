@@ -6,12 +6,12 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
+from lfx.services.database.models.flow import Flow, FlowCreate
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.flows_helpers import _read_flow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
-from langflow.services.database.models.flow.model import Flow, FlowCreate
 
 _FLOW_WRITE_DENIED_DETAIL = "You don't have permission to edit this flow."
 

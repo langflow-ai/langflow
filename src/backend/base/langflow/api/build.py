@@ -11,6 +11,8 @@ from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.jobs import JobType
 from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
@@ -33,8 +35,6 @@ from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.jobs.model import JobType
 from langflow.services.deps import (
     get_chat_service,
     get_job_service,

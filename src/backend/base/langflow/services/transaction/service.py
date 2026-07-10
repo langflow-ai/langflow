@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.log.logger import logger
+from lfx.services.database.models.transactions import TransactionBase, TransactionTable
 from lfx.services.deps import session_scope
 from lfx.services.interfaces import TransactionServiceProtocol
 
 from langflow.services.base import Service
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
-from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService

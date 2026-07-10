@@ -17,8 +17,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from langchain_chroma import Chroma
-
-    from langflow.services.database.models.message.model import MessageTable
+    from lfx.services.database.models.message import MessageTable
 
 # Chunk size for splitting long messages before embedding
 MESSAGE_CHUNK_SIZE = 1000

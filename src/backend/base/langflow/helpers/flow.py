@@ -5,12 +5,12 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.log.logger import logger
+from lfx.services.database.models.flow import Flow, FlowRead
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlalchemy.orm import aliased
 from sqlmodel import asc, desc, select
 
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
@@ -19,8 +19,7 @@ if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
     from lfx.graph.schema import RunOutputs
     from lfx.graph.vertex.base import Vertex
-
-    from langflow.services.database.models.user.model import User
+    from lfx.services.database.models.user import User
 
 from langflow.schema.data import Data
 
@@ -191,10 +190,11 @@ async def load_flow(
     user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
 ) -> Graph:
     """Load a flow graph after authorizing EXECUTE for the caller."""
+    from lfx.services.database.models.user import User
+
     from langflow.services.authorization import FlowAction
     from langflow.services.authorization.decorators import requires_flow_permission
     from langflow.services.authorization.fetch import authorized_or_owner_scoped
-    from langflow.services.database.models.user.model import User
 
     if not flow_id and not flow_name:
         msg = "Flow ID or Flow Name is required"

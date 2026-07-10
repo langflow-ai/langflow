@@ -24,6 +24,8 @@ from lfx.base.knowledge_bases.ingestion_sources import (
 )
 from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
 from lfx.log import logger
+from lfx.services.database.models.jobs import JobStatus, JobType
+from lfx.services.database.models.knowledge_base import KnowledgeBaseRecord
 from pydantic import BaseModel, Field
 
 from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
@@ -50,8 +52,6 @@ from langflow.services.authorization import (
     KnowledgeBaseAction,
     ensure_knowledge_base_permission,
 )
-from langflow.services.database.models.jobs.model import JobStatus, JobType
-from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.jobs.service import JobService

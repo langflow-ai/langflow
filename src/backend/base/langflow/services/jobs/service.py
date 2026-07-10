@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 from datetime import datetime, timezone
 from uuid import UUID
 
+from lfx.services.database.models.jobs import Job, JobStatus, JobType
 from sqlmodel import col, func, select
 
 from langflow.services.base import Service
@@ -17,7 +18,6 @@ from langflow.services.database.models.jobs.crud import (
     get_latest_jobs_by_asset_ids,
     update_job_status,
 )
-from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.deps import session_scope
 from langflow.services.jobs.exceptions import DuplicateJobError
 

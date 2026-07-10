@@ -34,14 +34,13 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from lfx.services.adapters.deployment.schema import DeploymentType
-from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, model_validator
-
-from langflow.services.database.models.deployment_provider_account.schemas import (
+from lfx.services.database.models.deployment_provider_account.schemas import (
     DeploymentProviderKey,
 )
-from langflow.services.database.models.deployment_provider_account.utils import (
+from lfx.services.database.models.deployment_provider_account.utils import (
     validate_provider_url,
 )
+from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, model_validator
 
 # ---------------------------------------------------------------------------
 # Shared validation helpers

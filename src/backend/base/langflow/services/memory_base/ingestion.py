@@ -15,15 +15,15 @@ import chromadb.errors
 from langchain_chroma import Chroma
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
-from sqlmodel import col, func, select
-
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
-from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
-from langflow.services.database.models.memory_base.model import (
+from lfx.services.database.models.jobs import Job, JobStatus, JobType
+from lfx.services.database.models.memory_base import (
     MemoryBase,
     MemoryBaseSession,
     MemoryBaseWorkflowRun,
 )
+from sqlmodel import col, func, select
+
+from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
 from langflow.services.deps import get_job_service, get_task_service, session_scope
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.memory_base.kb_path_helpers import (
@@ -268,12 +268,11 @@ async def regenerate(
     with the cursor reset so that re-ingestion starts clean without hitting the
     unique constraint.
     """
-    from sqlalchemy import delete as sa_delete
-
-    from langflow.services.database.models.memory_base.model import (
+    from lfx.services.database.models.memory_base import (
         MemoryBasePreprocessingOutput,
         MessageIngestionRecord,
     )
+    from sqlalchemy import delete as sa_delete
 
     async with session_scope() as db:
         await get_mb_or_raise(db, memory_base_id, user_id)
@@ -334,9 +333,8 @@ async def purge_session_data(
     (we'd rather drop the bookkeeping rows than leave them dangling, since the
     user's intent — "delete this session" — is unambiguous).
     """
+    from lfx.services.database.models.memory_base import MessageIngestionRecord
     from sqlalchemy import delete as sa_delete
-
-    from langflow.services.database.models.memory_base.model import MessageIngestionRecord
 
     if not session_ids:
         return 0

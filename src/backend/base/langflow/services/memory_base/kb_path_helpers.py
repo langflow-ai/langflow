@@ -54,7 +54,7 @@ def sanitize_kb_name(name: str) -> str:
 
 async def resolve_kb_username(db: AsyncSession, user_id: uuid.UUID) -> str:
     """Look up the username for a user_id within an existing DB session."""
-    from langflow.services.database.models.user.model import User
+    from lfx.services.database.models.user import User
 
     stmt = select(User.username).where(User.id == user_id)
     result = await db.exec(stmt)

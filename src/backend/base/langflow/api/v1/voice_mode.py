@@ -20,6 +20,9 @@ from elevenlabs import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks
 from lfx.log import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.message import MessageTable
+from lfx.services.database.models.user import User
 from lfx.utils.secrets import secret_value_to_str
 from openai import OpenAI
 from sqlalchemy import select
@@ -31,9 +34,6 @@ from langflow.api.v1.chat import build_flow_and_stream
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
 from langflow.services.auth.utils import get_current_user_for_websocket
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.message.model import MessageTable
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_variable_service, session_scope
 from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
 

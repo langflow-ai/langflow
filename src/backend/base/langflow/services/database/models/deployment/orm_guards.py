@@ -2,26 +2,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from lfx.services.database.models.deployment import Deployment
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.flow_version import FlowVersion
+from lfx.services.database.models.flow_version_deployment_attachment import (
+    FlowVersionDeploymentAttachment,
+)
 from sqlmodel import col, select
 
 from langflow.services.database.models.deployment.exceptions import (
     DeploymentGuardError,
     get_friendly_guard_detail,
 )
-from langflow.services.database.models.deployment.model import Deployment
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.flow_version.model import FlowVersion
-from langflow.services.database.models.flow_version_deployment_attachment.model import (
-    FlowVersionDeploymentAttachment,
-)
 
 if TYPE_CHECKING:
     from uuid import UUID
 
     from lfx.services.adapters.deployment.schema import DeploymentType
+    from lfx.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 
 
 def _raise_flow_deployed_in_project() -> None:

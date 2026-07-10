@@ -36,6 +36,12 @@ from lfx.services.adapters.payload import (
     PayloadSlotPolicy,
 )
 from lfx.services.adapters.schema import AdapterType
+from lfx.services.database.models.deployment import Deployment
+from lfx.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+from lfx.services.database.models.deployment_provider_account.utils import (
+    check_provider_url_allowed,
+    extract_tenant_from_url,
+)
 from pydantic import ValidationError
 
 from langflow.api.v1.mappers.deployments.base import (
@@ -105,23 +111,16 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
-from langflow.services.database.models.deployment.model import Deployment
-from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
-from langflow.services.database.models.deployment_provider_account.utils import (
-    check_provider_url_allowed,
-    extract_tenant_from_url,
-)
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     list_deployment_attachments_for_flow_version_ids,
 )
 
 if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from langflow.services.database.models.flow_version.model import FlowVersion
-    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    from lfx.services.database.models.flow_version import FlowVersion
+    from lfx.services.database.models.flow_version_deployment_attachment import (
         FlowVersionDeploymentAttachment,
     )
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @dataclass(frozen=True)

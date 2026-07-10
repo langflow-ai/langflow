@@ -1,7 +1,6 @@
 import httpx
 from lfx.load.utils import UploadError, replace_tweaks_with_env, upload, upload_file
-
-from langflow.services.database.models.flow.model import FlowBase
+from lfx.services.database.models.flow import FlowBase
 
 GET_FLOW_TIMEOUT = 30.0
 # Cap how much of an error response body is embedded in the raised UploadError

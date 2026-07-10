@@ -9,10 +9,9 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+from lfx.services.database.models.jobs import Job, JobStatus
 from sqlalchemy import update
 from sqlmodel import col, or_, select
-
-from langflow.services.database.models.jobs.model import Job, JobStatus
 
 
 async def get_jobs_by_flow_id(db: AsyncSession, flow_id: UUID, page: int = 1, size: int = 10) -> list[Job]:

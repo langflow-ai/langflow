@@ -9,12 +9,12 @@ from uuid import UUID
 
 from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
+from lfx.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
+from lfx.services.database.models.user import User
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth import utils as auth_utils
-from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:

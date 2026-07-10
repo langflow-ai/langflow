@@ -1,0 +1,81 @@
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
+
+from pydantic import ValidationInfo, field_validator
+from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel, func
+
+if TYPE_CHECKING:
+    from lfx.services.database.models.user import User
+
+# Variable type identifiers. Moved here from langflow.services.variable.constants
+# (which re-exports them) so this module has no langflow imports.
+CREDENTIAL_TYPE = "Credential"
+GENERIC_TYPE = "Generic"
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
+class VariableBase(SQLModel):
+    name: str = Field(description="Name of the variable")
+    value: str = Field(description="Encrypted value of the variable")
+    default_fields: list[str] | None = Field(sa_column=Column(JSON))
+    type: str | None = Field(None, description="Type of the variable")
+
+
+class Variable(VariableBase, table=True):  # type: ignore[call-arg]
+    id: UUID | None = Field(
+        default_factory=uuid4,
+        primary_key=True,
+        description="Unique ID for the variable",
+    )
+    # name is unique per user
+    created_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=True),
+        description="Creation time of the variable",
+    )
+    updated_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        description="Last update time of the variable",
+    )
+    default_fields: list[str] | None = Field(sa_column=Column(JSON))
+    # foreign key to user table
+    user_id: UUID = Field(description="User ID associated with this variable", foreign_key="user.id")
+    user: "User" = Relationship(back_populates="variables")
+
+
+class VariableCreate(VariableBase):
+    created_at: datetime | None = Field(default_factory=utc_now, description="Creation time of the variable")
+
+
+class VariableRead(SQLModel):
+    id: UUID
+    name: str | None = Field(None, description="Name of the variable")
+    type: str | None = Field(None, description="Type of the variable")
+    value: str | None = Field(None, description="Encrypted value of the variable")
+    default_fields: list[str] | None = Field(None, description="Default fields for the variable")
+    validation_error: str | None = Field(
+        None, description="Validation error message if this is a model provider credential with an invalid key"
+    )
+    is_valid: bool | None = Field(
+        None, description="Whether this model provider credential has a valid key (None if not a provider credential)"
+    )
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, value: str, info: ValidationInfo):
+        if info.data.get("type") == CREDENTIAL_TYPE:
+            return None
+        return value
+
+
+class VariableUpdate(SQLModel):
+    id: UUID  # Include the ID for updating
+    name: str | None = Field(None, description="Name of the variable")
+    value: str | None = Field(None, description="Encrypted value of the variable")
+    default_fields: list[str] | None = Field(None, description="Default fields for the variable")
+    type: str | None = Field(None, description="Type of the variable")

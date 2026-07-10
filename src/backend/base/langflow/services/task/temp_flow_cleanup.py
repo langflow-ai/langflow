@@ -5,11 +5,11 @@ import contextlib
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.database.models.message import MessageTable
+from lfx.services.database.models.transactions import TransactionTable
+from lfx.services.database.models.vertex_builds import VertexBuildTable
 from sqlmodel import col, delete, select
 
-from langflow.services.database.models.message.model import MessageTable
-from langflow.services.database.models.transactions.model import TransactionTable
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 async def cleanup_orphaned_records() -> None:
     """Clean up all records that reference non-existent flows."""
-    from langflow.services.database.models.flow.model import Flow
+    from lfx.services.database.models.flow import Flow
 
     async with session_scope() as session:
         # Create a subquery of existing flow IDs

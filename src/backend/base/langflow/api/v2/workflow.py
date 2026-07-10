@@ -40,6 +40,8 @@ from lfx.schema.workflow import (
     WorkflowStopRequest,
     WorkflowStopResponse,
 )
+from lfx.services.database.models.jobs import JobType
+from lfx.services.database.models.user import UserRead
 from lfx.services.deps import injectable_session_scope_readonly
 from lfx.workflow.actions import WorkflowAction
 from lfx.workflow.adapters import (
@@ -78,8 +80,6 @@ from langflow.exceptions.api import (
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.auth.utils import get_current_user_for_workflow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
-from langflow.services.database.models.jobs.model import JobType
-from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service
 
 # The langflow durable background routes (GET status, POST /stop, GET

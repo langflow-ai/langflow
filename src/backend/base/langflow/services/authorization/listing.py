@@ -19,10 +19,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from uuid import UUID
 
+    from lfx.services.database.models.user import User, UserRead
     from sqlalchemy.orm.attributes import InstrumentedAttribute
     from sqlalchemy.sql.elements import ColumnElement
-
-    from langflow.services.database.models.user.model import User, UserRead
 
 
 T = TypeVar("T")

@@ -13,6 +13,15 @@ from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.services.cache.utils import CACHE_MISS
+from lfx.services.database.models.flow import (
+    AccessTypeEnum,
+    Flow,
+    FlowCreate,
+    FlowHeader,
+    FlowRead,
+    FlowUpdate,
+)
+from lfx.services.database.models.folder import Folder
 from pydantic import ValidationError
 from sqlmodel import and_, col, select
 
@@ -58,20 +67,11 @@ from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
-from langflow.services.database.models.flow.model import (
-    AccessTypeEnum,
-    Flow,
-    FlowCreate,
-    FlowHeader,
-    FlowRead,
-    FlowUpdate,
-)
 
 # TODO: Full-version import/export is planned as a follow-up feature. When implemented,
 # re-add imports for create_flow_version_entry, get_flow_versions_with_provider_status, strip_version_data,
 # and FlowVersionError from the flow_version modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response

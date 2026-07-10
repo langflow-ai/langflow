@@ -50,6 +50,10 @@ dependencies = [
     "pypdf>=6.10.0,<7.0.0",
     "cryptography>=48.0.1",
     "pyjwt>=2.10.0,<3.0.0",
+    # Execution-history ORM models (lfx.services.database.models). lfx owns the
+    # schema for rows produced during graph execution (message / transaction /
+    # vertex_build); langflow re-exports them and keeps the alembic migrations.
+    "sqlmodel~=0.0.37",
     "ag-ui-protocol>=0.1.10",
     "langflow-sdk>=0.3.0",
     "markitdown>=0.1.4,<2.0.0",

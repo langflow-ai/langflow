@@ -12,6 +12,7 @@ Runs best-effort on startup and via ``langflow migrate-mcp``. Properties:
   file-based Langflow remains safe.
 """
 
+from lfx.services.database.models.user import User
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -19,7 +20,6 @@ from langflow.api.v2.mcp import _read_legacy_mcp_file
 from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import encrypt_mcp_config
 from langflow.services.database.models import MCPServer
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_storage_service
 
 

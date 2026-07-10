@@ -14,6 +14,12 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
+from lfx.services.database.models.deployment import Deployment
+from lfx.services.database.models.file import File as UserFile
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.folder import Folder
+from lfx.services.database.models.knowledge_base import KnowledgeBaseRecord
+from lfx.services.database.models.variable import Variable
 from pydantic import BaseModel, Field, field_validator
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -22,12 +28,6 @@ from langflow.api.utils import CurrentActiveUser, DbSessionReadOnly
 from langflow.services.auth.context import current_auth_context_for_authz
 from langflow.services.authorization.access_ceiling import filter_actions_by_external_access_ceiling
 from langflow.services.authorization.guards import should_apply_owner_override
-from langflow.services.database.models.deployment.model import Deployment
-from langflow.services.database.models.file.model import File as UserFile
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.folder.model import Folder
-from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
-from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
 
 router = APIRouter(prefix="/authz/me", tags=["Authorization"])

@@ -27,6 +27,9 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotListParams,
     SnapshotListResult,
 )
+from lfx.services.database.models.flow_version_deployment_attachment import (
+    FlowVersionDeploymentAttachment,
+)
 from lfx.services.deps import get_deployment_adapter
 from lfx.services.interfaces import DeploymentServiceProtocol
 
@@ -43,9 +46,6 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     delete_orphan_attachments_for_project,
     delete_unbound_attachments,
 )
-from langflow.services.database.models.flow_version_deployment_attachment.model import (
-    FlowVersionDeploymentAttachment,
-)
 from langflow.services.database.models.flow_version_deployment_attachment.schema import (
     DeploymentAttachmentKey,
     DeploymentAttachmentKeyBatch,
@@ -53,8 +53,9 @@ from langflow.services.database.models.flow_version_deployment_attachment.schema
 from langflow.services.database.utils import require_non_empty
 
 if TYPE_CHECKING:
+    from lfx.services.database.models.deployment import Deployment
+
     from langflow.api.utils import DbSession
-    from langflow.services.database.models.deployment.model import Deployment
 
 TGuardOperationResult = TypeVar("TGuardOperationResult")
 

@@ -29,18 +29,18 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.schema.legacy_render import render_v1_content_blocks
-from pydantic import BaseModel
-from sqlmodel import select
-
-from langflow.api.utils import CurrentActiveUser
-from langflow.services.authorization import KnowledgeBaseAction, ensure_knowledge_base_permission
-from langflow.services.database.models.memory_base.model import (
+from lfx.services.database.models.memory_base import (
     MemoryBase,
     MemoryBaseCreate,
     MemoryBaseRead,
     MemoryBaseSessionRead,
     MemoryBaseUpdate,
 )
+from pydantic import BaseModel
+from sqlmodel import select
+
+from langflow.api.utils import CurrentActiveUser
+from langflow.services.authorization import KnowledgeBaseAction, ensure_knowledge_base_permission
 from langflow.services.deps import get_memory_base_service, session_scope
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.memory_base.service import PreprocessingValidationError

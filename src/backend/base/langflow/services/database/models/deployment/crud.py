@@ -5,16 +5,16 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.log.logger import logger
+from lfx.services.database.models.deployment import Deployment
+from lfx.services.database.models.flow_version import FlowVersion
+from lfx.services.database.models.flow_version_deployment_attachment import (
+    FlowVersionDeploymentAttachment,
+)
 from sqlalchemy import Select, column, values
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select, update
 
-from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment.orm_guards import ensure_deployment_immutable_fields
-from langflow.services.database.models.flow_version.model import FlowVersion
-from langflow.services.database.models.flow_version_deployment_attachment.model import (
-    FlowVersionDeploymentAttachment,
-)
 from langflow.services.database.utils import parse_uuid
 
 if TYPE_CHECKING:
@@ -468,8 +468,8 @@ async def list_deployments_for_flows_with_provider_info(
     if not flow_ids:
         return []
 
-    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
-    from langflow.services.database.models.flow_version.model import FlowVersion
+    from lfx.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from lfx.services.database.models.flow_version import FlowVersion
 
     deployment_ids_subquery = (
         select(FlowVersionDeploymentAttachment.deployment_id)
@@ -512,7 +512,7 @@ async def list_project_deployments_with_provider_info(
     provider_account_id: UUID | None = None,
 ) -> list[tuple[Deployment, str]]:
     """Return project deployments with provider key for provider-scoped sync."""
-    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from lfx.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 
     stmt = (
         select(Deployment, DeploymentProviderAccount.provider_key)

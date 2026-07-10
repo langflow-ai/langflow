@@ -13,6 +13,7 @@ from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.auth.base import BaseAuthService
+from lfx.services.database.models.user import User, UserRead
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
 
@@ -50,7 +51,6 @@ from langflow.services.database.models.user.crud import (
     get_user_by_username,
     update_user_last_login_at,
 )
-from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
 

@@ -948,7 +948,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         auth = get_auth_service()
         if await auth.create_super_user(username, password, db=session):
             # Verify that the superuser was created
-            from langflow.services.database.models.user.model import User
+            from lfx.services.database.models.user import User
 
             stmt = select(User).where(User.username == username)
             created_user: User = (await session.exec(stmt)).first()
@@ -1087,7 +1087,7 @@ def api_key(
             return None
 
         async with session_scope() as session:
-            from langflow.services.database.models.user.model import User
+            from lfx.services.database.models.user import User
 
             superuser_username = auth_settings.SUPERUSER or DEFAULT_SUPERUSER
             stmt = select(User).where(
@@ -1100,8 +1100,9 @@ def api_key(
                     "Auto-login superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
                 )
                 return None
+            from lfx.services.database.models.api_key import ApiKey, ApiKeyCreate
+
             from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
-            from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 
             stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)
             api_key = (await session.exec(stmt)).first()

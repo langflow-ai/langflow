@@ -496,7 +496,7 @@ async def _save_model_list_variable(
     Raises:
         HTTPException: If there's an error saving the variable
     """
-    from langflow.services.database.models.variable.model import VariableUpdate
+    from lfx.services.database.models.variable import VariableUpdate
 
     models_json = json.dumps(list(model_set))
 
@@ -819,7 +819,7 @@ async def set_default_model(
             msg = f"Variable {DISABLED_MODELS_VAR} not found"
             raise ValueError(msg)
         # Update existing variable
-        from langflow.services.database.models.variable.model import VariableUpdate
+        from lfx.services.database.models.variable import VariableUpdate
 
         await variable_service.update_variable_fields(
             user_id=current_user.id,

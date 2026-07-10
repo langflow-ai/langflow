@@ -15,10 +15,10 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid5
 
 from lfx.log.logger import logger
+from lfx.services.database.models.traces import SpanStatus, SpanType
 from typing_extensions import override
 
 from langflow.serialization.serialization import serialize
-from langflow.services.database.models.traces.model import SpanStatus, SpanType
 from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.span_sorting import (
     LANGFLOW_SPAN_NAMESPACE,
@@ -271,9 +271,8 @@ class NativeTracer(BaseTracer):
     async def _flush_to_database(self, error: Exception | None = None) -> None:
         """Persist the completed trace and all its spans in a single DB session to minimise round-trips."""
         try:
+            from lfx.services.database.models.traces import SpanTable, TraceTable
             from lfx.services.deps import session_scope
-
-            from langflow.services.database.models.traces.model import SpanTable, TraceTable
 
             try:
                 flow_uuid = UUID(self.flow_id)

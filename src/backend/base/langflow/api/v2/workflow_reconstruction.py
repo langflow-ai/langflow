@@ -16,9 +16,8 @@ from langflow.api.v1.schemas import RunResponse
 from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_job_id
 
 if TYPE_CHECKING:
+    from lfx.services.database.models.flow import FlowRead
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.database.models.flow.model import FlowRead
 
 # Bound the structured search so a pathological/cyclic payload can't recurse
 # unboundedly; the session_id sits a few levels deep in the persisted Message.

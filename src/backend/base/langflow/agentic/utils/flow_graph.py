@@ -10,7 +10,7 @@ from lfx.log.logger import logger
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.flow.model import FlowRead
+    from lfx.services.database.models.flow import FlowRead
 
 
 async def get_flow_graph_representations(

@@ -6,6 +6,14 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Qu
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
+from lfx.services.database.models.flow import Flow, FlowRead
+from lfx.services.database.models.folder import (
+    Folder,
+    FolderCreate,
+    FolderRead,
+    FolderReadWithFlows,
+    FolderUpdate,
+)
 from lfx.services.mcp_composer.service import MCPComposerService
 from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
@@ -48,15 +56,7 @@ from langflow.services.database.models.deployment.exceptions import (
 )
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
-from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.services.database.models.folder.model import (
-    Folder,
-    FolderCreate,
-    FolderRead,
-    FolderReadWithFlows,
-    FolderUpdate,
-)
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType

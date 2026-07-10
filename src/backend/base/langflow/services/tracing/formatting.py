@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from langflow.services.database.models.traces.model import (
+from lfx.services.database.models.traces import (
     SpanReadResponse,
     SpanStatus,
     SpanTable,

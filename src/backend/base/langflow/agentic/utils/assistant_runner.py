@@ -16,6 +16,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.mcp.flow_builder_tools import get_working_flow
+from lfx.services.database.models.flow import Flow, FlowCreate
 
 from langflow.agentic.api.router import _resolve_assistant_context
 from langflow.agentic.api.schemas import AssistantRequest
@@ -23,7 +24,6 @@ from langflow.agentic.services.assistant_service import execute_flow_with_valida
 from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.deps import get_storage_service
 
 if TYPE_CHECKING:

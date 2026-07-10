@@ -1,12 +1,12 @@
 from uuid import UUID
 
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.message import MessageTable, MessageUpdate
 from lfx.utils.async_helpers import run_until_complete
 from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.message.model import MessageTable, MessageUpdate
 from langflow.services.deps import session_scope
 
 

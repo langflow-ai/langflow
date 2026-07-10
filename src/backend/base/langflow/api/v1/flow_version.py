@@ -5,6 +5,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
 from lfx.log import logger
+from lfx.services.database.models.flow import Flow, FlowRead
+from lfx.services.database.models.flow_version import (
+    FlowVersion,
+    FlowVersionCreate,
+    FlowVersionListResponse,
+    FlowVersionRead,
+    FlowVersionReadWithData,
+)
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import select
@@ -15,7 +23,6 @@ from langflow.api.utils.core import remove_api_keys
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
 from langflow.services.authorization import FlowAction, ensure_flow_permission
-from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_version.crud import (
     create_flow_version_entry,
     delete_flow_version_entry,
@@ -29,13 +36,6 @@ from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionError,
     FlowVersionNotFoundError,
     FlowVersionSerializationError,
-)
-from langflow.services.database.models.flow_version.model import (
-    FlowVersion,
-    FlowVersionCreate,
-    FlowVersionListResponse,
-    FlowVersionRead,
-    FlowVersionReadWithData,
 )
 from langflow.services.deps import get_settings_service
 

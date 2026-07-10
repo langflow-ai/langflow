@@ -8,6 +8,8 @@ from secrets import token_urlsafe
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.database.models.transactions import TransactionTable
+from lfx.services.database.models.vertex_builds import VertexBuildTable
 from lfx.services.settings.constants import (
     DEFAULT_SUPERUSER,
     LEGACY_DEFAULT_SUPERUSER_PASSWORD,
@@ -19,8 +21,6 @@ from sqlmodel import col, select
 
 from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
-from langflow.services.database.models.transactions.model import TransactionTable
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 
@@ -58,7 +58,7 @@ def get_auto_login_superuser_password(auth_settings) -> str:
 
 
 async def _get_superuser_by_username(session: AsyncSession, username: str):
-    from langflow.services.database.models.user.model import User
+    from lfx.services.database.models.user import User
 
     stmt = select(User).where(
         User.username == username,
@@ -93,7 +93,7 @@ async def get_or_create_super_user(
     *,
     rotate_legacy_default_password: bool = False,
 ):
-    from langflow.services.database.models.user.model import User
+    from lfx.services.database.models.user import User
 
     stmt = select(User).where(User.username == username)
     result = await session.exec(stmt)
@@ -293,8 +293,7 @@ async def migrate_orphaned_mcp_servers_config(
 
     import aiofiles
     import anyio
-
-    from langflow.services.database.models.file.model import File as UserFile
+    from lfx.services.database.models.file import File as UserFile
 
     try:
         config_dir_value = settings_service.settings.config_dir
@@ -410,7 +409,7 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
         await logger.adebug("AUTO_LOGIN is set to False. Removing default superuser if unused.")
         try:
             username = DEFAULT_SUPERUSER
-            from langflow.services.database.models.user.model import User
+            from lfx.services.database.models.user import User
 
             stmt = select(User).where(User.username == username)
             result = await session.exec(stmt)

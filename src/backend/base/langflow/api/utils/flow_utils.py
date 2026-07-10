@@ -9,23 +9,23 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
+from lfx.services.database.models.auth.authz import AuthzShare
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.flow_version import FlowVersion
+from lfx.services.database.models.message import MessageTable
+from lfx.services.database.models.traces import SpanTable, TraceTable
+from lfx.services.database.models.transactions import TransactionTable
+from lfx.services.database.models.user import User
+from lfx.services.database.models.vertex_builds import VertexBuildTable
 from lfx.services.deps import session_scope
 from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.auth.authz import AuthzShare
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
 from langflow.services.database.models.deployment.guards import check_flow_has_deployed_versions
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.flow_version.model import FlowVersion
-from langflow.services.database.models.message.model import MessageTable
-from langflow.services.database.models.traces.model import SpanTable, TraceTable
-from langflow.services.database.models.transactions.model import TransactionTable
-from langflow.services.database.models.user.model import User
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
 if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
@@ -238,9 +238,8 @@ async def verify_public_flow_and_get_user(
 
     # Check if the flow is public
     async with session_scope() as session:
+        from lfx.services.database.models.flow import AccessTypeEnum, Flow
         from sqlmodel import select
-
-        from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 
         flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
         if not flow or flow.access_type is not AccessTypeEnum.PUBLIC:

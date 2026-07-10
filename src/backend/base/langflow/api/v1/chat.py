@@ -13,6 +13,8 @@ from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest, OutputValue
 from lfx.services.cache.utils import CacheMiss
+from lfx.services.database.models.flow import AccessTypeEnum, Flow
+from lfx.services.database.models.user import User
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     prepare_public_flow_build,
@@ -50,8 +52,6 @@ from langflow.services.auth.utils import get_current_active_user, get_current_us
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,

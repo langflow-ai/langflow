@@ -87,6 +87,10 @@ src/
 - **langflow-base**: Core framework (api, services, graph engine)
 - **lfx**: Standalone CLI for running flows (`lfx serve`, `lfx run`)
 
+### ORM Model Ownership
+
+All `table=True` SQLModel classes live in `lfx.services.database.models` (flat modules per domain: `flow`, `user`, `folder`, `api_key`, `variable`, `file`, `jobs`, `traces`, `message`, `transactions`, `vertex_builds`, etc.; `auth/` and `deployment_provider_account/` are subpackages). The old `langflow.services.database.models.*` paths remain as re-export shims (class identity preserved — both import paths yield the same class objects, so `SQLModel.metadata` registers each table once). CRUD modules, alembic migrations, and the DB service stay in `langflow-base`; `lfx` owns only the model definitions. Shared model helpers live in `lfx.services.database.utils` (string validators) and `lfx.services.database.models.variable` (the variable type constants); the langflow twins re-export them. <!-- pragma: allowlist secret --> `lfx` depends on `sqlmodel` for these models; import them lazily on lfx hot paths. Known seam wart: `lfx.services.database.models.memory_base` lazily imports `langflow.services.memory_base.preprocessing` inside one default-factory path (embedded-only).
+
 ### Service Layer
 Backend services in `src/backend/base/langflow/services/`:
 - `auth/` - Authentication

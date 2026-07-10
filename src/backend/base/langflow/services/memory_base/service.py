@@ -18,10 +18,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from lfx.base.models.unified_models import get_api_key_for_provider
-from sqlmodel import col, select
-
-from langflow.services.base import Service
-from langflow.services.database.models.memory_base.model import (
+from lfx.services.database.models.memory_base import (
     MemoryBase,
     MemoryBaseCreate,
     MemoryBasePreprocessingOutput,
@@ -29,7 +26,10 @@ from langflow.services.database.models.memory_base.model import (
     MemoryBaseUpdate,
     MessageIngestionRecord,
 )
-from langflow.services.database.models.message.model import MessageTable
+from lfx.services.database.models.message import MessageTable
+from sqlmodel import col, select
+
+from langflow.services.base import Service
 from langflow.services.deps import session_scope
 from langflow.services.memory_base.embedding_helpers import infer_embedding_provider, infer_llm_provider
 from langflow.services.memory_base.ingestion import (
@@ -94,7 +94,7 @@ class MemoryBaseService(Service):
     async def create(self, payload: MemoryBaseCreate, user_id: uuid.UUID) -> MemoryBase:
         # 1. Verify that the referenced flow belongs to this user.
         async with session_scope() as db:
-            from langflow.services.database.models.flow.model import Flow
+            from lfx.services.database.models.flow import Flow
 
             flow_result = await db.exec(select(Flow).where(Flow.id == payload.flow_id).where(Flow.user_id == user_id))
             if flow_result.first() is None:

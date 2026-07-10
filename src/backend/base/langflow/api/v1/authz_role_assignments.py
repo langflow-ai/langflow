@@ -14,6 +14,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from lfx.log.logger import logger
+from lfx.services.database.models.user import User
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -25,7 +26,6 @@ from langflow.api.v1.schemas.authz_role_assignments import (
 from langflow.services.authorization.invalidation import safe_invalidate_user
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service
 
 router = APIRouter(prefix="/authz/role-assignments", tags=["Authorization"])

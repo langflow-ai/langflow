@@ -30,10 +30,10 @@ from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionSummary,
 )
 from lfx.log.logger import logger
+from lfx.services.database.models.jobs import Job, JobType
 from sqlalchemy import func
 from sqlmodel import select
 
-from langflow.services.database.models.jobs.model import Job, JobType
 from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:

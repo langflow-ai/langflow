@@ -1,4 +1,4 @@
-from langflow.services.database.models.memory_base.model import (
+from lfx.services.database.models.memory_base import (
     MemoryBase,
     MemoryBaseCreate,
     MemoryBaseRead,

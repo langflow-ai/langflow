@@ -38,13 +38,13 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.log.logger import logger
+from lfx.services.database.models.transactions import TransactionTable
+from lfx.services.database.models.vertex_builds import VertexBuildTable
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import col
 
 from langflow.services.base import Service
-from langflow.services.database.models.transactions.model import TransactionTable
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

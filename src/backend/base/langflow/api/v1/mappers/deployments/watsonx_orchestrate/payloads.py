@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
 from lfx.services.adapters.deployment.schema import DeploymentType
+from lfx.services.database.models.deployment_provider_account.utils import validate_provider_url
 from pydantic import (
     AfterValidator,
     BaseModel,
@@ -19,7 +20,6 @@ from pydantic import (
 )
 
 from langflow.api.v1.schemas.deployments import ValidatedUrl
-from langflow.services.database.models.deployment_provider_account.utils import validate_provider_url
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas.deployments import DeploymentCreateRequest

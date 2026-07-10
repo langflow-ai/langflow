@@ -25,7 +25,7 @@ from langflow.services.memory_base.embedding_helpers import infer_llm_provider
 if TYPE_CHECKING:
     import uuid
 
-    from langflow.services.database.models.message.model import MessageTable
+    from lfx.services.database.models.message import MessageTable
 
 
 DEFAULT_KILL_PHRASE = "NO_INGEST"

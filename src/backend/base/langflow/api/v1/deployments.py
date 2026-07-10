@@ -15,6 +15,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentType,
     DeploymentUpdateResult,
 )
+from lfx.services.database.models.flow import Flow
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.mappers.deployments import get_deployment_mapper
@@ -105,7 +106,6 @@ from langflow.services.database.models.deployment_provider_account.crud import (
 from langflow.services.database.models.deployment_provider_account.crud import (
     update_provider_account as update_provider_account_row,
 )
-from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     AttachmentConflictError,
     list_attachments_by_provider_snapshot_id,

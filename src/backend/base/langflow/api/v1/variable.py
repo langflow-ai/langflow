@@ -9,6 +9,7 @@ from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     validate_model_provider_key,
 )
+from lfx.services.database.models.variable import Variable, VariableCreate, VariableRead, VariableUpdate
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -22,7 +23,6 @@ from langflow.api.v1.schemas.deployments import DetectVarsRequest, DetectVarsRes
 from langflow.services.authorization import VariableAction, ensure_variable_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
-from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService

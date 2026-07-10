@@ -10,13 +10,13 @@ from urllib.parse import quote
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
 from lfx.log.logger import logger
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.user import User
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import get_current_active_user, get_current_active_user_mcp
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.user.model import User
 from langflow.services.store.utils import get_lf_version_from_pypi
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 

@@ -320,8 +320,10 @@ def _try_enqueue_via_telemetry_writer(vertex_build) -> bool:
     """
     global _legacy_vb_fallback_logged  # noqa: PLW0603 — one-shot module-level latch
     try:
-        from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+        # The writer service only exists in langflow; the ORM model is lfx-owned.
         from langflow.services.deps import get_telemetry_writer_service
+
+        from lfx.services.database.models.vertex_builds import VertexBuildTable
     except ImportError:
         return False
     writer = get_telemetry_writer_service()
@@ -371,7 +373,8 @@ async def log_vertex_build(
             from langflow.services.database.models.vertex_builds.crud import (
                 log_vertex_build as crud_log_vertex_build,
             )
-            from langflow.services.database.models.vertex_builds.model import VertexBuildBase
+
+            from lfx.services.database.models.vertex_builds import VertexBuildBase
 
             # Convert data to dict if it's a pydantic model
             data_dict = data

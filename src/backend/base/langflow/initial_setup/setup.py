@@ -27,6 +27,8 @@ from lfx.base.constants import (
     SKIPPED_FIELD_ATTRIBUTES,
 )
 from lfx.log.logger import logger
+from lfx.services.database.models.flow import Flow, FlowCreate
+from lfx.services.database.models.folder import Folder, FolderCreate, FolderRead
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.component_aliases import flatten_components_with_aliases
 from lfx.utils.util import escape_json_dump
@@ -41,13 +43,11 @@ from langflow.initial_setup.constants import (
     STARTER_FOLDER_DESCRIPTION,
     STARTER_FOLDER_NAME,
 )
-from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.constants import (
     DEFAULT_FOLDER_DESCRIPTION,
     DEFAULT_FOLDER_NAME,
     LEGACY_FOLDER_NAMES,
 )
-from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
 from langflow.services.deps import (
     get_settings_service,
     get_storage_service,
@@ -994,7 +994,7 @@ async def load_flows_from_directory() -> None:
 
     async with session_scope() as session:
         # Find superuser by role instead of username to avoid issues with credential reset
-        from langflow.services.database.models.user.model import User
+        from lfx.services.database.models.user import User
 
         stmt = select(User).where(User.is_superuser == True)  # noqa: E712
         result = await session.exec(stmt)
@@ -1056,7 +1056,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
 
     async with session_scope() as session:
         # Find superuser by role instead of username to avoid issues with credential reset
-        from langflow.services.database.models.user.model import User
+        from lfx.services.database.models.user import User
 
         stmt = select(User).where(User.is_superuser == True)  # noqa: E712
         result = await session.exec(stmt)

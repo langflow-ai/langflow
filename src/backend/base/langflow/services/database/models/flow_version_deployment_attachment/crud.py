@@ -4,23 +4,23 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from lfx.log.logger import logger
+from lfx.services.database.models.flow_version_deployment_attachment import (
+    FlowVersionDeploymentAttachment,
+)
 from sqlalchemy import and_, column, values
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select, update
 
 from langflow.services.database.models.deployment.orm_guards import ensure_attachment_project_match
-from langflow.services.database.models.flow_version_deployment_attachment.model import (
-    FlowVersionDeploymentAttachment,
-)
 from langflow.services.database.utils import require_non_empty
 
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from lfx.services.database.models.flow_version import FlowVersion
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
-    from langflow.services.database.models.flow_version.model import FlowVersion
     from langflow.services.database.models.flow_version_deployment_attachment.schema import (
         DeploymentAttachmentKeyBatch,
     )
@@ -151,7 +151,7 @@ async def list_deployment_attachments(
     deployment_id: UUID,
     flow_ids: list[UUID] | None = None,
 ) -> list[FlowVersionDeploymentAttachment]:
-    from langflow.services.database.models.flow_version.model import FlowVersion
+    from lfx.services.database.models.flow_version import FlowVersion
 
     stmt = (
         select(FlowVersionDeploymentAttachment)
@@ -178,8 +178,8 @@ async def list_deployment_attachments_with_versions(
     flow_ids: list[UUID] | None = None,
 ) -> list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]]:
     """Return paginated attachment rows joined with version metadata and flow name."""
-    from langflow.services.database.models.flow.model import Flow
-    from langflow.services.database.models.flow_version.model import FlowVersion
+    from lfx.services.database.models.flow import Flow
+    from lfx.services.database.models.flow_version import FlowVersion
 
     if limit <= 0:
         return []
@@ -345,9 +345,9 @@ async def list_attachments_for_flow_with_provider_info(
     This avoids N+1 queries when the caller needs to group attachments by
     provider for sync operations.
     """
-    from langflow.services.database.models.deployment.model import Deployment
-    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
-    from langflow.services.database.models.flow_version.model import FlowVersion
+    from lfx.services.database.models.deployment import Deployment
+    from lfx.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from lfx.services.database.models.flow_version import FlowVersion
 
     if not flow_ids:
         return []
@@ -403,7 +403,7 @@ async def delete_unbound_attachments(
     - Any ``deployment_ids`` not owned by ``provider_account_id`` are ignored
       by the joined predicates (dropped from the effective target set).
     """
-    from langflow.services.database.models.deployment.model import Deployment
+    from lfx.services.database.models.deployment import Deployment
 
     if not deployment_ids:
         return 0
@@ -477,9 +477,9 @@ async def list_attachments_for_flow_with_deployment_info(
     Results are ordered by ``updated_at`` descending so the most recent
     attachment per deployment comes first.
     """
-    from langflow.services.database.models.deployment.model import Deployment
-    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
-    from langflow.services.database.models.flow_version.model import FlowVersion
+    from lfx.services.database.models.deployment import Deployment
+    from lfx.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from lfx.services.database.models.flow_version import FlowVersion
 
     stmt = (
         select(
@@ -587,7 +587,7 @@ async def count_attachments_by_deployment_ids(
     if not deployment_ids:
         return {}
 
-    from langflow.services.database.models.flow_version.model import FlowVersion
+    from lfx.services.database.models.flow_version import FlowVersion
 
     stmt = (
         select(
@@ -617,7 +617,7 @@ async def count_deployment_attachments(
     deployment_id: UUID,
     flow_ids: list[UUID] | None = None,
 ) -> int:
-    from langflow.services.database.models.flow_version.model import FlowVersion
+    from lfx.services.database.models.flow_version import FlowVersion
 
     stmt = (
         select(func.count())
@@ -645,8 +645,8 @@ async def delete_orphan_attachments_for_flow_ids(
     flow_ids: list[UUID],
 ) -> int:
     """Delete attachment rows whose deployment parent is missing for the given flows."""
-    from langflow.services.database.models.deployment.model import Deployment
-    from langflow.services.database.models.flow_version.model import FlowVersion
+    from lfx.services.database.models.deployment import Deployment
+    from lfx.services.database.models.flow_version import FlowVersion
 
     if not flow_ids:
         return 0
@@ -676,9 +676,9 @@ async def delete_orphan_attachments_for_project(
     project_id: UUID,
 ) -> int:
     """Delete attachment rows with missing deployment parent for one project scope."""
-    from langflow.services.database.models.deployment.model import Deployment
-    from langflow.services.database.models.flow.model import Flow
-    from langflow.services.database.models.flow_version.model import FlowVersion
+    from lfx.services.database.models.deployment import Deployment
+    from lfx.services.database.models.flow import Flow
+    from lfx.services.database.models.flow_version import FlowVersion
 
     # Project-scoped variant used before project guard retries/sync.
     stale_attachment_ids = (

@@ -1,10 +1,10 @@
 from uuid import UUID
 
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.vertex_builds import VertexBuildBase, VertexBuildTable
 from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from langflow.services.deps import get_settings_service
 
 

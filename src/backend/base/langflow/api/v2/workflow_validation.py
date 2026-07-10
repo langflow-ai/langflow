@@ -9,12 +9,12 @@ route handlers can surface a structured error without running the graph.
 from __future__ import annotations
 
 from fastapi import HTTPException, status
+from lfx.services.database.models.flow import FlowRead
+from lfx.services.database.models.user import UserRead
 from lfx.utils.flow_validation import CustomComponentValidationError, validate_flow_for_current_settings
 from lfx.workflow.converters import ParsedWorkflowRun
 
 from langflow.services.authorization.fetch import deny_to_404
-from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.user.model import UserRead
 
 
 def _flow_not_found_privacy_exception(exc: HTTPException, flow_id: str) -> HTTPException:

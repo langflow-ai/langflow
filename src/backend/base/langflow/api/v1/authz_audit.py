@@ -14,13 +14,13 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from lfx.services.database.models.user import User
 from pydantic import BaseModel
 from sqlmodel import col, select
 
 from langflow.api.utils import DbSession
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.auth import AuthzAuditLog
-from langflow.services.database.models.user.model import User
 
 router = APIRouter(prefix="/authz/audit", tags=["Authorization"])
 

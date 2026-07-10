@@ -5,9 +5,9 @@ from uuid import UUID
 
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
+from lfx.services.database.models.flow import Flow
 
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
-from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
 
 

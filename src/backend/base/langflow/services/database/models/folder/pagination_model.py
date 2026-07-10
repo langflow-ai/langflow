@@ -1,8 +1,8 @@
 from fastapi_pagination import Page
+from lfx.services.database.models.flow import FlowRead
+from lfx.services.database.models.folder import FolderRead
 
 from langflow.helpers.base_model import BaseModel
-from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.folder.model import FolderRead
 
 
 class FolderWithPaginatedFlows(BaseModel):

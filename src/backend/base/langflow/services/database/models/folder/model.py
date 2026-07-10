@@ -1,66 +1,24 @@
-from typing import Optional
-from uuid import UUID, uuid4
+"""Re-export shim: these ORM models moved to ``lfx.services.database.models.folder``.
 
-from sqlalchemy import Text, UniqueConstraint
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+lfx owns the ORM model definitions; langflow keeps the alembic migrations
+and this import path for backward compatibility. Class identity is
+preserved.
+"""
 
-from langflow.services.database.models.deployment.model import Deployment
-from langflow.services.database.models.flow.model import Flow, FlowRead
-from langflow.services.database.models.user.model import User
+from lfx.services.database.models.folder import (
+    Folder,
+    FolderBase,
+    FolderCreate,
+    FolderRead,
+    FolderReadWithFlows,
+    FolderUpdate,
+)
 
-
-class FolderBase(SQLModel):
-    name: str = Field(index=True)
-    description: str | None = Field(default=None, sa_column=Column(Text))
-    auth_settings: dict | None = Field(
-        default=None,
-        sa_column=Column(JSON, nullable=True),
-        description="Authentication settings for the folder/project",
-    )
-
-
-class Folder(FolderBase, table=True):  # type: ignore[call-arg]
-    id: UUID | None = Field(default_factory=uuid4, primary_key=True)
-    parent_id: UUID | None = Field(default=None, foreign_key="folder.id")
-
-    parent: Optional["Folder"] = Relationship(
-        back_populates="children",
-        sa_relationship_kwargs={"remote_side": "Folder.id"},
-    )
-    children: list["Folder"] = Relationship(back_populates="parent")
-    user_id: UUID | None = Field(default=None, foreign_key="user.id")
-    workspace_id: UUID | None = Field(default=None, nullable=True, index=True)
-    user: User = Relationship(back_populates="folders")
-    flows: list[Flow] = Relationship(
-        back_populates="folder", sa_relationship_kwargs={"cascade": "all, delete, delete-orphan"}
-    )
-    deployments: list[Deployment] = Relationship(
-        back_populates="folder", sa_relationship_kwargs={"cascade": "all, delete, delete-orphan"}
-    )
-
-    __table_args__ = (UniqueConstraint("user_id", "name", name="unique_folder_name"),)
-
-
-class FolderCreate(FolderBase):
-    components_list: list[UUID] | None = None
-    flows_list: list[UUID] | None = None
-
-
-class FolderRead(FolderBase):
-    id: UUID
-    parent_id: UUID | None = Field()
-
-
-class FolderReadWithFlows(FolderBase):
-    id: UUID
-    parent_id: UUID | None = Field()
-    flows: list[FlowRead] = Field(default=[])
-
-
-class FolderUpdate(SQLModel):
-    name: str | None = None
-    description: str | None = None
-    parent_id: UUID | None = None
-    components: list[UUID] = Field(default_factory=list)
-    flows: list[UUID] = Field(default_factory=list)
-    auth_settings: dict | None = None
+__all__ = [
+    "Folder",
+    "FolderBase",
+    "FolderCreate",
+    "FolderRead",
+    "FolderReadWithFlows",
+    "FolderUpdate",
+]

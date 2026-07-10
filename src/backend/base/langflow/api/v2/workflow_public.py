@@ -35,6 +35,8 @@ from lfx.schema.workflow import (
     WORKFLOW_EXECUTION_RESPONSES,
     PublicWorkflowRunRequest,
 )
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.user import User, UserRead
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     validate_flow_for_current_settings,
@@ -56,8 +58,6 @@ from langflow.api.utils.flow_utils import (
     verify_public_flow_and_get_user,
 )
 from langflow.services.auth.utils import get_current_user_optional
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_settings_service, session_scope
 
 router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"])

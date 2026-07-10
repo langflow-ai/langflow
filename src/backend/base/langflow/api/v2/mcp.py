@@ -257,10 +257,10 @@ async def get_servers(
             # Get global variables from database for header resolution
             request_variables = {}
             try:
+                from lfx.services.database.models.variable import Variable
                 from sqlmodel import select
 
                 from langflow.services.auth import utils as auth_utils
-                from langflow.services.database.models.variable.model import Variable
 
                 # Load variables directly from database and decrypt ALL types (including CREDENTIAL)
                 stmt = select(Variable).where(Variable.user_id == current_user.id)

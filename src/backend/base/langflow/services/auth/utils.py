@@ -24,10 +24,9 @@ if TYPE_CHECKING:
     from collections.abc import Coroutine
     from datetime import timedelta
 
+    from lfx.services.database.models.user import User, UserRead
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.database.models.user.model import User, UserRead
 
 
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
@@ -277,7 +276,7 @@ async def get_current_user_for_workflow(
     execute a graph inline: a held auth connection contends with the run's own
     writes (on SQLite it blocks the run's INSERTs with "database is locked").
     """
-    from langflow.services.database.models.user.model import UserRead
+    from lfx.services.database.models.user import UserRead
 
     async with session_scope() as db:
         try:

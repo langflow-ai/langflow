@@ -31,16 +31,16 @@ from typing import TYPE_CHECKING
 from langchain_chroma import Chroma
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
-from sqlalchemy import text
-from sqlmodel import Session, col, select
-
-from langflow.api.utils.kb_helpers import KBIngestionHelper, KBStorageHelper
-from langflow.services.database.models.memory_base.model import (
+from lfx.services.database.models.memory_base import (
     MemoryBasePreprocessingOutput,
     MemoryBaseSession,
     MemoryBaseWorkflowRun,
 )
-from langflow.services.database.models.message.model import MessageTable
+from lfx.services.database.models.message import MessageTable
+from sqlalchemy import text
+from sqlmodel import Session, col, select
+
+from langflow.api.utils.kb_helpers import KBIngestionHelper, KBStorageHelper
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.memory_base.document_builders import (
     build_documents_from_messages,
@@ -514,7 +514,7 @@ async def _mark_messages_ingested(
     """
     from uuid import uuid4 as _uuid4
 
-    from langflow.services.database.models.memory_base.model import MessageIngestionRecord
+    from lfx.services.database.models.memory_base import MessageIngestionRecord
 
     ingested_at = datetime.now(timezone.utc)
     rows = [

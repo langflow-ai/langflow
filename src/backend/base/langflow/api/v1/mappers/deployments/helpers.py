@@ -26,6 +26,11 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult as AdapterDeploymentCreateResult,
 )
+from lfx.services.database.models.deployment import Deployment
+from lfx.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.flow_version import FlowVersion
+from lfx.services.database.models.folder import Folder
 from lfx.services.deps import get_deployment_adapter
 from lfx.services.interfaces import DeploymentServiceProtocol
 from sqlalchemy import and_, literal, union_all
@@ -55,16 +60,12 @@ from langflow.services.database.models.deployment.crud import (
 from langflow.services.database.models.deployment.crud import (
     get_deployment as get_deployment_db,
 )
-from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.crud import (
     get_provider_account_by_id as get_provider_account_row_by_id,
 )
 from langflow.services.database.models.deployment_provider_account.crud import (
     get_provider_account_by_id_unscoped as get_provider_account_row_by_id_unscoped,
 )
-from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     count_attachments_by_deployment_ids,
     count_deployment_attachments,
@@ -76,16 +77,16 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     list_deployment_attachments_with_versions,
     update_deployment_attachment_provider_snapshot_id,
 )
-from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.utils import require_non_empty
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from langflow.api.utils import DbSession
-    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    from lfx.services.database.models.flow_version_deployment_attachment import (
         FlowVersionDeploymentAttachment,
     )
+
+    from langflow.api.utils import DbSession
 
     from .base import BaseDeploymentMapper
 

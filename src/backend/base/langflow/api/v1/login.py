@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from lfx.services.database.models.user import UserRead
 from limits import parse
 from pydantic import BaseModel
 from slowapi.errors import RateLimitExceeded
@@ -14,7 +15,6 @@ from langflow.api.v1.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.exceptions import AuthenticationError
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
 from langflow.services.rate_limit import get_rate_limit_string
 

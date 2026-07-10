@@ -187,8 +187,9 @@ async def backfill_all_users_from_disk(*, kb_root: Path | None = None) -> int:
     read-only. Returns the total number of inserted rows across all
     users and never raises for per-user failures.
     """
+    from lfx.services.database.models.user import User
+
     from langflow.api.utils.kb_helpers import KBStorageHelper
-    from langflow.services.database.models.user.model import User
 
     effective_root = kb_root or KBStorageHelper.get_root_path()
     if not effective_root.exists():

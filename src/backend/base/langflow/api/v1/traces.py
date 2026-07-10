@@ -18,18 +18,18 @@ from uuid import UUID
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.exc import OperationalError, ProgrammingError
-from sqlmodel import col, select
-
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.traces.model import (
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.traces import (
     SpanStatus,
     TraceListResponse,
     TraceRead,
     TraceTable,
 )
-from langflow.services.database.models.user.model import User
+from lfx.services.database.models.user import User
+from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlmodel import col, select
+
+from langflow.services.auth.utils import get_current_active_user
 from langflow.services.deps import session_scope
 from langflow.services.tracing.repository import fetch_single_trace, fetch_traces
 from langflow.services.tracing.validation import sanitize_query_string

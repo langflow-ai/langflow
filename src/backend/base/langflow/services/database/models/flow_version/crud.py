@@ -3,20 +3,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from lfx.log import logger
+from lfx.services.database.models.deployment import Deployment
+from lfx.services.database.models.flow_version import (
+    FlowVersion,
+)
+from lfx.services.database.models.flow_version_deployment_attachment import (
+    FlowVersionDeploymentAttachment,
+)
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col, delete, func, select
 
-from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionConflictError,
     FlowVersionDeployedError,
     FlowVersionNotFoundError,
-)
-from langflow.services.database.models.flow_version.model import (
-    FlowVersion,
-)
-from langflow.services.database.models.flow_version_deployment_attachment.model import (
-    FlowVersionDeploymentAttachment,
 )
 from langflow.services.deps import get_settings_service
 

@@ -1,11 +1,10 @@
 from uuid import UUID
 
 from fastapi import HTTPException
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.user import User, UserRead
 from lfx.services.deps import session_scope_readonly
 from sqlmodel import select
-
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.user.model import User, UserRead
 
 
 async def get_user_by_flow_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> UserRead:

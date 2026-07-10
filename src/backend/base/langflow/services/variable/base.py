@@ -1,11 +1,11 @@
 import abc
 from uuid import UUID
 
+from lfx.services.database.models.variable import Variable, VariableRead, VariableUpdate
 from pydantic import SecretStr
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable, VariableRead, VariableUpdate
 
 
 class VariableService(Service):

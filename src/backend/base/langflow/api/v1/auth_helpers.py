@@ -1,9 +1,9 @@
 from typing import Any
 
+from lfx.services.database.models.folder import Folder
 from pydantic import SecretStr
 
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
-from langflow.services.database.models.folder.model import Folder
 
 
 def handle_auth_settings_update(

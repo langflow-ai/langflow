@@ -9,6 +9,13 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 from lfx.log.logger import logger
 from lfx.services.authorization.base import BaseAuthorizationService
+from lfx.services.database.models.deployment import Deployment
+from lfx.services.database.models.file import File as UserFile
+from lfx.services.database.models.flow import Flow
+from lfx.services.database.models.folder import Folder
+from lfx.services.database.models.knowledge_base import KnowledgeBaseRecord
+from lfx.services.database.models.user import User
+from lfx.services.database.models.variable import Variable
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -17,13 +24,6 @@ from langflow.services.authorization import ShareAction, ensure_share_permission
 from langflow.services.authorization.invalidation import safe_invalidate_all, safe_invalidate_user
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzShare, AuthzTeamMember, SharePermissionLevel, ShareScope
-from langflow.services.database.models.deployment.model import Deployment
-from langflow.services.database.models.file.model import File as UserFile
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.folder.model import Folder
-from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
-from langflow.services.database.models.user.model import User
-from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
 
 router = APIRouter(prefix="/authz/shares", tags=["Authorization"])

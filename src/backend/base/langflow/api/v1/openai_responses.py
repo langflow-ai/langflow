@@ -9,6 +9,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
 from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
+from lfx.services.database.models.flow import FlowRead
+from lfx.services.database.models.user import UserRead
 from lfx.utils.flow_validation import CustomComponentValidationError
 
 from langflow.api.utils import extract_global_variables_from_headers
@@ -25,8 +27,6 @@ from langflow.schema import (
 from langflow.schema.content_types import ToolContent
 from langflow.services.auth.utils import api_key_security
 from langflow.services.authorization import FlowAction, ensure_flow_permission
-from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_telemetry_service
 from langflow.services.telemetry.schema import RunPayload
 from langflow.services.telemetry.service import TelemetryService

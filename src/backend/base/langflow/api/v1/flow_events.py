@@ -4,11 +4,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from lfx.services.database.models.flow import Flow
 from pydantic import BaseModel, Field
 from sqlmodel import or_, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_flow_events_service
 from langflow.services.flow_events import FLOW_EVENT_TYPES, FlowEventsService
 

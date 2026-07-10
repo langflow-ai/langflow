@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from lfx.log.logger import logger
+from lfx.services.database.models.variable import Variable, VariableCreate, VariableRead, VariableUpdate
 from sqlmodel import select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 

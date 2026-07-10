@@ -23,14 +23,15 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+from lfx.services.database.models.deployment import Deployment
+from lfx.services.database.models.flow_version import FlowVersion
+from lfx.services.database.models.flow_version_deployment_attachment import (
+    FlowVersionDeploymentAttachment,
+)
+
 from langflow.services.database.models.deployment.exceptions import (
     DeploymentGuardError,
     get_friendly_guard_detail,
-)
-from langflow.services.database.models.deployment.model import Deployment
-from langflow.services.database.models.flow_version.model import FlowVersion
-from langflow.services.database.models.flow_version_deployment_attachment.model import (
-    FlowVersionDeploymentAttachment,
 )
 
 

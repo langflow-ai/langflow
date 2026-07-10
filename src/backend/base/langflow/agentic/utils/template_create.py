@@ -9,12 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
+from lfx.services.database.models.flow import FlowCreate
+from lfx.services.database.models.folder import Folder
 
 from langflow.agentic.utils.template_search import get_template_by_id
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.database.models.flow.model import FlowCreate
-from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_storage_service
 
 if TYPE_CHECKING:

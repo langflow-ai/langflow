@@ -1,4 +1,4 @@
-from langflow.services.database.models.knowledge_base.model import (
+from lfx.services.database.models.knowledge_base import (
     KnowledgeBaseRecord,
     KnowledgeBaseStatus,
 )

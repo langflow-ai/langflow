@@ -32,7 +32,7 @@ from langflow.services.deps import get_authorization_service, get_settings_servi
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langflow.services.database.models.user.model import User, UserRead
+    from lfx.services.database.models.user import User, UserRead
 
 # Action enums coerced to string values.
 _ACTION_ENUMS = (

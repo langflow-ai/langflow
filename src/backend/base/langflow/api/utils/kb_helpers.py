@@ -40,10 +40,10 @@ from lfx.base.knowledge_bases.ingestion_sources.base import IngestionItemStatus,
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
+from lfx.services.database.models.jobs import JobStatus
+from lfx.services.database.models.knowledge_base import KnowledgeBaseStatus
 
 from langflow.api.utils import CurrentActiveUser
-from langflow.services.database.models.jobs.model import JobStatus
-from langflow.services.database.models.knowledge_base.model import KnowledgeBaseStatus
 from langflow.services.deps import get_settings_service
 from langflow.services.jobs.service import JobService
 from langflow.utils.kb_constants import (

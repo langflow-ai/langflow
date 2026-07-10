@@ -8,6 +8,8 @@ from fastapi import HTTPException
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.log import logger
+from lfx.services.database.models.api_key import ApiKeyCreate
+from lfx.services.database.models.user import User
 from lfx.services.deps import get_settings_service
 from sqlmodel import select
 
@@ -15,9 +17,7 @@ from langflow.api.v2.mcp import get_server_list, update_server
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import create_api_key
-from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_storage_service
 
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104

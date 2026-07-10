@@ -1,19 +1,14 @@
-"""Schemas for the deployment_provider_account package.
+"""Re-export shim: these ORM models moved to ``lfx.services.database.models.deployment_provider_account.schemas``.
 
-Kept separate from ``model.py`` so that modules like ``utils.py`` can
-import these types without pulling in SQLModel / SQLAlchemy and without
-creating circular dependencies.
+lfx owns the ORM model definitions; langflow keeps the alembic migrations
+and this import path for backward compatibility. Class identity is
+preserved.
 """
 
-from enum import Enum
+from lfx.services.database.models.deployment_provider_account.schemas import (
+    DeploymentProviderKey,
+)
 
-
-class DeploymentProviderKey(str, Enum):
-    """Deployment provider identifiers recognised by Langflow.
-
-    Each member value must match the adapter registry key used by
-    ``get_deployment_adapter(adapter_key)`` in LFX and the corresponding
-    mapper registration in the Langflow mapper registry.
-    """
-
-    WATSONX_ORCHESTRATE = "watsonx-orchestrate"
+__all__ = [
+    "DeploymentProviderKey",
+]

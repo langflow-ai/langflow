@@ -95,15 +95,14 @@ from .contracts import (
 from .helpers import page_offset
 
 if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from langflow.services.database.models.deployment.model import Deployment
-    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
-    from langflow.services.database.models.flow.model import Flow
-    from langflow.services.database.models.flow_version.model import FlowVersion
-    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    from lfx.services.database.models.deployment import Deployment
+    from lfx.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from lfx.services.database.models.flow import Flow
+    from lfx.services.database.models.flow_version import FlowVersion
+    from lfx.services.database.models.flow_version_deployment_attachment import (
         FlowVersionDeploymentAttachment,
     )
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @dataclass(frozen=True)

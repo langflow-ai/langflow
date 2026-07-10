@@ -7,8 +7,7 @@ import re
 from enum import Enum
 
 from lfx.services.adapters.deployment.schema import DeploymentType
-
-from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
+from lfx.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 
 SUPPORTED_ADAPTER_DEPLOYMENT_TYPES: frozenset[DeploymentType] = frozenset({DeploymentType.AGENT})
 CREATE_MAX_RETRIES = 3

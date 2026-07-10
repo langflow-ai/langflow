@@ -30,7 +30,7 @@ from langflow.services.authorization.guards import (
 )
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.user.model import User, UserRead
+    from lfx.services.database.models.user import User, UserRead
 
 _Action = (
     DeploymentAction
