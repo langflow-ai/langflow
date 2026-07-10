@@ -414,7 +414,7 @@ async def update_server(
         )
         existing = result.first()
         if existing is None:
-            raise HTTPException(status_code=500, detail="Server not found.")
+            raise HTTPException(status_code=404, detail="Server not found.")
         await session.delete(existing)
         await session.commit()
         _clear_server_cache(server_name)
@@ -425,7 +425,7 @@ async def update_server(
 
     for _ in range(_MAX_UPSERT_RETRIES):
         if check_existing and existing is not None:
-            raise HTTPException(status_code=500, detail="Server already exists.")
+            raise HTTPException(status_code=409, detail="Server already exists.")
 
         if existing is None:
             session.add(
@@ -470,7 +470,7 @@ async def update_server(
             )
             existing = result.first()
             if existing is None:
-                raise HTTPException(status_code=500, detail="Server not found.")
+                raise HTTPException(status_code=404, detail="Server not found.")
             continue
 
         existing.config = encrypt_mcp_config(server_config)
