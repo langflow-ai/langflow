@@ -13,27 +13,37 @@ A2A support is off by default. To enable it, set the `LANGFLOW_A2A_ENABLED` envi
 
 ## Prerequisites
 
-* A [Langflow project](/concepts-flows#projects) with at least one agent flow.
+* A [Langflow flow](/concepts-flows) that contains a **Chat Input** (or **Human Input**) component and a **Chat Output** component.
 
-    Only agent-typed flows can be published as A2A agents. A workflow-typed flow returns `404` from the A2A endpoints even when publishing is enabled.
+    An A2A caller sends a message and reads a reply, so a flow can be served as an agent only if it can receive and answer messages. Langflow marks an eligible flow as agent-typed when you save it from the **Agent** tab. A workflow-typed flow returns `404` from the A2A endpoints even when publishing is enabled.
 
 * `LANGFLOW_A2A_ENABLED` set to `true` on the Langflow server.
 
 ## Publish a flow as an A2A agent
 
-1. Open the agent flow that you want to publish.
+1. Open the flow that you want to publish.
 
-2. Click **Share**, and then select **A2A Agent**.
+2. In the flow editor's left sidebar, click **Agent**.
 
-3. Turn on **Publish over A2A**.
+    The **Agent** tab replaces the canvas. The left pane publishes the agent and shows its card, and the right pane is a tester for the live endpoint.
 
-    Langflow now serves the flow's agent card and JSON-RPC endpoint. The **Agent card URL** that A2A clients use for discovery is shown in the dialog. Click <Icon name="Copy" aria-hidden="true"/> to copy it.
+    If the flow is missing a chat input or a chat output, the status reads **Unavailable**, the toggle is disabled, and a banner names what to add. If `LANGFLOW_A2A_ENABLED` is `false` on the server, the status reads **Off**.
 
-4. To test the published agent, type a message in the **Test the agent** field, and then click **Send**.
+3. Turn on **Serve as an A2A agent**.
 
-    Langflow sends the message to the live A2A endpoint and shows the agent's reply, so you can confirm the agent answers before sharing the card URL.
+    The status changes to **Draft** and the toggle reads **Turn on, then save to publish**. Nothing is served yet.
 
-5. Click **Save**.
+4. Click **Save**.
+
+    Langflow publishes the flow. The status changes to **Live**, and Langflow serves the flow's agent card and JSON-RPC endpoint.
+
+5. Under **Address**, select **URL** to get the agent card URL that A2A clients use for discovery, or **curl** to get a ready-made `message/send` request. Click <Icon name="Copy" aria-hidden="true"/> to copy it.
+
+6. To test the published agent, type a message in the **Try it** pane, and then click **Send**.
+
+    Langflow sends the message over the live A2A endpoint and shows the agent's reply, so you can confirm the agent answers before you share the card URL. If the agent requires an API key, paste a valid key in the field above the message box.
+
+To stop serving the flow, turn off **Serve as an A2A agent**, and then click **Save**.
 
 ## A2A endpoints
 
@@ -50,17 +60,19 @@ A `message/send` request runs the flow and returns a completed task carrying the
 
 ## Customize the agent card
 
-By default the card uses the flow's name and description, the Langflow version, and a single skill derived from the flow's input schema. In the **A2A Agent** dialog, you can override the editable parts of the card:
+By default the card uses the flow's name and description, the Langflow version, and a single skill derived from the flow's input schema. In the **Agent** tab, under **Customize card**, you can override the editable parts of the card:
 
 | Field | Description |
 | --- | --- |
 | **Name** | The agent name. Defaults to the flow name. |
-| **Description** | The agent description. Defaults to the flow description. |
 | **Version** | The advertised version. Defaults to the Langflow version. |
-| **Tags** | Skill tags, one per line. Defaults to `langflow`. |
-| **Examples** | Example prompts, one per line. |
+| **Description** | The agent description. Defaults to the flow description. |
+| **Tags** | Keywords that help people find the agent. Defaults to `langflow`. |
+| **Examples** | Sample prompts shown to callers. They don't affect how the agent runs. |
 
-Empty fields fall back to the defaults.
+Empty fields fall back to the defaults. Click **Save** to apply your overrides.
+
+The **Agent** tab also shows the card's **Input contract**, the fields a caller sends, derived from the flow's input schema.
 
 ## Authentication
 
