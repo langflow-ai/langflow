@@ -310,7 +310,15 @@ async def handle_call_tool(
             )
 
         session_id = processed_inputs.pop("session_id", None) or str(uuid4())
-        input_request = SimplifiedAPIRequest(input_value=processed_inputs.get("input_value", ""), session_id=session_id)
+        input_value = processed_inputs.pop("input_value", "")
+        # Forward remaining advertised fields as tweaks so the published MCP schema
+        # matches actual execution behaviour (issue #14002).
+        extra_tweaks = dict(processed_inputs) if processed_inputs else None
+        input_request = SimplifiedAPIRequest(
+            input_value=input_value,
+            session_id=session_id,
+            tweaks=extra_tweaks,
+        )
 
         async def send_progress_updates(progress_token):
             try:

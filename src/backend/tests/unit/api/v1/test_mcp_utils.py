@@ -532,3 +532,47 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
     # The flow's own definition wins — the reserved injection must not clobber it.
     assert schema["properties"]["session_id"]["description"] == custom_session_id_property["description"]
     assert "session_id" in schema["required"]
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_forwards_extra_fields_as_tweaks(monkeypatch):
+    """Extra advertised fields (beyond input_value/session_id) must be forwarded as tweaks.
+
+    Regression test for issue #14002: MCP tools advertise multiple input fields
+    but previously only passed input_value during execution.
+    """
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={
+            "input_value": "hello",
+            "backend_token": "secret-tok",
+            "backend_url": "https://backend.example.com",
+        },
+    )
+
+    forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
+    assert forwarded_request.input_value == "hello"
+    # tweaks is stored as a Tweaks model; compare its root dict for clarity.
+    tweaks_dict = (
+        forwarded_request.tweaks.root if hasattr(forwarded_request.tweaks, "root") else dict(forwarded_request.tweaks)
+    )
+    assert tweaks_dict == {
+        "backend_token": "secret-tok",
+        "backend_url": "https://backend.example.com",
+    }
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_tweaks_none_when_no_extra_fields(monkeypatch):
+    """When only input_value (and optionally session_id) are supplied, tweaks must be None.
+
+    Ensures backward compatibility: existing MCP calls with only input_value are
+    not affected by the issue #14002 fix.
+    """
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+    )
+
+    forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
+    assert forwarded_request.tweaks is None
