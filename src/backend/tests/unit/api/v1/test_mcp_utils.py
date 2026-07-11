@@ -534,7 +534,6 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
     assert "session_id" in schema["required"]
 
 
-@pytest.mark.asyncio
 async def test_handle_call_tool_forwards_extra_fields_as_tweaks(monkeypatch):
     """Extra advertised fields (beyond input_value/session_id) must be forwarded as tweaks.
 
@@ -562,7 +561,6 @@ async def test_handle_call_tool_forwards_extra_fields_as_tweaks(monkeypatch):
     }
 
 
-@pytest.mark.asyncio
 async def test_handle_call_tool_tweaks_none_when_no_extra_fields(monkeypatch):
     """When only input_value (and optionally session_id) are supplied, tweaks must be None.
 
