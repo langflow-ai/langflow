@@ -28,6 +28,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentUpdateRequest,
     SnapshotUpdateRequest,
 )
+from langflow.services.database.models.deployment.crud import DeploymentOwnerPair
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
@@ -2934,9 +2935,8 @@ class TestGetDeploymentSync:
         assert result.attached_count == 1
         mock_delete_unbound.assert_awaited_once_with(
             db=session,
-            user_id=ANY,
             provider_account_id=dep_row.deployment_provider_account_id,
-            deployment_ids=[dep_row.id],
+            deployment_owner_pairs=[DeploymentOwnerPair(owner_id=ANY, deployment_id=dep_row.id)],
             bindings=[ProviderSnapshotBinding(resource_key="agent-rk-1", snapshot_id="snap-1")],
         )
 

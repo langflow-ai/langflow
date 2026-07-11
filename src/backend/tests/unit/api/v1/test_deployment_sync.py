@@ -3,6 +3,7 @@
 Covers:
 - fetch_provider_resource_keys: ID-only matching, error handling
 - list_deployments_synced: candidate-batch sync with batched stale-row deletion
+- list_deployments_synced: flow_version_ids filtered listing with per-round attachment sync
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBinding,
     CreateSnapshotBindings,
+    ProviderSnapshotBinding,
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
 )
@@ -119,6 +121,37 @@ def _mock_async_db() -> MagicMock:
     db.begin_nested.return_value = _AsyncNoopSavepoint()
     db.exec = AsyncMock(return_value=MagicMock(all=MagicMock(return_value=[])))
     return db
+
+
+def _stub_attachment_batch(mock_delete, mock_list_rows, *, deployments, counts=None, matches=None, error=None):
+    """Drive list_deployments_synced attachment sync without hitting SQL."""
+    counts = counts or {}
+    matches = matches or {}
+    deployment_by_id = {deployment.id: deployment for deployment in deployments}
+
+    if error is not None:
+        mock_delete.side_effect = error
+        return
+
+    async def _list_rows(_db, *, deployments, flow_version_ids=None, limit=None):
+        from langflow.services.database.models.deployment.crud import DeploymentListRow
+
+        rows = []
+        for deployment in deployments:
+            if flow_version_ids is not None and deployment.id not in matches:
+                continue
+            rows.append(
+                DeploymentListRow(
+                    deployment=deployment_by_id[deployment.id],
+                    attached_count=counts.get(deployment.id, 0),
+                    matched_flow_versions=list(matches.get(deployment.id, [])),
+                )
+            )
+            if limit is not None and len(rows) >= limit:
+                break
+        return rows
+
+    mock_list_rows.side_effect = _list_rows
 
 
 @pytest.mark.asyncio
@@ -359,7 +392,7 @@ class TestListDeploymentsSynced:
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=2)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
@@ -368,7 +401,7 @@ class TestListDeploymentsSynced:
         mock_list,
         mock_fetch,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """Rows whose resource_key is in the provider's known set are kept."""
@@ -381,7 +414,9 @@ class TestListDeploymentsSynced:
             {"rk-1", "rk-2"},
             _mock_provider_view([SimpleNamespace(id="rk-1"), SimpleNamespace(id="rk-2")]),
         )
-        mock_count_attachments.return_value = {row1.id: 0, row2.id: 1}
+        _stub_attachment_batch(
+            mock_delete_unbound, mock_list_rows, deployments=[row1, row2], counts={row1.id: 0, row2.id: 1}
+        )
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -403,11 +438,12 @@ class TestListDeploymentsSynced:
         assert total == 2
         assert provider_data_by_resource_key == {}
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
@@ -418,7 +454,7 @@ class TestListDeploymentsSynced:
         mock_fetch,
         mock_delete,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """Rows not recognised by the provider are batch-deleted."""
@@ -436,7 +472,9 @@ class TestListDeploymentsSynced:
             {"rk-good"},
             _mock_provider_view([SimpleNamespace(id="rk-good")]),
         )  # only rk-good is known
-        mock_count_attachments.return_value = {good_row.id: 1}
+        _stub_attachment_batch(
+            mock_delete_unbound, mock_list_rows, deployments=[stale_row, good_row], counts={good_row.id: 1}
+        )
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
@@ -459,11 +497,12 @@ class TestListDeploymentsSynced:
             deployment_owner_pairs=[(uid, stale_row.id)],
         )
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=2)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
@@ -474,7 +513,7 @@ class TestListDeploymentsSynced:
         mock_fetch,
         mock_delete,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """Per-item provider_data is collected from each provider sync round."""
@@ -501,7 +540,9 @@ class TestListDeploymentsSynced:
                 _mock_provider_view([SimpleNamespace(id="rk-2", provider_data={"environments": ["live"]})]),
             ),
         ]
-        mock_count_attachments.return_value = {row1.id: 0, row2.id: 0}
+        _stub_attachment_batch(
+            mock_delete_unbound, mock_list_rows, deployments=[row1, row2], counts={row1.id: 0, row2.id: 0}
+        )
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -525,11 +566,12 @@ class TestListDeploymentsSynced:
         }
         mock_delete.assert_awaited_once_with(db, deployment_owner_pairs=[(owner_id, stale_row.id)])
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.update_deployment_metadata_batch", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
@@ -540,7 +582,7 @@ class TestListDeploymentsSynced:
         mock_fetch,
         mock_update_metadata_batch,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """Provider descriptions are passed through before local metadata batch sync."""
@@ -559,7 +601,7 @@ class TestListDeploymentsSynced:
         row = _mock_deployment_row("rk-1")
         mock_list.return_value = [(row, 0, [])]
         mock_fetch.return_value = ({"rk-1"}, _mock_provider_view([SimpleNamespace(id="rk-1")]))
-        mock_count_attachments.return_value = {row.id: 0}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=[row], counts={row.id: 0})
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -582,6 +624,7 @@ class TestListDeploymentsSynced:
         assert updates[0].display_name == "Provider Name"
         assert updates[0].description == long_description
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -613,7 +656,7 @@ class TestListDeploymentsSynced:
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
@@ -624,7 +667,7 @@ class TestListDeploymentsSynced:
         mock_fetch,
         mock_delete,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """Type-scoped lists push deployment_type into DB page/count and provider lookup."""
@@ -633,7 +676,7 @@ class TestListDeploymentsSynced:
         row_match = _mock_deployment_row("rk-1", deployment_type="agent")
         mock_list.side_effect = [[(row_match, 0, [])], []]
         mock_fetch.return_value = ({"rk-1"}, _mock_provider_view([SimpleNamespace(id="rk-1")]))
-        mock_count_attachments.return_value = {row_match.id: 0}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=[row_match], counts={row_match.id: 0})
         db = _mock_async_db()
         deployment_type = DeploymentType("agent")
 
@@ -655,10 +698,11 @@ class TestListDeploymentsSynced:
         assert mock_count.await_args.kwargs["deployment_type"] is deployment_type
         mock_delete.assert_not_awaited()
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=0)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
@@ -669,7 +713,7 @@ class TestListDeploymentsSynced:
         mock_fetch,
         mock_delete,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """Refill rounds seek after collected stale rows instead of advancing an offset."""
@@ -685,7 +729,7 @@ class TestListDeploymentsSynced:
             (set(), None),  # stale not known
             ({"rk-good"}, _mock_provider_view([SimpleNamespace(id="rk-good")])),  # good is known
         ]
-        mock_count_attachments.return_value = {good.id: 0}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=[good], counts={good.id: 0})
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -712,6 +756,7 @@ class TestListDeploymentsSynced:
         assert accepted[0][0] is good
         mock_delete.assert_awaited_once_with(db, deployment_owner_pairs=[(stale.user_id, stale.id)])
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -786,7 +831,7 @@ class TestListDeploymentsSynced:
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
@@ -797,7 +842,7 @@ class TestListDeploymentsSynced:
         mock_fetch,
         mock_delete,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """A failed refill logs and stops rounds; earlier work completes and backfill may fill the page."""
@@ -811,7 +856,7 @@ class TestListDeploymentsSynced:
             ({"rk-good"}, _mock_provider_view([SimpleNamespace(id="rk-good")])),
             RuntimeError("provider unavailable"),
         ]
-        mock_count_attachments.return_value = {good.id: 0}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=[good], counts={good.id: 0})
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -834,7 +879,10 @@ class TestListDeploymentsSynced:
             deployment_owner_pairs=[(stale.user_id, stale.id)],
         )
         mock_delete_unbound.assert_awaited_once()
-        assert mock_delete_unbound.await_args.kwargs["deployment_ids"] == [good.id]
+        mock_list_rows.assert_awaited_once()
+        assert [pair.deployment_id for pair in mock_delete_unbound.await_args.kwargs["deployment_owner_pairs"]] == [
+            good.id
+        ]
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -893,7 +941,7 @@ class TestListDeploymentsSynced:
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
@@ -904,7 +952,7 @@ class TestListDeploymentsSynced:
         mock_fetch,
         mock_delete,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """Stale ids from multiple owners are deleted through one helper call."""
@@ -919,7 +967,7 @@ class TestListDeploymentsSynced:
             [],
         ]
         mock_fetch.return_value = ({"rk-good"}, _mock_provider_view([SimpleNamespace(id="rk-good")]))
-        mock_count_attachments.return_value = {good.id: 0}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=[good], counts={good.id: 0})
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -941,6 +989,7 @@ class TestListDeploymentsSynced:
             deployment_owner_pairs=[(owner_a, stale_a1.id), (owner_a, stale_a2.id), (owner_b, stale_b1.id)],
         )
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -1016,7 +1065,7 @@ class TestListDeploymentsSynced:
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=3)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
@@ -1027,7 +1076,7 @@ class TestListDeploymentsSynced:
         mock_fetch,
         mock_delete,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """When the DB tracks fewer rows than the candidate batch, all are synced in one round."""
@@ -1039,7 +1088,7 @@ class TestListDeploymentsSynced:
             {r.resource_key for r in rows},
             _mock_provider_view([SimpleNamespace(id=r.resource_key) for r in rows]),
         )
-        mock_count_attachments.return_value = {r.id: 0 for r in rows}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=rows, counts={r.id: 0 for r in rows})
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -1060,11 +1109,12 @@ class TestListDeploymentsSynced:
         assert mock_list.call_count == 3  # candidate fetch + empty sync refill + empty backfill
         mock_delete.assert_not_awaited()
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=2)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
@@ -1075,7 +1125,7 @@ class TestListDeploymentsSynced:
         mock_fetch,
         mock_delete,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """Stale rows past the accepted page are still collected and batch-deleted."""
@@ -1085,7 +1135,7 @@ class TestListDeploymentsSynced:
         # Candidate window of 2 rows; page size 1 so only `good` is accepted.
         mock_list.side_effect = [[(good, 0, []), (stale, 0, [])], []]
         mock_fetch.return_value = ({"rk-good"}, _mock_provider_view([SimpleNamespace(id="rk-good")]))
-        mock_count_attachments.return_value = {good.id: 0}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=[good], counts={good.id: 0})
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -1104,11 +1154,12 @@ class TestListDeploymentsSynced:
         assert [row.resource_key for row, _, _ in accepted] == ["rk-good"]
         mock_delete.assert_awaited_once_with(db, deployment_owner_pairs=[(owner, stale.id)])
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
         mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=2)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
@@ -1119,7 +1170,7 @@ class TestListDeploymentsSynced:
         mock_fetch,
         mock_delete,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,
     ):
         """When sync rounds leave the page short, local rows backfill without provider checks."""
@@ -1133,7 +1184,7 @@ class TestListDeploymentsSynced:
             [(backfill, 3, [])],  # unverified backfill
         ]
         mock_fetch.return_value = ({"rk-good"}, _mock_provider_view([SimpleNamespace(id="rk-good")]))
-        mock_count_attachments.return_value = {good.id: 0}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=[good], counts={good.id: 0})
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -1155,13 +1206,304 @@ class TestListDeploymentsSynced:
         mock_delete.assert_awaited_once_with(db, deployment_owner_pairs=[(owner, stale.id)])
         # Binding sync runs before backfill, so only provider-confirmed rows are targeted.
         mock_delete_unbound.assert_awaited_once()
-        assert mock_delete_unbound.await_args.kwargs["deployment_ids"] == [good.id]
+        mock_list_rows.assert_awaited_once()
+        assert [pair.deployment_id for pair in mock_delete_unbound.await_args.kwargs["deployment_owner_pairs"]] == [
+            good.id
+        ]
         assert mock_list.call_count == 2
         backfill_call = mock_list.call_args_list[1]
         assert backfill_call.kwargs["offset"] is None
         assert backfill_call.kwargs["cursor_created_at"] == stale.created_at
         assert backfill_call.kwargs["cursor_exclude_id"] == stale.id
         assert backfill_call.kwargs["limit"] == 1
+        mock_count.assert_awaited_once()
+
+
+class _BindingMapper(_NoSnapshotBindingMapper):
+    def __init__(self, bindings: list[ProviderSnapshotBinding]):
+        self._bindings = bindings
+
+    def extract_snapshot_bindings(self, provider_view) -> list[ProviderSnapshotBinding]:
+        _ = provider_view
+        return list(self._bindings)
+
+
+class TestListDeploymentsSyncedFilteredFlowVersions:
+    @pytest.fixture(autouse=True)
+    def _mock_settings_service(self):
+        self._sync_settings = SimpleNamespace(
+            deployment_list_sync_batch_size=500,
+            deployment_list_sync_max_rounds=2,
+        )
+        with patch(
+            f"{MODULE}.get_settings_service",
+            return_value=SimpleNamespace(settings=self._sync_settings),
+        ):
+            yield
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.update_deployment_metadata_batch", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_deployments_by_owner_and_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_excludes_rows_whose_filter_attachments_are_unbound(
+        self,
+        mock_list,
+        mock_fetch,
+        mock_delete,
+        mock_update_metadata,
+        mock_delete_unbound,
+        mock_list_rows,
+        mock_count,
+    ):
+        """Stale local flow-version matches are dropped before the filtered page is returned."""
+        owner = uuid4()
+        fv_keep = uuid4()
+        fv_stale = uuid4()
+        stale_match = _mock_deployment_row("rk-stale-match", user_id=owner)
+        good = _mock_deployment_row("rk-good", user_id=owner)
+        mock_list.side_effect = [
+            [
+                (stale_match, 1, [(fv_stale, "snap-gone")]),
+                (good, 1, [(fv_keep, "snap-keep")]),
+            ],
+            [],
+        ]
+        mock_fetch.return_value = (
+            {"rk-stale-match", "rk-good"},
+            _mock_provider_view(
+                [
+                    SimpleNamespace(id="rk-stale-match"),
+                    SimpleNamespace(id="rk-good"),
+                ]
+            ),
+        )
+        _stub_attachment_batch(
+            mock_delete_unbound,
+            mock_list_rows,
+            deployments=[stale_match, good],
+            counts={stale_match.id: 0, good.id: 1},
+            matches={good.id: [(fv_keep, "snap-keep")]},
+        )
+        db = _mock_async_db()
+        mapper = _BindingMapper(
+            [ProviderSnapshotBinding(resource_key="rk-good", snapshot_id="snap-keep")],
+        )
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, total, _ = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=mapper,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=db,
+            page=1,
+            size=1,
+            deployment_type=None,
+            flow_version_ids=[fv_keep, fv_stale],
+        )
+
+        assert [row.resource_key for row, _, _ in accepted] == ["rk-good"]
+        assert accepted[0][1] == 1
+        assert accepted[0][2] == [(fv_keep, "snap-keep")]
+        assert total == 1
+        mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
+        assert {pair.deployment_id for pair in mock_delete_unbound.await_args.kwargs["deployment_owner_pairs"]} == {
+            stale_match.id,
+            good.id,
+        }
+        mock_delete.assert_not_awaited()
+        mock_update_metadata.assert_awaited_once()
+        mock_count.assert_awaited_once()
+        assert mock_list.call_count == 1
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.update_deployment_metadata_batch", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_syncs_attachments_per_round_before_accepting(
+        self,
+        mock_list,
+        mock_fetch,
+        mock_update_metadata,
+        mock_delete_unbound,
+        mock_list_rows,
+        mock_count,
+    ):
+        """Each sync round cleans attachments before filter acceptance."""
+        self._sync_settings.deployment_list_sync_batch_size = 1
+        owner = uuid4()
+        fv_id = uuid4()
+        stale_match = _mock_deployment_row("rk-stale", user_id=owner)
+        good = _mock_deployment_row("rk-good", user_id=owner)
+        mock_list.side_effect = [
+            [(stale_match, 1, [(fv_id, "snap-gone")])],
+            [(good, 1, [(fv_id, "snap-keep")])],
+            [],
+        ]
+        mock_fetch.side_effect = [
+            ({"rk-stale"}, _mock_provider_view([SimpleNamespace(id="rk-stale")])),
+            ({"rk-good"}, _mock_provider_view([SimpleNamespace(id="rk-good")])),
+        ]
+        _stub_attachment_batch(
+            mock_delete_unbound,
+            mock_list_rows,
+            deployments=[stale_match, good],
+            counts={stale_match.id: 0, good.id: 1},
+            matches={good.id: [(fv_id, "snap-keep")]},
+        )
+        db = _mock_async_db()
+
+        class _RoundBindingMapper(_NoSnapshotBindingMapper):
+            def extract_snapshot_bindings(self, provider_view) -> list[ProviderSnapshotBinding]:
+                resource_key = str(provider_view.deployments[0].id)
+                if resource_key == "rk-good":
+                    return [ProviderSnapshotBinding(resource_key="rk-good", snapshot_id="snap-keep")]
+                return []
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, total, _ = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=_RoundBindingMapper(),
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=db,
+            page=1,
+            size=1,
+            deployment_type=None,
+            flow_version_ids=[fv_id],
+        )
+
+        assert [row.resource_key for row, _, _ in accepted] == ["rk-good"]
+        assert accepted[0][2] == [(fv_id, "snap-keep")]
+        assert total == 1
+        assert mock_delete_unbound.await_count == 2
+        assert mock_list_rows.await_count == 2
+        assert [
+            pair.deployment_id for pair in mock_delete_unbound.await_args_list[0].kwargs["deployment_owner_pairs"]
+        ] == [stale_match.id]
+        assert [
+            pair.deployment_id for pair in mock_delete_unbound.await_args_list[1].kwargs["deployment_owner_pairs"]
+        ] == [good.id]
+        mock_update_metadata.assert_awaited_once()
+        mock_count.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.update_deployment_metadata_batch", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_skips_accepting_when_per_round_attachment_sync_fails(
+        self,
+        mock_list,
+        mock_fetch,
+        mock_update_metadata,
+        mock_delete_unbound,
+        mock_list_rows,
+        mock_count,
+    ):
+        """Failed per-round attachment sync must not accept unverified filter matches."""
+        fv_id = uuid4()
+        row = _mock_deployment_row("rk-1")
+        mock_list.side_effect = [[(row, 1, [(fv_id, "snap-1")])], [], []]
+        mock_fetch.return_value = ({"rk-1"}, _mock_provider_view([SimpleNamespace(id="rk-1")]))
+        _stub_attachment_batch(
+            mock_delete_unbound, mock_list_rows, deployments=[], error=RuntimeError("cleanup failed")
+        )
+        db = _mock_async_db()
+        mapper = _BindingMapper(
+            [ProviderSnapshotBinding(resource_key="rk-1", snapshot_id="snap-1")],
+        )
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, total, _ = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=mapper,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=db,
+            page=1,
+            size=10,
+            deployment_type=None,
+            flow_version_ids=[fv_id],
+        )
+
+        assert accepted == []
+        assert total == 0
+        mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_not_awaited()
+        mock_update_metadata.assert_not_awaited()
+        mock_count.assert_awaited_once()
+        assert mock_list.call_count == 3
+        assert mock_list.call_args_list[-1].kwargs["flow_version_ids"] == [fv_id]
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=2)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.update_deployment_metadata_batch", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_backfills_remaining_slots_when_filter_active(
+        self,
+        mock_list,
+        mock_fetch,
+        mock_update_metadata,
+        mock_delete_unbound,
+        mock_list_rows,
+        mock_count,
+    ):
+        """Filtered lists still backfill remaining page slots after sync rounds."""
+        self._sync_settings.deployment_list_sync_max_rounds = 1
+        fv_id = uuid4()
+        stale_match = _mock_deployment_row("rk-stale")
+        backfill_row = _mock_deployment_row("rk-backfill")
+        mock_list.side_effect = [
+            [(stale_match, 1, [(fv_id, "snap-gone")])],
+            [(backfill_row, 1, [(fv_id, "snap-local")])],
+        ]
+        mock_fetch.return_value = ({"rk-stale"}, _mock_provider_view([SimpleNamespace(id="rk-stale")]))
+        _stub_attachment_batch(
+            mock_delete_unbound, mock_list_rows, deployments=[stale_match], counts={stale_match.id: 0}, matches={}
+        )
+        db = _mock_async_db()
+        mapper = _BindingMapper([])
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, total, _ = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=mapper,
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=db,
+            page=1,
+            size=2,
+            deployment_type=None,
+            flow_version_ids=[fv_id],
+        )
+
+        assert [row.resource_key for row, _, _ in accepted] == ["rk-backfill"]
+        assert total == 2
+        assert mock_list.call_count == 2
+        backfill_call = mock_list.call_args_list[1]
+        assert backfill_call.kwargs["limit"] == 2
+        assert backfill_call.kwargs["flow_version_ids"] == [fv_id]
+        mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
+        mock_update_metadata.assert_not_awaited()
         mock_count.assert_awaited_once()
 
 
@@ -1498,7 +1840,7 @@ def test_base_mapper_extract_snapshot_bindings_for_get_raises_not_implemented():
     The base implementation MUST raise ``NotImplementedError`` rather than
     return ``[]``. An empty list would flow into
     ``delete_unbound_attachments`` (which treats empty ``bindings`` plus
-    non-empty ``deployment_ids`` as a wipe of every local attachment for
+    non-empty ``deployment_owner_pairs`` as a wipe of every local attachment for
     the GETted deployment). Raising prevents that destructive
     interpretation for any provider that hasn't overridden the method —
     the GET call site treats ``NotImplementedError`` as a mapper implementation
@@ -1522,7 +1864,7 @@ def test_base_mapper_extract_snapshot_bindings_raises_not_implemented():
     The base implementation MUST raise ``NotImplementedError`` rather than
     return ``[]``. An empty list would flow into
     ``delete_unbound_attachments`` (which treats empty ``bindings`` plus
-    non-empty ``deployment_ids`` as a wipe of every local attachment for
+    non-empty ``deployment_owner_pairs`` as a wipe of every local attachment for
     those deployments). Raising prevents that destructive interpretation
     for any provider that hasn't overridden the method.
     """
@@ -1939,7 +2281,9 @@ class TestSyncDeploymentsAndAttachmentsByProvider:
         mock_delete_deployments.assert_awaited_once()
         assert set(mock_delete_deployments.await_args.kwargs["deployment_ids"]) == {stale_a.id, stale_b.id}
         mock_delete_unbound.assert_awaited_once()
-        assert mock_delete_unbound.await_args.kwargs["deployment_ids"] == [surviving.id]
+        assert [pair.deployment_id for pair in mock_delete_unbound.await_args.kwargs["deployment_owner_pairs"]] == [
+            surviving.id
+        ]
         assert mock_delete_unbound.await_args.kwargs["bindings"] == ["binding-1"]
 
 
@@ -2479,8 +2823,8 @@ class TestListDeploymentsSyncedBindingPhase:
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
-    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
     async def test_binding_sync_corrects_attached_count(
@@ -2488,7 +2832,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list,
         mock_fetch_rk,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,  # noqa: ARG002
     ):
         """Phase 2 corrects attached_count using binding-level cleanup + recount."""
@@ -2512,7 +2856,7 @@ class TestListDeploymentsSyncedBindingPhase:
                 ]
             ),
         )
-        mock_count_attachments.return_value = {row.id: 2}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=[row], counts={row.id: 2})
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -2540,12 +2884,12 @@ class TestListDeploymentsSyncedBindingPhase:
         }
         db.begin_nested.assert_called_once()
         mock_delete_unbound.assert_awaited_once()
-        mock_count_attachments.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
-    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
     async def test_binding_cleanup_runs_with_empty_bindings(
@@ -2553,7 +2897,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list,
         mock_fetch_rk,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,  # noqa: ARG002
     ):
         """Phase 2 still runs when mapper extracts no bindings."""
@@ -2565,7 +2909,7 @@ class TestListDeploymentsSyncedBindingPhase:
                 [SimpleNamespace(id="rk-1", name="Agent 1", provider_data=_wxo_deployment_provider_data(tool_ids=[]))]
             ),
         )
-        mock_count_attachments.return_value = {row.id: 0}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=[row], counts={row.id: 0})
         db = _mock_async_db()
         provider_id = uuid4()
 
@@ -2584,14 +2928,14 @@ class TestListDeploymentsSyncedBindingPhase:
 
         assert len(accepted) == 1
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
         assert mock_delete_unbound.await_args.kwargs["bindings"] == []
         assert mock_delete_unbound.await_args.kwargs["provider_account_id"] == provider_id
-        mock_count_attachments.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
-    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
     async def test_binding_sync_error_preserves_original_counts(
@@ -2599,7 +2943,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list,
         mock_fetch_rk,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,  # noqa: ARG002
     ):
         """When Phase 2 raises, accepted rows keep their original attached_count."""
@@ -2617,7 +2961,9 @@ class TestListDeploymentsSyncedBindingPhase:
                 ]
             ),
         )
-        mock_delete_unbound.side_effect = RuntimeError("cleanup failed")
+        _stub_attachment_batch(
+            mock_delete_unbound, mock_list_rows, deployments=[], error=RuntimeError("cleanup failed")
+        )
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -2635,12 +2981,13 @@ class TestListDeploymentsSyncedBindingPhase:
 
         assert len(accepted) == 1
         assert accepted[0][1] == 3
-        mock_count_attachments.assert_not_awaited()
+        mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_not_awaited()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
-    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_by_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
     async def test_binding_cleanup_runs_inside_savepoint(
@@ -2648,7 +2995,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list,
         mock_fetch_rk,
         mock_delete_unbound,
-        mock_count_attachments,
+        mock_list_rows,
         mock_count,  # noqa: ARG002
     ):
         """Phase 2 cleanup uses a savepoint so failures don't leak partial writes."""
@@ -2666,7 +3013,7 @@ class TestListDeploymentsSyncedBindingPhase:
                 ]
             ),
         )
-        mock_count_attachments.return_value = {row.id: 3}
+        _stub_attachment_batch(mock_delete_unbound, mock_list_rows, deployments=[row], counts={row.id: 3})
         db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -2686,6 +3033,7 @@ class TestListDeploymentsSyncedBindingPhase:
         assert accepted[0][1] == 3
         db.begin_nested.assert_called_once()
         mock_delete_unbound.assert_awaited_once()
+        mock_list_rows.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

@@ -15,7 +15,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
-from langflow.services.database.utils import parse_uuid
+from langflow.services.database.utils import json_array, list_agg, parse_uuid
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -34,6 +34,19 @@ StmtT = TypeVar("StmtT", bound=Select[Any])
 class DeploymentOwnerPair(NamedTuple):
     owner_id: UUID
     deployment_id: UUID
+
+
+class DeploymentListRow(NamedTuple):
+    """One deployment list page row with attachment count and filter matches.
+
+    ``matched_flow_versions`` holds ``(flow_version_id, provider_snapshot_id)``
+    pairs for attachments that matched an active ``flow_version_ids`` filter
+    (empty when no filter is active).
+    """
+
+    deployment: Deployment
+    attached_count: int
+    matched_flow_versions: list[tuple[UUID, str | None]]
 
 
 class UnknownDeleteCount:
@@ -384,12 +397,12 @@ async def list_deployments_page(
     allowed_ids: list[UUID] | None = None,
     cursor_created_at: datetime | None = None,
     cursor_exclude_id: UUID | None = None,
-) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
+) -> list[DeploymentListRow]:
     """Return a page of deployments with attachment counts and matched attachments.
 
-    The third tuple element contains ``(flow_version_id, provider_snapshot_id)``
-    pairs for attachments that matched the ``flow_version_ids`` filter (empty
-    list when no filter is active).
+    Each ``DeploymentListRow.matched_flow_versions`` entry is a
+    ``(flow_version_id, provider_snapshot_id)`` pair for attachments that
+    matched the ``flow_version_ids`` filter (empty when no filter is active).
 
     ``allowed_ids`` is the DB-layer authorization prefilter. When ``None`` (OSS
     default) the page is owner-scoped exactly as before. When a list, the page
@@ -480,8 +493,17 @@ async def list_deployments_page(
     rows = (await db.exec(stmt)).all()
     deployment_rows = [(deployment, int(attached_count or 0)) for deployment, attached_count in rows]
     if not flow_version_ids or not deployment_rows:
-        return [(deployment, attached_count, []) for deployment, attached_count in deployment_rows]
+        return [
+            DeploymentListRow(
+                deployment=deployment,
+                attached_count=attached_count,
+                matched_flow_versions=[],
+            )
+            for deployment, attached_count in deployment_rows
+        ]
 
+    # TODO: fold this into the page select with list_agg/json_array (see
+    # list_deployments_by_ids) so matched pairs come back in one round trip.
     deployment_ids = [deployment.id for deployment, _ in deployment_rows]
     matched_rows = (
         await db.exec(
@@ -504,13 +526,133 @@ async def list_deployments_page(
             entries.append(pair)
 
     return [
-        (
-            deployment,
-            attached_count,
-            matched_by_deployment.get(deployment.id, []),
+        DeploymentListRow(
+            deployment=deployment,
+            attached_count=attached_count,
+            matched_flow_versions=matched_by_deployment.get(deployment.id, []),
         )
         for deployment, attached_count in deployment_rows
     ]
+
+
+async def list_deployments_by_ids(
+    db: AsyncSession,
+    *,
+    deployments: Sequence[Deployment],
+    flow_version_ids: Sequence[UUID] | None = None,
+    limit: int | None = None,
+) -> list[DeploymentListRow]:
+    """Return the given deployments with attachment counts.
+
+    Owner scope comes from each ORM row's ``user_id`` (same pattern as
+    metadata batch updates) — not the listing actor.
+
+    When ``flow_version_ids`` is set, only deployments that still have a
+    matching attachment are returned, and ``matched_flow_versions`` carries
+    those ``(flow_version_id, provider_snapshot_id)`` pairs aggregated in SQL.
+
+    Results are ordered like ``list_deployments_page``
+    (``created_at DESC, id DESC``) so sync recount/limit keeps page order.
+    """
+    if not deployments or limit == 0:
+        return []
+
+    # Fresh ``tuple_.in_(...)`` per clause — expanding binds cannot be reused
+    # across subqueries in one statement.
+    owner_pairs = [(deployment.user_id, deployment.id) for deployment in deployments]
+
+    attachment_counts = (
+        select(
+            col(FlowVersionDeploymentAttachment.deployment_id).label("deployment_id"),
+            func.count(func.distinct(FlowVersionDeploymentAttachment.flow_version_id)).label("attached_count"),
+        )
+        .join(
+            FlowVersion,
+            FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
+        )
+        .where(
+            tuple_(
+                FlowVersionDeploymentAttachment.user_id,
+                FlowVersionDeploymentAttachment.deployment_id,
+            ).in_(owner_pairs)
+        )
+        .group_by(FlowVersionDeploymentAttachment.deployment_id)
+        .subquery()
+    )
+
+    if not flow_version_ids:
+        stmt = (
+            select(
+                Deployment,
+                func.coalesce(attachment_counts.c.attached_count, 0).label("attached_count"),
+            )
+            .outerjoin(attachment_counts, attachment_counts.c.deployment_id == Deployment.id)
+            .where(tuple_(Deployment.user_id, Deployment.id).in_(owner_pairs))
+            .order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc())
+        )
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        return [
+            DeploymentListRow(
+                deployment=deployment,
+                attached_count=attached_count,
+                matched_flow_versions=[],
+            )
+            for deployment, attached_count in (await db.exec(stmt)).all()
+        ]
+
+    dialect_name = (await db.connection()).dialect.name
+    matched_attachments = (
+        select(
+            col(FlowVersionDeploymentAttachment.deployment_id).label("deployment_id"),
+            list_agg(
+                json_array(
+                    FlowVersionDeploymentAttachment.flow_version_id,
+                    FlowVersionDeploymentAttachment.provider_snapshot_id,
+                    dialect_name=dialect_name,
+                ),
+                dialect_name=dialect_name,
+            ).label("matched_flow_versions"),
+        )
+        .where(
+            tuple_(
+                FlowVersionDeploymentAttachment.user_id,
+                FlowVersionDeploymentAttachment.deployment_id,
+            ).in_(owner_pairs),
+            col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
+        )
+        .group_by(FlowVersionDeploymentAttachment.deployment_id)
+        .subquery()
+    )
+    stmt = (
+        select(
+            Deployment,
+            func.coalesce(attachment_counts.c.attached_count, 0).label("attached_count"),
+            matched_attachments.c.matched_flow_versions,
+        )
+        .join(matched_attachments, matched_attachments.c.deployment_id == Deployment.id)
+        .outerjoin(attachment_counts, attachment_counts.c.deployment_id == Deployment.id)
+        .where(tuple_(Deployment.user_id, Deployment.id).in_(owner_pairs))
+        .order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc())
+    )
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    return [
+        DeploymentListRow(
+            deployment=deployment,
+            attached_count=attached_count,
+            matched_flow_versions=_matched_flow_versions_from_json(matched),
+        )
+        for deployment, attached_count, matched in (await db.exec(stmt)).all()
+    ]
+
+
+def _matched_flow_versions_from_json(
+    raw: Any,
+) -> list[tuple[UUID, str | None]]:
+    if not raw:
+        return []
+    return [(parse_uuid(flow_version_id), provider_snapshot_id) for flow_version_id, provider_snapshot_id in raw]
 
 
 async def list_deployments_for_flows_with_provider_info(

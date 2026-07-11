@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from lfx.log.logger import logger
-from sqlalchemy import and_, column, values
+from sqlalchemy import and_, column, tuple_, values
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select, update
 
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
+    from langflow.services.database.models.deployment.crud import DeploymentOwnerPair
     from langflow.services.database.models.flow_version.model import FlowVersion
     from langflow.services.database.models.flow_version_deployment_attachment.schema import (
         DeploymentAttachmentKeyBatch,
@@ -375,38 +376,40 @@ async def list_attachments_for_flow_with_provider_info(
 async def delete_unbound_attachments(
     db: AsyncSession,
     *,
-    user_id: UUID,
     provider_account_id: UUID,
-    deployment_ids: list[UUID],
+    deployment_owner_pairs: list[DeploymentOwnerPair],
     bindings: list[ProviderSnapshotBinding],
 ) -> int:
-    """Delete stale attachments for an explicit deployment subset.
+    """Delete stale attachments for an explicit owner-scoped deployment subset.
 
     Scope contract:
-    - ``deployment_ids`` defines the target deployment set. Deletions are
-      always constrained to this set.
+    - ``deployment_owner_pairs`` defines the target set as deliberate
+      ``(owner_id, deployment_id)`` pairs. Deletions are always constrained to
+      that set (same data-plane contract as deployment owner-pair deletes).
     - ``bindings`` is the provider-observed snapshot view for the same scope
       and is keyed by ``(resource_key, snapshot_id)``.
 
-    Why ``deployment_ids`` is required:
+    Why ``deployment_owner_pairs`` is required:
     - ``bindings`` comes from the provider snapshot view, not from the local
       target set. It is not a complete scope declaration.
     - A targeted deployment can be absent from ``bindings`` when the provider
       returns no snapshots for it; in that case, all local attachments for that
       deployment are stale and should be deleted.
     - If scope is derived only from provider-scoped bindings (without explicit
-      ``deployment_ids``), it under-deletes: deployments with zero provider
-      bindings are skipped.
+      pairs), it under-deletes: deployments with zero provider bindings are
+      skipped.
     Provider scoping:
     - ``provider_account_id`` scopes ``resource_key`` matching to one provider
       account namespace.
-    - Any ``deployment_ids`` not owned by ``provider_account_id`` are ignored
-      by the joined predicates (dropped from the effective target set).
+    - Any pairs whose deployment is not owned by ``provider_account_id`` are
+      ignored by the joined predicates (dropped from the effective target set).
     """
     from langflow.services.database.models.deployment.model import Deployment
 
-    if not deployment_ids:
+    if not deployment_owner_pairs:
         return 0
+
+    owner_pairs = [(pair.owner_id, pair.deployment_id) for pair in deployment_owner_pairs]
 
     if not bindings:
         # all local db attachments are stale
@@ -414,8 +417,10 @@ async def delete_unbound_attachments(
             select(FlowVersionDeploymentAttachment.id)
             .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
             .where(
-                FlowVersionDeploymentAttachment.user_id == user_id,
-                col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+                tuple_(
+                    FlowVersionDeploymentAttachment.user_id,
+                    FlowVersionDeploymentAttachment.deployment_id,
+                ).in_(owner_pairs),
                 Deployment.deployment_provider_account_id == provider_account_id,
             )
         )
@@ -446,8 +451,10 @@ async def delete_unbound_attachments(
             ),
         )
         .where(
-            FlowVersionDeploymentAttachment.user_id == user_id,
-            col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+            tuple_(
+                FlowVersionDeploymentAttachment.user_id,
+                FlowVersionDeploymentAttachment.deployment_id,
+            ).in_(owner_pairs),
             Deployment.deployment_provider_account_id == provider_account_id,
             provider_bindings_cte.c.resource_key.is_(None),  # No provider binding match => stale local attachment
         )

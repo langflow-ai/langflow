@@ -4,6 +4,7 @@ import pytest
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
     create_deployment,
+    list_deployments_by_ids,
     list_deployments_page,
 )
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -162,6 +163,131 @@ async def test_local_deployment_queries_filter_project_and_flow_versions(async_s
         deployment_provider_account_id=provider_account.id,
     )
     assert count == 3
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_by_ids_aggregates_matched_flow_versions(async_session: AsyncSession):
+    user, provider_account, project_a, _project_b = await _seed_user_provider_and_projects(async_session)
+    _flow, fv_keep = await _seed_flow_and_version(async_session, user.id, project_a.id)
+    _flow_other, fv_other = await _seed_flow_and_version(async_session, user.id, project_a.id)
+
+    matching = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-{uuid4()}",
+        display_name="matching",
+        deployment_type=DeploymentType.AGENT,
+    )
+    other = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-{uuid4()}",
+        display_name="other",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await create_deployment_attachment(
+        async_session,
+        user_id=user.id,
+        deployment_id=matching.id,
+        flow_version_id=fv_keep.id,
+        provider_snapshot_id="snap-keep",
+    )
+    await create_deployment_attachment(
+        async_session,
+        user_id=user.id,
+        deployment_id=other.id,
+        flow_version_id=fv_other.id,
+        provider_snapshot_id="snap-other",
+    )
+
+    rows = await list_deployments_by_ids(
+        async_session,
+        deployments=[matching, other],
+        flow_version_ids=[fv_keep.id],
+    )
+
+    assert len(rows) == 1
+    assert rows[0].deployment.id == matching.id
+    assert rows[0].attached_count == 1
+    assert rows[0].matched_flow_versions == [(fv_keep.id, "snap-keep")]
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_by_ids_includes_shared_owner_rows(async_session: AsyncSession):
+    """Owner comes from each ORM row; attachment counts follow that owner."""
+    owner, provider_account, project_a, _project_b = await _seed_user_provider_and_projects(async_session)
+    _flow, fv = await _seed_flow_and_version(async_session, owner.id, project_a.id)
+    shared = await create_deployment(
+        async_session,
+        user_id=owner.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-{uuid4()}",
+        display_name="shared",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await create_deployment_attachment(
+        async_session,
+        user_id=owner.id,
+        deployment_id=shared.id,
+        flow_version_id=fv.id,
+        provider_snapshot_id="snap-shared",
+    )
+
+    rows = await list_deployments_by_ids(
+        async_session,
+        deployments=[shared],
+        flow_version_ids=[fv.id],
+    )
+
+    assert len(rows) == 1
+    assert rows[0].deployment.id == shared.id
+    assert rows[0].deployment.user_id == owner.id
+    assert rows[0].matched_flow_versions == [(fv.id, "snap-shared")]
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_by_ids_orders_like_page(async_session: AsyncSession):
+    """SQL order matches list_deployments_page even when ids are reversed."""
+    from datetime import datetime, timedelta, timezone
+
+    user, provider_account, project_a, _project_b = await _seed_user_provider_and_projects(async_session)
+    older = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-older-{uuid4()}",
+        display_name="older",
+        deployment_type=DeploymentType.AGENT,
+    )
+    newer = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-newer-{uuid4()}",
+        display_name="newer",
+        deployment_type=DeploymentType.AGENT,
+    )
+    base = datetime.now(timezone.utc)
+    older.created_at = base
+    newer.created_at = base + timedelta(seconds=1)
+    async_session.add(older)
+    async_session.add(newer)
+    await async_session.flush()
+
+    rows = await list_deployments_by_ids(
+        async_session,
+        # Intentionally reverse of page order (older first).
+        deployments=[older, newer],
+    )
+
+    assert [row.deployment.id for row in rows] == [newer.id, older.id]
 
 
 @pytest.mark.asyncio

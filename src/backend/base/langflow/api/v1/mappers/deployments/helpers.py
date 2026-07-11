@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, NamedTuple
 from uuid import UUID
 
 from fastapi import HTTPException, Query, status
@@ -45,11 +45,13 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
+    DeploymentListRow,
     DeploymentMetadataUpdate,
     DeploymentOwnerPair,
     count_deployments_by_provider,
     delete_deployment_by_id,
     delete_deployments_by_owner_and_ids,
+    list_deployments_by_ids,
     list_deployments_page,
     update_deployment_metadata,
     update_deployment_metadata_batch,
@@ -68,7 +70,6 @@ from langflow.services.database.models.deployment_provider_account.model import 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
-    count_attachments_by_deployment_ids,
     count_deployment_attachments,
     create_deployment_attachment,
     delete_deployment_attachment,
@@ -91,6 +92,23 @@ if TYPE_CHECKING:
     )
 
     from .base import BaseDeploymentMapper
+
+
+class SyncedDeploymentListPage(NamedTuple):
+    """Return value of ``list_deployments_synced``.
+
+    ``rows``
+        Page of deployments with attachment counts and filter matches.
+    ``total``
+        Provider-scoped deployment count after this request's sync/cleanup.
+    ``provider_data_by_resource_key``
+        Mapper-shaped provider payload keyed by ``resource_key`` for list-item
+        enrichment (empty for rows that were not seen on the provider).
+    """
+
+    rows: list[DeploymentListRow]
+    total: int
+    provider_data_by_resource_key: dict[str, dict[str, Any]]
 
 
 def parse_flow_version_reference_ids(reference_ids: Sequence[UUID | str]) -> list[UUID]:
@@ -776,9 +794,8 @@ async def sync_deployment_attachment_count_for_get(
         async with db.begin_nested():
             await delete_unbound_attachments(
                 db=db,
-                user_id=user_id,
                 provider_account_id=deployment.deployment_provider_account_id,
-                deployment_ids=[deployment.id],
+                deployment_owner_pairs=[DeploymentOwnerPair(owner_id=user_id, deployment_id=deployment.id)],
                 bindings=bindings,
             )
 
@@ -874,6 +891,61 @@ async def get_deployment_synced(
     return deployment, provider_deployment, attached_count
 
 
+async def _sync_attachments_for_batch(
+    *,
+    db: DbSession,
+    provider_id: UUID,
+    deployments: list[Deployment],
+    bindings: list[ProviderSnapshotBinding],
+    flow_version_ids: list[UUID] | None = None,
+    limit: int | None = None,
+) -> list[DeploymentListRow]:
+    """Sync attachments for a batch, then return list-accept rows.
+
+    Deletes use deliberate owner pairs; recount reads owner from each ORM row.
+    """
+    if not deployments or limit == 0:
+        return []
+    async with db.begin_nested():
+        await delete_unbound_attachments(
+            db,
+            provider_account_id=provider_id,
+            deployment_owner_pairs=[
+                DeploymentOwnerPair(owner_id=deployment.user_id, deployment_id=deployment.id)
+                for deployment in deployments
+            ],
+            bindings=bindings,
+        )
+        return await list_deployments_by_ids(
+            db,
+            deployments=deployments,
+            flow_version_ids=flow_version_ids,
+            limit=limit,
+        )
+
+
+async def _apply_metadata_updates(
+    *,
+    db: DbSession,
+    rows: list[DeploymentListRow],
+    provider_metadata_by_resource_key: dict[str, dict[str, Any]],
+) -> None:
+    """Persist provider metadata for synced list rows."""
+    if not rows:
+        return
+    metadata_updates: list[DeploymentMetadataUpdate] = [
+        DeploymentMetadataUpdate(
+            langflow_db_row=row.deployment,
+            **provider_metadata_by_resource_key[row.deployment.resource_key],
+        )
+        for row in rows
+    ]
+    await update_deployment_metadata_batch(
+        db,
+        deployment_updates=metadata_updates,
+    )
+
+
 async def list_deployments_synced(
     *,
     deployment_adapter: DeploymentServiceProtocol,
@@ -887,27 +959,37 @@ async def list_deployments_synced(
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
     allowed_ids: list[UUID] | None = None,
-) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int, dict[str, dict[str, Any]]]:
+) -> SyncedDeploymentListPage:
     """Return a page of deployments, batch-deleting DB rows the provider doesn't recognise.
 
     Each round fetches a candidate window so one provider lookup reconciles
     stale rows beyond the page. Refill rounds seek after the last processed row
-    to avoid offset drift under concurrent deletes. After provider sync finishes,
-    any remaining page slots are backfilled from local rows without another
-    provider check (they may be stale).
+    to avoid offset drift under concurrent deletes.
+
+    When filtering by ``flow_version_ids``, sync attachments each round before
+    accepting a row so stale local matches are not included in the page.
+    After sync rounds, any remaining page slots are backfilled
+    from local rows without another provider check (they may be stale).
+
+    When no ``flow_version_ids`` filter is active, attachment sync is deferred
+    until after all rounds (fewer DB calls).
 
     ``allowed_ids`` is the DB-layer authorization prefilter, threaded into both
     the page query and the total count so a registered authorization plugin can
     constrain the listing to (owner ⊕ visible) rows without a per-row enforce.
     ``None`` (OSS default) keeps the listing owner-scoped exactly as before.
+
+    Returns:
+        ``SyncedDeploymentListPage`` of ``(rows, total, provider_data_by_resource_key)``.
     """
     settings = get_settings_service().settings
     sync_batch_size = settings.deployment_list_sync_batch_size
     max_sync_rounds = settings.deployment_list_sync_max_rounds
+    # flow_version_ids filter needs attachments synced before we accept a row.
+    sync_attachments_per_round = bool(flow_version_ids)
 
-    accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
-    accepted_deployment_ids: list[UUID] = []
-    provider_bindings: list[ProviderSnapshotBinding] = []
+    all_synced_deploys: list[DeploymentListRow] = []
+    deferred_provider_bindings: list[ProviderSnapshotBinding] = []
     provider_data_by_resource_key: dict[str, dict[str, Any]] = {}
     provider_metadata_by_resource_key: dict[str, dict[str, Any]] = {}
     stale_deployment_owner_pairs: list[DeploymentOwnerPair] = []
@@ -915,7 +997,7 @@ async def list_deployments_synced(
     cursor_created_at = None
     cursor_exclude_id = None
     for _ in range(max_sync_rounds):
-        if len(accepted) >= size:
+        if len(all_synced_deploys) >= size:
             break
         try:
             batch = await list_deployments_page(
@@ -942,29 +1024,70 @@ async def list_deployments_synced(
                 resource_keys=[row.resource_key for row, _, _ in batch],
                 deployment_type=deployment_type,
             )
-            provider_bindings.extend(deployment_mapper.extract_snapshot_bindings(provider_view))
+            round_bindings = deployment_mapper.extract_snapshot_bindings(provider_view)
             provider_data_by_resource_key.update(deployment_mapper.extract_list_item_provider_data(provider_view))
             provider_metadata_by_resource_key.update(deployment_mapper.extract_metadata_for_list(provider_view))
 
-            last_row = batch[-1][0]
-            cursor_created_at = last_row.created_at
-            cursor_exclude_id = last_row.id
-            for row, attached_count, matched_flow_versions in batch:
-                if row.resource_key not in known:
+            last_deployment, _, _ = batch[-1]
+            cursor_created_at = last_deployment.created_at
+            cursor_exclude_id = last_deployment.id
+
+            round_synced_deploys: list[Deployment] = []
+            # mark deployments not recognized by the provider for deletion,
+            # and collect the remaining deployments for further sync
+            for deployment, attached_count, matched_flow_versions in batch:
+                if deployment.resource_key not in known:
                     # Page rows are already type-filtered in SQL when deployment_type
                     # is set, so provider-unknown rows are safe to prune as stale.
-                    stale_deployment_owner_pairs.append(DeploymentOwnerPair(owner_id=row.user_id, deployment_id=row.id))
+                    stale_deployment_owner_pairs.append(
+                        DeploymentOwnerPair(owner_id=deployment.user_id, deployment_id=deployment.id)
+                    )
                     continue
-                if len(accepted) < size:
-                    accepted.append((row, attached_count, matched_flow_versions))
-                    accepted_deployment_ids.append(row.id)
+                if sync_attachments_per_round:
+                    round_synced_deploys.append(deployment)
+                    continue
+                if len(all_synced_deploys) < size:
+                    all_synced_deploys.append(
+                        DeploymentListRow(
+                            deployment=deployment,
+                            attached_count=attached_count,
+                            matched_flow_versions=matched_flow_versions,
+                        )
+                    )
+
+            if not sync_attachments_per_round:
+                deferred_provider_bindings.extend(round_bindings)
+                continue
+            if not round_synced_deploys:
+                continue
+            try:
+                matching = await _sync_attachments_for_batch(
+                    db=db,
+                    provider_id=provider_id,
+                    deployments=round_synced_deploys,
+                    bindings=round_bindings,
+                    flow_version_ids=flow_version_ids,
+                    limit=size - len(all_synced_deploys),
+                )
+                all_synced_deploys.extend(matching)
+            except Exception:  # noqa: BLE001
+                # Do not accept unverified filter matches; keep seeking.
+                logger.warning(
+                    "Per-round attachment sync failed for provider %s; "
+                    "skipping %d deployment(s) without accepting filter matches",
+                    provider_id,
+                    len(round_synced_deploys),
+                    exc_info=True,
+                )
+                continue
+
         except Exception:  # noqa: BLE001
             # Keep the list path alive: return whatever earlier rounds accepted
             # and still prune confirmed stales once below.
             logger.warning(
                 "Deployment list sync round failed for provider %s; continuing with %d accepted row(s)",
                 provider_id,
-                len(accepted),
+                len(all_synced_deploys),
                 exc_info=True,
             )
             break
@@ -977,51 +1100,33 @@ async def list_deployments_synced(
         )
         await delete_deployments_by_owner_and_ids(db, deployment_owner_pairs=stale_deployment_owner_pairs)
 
-    # Phase 2: metadata and binding-level sync (provider-confirmed rows only).
-    if accepted:
-        metadata_updates: list[DeploymentMetadataUpdate] = []
-        for row, _attached_count, _matched in accepted:
-            provider_metadata = provider_metadata_by_resource_key[row.resource_key]
-            metadata_updates.append(
-                DeploymentMetadataUpdate(
-                    langflow_db_row=row,
-                    **provider_metadata,
-                )
-            )
-        await update_deployment_metadata_batch(
-            db,
-            deployment_updates=metadata_updates,
-        )
+    # Metadata sync after rounds (until a filter needs it earlier, e.g. display_name).
+    await _apply_metadata_updates(
+        db=db,
+        rows=all_synced_deploys,
+        provider_metadata_by_resource_key=provider_metadata_by_resource_key,
+    )
 
-    # Remove stale local attachments based on provider bindings, then recount.
+    # Deferred attachment sync when flow_version_ids is not filtering the list.
     # Best-effort - provider or DB failures should not block the list response.
     # Only provider-confirmed IDs: backfill rows below are not binding-synced.
-    if accepted_deployment_ids:
+    if not sync_attachments_per_round and all_synced_deploys:
         try:
-            async with db.begin_nested():
-                await delete_unbound_attachments(
-                    db,
-                    user_id=user_id,
-                    provider_account_id=provider_id,
-                    deployment_ids=accepted_deployment_ids,
-                    bindings=provider_bindings,
-                )
-
-            corrected_counts = await count_attachments_by_deployment_ids(
-                db,
-                user_id=user_id,
-                deployment_ids=accepted_deployment_ids,
+            all_synced_deploys = await _sync_attachments_for_batch(
+                db=db,
+                provider_id=provider_id,
+                deployments=[row.deployment for row in all_synced_deploys],
+                bindings=deferred_provider_bindings,
             )
-            accepted = [(row, corrected_counts[row.id], matched) for row, _attached_count, matched in accepted]
         except Exception:  # noqa: BLE001
             logger.warning(
                 "Snapshot-level sync failed for list_deployments_synced; returning unverified attachment counts",
                 exc_info=True,
             )
 
-    # Pad the response page from local rows after all provider sync is done.
+    # Pad remaining page slots from local rows after provider sync.
     # These rows may be stale and are not metadata/binding-synced above.
-    remaining = size - len(accepted)
+    remaining = size - len(all_synced_deploys)
     if remaining > 0:
         try:
             backfill_batch = await list_deployments_page(
@@ -1037,15 +1142,16 @@ async def list_deployments_synced(
                 cursor_created_at=cursor_created_at,
                 cursor_exclude_id=cursor_exclude_id,
             )
-            accepted.extend(backfill_batch)
+            all_synced_deploys.extend(backfill_batch)
         except Exception:  # noqa: BLE001
             logger.warning(
                 "Deployment list backfill failed for provider %s; returning %d accepted row(s)",
                 provider_id,
-                len(accepted),
+                len(all_synced_deploys),
                 exc_info=True,
             )
 
+    # Total from the DB after this request's sync/cleanup work.
     total = await count_deployments_by_provider(
         db,
         user_id=user_id,
@@ -1055,7 +1161,11 @@ async def list_deployments_synced(
         deployment_type=deployment_type,
         allowed_ids=allowed_ids,
     )
-    return accepted, total, provider_data_by_resource_key
+    return SyncedDeploymentListPage(
+        rows=all_synced_deploys,
+        total=total,
+        provider_data_by_resource_key=provider_data_by_resource_key,
+    )
 
 
 async def list_deployment_flow_versions_synced(

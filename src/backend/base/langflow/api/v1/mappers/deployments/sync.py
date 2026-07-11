@@ -32,6 +32,7 @@ from lfx.services.interfaces import DeploymentServiceProtocol
 
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
+    DeploymentOwnerPair,
     delete_deployments_by_ids,
     list_deployments_for_flows_with_provider_info,
     list_project_deployments_with_provider_info,
@@ -269,9 +270,11 @@ async def _sync_deployments_and_attachments_by_provider(
                     async with db.begin_nested():
                         await delete_unbound_attachments(
                             db=db,
-                            user_id=user_id,
                             provider_account_id=provider_account_id,
-                            deployment_ids=[deployment.id for deployment in surviving],
+                            deployment_owner_pairs=[
+                                DeploymentOwnerPair(owner_id=user_id, deployment_id=deployment.id)
+                                for deployment in surviving
+                            ],
                             bindings=bindings,
                         )
                 except Exception:  # noqa: BLE001

@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
-from langflow.services.database.models.deployment.crud import create_deployment
+from langflow.services.database.models.deployment.crud import DeploymentOwnerPair, create_deployment
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.crud import create_provider_account
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -143,9 +143,11 @@ async def test_delete_unbound_attachments_keeps_matching_bindings(active_user: U
 
         deleted_count = await delete_unbound_attachments(
             session,
-            user_id=active_user.id,
             provider_account_id=provider_account_id,
-            deployment_ids=[dep1_id, dep2_id],
+            deployment_owner_pairs=[
+                DeploymentOwnerPair(owner_id=active_user.id, deployment_id=dep1_id),
+                DeploymentOwnerPair(owner_id=active_user.id, deployment_id=dep2_id),
+            ],
             bindings=[
                 ProviderSnapshotBinding(resource_key="agent-1", snapshot_id="tool-1"),
                 ProviderSnapshotBinding(resource_key="agent-2", snapshot_id="tool-2"),
@@ -200,9 +202,8 @@ async def test_delete_unbound_attachments_empty_bindings_deletes_all_attachments
 
         deleted_count = await delete_unbound_attachments(
             session,
-            user_id=active_user.id,
             provider_account_id=provider_account_id,
-            deployment_ids=[dep1_id],
+            deployment_owner_pairs=[DeploymentOwnerPair(owner_id=active_user.id, deployment_id=dep1_id)],
             bindings=[],
         )
         remaining = await list_attachments_by_deployment_ids(
@@ -219,13 +220,12 @@ async def test_delete_unbound_attachments_empty_bindings_deletes_all_attachments
 
 
 @pytest.mark.asyncio
-async def test_delete_unbound_attachments_empty_deployment_ids_noop(active_user: User):
+async def test_delete_unbound_attachments_empty_owner_pairs_noop():
     async with session_scope() as session:
         deleted_count = await delete_unbound_attachments(
             session,
-            user_id=active_user.id,
             provider_account_id=uuid4(),
-            deployment_ids=[],
+            deployment_owner_pairs=[],
             bindings=[ProviderSnapshotBinding(resource_key="agent-1", snapshot_id="tool-1")],
         )
     assert deleted_count == 0
@@ -274,9 +274,11 @@ async def test_delete_unbound_attachments_drops_deployments_outside_provider_sco
 
         deleted_count = await delete_unbound_attachments(
             session,
-            user_id=active_user.id,
             provider_account_id=provider_account_id_a,
-            deployment_ids=[dep_a.id, dep_b.id],
+            deployment_owner_pairs=[
+                DeploymentOwnerPair(owner_id=active_user.id, deployment_id=dep_a.id),
+                DeploymentOwnerPair(owner_id=active_user.id, deployment_id=dep_b.id),
+            ],
             bindings=[],
         )
         remaining = await list_attachments_by_deployment_ids(
@@ -383,9 +385,11 @@ async def test_delete_unbound_attachments_in_memory_sqlite_coverage(async_sessio
 
     deleted_count = await delete_unbound_attachments(
         async_session,
-        user_id=user.id,
         provider_account_id=provider_account_a.id,
-        deployment_ids=[deployment_a.id, deployment_b.id],
+        deployment_owner_pairs=[
+            DeploymentOwnerPair(owner_id=user.id, deployment_id=deployment_a.id),
+            DeploymentOwnerPair(owner_id=user.id, deployment_id=deployment_b.id),
+        ],
         bindings=[],
     )
     remaining = await list_attachments_by_deployment_ids(

@@ -3,11 +3,12 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from alembic.util.exc import CommandError
 from lfx.log.logger import logger
+from sqlalchemy import JSON, ColumnElement, func
 from sqlmodel import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -25,6 +26,26 @@ def utc_now() -> datetime:
     microseconds — stored column text vs the parameter then diverge.
     """
     return datetime.now(timezone.utc)
+
+
+def list_agg(column: ColumnElement[Any], *, dialect_name: str) -> ColumnElement[Any]:
+    """Aggregate values into a JSON array for the active database dialect."""
+    if dialect_name == "postgresql":
+        return func.json_agg(column, type_=JSON)
+    if dialect_name == "sqlite":
+        return func.json_group_array(column, type_=JSON)
+    msg = f"Unsupported database: {dialect_name}"
+    raise NotImplementedError(msg)
+
+
+def json_array(*elements: ColumnElement[Any], dialect_name: str) -> ColumnElement[Any]:
+    """Build a JSON array expression for the active database dialect."""
+    if dialect_name == "postgresql":
+        return func.json_build_array(*elements)
+    if dialect_name == "sqlite":
+        return func.json_array(*elements)
+    msg = f"Unsupported database: {dialect_name}"
+    raise NotImplementedError(msg)
 
 
 async def initialize_database(*, fix_migration: bool = False) -> None:
