@@ -399,6 +399,10 @@ export const lazyIconsMapping = {
     import("@/icons/Redis").then((mod) => ({ default: mod.RedisIcon })),
   Reddit: () =>
     import("@/icons/reddit").then((mod) => ({ default: mod.RedditIcon })),
+  Requesty: () =>
+    import("@/icons/Requesty").then((mod) => ({
+      default: mod.RequestyIcon,
+    })),
   SambaNova: () =>
     import("@/icons/SambaNova").then((mod) => ({ default: mod.SambaNovaIcon })),
   ScrapeGraph: () =>

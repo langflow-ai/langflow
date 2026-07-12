@@ -42,6 +42,9 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "OPENROUTER_API_KEY",
     "OPENROUTER_SITE_URL",
     "OPENROUTER_APP_NAME",
+    "REQUESTY_API_KEY",
+    "REQUESTY_SITE_URL",
+    "REQUESTY_APP_NAME",
 ]
 
 # Agentic experience specific variables
