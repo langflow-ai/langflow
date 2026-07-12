@@ -1,7 +1,7 @@
 # Feature: Windows PostgreSQL Event Loop Fix
 
-> Generated on: 2024-02-13  
-> Status: Approved  
+> Generated on: 2024-02-13
+> Status: Approved
 > Owner: Platform Team / Database Infrastructure
 
 ---
@@ -58,10 +58,10 @@ Platform Infrastructure - Database Connectivity Layer
 #### Platform Configuration Aggregate
 - **Root Entity**: `WindowsPostgresHelper`
 - **Entities**: None (stateless helper)
-- **Value Objects**: 
+- **Value Objects**:
   - `LANGFLOW_DATABASE_URL` (constant)
   - `POSTGRESQL_PREFIXES` (tuple constant)
-- **Invariants**: 
+- **Invariants**:
   - Event loop policy must be set before any async database operations
   - Configuration only applies when Windows AND PostgreSQL are detected
   - Configuration is idempotent (safe to call multiple times)
@@ -79,8 +79,8 @@ Platform Infrastructure - Database Connectivity Layer
 
 ### Feature: Automatic Event Loop Configuration for Windows PostgreSQL
 
-**As a** Windows user  
-**I want** Langflow to automatically configure the correct event loop  
+**As a** Windows user
+**I want** Langflow to automatically configure the correct event loop
 **So that** I can use PostgreSQL without encountering startup errors
 
 ### Background
@@ -327,12 +327,12 @@ False  # Configuration not needed or already configured
 ```mermaid
 C4Context
   title System Context diagram for Windows PostgreSQL Event Loop Fix
-  
+
   Person(dev, "Developer", "Windows user running Langflow")
   System(langflow, "Langflow", "AI application development platform")
   System_Ext(postgres, "PostgreSQL", "Database server")
   System_Ext(sqlite, "SQLite", "File-based database")
-  
+
   Rel(dev, langflow, "Develops AI apps")
   Rel(langflow, postgres, "Stores data (with event loop fix)")
   Rel(langflow, sqlite, "Alternative storage (no fix needed)")
@@ -343,12 +343,12 @@ C4Context
 ```mermaid
 C4Container
   title Container diagram for Event Loop Configuration
-  
+
   Container(helper, "WindowsPostgresHelper", "Python Module", "Event loop configuration")
   Container(launcher, "Launcher", "Python", "Application entry point")
   Container(dbservice, "DatabaseService", "Python", "Database connection management")
   ContainerDb(postgres, "PostgreSQL", "psycopg", "Async database connection")
-  
+
   Rel(launcher, helper, "Calls configure_windows_postgres_event_loop()")
   Rel(dbservice, helper, "Calls configure_windows_postgres_event_loop()")
   Rel(helper, postgres, "Configures compatible event loop")
@@ -372,7 +372,7 @@ graph TB
         H --> J[Return True]
         D --> I
     end
-    
+
     subgraph "Entry Points"
         K[__init__.py] --> A
         L[launcher.py] --> A

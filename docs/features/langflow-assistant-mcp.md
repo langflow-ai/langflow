@@ -2661,7 +2661,7 @@ Three independent layers of defense:
 
 1. **Prompt** (`LangflowAssistant.json` system prompt): a new "Agent Tool Compatibility" section teaches the generator (a) action `verb_noun` method naming, (b) class-level `description` as LLM-facing tool description, (c) `tool_mode=True` discipline + clear `info=`, (d) NEVER use the reserved `component_as_tool`/`to_toolkit` names. With worked WRONG vs CORRECT examples.
 2. **Generator-time validator** (`agentic/helpers/validation.py`): `validate_component_code` returns `ValidationResult(is_valid=False, ...)` with an actionable error if the code declares `Output(name="component_as_tool", ...)` (`_RESERVED_OUTPUT_NAME`) or `method="to_toolkit"` (`_RESERVED_OUTPUT_METHOD`). The retry loop produces a correctly-named output instead of silently failing at runtime.
-3. **Toolkit runtime** (`lfx/base/tools/component_tool.py`): 
+3. **Toolkit runtime** (`lfx/base/tools/component_tool.py`):
    - `_GENERIC_OUTPUT_METHOD_NAMES = {"output", "process", "build_output", "run", "execute", "main", "handler", "build_result"}`.
    - `_class_name_to_tool_name(class_name)` — acronym-preserving CamelCase → snake_case (`HTTPClient` → `http_client`, `S3Bucket` → `s3_bucket`).
    - `_derive_tool_name(component, output_method, outputs)` — when there's exactly ONE tool-exposed output AND the method is generic, the tool name is the snake_cased class name. Multi-output components keep method-derived names so tools don't collapse.
@@ -2846,7 +2846,7 @@ Event: `progress` with new step types
   "step": "generating_flow | flow_proposal_ready | searching_components | building_flow | flow_built | flow_build_failed",
   "attempt": 1,
   "max_attempts": 4,
-  "message": "Generating flow..." 
+  "message": "Generating flow..."
 }
 ```
 

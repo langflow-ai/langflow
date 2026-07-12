@@ -1,6 +1,6 @@
 # Can We Skip CI for Pre-Release Builds? Analysis
 
-**Issue:** [LE-517](https://datastax.jira.com/browse/LE-517)  
+**Issue:** [LE-517](https://datastax.jira.com/browse/LE-517)
 **Problem:** Pre-release builds (PyPI + Docker) require 45-60 min CI wait
 
 ---
@@ -69,10 +69,10 @@ TIME SPENT WAITING FOR CI: 45-60 minutes (53-67% of total time)
 
 ### What Cross-Platform Tests Already Validate
 
-✅ **Installation works** on all platforms  
-✅ **Dependencies resolve** correctly  
-✅ **Basic imports** don't fail  
-✅ **Server starts** successfully  
+✅ **Installation works** on all platforms
+✅ **Dependencies resolve** correctly
+✅ **Basic imports** don't fail
+✅ **Server starts** successfully
 
 **Key Insight:** Cross-platform tests already catch the most critical issues (broken installation, missing dependencies, import errors).
 
@@ -106,10 +106,10 @@ TIME SPENT WAITING FOR CI: 45-60 minutes (53-67% of total time)
 
 **What Won't Go Wrong:**
 
-❌ Installation failures → Caught by cross-platform tests  
-❌ Missing dependencies → Caught by cross-platform tests  
-❌ Import errors → Caught by cross-platform tests  
-❌ Server won't start → Caught by cross-platform tests  
+❌ Installation failures → Caught by cross-platform tests
+❌ Missing dependencies → Caught by cross-platform tests
+❌ Import errors → Caught by cross-platform tests
+❌ Server won't start → Caught by cross-platform tests
 
 ---
 
@@ -234,36 +234,36 @@ jobs:
             echo "Error: Must provide skip_ci_reason"
             exit 1
           fi
-          
+
       - name: Notify team
         run: |
           echo "⚠️ CI SKIPPED for ${{ inputs.release_tag }}"
           echo "Reason: ${{ inputs.skip_ci_reason }}"
           # Send to Slack/Discord
-  
+
   ci:
     if: ${{ !inputs.skip_ci }}
     uses: ./.github/workflows/ci.yml
     # ... existing CI
-  
+
   publish-base:
     needs: [build-base, test-cross-platform]  # Remove 'ci'
     if: |
-      ${{ inputs.release_package_base && 
+      ${{ inputs.release_package_base &&
           (inputs.skip_ci || needs.ci.result == 'success') }}
     # ... existing publish
-  
+
   publish-main:
     needs: [build-main, test-cross-platform, publish-base]  # Remove 'ci'
     if: |
-      ${{ inputs.release_package_main && 
+      ${{ inputs.release_package_main &&
           (inputs.skip_ci || needs.ci.result == 'success') }}
     # ... existing publish
-  
+
   call_docker_build_main:
     needs: []  # Remove 'ci' dependency
     if: |
-      ${{ inputs.build_docker_main && 
+      ${{ inputs.build_docker_main &&
           (inputs.skip_ci || needs.ci.result == 'success') }}
     # ... existing Docker build
 ```
@@ -310,9 +310,9 @@ Build (20 min) + Cross-platform (15 min) + Publish (15 min) = 50 min
 
 ### Risk Assessment
 
-**Probability of broken pre-release:** ~10-15%  
-**Impact if broken:** Low (pre-release context, quick rollback)  
-**Mitigation:** Cross-platform tests catch 80-90% of critical issues  
+**Probability of broken pre-release:** ~10-15%
+**Impact if broken:** Low (pre-release context, quick rollback)
+**Mitigation:** Cross-platform tests catch 80-90% of critical issues
 
 **Trade-off:** 50 min saved vs 10-15% risk of non-critical issues
 
@@ -352,10 +352,10 @@ Build (20 min) + Cross-platform (15 min) + Publish (15 min) = 50 min
 
 **Implementation Priority:**
 
-**Week 1:** Add `skip_ci` parameter and validation  
-**Week 2:** Add team notifications and audit logging  
-**Week 3:** Document usage guidelines  
-**Week 4:** Monitor usage and adjust as needed  
+**Week 1:** Add `skip_ci` parameter and validation
+**Week 2:** Add team notifications and audit logging
+**Week 3:** Document usage guidelines
+**Week 4:** Monitor usage and adjust as needed
 
 **Success Metrics:**
 - Time to pre-release: < 60 minutes (from 100+ minutes)
