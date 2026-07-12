@@ -509,6 +509,10 @@ OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
 OPENROUTER_FETCH_TIMEOUT = 10.0
 
 
+REQUESTY_API_BASE = "https://router.requesty.ai/v1"
+REQUESTY_FETCH_TIMEOUT = 10.0
+
+
 OPENAI_COMPATIBLE_FETCH_TIMEOUT = 10.0
 
 AZURE_AI_FOUNDRY_FETCH_TIMEOUT = 10.0
@@ -1017,6 +1021,107 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
     ]
 
 
+def fetch_live_requesty_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
+    """Fetch live Requesty models using the user's configured API key.
+
+    Args:
+        user_id: The user ID to look up the Requesty API key
+        model_type: "llm" or "embeddings" (Requesty only supports llm)
+
+    Returns:
+        List of model metadata dicts, or empty list if unable to fetch.
+
+    Requesty's ``/v1/models`` payload differs from OpenRouter's: capabilities
+    are exposed as flat booleans (``supports_tool_calling`` /
+    ``supports_reasoning``) rather than a ``supported_parameters`` array, and
+    the context size field is ``context_window`` (not ``context_length``).
+    The ``default`` flag is set by intersecting the live catalog with the
+    curated seed list in ``requesty_constants`` so user-facing defaults stay
+    sensible regardless of Requesty's id ordering, with a fallback to the
+    first ``MIN_DEFAULT_MODELS`` ids when the seed list has gone stale.
+    """
+    from lfx.base.models.requesty_constants import REQUESTY_MODELS_DETAILED
+
+    if model_type != "llm":
+        return []
+
+    api_key = get_provider_variable_value(user_id, "REQUESTY_API_KEY")
+    if not api_key:
+        return []
+
+    url = f"{REQUESTY_API_BASE}/models"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    try:
+        response = httpx.get(url, headers=headers, timeout=REQUESTY_FETCH_TIMEOUT)
+        response.raise_for_status()
+        payload = response.json()
+    except (httpx.RequestError, httpx.HTTPStatusError) as e:
+        # Surface as a warning (not debug) so a user who saved a key and sees
+        # an empty model catalog has a server-side breadcrumb.
+        status_code = getattr(getattr(e, "response", None), "status_code", None)
+        logger.warning("Could not fetch live Requesty models from %s (status=%s): %s", url, status_code, e)
+        return []
+    except (ValueError, TypeError) as e:
+        # 200 with malformed JSON: degrade to an empty catalog rather than
+        # crashing the caller.
+        logger.warning("Malformed Requesty /models response from %s: %s", url, e)
+        return []
+
+    if not isinstance(payload, dict):
+        logger.warning("Unexpected Requesty /models payload type from %s: %s", url, type(payload).__name__)
+        return []
+
+    raw_models = payload.get("data", [])
+    if not isinstance(raw_models, list):
+        logger.warning("Unexpected Requesty /models payload (data is %s): %r", type(raw_models).__name__, raw_models)
+        return []
+
+    by_id: dict[str, dict] = {}
+    for raw in raw_models:
+        if not isinstance(raw, dict):
+            continue
+        mid = raw.get("id")
+        if not isinstance(mid, str) or not mid:
+            continue
+        created_raw = raw.get("created")
+        # Requesty exposes ``created`` as a Unix epoch (seconds). Defensive
+        # int-coercion handles the occasional string or null in the payload
+        # without bringing the whole fetch down.
+        try:
+            created = int(created_raw) if created_raw is not None else 0
+        except (TypeError, ValueError):
+            created = 0
+        by_id[mid] = {
+            # Requesty reports capabilities as flat booleans, unlike
+            # OpenRouter's ``supported_parameters`` array. Coerce to bool so a
+            # missing/null field degrades to False rather than surfacing a
+            # truthy string.
+            "tool_calling": bool(raw.get("supports_tool_calling")),
+            "reasoning": bool(raw.get("supports_reasoning")),
+            "created": max(created, 0),
+        }
+    if not by_id:
+        return []
+
+    sorted_ids = sorted(by_id)
+    seed_ids = {m["name"] for m in REQUESTY_MODELS_DETAILED}
+    intersected_defaults = seed_ids & by_id.keys()
+    default_set = intersected_defaults or set(sorted_ids[:MIN_DEFAULT_MODELS])
+
+    return [
+        create_model_metadata(
+            provider="Requesty",
+            name=name,
+            icon="Requesty",
+            tool_calling=by_id[name]["tool_calling"],
+            reasoning=by_id[name]["reasoning"],
+            default=name in default_set,
+            created=by_id[name]["created"],
+        )
+        for name in sorted_ids
+    ]
+
+
 def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
     """Fetch live WatsonX models from the configured WatsonX instance.
 
@@ -1095,6 +1200,8 @@ def get_live_models_for_provider(
         return fetch_live_watsonx_models(user_id, model_type)
     if provider == "OpenRouter":
         return fetch_live_openrouter_models(user_id, model_type)
+    if provider == "Requesty":
+        return fetch_live_requesty_models(user_id, model_type)
     if provider == "OpenAI":
         return fetch_live_openai_compatible_models(user_id, model_type)
     if provider == "Azure AI Foundry":
