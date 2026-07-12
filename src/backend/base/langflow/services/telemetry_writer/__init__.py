@@ -1,12 +1,15 @@
-"""Telemetry writer service.
+"""Compatibility re-export from the standalone ``services`` package."""
 
-Async batched writer for transaction and vertex_build rows backed by a
-disk-persisted SQLite outbox and a dedicated database connection. Removes
-write-path contention from the request-handling connection pool so heavy load
-no longer triggers SQLite "database is locked" or PostgreSQL pool timeouts.
-"""
+from __future__ import annotations
 
-from langflow.services.telemetry_writer.factory import TelemetryWriterServiceFactory
-from langflow.services.telemetry_writer.service import TelemetryWriterService
+import services.telemetry_writer as _impl
 
-__all__ = ["TelemetryWriterService", "TelemetryWriterServiceFactory"]
+globals().update({k: v for k, v in vars(_impl).items() if not k.startswith("__")})
+if hasattr(_impl, "__all__"):
+    __all__ = list(_impl.__all__)
+_getattr = getattr(_impl, "__getattr__", None)
+if _getattr is not None:
+    __getattr__ = _getattr
+_dir = getattr(_impl, "__dir__", None)
+if _dir is not None:
+    __dir__ = _dir

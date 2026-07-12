@@ -337,6 +337,14 @@ endif
 build_langflow_base:
 	cd src/backend/base && uv build $(args)
 
+build_langflow_services: ## build the langflow-services package
+	@echo 'Building langflow-services package'
+	uv build --package langflow-services $(args)
+
+check_services_isolated_wheel: ## prove services wheel imports without langflow-base
+	@echo 'Running isolated langflow-services wheel gate'
+	uv run python scripts/ci/check_services_isolated_wheel.py
+
 build_langflow_backup:
 	uv lock && uv build
 
@@ -412,6 +420,14 @@ update: ## update dependencies
 	cd src/backend/base && uv sync --upgrade
 	uv sync --upgrade
 
+publish_services: ## publish langflow-services to PyPI
+	@echo 'Publishing langflow-services package'
+	uv publish --package langflow-services
+
+publish_services_testpypi: ## publish langflow-services to test PyPI
+	@echo 'Publishing langflow-services package to test PyPI'
+	uv publish --package langflow-services -r test-pypi
+
 publish_base:
 	cd src/backend/base && uv publish
 
@@ -428,6 +444,10 @@ publish_langflow_testpypi:
 
 publish: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
+ifdef services
+	make publish_services
+endif
+
 ifdef base
 	make publish_base
 endif
@@ -574,7 +594,10 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base(?:\[[^\]]*\])?(?:==|>=|~=)[^\"]*\"', '\"langflow-base[complete]>=$$LANGFLOW_BASE_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating langflow-base pyproject.toml...$(NC)"; \
-	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?:~=|>=)[^\"]*\"', '\"lfx~=$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?:~=|>=)[^\"]*\"', '\"lfx~=$$LANGFLOW_VERSION\"', txt); txt=re.sub(r'\"langflow-services(?:~=|>=)[^\"]*\"', '\"langflow-services~=$$LANGFLOW_BASE_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	\
+	echo "$(GREEN)Updating langflow-services pyproject.toml...$(NC)"; \
+	python -c "import re; fname='src/langflow-services/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?:~=|>=)[^\"]*\"', '\"lfx~=$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating lfx pyproject.toml...$(NC)"; \
 	python -c "import re; fname='src/lfx/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
@@ -590,6 +613,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	if ! grep -qF "\"langflow-base[complete]>=$$LANGFLOW_BASE_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base dependency validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$LANGFLOW_BASE_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"lfx~=$$LANGFLOW_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml lfx pin validation failed$(NC)"; exit 1; fi; \
+	if ! grep -q "^version = \"$$LANGFLOW_BASE_VERSION\"" src/langflow-services/pyproject.toml; then echo "$(RED)✗ langflow-services pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/lfx/pyproject.toml; then echo "$(RED)✗ LFX pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"version\": \"$$LANGFLOW_VERSION\"" src/frontend/package.json; then echo "$(RED)✗ Frontend package.json version validation failed$(NC)"; exit 1; fi; \
 	echo "$(GREEN)✓ All versions updated successfully$(NC)"; \
@@ -607,7 +631,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 		git status --porcelain; \
 		exit 1; \
 	fi; \
-	EXPECTED_FILES="pyproject.toml uv.lock src/backend/base/pyproject.toml src/lfx/pyproject.toml src/frontend/package.json src/frontend/package-lock.json"; \
+	EXPECTED_FILES="pyproject.toml uv.lock src/backend/base/pyproject.toml src/langflow-services/pyproject.toml src/lfx/pyproject.toml src/frontend/package.json src/frontend/package-lock.json"; \
 	for file in $$EXPECTED_FILES; do \
 		if ! git status --porcelain | grep -q "$$file"; then \
 			echo "$(RED)✗ Expected file $$file was not modified$(NC)"; \

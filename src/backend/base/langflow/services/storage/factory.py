@@ -1,30 +1,13 @@
-from lfx.log.logger import logger
-from lfx.services.settings.service import SettingsService
-from typing_extensions import override
+"""Compatibility re-export from the standalone ``services`` package.
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.session.service import SessionService
-from langflow.services.storage.service import StorageService
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
+from __future__ import annotations
 
-class StorageServiceFactory(ServiceFactory):
-    def __init__(self) -> None:
-        super().__init__(
-            StorageService,
-        )
+import sys
 
-    @override
-    def create(self, session_service: SessionService, settings_service: SettingsService):
-        storage_type = settings_service.settings.storage_type
-        if storage_type.lower() == "local":
-            from .local import LocalStorageService
+from services.storage import factory as _impl
 
-            return LocalStorageService(session_service, settings_service)
-        if storage_type.lower() == "s3":
-            from .s3 import S3StorageService
-
-            return S3StorageService(session_service, settings_service)
-        logger.warning(f"Storage type {storage_type} not supported. Using local storage.")
-        from .local import LocalStorageService
-
-        return LocalStorageService(session_service, settings_service)
+sys.modules[__name__] = _impl

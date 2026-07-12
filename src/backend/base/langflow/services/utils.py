@@ -424,6 +424,75 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
             raise RuntimeError(msg) from exc
 
 
+async def assign_orphaned_flows_to_superuser() -> None:
+    """Assign orphaned flows to the default superuser when auto login is enabled.
+
+    Host-owned product maintenance hook kept outside DatabaseService.
+    """
+    import re
+
+    from lfx.services.database.models.flow import Flow
+    from lfx.services.database.models.folder import Folder
+    from sqlmodel import select
+
+    from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+    from langflow.services.database.models.user.crud import get_user_by_username
+
+    settings_service = get_settings_service()
+    if not settings_service.auth_settings.AUTO_LOGIN:
+        return
+
+    def _generate_unique_flow_name(original_name: str, existing_names: set[str]) -> str:
+        if original_name not in existing_names:
+            return original_name
+        match = re.search(r"^(.*) \((\d+)\)$", original_name)
+        if match:
+            base_name, current_number = match.groups()
+            new_name = f"{base_name} ({int(current_number) + 1})"
+        else:
+            new_name = f"{original_name} (1)"
+        while new_name in existing_names:
+            match = re.match(r"^(.*) \((\d+)\)$", new_name)
+            if match is None:
+                msg = "Invalid format: match is None"
+                raise ValueError(msg)
+            base_name, current_number = match.groups()
+            new_name = f"{base_name} ({int(current_number) + 1})"
+        return new_name
+
+    async with session_scope() as session:
+        stmt = (
+            select(Flow)
+            .join(Folder)
+            .where(
+                Flow.user_id == None,  # noqa: E711
+                Folder.name != STARTER_FOLDER_NAME,
+            )
+        )
+        orphaned_flows = (await session.exec(stmt)).all()
+        if not orphaned_flows:
+            return
+
+        await logger.adebug("Assigning orphaned flows to the default superuser")
+        superuser_username = settings_service.auth_settings.SUPERUSER
+        superuser = await get_user_by_username(session, superuser_username)
+        if not superuser:
+            error_message = "Default superuser not found"
+            await logger.aerror(error_message)
+            raise RuntimeError(error_message)
+
+        existing_names: set[str] = set(
+            (await session.exec(select(Flow.name).where(Flow.user_id == superuser.id))).all()
+        )
+        for flow in orphaned_flows:
+            flow.user_id = superuser.id
+            flow.name = _generate_unique_flow_name(flow.name, existing_names)
+            existing_names.add(flow.name)
+            session.add(flow)
+        await session.commit()
+        await logger.adebug("Successfully assigned orphaned flows to the default superuser")
+
+
 async def teardown_services() -> None:
     """Teardown all the services."""
     async with session_scope() as session:
@@ -557,95 +626,106 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         # Don't re-raise since this is a cleanup task
 
 
+def _register_host_service_hooks() -> None:
+    """Wire host-owned callbacks into the standalone ``services`` package."""
+    from pathlib import Path
+
+    from services.auth.service import set_get_user_by_flow_id_hook, set_jit_user_defaults_hook
+    from services.database.factory import set_alembic_path_provider
+    from services.memory_base.kb_hooks import set_kb_helpers
+    from services.providers import register_crud, register_hook
+
+    # CRUD providers (stay in langflow-base)
+    from langflow.services.database.models.api_key import crud as api_key_crud
+    from langflow.services.database.models.deployment_provider_account import crud as dpa_crud
+    from langflow.services.database.models.jobs import crud as jobs_crud
+    from langflow.services.database.models.transactions import crud as transactions_crud
+    from langflow.services.database.models.user import crud as user_crud
+
+    register_crud("api_key", api_key_crud)
+    register_crud("user", user_crud)
+    register_crud("jobs", jobs_crud)
+    register_crud("transactions", transactions_crud)
+    register_crud("deployment_provider_account", dpa_crud)
+
+    async def _jit_user_defaults(user, db) -> None:
+        from langflow.initial_setup.setup import get_or_create_default_folder
+        from langflow.services.deps import get_variable_service
+
+        await get_or_create_default_folder(db, user.id)
+        await get_variable_service().initialize_user_variables(user.id, db)
+
+    def _alembic_paths() -> tuple[Path, Path]:
+        import langflow.alembic as alembic_pkg
+
+        script_location = Path(next(iter(alembic_pkg.__path__)))
+        return script_location, script_location.parent / "alembic.ini"
+
+    set_jit_user_defaults_hook(_jit_user_defaults)
+    from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
+
+    set_get_user_by_flow_id_hook(get_user_by_flow_id_or_endpoint_name)
+    set_alembic_path_provider(_alembic_paths)
+
+    from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
+    from langflow.utils.version import get_version_info as langflow_get_version_info
+
+    register_hook("configure_windows_postgres_event_loop", configure_windows_postgres_event_loop)
+    register_hook("get_version_info", langflow_get_version_info)
+    register_hook("clean_authz_audit_log", clean_authz_audit_log)
+
+    register_hook("teardown_superuser", teardown_superuser)
+
+    try:
+        from langflow.worker import celery_app
+
+        register_hook("celery_app", celery_app)
+    except Exception:  # noqa: BLE001 — celery is optional
+        logger.debug("celery_app hook not registered")
+
+    try:
+        from langflow.utils.registered_email_util import get_email_model
+
+        register_hook("get_email_model", get_email_model)
+    except Exception:  # noqa: BLE001 — email util is optional
+        logger.debug("get_email_model hook not registered")
+
+    try:
+        from langflow.api.utils import kb_helpers
+
+        set_kb_helpers(
+            storage_helper=kb_helpers.KBStorageHelper,
+            analysis_helper=kb_helpers.KBAnalysisHelper,
+            ingestion_helper=kb_helpers.KBIngestionHelper,
+            chunk_text_for_ingestion=kb_helpers.chunk_text_for_ingestion,
+        )
+    except Exception:  # noqa: BLE001 — KB helpers may be unavailable in slim installs
+        logger.debug("KB helpers not registered for memory_base")
+
+
 def register_all_service_factories() -> None:
-    """Register all available service factories with the service manager."""
-    # Import all service factories
-    from lfx.services.manager import get_service_manager
-    from lfx.services.schema import ServiceType
+    """Register factories advertised by installed LFX service packages."""
+    from importlib.metadata import entry_points
 
-    service_manager = get_service_manager()
-    from lfx.services.executor import factory as executor_factory
-    from lfx.services.mcp_composer import factory as mcp_composer_factory
-    from lfx.services.settings import factory as settings_factory
+    _register_host_service_hooks()
+    registrars = sorted(entry_points(group="lfx.service-packages"), key=lambda entry_point: entry_point.name)
+    if not registrars:
+        msg = "No LFX service-package registrars found; install langflow-services"
+        raise RuntimeError(msg)
 
-    from langflow.services.auth import factory as auth_factory
-    from langflow.services.auth.service import AuthService
-    from langflow.services.authorization import factory as authorization_factory
-    from langflow.services.authorization.service import LangflowAuthorizationService
-    from langflow.services.cache import factory as cache_factory
-    from langflow.services.chat import factory as chat_factory
-    from langflow.services.database import factory as database_factory
-    from langflow.services.job_queue import factory as job_queue_factory
-    from langflow.services.session import factory as session_factory
-    from langflow.services.shared_component_cache import factory as shared_component_cache_factory
-    from langflow.services.state import factory as state_factory
-    from langflow.services.storage import factory as storage_factory
-    from langflow.services.store import factory as store_factory
-    from langflow.services.task import factory as task_factory
-    from langflow.services.telemetry import factory as telemetry_factory
-    from langflow.services.telemetry_writer import factory as telemetry_writer_factory
-    from langflow.services.tracing import factory as tracing_factory
-    from langflow.services.transaction import factory as transaction_factory
-    from langflow.services.variable import factory as variable_factory
-
-    # Register all factories
-    service_manager.register_factory(settings_factory.SettingsServiceFactory())
-    service_manager.register_factory(cache_factory.CacheServiceFactory())
-    service_manager.register_factory(chat_factory.ChatServiceFactory())
-    service_manager.register_factory(database_factory.DatabaseServiceFactory())
-    service_manager.register_factory(session_factory.SessionServiceFactory())
-    service_manager.register_factory(storage_factory.StorageServiceFactory())
-    service_manager.register_factory(variable_factory.VariableServiceFactory())
-    service_manager.register_factory(telemetry_factory.TelemetryServiceFactory())
-    service_manager.register_factory(tracing_factory.TracingServiceFactory())
-    service_manager.register_factory(transaction_factory.TransactionServiceFactory())
-    service_manager.register_factory(telemetry_writer_factory.TelemetryWriterServiceFactory())
-    service_manager.register_factory(state_factory.StateServiceFactory())
-    service_manager.register_factory(job_queue_factory.JobQueueServiceFactory())
-    service_manager.register_factory(task_factory.TaskServiceFactory())
-    service_manager.register_factory(store_factory.StoreServiceFactory())
-    service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
-    # Override LFX's no-op auth service with Langflow's full JWT implementation
-    service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
-    service_manager.register_factory(auth_factory.AuthServiceFactory())
-    # Same pattern as ``auth_service``: register the OSS pass-through here with
-    # ``override=True`` so Langflow always has a default. A registered
-    # authorization plugin replaces it by listing its class in
-    # ``LANGFLOW_CONFIG_DIR/lfx.toml`` (config files use ``override=True`` via
-    # ``_discover_from_config``). Plain entry-point discovery uses
-    # ``override=False`` and would lose to this default — the supported
-    # override path is the ``lfx.toml`` config, matching SSO.
-    service_manager.register_service_class(
-        ServiceType.AUTHORIZATION_SERVICE, LangflowAuthorizationService, override=True
-    )
-    service_manager.register_factory(authorization_factory.AuthorizationServiceFactory())
-    service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
-    service_manager.register_factory(executor_factory.ExecutorServiceFactory())
-    service_manager.set_factory_registered()
+    for entry_point in registrars:
+        registrar = entry_point.load()
+        if not callable(registrar):
+            msg = f"Service-package entry point {entry_point.name!r} did not resolve to a callable"
+            raise TypeError(msg)
+        registrar()
 
 
 def register_builtin_adapters() -> None:
-    """Import built-in adapter registration modules.
+    """Import built-in adapter registration modules."""
+    from services.bootstrap import register_builtin_adapters as _register
 
-    Mirrors ``register_all_service_factories()`` for the adapter registry system.
-    Each import registers the adapter class on the AdapterRegistry singleton.
-
-    TODO: Watsonx risks are documented here because registration is runtime-optional:
-    missing ``ibm_*`` modules should skip adapter registration, but broad
-    ``ModuleNotFoundError`` handling can also hide internal import regressions.
-    Future deployment API routing must treat "provider exists but adapter is not
-    registered in this runtime" as an explicit, deterministic error path.
-    Keep direct adapter imports limited to guarded paths and maintain CI
-    coverage that confirms Watsonx tests run (not skip) in eligible environments.
-    """
-    if not FEATURE_FLAGS.wxo_deployments:
-        logger.debug("Skipping deployment adapter registration: wxo_deployments feature flag disabled")
-        return
-
-    try:
-        import_module("langflow.services.adapters.deployment.watsonx_orchestrate.register")
-    except ModuleNotFoundError as exc:
-        logger.info("Skipping Watsonx Orchestrate adapter registration: %s", exc)
+    _register()
 
 
 def register_builtin_deployment_mappers() -> None:
@@ -703,7 +783,7 @@ async def initialize_services(*, fix_migration: bool = False, skip_superuser_set
         async with session_scope() as session:
             await setup_superuser(settings_service, session)
         try:
-            await get_db_service().assign_orphaned_flows_to_superuser()
+            await assign_orphaned_flows_to_superuser()
         except sqlalchemy_exc.IntegrityError as exc:
             await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
 

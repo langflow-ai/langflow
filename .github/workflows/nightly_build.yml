@@ -171,7 +171,7 @@ jobs:
           uv lock
           cd src/lfx && uv lock && cd ../..
 
-          git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml src/sdk/pyproject.toml uv.lock
+          git add pyproject.toml src/backend/base/pyproject.toml src/langflow-services/pyproject.toml src/lfx/pyproject.toml src/sdk/pyproject.toml uv.lock
           # The nightly keeps canonical package names and the stable `lfx-*` bundles
           # are not modified (see src/bundles/NIGHTLY.md), so no bundle pyprojects ride this commit.
           git commit -m "Update version for nightly"

@@ -1,6 +1,7 @@
 # https://github.com/dorny/paths-filter
 python:
   - "src/backend/**"
+  - "src/langflow-services/**"
   - "src/backend/**.py"
   - "src/lfx/**"
   - "pyproject.toml"
@@ -32,6 +33,7 @@ docker:
   - "uv.lock"
   - "pyproject.toml"
   - "src/backend/**"
+  - "src/langflow-services/**"
   - "src/frontend/**"
   - "src/lfx/**"
   - ".dockerignore"
@@ -103,6 +105,7 @@ api:
 
 database:
   - "src/backend/base/langflow/services/database/**"
+  - "src/langflow-services/src/services/database/**"
   - "src/backend/base/langflow/alembic/**"
   - "src/frontend/src/controllers/**"
   - "src/frontend/tests/core/features/**"

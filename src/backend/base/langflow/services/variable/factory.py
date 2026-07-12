@@ -1,28 +1,13 @@
+"""Compatibility re-export from the standalone ``services`` package.
+
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import sys
 
-from typing_extensions import override
+from services.variable import factory as _impl
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.variable.service import DatabaseVariableService, VariableService
-
-if TYPE_CHECKING:
-    from lfx.services.settings.service import SettingsService
-
-
-class VariableServiceFactory(ServiceFactory):
-    def __init__(self) -> None:
-        super().__init__(VariableService)
-
-    @override
-    def create(self, settings_service: SettingsService):
-        # here you would have logic to create and configure a VariableService
-        # based on the settings_service
-
-        if settings_service.settings.variable_store == "kubernetes":
-            # Keep it here to avoid import errors
-            from langflow.services.variable.kubernetes import KubernetesSecretService
-
-            return KubernetesSecretService(settings_service)
-        return DatabaseVariableService(settings_service)
+sys.modules[__name__] = _impl

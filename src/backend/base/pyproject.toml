@@ -18,6 +18,9 @@ maintainers = [
 
 dependencies = [
     "lfx~=1.11.0",
+    # Default DB dialect is SQLite; Postgres is opt-in via [postgresql].
+    # memory-base covers host KB helpers that still import chromadb/langchain_chroma.
+    "langflow-services[database-sqlite,memory-base]~=0.11.0",
     "fastapi>=0.135.0,<1.0.0",
     "slowapi>=0.1.9,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
@@ -99,7 +102,6 @@ dependencies = [
     "ibm-watsonx-ai>=1.3.1,<2.0.0",
     "langchain-ibm~=1.1.0",
     "trustcall>=0.0.38,<1.0.0",
-    "langchain-chroma~=0.2.6",
     "jaraco-context>=6.1.0",
     "wheel>=0.46.2,<1.0.0",
     "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10; allow 1.23.x for agent-lifecycle-toolkit compatibility
@@ -183,10 +185,8 @@ audio = [
     "webrtcvad>=2.0.10",
 ]
 
-postgresql = [
-    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
-    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
-]
+# Compatibility aliases: concrete service backends live in langflow-services.
+postgresql = ["langflow-services[database-postgresql]"]
 
 local = [
     "sentence-transformers>=2.0.0",
@@ -201,7 +201,11 @@ clickhouse = ["clickhouse-connect==0.7.19"]
 
 mongodb = ["pymongo>=4.10.1"]
 supabase = ["supabase>=2.6.0,<3.0.0"]
-redis = ["redis>=7.4.0,<8.0.0"]
+redis = [
+    "langflow-services[cache-redis]",
+    "langflow-services[job-queue-redis]",
+]
+job-queue-redis = ["langflow-services[job-queue-redis]"]
 elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
 
 # Individual vector store providers
@@ -212,10 +216,7 @@ faiss = [
 qdrant = ["qdrant-client>=1.12.0,<2.0.0"]
 qdrant-vectors = ["langchain-qdrant>=1.0.0,<2.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
-chroma = [
-    "chromadb>=1.0.0,<2.0.0",
-    "langchain-chroma~=0.2.6"
-]
+chroma = ["langflow-services[memory-base]"]
 upstash = ["upstash-vector==0.6.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
 milvus = ["langchain-milvus~=0.3.2"]
@@ -247,10 +248,10 @@ ctransformers = ["ctransformers>=0.2.10"]
 # the langfuse SDK raises pydantic.v1.errors.ConfigError on import in Python
 # 3.14 environments (e.g. the official Docker image), causing tracing to
 # silently no-op. See https://github.com/langflow-ai/langflow/issues/13317.
-langfuse = ["langfuse~=3.8", "pydantic>=2.13.0"]
-langwatch = ["langwatch~=0.10.0; python_version < '3.14'"]
-langsmith = ["langsmith>=0.3.42,<1.0.0"]
-arize = ["arize-phoenix-otel>=0.6.1"]
+langfuse = ["langflow-services[tracing-langfuse]"]
+langwatch = ["langflow-services[tracing-langwatch]"]
+langsmith = ["langflow-services[tracing-langsmith]"]
+arize = ["langflow-services[tracing-arize]"]
 
 # Individual document loaders
 pypdf = ["pypdf>=6.10.0,<7.0.0"]
@@ -319,7 +320,7 @@ litellm = [
 zep = ["zep-python==2.0.2"]
 youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
 markdown = ["Markdown>=3.8.0"]
-kubernetes = ["kubernetes==31.0.0"]
+kubernetes = ["langflow-services[variable-kubernetes]"]
 json-repair = ["json_repair==0.30.3"]
 composio = [
     "composio==0.16.0",
@@ -331,7 +332,7 @@ atlassian = ["atlassian-python-api==3.41.16"]
 mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
-openinference = ["openinference-instrumentation-langchain>=0.1.29"]
+openinference = ["langflow-services[tracing-openinference]"]
 mcp = ["mcp>=1.17.0,<2.0.0"]
 ag2 = ["ag2>=0.1.0"]
 scrapegraph = ["scrapegraph-py>=1.12.0"]
@@ -363,9 +364,10 @@ langchain-unstructured = ["langchain-unstructured~=1.0.0"]
 langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
 
 # Additional monitoring
-opik = ["opik>=2.0.0,<3.0.0"]
-traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
-openlayer = ["openlayer>=0.9.0,<1.0.0"]
+opik = ["langflow-services[tracing-opik]"]
+traceloop = ["langflow-services[tracing-traceloop]"]
+openlayer = ["langflow-services[tracing-openlayer]"]
+tracing-all = ["langflow-services[tracing-all]"]
 
 # Document processing / OCR
 docling = [
@@ -408,8 +410,9 @@ mlx = [
 # MCP
 fastmcp = ["fastmcp>=3.2.0"]
 
-# AWS extras
-aioboto3 = ["aioboto3>=15.2.0,<16.0.0"]
+# AWS extras — S3 storage backend lives in langflow-services.
+aioboto3 = ["langflow-services[storage-s3]"]
+celery = ["langflow-services[task-celery]"]
 
 # Astra
 astrapy = ["astrapy>=2.1.0,<3.0.0"]
@@ -417,54 +420,20 @@ astrapy = ["astrapy>=2.1.0,<3.0.0"]
 # Windows-specific
 gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 
-# SDKs for IBM watsonx Orchestrate deployment adapter.
-ibm-watsonx-clients = [
-    "ibm-cloud-sdk-core~=3.24.4",
-    "ibm-watsonx-orchestrate-core~=2.12.0; python_version >= '3.11'",
-    "ibm-watsonx-orchestrate-clients~=2.12.0; python_version >= '3.11'",
-]
+# SDKs for IBM watsonx Orchestrate deployment adapter (owned by services).
+ibm-watsonx-clients = ["langflow-services[deployment-watsonx-orchestrate]"]
+production = ["langflow-services[production]"]
 
 complete = [
-    # langflow-base[complete] pulls the third-party libraries that
-    # langflow-base's OWN code imports -- service backends (cache, knowledge
-    # base), the tracing/observability backends in langflow.services.tracing.*,
-    # MCP, and deployment adapters. Provider *component* dependencies now live in
-    # the lfx-* bundles (installed via langflow's "lfx-bundles[all-no-torch]"
-    # default plus explicit bundle deps), so they are intentionally NOT
-    # re-declared here -- doing so re-pulled large, already-bundled stacks (and
-    # torch) into every install. When adding a base extra, only list it here if
-    # langflow-base itself imports it.
-
-    # Cache / state
-    "langflow-base[redis]",
-    # Knowledge-base vector store
-    "langflow-base[chroma]",
-    # Observability / tracing backends (langflow.services.tracing.*)
-    "langflow-base[langfuse]",
-    "langflow-base[langwatch]",
-    "langflow-base[langsmith]",
-    "langflow-base[arize]",
-    "langflow-base[openinference]",
-    "langflow-base[opik]",
-    "langflow-base[traceloop]",
-    "langflow-base[openlayer]",
-    # Document processing / OCR: docling and easyocr are now OPT-IN -- both pull
-    # torch, which is no longer shipped by default. The File component's docling
-    # path degrades gracefully and is enabled with: pip install "langflow[docling]".
-    # Both extra definitions remain, so langflow-base[docling] / [easyocr] still
-    # install on demand.
-    # MCP
+    # Concrete service implementations + selectable backends/providers.
+    "langflow-services[all]",
+    # Host-only extras not owned by langflow-services.
+    # Document processing / OCR remain OPT-IN (torch) -- not in [complete].
     "langflow-base[mcp]",
-    # Orchestration / deployment adapters
-    "langflow-base[kubernetes]",
-    "langflow-base[aioboto3]",
-    "langflow-base[ibm-watsonx-clients]",
-    # lfx-core component features: the dependency now lives in lfx (these base
-    # extras re-export the matching lfx extra), keeping a single source of truth
-    # while the default install still ships these components working.
+    # lfx-core component features: base extras re-export matching lfx extras.
     "langflow-base[cassandra]",  # -> lfx[cassandra] (cassio; Cassandra components)
     "langflow-base[toolguard]",  # -> lfx[toolguard] (Policies component)
-    # Deliberately retained in langflow-base (not bundled):
+    # Deliberately retained in langflow-base (not owned by services):
     #   litellm -- langfuse logging via litellm.proxy.proxy_server (#12228);
     #              the lfx-bundles litellm component uses the langchain-openai
     #              client and does not import the litellm package.

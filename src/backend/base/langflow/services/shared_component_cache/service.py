@@ -1,7 +1,13 @@
-from langflow.services.cache.service import ThreadingInMemoryCache
+"""Compatibility re-export from the standalone ``services`` package.
 
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
-class SharedComponentCacheService(ThreadingInMemoryCache):
-    """A caching service shared across components."""
+from __future__ import annotations
 
-    name = "shared_component_cache_service"
+import sys
+
+from services.shared_component_cache import service as _impl
+
+sys.modules[__name__] = _impl

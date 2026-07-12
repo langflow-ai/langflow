@@ -28,6 +28,7 @@ members = [
     "langflow",
     "langflow-base",
     "langflow-sdk",
+    "langflow-services",
     "langflow-stepflow",
     "lfx",
     "lfx-amazon",
@@ -515,6 +516,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1a/cc/ac0bed8e562e7407fe55c3ba85a4dce86e6dbd8730887bd1e406a6c5c18a/alembic-1.18.5.tar.gz", hash = "sha256:1554982221dd17e9a749b53902407578eb305e453f71999e8c7f0a48389fff8e", size = 2060480, upload-time = "2026-06-25T15:20:54.888Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/96/78/5fe6dc3a3a5b2f5a2a4faef8bfe336d5fa049a38884ab3172e0098160c01/alembic-1.18.5-py3-none-any.whl", hash = "sha256:06d8ba9d04558022f5395e9317de03d270f3dced49cee01f89fe7a13c26f14bc", size = 264664, upload-time = "2026-06-25T15:20:56.673Z" },
+]
+
+[[package]]
+name = "amqp"
+version = "5.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "vine" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/79/fc/ec94a357dfc6683d8c86f8b4cfa5416a4c36b28052ec8260c77aca96a443/amqp-5.3.1.tar.gz", hash = "sha256:cddc00c725449522023bad949f70fff7b48f0b1ade74d170a6f10ab044739432", size = 129013, upload-time = "2024-11-12T19:55:44.051Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/99/fc813cd978842c26c82534010ea849eee9ab3a13ea2b74e95cb9c99e747b/amqp-5.3.1-py3-none-any.whl", hash = "sha256:43b3319e1b4e7d1251833a93d672b4af1e40f3d632d479b98661a95f117880a2", size = 50944, upload-time = "2024-11-12T19:55:41.782Z" },
 ]
 
 [[package]]
@@ -1035,6 +1048,15 @@ wheels = [
 ]
 
 [[package]]
+name = "billiard"
+version = "4.2.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/58/23/b12ac0bcdfb7360d664f40a00b1bda139cbbbced012c34e375506dbd0143/billiard-4.2.4.tar.gz", hash = "sha256:55f542c371209e03cd5862299b74e52e4fbcba8250ba611ad94276b369b6a85f", size = 156537, upload-time = "2025-11-30T13:28:48.52Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/87/8bab77b323f16d67be364031220069f79159117dd5e43eeb4be2fef1ac9b/billiard-4.2.4-py3-none-any.whl", hash = "sha256:525b42bdec68d2b983347ac312f892db930858495db601b5836ac24e6477cde5", size = 87070, upload-time = "2025-11-30T13:28:47.016Z" },
+]
+
+[[package]]
 name = "black"
 version = "26.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1466,6 +1488,27 @@ wheels = [
 ]
 
 [[package]]
+name = "celery"
+version = "5.6.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "billiard" },
+    { name = "click" },
+    { name = "click-didyoumean" },
+    { name = "click-plugins" },
+    { name = "click-repl" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
+    { name = "kombu" },
+    { name = "python-dateutil" },
+    { name = "tzlocal" },
+    { name = "vine" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e8/b4/a1233943ab5c8ea05fb877a88a0a0622bf47444b99e4991a8045ac37ea1d/celery-5.6.3.tar.gz", hash = "sha256:177006bd2054b882e9f01be59abd8529e88879ef50d7918a7050c5a9f4e12912", size = 1742243, upload-time = "2026-03-26T12:14:51.76Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cf/c9/6eccdda96e098f7ae843162db2d3c149c6931a24fda69fe4ab84d0027eb5/celery-5.6.3-py3-none-any.whl", hash = "sha256:0808f42f80909c4d5833202360ffafb2a4f83f4d8e23e1285d926610e9a7afa6", size = 451235, upload-time = "2026-03-26T12:14:49.491Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.6.17"
 source = { registry = "https://pypi.org/simple" }
@@ -1837,6 +1880,43 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/76/d4/81420972a676e8ffea40450d8c8c92943e7218a78fe9b64359836cc9876b/click-8.4.2.tar.gz", hash = "sha256:9a6cea6e60b17ebe0a44c5cc636d94f09bd66142c1cd7d8b4cd731c4917a15f6", size = 338000, upload-time = "2026-06-24T17:45:15.148Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fb/e2/79c688af8b210d232694e31e59da9f6ec747bae31c3f5946e4e9b98860d5/click-8.4.2-py3-none-any.whl", hash = "sha256:e6f9f66136c816745b9d65817da91d61d957fb16e02e4dcd0552553c5a197b76", size = 119243, upload-time = "2026-06-24T17:45:13.73Z" },
+]
+
+[[package]]
+name = "click-didyoumean"
+version = "0.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/30/ce/217289b77c590ea1e7c24242d9ddd6e249e52c795ff10fac2c50062c48cb/click_didyoumean-0.3.1.tar.gz", hash = "sha256:4f82fdff0dbe64ef8ab2279bd6aa3f6a99c3b28c05aa09cbfc07c9d7fbb5a463", size = 3089, upload-time = "2024-03-24T08:22:07.499Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1b/5b/974430b5ffdb7a4f1941d13d83c64a0395114503cc357c6b9ae4ce5047ed/click_didyoumean-0.3.1-py3-none-any.whl", hash = "sha256:5c4bb6007cfea5f2fd6583a2fb6701a22a41eb98957e63d0fac41c10e7c3117c", size = 3631, upload-time = "2024-03-24T08:22:06.356Z" },
+]
+
+[[package]]
+name = "click-plugins"
+version = "1.1.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c3/a4/34847b59150da33690a36da3681d6bbc2ec14ee9a846bc30a6746e5984e4/click_plugins-1.1.1.2.tar.gz", hash = "sha256:d7af3984a99d243c131aa1a828331e7630f4a88a9741fd05c927b204bcf92261", size = 8343, upload-time = "2025-06-25T00:47:37.555Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3d/9a/2abecb28ae875e39c8cad711eb1186d8d14eab564705325e77e4e6ab9ae5/click_plugins-1.1.1.2-py2.py3-none-any.whl", hash = "sha256:008d65743833ffc1f5417bf0e78e8d2c23aab04d9745ba817bd3e71b0feb6aa6", size = 11051, upload-time = "2025-06-25T00:47:36.731Z" },
+]
+
+[[package]]
+name = "click-repl"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "prompt-toolkit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/a2/57f4ac79838cfae6912f997b4d1a64a858fb0c86d7fcaae6f7b58d267fca/click-repl-0.3.0.tar.gz", hash = "sha256:17849c23dba3d667247dc4defe1757fff98694e90fe37474f3feebb69ced26a9", size = 10449, upload-time = "2023-06-15T12:43:51.141Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/52/40/9d857001228658f0d59e97ebd4c346fe73e138c6de1bce61dc568a57c7f8/click_repl-0.3.0-py3-none-any.whl", hash = "sha256:fb7e06deb8da8de86180a33a9da97ac316751c094c6899382da7feeeeb51b812", size = 10289, upload-time = "2023-06-15T12:43:48.626Z" },
 ]
 
 [[package]]
@@ -7290,6 +7370,21 @@ wheels = [
 ]
 
 [[package]]
+name = "kombu"
+version = "5.6.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "amqp" },
+    { name = "packaging" },
+    { name = "tzdata" },
+    { name = "vine" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b6/a5/607e533ed6c83ae1a696969b8e1c137dfebd5759a2e9682e26ff1b97740b/kombu-5.6.2.tar.gz", hash = "sha256:8060497058066c6f5aed7c26d7cd0d3b574990b09de842a8c5aaed0b92cc5a55", size = 472594, upload-time = "2025-12-29T20:30:07.779Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/0f/834427d8c03ff1d7e867d3db3d176470c64871753252b21b4f4897d1fa45/kombu-5.6.2-py3-none-any.whl", hash = "sha256:efcfc559da324d41d61ca311b0c64965ea35b4c55cc04ee36e55386145dace93", size = 214219, upload-time = "2025-12-29T20:30:05.74Z" },
+]
+
+[[package]]
 name = "kubernetes"
 version = "31.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -8024,7 +8119,7 @@ nv-ingest = [
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
 ]
 postgresql = [
-    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+    { name = "langflow-base", extra = ["postgresql"] },
 ]
 
 [package.dev-dependencies]
@@ -8077,6 +8172,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/backend/base" },
     { name = "lfx-amazon", editable = "src/bundles/amazon" },
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
@@ -8101,8 +8197,6 @@ requires-dist = [
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
 ]
 provides-extras = ["docling", "docling-chunking", "docling-image-description", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
@@ -8190,7 +8284,6 @@ dependencies = [
     { name = "json-repair" },
     { name = "jsonquerylang" },
     { name = "langchain" },
-    { name = "langchain-chroma" },
     { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langchain-experimental" },
@@ -8200,6 +8293,7 @@ dependencies = [
     { name = "langchain-qdrant" },
     { name = "langchain-weaviate" },
     { name = "langchainhub" },
+    { name = "langflow-services", extra = ["database-sqlite", "memory-base"] },
     { name = "langgraph-checkpoint" },
     { name = "lfx" },
     { name = "loguru" },
@@ -8261,33 +8355,17 @@ ag2 = [
     { name = "ag2" },
 ]
 aioboto3 = [
-    { name = "aioboto3" },
+    { name = "langflow-services", extra = ["storage-s3"] },
 ]
 all = [
-    { name = "aioboto3" },
     { name = "apscheduler" },
-    { name = "arize-phoenix-otel" },
-    { name = "chromadb" },
     { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14' or (python_full_version < '3.11' and platform_machine != 'arm64' and sys_platform == 'darwin')" },
-    { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
-    { name = "kubernetes" },
-    { name = "langchain-chroma" },
-    { name = "langfuse" },
-    { name = "langsmith" },
-    { name = "langwatch", marker = "python_full_version < '3.14'" },
+    { name = "langflow-services", extra = ["all"] },
     { name = "lfx", extra = ["cassandra"] },
     { name = "lfx", extra = ["toolguard"], marker = "python_full_version < '3.14'" },
     { name = "litellm", marker = "python_full_version < '3.14'" },
     { name = "mcp" },
-    { name = "openinference-instrumentation-langchain" },
-    { name = "openlayer" },
-    { name = "opik" },
-    { name = "pydantic" },
-    { name = "redis" },
-    { name = "traceloop-sdk" },
 ]
 altk = [
     { name = "agent-lifecycle-toolkit", marker = "(python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
@@ -8297,7 +8375,7 @@ apify = [
     { name = "apify-client", version = "3.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 arize = [
-    { name = "arize-phoenix-otel" },
+    { name = "langflow-services", extra = ["tracing-arize"] },
 ]
 assemblyai = [
     { name = "assemblyai" },
@@ -8320,9 +8398,11 @@ beautifulsoup = [
 cassandra = [
     { name = "lfx", extra = ["cassandra"] },
 ]
+celery = [
+    { name = "langflow-services", extra = ["task-celery"] },
+]
 chroma = [
-    { name = "chromadb" },
-    { name = "langchain-chroma" },
+    { name = "langflow-services", extra = ["memory-base"] },
 ]
 cleanlab = [
     { name = "cleanlab-tlm" },
@@ -8331,30 +8411,14 @@ clickhouse = [
     { name = "clickhouse-connect" },
 ]
 complete = [
-    { name = "aioboto3" },
     { name = "apscheduler" },
-    { name = "arize-phoenix-otel" },
-    { name = "chromadb" },
     { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14' or (python_full_version < '3.11' and platform_machine != 'arm64' and sys_platform == 'darwin')" },
-    { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
-    { name = "kubernetes" },
-    { name = "langchain-chroma" },
-    { name = "langfuse" },
-    { name = "langsmith" },
-    { name = "langwatch", marker = "python_full_version < '3.14'" },
+    { name = "langflow-services", extra = ["all"] },
     { name = "lfx", extra = ["cassandra"] },
     { name = "lfx", extra = ["toolguard"], marker = "python_full_version < '3.14'" },
     { name = "litellm", marker = "python_full_version < '3.14'" },
     { name = "mcp" },
-    { name = "openinference-instrumentation-langchain" },
-    { name = "openlayer" },
-    { name = "opik" },
-    { name = "pydantic" },
-    { name = "redis" },
-    { name = "traceloop-sdk" },
 ]
 composio = [
     { name = "composio" },
@@ -8445,18 +8509,19 @@ huggingface = [
     { name = "huggingface-hub" },
 ]
 ibm-watsonx-clients = [
-    { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
+    { name = "langflow-services", extra = ["deployment-watsonx-orchestrate"] },
 ]
 jigsawstack = [
     { name = "jigsawstack" },
+]
+job-queue-redis = [
+    { name = "langflow-services", extra = ["job-queue-redis"] },
 ]
 json-repair = [
     { name = "json-repair" },
 ]
 kubernetes = [
-    { name = "kubernetes" },
+    { name = "langflow-services", extra = ["variable-kubernetes"] },
 ]
 langchain-huggingface = [
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -8468,14 +8533,13 @@ langchain-unstructured = [
     { name = "langchain-unstructured" },
 ]
 langfuse = [
-    { name = "langfuse" },
-    { name = "pydantic" },
+    { name = "langflow-services", extra = ["tracing-langfuse"] },
 ]
 langsmith = [
-    { name = "langsmith" },
+    { name = "langflow-services", extra = ["tracing-langsmith"] },
 ]
 langwatch = [
-    { name = "langwatch", marker = "python_full_version < '3.14'" },
+    { name = "langflow-services", extra = ["tracing-langwatch"] },
 ]
 lark = [
     { name = "lark" },
@@ -8543,16 +8607,16 @@ opendsstar = [
     { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin')" },
 ]
 openinference = [
-    { name = "openinference-instrumentation-langchain" },
+    { name = "langflow-services", extra = ["tracing-openinference"] },
 ]
 openlayer = [
-    { name = "openlayer" },
+    { name = "langflow-services", extra = ["tracing-openlayer"] },
 ]
 opensearch = [
     { name = "opensearch-py" },
 ]
 opik = [
-    { name = "opik" },
+    { name = "langflow-services", extra = ["tracing-opik"] },
 ]
 pgvector = [
     { name = "pgvector" },
@@ -8561,7 +8625,10 @@ pinecone = [
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
 ]
 postgresql = [
-    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+    { name = "langflow-services", extra = ["database-postgresql"] },
+]
+production = [
+    { name = "langflow-services", extra = ["production"] },
 ]
 pyarrow = [
     { name = "pyarrow" },
@@ -8585,7 +8652,7 @@ ragstack = [
     { name = "ragstack-ai-knowledge-store", marker = "python_full_version < '3.13'" },
 ]
 redis = [
-    { name = "redis" },
+    { name = "langflow-services", extra = ["cache-redis", "job-queue-redis"] },
 ]
 sambanova = [
     { name = "langchain-sambanova" },
@@ -8616,7 +8683,10 @@ toolguard = [
     { name = "lfx", extra = ["toolguard"], marker = "python_full_version < '3.14'" },
 ]
 traceloop = [
-    { name = "traceloop-sdk" },
+    { name = "langflow-services", extra = ["tracing-traceloop"] },
+]
+tracing-all = [
+    { name = "langflow-services", extra = ["tracing-all"] },
 ]
 twelvelabs = [
     { name = "twelvelabs" },
@@ -8679,14 +8749,12 @@ requires-dist = [
     { name = "ag-ui-protocol", specifier = "==0.1.18" },
     { name = "ag2", marker = "extra == 'ag2'", specifier = ">=0.1.0" },
     { name = "agent-lifecycle-toolkit", marker = "(python_full_version < '3.14' and platform_machine != 'x86_64' and extra == 'altk') or (python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'altk')", specifier = ">=0.10.1,<1.0" },
-    { name = "aioboto3", marker = "extra == 'aioboto3'", specifier = ">=15.2.0,<16.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "aiosqlite", specifier = ">=0.20.0,<1.0.0" },
     { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
     { name = "apify-client", marker = "extra == 'apify'", specifier = ">=1.8.1" },
     { name = "apscheduler", marker = "extra == 'litellm'", specifier = ">=3.10.4,<4.0.0" },
-    { name = "arize-phoenix-otel", marker = "extra == 'arize'", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
     { name = "assemblyai", marker = "extra == 'assemblyai'", specifier = "==0.35.1" },
     { name = "astrapy", marker = "extra == 'astrapy'", specifier = ">=2.1.0,<3.0.0" },
@@ -8696,7 +8764,6 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.34.162,<2.0.0" },
     { name = "cachetools", specifier = ">=6.0.0" },
     { name = "chardet", specifier = ">=7.3.0" },
-    { name = "chromadb", marker = "extra == 'chroma'", specifier = ">=1.0.0,<2.0.0" },
     { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
@@ -8745,20 +8812,14 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=25.3.0,<27.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
     { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=1.0.0,<2.0.0" },
-    { name = "ibm-cloud-sdk-core", marker = "extra == 'ibm-watsonx-clients'", specifier = "~=3.24.4" },
     { name = "ibm-watsonx-ai", specifier = ">=1.3.1,<2.0.0" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.12.0" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.12.0" },
     { name = "jaraco-context", specifier = ">=6.1.0" },
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
     { name = "json-repair", marker = "extra == 'json-repair'", specifier = "==0.30.3" },
     { name = "jsonquerylang", specifier = ">=1.1.1,<2.0.0" },
-    { name = "kubernetes", marker = "extra == 'kubernetes'", specifier = "==31.0.0" },
     { name = "langchain", specifier = "~=1.3.0" },
-    { name = "langchain-chroma", specifier = "~=0.2.6" },
-    { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
     { name = "langchain-community", specifier = "~=0.4.1" },
     { name = "langchain-core", specifier = ">=1.3.3,<2.0.0" },
     { name = "langchain-docling", marker = "extra == 'docling-image-description'", specifier = ">=1.1.0" },
@@ -8786,30 +8847,35 @@ requires-dist = [
     { name = "langchain-unstructured", marker = "extra == 'langchain-unstructured'", specifier = "~=1.0.0" },
     { name = "langchain-weaviate", specifier = ">=0.0.6" },
     { name = "langchainhub", specifier = "~=0.1.15" },
-    { name = "langflow-base", extras = ["aioboto3"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["arize"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["cassandra"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["chroma"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["complete"], marker = "extra == 'all'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["docling"], marker = "extra == 'docling-chunking'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["docling"], marker = "extra == 'docling-image-description'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["ibm-watsonx-clients"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["kubernetes"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langfuse"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langsmith"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langwatch"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["litellm"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["mcp"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openinference"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openlayer"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["opik"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["redis"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["toolguard"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["traceloop"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langfuse", marker = "extra == 'langfuse'", specifier = "~=3.8" },
+    { name = "langflow-services", extras = ["all"], marker = "extra == 'complete'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["cache-redis"], marker = "extra == 'redis'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["database-postgresql"], marker = "extra == 'postgresql'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["database-sqlite", "memory-base"], editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["deployment-watsonx-orchestrate"], marker = "extra == 'ibm-watsonx-clients'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["job-queue-redis"], marker = "extra == 'job-queue-redis'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["job-queue-redis"], marker = "extra == 'redis'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["memory-base"], marker = "extra == 'chroma'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["production"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["storage-s3"], marker = "extra == 'aioboto3'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["task-celery"], marker = "extra == 'celery'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-all"], marker = "extra == 'tracing-all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-arize"], marker = "extra == 'arize'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-langfuse"], marker = "extra == 'langfuse'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-langsmith"], marker = "extra == 'langsmith'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-langwatch"], marker = "extra == 'langwatch'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-openinference"], marker = "extra == 'openinference'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-openlayer"], marker = "extra == 'openlayer'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-opik"], marker = "extra == 'opik'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-traceloop"], marker = "extra == 'traceloop'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["variable-kubernetes"], marker = "extra == 'kubernetes'", editable = "src/langflow-services" },
     { name = "langgraph-checkpoint", specifier = ">4.0.0,<5.0.0" },
-    { name = "langsmith", marker = "extra == 'langsmith'", specifier = ">=0.3.42,<1.0.0" },
-    { name = "langwatch", marker = "python_full_version < '3.14' and extra == 'langwatch'", specifier = "~=0.10.0" },
     { name = "lark", marker = "extra == 'lark'", specifier = "==1.2.2" },
     { name = "lfx", editable = "src/lfx" },
     { name = "lfx", marker = "extra == 'beautifulsoup'", editable = "src/lfx" },
@@ -8835,8 +8901,6 @@ requires-dist = [
     { name = "onnxruntime", marker = "python_full_version < '3.14'", specifier = ">=1.20,<1.24" },
     { name = "onnxruntime", marker = "python_full_version >= '3.14'", specifier = ">=1.26" },
     { name = "opendsstar", marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'x86_64' and extra == 'opendsstar') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'opendsstar')", specifier = "==1.0.26" },
-    { name = "openinference-instrumentation-langchain", marker = "extra == 'openinference'", specifier = ">=0.1.29" },
-    { name = "openlayer", marker = "extra == 'openlayer'", specifier = ">=0.9.0,<1.0.0" },
     { name = "opensearch-py", marker = "extra == 'opensearch'", specifier = "==2.8.0" },
     { name = "opentelemetry-api", specifier = ">=1.30.0,<2.0.0" },
     { name = "opentelemetry-exporter-otlp", specifier = ">=1.30.0,<2.0.0" },
@@ -8845,7 +8909,6 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-requests", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-instrumentation-urllib3", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.30.0,<2.0.0" },
-    { name = "opik", marker = "extra == 'opik'", specifier = ">=2.0.0,<3.0.0" },
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
@@ -8857,7 +8920,6 @@ requires-dist = [
     { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = ">=23.0.1,<24.0.0" },
     { name = "pyasn1", specifier = ">=0.6.3,<0.7.0" },
     { name = "pydantic", specifier = ">=2.13.0,<3.0.0" },
-    { name = "pydantic", marker = "extra == 'langfuse'", specifier = ">=2.13.0" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.12.1" },
     { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.10.1" },
@@ -8871,7 +8933,6 @@ requires-dist = [
     { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = ">=1.12.0,<2.0.0" },
     { name = "qianfan", marker = "extra == 'qianfan'", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", marker = "python_full_version < '3.13' and extra == 'ragstack'", specifier = "==0.2.1" },
-    { name = "redis", marker = "extra == 'redis'", specifier = ">=7.4.0,<8.0.0" },
     { name = "rich", specifier = ">=13.7.0,<14.0.0" },
     { name = "scipy", specifier = ">=1.15.2,<2.0.0" },
     { name = "scrapegraph-py", marker = "extra == 'scrapegraph'", specifier = ">=1.12.0" },
@@ -8884,14 +8945,11 @@ requires-dist = [
     { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
     { name = "spider-client", marker = "extra == 'spider'", specifier = ">=0.0.27,<1.0.0" },
     { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlmodel", specifier = "~=0.0.37" },
     { name = "sseclient-py", marker = "extra == 'sseclient'", specifier = "==1.8.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
     { name = "tiktoken", marker = "extra == 'docling-chunking'", specifier = ">=0.7.0" },
-    { name = "traceloop-sdk", marker = "extra == 'traceloop'", specifier = ">=0.43.1,<1.0.0" },
     { name = "transformers", specifier = ">=5.6.0,<6.0.0" },
     { name = "trustcall", specifier = ">=0.0.38,<1.0.0" },
     { name = "twelvelabs", marker = "extra == 'twelvelabs'", specifier = ">=0.4.7,<1.0.0" },
@@ -8910,7 +8968,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "opendsstar", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "job-queue-redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "opendsstar", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "tracing-all", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "celery", "astrapy", "gassist", "ibm-watsonx-clients", "production", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -8987,6 +9045,250 @@ dev = [
     { name = "respx", specifier = ">=0.21.0" },
     { name = "ruff", specifier = ">=0.9.10" },
 ]
+
+[[package]]
+name = "langflow-services"
+version = "0.11.0"
+source = { editable = "src/langflow-services" }
+dependencies = [
+    { name = "aiofiles" },
+    { name = "alembic" },
+    { name = "anyio" },
+    { name = "bcrypt" },
+    { name = "cachetools" },
+    { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
+    { name = "cryptography", version = "49.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14' or (python_full_version < '3.11' and platform_machine != 'arm64' and sys_platform == 'darwin')" },
+    { name = "dill" },
+    { name = "email-validator" },
+    { name = "fastapi" },
+    { name = "filelock" },
+    { name = "greenlet" },
+    { name = "httpx", extra = ["http2"] },
+    { name = "lfx" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp" },
+    { name = "opentelemetry-exporter-prometheus" },
+    { name = "opentelemetry-sdk" },
+    { name = "orjson" },
+    { name = "passlib" },
+    { name = "platformdirs" },
+    { name = "prometheus-client" },
+    { name = "pydantic" },
+    { name = "pyjwt" },
+    { name = "sqlalchemy" },
+    { name = "sqlmodel" },
+    { name = "tenacity" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "aioboto3" },
+    { name = "aiosqlite" },
+    { name = "arize-phoenix-otel" },
+    { name = "celery" },
+    { name = "chromadb" },
+    { name = "ibm-cloud-sdk-core" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
+    { name = "kubernetes" },
+    { name = "langchain-chroma" },
+    { name = "langchain-core" },
+    { name = "langfuse" },
+    { name = "langsmith" },
+    { name = "langwatch", marker = "python_full_version < '3.14'" },
+    { name = "openinference-instrumentation-langchain" },
+    { name = "openlayer" },
+    { name = "opik" },
+    { name = "redis" },
+    { name = "sqlalchemy", extra = ["aiosqlite", "postgresql-psycopg"] },
+    { name = "traceloop-sdk" },
+]
+cache-redis = [
+    { name = "redis" },
+]
+database-postgresql = [
+    { name = "sqlalchemy", extra = ["postgresql-psycopg"] },
+]
+database-sqlite = [
+    { name = "aiosqlite" },
+    { name = "sqlalchemy", extra = ["aiosqlite"] },
+]
+deployment-watsonx-orchestrate = [
+    { name = "ibm-cloud-sdk-core" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
+]
+job-queue-redis = [
+    { name = "redis" },
+]
+memory-base = [
+    { name = "chromadb" },
+    { name = "langchain-chroma" },
+    { name = "langchain-core" },
+]
+production = [
+    { name = "aioboto3" },
+    { name = "celery" },
+    { name = "chromadb" },
+    { name = "langchain-chroma" },
+    { name = "langchain-core" },
+    { name = "redis" },
+    { name = "sqlalchemy", extra = ["postgresql-psycopg"] },
+]
+storage-s3 = [
+    { name = "aioboto3" },
+]
+task-celery = [
+    { name = "celery" },
+]
+tracing-all = [
+    { name = "arize-phoenix-otel" },
+    { name = "langfuse" },
+    { name = "langsmith" },
+    { name = "langwatch", marker = "python_full_version < '3.14'" },
+    { name = "openinference-instrumentation-langchain" },
+    { name = "openlayer" },
+    { name = "opik" },
+    { name = "traceloop-sdk" },
+]
+tracing-arize = [
+    { name = "arize-phoenix-otel" },
+    { name = "openinference-instrumentation-langchain" },
+]
+tracing-langfuse = [
+    { name = "langfuse" },
+]
+tracing-langsmith = [
+    { name = "langsmith" },
+]
+tracing-langwatch = [
+    { name = "langwatch", marker = "python_full_version < '3.14'" },
+]
+tracing-openinference = [
+    { name = "openinference-instrumentation-langchain" },
+]
+tracing-openlayer = [
+    { name = "openlayer" },
+]
+tracing-opik = [
+    { name = "opik" },
+]
+tracing-traceloop = [
+    { name = "traceloop-sdk" },
+]
+variable-kubernetes = [
+    { name = "kubernetes" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aioboto3", marker = "extra == 'storage-s3'", specifier = ">=15.2.0,<16.0.0" },
+    { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
+    { name = "aiosqlite", marker = "extra == 'database-sqlite'", specifier = ">=0.20.0,<1.0.0" },
+    { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
+    { name = "anyio", specifier = ">=4.0.0" },
+    { name = "arize-phoenix-otel", marker = "extra == 'tracing-arize'", specifier = ">=0.6.1" },
+    { name = "bcrypt", specifier = "==4.0.1" },
+    { name = "cachetools", specifier = ">=6.0.0" },
+    { name = "celery", marker = "extra == 'task-celery'", specifier = ">=5.3.0,<6.0.0" },
+    { name = "chromadb", marker = "extra == 'memory-base'", specifier = ">=1.0.0,<2.0.0" },
+    { name = "cryptography", specifier = ">=48.0.1" },
+    { name = "dill", specifier = ">=0.3.8" },
+    { name = "email-validator", specifier = ">=2.0.0" },
+    { name = "fastapi", specifier = ">=0.135.0,<1.0.0" },
+    { name = "filelock", specifier = ">=3.20.1,<4.0.0" },
+    { name = "greenlet", specifier = ">=3.1.1,<4.0.0" },
+    { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
+    { name = "ibm-cloud-sdk-core", marker = "extra == 'deployment-watsonx-orchestrate'", specifier = "~=3.24.4" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and extra == 'deployment-watsonx-orchestrate'", specifier = "~=2.12.0" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and extra == 'deployment-watsonx-orchestrate'", specifier = "~=2.12.0" },
+    { name = "kubernetes", marker = "extra == 'variable-kubernetes'", specifier = "==31.0.0" },
+    { name = "langchain-chroma", marker = "extra == 'memory-base'", specifier = "~=0.2.6" },
+    { name = "langchain-core", marker = "extra == 'memory-base'", specifier = ">=1.3.3,<2.0.0" },
+    { name = "langflow-services", extras = ["auth"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["auth"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["authorization"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["authorization"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["cache"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["cache-redis"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["cache-redis"], marker = "extra == 'job-queue-redis'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["cache-redis"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["chat"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["chat"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["database-postgresql"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["database-postgresql"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["database-sqlite"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["deployment-watsonx-orchestrate"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["flow-events"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["flow-events"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["job-queue"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["job-queue-redis"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["job-queue-redis"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["jobs"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["jobs"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["memory-base"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["memory-base"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["session"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["session"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["shared-component-cache"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["shared-component-cache"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["state"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["state"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["storage"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["storage-s3"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["storage-s3"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["store"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["store"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["task"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["task-celery"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["task-celery"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["telemetry"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["telemetry"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["telemetry-writer"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["telemetry-writer"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-all"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-arize"], marker = "extra == 'tracing-all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-langfuse"], marker = "extra == 'tracing-all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-langsmith"], marker = "extra == 'tracing-all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-langwatch"], marker = "extra == 'tracing-all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-openinference"], marker = "extra == 'tracing-all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-openinference"], marker = "extra == 'tracing-arize'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-openlayer"], marker = "extra == 'tracing-all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-opik"], marker = "extra == 'tracing-all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["tracing-traceloop"], marker = "extra == 'tracing-all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["transaction"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["transaction"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["variable"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["variable"], marker = "extra == 'production'", editable = "src/langflow-services" },
+    { name = "langflow-services", extras = ["variable-kubernetes"], marker = "extra == 'all'", editable = "src/langflow-services" },
+    { name = "langfuse", marker = "extra == 'tracing-langfuse'", specifier = "~=3.8" },
+    { name = "langsmith", marker = "extra == 'tracing-langsmith'", specifier = ">=0.3.42,<1.0.0" },
+    { name = "langwatch", marker = "python_full_version < '3.14' and extra == 'tracing-langwatch'", specifier = "~=0.10.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "openinference-instrumentation-langchain", marker = "extra == 'tracing-openinference'", specifier = ">=0.1.29" },
+    { name = "openlayer", marker = "extra == 'tracing-openlayer'", specifier = ">=0.9.0,<1.0.0" },
+    { name = "opentelemetry-api", specifier = ">=1.30.0,<2.0.0" },
+    { name = "opentelemetry-exporter-otlp", specifier = ">=1.30.0,<2.0.0" },
+    { name = "opentelemetry-exporter-prometheus", specifier = ">=0.50b0,<1.0.0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.30.0,<2.0.0" },
+    { name = "opik", marker = "extra == 'tracing-opik'", specifier = ">=2.0.0,<3.0.0" },
+    { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
+    { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
+    { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
+    { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
+    { name = "pydantic", specifier = ">=2.13.0,<3.0.0" },
+    { name = "pyjwt", specifier = ">=2.12.1" },
+    { name = "redis", marker = "extra == 'cache-redis'", specifier = ">=7.4.0,<8.0.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.38,<3.0.0" },
+    { name = "sqlalchemy", extras = ["aiosqlite"], marker = "extra == 'database-sqlite'", specifier = ">=2.0.38,<3.0.0" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'database-postgresql'", specifier = ">=2.0.38,<3.0.0" },
+    { name = "sqlmodel", specifier = "~=0.0.37" },
+    { name = "tenacity", specifier = ">=8.0.0" },
+    { name = "traceloop-sdk", marker = "extra == 'tracing-traceloop'", specifier = ">=0.43.1,<1.0.0" },
+]
+provides-extras = ["auth", "authorization", "cache", "chat", "flow-events", "job-queue", "jobs", "memory-base", "session", "shared-component-cache", "state", "storage", "store", "task", "telemetry", "telemetry-writer", "tracing", "transaction", "variable", "database-sqlite", "database-postgresql", "cache-redis", "job-queue-redis", "storage-s3", "variable-kubernetes", "task-celery", "tracing-langfuse", "tracing-langwatch", "tracing-langsmith", "tracing-arize", "tracing-openinference", "tracing-opik", "tracing-traceloop", "tracing-openlayer", "tracing-all", "deployment-watsonx-orchestrate", "production", "all"]
 
 [[package]]
 name = "langflow-stepflow"
@@ -14716,69 +15018,6 @@ wheels = [
 ]
 
 [[package]]
-name = "psycopg2-binary"
-version = "2.9.12"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2a/60/a3624f79acea344c16fbef3a94d28b89a8042ddfb8f3e4ca83f538671409/psycopg2_binary-2.9.12.tar.gz", hash = "sha256:5ac9444edc768c02a6b6a591f070b8aae28ff3a99be57560ac996001580f294c", size = 379686, upload-time = "2026-04-21T09:40:34.304Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/78/80/49bacf9e51617d8309f6f0123e29edc793f6f5f6700c7d1f1b20782fbb37/psycopg2_binary-2.9.12-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:9b818ceff717f98851a64bffd4c5eb5b3059ae280276dcecc52ac658dcf006a4", size = 3712314, upload-time = "2026-04-20T23:33:31.363Z" },
-    { url = "https://files.pythonhosted.org/packages/d3/f2/98eeac7d60c43df9338287834edf9b3e69be68a2db78a57b1b81d705e735/psycopg2_binary-2.9.12-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:d2fa0d7caca8635c56e373055094eeda3208d901d55dd0ff5abc1d4e47f82b56", size = 3822389, upload-time = "2026-04-20T23:33:34.178Z" },
-    { url = "https://files.pythonhosted.org/packages/9f/7c/30575e75f14d5351a56a1971bb43fe7f8bf7edf1b654fb1bec65c42a8812/psycopg2_binary-2.9.12-cp310-cp310-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:864c261b3690e1207d14bbfe0a61e27567981b80c47a778561e49f676f7ce433", size = 4578448, upload-time = "2026-04-20T23:33:37.073Z" },
-    { url = "https://files.pythonhosted.org/packages/65/9b/4df366d89f28c527dc39d0b6c98a5ca74e30d37ac097b73f3352147568ae/psycopg2_binary-2.9.12-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:c5ee5213445dd45312459029b8c4c0a695461eb517b753d2582315bd07995f5e", size = 4273705, upload-time = "2026-04-20T23:33:39.291Z" },
-    { url = "https://files.pythonhosted.org/packages/4e/8a/c566803818eb03161ba869b6ba612bf7ad56816d98b9e5121e0a22ad6b0b/psycopg2_binary-2.9.12-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:6f9cae1f848779b5b01f417e762c40d026ea93eb0648249a604728cda991dde3", size = 5893784, upload-time = "2026-04-20T23:33:41.658Z" },
-    { url = "https://files.pythonhosted.org/packages/63/fe/0dfa5797e0b229e0567bc378695224caf14d547f73b05be0c80549089772/psycopg2_binary-2.9.12-cp310-cp310-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl", hash = "sha256:63a3ebbd543d3d1eda088ac99164e8c5bac15293ee91f20281fd17d050aee1c4", size = 4109306, upload-time = "2026-04-20T23:33:43.953Z" },
-    { url = "https://files.pythonhosted.org/packages/3c/89/28063adf17a4ba501eedd9890feab0c649ee4d8bd0a97df0ff1e9584feab/psycopg2_binary-2.9.12-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:d6fcbba8c9fed08a73b8ac61ea79e4821e45b1e92bb466230c5e746bbf3d5256", size = 3654400, upload-time = "2026-04-20T23:33:46.115Z" },
-    { url = "https://files.pythonhosted.org/packages/84/94/5a01de0aa4ead0b8d8d1aa4ec18cec0bd36d03fa714eaa5bb8a0b1b50020/psycopg2_binary-2.9.12-cp310-cp310-musllinux_1_2_ppc64le.whl", hash = "sha256:36512911ebb2b60a0c3e44d0bb5048c1980aced91235d133b7874f3d1d93487c", size = 3299215, upload-time = "2026-04-20T23:33:48.202Z" },
-    { url = "https://files.pythonhosted.org/packages/7a/85/723bb085a61c6ac2dc0a0043f375f2fe7365363e27b073bad56ca5bda979/psycopg2_binary-2.9.12-cp310-cp310-musllinux_1_2_riscv64.whl", hash = "sha256:8ffdb59fe88f99589e34354a130217aa1fd2d615612402d6edc8b3dbc7a44463", size = 3047724, upload-time = "2026-04-20T23:33:50.74Z" },
-    { url = "https://files.pythonhosted.org/packages/b4/67/4d8b1e0d2fc4166677380eac0edf9cdff91013aca2546e8ef7bc04b56158/psycopg2_binary-2.9.12-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:a46fe069b65255df410f856d842bc235f90e22ffdf532dda625fd4213d3fd9b1", size = 3349183, upload-time = "2026-04-20T23:33:59.635Z" },
-    { url = "https://files.pythonhosted.org/packages/73/99/21af7a5498637ea4dc91a17c281a53bc1d632fbafe00f6689fbfb32a9fed/psycopg2_binary-2.9.12-cp310-cp310-win_amd64.whl", hash = "sha256:ab29414b25dcb698bf26bf213e3348abdcd07bbd5de032a5bec15bd75b298b03", size = 2757036, upload-time = "2026-04-20T23:34:01.606Z" },
-    { url = "https://files.pythonhosted.org/packages/d5/19/d4ce60954f3bb9d8e3bc5e5c4d1f2487de2d3851bf2391d54954c9df12a6/psycopg2_binary-2.9.12-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:5c8ce6c61bd1b1f6b9c24ee32211599f6166af2c55abb19456090a21fd16554b", size = 3712338, upload-time = "2026-04-20T23:34:03.961Z" },
-    { url = "https://files.pythonhosted.org/packages/53/71/c85409ee0d78890f0660eff262e815e7dd2bb741a17611d82e9e8cd9dc5e/psycopg2_binary-2.9.12-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:b4a9eaa6e7f4ff91bec10aa3fb296878e75187bced5cc4bafe17dc40915e1326", size = 3822407, upload-time = "2026-04-20T23:34:05.977Z" },
-    { url = "https://files.pythonhosted.org/packages/3c/ed/60486c2c7f0d4d1ede2bfb1ed27e2498477ce646bc7f6b2759906303117e/psycopg2_binary-2.9.12-cp311-cp311-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:c6528cefc8e50fcc6f4a107e27a672058b36cc5736d665476aeb413ba88dbb06", size = 4578425, upload-time = "2026-04-20T23:34:08.246Z" },
-    { url = "https://files.pythonhosted.org/packages/0b/b9/656cb03fad9f4f49f2145c334b1126ee75189929ca4e6187d485a2d59951/psycopg2_binary-2.9.12-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:e4e184b1fb6072bf05388aa41c697e1b2d01b3473f107e7ec44f186a32cfd0b8", size = 4273709, upload-time = "2026-04-20T23:34:10.974Z" },
-    { url = "https://files.pythonhosted.org/packages/99/66/08cf0da0e25cc6fb142c89be45fc8418792858f0c4cbff5e24530ff02cd6/psycopg2_binary-2.9.12-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:4766ab678563054d3f1d064a4db19cc4b5f9e3a8d9018592a8285cf200c248f3", size = 5893779, upload-time = "2026-04-20T23:34:13.905Z" },
-    { url = "https://files.pythonhosted.org/packages/17/d7/eecd9ce8e146d3721115d82d3836efdbb712187e4590325df549989d18f4/psycopg2_binary-2.9.12-cp311-cp311-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl", hash = "sha256:5a0253224780c978746cb9be55a946bcdaf40fe3519c0f622924cdabdafe2c39", size = 4109308, upload-time = "2026-04-20T23:34:16.761Z" },
-    { url = "https://files.pythonhosted.org/packages/b6/2e/b1dc289b362cc8d45697b57eefbd673186f49a4ea0906928988e3affcc98/psycopg2_binary-2.9.12-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:0dc9228d47c46bda253d2ecd6bb93b56a9f2d7ad33b684a1fa3622bf74ffe30c", size = 3654405, upload-time = "2026-04-20T23:34:19.303Z" },
-    { url = "https://files.pythonhosted.org/packages/eb/e4/4c4aea6473214dbdbd0fbba11aa4691e76dc01722c55724c5951719865ff/psycopg2_binary-2.9.12-cp311-cp311-musllinux_1_2_ppc64le.whl", hash = "sha256:f921f3cd87035ef7df233383011d7a53ea1d346224752c1385f1edfd790ceb6a", size = 3299187, upload-time = "2026-04-20T23:34:21.206Z" },
-    { url = "https://files.pythonhosted.org/packages/ba/5d/b03b99986446a4f57b170ed9a2579fb7ff9783ca0fa5226b19db99737fee/psycopg2_binary-2.9.12-cp311-cp311-musllinux_1_2_riscv64.whl", hash = "sha256:3d999bd982a723113c1a45b55a7a6a90d64d0ed2278020ed625c490ff7bef96c", size = 3047716, upload-time = "2026-04-20T23:34:23.077Z" },
-    { url = "https://files.pythonhosted.org/packages/14/86/382ee4afbd1d97500c9d2862b20c2fdeddf4b7335e984df3fb4309f64108/psycopg2_binary-2.9.12-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:29d4d134bd0ab46ffb04e94aa3c5fa3ef582e9026609165e2f758ff76fc3a3be", size = 3349237, upload-time = "2026-04-20T23:34:25.211Z" },
-    { url = "https://files.pythonhosted.org/packages/a8/16/9a57c75ba1eda7165c017342f526810d5f5a12647dde749c99ae9a7141d7/psycopg2_binary-2.9.12-cp311-cp311-win_amd64.whl", hash = "sha256:cb4a1dacdd48077150dc762a9e5ddbf32c256d66cb46f80839391aa458774936", size = 2757036, upload-time = "2026-04-20T23:34:27.77Z" },
-    { url = "https://files.pythonhosted.org/packages/e2/9f/ef4ef3c8e15083df90ca35265cfd1a081a2f0cc07bb229c6314c6af817f4/psycopg2_binary-2.9.12-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:5cdc05117180c5fa9c40eea8ea559ce64d73824c39d928b7da9fb5f6a9392433", size = 3712459, upload-time = "2026-04-20T23:34:30.549Z" },
-    { url = "https://files.pythonhosted.org/packages/b5/01/3dd14e46ba48c1e1a6ec58ee599fa1b5efa00c246d5046cd903d0eeb1af1/psycopg2_binary-2.9.12-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:d3227a3bc228c10d21011a99245edca923e4e8bf461857e869a507d9a41fe9f6", size = 3822936, upload-time = "2026-04-20T23:34:32.77Z" },
-    { url = "https://files.pythonhosted.org/packages/a6/f7/0640e4901119d8a9f7a1784b927f494e2198e213ceb593753d1f2c8b1b30/psycopg2_binary-2.9.12-cp312-cp312-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:995ce929eede89db6254b50827e2b7fd61e50d11f0b116b29fffe4a2e53c4580", size = 4578676, upload-time = "2026-04-20T23:34:35.18Z" },
-    { url = "https://files.pythonhosted.org/packages/b0/55/44df3965b5f297c50cc0b1b594a31c67d6127a9d133045b8a66611b14dfb/psycopg2_binary-2.9.12-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:9fe06d93e72f1c048e731a2e3e7854a5bfaa58fc736068df90b352cefe66f03f", size = 4274917, upload-time = "2026-04-20T23:34:37.982Z" },
-    { url = "https://files.pythonhosted.org/packages/b0/4b/74535248b1eac0c9336862e8617c765ac94dac76f9e25d7c4a79588c8907/psycopg2_binary-2.9.12-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:40e7b28b63aaf737cb3a1edc3a9bbc9a9f4ad3dcb7152e8c1130e4050eddcb7d", size = 5894843, upload-time = "2026-04-20T23:34:40.856Z" },
-    { url = "https://files.pythonhosted.org/packages/f2/ba/f1bf8d2ae71868ad800b661099086ee52bc0f8d9f05be1acd8ebb06757cc/psycopg2_binary-2.9.12-cp312-cp312-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl", hash = "sha256:89d19a9f7899e8eb0656a2b3a08e0da04c720a06db6e0033eab5928aabe60fa9", size = 4110556, upload-time = "2026-04-20T23:34:44.016Z" },
-    { url = "https://files.pythonhosted.org/packages/45/46/c15706c338403b7c420bcc0c2905aad116cc064545686d8bf85f1999ea00/psycopg2_binary-2.9.12-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:612b965daee295ae2da8f8218ce1d274645dc76ef3f1abf6a0a94fd57eff876d", size = 3655714, upload-time = "2026-04-20T23:34:46.233Z" },
-    { url = "https://files.pythonhosted.org/packages/b3/7c/a2d5dc09b64a4564db242a0fe418fde7d33f6f8259dd2c5b9d7def00fb5a/psycopg2_binary-2.9.12-cp312-cp312-musllinux_1_2_ppc64le.whl", hash = "sha256:b9a339b79d37c1b45f3235265f07cdeb0cb5ad7acd2ac7720a5920989c17c24e", size = 3301154, upload-time = "2026-04-20T23:34:49.528Z" },
-    { url = "https://files.pythonhosted.org/packages/c0/e8/cc8c9a4ce71461f9ec548d38cadc41dc184b34c73e6455450775a9334ccd/psycopg2_binary-2.9.12-cp312-cp312-musllinux_1_2_riscv64.whl", hash = "sha256:3471336e1acfd9c7fe507b8bad5af9317b6a89294f9eb37bd9a030bb7bebcdc6", size = 3048882, upload-time = "2026-04-20T23:34:51.86Z" },
-    { url = "https://files.pythonhosted.org/packages/19/6a/31e2296bc0787c5ab75d3d118e40b239db8151b5192b90b77c72bc9256e9/psycopg2_binary-2.9.12-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:7af18183109e23502c8b2ae7f6926c0882766f35b5175a4cd737ad825e4d7a1b", size = 3351298, upload-time = "2026-04-20T23:34:54.124Z" },
-    { url = "https://files.pythonhosted.org/packages/5f/a8/75f4e3e11203b590150abed2cf7794b9c9c9f7eceddae955191138b44dde/psycopg2_binary-2.9.12-cp312-cp312-win_amd64.whl", hash = "sha256:398fcd4db988c7d7d3713e2b8e18939776fd3fb447052daae4f24fa39daede4c", size = 2757230, upload-time = "2026-04-20T23:34:56.242Z" },
-    { url = "https://files.pythonhosted.org/packages/91/bb/4608c96f970f6e0c56572e87027ef4404f709382a3503e9934526d7ba051/psycopg2_binary-2.9.12-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:7c729a73c7b1b84de3582f73cdd27d905121dc2c531f3d9a3c32a3011033b965", size = 3712419, upload-time = "2026-04-20T23:34:58.754Z" },
-    { url = "https://files.pythonhosted.org/packages/5e/af/48f76af9d50d61cf390f8cd657b503168b089e2e9298e48465d029fcc713/psycopg2_binary-2.9.12-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:4413d0caef93c5cf50b96863df4c2efe8c269bf2267df353225595e7e15e8df7", size = 3822990, upload-time = "2026-04-20T23:35:00.821Z" },
-    { url = "https://files.pythonhosted.org/packages/7a/df/aba0f99397cd811d32e06fc0cc781f1f3ce98bc0e729cb423925085d781a/psycopg2_binary-2.9.12-cp313-cp313-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:4dfcf8e45ebb0c663be34a3442f65e17311f3367089cd4e5e3a3e8e62c978777", size = 4578696, upload-time = "2026-04-20T23:35:03.409Z" },
-    { url = "https://files.pythonhosted.org/packages/95/9c/eaa74021ac4e4d5c2f83d82fc6615a63f4fe6c94dc4e94c3990427053f67/psycopg2_binary-2.9.12-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:c41321a14dd74aceb6a9a643b9253a334521babfa763fa873e33d89cfa122fb5", size = 4274982, upload-time = "2026-04-20T23:35:05.583Z" },
-    { url = "https://files.pythonhosted.org/packages/35/ed/c25deff98bd26187ba48b3b250a3ffc3037c46c5b89362534a15d200e0db/psycopg2_binary-2.9.12-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:83946ba43979ebfdc99a3cd0ee775c89f221df026984ba19d46133d8d75d3cd9", size = 5894867, upload-time = "2026-04-20T23:35:07.902Z" },
-    { url = "https://files.pythonhosted.org/packages/9a/81/8d0e21ca77373c6c9589e5c4528f6e8f0c08c62cafc76fb0bddb7a2cee22/psycopg2_binary-2.9.12-cp313-cp313-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl", hash = "sha256:411e85815652d13560fbe731878daa5d92378c4995a22302071890ec3397d019", size = 4110578, upload-time = "2026-04-20T23:35:10.149Z" },
-    { url = "https://files.pythonhosted.org/packages/00/fc/f481e2435bd8f742d0123309174aae4165160ad3ef17c1b99c3622c241d2/psycopg2_binary-2.9.12-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:1c8ad4c08e00f7679559eaed7aff1edfffc60c086b976f93972f686384a95e2c", size = 3655816, upload-time = "2026-04-20T23:35:12.56Z" },
-    { url = "https://files.pythonhosted.org/packages/53/79/b9f46466bdbe9f239c96cde8be33c1aace4842f06013b47b730dc9759187/psycopg2_binary-2.9.12-cp313-cp313-musllinux_1_2_ppc64le.whl", hash = "sha256:00814e40fa23c2b37ef0a1e3c749d89982c73a9cb5046137f0752a22d432e82f", size = 3301307, upload-time = "2026-04-20T23:35:15.029Z" },
-    { url = "https://files.pythonhosted.org/packages/3f/19/7dc003b32fe35024df89b658104f7c8538a8b2dcbde7a4e746ce929742e7/psycopg2_binary-2.9.12-cp313-cp313-musllinux_1_2_riscv64.whl", hash = "sha256:98062447aebc20ed20add1f547a364fd0ef8933640d5372ff1873f8deb9b61be", size = 3048968, upload-time = "2026-04-20T23:35:16.757Z" },
-    { url = "https://files.pythonhosted.org/packages/91/58/2dbd7db5c604d45f4950d988506aae672a14126ec22998ced5021cbb76bb/psycopg2_binary-2.9.12-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:66a7685d7e548f10fb4ce32fb01a7b7f4aa702134de92a292c7bd9e0d3dbd290", size = 3351369, upload-time = "2026-04-20T23:35:18.933Z" },
-    { url = "https://files.pythonhosted.org/packages/42/ee/dee8dcaad07f735824de3d6563bc67119fa6c28257b17977a8d624f02fab/psycopg2_binary-2.9.12-cp313-cp313-win_amd64.whl", hash = "sha256:b6937f5fe4e180aeee87de907a2fa982ded6f7f15d7218f78a083e4e1d68f2a0", size = 2757347, upload-time = "2026-04-20T23:35:21.283Z" },
-    { url = "https://files.pythonhosted.org/packages/13/1b/708c0dca874acfad6d65314271859899a79007686f3a1f74e82a2ed4b645/psycopg2_binary-2.9.12-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:6f3b3de8a74ef8db215f22edffb19e32dc6fa41340456de7ec99efdc8a7b3ec2", size = 3712428, upload-time = "2026-04-20T23:35:23.453Z" },
-    { url = "https://files.pythonhosted.org/packages/d6/39/ddbea9d4b4de6aca9431b6ed253f530f8a02d3b8f9bcfd0dbfe2b3de6fe4/psycopg2_binary-2.9.12-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:1006fb62f0f0bc5ce256a832356c6262e91be43f5e4eb15b5eaf38079464caf2", size = 3823184, upload-time = "2026-04-20T23:35:25.92Z" },
-    { url = "https://files.pythonhosted.org/packages/bf/a0/bc2fef74b106fa345567122a0659e6d94512ed7dc0131ec44c9e5aba3725/psycopg2_binary-2.9.12-cp314-cp314-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:840066105706cd2eb29b9a1c2329620056582a4bf3e8169dec5c447042d0869f", size = 4579157, upload-time = "2026-04-20T23:35:28.542Z" },
-    { url = "https://files.pythonhosted.org/packages/57/d7/d4e3b2005d3de607ca4fbb0e8742e248056e52184a6b94ebda3c1c2c329b/psycopg2_binary-2.9.12-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:863f5d12241ebe1c76a72a04c2113b6dc905f90b9cef0e9be0efd994affd9354", size = 4274970, upload-time = "2026-04-20T23:35:30.418Z" },
-    { url = "https://files.pythonhosted.org/packages/2e/42/c9853f8db3967fe08bcde11f53d53b85d351750cae726ce001cb68afa9c1/psycopg2_binary-2.9.12-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:a99eaab34a9010f1a086b126de467466620a750634d114d20455f3a824aae033", size = 5895175, upload-time = "2026-04-20T23:35:33.584Z" },
-    { url = "https://files.pythonhosted.org/packages/eb/fd/b82b5601a97630308bef079f545ffec481bbbc795c2ba5ec416a01d03f60/psycopg2_binary-2.9.12-cp314-cp314-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl", hash = "sha256:ffdd7dc5463ccd61845ac37b7012d0f35a1548df9febe14f8dd549be4a0bc81e", size = 4110658, upload-time = "2026-04-20T23:35:35.638Z" },
-    { url = "https://files.pythonhosted.org/packages/62/8c/32ca69b0389ef25dd22937bf9e8fbe2ce27aea20b05ded48c4ce4cb42475/psycopg2_binary-2.9.12-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:54a0dfecab1b48731f934e06139dfe11e24219fb6d0ceb32177cf0375f14c7b5", size = 3656251, upload-time = "2026-04-20T23:35:37.854Z" },
-    { url = "https://files.pythonhosted.org/packages/c4/29/96992a2b59e3b9d730fcf9612d0a387305025dc867a9fc490a9e496e074e/psycopg2_binary-2.9.12-cp314-cp314-musllinux_1_2_ppc64le.whl", hash = "sha256:96937c9c5d891f772430f418a7a8b4691a90c3e6b93cf72b5bd7cad8cbca32a5", size = 3301810, upload-time = "2026-04-20T23:35:39.927Z" },
-    { url = "https://files.pythonhosted.org/packages/56/ad/44b06659949b243ae10112cd3b20a197f9bf3e81d5651379b9eb889bfaad/psycopg2_binary-2.9.12-cp314-cp314-musllinux_1_2_riscv64.whl", hash = "sha256:77b348775efd4cdab410ec6609d81ccecd1139c90265fa583a7255c8064bc03d", size = 3048977, upload-time = "2026-04-20T23:35:41.806Z" },
-    { url = "https://files.pythonhosted.org/packages/1d/f2/10a1bcebadb6aa55e280e1f58975c36a7b560ea525184c7aa4064c466633/psycopg2_binary-2.9.12-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:527e6342b3e44c2f0544f6b8e927d60de7f163f5723b8f1dfa7d2a84298738cd", size = 3351466, upload-time = "2026-04-20T23:35:43.993Z" },
-    { url = "https://files.pythonhosted.org/packages/20/be/b732c8418ffa5bcfda002890f5dc4c869fc17db66ff11f53b17cfe44afc0/psycopg2_binary-2.9.12-cp314-cp314-win_amd64.whl", hash = "sha256:f12ae41fcafadb39b2785e64a40f9db05d6de2ac114077457e0e7c597f3af980", size = 2848762, upload-time = "2026-04-20T23:35:46.421Z" },
-]
-
-[[package]]
 name = "ptyprocess"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -18594,9 +18833,6 @@ aiosqlite = [
 postgresql-psycopg = [
     { name = "psycopg" },
 ]
-postgresql-psycopg2binary = [
-    { name = "psycopg2-binary" },
-]
 
 [[package]]
 name = "sqlite-vec"
@@ -20226,6 +20462,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/53/66/a435d9ae49850b2f071f7ebd8119dd4e84872b01630d6736761e6e7fd847/validators-0.35.0.tar.gz", hash = "sha256:992d6c48a4e77c81f1b4daba10d16c3a9bb0dbb79b3a19ea847ff0928e70497a", size = 73399, upload-time = "2025-05-01T05:42:06.7Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/6e/3e955517e22cbdd565f2f8b2e73d52528b14b8bcfdb04f62466b071de847/validators-0.35.0-py3-none-any.whl", hash = "sha256:e8c947097eae7892cb3d26868d637f79f47b4a0554bc6b80065dfe5aac3705dd", size = 44712, upload-time = "2025-05-01T05:42:04.203Z" },
+]
+
+[[package]]
+name = "vine"
+version = "5.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/bd/e4/d07b5f29d283596b9727dd5275ccbceb63c44a1a82aa9e4bfd20426762ac/vine-5.1.0.tar.gz", hash = "sha256:8b62e981d35c41049211cf62a0a1242d8c1ee9bd15bb196ce38aefd6799e61e0", size = 48980, upload-time = "2023-11-05T08:46:53.857Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/03/ff/7c0c86c43b3cbb927e0ccc0255cb4057ceba4799cd44ae95174ce8e8b5b2/vine-5.1.0-py3-none-any.whl", hash = "sha256:40fdf3c48b2cfe1c38a49e9ae2da6fda88e4794c810050a728bd7413811fb1dc", size = 9636, upload-time = "2023-11-05T08:46:51.205Z" },
 ]
 
 [[package]]

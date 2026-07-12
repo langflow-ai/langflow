@@ -101,6 +101,7 @@ explicit = true
 
 [tool.uv.sources]
 langflow-base = { workspace = true }
+langflow-services = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
 langflow-sdk = { workspace = true }
@@ -130,6 +131,7 @@ torchvision = { index = "pytorch-cpu" }
 [tool.uv.workspace]
 members = [
     "src/backend/base",
+    "src/langflow-services",
     ".",
     "src/lfx",
     "src/langflow-stepflow",
@@ -200,10 +202,7 @@ nv-ingest = [
     "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
 ]
 
-postgresql = [
-    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
-    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
-]
+postgresql = ["langflow-base[postgresql]"]
 
 [tool.uv]
 override-dependencies = [
@@ -385,8 +384,26 @@ external = ["RUF027"]
 "src/backend/base/langflow/services/cache/*" = [
     "S301",  # Pickle usage is intentional for caching
 ]
+"src/langflow-services/src/services/cache/*" = [
+    "S301",  # Pickle usage is intentional for caching
+]
 "src/backend/base/langflow/services/tracing/*" = [
     "SLF001",  # Third-party library private member access (langwatch, opik)
+]
+"src/langflow-services/src/services/tracing/*" = [
+    "SLF001",  # Third-party library private member access (langwatch, opik)
+]
+"src/langflow-services/src/services/auth/service.py" = [
+    "PLW0603",  # Host hook registration intentionally mutates module globals
+]
+"src/langflow-services/src/services/database/factory.py" = [
+    "PLW0603",  # Host alembic path provider registration
+]
+"src/langflow-services/src/services/memory_base/kb_hooks.py" = [
+    "PLW0603",  # Host KB helper registration
+]
+"scripts/ci/check_services_isolated_wheel.py" = [
+    "S603",  # Trusted local uv/pip/python invocations
 ]
 "src/lfx/src/lfx/base/curl/parse.py" = [
     "S105",  # False positive: 'token' variable name, not a password

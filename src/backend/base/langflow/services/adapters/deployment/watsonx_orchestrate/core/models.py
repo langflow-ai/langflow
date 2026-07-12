@@ -1,13 +1,13 @@
-"""Model-catalog retrieval helpers for the wxO deployment adapter."""
+"""Compatibility re-export from the standalone ``services`` package.
+
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import sys
 
-if TYPE_CHECKING:
-    from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
+from services.adapters.deployment.watsonx_orchestrate.core import models as _impl
 
-
-def fetch_models_adapter(clients: WxOClient, params: dict[str, Any] | None = None) -> Any:
-    """Fetch raw provider models through the adapter client seam."""
-    return clients.get_models_raw(params=params)
+sys.modules[__name__] = _impl

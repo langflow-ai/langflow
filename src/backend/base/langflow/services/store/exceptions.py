@@ -1,25 +1,13 @@
-class CustomError(Exception):
-    def __init__(self, detail: str, status_code: int):
-        super().__init__(detail)
-        self.status_code = status_code
+"""Compatibility re-export from the standalone ``services`` package.
 
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
-# Define custom exceptions with status codes
-class UnauthorizedError(CustomError):
-    def __init__(self, detail: str = "Unauthorized access"):
-        super().__init__(detail, 401)
+from __future__ import annotations
 
+import sys
 
-class ForbiddenError(CustomError):
-    def __init__(self, detail: str = "Forbidden"):
-        super().__init__(detail, 403)
+from services.store import exceptions as _impl
 
-
-class APIKeyError(CustomError):
-    def __init__(self, detail: str = "API key error"):
-        super().__init__(detail, 400)  # ! Should be 401
-
-
-class FilterError(CustomError):
-    def __init__(self, detail: str = "Filter error"):
-        super().__init__(detail, 400)
+sys.modules[__name__] = _impl

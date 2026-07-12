@@ -1,13 +1,13 @@
-"""Database service constants."""
+"""Compatibility re-export from the standalone ``services`` package.
 
-# Minimum PostgreSQL major version required by Langflow.
-# The schema uses UNIQUE NULLS DISTINCT, which is only supported in PostgreSQL 15+.
-MIN_POSTGRESQL_MAJOR_VERSION = 15
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
-# User-facing message when migrations fail due to PostgreSQL < 15 (e.g. UNIQUE NULLS DISTINCT).
-POSTGRESQL_VERSION_REQUIRED_MESSAGE = (
-    f"Langflow requires PostgreSQL {MIN_POSTGRESQL_MAJOR_VERSION} or higher when using PostgreSQL as the database. "
-    "The current PostgreSQL version does not support the syntax used by Langflow's schema. "
-    f"Please upgrade your PostgreSQL instance to version {MIN_POSTGRESQL_MAJOR_VERSION} or higher. "
-    "See: https://docs.langflow.org/configuration-custom-database"
-)
+from __future__ import annotations
+
+import sys
+
+from services.database import constants as _impl
+
+sys.modules[__name__] = _impl

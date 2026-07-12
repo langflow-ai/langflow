@@ -66,6 +66,38 @@ def update_lfx_dep_in_base(pyproject_path: str, lfx_version: str) -> None:
     filepath.write_text(content, encoding="utf-8")
 
 
+def update_langflow_services_dep_in_base(pyproject_path: str, services_version: str) -> None:
+    """Pin langflow-services in langflow-base to an exact nightly/dev version."""
+    filepath = BASE_DIR / pyproject_path
+    content = filepath.read_text(encoding="utf-8")
+
+    version_pattern = r"[0-9]+(?:\.[0-9]+)*(?:\.(?:post|dev|a|b|rc)\d+)*"
+    pattern = re.compile(rf'"langflow-services(?:~=|==|>=){version_pattern}"')
+
+    if not pattern.search(content):
+        msg = f'langflow-services dependency not found in "{filepath}"'
+        raise ValueError(msg)
+
+    content = pattern.sub(f'"langflow-services=={services_version}"', content)
+    filepath.write_text(content, encoding="utf-8")
+
+
+def update_lfx_dep_in_services(pyproject_path: str, lfx_version: str) -> None:
+    """Pin lfx in langflow-services to an exact nightly/dev version."""
+    filepath = BASE_DIR / pyproject_path
+    content = filepath.read_text(encoding="utf-8")
+
+    version_pattern = r"[0-9]+(?:\.[0-9]+)*(?:\.(?:post|dev|a|b|rc)\d+)*"
+    pattern = re.compile(rf'"lfx(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==){version_pattern}([^"]*)"')
+
+    if not pattern.search(content):
+        msg = f'LFX dependency not found in "{filepath}"'
+        raise ValueError(msg)
+
+    content = pattern.sub(lambda m: f'"lfx{m.group(1)}=={lfx_version}{m.group(2)}"', content)
+    filepath.write_text(content, encoding="utf-8")
+
+
 def verify_pep440(version):
     """Verify if version is PEP440 compliant.
 
@@ -93,6 +125,10 @@ def main() -> None:
 
     # Update LFX dependency in langflow-base
     update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)
+
+    # Keep langflow-services in lockstep with langflow-base.
+    update_langflow_services_dep_in_base("src/backend/base/pyproject.toml", base_version)
+    update_lfx_dep_in_services("src/langflow-services/pyproject.toml", lfx_version)
 
 
 if __name__ == "__main__":

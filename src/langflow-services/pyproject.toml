@@ -1,0 +1,197 @@
+[project]
+name = "langflow-services"
+version = "0.11.0"
+description = "Concrete Langflow service implementations for the LFX pluggable service layer"
+requires-python = ">=3.10,<3.15"
+license = "MIT"
+readme = "OWNERSHIP.md"
+dependencies = [
+    "lfx~=1.11.0",
+    "cachetools>=6.0.0",
+    "sqlmodel~=0.0.37",
+    # Shared DB stack (dialect drivers live in database-* extras).
+    "sqlalchemy>=2.0.38,<3.0.0",
+    "alembic>=1.13.0,<2.0.0",
+    "anyio>=4.0.0",
+    "tenacity>=8.0.0",
+    "filelock>=3.20.1,<4.0.0",
+    "orjson>=3.11.6,<4.0.0",
+    "pydantic>=2.13.0,<3.0.0",
+    "email-validator>=2.0.0",
+    "httpx[http2]>=0.27,<1.0.0",
+    "aiofiles>=24.1.0,<25.0.0",
+    "passlib>=1.7.4,<2.0.0",
+    "bcrypt==4.0.1",
+    "PyJWT>=2.12.1",
+    "cryptography>=48.0.1",
+    "platformdirs>=4.2.0,<5.0.0",
+    "fastapi>=0.135.0,<1.0.0",
+    "dill>=0.3.8",
+    "opentelemetry-api>=1.30.0,<2.0.0",
+    "opentelemetry-sdk>=1.30.0,<2.0.0",
+    "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
+    "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
+    "prometheus-client>=0.20.0,<1.0.0",
+    "greenlet>=3.1.1,<4.0.0",
+]
+
+[project.optional-dependencies]
+# ---------------------------------------------------------------------------
+# Service-package ownership markers (one per services/<name>/).
+# Empty extras mark ownership when the default path needs no extra third-party
+# deps. Use <service>-<backend> extras only when a service has distinct
+# selectable backends (database, tracing, storage-s3, cache-redis, …).
+# ---------------------------------------------------------------------------
+auth = []
+authorization = []
+cache = []
+chat = []
+flow-events = []
+job-queue = []
+jobs = []
+memory-base = [
+    "chromadb>=1.0.0,<2.0.0",
+    "langchain-chroma~=0.2.6",
+    "langchain-core>=1.3.3,<2.0.0",
+]
+session = []
+shared-component-cache = []
+state = []
+storage = []
+store = []
+task = []
+telemetry = []
+telemetry-writer = []
+tracing = []
+transaction = []
+variable = []
+
+# ---------------------------------------------------------------------------
+# Selectable backends / providers (only where distinct deps are needed).
+# ---------------------------------------------------------------------------
+database-sqlite = [
+    "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
+    "aiosqlite>=0.20.0,<1.0.0",
+]
+database-postgresql = [
+    # DatabaseService rewrites postgres URLs to postgresql+psycopg (psycopg3).
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+]
+cache-redis = ["redis>=7.4.0,<8.0.0"]
+job-queue-redis = ["langflow-services[cache-redis]"]
+storage-s3 = ["aioboto3>=15.2.0,<16.0.0"]
+variable-kubernetes = ["kubernetes==31.0.0"]
+task-celery = ["celery>=5.3.0,<6.0.0"]
+
+tracing-langfuse = ["langfuse~=3.8"]
+tracing-langwatch = ["langwatch~=0.10.0; python_version < '3.14'"]
+tracing-langsmith = ["langsmith>=0.3.42,<1.0.0"]
+tracing-arize = [
+    "arize-phoenix-otel>=0.6.1",
+    # arize_phoenix.py imports openinference.semconv at module level.
+    "langflow-services[tracing-openinference]",
+]
+tracing-openinference = ["openinference-instrumentation-langchain>=0.1.29"]
+tracing-opik = ["opik>=2.0.0,<3.0.0"]
+tracing-traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
+tracing-openlayer = ["openlayer>=0.9.0,<1.0.0"]
+tracing-all = [
+    "langflow-services[tracing-langfuse]",
+    "langflow-services[tracing-langwatch]",
+    "langflow-services[tracing-langsmith]",
+    "langflow-services[tracing-arize]",
+    "langflow-services[tracing-openinference]",
+    "langflow-services[tracing-opik]",
+    "langflow-services[tracing-traceloop]",
+    "langflow-services[tracing-openlayer]",
+]
+
+# Nested path: services/adapters/deployment/watsonx_orchestrate
+# Flat extra name (PEP 508 cannot express bracket nesting).
+deployment-watsonx-orchestrate = [
+    "ibm-cloud-sdk-core~=3.24.4",
+    "ibm-watsonx-orchestrate-core~=2.12.0; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-clients~=2.12.0; python_version >= '3.11'",
+]
+
+# Every Langflow-owned service, preferring production backends where they
+# exist (Postgres / Redis / S3 / Celery). Remaining services keep their
+# only/default implementation. Variables default to the DB store
+# (``variable_store="db"``); Kubernetes is opt-in via variable-kubernetes.
+# Tracing providers stay opt-in via tracing-* / tracing-all.
+production = [
+    # Production backends (replace local/dev defaults)
+    "langflow-services[database-postgresql]",
+    "langflow-services[cache-redis]",
+    "langflow-services[job-queue-redis]",
+    "langflow-services[storage-s3]",
+    "langflow-services[task-celery]",
+    # Default / only implementations
+    "langflow-services[auth]",
+    "langflow-services[authorization]",
+    "langflow-services[chat]",
+    "langflow-services[flow-events]",
+    "langflow-services[jobs]",
+    "langflow-services[memory-base]",
+    "langflow-services[session]",
+    "langflow-services[shared-component-cache]",
+    "langflow-services[state]",
+    "langflow-services[store]",
+    "langflow-services[telemetry]",
+    "langflow-services[telemetry-writer]",
+    "langflow-services[tracing]",
+    "langflow-services[transaction]",
+    "langflow-services[variable]",
+]
+
+# Full install: every service shell + every selectable backend/provider.
+all = [
+    "langflow-services[auth]",
+    "langflow-services[authorization]",
+    "langflow-services[cache]",
+    "langflow-services[chat]",
+    "langflow-services[flow-events]",
+    "langflow-services[job-queue]",
+    "langflow-services[jobs]",
+    "langflow-services[memory-base]",
+    "langflow-services[session]",
+    "langflow-services[shared-component-cache]",
+    "langflow-services[state]",
+    "langflow-services[storage]",
+    "langflow-services[store]",
+    "langflow-services[task]",
+    "langflow-services[telemetry]",
+    "langflow-services[telemetry-writer]",
+    "langflow-services[tracing]",
+    "langflow-services[transaction]",
+    "langflow-services[variable]",
+    "langflow-services[database-sqlite]",
+    "langflow-services[database-postgresql]",
+    "langflow-services[cache-redis]",
+    "langflow-services[job-queue-redis]",
+    "langflow-services[storage-s3]",
+    "langflow-services[variable-kubernetes]",
+    "langflow-services[task-celery]",
+    "langflow-services[tracing-all]",
+    "langflow-services[deployment-watsonx-orchestrate]",
+]
+
+# The host loads service-package registrars only after registering its CRUD,
+# Alembic, version, and lifecycle hooks.
+[project.entry-points."lfx.service-packages"]
+langflow-services = "services.bootstrap:register_all_service_factories"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# Hatch includes this package recursively, including every services/<name>/
+# subpackage represented by the service-package extras above.
+packages = ["src/services"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src/services",
+    "/OWNERSHIP.md",
+]

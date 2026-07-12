@@ -1,18 +1,13 @@
-from typing import TYPE_CHECKING
+"""Compatibility re-export from the standalone ``services`` package.
 
-from typing_extensions import override
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.shared_component_cache.service import SharedComponentCacheService
+from __future__ import annotations
 
-if TYPE_CHECKING:
-    from lfx.services.settings.service import SettingsService
+import sys
 
+from services.shared_component_cache import factory as _impl
 
-class SharedComponentCacheServiceFactory(ServiceFactory):
-    def __init__(self) -> None:
-        super().__init__(SharedComponentCacheService)
-
-    @override
-    def create(self, settings_service: "SettingsService"):
-        return SharedComponentCacheService(expiration_time=settings_service.settings.cache_expire)
+sys.modules[__name__] = _impl

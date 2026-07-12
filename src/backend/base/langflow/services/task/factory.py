@@ -1,14 +1,13 @@
-from lfx.services.settings.service import SettingsService
-from typing_extensions import override
+"""Compatibility re-export from the standalone ``services`` package.
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.task.service import TaskService
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
+from __future__ import annotations
 
-class TaskServiceFactory(ServiceFactory):
-    def __init__(self) -> None:
-        super().__init__(TaskService)
+import sys
 
-    @override
-    def create(self, settings_service: SettingsService):
-        return TaskService(settings_service)
+from services.task import factory as _impl
+
+sys.modules[__name__] = _impl

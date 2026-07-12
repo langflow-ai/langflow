@@ -6,6 +6,8 @@ on:
       - 'src/backend/base/langflow/alembic/**'
       - 'src/backend/base/langflow/services/database/models/**'
       - 'src/backend/base/langflow/services/database/service.py'
+      - 'src/langflow-services/src/services/database/service.py'
+      - 'src/langflow-services/src/services/database/factory.py'
       - 'src/backend/tests/unit/alembic/**'
       - '.github/workflows/migration-validation.yml'
 

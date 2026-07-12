@@ -1,20 +1,13 @@
-from pydantic import BaseModel, field_serializer
-from pydantic_core import PydanticSerializationError
+"""Compatibility re-export from the standalone ``services`` package.
 
-from langflow.schema.log import LoggableType
-from langflow.serialization.serialization import serialize
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
+from __future__ import annotations
 
-class Log(BaseModel):
-    name: str
-    message: LoggableType
-    type: str
+import sys
 
-    @field_serializer("message")
-    def serialize_message(self, value):
-        try:
-            return serialize(value)
-        except UnicodeDecodeError:
-            return str(value)  # Fallback to string representation
-        except PydanticSerializationError:
-            return str(value)  # Fallback to string for Pydantic errors
+from services.tracing import schema as _impl
+
+sys.modules[__name__] = _impl

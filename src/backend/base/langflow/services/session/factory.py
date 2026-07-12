@@ -1,18 +1,13 @@
-from typing import TYPE_CHECKING
+"""Compatibility re-export from the standalone ``services`` package.
 
-from typing_extensions import override
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.session.service import SessionService
+from __future__ import annotations
 
-if TYPE_CHECKING:
-    from langflow.services.cache.service import CacheService
+import sys
 
+from services.session import factory as _impl
 
-class SessionServiceFactory(ServiceFactory):
-    def __init__(self) -> None:
-        super().__init__(SessionService)
-
-    @override
-    def create(self, cache_service: "CacheService"):
-        return SessionService(cache_service)
+sys.modules[__name__] = _impl

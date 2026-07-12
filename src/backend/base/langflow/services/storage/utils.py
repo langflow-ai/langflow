@@ -1,5 +1,13 @@
-from lfx.utils.helpers import build_content_type_from_extension
+"""Compatibility re-export from the standalone ``services`` package.
 
-__all__ = [
-    "build_content_type_from_extension",
-]
+Aliases this module to the concrete implementation so public and private
+names, monkeypatches, and identity checks resolve to one object.
+"""
+
+from __future__ import annotations
+
+import sys
+
+from services.storage import utils as _impl
+
+sys.modules[__name__] = _impl

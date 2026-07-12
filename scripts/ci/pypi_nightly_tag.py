@@ -26,12 +26,15 @@ import requests
 from packaging.version import Version
 
 # Count dev releases against the CANONICAL projects (not `*-nightly`), since the nightly is
-# published as canonical `.devN` pre-releases of `langflow` / `langflow-base`.
+# published as canonical `.devN` pre-releases of `langflow` / `langflow-base` /
+# `langflow-services`.
 PYPI_LANGFLOW_URL = "https://pypi.org/pypi/langflow/json"
 PYPI_LANGFLOW_BASE_URL = "https://pypi.org/pypi/langflow-base/json"
+PYPI_LANGFLOW_SERVICES_URL = "https://pypi.org/pypi/langflow-services/json"
 
-# main and base MUST share one dev number, so the shared number is derived from both packages.
-PYPI_CANONICAL_URLS = (PYPI_LANGFLOW_URL, PYPI_LANGFLOW_BASE_URL)
+# main/base/services MUST share one nightly `.devN` (nightly remaps base+services onto the
+# root version axis), so the shared number is derived from all three packages.
+PYPI_CANONICAL_URLS = (PYPI_LANGFLOW_URL, PYPI_LANGFLOW_BASE_URL, PYPI_LANGFLOW_SERVICES_URL)
 
 ARGUMENT_NUMBER = 2
 VALID_BUILD_TYPES = ("main", "base", "both")

@@ -3,7 +3,11 @@
 import sys
 from pathlib import Path
 
-from update_lf_base_dependency import update_lfx_dep_in_base
+from update_lf_base_dependency import (
+    update_langflow_services_dep_in_base,
+    update_lfx_dep_in_base,
+    update_lfx_dep_in_services,
+)
 from update_pyproject_version import update_pyproject_version
 from update_uv_dependency import update_uv_dep as update_version_uv_dep
 
@@ -46,10 +50,14 @@ def main():
 
     # First handle base package updates (canonical name kept).
     update_pyproject_version("src/backend/base/pyproject.toml", base_tag)
+    # langflow-services tracks the langflow-base version axis.
+    update_pyproject_version("src/langflow-services/pyproject.toml", base_tag)
 
-    # Update LFX dependency in langflow-base (exact canonical dev pin).
+    # Update LFX dependency in langflow-base and langflow-services (exact canonical dev pin).
     lfx_version = lfx_tag.lstrip("v")
     update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)
+    update_lfx_dep_in_services("src/langflow-services/pyproject.toml", lfx_version)
+    update_langflow_services_dep_in_base("src/backend/base/pyproject.toml", base_tag.lstrip("v"))
 
     # Then handle main package updates (canonical name kept).
     update_pyproject_version("pyproject.toml", main_tag)
