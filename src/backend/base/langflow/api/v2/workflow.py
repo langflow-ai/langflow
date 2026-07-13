@@ -876,6 +876,8 @@ async def resume_workflow(
     Owner-or-superuser; a non-owner non-superuser (or unknown/non-workflow job)
     maps to 404 to avoid leaking other users' runs. A stale/duplicate request_id
     or a non-suspended job maps to 409 (single-use enforced behind ``resume_job``).
+    Resuming executes the remainder of the flow, so flow:execute is re-enforced —
+    access revoked while the run was suspended must not let the decision through.
     """
 
     def _not_found() -> HTTPException:
@@ -894,7 +896,9 @@ async def resume_workflow(
     if job is None or job.type != JobType.WORKFLOW or not (is_owner or current_user.is_superuser):
         raise _not_found()
 
-    from langflow.api.v2.hitl import is_decision_allowed, mark_card_answered
+    from langflow.api.v2.hitl import ensure_resume_execute_permission, is_decision_allowed, mark_card_answered
+
+    await ensure_resume_execute_permission(current_user, job.flow_id)
 
     if not await is_decision_allowed(parsed_job_id, request.decision or {}):
         raise HTTPException(
@@ -910,6 +914,9 @@ async def resume_workflow(
     service = get_background_execution_service()
     if service._frame_source_factory is None:  # noqa: SLF001
         service._frame_source_factory = _default_frame_source_factory  # noqa: SLF001
+    # Snapshot the card id before the continuation runs: it may reach another pause and
+    # overwrite job metadata, and this decision must never stamp that later card.
+    card_message_id = (job.job_metadata or {}).get("card_message_id")
     accepted = await service.resume_job(
         parsed_job_id,
         current_user,
@@ -926,7 +933,7 @@ async def resume_workflow(
                 "job_id": job_id,
             },
         )
-    await mark_card_answered(parsed_job_id, request.request_id, request.decision or {})
+    await mark_card_answered(parsed_job_id, request.request_id, request.decision or {}, card_message_id=card_message_id)
     return WorkflowResumeResponse(job_id=job_id, status="resuming", message="Resume accepted")
 
 

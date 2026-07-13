@@ -97,14 +97,42 @@ function forEachMessageCache(
   }
 }
 
-function cardAlreadyAnswered(messageId: string): boolean {
+/**
+ * Cards are matched by the nested human_input content's request_id, NOT by message id:
+ * a live card uses the synthetic `human-input-${request_id}` id, but a persisted card
+ * reloads from the DB with a database UUID, and the answered state must survive that.
+ */
+function isCardMessageFor(message: Message, requestId: string): boolean {
+  return (
+    findHumanInputContent(message.content_blocks)?.request_id === requestId
+  );
+}
+
+function cardAlreadyAnswered(requestId: string): boolean {
   let answered = false;
   forEachMessageCache((_key, messages) => {
-    const msg = messages.find((m) => m.id === messageId);
-    const content = findHumanInputContent(msg?.content_blocks);
-    if (content?.submitted_action) answered = true;
+    for (const msg of messages) {
+      const content = findHumanInputContent(msg.content_blocks);
+      if (content?.request_id === requestId && content.submitted_action) {
+        answered = true;
+        return;
+      }
+    }
   });
   return answered;
+}
+
+/**
+ * Whether ANY card for this pause is already in the cache — answered or not. The
+ * persisted card (database id) and the synthetic one (`human-input-*` id) are distinct
+ * messages for the same request_id; injecting while either is visible duplicates the box.
+ */
+function cardAlreadyVisible(requestId: string): boolean {
+  let visible = false;
+  forEachMessageCache((_key, messages) => {
+    if (messages.some((m) => isCardMessageFor(m, requestId))) visible = true;
+  });
+  return visible;
 }
 
 /**
@@ -118,7 +146,7 @@ export function isHumanInputCardAnswered(
   jobId: string,
 ): boolean {
   const content = toInteractiveContent(payload, jobId);
-  return cardAlreadyAnswered(`human-input-${content.request_id}`);
+  return cardAlreadyAnswered(content.request_id);
 }
 
 /**
@@ -130,7 +158,6 @@ export function markHumanInputSubmitted(
   requestId: string,
   actionId: string,
 ): void {
-  const messageId = `human-input-${requestId}`;
   const stampBlocks = (
     blocks: ContentBlockItem[] | undefined,
   ): ContentBlockItem[] =>
@@ -147,10 +174,10 @@ export function markHumanInputSubmitted(
       };
     });
   forEachMessageCache((key, messages) => {
-    if (!messages.some((m) => m.id === messageId)) return;
+    if (!messages.some((m) => isCardMessageFor(m, requestId))) return;
     queryClient.setQueryData(key, (old: Message[] = []) =>
       old.map((m) =>
-        m.id === messageId
+        isCardMessageFor(m, requestId)
           ? { ...m, content_blocks: stampBlocks(m.content_blocks) }
           : m,
       ),
@@ -159,7 +186,7 @@ export function markHumanInputSubmitted(
   // injectHumanInputCard writes both caches, so the resolve must stamp both — else a surface reading
   // useMessagesStore (legacy IOModal) keeps an interactive card after the other surface answered.
   const store = useMessagesStore.getState();
-  const target = store.messages.find((m) => m.id === messageId);
+  const target = store.messages.find((m) => isCardMessageFor(m, requestId));
   if (target) {
     store.updateMessage({
       ...target,
@@ -177,9 +204,9 @@ export function injectHumanInputCard(
   const content = toInteractiveContent(payload, jobId);
   resumeRegistry.set(content.request_id, { jobId, opts });
   const messageId = `human-input-${content.request_id}`;
-  // A resume reattach replays the pause event; if the user already answered (the
-  // card carries submitted_action), re-injecting would clobber that choice. Skip.
-  if (cardAlreadyAnswered(messageId)) {
+  // Replayed pauses re-enter here; injecting while any card for this request_id is
+  // rendered would clobber an answered card or duplicate a pending one. Just flag.
+  if (cardAlreadyVisible(content.request_id)) {
     useFlowStore.getState().setAwaitingInput(true);
     return;
   }

@@ -654,13 +654,16 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if interrupts_enabled and thread_id and self._gated_interrupt_on():
             agent_config["configurable"] = {"thread_id": thread_id}
             get_pending_interrupt = self._pending_interrupt_getter(agent, agent_config)
-            decision = self._injected_agent_decision(thread_id)
-            if decision is not None:
-                # Resume the interrupted thread with the human pick rather than re-running
-                # from the original input; the checkpointer reloads the paused state.
-                value = await self._read_pending_interrupt_value(agent, agent_config)
-                action_requests = (value or {}).get("action_requests") or []
-                stream_input = Command(resume={"decisions": self._build_resume_decisions(decision, action_requests)})
+            if self._has_candidate_decision(thread_id):
+                # The injected decision must match the pending interrupt's nonce, so read
+                # the interrupt first; a matched decision resumes the checkpointed thread.
+                value, interrupt_id = await self._read_pending_interrupt(agent, agent_config)
+                decision = self._injected_agent_decision(thread_id, interrupt_id)
+                if decision is not None:
+                    action_requests = (value or {}).get("action_requests") or []
+                    stream_input = Command(
+                        resume={"decisions": self._build_resume_decisions(decision, action_requests)}
+                    )
         stream = adapt_graph_events_to_executor_shape(
             agent.astream_events(stream_input, config=agent_config, version="v2")
         )

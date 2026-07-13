@@ -17,12 +17,33 @@ from sqlalchemy.orm.attributes import flag_modified
 from langflow.services.deps import get_job_service
 
 __all__ = [
+    "ensure_resume_execute_permission",
     "is_decision_allowed",
     "list_pending_human_requests",
     "mark_card_answered",
     "persist_human_input_card",
     "reroute_decision_on_timeout",
 ]
+
+
+async def ensure_resume_execute_permission(current_user, flow_id: UUID) -> None:
+    """Re-enforce flow:execute before applying a resume decision.
+
+    Resume executes the remainder of the flow; job ownership alone is not enough —
+    shared access revoked while the run was suspended must not let the decision through.
+    """
+    from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+    from langflow.services.authorization import FlowAction, ensure_flow_permission
+
+    flow = await get_flow_by_id_or_endpoint_name(str(flow_id), current_user.id, widen_for_shares=True)
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=getattr(flow, "workspace_id", None),
+        folder_id=getattr(flow, "folder_id", None),
+    )
 
 
 async def list_pending_human_requests(flow_id: UUID, user_id: UUID) -> list[dict]:
@@ -120,16 +141,24 @@ async def persist_human_input_card(data: dict, flow_id: uuid.UUID, session_id: s
         await logger.awarning("Failed to persist human-input card for flow %s", flow_id, exc_info=True)
 
 
-def _set_submitted_action(content_blocks: list, action_id: str | None) -> bool:
-    """Stamp ``submitted_action`` on the card's content in place, preserving the rest."""
+def _set_submitted_action(content_blocks: list, action_id: str | None, request_id: str | None = None) -> bool:
+    """Stamp ``submitted_action`` on the card's content in place, preserving the rest.
+
+    With ``request_id`` set, only a content whose ``request_id`` matches is stamped, so
+    a decision can never resolve a different pause's card.
+    """
     changed = False
     for block in content_blocks or []:
         contents = block.get("contents") if isinstance(block, dict) else getattr(block, "contents", None)
         for content in contents or []:
-            ctype = content.get("type") if isinstance(content, dict) else getattr(content, "type", None)
+            is_dict = isinstance(content, dict)
+            ctype = content.get("type") if is_dict else getattr(content, "type", None)
             if ctype != "human_input":
                 continue
-            if isinstance(content, dict):
+            card_request_id = content.get("request_id") if is_dict else getattr(content, "request_id", None)
+            if request_id is not None and card_request_id != request_id:
+                continue
+            if is_dict:
                 content["submitted_action"] = action_id
             else:
                 content.submitted_action = action_id
@@ -137,18 +166,23 @@ def _set_submitted_action(content_blocks: list, action_id: str | None) -> bool:
     return changed
 
 
-async def mark_card_answered(job_id: UUID, request_id: str, decision: dict) -> None:  # noqa: ARG001
+async def mark_card_answered(job_id: UUID, request_id: str, decision: dict, *, card_message_id=None) -> None:
     """Record the chosen action on the persisted card message for ``job_id``.
 
     Patches the existing card in place so the prompt/options it was stored with are
-    preserved — rebuilding from the suspend event would drop them.
+    preserved — rebuilding from the suspend event would drop them. Callers should pass
+    the ``card_message_id`` they read BEFORE enqueuing the continuation: the resumed run
+    may reach another pause and overwrite job metadata, and the stamp must land on the
+    answered card, not the new one (``request_id`` is enforced against the card content
+    as a second guard).
     """
     from lfx.services.deps import session_scope
 
     from langflow.services.database.models.message.model import MessageTable
 
-    job = await get_job_service().get_job_by_job_id(job_id)
-    card_message_id = (job.job_metadata or {}).get("card_message_id") if job else None
+    if card_message_id is None:
+        job = await get_job_service().get_job_by_job_id(job_id)
+        card_message_id = (job.job_metadata or {}).get("card_message_id") if job else None
     if not card_message_id:
         return
     try:
@@ -156,7 +190,7 @@ async def mark_card_answered(job_id: UUID, request_id: str, decision: dict) -> N
             message = await session.get(MessageTable, UUID(str(card_message_id)))
             if message is None:
                 return
-            if _set_submitted_action(message.content_blocks, decision.get("action_id")):
+            if _set_submitted_action(message.content_blocks, decision.get("action_id"), request_id):
                 flag_modified(message, "content_blocks")
                 session.add(message)
     except Exception as _e:  # noqa: BLE001

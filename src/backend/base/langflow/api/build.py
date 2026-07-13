@@ -456,6 +456,7 @@ async def generate_flow_events(
         the paused node so it re-runs and routes (its first-run output was a placeholder).
         """
         from lfx.graph.graph.base import Graph as LfxGraph
+        from lfx.run.hitl import request_id_targets_vertex
         from lfx.services.deps import get_checkpoint_service
 
         from langflow.api.v2.hitl import reroute_decision_on_timeout
@@ -488,7 +489,7 @@ async def generate_flow_events(
                 outputs={"decision": action_id},
             )
         for vertex in graph.vertices:
-            if f"{vertex.id}:{run_id}" == resume["request_id"]:
+            if request_id_targets_vertex(str(resume["request_id"]), vertex.id, run_id):
                 vertex.built = False
                 _rerun_non_input_predecessors(graph, vertex.id)
         first_layer = graph.resume_first_layer()

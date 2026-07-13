@@ -65,12 +65,14 @@ class ToolApprovalMixin:
                 gated[name] = {"allowed_decisions": list(actions)}
         return gated
 
-    def _map_interrupt_to_request(self, value: dict[str, Any]) -> dict[str, Any]:
+    def _map_interrupt_to_request(self, value: dict[str, Any], interrupt_id: str | None = None) -> dict[str, Any]:
         """Translate a HumanInTheLoopMiddleware interrupt into the HITL pause request.
 
         Reuses the same ``request_id``/``options``/``allowed_decisions`` contract as the
         HumanInput node so the persisted card, resume route, and frontend treat an agent
-        tool-approval pause exactly like a node pause.
+        tool-approval pause exactly like a node pause. The interrupt id is appended as a
+        per-pause nonce: one agent can pause multiple times in a run, and without it a
+        stale resume for approval N would be accepted while approval N+1 is pending.
         """
         action_requests = value.get("action_requests") or []
         review_configs = value.get("review_configs") or []
@@ -81,8 +83,9 @@ class ToolApprovalMixin:
                     allowed.append(decision)
         calls = ", ".join(str(req.get("name")) for req in action_requests if req.get("name"))
         prompt = action_requests[0].get("description") if action_requests else ""
+        base_request_id = f"{self._id}:{self._agent_thread_id()}"
         return {
-            "request_id": f"{self._id}:{self._agent_thread_id()}",
+            "request_id": f"{base_request_id}:{interrupt_id}" if interrupt_id else base_request_id,
             "kind": KIND_TOOL_APPROVAL,
             "prompt": prompt or (f"Approve tool call: {calls}" if calls else "Approve the agent's next action?"),
             "options": [{"action_id": d, "label": DECISION_LABELS.get(d, d.title())} for d in allowed],
@@ -90,8 +93,8 @@ class ToolApprovalMixin:
             "action_requests": action_requests,
         }
 
-    async def _read_pending_interrupt_value(self, agent, config: dict[str, Any]) -> dict[str, Any] | None:
-        """Return the raw interrupt value (action_requests/review_configs) from the snapshot."""
+    async def _read_pending_interrupt(self, agent, config: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+        """Return (raw interrupt value, interrupt id) from the snapshot, or (None, None)."""
         snapshot = await agent.aget_state(config)
         interrupts = getattr(snapshot, "interrupts", None) or []
         if not interrupts:
@@ -100,9 +103,11 @@ class ToolApprovalMixin:
                 if interrupts:
                     break
         if not interrupts:
-            return None
-        value = getattr(interrupts[0], "value", None)
-        return value if isinstance(value, dict) else None
+            return None, None
+        first = interrupts[0]
+        value = getattr(first, "value", None)
+        interrupt_id = getattr(first, "id", None) or getattr(first, "interrupt_id", None)
+        return (value if isinstance(value, dict) else None), (str(interrupt_id) if interrupt_id else None)
 
     def _pending_interrupt_getter(self, agent, config: dict[str, Any]):
         """Closure that reports the agent's pending tool-approval request, or None.
@@ -112,16 +117,33 @@ class ToolApprovalMixin:
         """
 
         async def _get() -> dict[str, Any] | None:
-            value = await self._read_pending_interrupt_value(agent, config)
-            return self._map_interrupt_to_request(value) if value else None
+            value, interrupt_id = await self._read_pending_interrupt(agent, config)
+            return self._map_interrupt_to_request(value, interrupt_id) if value else None
 
         return _get
 
-    def _injected_agent_decision(self, thread_id: str) -> dict[str, Any] | None:
-        """Human decision for this agent's pending approval, injected on resume."""
+    def _has_candidate_decision(self, thread_id: str) -> bool:
+        """Whether any injected decision targets this agent's thread (any pause nonce)."""
+        decisions = getattr(self.graph, "human_input_decisions", None)
+        if not isinstance(decisions, dict):
+            return False
+        prefix = f"{self._id}:{thread_id}"
+        return any(key == prefix or str(key).startswith(prefix + ":") for key in decisions)
+
+    def _injected_agent_decision(self, thread_id: str, interrupt_id: str | None = None) -> dict[str, Any] | None:
+        """Human decision for this agent's pending approval, injected on resume.
+
+        Nonce-keyed decisions must match the pending interrupt exactly; the bare
+        ``component:thread`` key is only honored for checkpoints written before the
+        nonce existed, so an earlier approval's answer can never satisfy a later pause.
+        """
         decisions = getattr(self.graph, "human_input_decisions", None)
         if not isinstance(decisions, dict):
             return None
+        if interrupt_id:
+            nonce_match = decisions.get(f"{self._id}:{thread_id}:{interrupt_id}")
+            if nonce_match is not None:
+                return nonce_match
         return decisions.get(f"{self._id}:{thread_id}")
 
     @staticmethod

@@ -18,6 +18,7 @@ import { cn } from "@/utils/utils";
 import { useMessageDuration } from "../hooks/use-message-duration";
 import { useStreamingMessage } from "../hooks/use-streaming-message";
 import {
+  excludeHumanInputBlocks,
   getContentBlockLoadingState,
   getContentBlockState,
   resolveContentBlockLayout,
@@ -168,7 +169,9 @@ export const BotMessage = memo(
 
     const { displayedContentBlocks, showBubbleBody } =
       resolveContentBlockLayout(
-        chat.content_blocks ?? [],
+        // The dedicated HumanInputCard below owns the pause render; leaving the
+        // human_input block in would paint a duplicate card via ContentDisplay.
+        excludeHumanInputBlocks(chat.content_blocks ?? []),
         chat.message?.toString(),
         Boolean(editMessage),
       );

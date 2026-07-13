@@ -30,7 +30,7 @@ from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 from lfx.run._defaults import apply_run_defaults
-from lfx.run.hitl import reroute_decision_on_timeout
+from lfx.run.hitl import request_id_targets_vertex, reroute_decision_on_timeout
 from lfx.schema.schema import INPUT_FIELD_NAME
 from lfx.schema.workflow import (
     ErrorDetail,
@@ -265,7 +265,7 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
             request.request_id: decision,
         }
         for vertex in graph.vertices:
-            if f"{vertex.id}:{graph.run_id}" == request.request_id:
+            if request_id_targets_vertex(request.request_id, vertex.id, str(graph.run_id)):
                 vertex.built = False
         # Re-run the fixpoint post-un-build: a dropped producer feeding only the request
         # vertex was still built at restore time, and its restored None would crash the re-run.

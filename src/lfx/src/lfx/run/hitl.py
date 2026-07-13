@@ -38,6 +38,18 @@ _MAX_PAUSES = 100
 EXPIRED_ACTION = "__expired__"
 
 
+def request_id_targets_vertex(request_id: str, vertex_id: str, run_id: str) -> bool:
+    """Whether a resume ``request_id`` addresses this vertex's pause.
+
+    Node pauses use ``vertex_id:run_id``; agent tool-approval pauses append a
+    per-pause interrupt id (``vertex_id:run_id:interrupt_id``) so each approval
+    in one run is individually addressable and a stale resume for an earlier
+    approval cannot be applied to a later one.
+    """
+    base = f"{vertex_id}:{run_id}"
+    return request_id == base or request_id.startswith(base + ":")
+
+
 def reroute_decision_on_timeout(pending: dict | None, decision: dict) -> dict:
     """Reroute a late HITL decision once the pause timed out.
 
@@ -120,7 +132,7 @@ async def run_graph_with_human_input(
                 request_id: decision,
             }
             for vertex in graph.vertices:
-                if f"{vertex.id}:{graph.run_id}" == request_id:
+                if request_id_targets_vertex(str(request_id), vertex.id, str(graph.run_id)):
                     vertex.built = False
             # Re-run the fixpoint post-un-build: a dropped producer feeding only the paused
             # vertex was still built at restore time, and its restored None would crash the re-run.

@@ -161,6 +161,117 @@ async def test_mark_card_answered_is_noop_without_card_message(client):  # noqa:
     await mark_card_answered(uuid4(), "req-1", {"action_id": "approve"})
 
 
+async def test_resume_reenforces_flow_execute_permission(client, created_api_key, suspended_job, monkeypatch):
+    """Resume executes the rest of the flow, so flow:execute is re-checked at resume time.
+
+    Job ownership alone must not be enough: shared access revoked while the run was
+    suspended (a plugin-enforced deny) has to block the decision and keep the job SUSPENDED.
+    """
+    import langflow.services.authorization as authz
+    from fastapi import HTTPException
+
+    async def _deny(*_args, **_kwargs):
+        raise HTTPException(status_code=403, detail="flow:execute denied")
+
+    monkeypatch.setattr(authz, "ensure_flow_permission", _deny)
+    body = {"request_id": "req-1", "decision": {"action_id": "approve"}}
+    resp = await client.post(f"api/v2/workflows/{suspended_job}/resume", json=body, headers=_headers(created_api_key))
+    assert resp.status_code == 403, resp.text
+    async with session_scope() as session:
+        job = await session.get(Job, suspended_job)
+        assert job.status == JobStatus.SUSPENDED
+
+
+def _card_row(flow_id, request_id: str):
+    from langflow.services.database.models.message.model import MessageTable
+
+    return MessageTable(
+        flow_id=flow_id,
+        session_id="sess-cards",
+        sender="Machine",
+        sender_name="AI",
+        text="",
+        files=[],
+        category="message",
+        content_blocks=[
+            {
+                "title": "Human input required",
+                "contents": [{"type": "human_input", "request_id": request_id, "options": []}],
+            }
+        ],
+    )
+
+
+async def test_mark_card_answered_stamps_snapshot_card_not_next_pause(client, created_api_key):  # noqa: ARG001
+    """The decision stamps the card captured before resume, never a later pause's card.
+
+    Simulates the race: the continuation already reached a second pause and overwrote
+    job_metadata.card_message_id, but the caller passes the pre-resume snapshot id.
+    """
+    from langflow.api.v2.hitl import mark_card_answered
+    from langflow.services.database.models.message.model import MessageTable
+
+    user_id = created_api_key.user_id
+    flow_id, job_id = uuid4(), uuid4()
+    first_card, second_card = _card_row(flow_id, "req-1"), _card_row(flow_id, "req-2")
+    async with session_scope() as session:
+        session.add(Flow(id=flow_id, name=f"f-{flow_id}", data={"nodes": [], "edges": []}, user_id=user_id))
+        session.add(first_card)
+        session.add(second_card)
+        await session.flush()
+        first_id, second_id = first_card.id, second_card.id
+        session.add(
+            Job(
+                job_id=job_id,
+                flow_id=flow_id,
+                user_id=user_id,
+                type=JobType.WORKFLOW,
+                status=JobStatus.SUSPENDED,
+                job_metadata={"card_message_id": str(second_id)},
+            )
+        )
+        await session.flush()
+    try:
+        await mark_card_answered(job_id, "req-1", {"action_id": "approve"}, card_message_id=str(first_id))
+        async with session_scope() as session:
+            first = await session.get(MessageTable, first_id)
+            second = await session.get(MessageTable, second_id)
+            assert first.content_blocks[0]["contents"][0]["submitted_action"] == "approve"
+            assert "submitted_action" not in second.content_blocks[0]["contents"][0]
+    finally:
+        async with session_scope() as session:
+            for model, key in ((Job, job_id), (MessageTable, first_id), (MessageTable, second_id), (Flow, flow_id)):
+                row = await session.get(model, key)
+                if row:
+                    await session.delete(row)
+
+
+async def test_mark_card_answered_skips_card_of_a_different_request(client, created_api_key):  # noqa: ARG001
+    """Even a stale card_message_id cannot stamp a card whose request_id differs."""
+    from langflow.api.v2.hitl import mark_card_answered
+    from langflow.services.database.models.message.model import MessageTable
+
+    user_id = created_api_key.user_id
+    flow_id = uuid4()
+    other_card = _card_row(flow_id, "req-2")
+    async with session_scope() as session:
+        session.add(Flow(id=flow_id, name=f"f-{flow_id}", data={"nodes": [], "edges": []}, user_id=user_id))
+        session.add(other_card)
+        await session.flush()
+        other_id = other_card.id
+    try:
+        await mark_card_answered(uuid4(), "req-1", {"action_id": "approve"}, card_message_id=str(other_id))
+        async with session_scope() as session:
+            other = await session.get(MessageTable, other_id)
+            assert "submitted_action" not in other.content_blocks[0]["contents"][0]
+    finally:
+        async with session_scope() as session:
+            for model, key in ((MessageTable, other_id), (Flow, flow_id)):
+                row = await session.get(model, key)
+                if row:
+                    await session.delete(row)
+
+
 async def test_list_pending_returns_suspended_hitl(client, created_api_key):
     """GET /workflows/pending surfaces a SUSPENDED HITL job + its pending request."""
     from sqlmodel import select
