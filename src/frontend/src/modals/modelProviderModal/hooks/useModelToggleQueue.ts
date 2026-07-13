@@ -5,10 +5,14 @@ import {
   EnabledModelsResponse,
   useGetEnabledModels,
 } from "@/controllers/API/queries/models/use-get-enabled-models";
-import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
+import {
+  ModelStatusUpdate,
+  useUpdateEnabledModels,
+} from "@/controllers/API/queries/models/use-update-enabled-models";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import useAlertStore from "@/stores/alertStore";
+import type { ModelType } from "@/types/models";
 
 // Extracted from useProviderConfiguration.ts to keep the toggle-queue
 // concerns (overlay buffer, unsent buffer, debounced flush, awaitable
@@ -24,6 +28,88 @@ const getErrorMessage = (error: unknown): string | undefined => {
   return e?.response?.data?.detail || e?.message;
 };
 
+type ToggleMap = Map<string, ModelStatusUpdate>;
+
+const getToggleIdentity = (modelName: string, modelType: ModelType): string =>
+  JSON.stringify([modelType, modelName]);
+
+const getToggleEnabled = (
+  data: EnabledModelsResponse,
+  update: ModelStatusUpdate,
+): boolean => {
+  const typedProvider = data.enabled_models_by_type?.[update.provider];
+  if (typedProvider !== undefined) {
+    return typedProvider[update.model_type]?.[update.model_id] ?? false;
+  }
+  return data.enabled_models[update.provider]?.[update.model_id] ?? false;
+};
+
+const applyToggleToEnabledModels = (
+  data: EnabledModelsResponse,
+  update: ModelStatusUpdate,
+): EnabledModelsResponse => {
+  const {
+    provider,
+    model_id: modelName,
+    model_type: modelType,
+    enabled,
+  } = update;
+  const typedProvider = data.enabled_models_by_type?.[provider];
+
+  // A provider without a typed map is using the legacy response contract even
+  // if another provider in the same response is typed. Preserve its flat
+  // optimistic update while still sending model_type to the mutation endpoint.
+  if (typedProvider === undefined) {
+    return {
+      ...data,
+      enabled_models: {
+        ...data.enabled_models,
+        [provider]: {
+          ...(data.enabled_models[provider] ?? {}),
+          [modelName]: enabled,
+        },
+      },
+    };
+  }
+
+  const otherType: ModelType = modelType === "llm" ? "embeddings" : "llm";
+  const nextTypedProvider = {
+    ...typedProvider,
+    [modelType]: {
+      ...(typedProvider[modelType] ?? {}),
+      [modelName]: enabled,
+    },
+  };
+  const flatEnabled =
+    enabled || (nextTypedProvider[otherType]?.[modelName] ?? false);
+
+  return {
+    ...data,
+    enabled_models: {
+      ...data.enabled_models,
+      [provider]: {
+        ...(data.enabled_models[provider] ?? {}),
+        [modelName]: flatEnabled,
+      },
+    },
+    enabled_models_by_type: {
+      ...data.enabled_models_by_type,
+      [provider]: nextTypedProvider,
+    },
+  };
+};
+
+const applyToggleMap = (
+  data: EnabledModelsResponse,
+  toggles: ToggleMap,
+): EnabledModelsResponse => {
+  let nextData = data;
+  for (const update of toggles.values()) {
+    nextData = applyToggleToEnabledModels(nextData, update);
+  }
+  return nextData;
+};
+
 export interface UseModelToggleQueueOptions {
   /**
    * Provider whose models the user is toggling. ``null`` short-circuits all
@@ -33,14 +119,18 @@ export interface UseModelToggleQueueOptions {
 }
 
 export interface UseModelToggleQueueReturn {
-  handleModelToggle: (modelName: string, enabled: boolean) => void;
+  handleModelToggle: (
+    modelName: string,
+    enabled: boolean,
+    modelType: ModelType,
+  ) => void;
   flushPendingChanges: () => Promise<void>;
 }
 
 interface ToggleBatch {
-  updates: { provider: string; model_id: string; enabled: boolean }[];
+  updates: ModelStatusUpdate[];
   previousData: EnabledModelsResponse | undefined;
-  togglesToSend: Record<string, boolean>;
+  togglesToSend: ToggleMap;
 }
 
 /**
@@ -76,8 +166,8 @@ export const useModelToggleQueue = ({
   const { refreshAllModelInputs } = useRefreshModelInputs();
   const { data: enabledModelsData } = useGetEnabledModels();
 
-  const overlayToggles = useRef<Record<string, boolean>>({});
-  const unsentToggles = useRef<Record<string, boolean>>({});
+  const overlayToggles = useRef<ToggleMap>(new Map());
+  const unsentToggles = useRef<ToggleMap>(new Map());
   const fallbackModelData = useRef<EnabledModelsResponse | undefined>(
     undefined,
   );
@@ -87,13 +177,13 @@ export const useModelToggleQueue = ({
   // mismatch means the user re-toggled the same model mid-flight; that
   // entry already sits in ``unsentToggles`` for the next flush and must
   // not be dropped from the overlay until its own mutation settles.
-  const clearSentOverlay = useCallback((sent: Record<string, boolean>) => {
-    for (const [key, value] of Object.entries(sent)) {
-      if (overlayToggles.current[key] === value) {
-        delete overlayToggles.current[key];
+  const clearSentOverlay = useCallback((sent: ToggleMap) => {
+    for (const [key, sentUpdate] of sent) {
+      if (overlayToggles.current.get(key)?.enabled === sentUpdate.enabled) {
+        overlayToggles.current.delete(key);
       }
     }
-    if (Object.keys(overlayToggles.current).length === 0) {
+    if (overlayToggles.current.size === 0) {
       fallbackModelData.current = undefined;
     }
   }, []);
@@ -106,19 +196,13 @@ export const useModelToggleQueue = ({
   const buildAndConsumeToggleBatch = useCallback((): ToggleBatch | null => {
     if (!providerName) return null;
 
-    const togglesToSend = { ...unsentToggles.current };
-    if (Object.keys(togglesToSend).length === 0) return null;
+    const togglesToSend = new Map(unsentToggles.current);
+    if (togglesToSend.size === 0) return null;
 
-    const updates = Object.entries(togglesToSend).map(
-      ([modelName, enabled]) => ({
-        provider: providerName,
-        model_id: modelName,
-        enabled,
-      }),
-    );
+    const updates = Array.from(togglesToSend.values());
 
     const previousData = fallbackModelData.current;
-    unsentToggles.current = {};
+    unsentToggles.current = new Map();
 
     return { updates, previousData, togglesToSend };
   }, [providerName]);
@@ -128,7 +212,7 @@ export const useModelToggleQueue = ({
   // a stale overlay over the rollback we just performed.
   const rollbackToggleBatch = useCallback(
     (
-      togglesToSend: Record<string, boolean>,
+      togglesToSend: ToggleMap,
       previousData: EnabledModelsResponse | undefined,
       error: unknown,
     ) => {
@@ -200,8 +284,16 @@ export const useModelToggleQueue = ({
   ]);
 
   const handleModelToggle = useCallback(
-    (modelName: string, enabled: boolean) => {
+    (modelName: string, enabled: boolean, modelType: ModelType) => {
       if (!providerName) return;
+
+      const update: ModelStatusUpdate = {
+        provider: providerName,
+        model_id: modelName,
+        model_type: modelType,
+        enabled,
+      };
+      const toggleIdentity = getToggleIdentity(modelName, modelType);
 
       // Cancel any in-flight refetch of useGetEnabledModels so its (stale)
       // result cannot overwrite the optimistic cache update below. The
@@ -209,7 +301,7 @@ export const useModelToggleQueue = ({
       // ``cancelQueries`` covers the ones already in flight at click time.
       void queryClient.cancelQueries({ queryKey: ["useGetEnabledModels"] });
 
-      if (Object.keys(overlayToggles.current).length === 0) {
+      if (overlayToggles.current.size === 0) {
         fallbackModelData.current =
           queryClient.getQueryData<EnabledModelsResponse>([
             "useGetEnabledModels",
@@ -220,23 +312,14 @@ export const useModelToggleQueue = ({
         ["useGetEnabledModels"],
         (old) => {
           if (!old) return old;
-          return {
-            ...old,
-            enabled_models: {
-              ...old.enabled_models,
-              [providerName]: {
-                ...old.enabled_models[providerName],
-                [modelName]: enabled,
-              },
-            },
-          };
+          return applyToggleToEnabledModels(old, update);
         },
       );
 
       // Track in BOTH buffers: overlay for UI protection across refetches,
       // unsent for the next flush's payload.
-      overlayToggles.current[modelName] = enabled;
-      unsentToggles.current[modelName] = enabled;
+      overlayToggles.current.set(toggleIdentity, update);
+      unsentToggles.current.set(toggleIdentity, update);
       flushModelToggles();
     },
     [providerName, queryClient, flushModelToggles],
@@ -254,18 +337,18 @@ export const useModelToggleQueue = ({
     if (!providerName) return;
     if (!enabledModelsData) return;
     const overlay = overlayToggles.current;
-    if (Object.keys(overlay).length === 0) return;
+    if (overlay.size === 0) return;
 
-    const current = enabledModelsData.enabled_models[providerName] ?? {};
     // Loop guard: the ``setQueryData`` below re-emits ``enabledModelsData``
     // and re-runs this effect; ``drifted`` must return false on the second
     // pass for the recursion to terminate. Don't replace this with an
     // unconditional re-apply — the second invocation finds the overlay
-    // already applied, ``current[model] === enabled`` for every entry, and
+    // already applied, ``getToggleEnabled`` matches every queued update, and
     // bails. Any future refactor that removes the drift check must
     // introduce an equivalent termination condition.
-    const drifted = Object.entries(overlay).some(
-      ([model, enabled]) => current[model] !== enabled,
+    const drifted = Array.from(overlay.values()).some(
+      (update) =>
+        getToggleEnabled(enabledModelsData, update) !== update.enabled,
     );
     if (!drifted) return;
 
@@ -273,16 +356,7 @@ export const useModelToggleQueue = ({
       ["useGetEnabledModels"],
       (old) => {
         if (!old) return old;
-        return {
-          ...old,
-          enabled_models: {
-            ...old.enabled_models,
-            [providerName]: {
-              ...(old.enabled_models[providerName] ?? {}),
-              ...overlay,
-            },
-          },
-        };
+        return applyToggleMap(old, overlay);
       },
     );
   }, [enabledModelsData, providerName, queryClient]);

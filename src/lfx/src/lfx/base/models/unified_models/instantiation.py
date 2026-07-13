@@ -423,11 +423,13 @@ def _get_provider_catalog_models(
 def _get_provider_enabled_model_names(
     provider: str,
     user_id: UUID | str | None,
+    model_type: str | None = None,
 ) -> list[str]:
     """Return model names enabled for a provider in Model Providers settings.
 
-    Includes both LLM and embedding models (e.g. gpt-5 and text-embedding-3-small).
-    When *user_id* is absent, returns all non-deprecated catalog models for the provider.
+    Includes both LLM and embedding models unless *model_type* restricts the
+    result. When *user_id* is absent, returns all matching non-deprecated
+    catalog models for the provider.
     """
     catalog_models = _get_provider_catalog_models(provider, user_id)
 
@@ -447,23 +449,25 @@ def _get_provider_enabled_model_names(
         model_name = model_data.get("model_name")
         if not model_name:
             continue
+        metadata = model_data.get("metadata", {})
+        row_model_type = metadata.get("model_type") or "llm"
+        if model_type is not None and row_model_type != model_type:
+            continue
 
         if apply_user_prefs:
-            metadata = model_data.get("metadata", {})
             is_default = metadata.get("default", False)
-            if not is_default and not model_status_contains(explicitly_enabled_models, provider, model_name):
+            if not is_default and not model_status_contains(
+                explicitly_enabled_models,
+                provider,
+                model_name,
+                model_type=row_model_type,
+            ):
                 continue
-            if model_status_contains(disabled_models, provider, model_name):
+            if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
                 continue
 
         model_names.append(model_name)
     return model_names
-
-
-def _is_embedding_catalog_model(model_data: dict[str, Any]) -> bool:
-    """Return True when a catalog entry is an embedding model."""
-    model_type = model_data.get("metadata", {}).get("model_type", "llm")
-    return model_type == "embeddings"
 
 
 def _get_configured_embedding_providers(
@@ -489,19 +493,7 @@ def _get_provider_embedding_model_names(
     user_id: UUID | str | None,
 ) -> list[str]:
     """Return enabled embedding model names for a single provider."""
-    catalog_by_name = {
-        model_data.get("model_name"): model_data
-        for model_data in _get_provider_catalog_models(provider, user_id)
-        if model_data.get("model_name")
-    }
-
-    model_names: list[str] = []
-    for model_name in _get_provider_enabled_model_names(provider, user_id):
-        model_data = catalog_by_name.get(model_name)
-        if model_data is None or not _is_embedding_catalog_model(model_data):
-            continue
-        model_names.append(model_name)
-    return model_names
+    return _get_provider_enabled_model_names(provider, user_id, model_type="embeddings")
 
 
 def _compose_embedding_kwargs(

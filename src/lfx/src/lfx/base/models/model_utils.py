@@ -9,6 +9,7 @@ import requests
 
 from lfx.base.models.model_metadata import (
     CONDITIONAL_LIVE_MODEL_PROVIDERS,
+    EXPLICIT_ENABLE_ONLY_PROVIDERS,
     LIVE_MODEL_PROVIDERS,
     create_model_metadata,
 )
@@ -29,8 +30,6 @@ from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
 MIN_DEFAULT_MODELS = 5
-# Keep in sync with credentials.MODEL_STATUS_KEY_SEPARATOR (avoid circular import).
-_MODEL_STATUS_KEY_SEPARATOR = "::"
 
 # Ollama model lists are cached in-process for a short window so that:
 # (1) overlapping ``/api/v1/models`` requests don't all serialize through
@@ -813,16 +812,15 @@ def inject_custom_enabled_models(
     matching custom entries are injected so filtered API responses stay
     consistent.
 
-    When *model_type* is ``None`` (Settings "all" / unfiltered lists), each
-    custom name is injected once as ``llm`` and once as ``embeddings`` so
-    Foundry deployments can appear under either section — Foundry's seed
-    catalog is chat-only, so embeddings-filtered queries would otherwise
-    drop the provider entirely.
+    Typed status entries are injected only under their persisted type. Legacy
+    provider-qualified entries predate embedding deployment support and retain
+    their original ``llm`` behavior.
     """
     if not explicitly_enabled_models:
         return
 
-    # Lazy import: provider_queries pulls model constants that import model_utils.
+    # Lazy imports: provider_queries pulls model constants that import model_utils.
+    from lfx.base.models.unified_models.credentials import parse_model_status_key
     from lfx.base.models.unified_models.provider_queries import get_model_provider_metadata
 
     provider_meta = get_model_provider_metadata()
@@ -844,17 +842,28 @@ def inject_custom_enabled_models(
             if isinstance(model.get("model_name"), str)
         }
 
-    types_to_inject: tuple[str, ...] = (model_type,) if model_type else ("llm", "embeddings")
-
     # Stable order: set iteration is unordered across runs/processes.
     for entry in sorted(explicitly_enabled_models):
-        if _MODEL_STATUS_KEY_SEPARATOR not in entry:
+        provider, custom_name, persisted_type = parse_model_status_key(entry)
+        if provider not in EXPLICIT_ENABLE_ONLY_PROVIDERS:
             continue
-        provider, custom_name = entry.split(_MODEL_STATUS_KEY_SEPARATOR, 1)
         custom_name = custom_name.strip()
         if not provider or not custom_name:
             continue
+        resolved_type = persisted_type or "llm"
+        if model_type is not None and resolved_type != model_type:
+            continue
         if model_name is not None and custom_name != model_name:
+            continue
+
+        icon = provider_meta.get(provider, {}).get("icon", "Bot")
+        metadata = {
+            "icon": icon,
+            "model_type": resolved_type,
+            "tool_calling": resolved_type == "llm",
+            "default": False,
+        }
+        if metadata_filters and any(metadata.get(k) != v for k, v in metadata_filters.items()):
             continue
 
         provider_dict = provider_dicts.get(provider)
@@ -873,28 +882,16 @@ def inject_custom_enabled_models(
             known_by_provider[provider] = set()
 
         known = known_by_provider.setdefault(provider, set())
-        icon = provider_meta.get(provider, {}).get("icon", "Bot")
-
-        for resolved_type in types_to_inject:
-            if (custom_name, resolved_type) in known:
-                continue
-            metadata = {
-                "icon": icon,
-                "model_type": resolved_type,
-                "tool_calling": resolved_type == "llm",
-                "default": False,
+        if (custom_name, resolved_type) in known:
+            continue
+        provider_dict.setdefault("models", []).append(
+            {
+                "model_name": custom_name,
+                "metadata": metadata,
             }
-            if metadata_filters and any(metadata.get(k) != v for k, v in metadata_filters.items()):
-                continue
-
-            provider_dict.setdefault("models", []).append(
-                {
-                    "model_name": custom_name,
-                    "metadata": metadata,
-                }
-            )
-            provider_dict["num_models"] = len(provider_dict["models"])
-            known.add((custom_name, resolved_type))
+        )
+        provider_dict["num_models"] = len(provider_dict["models"])
+        known.add((custom_name, resolved_type))
 
 
 def replace_with_live_models(

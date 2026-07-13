@@ -180,7 +180,12 @@ def get_language_model_options(
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:
         replace_with_live_models(all_models, user_id, enabled_providers, "llm", model_provider_metadata)
-    inject_custom_enabled_models(all_models, explicitly_enabled_models, model_type="llm")
+    inject_custom_enabled_models(
+        all_models,
+        explicitly_enabled_models,
+        model_type="llm",
+        metadata_filters=metadata_filters or None,
+    )
 
     options = []
 
@@ -209,17 +214,28 @@ def get_language_model_options(
             model_name = model_data.get("model_name")
             metadata = model_data.get("metadata", {})
             is_default = metadata.get("default", False)
+            row_model_type = metadata.get("model_type") or "llm"
 
             # Determine if model should be shown:
             # - Explicit-enable-only providers (Azure AI Foundry): seed defaults
             #   are suggestions; only user-enabled deployment names are callable.
             # - Otherwise: show defaults or explicitly enabled; skip disabled.
             if provider in EXPLICIT_ENABLE_ONLY_PROVIDERS:
-                if not model_status_contains(explicitly_enabled_models, provider, model_name):
+                if not model_status_contains(
+                    explicitly_enabled_models,
+                    provider,
+                    model_name,
+                    model_type=row_model_type,
+                ):
                     continue
-            elif not is_default and not model_status_contains(explicitly_enabled_models, provider, model_name):
+            elif not is_default and not model_status_contains(
+                explicitly_enabled_models,
+                provider,
+                model_name,
+                model_type=row_model_type,
+            ):
                 continue
-            if model_status_contains(disabled_models, provider, model_name):
+            if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
                 continue
 
             # Get parameter mapping for this provider
@@ -333,16 +349,27 @@ def get_embedding_model_options(
             model_name = model_data.get("model_name")
             metadata = model_data.get("metadata", {})
             is_default = metadata.get("default", False)
+            row_model_type = metadata.get("model_type") or "embeddings"
 
             # Determine if model should be shown:
             # - Explicit-enable-only providers: require a user-enabled entry
             # - Otherwise: show defaults or explicitly enabled; skip disabled
             if provider in EXPLICIT_ENABLE_ONLY_PROVIDERS:
-                if not model_status_contains(explicitly_enabled_models, provider, model_name):
+                if not model_status_contains(
+                    explicitly_enabled_models,
+                    provider,
+                    model_name,
+                    model_type=row_model_type,
+                ):
                     continue
-            elif not is_default and not model_status_contains(explicitly_enabled_models, provider, model_name):
+            elif not is_default and not model_status_contains(
+                explicitly_enabled_models,
+                provider,
+                model_name,
+                model_type=row_model_type,
+            ):
                 continue
-            if model_status_contains(disabled_models, provider, model_name):
+            if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
                 continue
 
             # Build the option dict

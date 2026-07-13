@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
+import type { ModelType, ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
 
 /** Providers where the callable model id is a user-chosen deployment name. */
@@ -15,16 +16,21 @@ const CUSTOM_DEPLOYMENT_PROVIDERS = new Set(["Azure AI Foundry"]);
 
 export interface ModelProviderSelectionProps {
   availableModels: Model[];
-  onModelToggle: (modelName: string, enabled: boolean) => void;
-  modelType: "llm" | "embeddings" | "all";
+  onModelToggle: (
+    modelName: string,
+    enabled: boolean,
+    modelType: ModelType,
+  ) => void;
+  modelType: ModelTypeFilter;
   providerName?: string;
   isEnabledModel?: boolean;
 }
 
 interface ModelRowProps {
   model: Model;
+  modelType: ModelType;
   enabled: boolean;
-  onToggle: (modelName: string, enabled: boolean) => void;
+  onToggle: (modelName: string, enabled: boolean, modelType: ModelType) => void;
   testIdPrefix: string;
   isEnabledModel?: boolean;
   /** When true (modelType === "all" view), show the "embedding" tag on
@@ -105,6 +111,7 @@ const buildCapabilityTags = (
 const ModelRow = ({
   onToggle,
   model,
+  modelType,
   enabled,
   testIdPrefix,
   isEnabledModel,
@@ -150,7 +157,9 @@ const ModelRow = ({
       {isEnabledModel && (
         <Switch
           checked={enabled}
-          onCheckedChange={(checked) => onToggle(model.model_name, checked)}
+          onCheckedChange={(checked) =>
+            onToggle(model.model_name, checked, modelType)
+          }
           data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
           aria-label={
             enabled
@@ -188,44 +197,78 @@ const ModelSelection = ({
     setShowDeprecated(false);
   }, [providerName]);
 
-  const isModelEnabled = (modelName: string): boolean => {
+  const isModelEnabled = (
+    modelName: string,
+    selectedModelType: ModelType,
+  ): boolean => {
     if (!providerName || !enabledModelsData?.enabled_models) return false;
+
+    const typedProvider =
+      enabledModelsData.enabled_models_by_type?.[providerName];
+    if (typedProvider !== undefined) {
+      return typedProvider[selectedModelType]?.[modelName] ?? false;
+    }
+
     return enabledModelsData.enabled_models[providerName]?.[modelName] ?? false;
   };
 
   const supportsCustomDeployments =
     !!providerName && CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName);
 
+  const visibleDeploymentTypes = useMemo<ModelType[]>(
+    () => (modelType === "all" ? ["llm", "embeddings"] : [modelType]),
+    [modelType],
+  );
+
   // Merge free-text deployments the user already enabled but that are not yet
-  // in the static/live catalog (e.g. Azure AI Foundry portal names). Prefer the
-  // catalog row when both exist for the same model_type. In Settings "all",
-  // surface each custom under both Language models and Embeddings (Foundry's
-  // seed catalog is chat-only).
+  // in the static/live catalog. Typed servers preserve the selected type. For
+  // a legacy flat-only response, catalog rows keep their declared type and an
+  // unknown custom deployment defaults to llm for backward compatibility.
   const modelsWithCustomDeployments = useMemo(() => {
     if (!supportsCustomDeployments || !providerName) {
       return availableModels;
     }
-    const deploymentTypes: Array<"llm" | "embeddings"> =
-      modelType === "all"
-        ? ["llm", "embeddings"]
-        : [modelType === "embeddings" ? "embeddings" : "llm"];
-    const enabledForProvider =
+
+    const flatEnabledForProvider =
       enabledModelsData?.enabled_models?.[providerName] ?? {};
+    const typedEnabledForProvider =
+      enabledModelsData?.enabled_models_by_type?.[providerName];
+    const knownNames = new Set(
+      availableModels.map((model) => model.model_name),
+    );
+    const knownTypedNames = new Set(
+      availableModels.map(
+        (model) =>
+          `${model.metadata?.model_type ?? "llm"}\0${model.model_name}`,
+      ),
+    );
     const customModels: Model[] = [];
-    for (const deploymentType of deploymentTypes) {
-      const knownNames = new Set(
-        availableModels
-          .filter((model) => model.metadata?.model_type === deploymentType)
-          .map((model) => model.model_name),
-      );
-      for (const [name, enabled] of Object.entries(enabledForProvider)) {
+
+    if (typedEnabledForProvider !== undefined) {
+      for (const deploymentType of visibleDeploymentTypes) {
+        for (const [name, enabled] of Object.entries(
+          typedEnabledForProvider[deploymentType] ?? {},
+        )) {
+          if (!enabled || knownTypedNames.has(`${deploymentType}\0${name}`)) {
+            continue;
+          }
+          customModels.push({
+            model_name: name,
+            metadata: {
+              model_type: deploymentType,
+              icon: "Azure",
+            },
+          });
+        }
+      }
+    } else if (visibleDeploymentTypes.includes("llm")) {
+      for (const [name, enabled] of Object.entries(flatEnabledForProvider)) {
         if (!enabled || knownNames.has(name)) continue;
         customModels.push({
           model_name: name,
           metadata: {
-            model_type: deploymentType,
+            model_type: "llm",
             icon: "Azure",
-            tool_calling: deploymentType === "llm",
           },
         });
       }
@@ -236,9 +279,10 @@ const ModelSelection = ({
   }, [
     availableModels,
     enabledModelsData?.enabled_models,
-    modelType,
+    enabledModelsData?.enabled_models_by_type,
     providerName,
     supportsCustomDeployments,
+    visibleDeploymentTypes,
   ]);
 
   const trimmedModelQuery = modelQuery.trim();
@@ -266,14 +310,20 @@ const ModelSelection = ({
     [modelsWithCustomDeployments, trimmedModelQueryLower],
   );
 
-  const hasExactModelMatch = modelsWithCustomDeployments.some(
-    (model) => model.model_name.toLowerCase() === trimmedModelQueryLower,
-  );
-  const canAddCustomDeployment =
+  const addableDeploymentTypes =
     supportsCustomDeployments &&
     !!isEnabledModel &&
-    trimmedModelQuery.length > 0 &&
-    !hasExactModelMatch;
+    trimmedModelQuery.length > 0
+      ? visibleDeploymentTypes.filter(
+          (deploymentType) =>
+            !modelsWithCustomDeployments.some(
+              (model) =>
+                model.metadata?.model_type === deploymentType &&
+                model.model_name.toLowerCase() === trimmedModelQueryLower,
+            ),
+        )
+      : [];
+  const canAddCustomDeployment = addableDeploymentTypes.length > 0;
 
   const partitionDeprecated = (models: Model[]): [Model[], Model[]] => {
     const active: Model[] = [];
@@ -288,13 +338,14 @@ const ModelSelection = ({
     return [active, deprecated];
   };
 
-  const renderModelRow = (model: Model, testIdPrefix: string) => (
+  const renderModelRow = (model: Model, selectedModelType: ModelType) => (
     <ModelRow
       key={model.model_name}
       model={model}
-      enabled={isModelEnabled(model.model_name)}
+      modelType={selectedModelType}
+      enabled={isModelEnabled(model.model_name, selectedModelType)}
       onToggle={onModelToggle}
-      testIdPrefix={testIdPrefix}
+      testIdPrefix={selectedModelType}
       isEnabledModel={isEnabledModel}
       showEmbeddingTag={modelType === "all"}
     />
@@ -303,22 +354,24 @@ const ModelSelection = ({
   const renderModelSection = (
     title: string,
     models: Model[],
-    testIdPrefix: string,
+    selectedModelType: ModelType,
   ) => {
     if (models.length === 0) return null;
     const [activeModels, deprecatedModels] = partitionDeprecated(models);
     return (
-      <div data-testid={`${testIdPrefix}-models-section`}>
+      <div data-testid={`${selectedModelType}-models-section`}>
         <div className="text-[13px] font-semibold text-muted-foreground">
           {title}
         </div>
         <div className="flex flex-col gap-2 pt-4">
-          {activeModels.map((model) => renderModelRow(model, testIdPrefix))}
+          {activeModels.map((model) =>
+            renderModelRow(model, selectedModelType),
+          )}
         </div>
         {deprecatedModels.length > 0 && (
           <details
             className="pt-3"
-            data-testid={`${testIdPrefix}-deprecated-disclosure`}
+            data-testid={`${selectedModelType}-deprecated-disclosure`}
             open={showDeprecated}
             onToggle={(event) =>
               setShowDeprecated(
@@ -328,7 +381,7 @@ const ModelSelection = ({
           >
             <summary
               className="text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer select-none"
-              data-testid={`${testIdPrefix}-deprecated-summary`}
+              data-testid={`${selectedModelType}-deprecated-summary`}
             >
               {deprecatedModels.length === 1
                 ? t("modelProviders.showDeprecatedSingular", {
@@ -341,7 +394,7 @@ const ModelSelection = ({
             </summary>
             <div className="flex flex-col gap-2 pt-3">
               {deprecatedModels.map((model) =>
-                renderModelRow(model, testIdPrefix),
+                renderModelRow(model, selectedModelType),
               )}
             </div>
           </details>
@@ -407,23 +460,44 @@ const ModelSelection = ({
         />
       )}
       {canAddCustomDeployment ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full justify-start"
-          data-testid="add-custom-deployment-button"
-          onClick={() => {
-            onModelToggle(trimmedModelQuery, true);
-            setModelQuery("");
-          }}
-        >
-          <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
-          {t("modelProviders.addDeployment", {
-            name: trimmedModelQuery,
-            defaultValue: 'Add deployment "{{name}}"',
-          })}
-        </Button>
+        <div className="flex flex-col gap-2">
+          {addableDeploymentTypes.map((deploymentType) => (
+            <Button
+              key={deploymentType}
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              data-testid={
+                modelType === "all"
+                  ? `add-custom-${deploymentType}-deployment-button`
+                  : "add-custom-deployment-button"
+              }
+              onClick={() => {
+                onModelToggle(trimmedModelQuery, true, deploymentType);
+                setModelQuery("");
+              }}
+            >
+              <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
+              {modelType === "all"
+                ? deploymentType === "llm"
+                  ? t("modelProviders.addLanguageDeployment", {
+                      name: trimmedModelQuery,
+                      defaultValue:
+                        'Add deployment "{{name}}" as language model',
+                    })
+                  : t("modelProviders.addEmbeddingDeployment", {
+                      name: trimmedModelQuery,
+                      defaultValue:
+                        'Add deployment "{{name}}" as embedding model',
+                    })
+                : t("modelProviders.addDeployment", {
+                    name: trimmedModelQuery,
+                    defaultValue: 'Add deployment "{{name}}"',
+                  })}
+            </Button>
+          ))}
+        </div>
       ) : null}
       {noModelsMatchQuery && !canAddCustomDeployment ? (
         <div

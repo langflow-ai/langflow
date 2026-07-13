@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from langflow.api.v1 import models as models_api
 from langflow.api.v1.models import (
     ModelStatusUpdate,
     _build_model_default_flags,
@@ -38,7 +39,9 @@ def test_model_defaults_and_updates_are_provider_qualified():
 
     assert default_flags == {
         "OpenAI::gpt-4o-mini": False,
+        "OpenAI::llm::gpt-4o-mini": False,
         "Azure AI Foundry::gpt-4o-mini": True,
+        "Azure AI Foundry::llm::gpt-4o-mini": True,
     }
 
     # A pre-upgrade bare entry applied to both providers. On the next write it
@@ -69,6 +72,50 @@ def test_foundry_seed_default_stays_explicitly_enabled():
 
     assert disabled_models == set()
     assert explicitly_enabled_models == {"Azure AI Foundry::gpt-4o-mini"}
+
+
+def test_typed_default_flags_do_not_cross_model_types():
+    provider = "OpenAI"
+    model_name = "shared-name"
+    flags = _build_model_default_flags(
+        [
+            {
+                "provider": provider,
+                "models": [
+                    {
+                        "model_name": model_name,
+                        "metadata": {"default": True, "model_type": "llm"},
+                    },
+                    {
+                        "model_name": model_name,
+                        "metadata": {"default": False, "model_type": "embeddings"},
+                    },
+                ],
+            }
+        ]
+    )
+
+    assert flags[model_status_key(provider, model_name)] is True
+    assert flags[model_status_key(provider, model_name, model_type="llm")] is True
+    assert flags[model_status_key(provider, model_name, model_type="embeddings")] is False
+
+    llm_enabled: set[str] = set()
+    _update_model_sets(
+        [ModelStatusUpdate(provider=provider, model_id=model_name, enabled=True, model_type="llm")],
+        set(),
+        llm_enabled,
+        flags,
+    )
+    embedding_enabled: set[str] = set()
+    _update_model_sets(
+        [ModelStatusUpdate(provider=provider, model_id=model_name, enabled=True, model_type="embeddings")],
+        set(),
+        embedding_enabled,
+        flags,
+    )
+
+    assert llm_enabled == set()
+    assert embedding_enabled == {model_status_key(provider, model_name, model_type="embeddings")}
 
 
 def test_typed_model_statuses_are_independent():
@@ -132,6 +179,104 @@ def test_typed_model_statuses_are_independent():
         "portal-deploy",
         model_type="llm",
     )
+
+
+@pytest.mark.parametrize(
+    ("update_enabled", "initial_disabled", "initial_enabled", "expected_disabled", "expected_enabled"),
+    [
+        (
+            False,
+            set(),
+            {"Azure AI Foundry::shared-deploy"},
+            {"Azure AI Foundry::llm::shared-deploy"},
+            {"Azure AI Foundry::embeddings::shared-deploy"},
+        ),
+        (
+            True,
+            {"Azure AI Foundry::shared-deploy"},
+            set(),
+            {"Azure AI Foundry::embeddings::shared-deploy"},
+            {"Azure AI Foundry::llm::shared-deploy"},
+        ),
+    ],
+)
+def test_typed_update_migrates_matching_legacy_state(
+    update_enabled,
+    initial_disabled,
+    initial_enabled,
+    expected_disabled,
+    expected_enabled,
+):
+    identity = "Azure AI Foundry::shared-deploy"
+
+    _update_model_sets(
+        [
+            ModelStatusUpdate(
+                provider="Azure AI Foundry",
+                model_id="shared-deploy",
+                enabled=update_enabled,
+                model_type="llm",
+            )
+        ],
+        initial_disabled,
+        initial_enabled,
+        {identity: False},
+        model_types_by_identity={identity: {"llm", "embeddings"}},
+    )
+
+    assert initial_disabled == expected_disabled
+    assert initial_enabled == expected_enabled
+
+
+async def test_get_enabled_models_returns_type_map_and_flat_union(monkeypatch):
+    provider = "Azure AI Foundry"
+    shared_name = "shared-deploy"
+    catalog = [
+        {
+            "provider": provider,
+            "models": [
+                {
+                    "model_name": shared_name,
+                    "metadata": {"default": False, "model_type": "llm"},
+                },
+                {
+                    "model_name": shared_name,
+                    "metadata": {"default": False, "model_type": "embeddings"},
+                },
+                {
+                    "model_name": "filtered-out",
+                    "metadata": {"default": False, "model_type": "llm"},
+                },
+            ],
+        }
+    ]
+
+    monkeypatch.setattr(models_api, "get_unified_models_detailed", lambda **_kwargs: catalog)
+    monkeypatch.setattr(
+        models_api,
+        "get_enabled_providers",
+        AsyncMock(return_value={"provider_status": {provider: True}}),
+    )
+    monkeypatch.setattr(
+        models_api, "_get_disabled_models", AsyncMock(return_value={f"{provider}::embeddings::{shared_name}"})
+    )
+    monkeypatch.setattr(models_api, "_get_enabled_models", AsyncMock(return_value={f"{provider}::llm::{shared_name}"}))
+    monkeypatch.setattr(models_api, "replace_with_live_models", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(models_api, "inject_custom_enabled_models", lambda *_args, **_kwargs: None)
+
+    result = await models_api.get_enabled_models(
+        session=SimpleNamespace(),
+        current_user=SimpleNamespace(id=uuid4()),
+        model_names=[shared_name],
+    )
+
+    assert result["enabled_models"] == {provider: {shared_name: True}}
+    assert result["enabled_models_by_type"] == {
+        provider: {
+            "llm": {shared_name: True},
+            "embeddings": {shared_name: False},
+        }
+    }
 
 
 def test_inject_custom_enabled_models_appends_missing_deployments():

@@ -418,6 +418,39 @@ describe("ModelSelection", () => {
       ).not.toBeInTheDocument();
     });
 
+    it("uses the flat fallback when only another provider has typed status", () => {
+      useGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            "Azure AI Foundry": { "legacy-custom": true },
+            OpenAI: { "gpt-4": true },
+          },
+          enabled_models_by_type: {
+            OpenAI: { llm: { "gpt-4": true } },
+          },
+        },
+        isLoading: false,
+      });
+
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="all"
+          providerName="Azure AI Foundry"
+          availableModels={[]}
+        />,
+      );
+
+      expect(
+        within(screen.getByTestId("llm-models-section")).getByText(
+          "legacy-custom",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("embeddings-models-section"),
+      ).not.toBeInTheDocument();
+    });
+
     it("keeps identical deployment names independently typed and toggleable", async () => {
       const user = userEvent.setup();
       const onModelToggle = jest.fn();

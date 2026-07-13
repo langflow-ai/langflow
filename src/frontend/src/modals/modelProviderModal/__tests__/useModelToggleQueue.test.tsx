@@ -1,25 +1,22 @@
 import { renderHook } from "@testing-library/react";
 import { act } from "react";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
+import type { ModelType } from "@/types/models";
 import { useModelToggleQueue } from "../hooks/useModelToggleQueue";
 
-type ModelType = "llm" | "embeddings";
 type TypedModelToggle = (
   modelName: string,
   enabled: boolean,
   modelType: ModelType,
 ) => void;
 
-// Keep these RED tests executable against the current two-argument hook. The
-// third argument is intentionally ignored by the production code until the
-// typed-toggle contract is implemented.
 const invokeTypedToggle = (
-  toggle: unknown,
+  toggle: TypedModelToggle,
   modelName: string,
   enabled: boolean,
   modelType: ModelType,
 ) => {
-  (toggle as TypedModelToggle)(modelName, enabled, modelType);
+  toggle(modelName, enabled, modelType);
 };
 
 // ---------------------------------------------------------------------------
@@ -227,6 +224,46 @@ describe("useModelToggleQueue", () => {
         updated.enabled_models_by_type["Azure AI Foundry"].embeddings.shared,
       ).toBe(true);
       expect(updated.enabled_models["Azure AI Foundry"].shared).toBe(true);
+    });
+
+    it("falls back per provider when only another provider has typed status", () => {
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "OpenAI" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
+      });
+
+      const updater = trackingQueryClient.setQueryData.mock.calls[0][1] as (
+        old: unknown,
+      ) => unknown;
+      const updated = updater({
+        enabled_models: {
+          OpenAI: { "gpt-4": true },
+          Anthropic: { "claude-3": true },
+        },
+        enabled_models_by_type: {
+          Anthropic: { llm: { "claude-3": true } },
+        },
+      }) as {
+        enabled_models: Record<string, Record<string, boolean>>;
+        enabled_models_by_type: Record<
+          string,
+          Partial<Record<ModelType, Record<string, boolean>>>
+        >;
+      };
+
+      expect(updated.enabled_models.OpenAI["gpt-4"]).toBe(false);
+      expect(updated.enabled_models_by_type.OpenAI).toBeUndefined();
+      expect(updated.enabled_models_by_type.Anthropic.llm?.["claude-3"]).toBe(
+        true,
+      );
     });
 
     it("no-ops when no provider is selected", () => {

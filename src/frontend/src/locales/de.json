@@ -1452,6 +1452,8 @@
   "modelProviders.searchOrAddDeployment": "Bereitstellungsnamen suchen oder hinzufügen…",
   "modelProviders.customDeploymentHint": "Verwenden Sie die Bereitstellungsnamen aus dem Azure AI Foundry-Portal (keine Katalog-Modell-IDs). Suchen oder geben Sie einen Namen ein, um einen hinzuzufügen.",
   "modelProviders.addDeployment": "Bereitstellung \"{{name}}\" hinzufügen",
+  "modelProviders.addLanguageDeployment": "Bereitstellung \"{{name}}\" als Sprachmodell hinzufügen",
+  "modelProviders.addEmbeddingDeployment": "Bereitstellung \"{{name}}\" als Einbettungsmodell hinzufügen",
   "modelProviders.noProvidersMatch": "Es wurden keine Anbieter gefunden, die Ihrer Suche entsprechen.",
   "modelProviders.ollamaNoModelsAll": "Es sieht so aus, als hättest du keine Modelle für Ollama installiert. Bitte wählen Sie die Modelle aus, die Sie verwenden möchten.",
   "modelProviders.ollamaNoModelsEmbeddings": "Es sieht so aus, als hättest du keine Einbettungsmodelle für Ollama installiert. Bitte wählen Sie die Modelle aus, die Sie verwenden möchten.",
