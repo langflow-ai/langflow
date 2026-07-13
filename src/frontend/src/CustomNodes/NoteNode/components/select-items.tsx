@@ -4,7 +4,7 @@ import { ForwardedIconComponent } from "@/components/common/genericIconComponent
 import {
   SelectContentWithoutPortal,
   SelectItem,
-} from "@/components/ui/select-custom";
+} from "@/components/ui/select";
 import ToolbarSelectItem from "@/pages/FlowPage/components/nodeToolbarComponent/toolbarSelectItem";
 import type { NoteDataType } from "@/types/flow";
 
@@ -19,7 +19,7 @@ export const SelectItems = memo(
     const { t } = useTranslation();
     return (
       <SelectContentWithoutPortal>
-        <SelectItem value="duplicate">
+        <SelectItem variant="plain" value="duplicate">
           <ToolbarSelectItem
             shortcut={
               shortcuts.find((obj) => obj.name === "Duplicate")?.shortcut!
@@ -29,7 +29,7 @@ export const SelectItems = memo(
             dataTestId="copy-button-modal"
           />
         </SelectItem>
-        <SelectItem value="copy">
+        <SelectItem variant="plain" value="copy">
           <ToolbarSelectItem
             shortcut={shortcuts.find((obj) => obj.name === "Copy")?.shortcut!}
             value={t("nodeToolbar.copy")}
@@ -37,7 +37,7 @@ export const SelectItems = memo(
             dataTestId="copy-button-modal"
           />
         </SelectItem>
-        <SelectItem
+        <SelectItem variant="plain"
           value="documentation"
           disabled={data.node?.documentation === ""}
         >
@@ -48,7 +48,7 @@ export const SelectItems = memo(
             dataTestId="docs-button-modal"
           />
         </SelectItem>
-        <SelectItem value="delete" className="focus:bg-destructive/[.20]">
+        <SelectItem variant="plain" value="delete" className="focus:bg-destructive/[.20]">
           <div className="font-red flex text-status-red">
             <ForwardedIconComponent
               name="Trash2"

@@ -12,7 +12,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "@/components/ui/select-custom";
+} from "@/components/ui/select";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useDarkStore } from "@/stores/darkStore";
@@ -221,7 +221,7 @@ export const SidebarDraggableComponent = forwardRef(
                     name="GripVertical"
                     className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
                   />
-                  <SelectTrigger
+                  <SelectTrigger variant="plain"
                     tabIndex={-1}
                     aria-label={t("folder.options")}
                   ></SelectTrigger>
@@ -229,13 +229,14 @@ export const SidebarDraggableComponent = forwardRef(
                     position="popper"
                     side="bottom"
                     sideOffset={-25}
+                    className="min-w-[11.5rem]"
                     style={{
                       position: "absolute",
                       left: cursorPos.x,
                       top: cursorPos.y,
                     }}
                   >
-                    <SelectItem value={"download"}>
+                    <SelectItem variant="plain" value={"download"}>
                       <div className="flex">
                         <IconComponent
                           name="Download"
@@ -245,7 +246,7 @@ export const SidebarDraggableComponent = forwardRef(
                       </div>{" "}
                     </SelectItem>
                     {(!official || onDelete) && (
-                      <SelectItem
+                      <SelectItem variant="plain"
                         value={"delete"}
                         data-testid="draggable-component-menu-delete"
                       >
