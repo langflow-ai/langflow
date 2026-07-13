@@ -13,7 +13,8 @@ PUBLISHED_DOCKERFILES = (
 
 
 @pytest.mark.parametrize("dockerfile", PUBLISHED_DOCKERFILES)
-def test_published_images_enable_mcp_docker_hardening(dockerfile: str) -> None:
+def test_published_images_enable_mcp_hardening(dockerfile: str) -> None:
     content = (REPO_ROOT / "docker" / dockerfile).read_text(encoding="utf-8")
 
     assert "ENV LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true" in content
+    assert "ENV LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=true" in content

@@ -327,6 +327,31 @@ def test_package_runner_allowlist_preserves_approved_packages(command, args, all
     validate_mcp_stdio_config(command, args, {}, allowed_packages=allowed)
 
 
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("python", ["/app/langflow/attacker/upload.py"]),
+        ("python3", ["-m", "attacker_module"]),
+        ("node", ["/app/langflow/attacker/server.js"]),
+        ("sh", ["-c", "python /app/langflow/attacker/upload.py"]),
+        ("cmd", ["/c", "node", "C:\\Users\\attacker\\server.js"]),
+    ],
+)
+def test_interpreter_hardening_blocks_tenant_code(command, args):
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(command, args, {}, interpreter_hardening=True)
+
+
+@pytest.mark.parametrize("module", ["langflow.agentic.mcp", "langflow.agentic.mcp.server"])
+def test_interpreter_hardening_preserves_bound_internal_server(module):
+    validate_mcp_stdio_config("python", ["-m", module], {}, interpreter_hardening=True)
+
+
+def test_interpreter_default_preserves_legacy_single_tenant_config():
+    validate_mcp_stdio_config("python", ["custom_server.py"], {}, interpreter_hardening=False)
+    validate_mcp_stdio_config("node", ["custom_server.js"], {}, interpreter_hardening=False)
+
+
 def test_configured_package_allowlist_is_enforced_at_validation_sink(monkeypatch):
     settings_service = SimpleNamespace(settings=SimpleNamespace(mcp_server_allowed_packages="mcp-proxy,lfx"))
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)

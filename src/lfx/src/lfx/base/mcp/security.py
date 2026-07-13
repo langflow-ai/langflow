@@ -178,6 +178,12 @@ SHELL_WRAPPERS = frozenset({"cmd", "sh", "bash"})
 # SECURITY: Shell command flags that execute code.
 SHELL_EXEC_FLAGS = frozenset({"-c", "/c"})
 
+# Python modules owned by Langflow whose server identity is rebound from the authenticated
+# request in ``update_tools``. No tenant-selected script/module is allowed in interpreter-
+# hardened mode.
+HARDENED_ALLOWED_PYTHON_MODULES = frozenset({"langflow.agentic.mcp", "langflow.agentic.mcp.server"})
+PYTHON_MODULE_MIN_ARGS = 2
+
 
 def _is_shell_exec_flag(arg: str) -> bool:
     arg_lower = arg.lower()
@@ -235,6 +241,16 @@ def _docker_hardening_enabled() -> bool:
 
         return bool(get_settings_service().settings.mcp_server_docker_hardening)
     except Exception:  # noqa: BLE001 - settings may be unavailable (e.g. early import); default off
+        return False
+
+
+def _interpreter_hardening_enabled() -> bool:
+    """Whether direct Python/Node MCP entrypoints are restricted for multi-tenant use."""
+    try:
+        from lfx.services.deps import get_settings_service
+
+        return bool(get_settings_service().settings.mcp_server_interpreter_hardening)
+    except Exception:  # noqa: BLE001 - settings may be unavailable; preserve the legacy default
         return False
 
 
@@ -330,6 +346,24 @@ def _validate_package_runner(
         raise MCPStdioSecurityError(msg)
 
 
+def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
+    """Reject tenant-selected Python/Node code while preserving Langflow's bound MCP server."""
+    if not hardened or base_command not in {"node", "python", "python3"}:
+        return
+    if (
+        base_command in {"python", "python3"}
+        and len(args) >= PYTHON_MODULE_MIN_ARGS
+        and args[0] == "-m"
+        and args[1] in HARDENED_ALLOWED_PYTHON_MODULES
+    ):
+        return
+    msg = (
+        f"Interpreter command '{base_command}' is not allowed when "
+        "LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=true. Use an operator-approved package runner instead."
+    )
+    raise MCPStdioSecurityError(msg)
+
+
 def _docker_arg_value(arg: str, args: list[str], index: int) -> str:
     """Return the lowercased value bound to a docker flag token.
 
@@ -407,6 +441,7 @@ def validate_mcp_stdio_config(
     *,
     docker_hardening: bool | None = None,
     allowed_packages: Collection[str] | str | None = None,
+    interpreter_hardening: bool | None = None,
 ) -> None:
     """Validate an MCP stdio command/args/env triple against the security policy.
 
@@ -424,6 +459,10 @@ def validate_mcp_stdio_config(
         allowed_packages: exact package identities that ``npx``/``uvx`` may execute.
             ``None`` reads ``LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES``; when neither is set,
             legacy single-tenant package-runner behavior is preserved.
+        interpreter_hardening: restrict Python/Node entrypoints to Langflow's authenticated
+            internal agentic MCP module. ``None`` reads
+            ``LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING``; the default is disabled for
+            legacy single-tenant compatibility.
 
     Raises:
         MCPStdioSecurityError: If the command is not allowlisted, the args contain shell
@@ -438,6 +477,8 @@ def validate_mcp_stdio_config(
     args = list(args or [])
     if allowed_packages is None:
         allowed_packages = _configured_allowed_packages()
+    if interpreter_hardening is None:
+        interpreter_hardening = _interpreter_hardening_enabled()
     if command and not _is_file_path(command):
         try:
             command_tokens = shlex.split(command)
@@ -455,6 +496,7 @@ def validate_mcp_stdio_config(
             allowed_list = ", ".join(sorted(ALLOWED_MCP_COMMANDS))
             msg = f"Command '{base_command}' is not allowed for security reasons. Allowed commands: {allowed_list}"
             raise MCPStdioSecurityError(msg)
+        _validate_interpreter_invocation(base_command, args, hardened=interpreter_hardening)
 
     # Shell-wrapper rules: -c/-/c only with shell wrappers, and a wrapper may only wrap
     # another allowed (non-shell) command. This is what blocks `bash -c '<payload>'`. Checked
@@ -495,7 +537,9 @@ def validate_mcp_stdio_config(
                 if wrapped_tokens:
                     nested_command = wrapped_tokens[0]
                     nested_args = wrapped_tokens[1:] + wrapped_args
-                    _validate_package_runner(extract_base_command(nested_command), nested_args, allowed_packages)
+                    nested_base = extract_base_command(nested_command)
+                    _validate_package_runner(nested_base, nested_args, allowed_packages)
+                    _validate_interpreter_invocation(nested_base, nested_args, hardened=interpreter_hardening)
 
         _validate_package_runner(base_command, args, allowed_packages)
 

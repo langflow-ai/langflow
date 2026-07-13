@@ -90,6 +90,15 @@ class McpSettings(BaseModel):
     to the packages installed by their operator; an empty value blocks all package runners.
     """
 
+    mcp_server_interpreter_hardening: bool = False
+    """If set to True, blocks tenant-controlled Python and Node.js MCP entrypoints.
+
+    The command allowlist alone cannot make ``python <uploaded-file>`` or
+    ``node <uploaded-file>`` safe. Hardened mode rejects those interpreter invocations while
+    retaining the authenticated internal ``python -m langflow.agentic.mcp`` server. Leave
+    disabled to preserve legacy single-tenant MCP configurations.
+    """
+
     @field_validator("mcp_composer_version", mode="before")
     @classmethod
     def validate_mcp_composer_version(cls, value):

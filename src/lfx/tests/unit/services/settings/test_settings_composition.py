@@ -216,6 +216,7 @@ EXPECTED_FIELDS = {
     "restrict_local_file_access",
     "mcp_server_docker_hardening",
     "mcp_server_allowed_packages",
+    "mcp_server_interpreter_hardening",
 }
 
 
