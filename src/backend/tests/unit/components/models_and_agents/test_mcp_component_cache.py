@@ -87,6 +87,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         component.use_cache = True
         server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
 
         # Directly test caching by setting up expected data and calling the method
         # Simulate successful tool fetching by manually populating the result
@@ -102,7 +103,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "config": mock_server_config,
         }
         current_servers_cache = safe_cache_get(component._shared_component_cache, "servers", {})
-        current_servers_cache[server_name] = cache_data
+        current_servers_cache[cache_key] = cache_data
         safe_cache_set(component._shared_component_cache, "servers", current_servers_cache)
 
         # Now call update_tool_list which should use the cache
@@ -116,8 +117,8 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
 
         # Verify tools are still cached
         servers_cache = safe_cache_get(component._shared_component_cache, "servers", {})
-        assert server_name in servers_cache
-        cached_data = servers_cache[server_name]
+        assert cache_key in servers_cache
+        cached_data = servers_cache[cache_key]
         assert len(cached_data["tools"]) == 2
         assert cached_data["tool_names"] == ["test_tool", "second_tool"]
 
@@ -129,6 +130,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         component.use_cache = True
         server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
 
         # Pre-populate cache
         cache_data = {
@@ -137,7 +139,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "tool_cache": {"test_tool": mock_tools_list[0]},
             "config": mock_server_config,
         }
-        safe_cache_set(component._shared_component_cache, "servers", {server_name: cache_data})
+        safe_cache_set(component._shared_component_cache, "servers", {cache_key: cache_data})
 
         with patch("lfx.base.mcp.util.update_tools") as mock_update_tools:
             # This should NOT be called if cache is working
@@ -402,7 +404,9 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
 
         # First component instance
         component1 = await self.component_setup(component_class, default_kwargs)
+        component1._user_id = "shared-tenant"
         component1.use_cache = True
+        cache_key = component1._mcp_servers_cache_key(server_name)
 
         # Cache some data
         cache_data = {
@@ -411,10 +415,11 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "tool_cache": {"test_tool": mock_tools_list[0]},
             "config": mock_server_config,
         }
-        safe_cache_set(component1._shared_component_cache, "servers", {server_name: cache_data})
+        safe_cache_set(component1._shared_component_cache, "servers", {cache_key: cache_data})
 
         # Second component instance
         component2 = await self.component_setup(component_class, default_kwargs)
+        component2._user_id = "shared-tenant"
         component2.use_cache = True
 
         # Should access the same cache
@@ -434,6 +439,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         component.use_cache = True
         server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
 
         # Pre-populate cache
         cache_data = {
@@ -442,7 +448,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "tool_cache": {"test_tool": mock_tools_list[0]},
             "config": {"command": "test"},
         }
-        safe_cache_set(component._shared_component_cache, "servers", {server_name: cache_data})
+        safe_cache_set(component._shared_component_cache, "servers", {cache_key: cache_data})
 
         build_config = {
             "mcp_server": {"value": {"name": server_name}},
