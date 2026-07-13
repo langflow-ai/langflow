@@ -56,8 +56,6 @@ DOCKER_BLOCKED_HOST_ACCESS_FLAGS = frozenset(
 DOCKER_CLUSTERABLE_SHORT_FLAGS = frozenset({"d", "i", "P", "q", "t"})
 DOCKER_NAMESPACE_FLAGS = frozenset({"--pid", "--ipc", "--uts", "--net", "--network"})
 DOCKER_DANGEROUS_SECURITY_OPT_SUBSTRINGS = ("unconfined", "disable")
-SHELL_WRAPPERS = frozenset({"sh", "bash", "cmd"})
-APPROVED_SHELL_PAYLOAD_COMMANDS = frozenset({"node", "python", "python3", "npx", "uvx", "docker"})
 SHELL_CONTROL_CHARS = frozenset({";", "|", "&", "$", "`", "<", ">", "\n", "\r"})
 
 # Options whose following token is a value, not uvx's package/command. Source-
@@ -127,7 +125,8 @@ def _looks_like_file_path(command: str) -> bool:
     )
 
 
-def _split_command(command: str, args: list[str] | None) -> tuple[str, list[str]]:
+def split_mcp_stdio_command(command: str, args: list[str] | None) -> tuple[str, list[str]]:
+    """Normalize a legacy packed command into an executable and argv list."""
     combined_args = list(args or [])
     executable = command
     if command and not _looks_like_file_path(command):
@@ -139,6 +138,11 @@ def _split_command(command: str, args: list[str] | None) -> tuple[str, list[str]
         if command_parts:
             executable = command_parts[0]
             combined_args = command_parts[1:] + combined_args
+    return executable, combined_args
+
+
+def _split_command(command: str, args: list[str] | None) -> tuple[str, list[str]]:
+    executable, combined_args = split_mcp_stdio_command(command, args)
     return _base_command(executable), combined_args
 
 
@@ -292,14 +296,31 @@ def _validate_docker_args(args: list[str]) -> None:
                 _raise_disallowed("docker", arg)
 
 
-def _shell_wrapped_command(command: str, args: list[str]) -> tuple[str, list[str]] | None:
-    """Return a shell's explicit command payload without executing it."""
+def _parse_shell_payload(command: str, payload: str) -> tuple[str, list[str]]:
+    if any(char in payload for char in SHELL_CONTROL_CHARS):
+        _raise_disallowed(command, payload)
+    try:
+        parts = shlex.split(payload)
+    except ValueError as exc:
+        msg = f"Shell wrapper '{command}' payload cannot be parsed safely"
+        raise ValueError(msg) from exc
+    if not parts:
+        _raise_disallowed(command, payload)
+    return parts[0], parts[1:]
+
+
+def parse_mcp_shell_wrapper(command: str, args: list[str]) -> tuple[str, list[str]] | None:
+    """Return a shell wrapper's canonical executable and argv payload."""
+    command = _base_command(command)
     for index, arg in enumerate(args):
         arg_lower = arg.lower()
         if command == "cmd":
             if arg_lower != "/c" or index + 1 >= len(args):
                 continue
-            return args[index + 1], args[index + 2 :]
+            payload = args[index + 1 :]
+            if any(char in " ".join(payload) for char in SHELL_CONTROL_CHARS):
+                _raise_disallowed(command, " ".join(payload))
+            return split_mcp_stdio_command(payload[0], payload[1:])
 
         is_exec_flag = arg_lower.startswith("-") and not arg_lower.startswith("--") and "c" in arg_lower[1:]
         if not is_exec_flag:
@@ -310,9 +331,9 @@ def _shell_wrapped_command(command: str, args: list[str]) -> tuple[str, list[str
         option_cluster = arg[1:]
         attached_command = option_cluster[option_cluster.lower().index("c") + 1 :]
         if attached_command:
-            return attached_command, []
+            return _parse_shell_payload(command, attached_command)
         if index + 1 < len(args):
-            return args[index + 1], []
+            return _parse_shell_payload(command, args[index + 1])
     return None
 
 
@@ -326,17 +347,7 @@ def validate_mcp_stdio_source_policy(command: str | None, args: list[str] | None
     if not command:
         return
     base_command, combined_args = _split_command(command, args)
-    if base_command in SHELL_WRAPPERS:
-        wrapped = _shell_wrapped_command(base_command, combined_args)
-        if wrapped:
-            wrapped_command, wrapped_args = wrapped
-            if any(char in wrapped_command for char in SHELL_CONTROL_CHARS):
-                _raise_disallowed(base_command, wrapped_command)
-            wrapped_base, _ = _split_command(wrapped_command, wrapped_args)
-            if wrapped_base not in APPROVED_SHELL_PAYLOAD_COMMANDS:
-                _raise_disallowed(base_command, wrapped_command)
-            validate_mcp_stdio_source_policy(*wrapped)
-    elif base_command == "uvx":
+    if base_command == "uvx":
         _validate_uvx_args(combined_args)
     elif base_command == "npx":
         _validate_npx_args(combined_args)

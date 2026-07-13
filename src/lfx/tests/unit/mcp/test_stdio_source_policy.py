@@ -1,8 +1,16 @@
 import pytest
+from lfx.base.mcp.security import validate_mcp_stdio_config
 from lfx.base.mcp.source_policy import (
     is_package_manager_config_env_var,
     validate_mcp_stdio_source_policy,
 )
+
+
+def _validate_policy(command, args):
+    if command in {"sh", "bash", "cmd"}:
+        validate_mcp_stdio_config(command, args, None)
+    else:
+        validate_mcp_stdio_source_policy(command, args)
 
 
 @pytest.mark.parametrize(
@@ -59,8 +67,8 @@ def test_package_manager_configuration_namespaces_are_reserved(env_var):
     ],
 )
 def test_source_redirects_and_docker_host_access_are_rejected(command, args):
-    with pytest.raises(ValueError, match="not allowed"):
-        validate_mcp_stdio_source_policy(command, args)
+    with pytest.raises(ValueError, match=r"not allowed|dangerous shell metacharacter"):
+        _validate_policy(command, args)
 
 
 @pytest.mark.parametrize(
@@ -83,4 +91,4 @@ def test_source_redirects_and_docker_host_access_are_rejected(command, args):
     ],
 )
 def test_trusted_registry_packages_and_isolated_docker_args_are_allowed(command, args):
-    validate_mcp_stdio_source_policy(command, args)
+    _validate_policy(command, args)
