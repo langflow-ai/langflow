@@ -694,6 +694,8 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "slider",
   "tab",
   "sortableList",
+  "actionPicker",
+  "duration",
   "connect",
   "auth",
   "query",

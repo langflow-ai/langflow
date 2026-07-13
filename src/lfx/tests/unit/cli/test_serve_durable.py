@@ -6,7 +6,11 @@ into the SQLite job store, and ``POST /{job_id}/resume`` completes the chosen br
 including after a "process restart" (a fresh app + host on the same DB file).
 """
 
+import contextlib
+import json
+import sqlite3
 import time
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -141,6 +145,21 @@ def _pending_request(client: TestClient, job_id: str) -> dict:
     return resp.json()
 
 
+def _read_events(client: TestClient, job_id: str, *, last_event_id: str | None = None) -> list[dict]:
+    headers = dict(_HEADERS)
+    if last_event_id is not None:
+        headers["Last-Event-ID"] = last_event_id
+    resp = client.get(f"/api/v2/workflows/{job_id}/events", headers=headers)
+    assert resp.status_code == 200, resp.text
+    assert resp.headers["content-type"].startswith("text/event-stream")
+    events: list[dict] = []
+    for block in resp.text.split("\n\n"):
+        data_line = next((line for line in block.splitlines() if line.startswith("data:")), None)
+        if data_line:
+            events.append(json.loads(data_line[len("data:") :].strip()))
+    return events
+
+
 def test_background_echo_completes_with_execution_response(client):
     job_id = _submit(client, _ECHO_FLOW_ID)
     body = _wait_for_status(client, job_id, "completed")
@@ -196,6 +215,121 @@ def test_resume_survives_process_restart():
         body = _wait_for_status(second_client, job_id, "completed")
         assert "co_approve" in body["outputs"]
         assert "co_reject" not in body["outputs"]
+
+
+def _backdate_pause(db_path, job_id: str, *, days: int) -> None:
+    """Rewrite the suspended job's ``paused_at`` so the pending request is already expired."""
+    stale = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    with contextlib.closing(sqlite3.connect(db_path)) as conn, conn:
+        row = conn.execute("SELECT job_metadata FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
+        meta = json.loads(row[0])
+        meta["pending"]["paused_at"] = stale
+        conn.execute("UPDATE jobs SET job_metadata = ? WHERE job_id = ?", (json.dumps(meta), job_id))
+
+
+def test_late_resume_records_human_input_expired_event(client, durable_db):
+    job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, job_id, "suspended")
+    pending = _pending_request(client, job_id)
+    _backdate_pause(durable_db, job_id, days=10)
+
+    resp = client.post(
+        f"/api/v2/workflows/{job_id}/resume",
+        json={"request_id": pending["request_id"], "decision": {"action_id": "approve", "values": {}}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200, resp.text
+
+    body = _wait_for_status(client, job_id, "completed")
+    assert body["outputs"] == {}, "expired with no fallback takes no branch"
+
+    events = _read_events(client, job_id)
+    expired = [event for event in events if event["event"] == "human_input_expired"]
+    assert expired, f"no human_input_expired event; got {[e['event'] for e in events]}"
+    payload = expired[0]["data"]
+    assert payload["request_id"] == pending["request_id"]
+    assert payload["requested_action"] == "approve"
+    assert payload["rerouted_to"] == "__expired__"
+
+    decision_events = [event for event in events if event["event"] == "human_input_decision"]
+    assert decision_events
+    assert decision_events[0]["data"]["action_id"] == "__expired__"
+    assert expired[0]["seq"] < decision_events[0]["seq"]
+
+
+def test_ontime_resume_records_no_expired_event(client):
+    job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, job_id, "suspended")
+    pending = _pending_request(client, job_id)
+
+    resp = client.post(
+        f"/api/v2/workflows/{job_id}/resume",
+        json={"request_id": pending["request_id"], "decision": {"action_id": "approve", "values": {}}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200, resp.text
+    _wait_for_status(client, job_id, "completed")
+
+    events = _read_events(client, job_id)
+    assert not [event for event in events if event["event"] == "human_input_expired"]
+
+
+def test_events_endpoint_replays_completed_run(client):
+    job_id = _submit(client, _ECHO_FLOW_ID)
+    _wait_for_status(client, job_id, "completed")
+    events = _read_events(client, job_id)
+    assert events, "expected at least the terminal 'end' event"
+    assert any(event["event"] == "end" for event in events)
+    assert all(event["seq"] >= 1 for event in events)
+
+
+def test_events_endpoint_streams_hitl_request_and_ends_at_suspend(client):
+    job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, job_id, "suspended")
+    events = _read_events(client, job_id)
+    request_events = [event for event in events if event["event"] == "human_input_request"]
+    assert request_events, events
+    assert request_events[0]["data"].get("request_id")
+
+
+def test_events_endpoint_resumes_from_last_event_id_after_resume(client):
+    job_id = _submit(client, _HITL_FLOW_ID)
+    _wait_for_status(client, job_id, "suspended")
+    pending = _pending_request(client, job_id)
+
+    before = _read_events(client, job_id)
+    assert before
+    last_seq = str(before[-1]["seq"])
+
+    resp = client.post(
+        f"/api/v2/workflows/{job_id}/resume",
+        json={"request_id": pending["request_id"], "decision": {"action_id": "approve", "values": {}}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200, resp.text
+    _wait_for_status(client, job_id, "completed")
+
+    after = _read_events(client, job_id, last_event_id=last_seq)
+    assert after, "reconnect from Last-Event-ID should deliver post-resume events"
+    assert all(event["seq"] > int(last_seq) for event in after)
+    assert any(event["event"] == "human_input_decision" for event in after)
+    assert any(event["event"] == "end" for event in after)
+
+
+def test_events_endpoint_unknown_job_404(client):
+    resp = client.get(
+        "/api/v2/workflows/00000000-0000-4000-8000-000000000000/events",
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["code"] == "JOB_NOT_FOUND"
+
+
+def test_events_endpoint_requires_api_key(client):
+    job_id = _submit(client, _ECHO_FLOW_ID)
+    _wait_for_status(client, job_id, "completed")
+    resp = client.get(f"/api/v2/workflows/{job_id}/events")
+    assert resp.status_code == 401
 
 
 def test_resume_unknown_job_404(client):

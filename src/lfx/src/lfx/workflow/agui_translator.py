@@ -273,10 +273,22 @@ class AGUITranslator:
         events: list[BaseEvent] = []
 
         # Content blocks: tool_use becomes tool-call events, the Langflow-specific
-        # content types become namespaced CUSTOM events.
+        # content types become namespaced CUSTOM events. They arrive in two shapes:
+        # the legacy/grouped shape nests leaves inside a group's ``contents``, while
+        # the agent's flat log (the content-blocks-as-source-of-truth design) carries
+        # ``tool_use`` / custom leaves at the TOP level with empty ``contents``. Handle
+        # both: translate a top-level leaf by its own type, and still walk a group's
+        # nested contents. ``text`` leaves are skipped here (text rides ``data["text"]``
+        # below); a block is either a leaf or a group, so a leaf's empty ``contents``
+        # makes the nested loop a no-op and the two paths cannot double-emit.
         for block_index, block in enumerate(data.get("content_blocks") or []):
             if not isinstance(block, dict):
                 continue
+            block_type = block.get("type")
+            if block_type == "tool_use":
+                events.extend(self._translate_tool_use(message_id, block_index, 0, block))
+            elif block_type in _CUSTOM_CONTENT_TYPES:
+                events.extend(self._translate_custom_content(message_id, block, block_index, 0, block))
             for content_index, content in enumerate(block.get("contents") or []):
                 if not isinstance(content, dict):
                     continue

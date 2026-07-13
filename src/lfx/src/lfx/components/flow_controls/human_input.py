@@ -52,7 +52,8 @@ class HumanInput(Component):
         DurationInput(
             name="timeout",
             display_name="Timeout",
-            info="How long to wait for a human response before taking the fallback path (when enabled).",
+            info="How long to wait for a human response before taking the fallback path (when enabled). "
+            "Set to 0 to wait indefinitely.",
             options=["Minutes", "Hours", "Days"],
             value={"value": 3, "unit": "Days"},
         ),

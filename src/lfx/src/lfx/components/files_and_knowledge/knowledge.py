@@ -41,10 +41,11 @@ from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.files_and_knowledge._kb_paths import (
-    get_knowledge_bases_root_path as _get_knowledge_bases_root_path,
+    KBKeyDecryptError,
+    load_kb_metadata,
 )
 from lfx.components.files_and_knowledge._kb_paths import (
-    load_kb_metadata,
+    get_knowledge_bases_root_path as _get_knowledge_bases_root_path,
 )
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
@@ -1229,7 +1230,18 @@ class KnowledgeComponent(Component):
                     try:
                         api_key = decrypt_api_key(encrypted_key, settings_service)
                     except (InvalidToken, TypeError, ValueError) as e:
-                        self.log(f"Could not decrypt API key. Please provide it manually. Error: {e}")
+                        if not self.api_key:
+                            log_label = f"knowledge base '{self.knowledge_base}'"
+                            msg = (
+                                f"Cannot decrypt the stored embedding API key for {log_label}. "
+                                "This usually means the server's SECRET_KEY changed after the "
+                                "key was saved. To recover, supply the embedding provider API "
+                                "key on the component's 'Embedding Provider API Key' input and "
+                                "re-run ingestion — the key will be re-encrypted with the "
+                                "current SECRET_KEY."
+                            )
+                            raise KBKeyDecryptError(msg) from e
+                        logger.warning("Stored API key undecryptable; using component-supplied key. Error: %s", e)
 
             if self.api_key:
                 api_key = self.api_key
@@ -1519,10 +1531,14 @@ class KnowledgeComponent(Component):
             return None
         return self.user_id if isinstance(self.user_id, uuid.UUID) else uuid.UUID(self.user_id)
 
-    def _get_kb_metadata(self, kb_path: Path) -> dict:
+    def _get_kb_metadata(self, kb_path: Path, *, require_api_key: bool = False) -> dict:
         """Load the knowledge base's embedding metadata file."""
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
-        return load_kb_metadata(kb_path, log_label=f"knowledge base '{self.knowledge_base}'")
+        return load_kb_metadata(
+            kb_path,
+            log_label=f"knowledge base '{self.knowledge_base}'",
+            require_api_key=require_api_key,
+        )
 
     async def _resolve_backend(self, *, kb_user: str) -> tuple[str, dict[str, Any]]:  # noqa: ARG002
         """Return ``(backend_type, backend_config)`` for this KB."""
@@ -1627,16 +1643,20 @@ class KnowledgeComponent(Component):
             kb_user = current_user.username
         kb_path = _get_knowledge_bases_root_path() / kb_user / self.knowledge_base
 
-        metadata = self._get_kb_metadata(kb_path)
+        component_api_key = self.api_key if getattr(self, "api_key", None) else None
+        needs_stored_key = not component_api_key
+        metadata = self._get_kb_metadata(kb_path, require_api_key=needs_stored_key)
         if not metadata:
             msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
             raise ValueError(msg)
 
+        api_key = component_api_key or metadata.get("api_key")
         model_selection = self._resolve_model_selection(metadata)
         chunk_size = metadata.get("chunk_size")
         embedding_function = get_embeddings(
             model=model_selection,
             user_id=self.user_id,
+            api_key=api_key,
             chunk_size=chunk_size,
         )
 
