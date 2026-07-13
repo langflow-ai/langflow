@@ -81,6 +81,15 @@ class McpSettings(BaseModel):
     explicitly when you want to lock MCP server management.
     """
 
+    mcp_server_allowed_packages: str | None = None
+    """Comma-separated package allowlist for MCP ``npx``/``uvx`` stdio servers.
+
+    When set, package runners may download and execute only these exact package names.
+    Version specifiers are allowed but do not change the package identity. Leave unset to
+    preserve the legacy single-tenant behavior. Multi-tenant deployments should set this
+    to the packages installed by their operator; an empty value blocks all package runners.
+    """
+
     @field_validator("mcp_composer_version", mode="before")
     @classmethod
     def validate_mcp_composer_version(cls, value):

