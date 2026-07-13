@@ -385,8 +385,10 @@ def test_preload_starts_no_fork_unsafe_background_threads(tmp_path, monkeypatch)
 
 @pytest.mark.skipif(sys.platform == "win32", reason="gunicorn is Unix-only")
 def test_pre_fork_flags_ghost_thread_but_not_benign():
-    """The pre_fork guardrail must warn about a non-benign thread alive before fork
-    and must NOT flag a benign-named one.
+    """The pre_fork guardrail warns about a ghost thread but not a benign one.
+
+    It must warn about a non-benign thread alive before fork and must NOT flag a
+    benign-named one.
     """
     import threading
 
@@ -417,7 +419,8 @@ def test_pre_fork_flags_ghost_thread_but_not_benign():
         benign.join(timeout=2)
 
     blob = "\n".join(warnings)
-    assert "Ghost threads" in blob and "EvilGhostThread" in blob, warnings
+    assert "Ghost threads" in blob, warnings
+    assert "EvilGhostThread" in blob, warnings
     assert "OTel-benign" not in blob  # benign-named threads are filtered out
 
 

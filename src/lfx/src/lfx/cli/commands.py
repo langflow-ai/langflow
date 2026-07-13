@@ -253,7 +253,12 @@ def serve_command(
         help="Number of worker processes (gunicorn on Unix, uvicorn on Windows). "
         "Use with --flow-dir for multi-worker flow sharing.",
     ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),
+    verbose: bool = typer.Option(  # noqa: FBT001
+        False,  # noqa: FBT003
+        "--verbose",
+        "-v",
+        help="Show diagnostic output and execution details",
+    ),
     env_file: Path | None = typer.Option(
         None,
         "--env-file",

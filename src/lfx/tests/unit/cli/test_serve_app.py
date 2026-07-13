@@ -68,10 +68,10 @@ def test_create_multi_serve_app_registers_variable_service():
 
 
 async def test_serve_app_resolves_request_scoped_credential(monkeypatch):
-    """End-to-end: the serve app's real registration lets a request-scoped global_var
-    resolve through ``get_api_key_for_provider`` under ``--no-env-fallback``.
+    """End-to-end: real registration resolves a request-scoped global_var under ``--no-env-fallback``.
 
-    Unlike the ``variable_service_registered`` fixture in ``test_credentials.py``, this
+    The serve app's real registration lets a request-scoped global_var resolve through
+    ``get_api_key_for_provider``. Unlike the ``variable_service_registered`` fixture in ``test_credentials.py``, this
     drives the *actual* registration path (``create_multi_serve_app``) — the exact chain
     the original bug broke (service unregistered -> request scope never consulted). A
     different value is left in ``os.environ`` to prove the request scope wins and env is
