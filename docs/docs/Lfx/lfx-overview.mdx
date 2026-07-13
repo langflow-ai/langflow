@@ -1,0 +1,68 @@
+---
+title: About LFX
+slug: /lfx-overview
+---
+
+import Icon from "@site/src/components/icon";
+
+**LFX** (Langflow Executor) is a lightweight CLI and Python library for running Langflow flows without the full Langflow application.
+
+Flows are built in the Langflow visual builder, and then the flow JSON files are run with LFX.
+LFX executes flows statelessly from JSON files with minimal dependencies, no database, and no UI.
+
+LFX is similar to running Langflow with `--backend-only`, but even more lightweight because the full Langflow package and its dependencies do not need to be installed.
+
+If you're building flows in Langflow with a `uv pip install langflow` installation, you likely don't need to explore LFX, but if you're deploying and running flows from JSON files using other applications or environments, you'll find LFX is a powerful tool for executing flows.
+
+If you have installed Langflow OSS version 1.6 or later, lfx is already included in your environment.
+
+## How LFX differs from Langflow
+
+In Langflow, you build and test flows in the visual builder, and the full application stores flows, messages, and users in a database.
+The same Langflow server already uses LFX as its flow runtime.
+Installing LFX on its own decouples the runtime from the Langflow UI and database.
+[`lfx run`](./lfx-run) executes a flow once from the command line and prints the result, and [`lfx serve`](./lfx-serve) exposes one or more flows as persistent HTTP endpoints.
+You still author flows in the Langflow visual builder, and export the flows as JSON files.
+Standalone LFX is for executing flow JSON files without starting the Langflow server or opening the visual editor.
+
+Under the hood, LFX uses a no-op database interface ([`NoopSession`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/services/session.py)) instead of a real database. There is no `langflow.db` file, and stateful operations such as saving flows, storing messages, and managing users do not persist. Operations that depend on `langflow.db` will not work as they do in the full Langflow application.
+
+## LFX commands
+
+LFX provides two sets of commands:
+
+**Runtime commands**, to run and serve flows locally:
+
+| Command | Description |
+|---|---|
+| [`lfx serve`](./lfx-serve) | Serve one or more flows as FastAPI endpoints at `/flows/{flow_id}/run` |
+| [`lfx run`](./lfx-run) | Execute a flow locally and stream results to `stdout` |
+| [`lfx-mcp`](./lfx-mcp) | Start an MCP server that connects to a running Langflow instance |
+
+For the LFX runtime commands, see [Run flows with LFX](./lfx-run) and [Serve flows with LFX](./lfx-serve).
+
+**Flow DevOps SDK commands**, to version, test, and deploy flows:
+
+| Command | Description |
+|---|---|
+| `lfx init` | Scaffold a versioned flow project with CI templates |
+| `lfx login` | Validate credentials against a remote Langflow instance |
+| `lfx create` | Create a new flow JSON from a built-in or custom template |
+| `lfx validate` | Validate flow JSON before pushing |
+| `lfx requirements` | Generate `requirements.txt` from a flow's component dependencies |
+| `lfx status` | Compare local flow files against a remote Langflow instance |
+| `lfx push` | Push flows to a remote instance by stable ID |
+| `lfx pull` | Pull flows from a remote instance to local files |
+| `lfx export` | Normalize flow JSON for clean git diffs |
+
+For the Flow DevOps SDK commands, see [Flow DevOps Toolkit SDK](/flow-devops-sdk).
+
+## See also
+
+- [Install LFX](./lfx-install)
+- [Run flows with LFX](./lfx-run)
+- [Serve flows with LFX](./lfx-serve)
+- [Build flows with the LFX MCP server](./lfx-mcp)
+- [Flow DevOps Toolkit SDK](./lfx-devops-sdk.mdx)
+- [LFX and Langflow version compatibility](./lfx-compatibility)
+- [Extensions overview](./extensions-overview)

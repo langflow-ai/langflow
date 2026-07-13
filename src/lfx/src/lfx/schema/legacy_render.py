@@ -63,12 +63,32 @@ def legacy_content_blocks(blocks) -> list[dict]:
     leaf, reproducing baseline. In every other case the answer text is carried by
     the message's ``text`` / ``data["text"]`` and is not re-injected, which keeps
     generic ``.text=`` / multi-group / custom-titled-group messages untouched.
+
+    The agent renderer can also emit a flat, chronological log (interleaved text +
+    tool_use leaves with no wrapping group). release-1.11.0 rendered agent steps
+    inside an "Agent Steps" group, so reconstruct one here when the top level holds
+    a ``tool_use`` leaf and no group exists, otherwise the group-only rule below
+    would drop every tool call and leave v1 with an empty content_blocks. The gate
+    is ``tool_use`` specifically (the agent-step signal), not "any non-text leaf":
+    plain ``from_lc_message`` conversions put top-level ``usage`` / ``media`` /
+    ``image`` leaves on ordinary replies, and those must stay text-only on the v1
+    wire (a tool-less agent answer likewise carries no steps and projects to []).
     """
     blocks = blocks or []
     groups = [b for b in blocks if _is_group(b)]
-    answer = "".join(
-        b.get("text", "") for b in blocks if isinstance(b, dict) and not _is_group(b) and b.get("type") == "text"
-    )
+    leaves = [b for b in blocks if isinstance(b, dict) and not _is_group(b)]
+
+    if not groups and any(leaf.get("type") == "tool_use" for leaf in leaves):
+        return [
+            {
+                "title": _AGENT_STEPS_TITLE,
+                "contents": [_legacy_leaf(leaf) for leaf in leaves],
+                "allow_markdown": True,
+                "media_url": None,
+            }
+        ]
+
+    answer = "".join(leaf.get("text", "") for leaf in leaves if leaf.get("type") == "text")
 
     rendered: list[dict] = []
     folded = False
