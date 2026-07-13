@@ -347,6 +347,21 @@ def _raise_docker_arg(arg: str) -> None:
     raise MCPStdioSecurityError(msg)
 
 
+def _is_docker_short_volume_flag(arg: str) -> bool:
+    """Return whether a Docker short-option token contains the ``-v`` volume flag.
+
+    Docker accepts the volume value attached to the shorthand (``-v/:/host``) and accepts
+    ``-v`` after bundled boolean flags (``-itv /:/host``). Exact-token matching misses both.
+    """
+    if not arg.startswith("-") or arg.startswith("--"):
+        return False
+    short_flags = arg[1:].split("=", 1)[0]
+    if short_flags.startswith("v"):
+        return True
+    volume_index = short_flags.find("v")
+    return volume_index > 0 and all(flag in {"d", "i", "P", "t"} for flag in short_flags[:volume_index])
+
+
 def _validate_docker_args_lenient(args: list[str]) -> None:
     """Default policy: only privilege/cap flags and host-namespace ``=`` forms (previous behavior)."""
     for arg in args:
@@ -361,9 +376,16 @@ def _validate_docker_args_hardened(args: list[str]) -> None:
     non-default networks, and sandbox-downgrading ``--security-opt`` -- while allowing benign
     network/namespace/security values.
     """
+    # MCP Docker transports only need ``docker run``. Other subcommands operate on existing
+    # containers/images or invoke broader build/daemon surfaces (e.g. exec/cp/build/context),
+    # which defeats the isolation policy when the Docker socket is available. Requiring run as
+    # the first token also prevents tenant-controlled global daemon selectors such as ``-H``.
+    if not args or args[0].lower() != "run":
+        _raise_docker_arg(args[0] if args else "<missing run subcommand>")
+
     for i, arg in enumerate(args):
         flag = arg.split("=", 1)[0]
-        if flag in DOCKER_HARDENED_BLOCKED_FLAGS:
+        if flag in DOCKER_HARDENED_BLOCKED_FLAGS or _is_docker_short_volume_flag(arg):
             _raise_docker_arg(arg)
         elif flag in DOCKER_HARDENED_NAMESPACE_FLAGS:
             value = _docker_arg_value(arg, args, i)

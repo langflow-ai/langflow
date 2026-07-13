@@ -76,6 +76,8 @@ def test_validate_mcp_stdio_config_blocks_malicious(command, args, env):
     [
         # Host filesystem / device mounts -> host compromise.
         ["run", "-v", "/:/host", "alpine"],
+        ["run", "-v/:/host", "alpine"],
+        ["run", "-itv", "/:/host", "alpine"],
         ["run", "--volume=/:/host", "alpine"],
         ["run", "-v", "/var/run/docker.sock:/s", "alpine"],
         ["run", "--mount", "type=bind,src=/,dst=/host", "alpine"],
@@ -95,6 +97,11 @@ def test_validate_mcp_stdio_config_blocks_malicious(command, args, env):
         ["run", "--security-opt", "seccomp=unconfined", "img"],
         ["run", "--security-opt=apparmor=unconfined", "img"],
         ["run", "--security-opt", "label:disable", "img"],
+        # Existing-container/build/daemon surfaces are outside the MCP Docker transport contract.
+        ["exec", "victim", "node", "server.js"],
+        ["cp", "victim:/etc/passwd", "./passwd"],
+        ["build", "."],
+        ["-H", "tcp://docker.internal:2375", "run", "img"],
     ],
 )
 def test_docker_hardened_policy_blocks_host_access(args):
