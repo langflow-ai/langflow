@@ -7,7 +7,6 @@ import {
   DisclosureContent,
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
-import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 import MustachePromptModal from "@/modals/mustachePromptModal";
 import PromptModal from "@/modals/promptModal";
 import { cn } from "@/utils/utils";
@@ -15,6 +14,7 @@ import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, PromptAreaComponentType } from "../../types";
 import { generateUniqueVariableName } from "./helpers/generate-unique-variable-name";
 import { getHighlightedHTML } from "./helpers/prompt-highlight";
+import { usePromptValidation } from "./hooks/usePromptValidation";
 
 /** @deprecated import from "./helpers/generate-unique-variable-name" */
 export { generateUniqueVariableName } from "./helpers/generate-unique-variable-name";
@@ -38,9 +38,14 @@ export default function AccordionPromptComponent({
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const cursorPositionRef = useRef<number>(0);
   const isTypingRef = useRef(false);
-  const { mutate: postValidatePrompt } = usePostValidatePrompt();
-  const validateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastValidatedValueRef = useRef<string>(value);
+  const { lastValidatedValueRef } = usePromptValidation({
+    value,
+    internalValue,
+    isDoubleBrackets,
+    field_name,
+    nodeClass,
+    handleNodeClass,
+  });
 
   const resizeToFit = () => {
     const el = contentEditableRef.current;
@@ -248,115 +253,6 @@ export default function AccordionPromptComponent({
   useEffect(() => {
     resizeToFit();
   }, []);
-
-  // Validate prompt with debounce
-  useEffect(() => {
-    // Clear existing timeout
-    if (validateTimeoutRef.current) {
-      clearTimeout(validateTimeoutRef.current);
-    }
-
-    // Only validate if value has changed and is not empty
-    if (
-      internalValue &&
-      internalValue !== "" &&
-      internalValue !== lastValidatedValueRef.current &&
-      nodeClass
-    ) {
-      validateTimeoutRef.current = setTimeout(() => {
-        const valueToValidate = internalValue;
-        postValidatePrompt(
-          {
-            name: field_name || "",
-            template: valueToValidate,
-            frontend_node: nodeClass,
-            mustache: isDoubleBrackets,
-          },
-          {
-            onSuccess: (apiReturn) => {
-              if (
-                apiReturn?.frontend_node &&
-                valueToValidate === lastValidatedValueRef.current
-              ) {
-                lastValidatedValueRef.current = valueToValidate; // Redundant but safe
-                apiReturn.frontend_node.template.template.value =
-                  valueToValidate;
-                if (handleNodeClass) {
-                  handleNodeClass(apiReturn.frontend_node);
-                }
-              }
-            },
-            onError: (error) => {
-              console.error("[AccordionPrompt] Validation error:", error);
-            },
-          },
-        );
-        lastValidatedValueRef.current = valueToValidate;
-      }, 1000); // 1 second debounce
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (validateTimeoutRef.current) {
-        clearTimeout(validateTimeoutRef.current);
-      }
-    };
-  }, [internalValue, isDoubleBrackets, field_name]);
-
-  // Track if this is the first render to avoid triggering on mount
-  const isFirstRenderRef = useRef(true);
-
-  // Force re-validation when isDoubleBrackets mode changes
-  useEffect(() => {
-    // Skip the first render (mount)
-    if (isFirstRenderRef.current) {
-      isFirstRenderRef.current = false;
-      return;
-    }
-
-    // Only trigger if we have a value and nodeClass
-    if (internalValue && internalValue !== "" && nodeClass) {
-      // Use queueMicrotask to defer validation until after current render cycle
-      queueMicrotask(() => {
-        // Reset the last validated value to force re-validation
-        lastValidatedValueRef.current = "";
-
-        postValidatePrompt(
-          {
-            name: field_name || "",
-            template: internalValue,
-            frontend_node: nodeClass,
-            mustache: isDoubleBrackets,
-          },
-          {
-            onSuccess: (apiReturn) => {
-              if (apiReturn?.frontend_node) {
-                lastValidatedValueRef.current = internalValue;
-                apiReturn.frontend_node.template.template.value = internalValue;
-                if (handleNodeClass) {
-                  // Merge the updated template fields while preserving existing properties
-                  const updatedNode = {
-                    ...nodeClass,
-                    template: {
-                      ...nodeClass.template,
-                      ...apiReturn.frontend_node.template,
-                    },
-                  };
-                  handleNodeClass(updatedNode);
-                }
-              }
-            },
-            onError: (error) => {
-              console.error(
-                "[AccordionPrompt] Mode change validation error:",
-                error,
-              );
-            },
-          },
-        );
-      });
-    }
-  }, [isDoubleBrackets]);
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     if (!contentEditableRef.current) return;
