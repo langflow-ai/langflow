@@ -50,6 +50,8 @@
   "alerts.noChatOutput": "Im Ablauf ist keine „ ChatOutput “-Komponente vorhanden.",
   "alerts.noTemplateVariables": "Ihre Vorlage enthält keine Variablen.",
   "alerts.notificationsTitle": "Benachrichtigungen",
+  "alerts.clearNotifications": "Benachrichtigungen löschen",
+  "alerts.closeNotifications": "Benachrichtigungen schließen",
   "apiKey.expirationDate": "Ablaufdatum",
   "apiKey.copy": "API-Schlüssel kopieren",
   "apiKey.generated": "Generierter API-Schlüssel",
