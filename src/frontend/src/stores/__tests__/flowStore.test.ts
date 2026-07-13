@@ -1375,7 +1375,9 @@ describe("useFlowStore", () => {
           .getState()
           .setNode(
             "hitl",
-            humanInputNode([{ name: "branch_approve", display_name: "Approve" }]),
+            humanInputNode([
+              { name: "branch_approve", display_name: "Approve" },
+            ]),
           );
       });
 
