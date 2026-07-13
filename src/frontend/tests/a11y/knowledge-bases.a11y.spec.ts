@@ -511,7 +511,7 @@ test.describe("knowledge bases route accessibility", () => {
       ).toBeVisible({ timeout: TIMEOUTS.standard });
       await page.getByRole("combobox", { name: /embedding model/i }).click();
       await expect(
-        page.getByTestId("text-embedding-3-small-option"),
+        page.getByTestId("OpenAI-text-embedding-3-small-option"),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
       await expect(page.getByTestId("manage-model-providers")).toBeVisible();
       await page.runA11yScan("kb-upload-embedding-dropdown");
