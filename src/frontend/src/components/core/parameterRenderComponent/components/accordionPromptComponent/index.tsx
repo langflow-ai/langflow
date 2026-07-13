@@ -14,6 +14,7 @@ import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, PromptAreaComponentType } from "../../types";
 import { generateUniqueVariableName } from "./helpers/generate-unique-variable-name";
 import { getHighlightedHTML } from "./helpers/prompt-highlight";
+import { usePromptDomSync } from "./hooks/usePromptDomSync";
 import { usePromptValidation } from "./hooks/usePromptValidation";
 
 /** @deprecated import from "./helpers/generate-unique-variable-name" */
@@ -201,54 +202,20 @@ export default function AccordionPromptComponent({
     findPosition(contentEditableRef.current);
   };
 
-  // Initialize content on mount and when value changes externally
-  useEffect(() => {
-    if (!isTypingRef.current && value !== internalValue) {
-      setInternalValue(value);
-
-      // Update DOM when value comes from external source
-      if (contentEditableRef.current) {
-        saveCursorPosition();
-        contentEditableRef.current.innerHTML = value
-          ? getHighlightedHTML(value, isDoubleBrackets)
-          : "";
-        restoreCursorPosition();
-        resizeToFit();
-      }
-
-      // Update last validated value to avoid redundant calls
-      lastValidatedValueRef.current = value;
-    }
-  }, [value]);
-
-  // Update DOM when internal value changes (only on mount/external changes)
-  useEffect(() => {
-    if (!contentEditableRef.current || isTypingRef.current) return;
-
-    const currentText = contentEditableRef.current.innerText;
-    if (currentText !== internalValue) {
-      contentEditableRef.current.innerHTML = internalValue
-        ? getHighlightedHTML(internalValue, isDoubleBrackets)
-        : "";
-      resizeToFit();
-    }
-  }, [internalValue]);
-
-  // Restore content when disclosure opens
-  useEffect(() => {
-    if (isOpen && contentEditableRef.current && internalValue) {
-      // Small delay to ensure the DOM is ready after disclosure animation
-      requestAnimationFrame(() => {
-        if (contentEditableRef.current) {
-          contentEditableRef.current.innerHTML = getHighlightedHTML(
-            internalValue,
-            isDoubleBrackets,
-          );
-          resizeToFit();
-        }
-      });
-    }
-  }, [isOpen]);
+  // Value <-> DOM synchronization effects
+  usePromptDomSync({
+    value,
+    internalValue,
+    setInternalValue,
+    isOpen,
+    isDoubleBrackets,
+    contentEditableRef,
+    isTypingRef,
+    lastValidatedValueRef,
+    saveCursorPosition,
+    restoreCursorPosition,
+    resizeToFit,
+  });
 
   useEffect(() => {
     resizeToFit();
