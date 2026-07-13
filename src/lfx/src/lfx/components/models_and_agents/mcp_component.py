@@ -517,7 +517,10 @@ class MCPToolsComponent(ComponentWithCache):
                         from lfx.services.deps import get_variable_service
 
                         variable_service = get_variable_service()
-                        if variable_service:
+                        # ``get_all_decrypted_variables`` is DB-service-only; the minimal
+                        # lfx VariableService (now registered by ``lfx serve``) lacks it, so
+                        # skip cleanly rather than raising into the broad except below.
+                        if variable_service and hasattr(variable_service, "get_all_decrypted_variables"):
                             async with session_scope() as db:
                                 request_variables = await variable_service.get_all_decrypted_variables(
                                     user_id=self.user_id, session=db
