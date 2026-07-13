@@ -143,18 +143,18 @@ class SecuritySettings(BaseModel):
     flow-embedded configs and the ``/api/v2/mcp/servers`` REST endpoint).
 
     ``docker`` is an allowed MCP transport, but flags like ``-v /:/host`` (mount the host
-    filesystem), ``-v /var/run/docker.sock:/s`` (Docker-API root), ``--device``, ``--network
-    host``, and ``--privileged`` turn a container run into host access. With the default (False)
-    only ``--privileged`` / ``--cap-add`` and the host-namespace ``=`` forms are blocked, which
-    preserves existing single-tenant behavior where docker MCP servers legitimately use volume
-    mounts and custom networks.
+    filesystem), ``--use-api-socket`` (Docker-API root), ``--env-file`` (host file read),
+    ``--device``, ``--network host``, and ``--privileged`` turn a container run into host access.
+    With the default (False) only ``--privileged`` / ``--cap-add`` and the host-namespace ``=``
+    forms are blocked, which preserves existing single-tenant behavior where docker MCP servers
+    legitimately use volume mounts and custom networks.
 
     Multi-tenant / untrusted-tenant deployments should set this to True (alongside
-    ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``): host filesystem/device mounts and privilege flags
-    are then rejected outright, host/another-container namespaces and non-default networks are
-    rejected, and ``--security-opt`` is rejected only when it disables the sandbox. Benign forms
-    (no flags, ``--user``, ``--network none``/``bridge``, ``--security-opt no-new-privileges``)
-    stay allowed."""
+    ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``): host file/API/device access, published ports,
+    custom runtimes, restart persistence, and privilege flags are then rejected outright;
+    host/another-container namespaces and non-default networks are rejected; and
+    ``--security-opt`` is rejected only when it disables the sandbox. Benign forms (no flags,
+    ``--user``, ``--network none``/``bridge``, ``--security-opt no-new-privileges``) stay allowed."""
 
     # Rate Limiting
     rate_limit_enabled: bool = True

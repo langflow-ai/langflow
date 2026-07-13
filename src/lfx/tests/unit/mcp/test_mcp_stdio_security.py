@@ -84,6 +84,12 @@ def test_validate_mcp_stdio_config_blocks_malicious(command, args, env):
         ["run", "--volumes-from", "other", "img"],
         ["run", "--device", "/dev/mem", "img"],
         ["run", "--device-cgroup-rule", "b 8:0 rwm", "img"],
+        ["run", "--gpus", "all", "img"],
+        ["run", "--use-api-socket", "img"],
+        # Docker CLI host-file reads/writes.
+        ["run", "--env-file", "/app/.env", "img"],
+        ["run", "--label-file=/app/.env", "img"],
+        ["run", "--cidfile", "/app/container.id", "img"],
         # Host / another-container namespaces.
         ["run", "--network", "host", "img"],
         ["run", "--net=host", "img"],
@@ -91,8 +97,19 @@ def test_validate_mcp_stdio_config_blocks_malicious(command, args, env):
         ["run", "--ipc", "host", "img"],
         ["run", "--uts", "host", "img"],
         ["run", "--pid", "container:victim", "img"],
+        ["run", "--cgroupns", "host", "img"],
+        ["run", "--userns=host", "img"],
         # Non-default network (named infra network -> lateral movement).
         ["run", "--network", "internal-db-net", "img"],
+        ["run", "--link", "database:db", "img"],
+        # MCP stdio servers do not need host ports, custom runtimes, or restart persistence.
+        ["run", "-p", "8080:80", "img"],
+        ["run", "-p8080:80", "img"],
+        ["run", "-itp8080:80", "img"],
+        ["run", "-P", "img"],
+        ["run", "--publish=8080:80", "img"],
+        ["run", "--runtime", "custom", "img"],
+        ["run", "--restart", "always", "img"],
         # Sandbox-profile downgrades.
         ["run", "--security-opt", "seccomp=unconfined", "img"],
         ["run", "--security-opt=apparmor=unconfined", "img"],
@@ -120,6 +137,7 @@ def test_docker_hardened_policy_blocks_host_access(args):
         ["run", "--network=default", "img"],
         ["run", "--security-opt", "no-new-privileges", "img"],  # hardening flag, must stay allowed
         ["run", "--ipc", "private", "img"],
+        ["run", "--cgroupns", "private", "img"],
     ],
 )
 def test_docker_hardened_policy_allows_benign(args):

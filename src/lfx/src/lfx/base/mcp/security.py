@@ -148,7 +148,8 @@ DOCKER_DANGEROUS_ARGS = frozenset({"--privileged", "--cap-add"})
 DOCKER_DANGEROUS_ARG_PREFIXES = ("--net=", "--network=", "--pid=", "--cap-add=", "--privileged=")
 
 # -- Hardened (opt-in) --
-# Flags with no safe value: host filesystem / device access and privilege escalation.
+# Flags with no safe value for an MCP stdio transport: host filesystem / device access,
+# Docker API access, host port exposure, persistence, and privilege escalation.
 DOCKER_HARDENED_BLOCKED_FLAGS = frozenset(
     {
         "--privileged",
@@ -159,10 +160,22 @@ DOCKER_HARDENED_BLOCKED_FLAGS = frozenset(
         "--mount",
         "--device",
         "--device-cgroup-rule",
+        "--env-file",
+        "--label-file",
+        "--cidfile",
+        "--gpus",
+        "--use-api-socket",
+        "--link",
+        "--runtime",
+        "-p",
+        "-P",
+        "--publish",
+        "--publish-all",
+        "--restart",
     }
 )
 # Namespace flags: dangerous only when sharing the host's or another container's namespace.
-DOCKER_HARDENED_NAMESPACE_FLAGS = frozenset({"--pid", "--ipc", "--uts"})
+DOCKER_HARDENED_NAMESPACE_FLAGS = frozenset({"--pid", "--ipc", "--uts", "--cgroupns", "--userns"})
 # Network flags: only the default-isolated values are safe. ``host`` / ``container:*`` break
 # isolation, and a *named* network can be the operator's internal bridge (lateral movement), so
 # anything outside this allowlist is rejected.
@@ -406,6 +419,24 @@ def _is_docker_short_volume_flag(arg: str) -> bool:
     return volume_index > 0 and all(flag in {"d", "i", "P", "t"} for flag in short_flags[:volume_index])
 
 
+def _is_docker_short_publish_flag(arg: str) -> bool:
+    """Return whether a Docker short-option token publishes host ports.
+
+    Docker accepts values attached to ``-p`` and bundles boolean flags before it
+    (for example, ``-itp8080:80``), so exact-token checks are insufficient.
+    """
+    if not arg.startswith("-") or arg.startswith("--"):
+        return False
+    short_flags = arg[1:].split("=", 1)[0]
+    for publish_flag in ("p", "P"):
+        publish_index = short_flags.find(publish_flag)
+        if publish_index == 0 or (
+            publish_index > 0 and all(flag in {"d", "i", "t"} for flag in short_flags[:publish_index])
+        ):
+            return True
+    return False
+
+
 def _validate_docker_args_lenient(args: list[str]) -> None:
     """Default policy: only privilege/cap flags and host-namespace ``=`` forms (previous behavior)."""
     for arg in args:
@@ -429,7 +460,11 @@ def _validate_docker_args_hardened(args: list[str]) -> None:
 
     for i, arg in enumerate(args):
         flag = arg.split("=", 1)[0]
-        if flag in DOCKER_HARDENED_BLOCKED_FLAGS or _is_docker_short_volume_flag(arg):
+        if (
+            flag in DOCKER_HARDENED_BLOCKED_FLAGS
+            or _is_docker_short_volume_flag(arg)
+            or _is_docker_short_publish_flag(arg)
+        ):
             _raise_docker_arg(arg)
         elif flag in DOCKER_HARDENED_NAMESPACE_FLAGS:
             value = _docker_arg_value(arg, args, i)
