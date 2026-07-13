@@ -141,7 +141,8 @@ const Footer: React.FC<{
       {submit ? (
         <div className="flex w-full items-center justify-between">
           {children ?? <div />}
-          <div className="flex items-center gap-3">
+          {/* p-2/-m-2 keeps layout unchanged while giving ring-offset-2 room to paint */}
+          <div className="-m-2 flex items-center gap-3 overflow-visible p-2">
             <DialogClose asChild>
               <Button
                 variant="outline"
@@ -258,6 +259,15 @@ function BaseModal({
 
   const { minWidth, height } = switchCaseModalSize(size);
 
+  // BaseModal.Header renders DialogTitle/Description inside its own component
+  // body, so DialogContent's child-tree scan cannot see them and would inject a
+  // VisuallyHidden "Dialog" title that steals aria-labelledby. Skip that
+  // fallback whenever a Header is present.
+  const hideTitleFallback = !!headerChild;
+  const hideDescriptionFallback =
+    React.isValidElement(headerChild) &&
+    !!(headerChild.props as { description?: unknown }).description;
+
   useEffect(() => {
     if (onChangeOpenModal) {
       onChangeOpenModal(open);
@@ -284,7 +294,7 @@ function BaseModal({
     className,
   );
 
-  const formClasses = "flex flex-col flex-1 gap-6 overflow-hidden";
+  const formClasses = "flex min-h-0 flex-col flex-1 gap-6";
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (
@@ -319,6 +329,8 @@ function BaseModal({
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}
+              hideTitle={hideTitleFallback}
+              hideDescription={hideDescriptionFallback}
             >
               {onSubmit ? (
                 <Form.Root
@@ -342,6 +354,8 @@ function BaseModal({
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}
+              hideTitle={hideTitleFallback}
+              hideDescription={hideDescriptionFallback}
             >
               {onSubmit ? (
                 <Form.Root

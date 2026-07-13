@@ -106,6 +106,28 @@ export function patchTabbableRow(container: HTMLElement) {
   rows.forEach((row, index) => {
     setAttributeIfChanged(row, "tabindex", index === 0 ? "0" : "-1");
   });
+
+  container
+    .querySelectorAll<HTMLInputElement>(
+      '.ag-checkbox-input-wrapper input[type="checkbox"]',
+    )
+    .forEach((checkboxInput) => {
+      const cell = checkboxInput.closest<HTMLElement>(
+        '[role="gridcell"], [role="columnheader"]',
+      );
+      const checkboxLabel = checkboxInput.getAttribute("aria-label");
+      if (!cell || !checkboxLabel) return;
+
+      const valueText =
+        cell
+          .querySelector<HTMLElement>(".ag-cell-value, .ag-header-cell-text")
+          ?.textContent?.trim() || "";
+      const combinedLabel = valueText
+        ? `${valueText}, ${checkboxLabel}`
+        : checkboxLabel;
+
+      setAttributeIfChanged(cell, "aria-label", combinedLabel);
+    });
 }
 
 export function patchGridAccessibility(

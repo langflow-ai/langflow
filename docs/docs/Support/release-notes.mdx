@@ -61,7 +61,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Upcoming breaking change: bundle separation
 
     Langflow 1.10.x introduced the Extension bundles model.
-    In Langflow 1.11.x and future releases, bundle separation will extend to more component providers.
+    In Langflow 1.11.x and future releases, bundle separation extends to more component providers.
 
     Saved flows continue to open normally, but the following may require manual updates before upgrading:
 
@@ -92,6 +92,19 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [Deploy flows on watsonx Orchestrate](/deployment-wxo).
 
+- Optional integrations not yet available on Python 3.14
+
+    The following optional integrations remain excluded from installations on Python 3.14:
+
+    - [ALTK](/bundles-altk)
+    - [CUGA](/bundles-cuga)
+    - [LangWatch](/integrations-langwatch)
+    - [Pinecone](/bundles-pinecone)
+    - [OpenDsStar](/bundles-files-ingestion)
+    - [litellm](/bundles-lite-llm)
+    - [opik](/integrations-opik)
+    - [toolguard](/policies)
+
 - NextPlaid multi-vector bundle
 
     The **NextPlaid** bundle adds two new components for ColBERT-style multi-vector retrieval.
@@ -100,12 +113,18 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [NextPlaid bundle](./bundles-nextplaid).
 
+- PaddleOCR bundle
+
+    The **Paddle** bundle (`lfx-paddle`) adds a **PaddleOCR** component that calls the PaddleOCR AI Studio Job API for layout-aware document parsing into Markdown.
+
+    For more information, see [Paddle bundle](./bundles-paddle).
+    
 - Oracle Extension bundle
 
     The **Oracle** bundle adds Oracle Database integration for vector search, document loading, and embeddings.
 
     For more information, see [Oracle bundle](./bundles-oracle).
-    
+
 - LFX is now engine-only
 
     `uv pip install lfx` now installs the LFX executor only, with no bundle components included.
