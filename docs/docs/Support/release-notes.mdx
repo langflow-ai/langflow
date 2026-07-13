@@ -58,10 +58,10 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
     If `LANGFLOW_AUTO_LOGIN=False`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup.
 
-- Upcoming breaking change: bundle separation
+- Ongoing breaking changes: bundle separation
 
     Langflow 1.10.x introduced the Extension bundles model.
-    In Langflow 1.11.x and future releases, bundle separation will extend to more component providers.
+    In Langflow 1.11.x and future releases, bundle separation extends to more component providers.
 
     Saved flows continue to open normally, but the following may require manual updates before upgrading:
 
@@ -76,6 +76,42 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     **CUGA**, **Code Agents**, and **Docling** local conversion are excluded from the default `uv pip install langflow` installation because they require PyTorch.
 
     To install these components, see [Torch opt-in installs](./components-bundle-components#torch-opt-in).
+
+- Workflow API request schema (Beta)
+
+    The v2 [Workflow API (Beta)](/workflow-api) request body and interaction pattern changes in 1.11.
+    Any client that calls `POST /api/v2/workflows` against 1.10.x must update as follows:
+
+    Example 1.10.x request:
+
+    ```json
+    {
+      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+      "background": false,
+      "inputs": {
+        "ChatInput-abc.input_value": "what is 2+2",
+        "LLMComponent-123.temperature": 0.7
+      }
+    }
+    ```
+
+    Example 1.11.x request:
+
+    ```json
+    {
+      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
+      "input_value": "what is 2+2",
+      "mode": "stream",
+      "stream_protocol": "agui",
+      "tweaks": {
+        "LLMComponent-123": {
+          "temperature": 0.7
+        }
+      }
+    }
+    ```
+
+    For more information, see [Workflow API (Beta)](/workflow-api).
 
 ### New features and enhancements
 
@@ -105,7 +141,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The **Oracle** bundle adds Oracle Database integration for vector search, document loading, and embeddings.
 
     For more information, see [Oracle bundle](./bundles-oracle).
-    
+
 - LFX is now engine-only
 
     `uv pip install lfx` now installs the LFX executor only, with no bundle components included.
