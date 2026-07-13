@@ -52,6 +52,8 @@
   "alerts.noChatOutput": "Im Ablauf ist keine „ ChatOutput “-Komponente vorhanden.",
   "alerts.noTemplateVariables": "Ihre Vorlage enthält keine Variablen.",
   "alerts.notificationsTitle": "Benachrichtigungen",
+  "alerts.clearNotifications": "Benachrichtigungen löschen",
+  "alerts.closeNotifications": "Benachrichtigungen schließen",
   "apiKey.expirationDate": "Ablaufdatum",
   "apiKey.copy": "API-Schlüssel kopieren",
   "apiKey.generated": "Generierter API-Schlüssel",
@@ -1451,6 +1453,11 @@
   "modelProviders.loadingProviders": "Anbieter werden geladen",
   "modelProviders.noModelsAvailable": "Keine Modelle verfügbar",
   "modelProviders.noModelsMatch": "Es wurden keine Modelle gefunden, die Ihrer Suche entsprechen.",
+  "modelProviders.searchOrAddDeployment": "Bereitstellungsnamen suchen oder hinzufügen…",
+  "modelProviders.customDeploymentHint": "Verwenden Sie die Bereitstellungsnamen aus dem Azure AI Foundry-Portal (keine Katalog-Modell-IDs). Suchen oder geben Sie einen Namen ein, um einen hinzuzufügen.",
+  "modelProviders.addDeployment": "Bereitstellung \"{{name}}\" hinzufügen",
+  "modelProviders.addLanguageDeployment": "Bereitstellung \"{{name}}\" als Sprachmodell hinzufügen",
+  "modelProviders.addEmbeddingDeployment": "Bereitstellung \"{{name}}\" als Einbettungsmodell hinzufügen",
   "modelProviders.noProvidersMatch": "Es wurden keine Anbieter gefunden, die Ihrer Suche entsprechen.",
   "modelProviders.ollamaNoModelsAll": "Es sieht so aus, als hättest du keine Modelle für Ollama installiert. Bitte wählen Sie die Modelle aus, die Sie verwenden möchten.",
   "modelProviders.ollamaNoModelsEmbeddings": "Es sieht so aus, als hättest du keine Einbettungsmodelle für Ollama installiert. Bitte wählen Sie die Modelle aus, die Sie verwenden möchten.",
@@ -2108,5 +2115,8 @@
   "paginator.pageLabel": "Page",
   "flow.flowSettings": "Flow settings",
   "files.actionsMenu": "Dateiaktionen für {{name}}",
-  "mcp.servers.actionsMenu": "Aktionen für {{name}}"
+  "mcp.servers.actionsMenu": "Aktionen für {{name}}",
+  "assistant.modelNotice.fallback": "Modell {{failed}} ist fehlgeschlagen ({{reason}}); stattdessen wurde {{used}} verwendet.",
+  "assistant.modelNotice.remediation": "Modell {{failed}} benötigte eine Anpassung zur Ausführung ({{reason}}).",
+  "assistant.modelNotice.ariaLabel": "Modellhinweis"
 }

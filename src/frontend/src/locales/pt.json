@@ -52,6 +52,8 @@
   "alerts.noChatOutput": "Não há nenhum componente \" ChatOutput \" no fluxo.",
   "alerts.noTemplateVariables": "Seu modelo não contém nenhuma variável.",
   "alerts.notificationsTitle": "Notificações",
+  "alerts.clearNotifications": "Limpar notificações",
+  "alerts.closeNotifications": "Fechar notificações",
   "apiKey.expirationDate": "data de expiração",
   "apiKey.copy": "Copiar chave de API",
   "apiKey.generated": "Chave de API gerada",
@@ -1451,6 +1453,11 @@
   "modelProviders.loadingProviders": "Carregando provedores",
   "modelProviders.noModelsAvailable": "Não há modelos disponíveis",
   "modelProviders.noModelsMatch": "Não foram encontrados modelos que correspondam à sua pesquisa.",
+  "modelProviders.searchOrAddDeployment": "Pesquisar ou adicionar um nome de implantação…",
+  "modelProviders.customDeploymentHint": "Use os nomes de implantação do Azure AI Foundry no portal (não os IDs do catálogo). Pesquise ou digite um nome para adicionar.",
+  "modelProviders.addDeployment": "Adicionar implantação \"{{name}}\"",
+  "modelProviders.addLanguageDeployment": "Adicionar a implantação \"{{name}}\" como modelo de linguagem",
+  "modelProviders.addEmbeddingDeployment": "Adicionar a implantação \"{{name}}\" como modelo de embeddings",
   "modelProviders.noProvidersMatch": "Não foram encontrados prestadores que correspondam à sua pesquisa.",
   "modelProviders.ollamaNoModelsAll": "Parece que você não tem nenhum modelo instalado para o Ollama. Por favor, selecione os modelos que deseja usar.",
   "modelProviders.ollamaNoModelsEmbeddings": "Parece que você não tem nenhum modelo de incorporação instalado para o Ollama. Por favor, selecione os modelos que deseja usar.",
@@ -2108,5 +2115,8 @@
   "paginator.pageLabel": "Page",
   "flow.flowSettings": "Flow settings",
   "files.actionsMenu": "Ações do arquivo para {{name}}",
-  "mcp.servers.actionsMenu": "Ações para {{name}}"
+  "mcp.servers.actionsMenu": "Ações para {{name}}",
+  "assistant.modelNotice.fallback": "O modelo {{failed}} falhou ({{reason}}); usei {{used}} no lugar.",
+  "assistant.modelNotice.remediation": "O modelo {{failed}} precisou de um ajuste para rodar ({{reason}}).",
+  "assistant.modelNotice.ariaLabel": "Aviso do modelo"
 }

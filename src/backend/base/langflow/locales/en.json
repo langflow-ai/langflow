@@ -5176,7 +5176,7 @@
   "components.opensearchvectorstorecomponentmultimodalmultiembedding.outputs.search_results.display_name.39414102": "Search Results",
   "components.opensearchvectorstorecomponentmultimodalmultiembedding.outputs.vectorstoreconnection.display_name.1d6ec66e": "Vector Store Connection",
   "components.operations.description.c7208823": "Perform operations on Text, JSON, and Tables from a single component.",
-  "components.operations.display_name.358cc201": "Operations",
+  "components.operations.display_name.e7b41d7a": "Data Operations",
   "components.operations.inputs.append_update_data.display_name.21359081": "Append or Update",
   "components.operations.inputs.append_update_data.info.15fd614a": "Data to append or update the existing data with. Only top-level keys are checked.",
   "components.operations.inputs.ascending.display_name.f09318d7": "Sort Ascending",
