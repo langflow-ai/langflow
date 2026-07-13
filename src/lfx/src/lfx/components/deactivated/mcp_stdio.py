@@ -1,8 +1,11 @@
 # from lfx.field_typing import Data
 
+import shlex
+
 from langchain_core.tools import StructuredTool
 from mcp import types
 
+from lfx.base.mcp.security import validate_mcp_stdio_config
 from lfx.base.mcp.util import (
     MCPStdioClient,
     create_input_schema_from_json_schema,
@@ -43,6 +46,13 @@ class MCPStdio(Component):
 
     async def build_output(self) -> list[Tool]:
         if self.client.session is None:
+            # SECURITY: ``self.command`` is tenant-controlled and is passed straight to a
+            # ``bash -c "exec <command>"`` stdio transport. This legacy component bypasses the
+            # update_tools choke point, so enforce the MCP command allowlist/metacharacter
+            # policy here too. Raises MCPStdioSecurityError (a ValueError) on violation.
+            command_parts = shlex.split(self.command or "")
+            if command_parts:
+                validate_mcp_stdio_config(command_parts[0], command_parts[1:], None)
             self.tools = await self.client.connect_to_server(self.command)
 
         tool_list = []

@@ -14,6 +14,7 @@ from lfx.io import DictInput, IntInput, StrInput, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
@@ -196,6 +197,9 @@ class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
     def astra_rest(self, args):
         headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
         astra_url = f"{self.get_api_endpoint()}/api/rest/v2/keyspaces/{self.get_keyspace()}/{self.collection_name}/"
+        # api_endpoint is tenant-controlled: block SSRF to internal/cloud-metadata hosts before
+        # the Cassandra token is sent to it.
+        validate_connector_url_for_ssrf(astra_url)
         where = {}
 
         for param in self.tools_params:
@@ -240,7 +244,7 @@ class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
         if self.projection_fields != "*":
             url += f"&fields={urllib.parse.quote(self.projection_fields.replace(' ', ''))}"
 
-        res = requests.request("GET", url=url, headers=headers, timeout=10)
+        res = requests.request("GET", url=url, headers=headers, timeout=10, allow_redirects=False)
 
         if int(res.status_code) >= HTTPStatus.BAD_REQUEST:
             msg = f"Error on Astra DB CQL Tool {self.tool_name} request: {res.text}"

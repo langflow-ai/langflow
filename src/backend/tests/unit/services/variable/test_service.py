@@ -472,3 +472,70 @@ async def test_create_credential_variable_with_fernet_signature_succeeds(service
     assert variable.name == "TEST_CRED"
     # The value should be encrypted (different from input)
     assert variable.value != "gAAAAABsome-value"
+
+
+# A Fernet token always starts with this prefix. We use a synthetic one so the tests are
+# deterministic regardless of whether the auth service in the test env actually encrypts.
+_FERNET_TOKEN = "gAAAAABthis-stands-in-for-an-encrypted-credential"  # noqa: S105  # pragma: allowlist secret
+
+
+async def test_credential_to_generic_type_flip_without_value_is_rejected(service, session: AsyncSession):
+    """Security: flipping a CREDENTIAL variable to GENERIC without a new value is rejected.
+
+    Otherwise the Fernet ciphertext would remain in the row while the type says GENERIC,
+    and get_all() would decrypt it and return the plaintext secret via GET /variables.
+    """
+    user_id = uuid4()
+    variable = await service.create_variable(
+        user_id, "OPENAI_API_KEY", "placeholder", type_=CREDENTIAL_TYPE, session=session
+    )
+    saved_id = variable.model_dump()["id"]
+
+    # Pin the at-rest value to a Fernet token so the guard precondition holds in any env.
+    db_var = await service.get_variable_by_id(user_id, saved_id, session=session)
+    db_var.value = _FERNET_TOKEN
+    session.add(db_var)
+    await session.flush()
+    assert db_var.updated_at is None
+
+    # Attacker sends only {id, type=Generic} with no value -> must be rejected.
+    flip = VariableUpdate(id=saved_id, type=GENERIC_TYPE)
+    with pytest.raises(ValueError, match="without providing a new value"):
+        await service.update_variable_fields(
+            user_id=user_id,
+            variable_id=saved_id,
+            variable=flip,
+            session=session,
+        )
+
+    # The row must remain CREDENTIAL-typed (transition rejected, not silently applied).
+    db_var_after = await service.get_variable_by_id(user_id, saved_id, session=session)
+    assert db_var_after.type == CREDENTIAL_TYPE
+    assert db_var_after.updated_at is None
+
+
+async def test_get_all_never_returns_decrypted_credential_as_generic(service, session: AsyncSession):
+    """Security defense-in-depth: a GENERIC row holding a Fernet token is never decrypted/returned.
+
+    Simulates a pre-existing type-confused row (e.g. from before the write-path guard) and
+    verifies get_all() does not leak its value.
+    """
+    user_id = uuid4()
+    variable = await service.create_variable(
+        user_id, "AWS_SECRET_ACCESS_KEY", "placeholder", type_=CREDENTIAL_TYPE, session=session
+    )
+    saved_id = variable.model_dump()["id"]
+
+    # Force the corrupt state directly in the DB (bypassing the write-path guard):
+    # GENERIC type but the value is still a Fernet token.
+    db_var = await service.get_variable_by_id(user_id, saved_id, session=session)
+    db_var.type = GENERIC_TYPE
+    db_var.value = _FERNET_TOKEN
+    session.add(db_var)
+    await session.flush()
+
+    results = await service.get_all(user_id, session=session)
+    # The type-confused row must be skipped, never returned with a value derived from the token.
+    leaked = [v for v in results if v.value and v.value.startswith("gAAAAA")]
+    assert leaked == []
+    assert all(v.id != saved_id for v in results if v.value is not None)
