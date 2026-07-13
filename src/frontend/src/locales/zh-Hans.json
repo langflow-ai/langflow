@@ -2113,5 +2113,8 @@
   "paginator.pageLabel": "Page",
   "flow.flowSettings": "Flow settings",
   "files.actionsMenu": "{{name}} 的文件操作",
-  "mcp.servers.actionsMenu": "{{name}} 的操作"
+  "mcp.servers.actionsMenu": "{{name}} 的操作",
+  "assistant.modelNotice.fallback": "模型 {{failed}} 失败（{{reason}}），改用 {{used}}。",
+  "assistant.modelNotice.remediation": "模型 {{failed}} 需要调整才能运行（{{reason}}）。",
+  "assistant.modelNotice.ariaLabel": "模型提示"
 }
