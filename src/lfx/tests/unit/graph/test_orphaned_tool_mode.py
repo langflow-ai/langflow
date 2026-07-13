@@ -59,6 +59,29 @@ def test_orphaned_tool_mode_node_excluded_from_run():
     assert all(ORPHANED_TOOL not in layer for layer in graph.vertices_layers)
 
 
+def test_orphaned_tool_still_runs_when_explicitly_targeted():
+    """A single-node build of the tool-mode component (node play button) must run it.
+
+    The orphan exclusion protects full-flow runs from leftover tools; a run whose
+    ``stop_component_id`` IS the tool-mode node is the user inspecting its toolset
+    output, and skipping it builds nothing (the inspect button stays disabled).
+    """
+    graph = _prepared_graph()
+
+    sorted_ids = graph.sort_vertices(stop_component_id=ORPHANED_TOOL)
+
+    assert ORPHANED_TOOL in sorted_ids
+    assert ORPHANED_TOOL in graph._first_layer or any(ORPHANED_TOOL in layer for layer in graph.vertices_layers)
+
+
+def test_orphaned_tool_still_runs_as_start_component():
+    graph = _prepared_graph()
+
+    sorted_ids = graph.sort_vertices(start_component_id=ORPHANED_TOOL)
+
+    assert ORPHANED_TOOL in sorted_ids
+
+
 def test_non_tool_nodes_still_run():
     graph = _prepared_graph()
 

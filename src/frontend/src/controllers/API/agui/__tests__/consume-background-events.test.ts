@@ -167,7 +167,13 @@ describe("consumeBackgroundEvents", () => {
           id: "human-input-HI:job-3",
           content_blocks: [
             {
-              contents: [{ type: "human_input", submitted_action: "approve" }],
+              contents: [
+                {
+                  type: "human_input",
+                  request_id: "HI:job-3",
+                  submitted_action: "approve",
+                },
+              ],
             },
           ],
         },
@@ -216,7 +222,13 @@ describe("consumeBackgroundEvents", () => {
           id: "human-input-HI1:job-4",
           content_blocks: [
             {
-              contents: [{ type: "human_input", submitted_action: "approve" }],
+              contents: [
+                {
+                  type: "human_input",
+                  request_id: "HI1:job-4",
+                  submitted_action: "approve",
+                },
+              ],
             },
           ],
         },
