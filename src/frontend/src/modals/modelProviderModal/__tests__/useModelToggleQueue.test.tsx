@@ -3,6 +3,25 @@ import { act } from "react";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useModelToggleQueue } from "../hooks/useModelToggleQueue";
 
+type ModelType = "llm" | "embeddings";
+type TypedModelToggle = (
+  modelName: string,
+  enabled: boolean,
+  modelType: ModelType,
+) => void;
+
+// Keep these RED tests executable against the current two-argument hook. The
+// third argument is intentionally ignored by the production code until the
+// typed-toggle contract is implemented.
+const invokeTypedToggle = (
+  toggle: unknown,
+  modelName: string,
+  enabled: boolean,
+  modelType: ModelType,
+) => {
+  (toggle as TypedModelToggle)(modelName, enabled, modelType);
+};
+
 // ---------------------------------------------------------------------------
 // React Query — capture invocation order on the shared mock so the test can
 // assert that ``cancelQueries`` is called BEFORE ``setQueryData`` whenever a
@@ -52,7 +71,12 @@ jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
 // flush sends ONLY the unsent slice, never re-sending an in-flight overlay,
 // and can drive ``onError`` / ``onSettled`` via the captured callbacks.
 const mutationCalls: Array<{
-  updates: { provider: string; model_id: string; enabled: boolean }[];
+  updates: {
+    provider: string;
+    model_id: string;
+    enabled: boolean;
+    model_type: ModelType;
+  }[];
 }> = [];
 const mutationCallbacks: Array<{
   onError?: (error: unknown) => void;
@@ -133,7 +157,12 @@ describe("useModelToggleQueue", () => {
       );
 
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
       });
 
       expect(trackingQueryClient.cancelQueries).toHaveBeenCalledWith({
@@ -156,13 +185,62 @@ describe("useModelToggleQueue", () => {
       expect(cancelIdx).toBeLessThan(setIdx);
     });
 
+    it("disables only the selected type and keeps the flat union enabled", () => {
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "Azure AI Foundry" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "shared",
+          false,
+          "llm",
+        );
+      });
+
+      const updater = trackingQueryClient.setQueryData.mock.calls[0][1] as (
+        old: unknown,
+      ) => unknown;
+      const updated = updater({
+        enabled_models: {
+          "Azure AI Foundry": { shared: true },
+        },
+        enabled_models_by_type: {
+          "Azure AI Foundry": {
+            llm: { shared: true },
+            embeddings: { shared: true },
+          },
+        },
+      }) as {
+        enabled_models: Record<string, Record<string, boolean>>;
+        enabled_models_by_type: Record<
+          string,
+          Record<ModelType, Record<string, boolean>>
+        >;
+      };
+
+      expect(
+        updated.enabled_models_by_type["Azure AI Foundry"].llm.shared,
+      ).toBe(false);
+      expect(
+        updated.enabled_models_by_type["Azure AI Foundry"].embeddings.shared,
+      ).toBe(true);
+      expect(updated.enabled_models["Azure AI Foundry"].shared).toBe(true);
+    });
+
     it("no-ops when no provider is selected", () => {
       const { result } = renderHook(() =>
         useModelToggleQueue({ providerName: null }),
       );
 
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
       });
 
       expect(trackingQueryClient.cancelQueries).not.toHaveBeenCalled();
@@ -187,7 +265,12 @@ describe("useModelToggleQueue", () => {
 
       // User toggles gpt-4 off — overlay now holds {gpt-4: false}.
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
       });
       expect(trackingQueryClient.setQueryData).toHaveBeenCalled();
 
@@ -234,6 +317,44 @@ describe("useModelToggleQueue", () => {
   });
 
   describe("send buffer", () => {
+    it("preserves the same deployment name independently across model types", () => {
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "Azure AI Foundry" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "shared",
+          false,
+          "llm",
+        );
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "shared",
+          true,
+          "embeddings",
+        );
+        runDebounced();
+      });
+
+      expect(mutationCalls).toHaveLength(1);
+      expect(mutationCalls[0].updates).toEqual([
+        {
+          provider: "Azure AI Foundry",
+          model_id: "shared",
+          enabled: false,
+          model_type: "llm",
+        },
+        {
+          provider: "Azure AI Foundry",
+          model_id: "shared",
+          enabled: true,
+          model_type: "embeddings",
+        },
+      ]);
+    });
+
     it("does not resend in-flight toggles when a new toggle is flushed", () => {
       const { result } = renderHook(() =>
         useModelToggleQueue({ providerName: "OpenAI" }),
@@ -241,24 +362,44 @@ describe("useModelToggleQueue", () => {
 
       // Toggle A → debounce schedules a flush; drive it to send mutation A.
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(1);
       expect(mutationCalls[0].updates).toEqual([
-        { provider: "OpenAI", model_id: "gpt-4", enabled: false },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          enabled: false,
+          model_type: "llm",
+        },
       ]);
 
       // Toggle B while A's mutation is still in flight (onSettled hasn't
       // fired). The next flush MUST send ONLY B — re-sending A would be a
       // duplicate request with non-deterministic ordering vs the original.
       act(() => {
-        result.current.handleModelToggle("gpt-3.5-turbo", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-3.5-turbo",
+          false,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(2);
       expect(mutationCalls[1].updates).toEqual([
-        { provider: "OpenAI", model_id: "gpt-3.5-turbo", enabled: false },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-3.5-turbo",
+          enabled: false,
+          model_type: "llm",
+        },
       ]);
     });
 
@@ -269,23 +410,43 @@ describe("useModelToggleQueue", () => {
 
       // Toggle A → false. Drive the debounce.
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(1);
       expect(mutationCalls[0].updates).toEqual([
-        { provider: "OpenAI", model_id: "gpt-4", enabled: false },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          enabled: false,
+          model_type: "llm",
+        },
       ]);
 
       // User re-toggles A → true before the first mutation settles. The
       // re-toggle is a fresh intent and must be sent.
       act(() => {
-        result.current.handleModelToggle("gpt-4", true);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          true,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(2);
       expect(mutationCalls[1].updates).toEqual([
-        { provider: "OpenAI", model_id: "gpt-4", enabled: true },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          enabled: true,
+          model_type: "llm",
+        },
       ]);
     });
   });
@@ -297,7 +458,12 @@ describe("useModelToggleQueue", () => {
       );
 
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCallbacks).toHaveLength(1);
@@ -348,7 +514,12 @@ describe("useModelToggleQueue", () => {
       );
 
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
         runDebounced();
       });
 
@@ -380,7 +551,12 @@ describe("useModelToggleQueue", () => {
       );
 
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(1);
@@ -388,7 +564,12 @@ describe("useModelToggleQueue", () => {
 
       // Re-toggle while first mutation is in flight.
       act(() => {
-        result.current.handleModelToggle("gpt-4", true);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          true,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(2);
@@ -432,7 +613,12 @@ describe("useModelToggleQueue", () => {
       // Toggle but DON'T run the debounced flush — leave the entry in
       // unsentToggles for the awaitable close handler to consume.
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
       });
 
       await act(async () => {

@@ -15,6 +15,7 @@ from langflow.api.v1.models import (
 )
 from langflow.api.v1.variable import _cleanup_model_list_variable
 from lfx.base.models.model_utils import inject_custom_enabled_models
+from lfx.base.models.unified_models.credentials import model_status_contains, model_status_key
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -53,6 +54,84 @@ def test_model_defaults_and_updates_are_provider_qualified():
 
     assert disabled_models == {"Azure AI Foundry::gpt-4o-mini"}
     assert explicitly_enabled_models == {"OpenAI::gpt-4o-mini"}
+
+
+def test_foundry_seed_default_stays_explicitly_enabled():
+    disabled_models = {"Azure AI Foundry::gpt-4o-mini"}
+    explicitly_enabled_models: set[str] = set()
+
+    _update_model_sets(
+        [ModelStatusUpdate(provider="Azure AI Foundry", model_id="gpt-4o-mini", enabled=True)],
+        disabled_models,
+        explicitly_enabled_models,
+        {"Azure AI Foundry::gpt-4o-mini": True},
+    )
+
+    assert disabled_models == set()
+    assert explicitly_enabled_models == {"Azure AI Foundry::gpt-4o-mini"}
+
+
+def test_typed_model_statuses_are_independent():
+    llm_update = ModelStatusUpdate(
+        provider="Azure AI Foundry",
+        model_id="portal-deploy",
+        enabled=True,
+        model_type="llm",
+    )
+    embedding_update = ModelStatusUpdate(
+        provider="Azure AI Foundry",
+        model_id="portal-deploy",
+        enabled=True,
+        model_type="embeddings",
+    )
+    llm_status = model_status_key("Azure AI Foundry", "portal-deploy", model_type="llm")
+    embedding_status = model_status_key("Azure AI Foundry", "portal-deploy", model_type="embeddings")
+
+    assert llm_update.model_type == "llm"
+    assert embedding_update.model_type == "embeddings"
+    assert llm_status != embedding_status
+
+    llm_enabled: set[str] = set()
+    _update_model_sets(
+        [llm_update],
+        set(),
+        llm_enabled,
+        {"Azure AI Foundry::portal-deploy": False},
+    )
+    embedding_enabled: set[str] = set()
+    _update_model_sets(
+        [embedding_update],
+        set(),
+        embedding_enabled,
+        {"Azure AI Foundry::portal-deploy": False},
+    )
+
+    assert llm_enabled == {llm_status}
+    assert embedding_enabled == {embedding_status}
+    assert model_status_contains(
+        {llm_status},
+        "Azure AI Foundry",
+        "portal-deploy",
+        model_type="llm",
+    )
+    assert not model_status_contains(
+        {llm_status},
+        "Azure AI Foundry",
+        "portal-deploy",
+        model_type="embeddings",
+    )
+    assert model_status_contains(
+        {embedding_status},
+        "Azure AI Foundry",
+        "portal-deploy",
+        model_type="embeddings",
+    )
+    assert not model_status_contains(
+        {embedding_status},
+        "Azure AI Foundry",
+        "portal-deploy",
+        model_type="llm",
+    )
 
 
 def test_inject_custom_enabled_models_appends_missing_deployments():
@@ -129,7 +208,7 @@ def test_inject_custom_enabled_models_respects_filters_and_stable_order():
     provider_models[0]["models"] = []
     inject_custom_enabled_models(
         provider_models,
-        {"Azure AI Foundry::text-embed"},
+        {model_status_key("Azure AI Foundry", "text-embed", model_type="embeddings")},
         model_type="embeddings",
     )
     custom = provider_models[0]["models"][0]
@@ -143,7 +222,7 @@ def test_inject_custom_enabled_models_creates_provider_stub_for_embeddings():
     provider_models: list[dict] = []
     inject_custom_enabled_models(
         provider_models,
-        {"Azure AI Foundry::my-embed-deploy"},
+        {model_status_key("Azure AI Foundry", "my-embed-deploy", model_type="embeddings")},
         model_type="embeddings",
     )
 
@@ -155,7 +234,7 @@ def test_inject_custom_enabled_models_creates_provider_stub_for_embeddings():
     assert models[0]["metadata"]["model_type"] == "embeddings"
 
 
-def test_inject_custom_enabled_models_dual_types_when_unfiltered():
+def test_inject_custom_enabled_models_uses_persisted_type():
     provider_models = [
         {
             "provider": "Azure AI Foundry",
@@ -165,12 +244,54 @@ def test_inject_custom_enabled_models_dual_types_when_unfiltered():
     ]
     inject_custom_enabled_models(
         provider_models,
-        {"Azure AI Foundry::portal-deploy"},
+        {
+            model_status_key("Azure AI Foundry", "team-chat", model_type="llm"),
+            model_status_key("Azure AI Foundry", "vector-prod", model_type="embeddings"),
+        },
     )
-    types = {m["metadata"]["model_type"] for m in provider_models[0]["models"]}
-    names = [m["model_name"] for m in provider_models[0]["models"]]
-    assert names == ["portal-deploy", "portal-deploy"]
-    assert types == {"llm", "embeddings"}
+
+    models = provider_models[0]["models"]
+    assert {(model["model_name"], model["metadata"]["model_type"]) for model in models} == {
+        ("team-chat", "llm"),
+        ("vector-prod", "embeddings"),
+    }
+
+
+def test_inject_legacy_custom_enabled_model_defaults_to_llm():
+    provider_models = [
+        {
+            "provider": "Azure AI Foundry",
+            "models": [],
+            "num_models": 0,
+        }
+    ]
+
+    inject_custom_enabled_models(
+        provider_models,
+        {"Azure AI Foundry::legacy-deploy"},
+    )
+
+    models = provider_models[0]["models"]
+    assert [(model["model_name"], model["metadata"]["model_type"]) for model in models] == [("legacy-deploy", "llm")]
+
+
+def test_inject_custom_enabled_models_does_not_synthesize_non_custom_provider():
+    provider_models = [
+        {
+            "provider": "OpenAI",
+            "models": [],
+            "num_models": 0,
+        }
+    ]
+
+    inject_custom_enabled_models(
+        provider_models,
+        {"OpenAI::gpt-5-chat-latest"},
+        model_type="llm",
+        metadata_filters={"tool_calling": True},
+    )
+
+    assert provider_models[0]["models"] == []
 
 
 async def test_provider_cleanup_migrates_legacy_entries_before_removing_target_provider():

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ModelSelection from "../components/ModelSelection";
 import { Model } from "../components/types";
@@ -155,7 +155,11 @@ describe("ModelSelection", () => {
       const toggle = screen.getByTestId("llm-toggle-gpt-4");
       await user.click(toggle);
 
-      expect(onModelToggle).toHaveBeenCalledWith("gpt-4", expect.any(Boolean));
+      expect(onModelToggle).toHaveBeenCalledWith(
+        "gpt-4",
+        expect.any(Boolean),
+        "llm",
+      );
     });
 
     it("should not bubble toggle clicks to parent containers", async () => {
@@ -177,6 +181,7 @@ describe("ModelSelection", () => {
       expect(onModelToggle).toHaveBeenCalledWith(
         "text-embedding-ada-002",
         expect.any(Boolean),
+        "embeddings",
       );
       expect(onParentClick).not.toHaveBeenCalled();
     });
@@ -304,7 +309,19 @@ describe("ModelSelection", () => {
           enabled_models: {
             "Azure AI Foundry": {
               "gpt-4o": true,
-              "gpt-5-mini": true,
+              "team-chat": true,
+              "team-embed": true,
+            },
+          },
+          enabled_models_by_type: {
+            "Azure AI Foundry": {
+              llm: {
+                "gpt-4o": true,
+                "team-chat": true,
+              },
+              embeddings: {
+                "team-embed": true,
+              },
             },
           },
         },
@@ -312,7 +329,7 @@ describe("ModelSelection", () => {
       });
     });
 
-    it("shows a hint and lets users add a typed deployment name", async () => {
+    it("shows explicit LLM and embeddings actions when adding from the all view", async () => {
       const user = userEvent.setup();
       const onModelToggle = jest.fn();
       render(
@@ -325,21 +342,37 @@ describe("ModelSelection", () => {
       );
 
       expect(screen.getByTestId("custom-deployment-hint")).toBeInTheDocument();
-      expect(screen.getAllByText("gpt-5-mini").length).toBeGreaterThanOrEqual(
-        1,
-      );
 
       const input = screen.getByTestId("model-search-input");
       await user.clear(input);
-      await user.type(input, "team-chat");
+      await user.type(input, "new-deployment");
 
-      const addButton = screen.getByTestId("add-custom-deployment-button");
-      expect(addButton).toHaveTextContent('Add deployment "team-chat"');
-      await user.click(addButton);
-      expect(onModelToggle).toHaveBeenCalledWith("team-chat", true);
+      const addLlmButton = screen.getByTestId(
+        "add-custom-llm-deployment-button",
+      );
+      expect(
+        screen.getByTestId("add-custom-embeddings-deployment-button"),
+      ).toBeInTheDocument();
+
+      await user.click(addLlmButton);
+      expect(onModelToggle).toHaveBeenLastCalledWith(
+        "new-deployment",
+        true,
+        "llm",
+      );
+
+      await user.type(input, "new-deployment");
+      await user.click(
+        screen.getByTestId("add-custom-embeddings-deployment-button"),
+      );
+      expect(onModelToggle).toHaveBeenLastCalledWith(
+        "new-deployment",
+        true,
+        "embeddings",
+      );
     });
 
-    it("does not offer add when the typed name already exists", async () => {
+    it("offers only the missing type when a deployment name exists as an LLM", async () => {
       const user = userEvent.setup();
       render(
         <ModelSelection
@@ -351,11 +384,14 @@ describe("ModelSelection", () => {
 
       await user.type(screen.getByTestId("model-search-input"), "gpt-4o");
       expect(
-        screen.queryByTestId("add-custom-deployment-button"),
+        screen.queryByTestId("add-custom-llm-deployment-button"),
       ).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId("add-custom-embeddings-deployment-button"),
+      ).toBeInTheDocument();
     });
 
-    it("surfaces enabled customs under Embeddings in the all view", () => {
+    it("renders typed custom deployments only in their stored section", () => {
       render(
         <ModelSelection
           {...defaultProps}
@@ -369,34 +405,60 @@ describe("ModelSelection", () => {
       expect(
         screen.getByTestId("embeddings-models-section"),
       ).toBeInTheDocument();
-      // Same custom name appears in both sections (Foundry seed is chat-only).
-      expect(screen.getAllByText("gpt-5-mini")).toHaveLength(2);
+
+      const llmSection = within(screen.getByTestId("llm-models-section"));
+      const embeddingsSection = within(
+        screen.getByTestId("embeddings-models-section"),
+      );
+      expect(llmSection.getByText("team-chat")).toBeInTheDocument();
+      expect(llmSection.queryByText("team-embed")).not.toBeInTheDocument();
+      expect(embeddingsSection.getByText("team-embed")).toBeInTheDocument();
+      expect(
+        embeddingsSection.queryByText("team-chat"),
+      ).not.toBeInTheDocument();
     });
 
-    it("surfaces enabled customs as embeddings in the embeddings view", () => {
+    it("keeps identical deployment names independently typed and toggleable", async () => {
+      const user = userEvent.setup();
+      const onModelToggle = jest.fn();
+      useGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            "Azure AI Foundry": {
+              shared: true,
+            },
+          },
+          enabled_models_by_type: {
+            "Azure AI Foundry": {
+              llm: { shared: true },
+              embeddings: { shared: true },
+            },
+          },
+        },
+        isLoading: false,
+      });
+
       render(
         <ModelSelection
           {...defaultProps}
-          modelType="embeddings"
+          modelType="all"
           providerName="Azure AI Foundry"
-          availableModels={[
-            {
-              model_name: "text-embedding-3-small",
-              metadata: { model_type: "embeddings", icon: "Azure" },
-            },
-          ]}
+          availableModels={[]}
+          onModelToggle={onModelToggle}
         />,
       );
 
-      // gpt-5-mini is enabled but only present in the API as an llm seed /
-      // injected row elsewhere — embeddings view still merges it as embeddings.
-      expect(screen.getByText("gpt-5-mini")).toBeInTheDocument();
-      expect(
-        screen.getByTestId("embeddings-models-section"),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByTestId("llm-models-section"),
-      ).not.toBeInTheDocument();
+      expect(screen.getAllByText("shared")).toHaveLength(2);
+
+      await user.click(screen.getByTestId("llm-toggle-shared"));
+      expect(onModelToggle).toHaveBeenLastCalledWith("shared", false, "llm");
+
+      await user.click(screen.getByTestId("embeddings-toggle-shared"));
+      expect(onModelToggle).toHaveBeenLastCalledWith(
+        "shared",
+        false,
+        "embeddings",
+      );
     });
   });
 
