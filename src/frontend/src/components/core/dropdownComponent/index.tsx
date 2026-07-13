@@ -2,11 +2,8 @@ import { PopoverAnchor } from "@radix-ui/react-popover";
 import { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
-import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import {
   convertStringToHTML,
@@ -35,6 +32,7 @@ import {
   filterMetadataKeys,
   formatTooltipContent,
 } from "./helpers/dropdown-search";
+import { useDropdownMutations } from "./hooks/useDropdownMutations";
 import { useDropdownOptions } from "./hooks/useDropdownOptions";
 
 export default function Dropdown({
@@ -109,52 +107,18 @@ export default function Dropdown({
       : PopoverContentWithoutPortal;
   const { helperText, hasRefreshButton } = baseInputProps;
 
-  // API and store hooks
-  const postTemplateValue = usePostTemplateValue({
-    parameterId: name,
-    nodeId: nodeId,
-    node: nodeClass,
-  });
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-
-  const handleSourceOptions = async (value: string) => {
-    setWaitingForResponse(true);
-    setOpen(false);
-
-    await mutateTemplate(
+  // Template mutation flows (create-from-source, refresh list)
+  const { handleSourceOptions, handleRefreshButtonPress } =
+    useDropdownMutations({
       value,
-      nodeId,
-      nodeClass!,
-      handleNodeClass,
-      postTemplateValue,
-      setErrorData,
       name,
-    );
-
-    setWaitingForResponse(false);
-  };
-
-  const handleRefreshButtonPress = async () => {
-    setRefreshOptions(true);
-    setOpen(false);
-
-    await mutateTemplate(
-      value,
       nodeId,
-      nodeClass!,
+      nodeClass,
       handleNodeClass,
-      postTemplateValue,
-      setErrorData,
-      undefined, // parameterName
-      undefined, // callback
-      undefined, // toolMode
-      true, // isRefresh
-    )?.then(() => {
-      setTimeout(() => {
-        setRefreshOptions(false);
-      }, 2000);
+      setOpen,
+      setWaitingForResponse,
+      setRefreshOptions,
     });
-  };
 
   const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
