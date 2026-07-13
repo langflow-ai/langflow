@@ -610,9 +610,9 @@ class FileComponent(BaseFileComponent):
 
             # Security: confine tool-mode reads to the storage dir in restricted (multi-tenant)
             # mode so a tenant cannot read arbitrary server files via file_path_str.
-            from lfx.utils.file_path_security import enforce_local_file_access
+            from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
-            resolved_path = enforce_local_file_access(resolved_path)
+            resolved_path = enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self))
 
             if not resolved_path.exists():
                 msg = f"File or directory not found: {file_path_str}"
@@ -1027,16 +1027,13 @@ class FileComponent(BaseFileComponent):
             """
         )
 
-        # Validate file_path to avoid command injection or unsafe input.
-        # Note: $ is intentionally not blocked here because the path is passed as JSON via
-        # stdin to the subprocess, not interpolated in a shell command.
-        if not isinstance(args["file_path"], str) or any(c in args["file_path"] for c in [";", "|", "&", "`"]):
+        # The path is passed as JSON over stdin to an argument-list subprocess, so shell
+        # metacharacters are ordinary filename characters here.
+        if not isinstance(args["file_path"], str):
             return Data(data={"error": "Unsafe file path detected.", "file_path": args["file_path"]})
 
-        # Use Popen with a polling loop instead of blocking subprocess.run().
-        # This lets us emit periodic log messages that keep the SSE event stream
-        # alive in multi-worker (Gunicorn) deployments, preventing the job queue
-        # from being cleaned up while Docling is still processing.
+        # Use communicate() in bounded intervals so stdout/stderr are drained while the
+        # child runs without losing the heartbeat that keeps the SSE event stream alive.
         docling_timeout = 600  # 10 minutes; large PDFs with OCR may need this
         poll_interval = 5  # seconds between progress heartbeats
 
@@ -1046,16 +1043,14 @@ class FileComponent(BaseFileComponent):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        # Send input and close stdin so child can proceed
-        proc.stdin.write(json.dumps(args).encode("utf-8"))
-        proc.stdin.close()
 
         start = time.monotonic()
-        while proc.poll() is None:
+        input_bytes: bytes | None = json.dumps(args).encode("utf-8")
+        while True:
             elapsed = time.monotonic() - start
             if elapsed >= docling_timeout:
                 proc.kill()
-                proc.wait()
+                proc.communicate()
                 return Data(
                     data={
                         "error": (
@@ -1065,14 +1060,18 @@ class FileComponent(BaseFileComponent):
                         "file_path": original_file_path,
                     },
                 )
-            # Heartbeat: emit a log so the graph event stream stays active
-            self.log(f"Docling processing in progress ({int(elapsed)}s elapsed)...")
-            time.sleep(poll_interval)
-
-        stdout_bytes = proc.stdout.read()
-        stderr_bytes = proc.stderr.read()
-        proc.stdout.close()
-        proc.stderr.close()
+            try:
+                stdout_bytes, stderr_bytes = proc.communicate(
+                    input=input_bytes,
+                    timeout=min(poll_interval, docling_timeout - elapsed),
+                )
+                break
+            except subprocess.TimeoutExpired:
+                # communicate() retains partially written input and collected output across
+                # retries, so subsequent calls continue draining without resending stdin.
+                input_bytes = None
+                elapsed = time.monotonic() - start
+                self.log(f"Docling processing in progress ({int(elapsed)}s elapsed)...")
 
         if not stdout_bytes:
             err_msg = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else "no output from child process"
