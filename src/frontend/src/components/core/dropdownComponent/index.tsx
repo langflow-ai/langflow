@@ -32,6 +32,10 @@ import {
   PopoverTrigger,
 } from "../../ui/popover";
 import type { BaseInputProps } from "../parameterRenderComponent/types";
+import {
+  filterMetadataKeys,
+  formatTooltipContent,
+} from "./helpers/dropdown-search";
 
 export default function Dropdown({
   disabled,
@@ -118,23 +122,6 @@ export default function Dropdown({
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   // Utility functions
-  const filterMetadataKeys = (
-    // biome-ignore lint/suspicious/noExplicitAny: legacy
-    metadata: Record<string, any> = {},
-    excludeKeys: string[] = [
-      "api_endpoint",
-      "icon",
-      "status",
-      "org_id",
-      "id",
-      "updated_at",
-    ],
-  ) => {
-    return Object.fromEntries(
-      Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key)),
-    );
-  };
-
   const searchRoleByTerm = async (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setCustomValue(value);
@@ -233,31 +220,6 @@ export default function Dropdown({
         setRefreshOptions(false);
       }, 2000);
     });
-  };
-
-  const formatTooltipContent = (option: string, index: number) => {
-    if (!filteredMetadata?.[index]) return option;
-
-    const metadata = filteredMetadata[index];
-    const metadataEntries = Object.entries(metadata)
-      .filter(
-        ([key, value]) =>
-          value !== null &&
-          key !== "icon" &&
-          key !== "id" &&
-          key !== "updated_at",
-      )
-      .map(([key, value]) => {
-        const displayValue =
-          typeof value === "string" && value.length > 20
-            ? `${value.substring(0, 30)}...`
-            : String(value);
-        return `${key}: ${displayValue}`;
-      });
-
-    return metadataEntries.length > 0
-      ? `${firstWord}: ${option}\n${metadataEntries.join("\n")}`
-      : option;
   };
 
   // Auto-select a newly created option (e.g. knowledge base) once it appears in the options list
@@ -465,7 +427,12 @@ export default function Dropdown({
               key={index}
               delayDuration={700}
               styleClasses="whitespace-pre-wrap"
-              content={formatTooltipContent(option, index)}
+              content={formatTooltipContent(
+                option,
+                index,
+                filteredMetadata,
+                firstWord,
+              )}
             >
               <div>
                 <CommandItem
