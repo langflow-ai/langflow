@@ -130,6 +130,7 @@ const FlowSettingsComponent = ({
             submitForm={submitForm}
             locked={locked}
             setLocked={setLocked}
+            flowId={flow?.id}
           />
         </div>
         <div className="flex justify-end gap-2">

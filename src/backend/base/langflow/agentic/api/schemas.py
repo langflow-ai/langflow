@@ -40,6 +40,17 @@ class AssistantRequest(BaseModel):
     session_id: str | None = None
 
 
+class DescriptionGenerationRequest(BaseModel):
+    """Request to generate a workflow or component description."""
+
+    flow_id: str
+    component_id: str | None = None
+    current_description: str | None = Field(None, max_length=1000)
+    language: str = Field("en", min_length=2, max_length=35)
+    model_name: str | None = None
+    provider: str | None = None
+
+
 class ValidationResult(BaseModel):
     """Result of component code validation."""
 
