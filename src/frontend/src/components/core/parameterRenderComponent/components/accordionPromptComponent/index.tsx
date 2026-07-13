@@ -7,11 +7,9 @@ import {
   DisclosureContent,
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
-import MustachePromptModal from "@/modals/mustachePromptModal";
-import PromptModal from "@/modals/promptModal";
 import { cn } from "@/utils/utils";
-import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, PromptAreaComponentType } from "../../types";
+import { PromptEditableArea } from "./components/PromptEditableArea";
 import { generateUniqueVariableName } from "./helpers/generate-unique-variable-name";
 import { getHighlightedHTML } from "./helpers/prompt-highlight";
 import { usePromptDomSync } from "./hooks/usePromptDomSync";
@@ -358,8 +356,6 @@ export default function AccordionPromptComponent({
     }
   };
 
-  const ModalComponent = isDoubleBrackets ? MustachePromptModal : PromptModal;
-
   if (!showParameter) return <></>;
 
   return (
@@ -397,66 +393,22 @@ export default function AccordionPromptComponent({
         </div>
 
         <DisclosureContent>
-          <div className="relative">
-            <div
-              ref={contentEditableRef}
-              contentEditable={!disabled && !readonly}
-              onInput={handleInput}
-              onKeyDown={handleKeyDown}
-              suppressContentEditableWarning
-              id={id}
-              data-testid={id}
-              className={cn(
-                "relative min-h-10 overflow-y-auto rounded-md border bg-background px-3 py-2 pr-8 text-sm outline-none break-words whitespace-pre-wrap",
-                "focus:border-primary hover:border-muted-foreground",
-                "before:content-[''] before:pointer-events-none before:absolute before:left-3 before:top-2 before:text-muted-foreground",
-                "empty:before:content-[attr(data-placeholder)]",
-                disabled && "cursor-not-allowed opacity-50",
-                readonly && "cursor-default",
-                !internalValue && "text-muted-foreground",
-              )}
-              data-placeholder={getPlaceholder(
-                disabled,
-                "Type your prompt here...",
-              )}
-            />
-            {!disabled && (
-              <div
-                className={cn(
-                  "absolute top-2 z-10 flex items-center gap-1",
-                  isScrollable ? "right-3" : "right-1",
-                )}
-              >
-                <ModalComponent
-                  id={id}
-                  field_name={field_name}
-                  readonly={readonly}
-                  value={value}
-                  setValue={handlePromptModalSetValue}
-                  nodeClass={nodeClass}
-                  setNodeClass={handleNodeClass}
-                >
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-muted-foreground"
-                    title={t("accordion.fullscreen")}
-                    data-testid={
-                      isDoubleBrackets
-                        ? "button_open_mustache_prompt_modal"
-                        : "button_open_prompt_modal"
-                    }
-                  >
-                    <ForwardedIconComponent
-                      name="Maximize"
-                      className="h-3.5 w-3.5"
-                    />
-                  </Button>
-                </ModalComponent>
-              </div>
-            )}
-          </div>
+          <PromptEditableArea
+            contentEditableRef={contentEditableRef}
+            disabled={disabled}
+            readonly={readonly}
+            id={id}
+            internalValue={internalValue}
+            isScrollable={isScrollable}
+            isDoubleBrackets={isDoubleBrackets}
+            field_name={field_name}
+            value={value}
+            nodeClass={nodeClass}
+            handleNodeClass={handleNodeClass}
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
+            onPromptModalSetValue={handlePromptModalSetValue}
+          />
         </DisclosureContent>
       </Disclosure>
     </div>
