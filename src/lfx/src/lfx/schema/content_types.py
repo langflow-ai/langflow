@@ -87,6 +87,9 @@ class BaseContent(BaseModel):
     def serialize_model(self, nxt) -> dict[str, Any]:
         try:
             dump = nxt(self)
+            # Keep the discriminator through exclude_unset/defaults (else reload fails union_tag_not_found).
+            if isinstance(dump, dict):
+                dump.setdefault("type", self.type)
             return jsonable_encoder(dump, custom_encoder=CUSTOM_ENCODERS)
         except Exception:  # noqa: BLE001
             return nxt(self)
