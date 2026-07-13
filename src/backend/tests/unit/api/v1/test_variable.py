@@ -403,9 +403,11 @@ async def test_create_variable__ollama_base_url_validation_failure(client: Async
         if var.get("name") == "OLLAMA_BASE_URL":
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
 
+    # A reachable-but-erroring local Ollama: loopback passes SSRF (allowed by default for
+    # connectors), so validation proceeds to the request, which returns a non-200 status.
     ollama_variable = {
         "name": "OLLAMA_BASE_URL",
-        "value": "http://invalid-url",
+        "value": "http://localhost:11434",
         "type": CREDENTIAL_TYPE,
         "default_fields": [],
     }
@@ -418,6 +420,7 @@ async def test_create_variable__ollama_base_url_validation_failure(client: Async
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Invalid Ollama base URL" in result["detail"]
+        assert mock_get.called
 
 
 @pytest.mark.usefixtures("active_user")
