@@ -125,6 +125,8 @@ jest.mock("../../utils/reactflowUtils", () => {
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import type { LogsLogType, VertexBuildTypeAPI } from "@/types/api";
 import type { AllNodeType, EdgeType } from "@/types/flow";
+import { scapedJSONStringfy } from "../../utils/reactflowUtils";
+import useAlertStore from "../alertStore";
 import useAuthStore from "../authStore";
 import useFlowStore, {
   completeNodeUpdate,
@@ -1273,6 +1275,126 @@ describe("useFlowStore", () => {
           threadId: "session-123",
         }),
       );
+    });
+  });
+
+  describe("setNode broken-edge warning", () => {
+    const sourceHandle = scapedJSONStringfy({
+      id: "hitl",
+      name: "branch_fallback",
+      output_types: ["Message"],
+      dataType: "HumanInput",
+    });
+    const targetHandle = scapedJSONStringfy({
+      type: "str",
+      fieldName: "input_value",
+      id: "co",
+      inputTypes: ["Message"],
+    });
+
+    const humanInputNode = (
+      outputs: { name: string; display_name: string }[],
+    ): AllNodeType =>
+      ({
+        id: "hitl",
+        type: "genericNode",
+        position: { x: 0, y: 0 },
+        data: {
+          id: "hitl",
+          type: "HumanInput",
+          node: {
+            display_name: "Human Input",
+            template: {},
+            outputs: outputs.map((output) => ({
+              ...output,
+              types: ["Message"],
+              group_outputs: true,
+            })),
+          },
+        },
+      }) as unknown as AllNodeType;
+
+    const chatOutputNode = {
+      id: "co",
+      type: "genericNode",
+      position: { x: 0, y: 0 },
+      data: {
+        id: "co",
+        type: "ChatOutput",
+        node: {
+          display_name: "Chat Output",
+          template: {
+            input_value: {
+              type: "str",
+              input_types: ["Message"],
+              display_name: "Inputs",
+            },
+          },
+          outputs: [],
+        },
+      },
+    } as unknown as AllNodeType;
+
+    const fallbackEdge = {
+      id: "edge-fallback",
+      source: "hitl",
+      target: "co",
+      sourceHandle,
+      targetHandle,
+    } as unknown as EdgeType;
+
+    const bothBranches = [
+      { name: "branch_approve", display_name: "Approve" },
+      { name: "branch_fallback", display_name: "Fallback" },
+    ];
+
+    const spyOnErrorData = () => {
+      const setErrorData = jest.fn();
+      jest.spyOn(useAlertStore, "getState").mockReturnValue({
+        setErrorData,
+        setSuccessData: jest.fn(),
+      } as unknown as ReturnType<typeof useAlertStore.getState>);
+      return setErrorData;
+    };
+
+    const seedFlow = () => {
+      act(() => {
+        useFlowStore.setState({
+          nodes: [humanInputNode(bothBranches), chatOutputNode],
+          edges: [fallbackEdge],
+        });
+      });
+    };
+
+    it("warns when a node edit drops a wired edge", () => {
+      const setErrorData = spyOnErrorData();
+      seedFlow();
+
+      act(() => {
+        useFlowStore
+          .getState()
+          .setNode(
+            "hitl",
+            humanInputNode([{ name: "branch_approve", display_name: "Approve" }]),
+          );
+      });
+
+      expect(useFlowStore.getState().edges).toHaveLength(0);
+      expect(setErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "flow.brokenEdgesWarning" }),
+      );
+    });
+
+    it("does not warn when the edit keeps every wired handle", () => {
+      const setErrorData = spyOnErrorData();
+      seedFlow();
+
+      act(() => {
+        useFlowStore.getState().setNode("hitl", humanInputNode(bothBranches));
+      });
+
+      expect(useFlowStore.getState().edges).toHaveLength(1);
+      expect(setErrorData).not.toHaveBeenCalled();
     });
   });
 });

@@ -245,7 +245,21 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
         apply_run_defaults(
             graph, session_id=graph.session_id, user_id=job.user_id or None, overwrite_user_id=bool(job.user_id)
         )
+        requested_action = (request.decision or {}).get("action_id")
         decision = reroute_decision_on_timeout(pending, request.decision or {})
+        if decision.get("action_id") != requested_action:
+            # The late answer was rerouted (fallback branch or the expired sentinel);
+            # record why, so /events readers can tell an expiry from an empty-output run.
+            await self.jobs.append_event(
+                job_id,
+                "human_input_expired",
+                {
+                    "request_id": request.request_id,
+                    "requested_action": requested_action,
+                    "rerouted_to": decision.get("action_id"),
+                    "timeout_seconds": pending.get("timeout_seconds"),
+                },
+            )
         graph.human_input_decisions = {
             **(getattr(graph, "human_input_decisions", {}) or {}),
             request.request_id: decision,
