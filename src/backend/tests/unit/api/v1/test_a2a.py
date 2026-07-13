@@ -1896,7 +1896,9 @@ async def test_execute_emits_canceled_when_run_is_cancelled():
     while True:
         try:
             event = await asyncio.wait_for(queue.dequeue_event(), timeout=0.5)
-        except TimeoutError:
+        except asyncio.TimeoutError:
+            # Not the builtin TimeoutError: on 3.10 asyncio's is a separate class, so a bare
+            # `except TimeoutError` misses it and the drain loop blows up instead of ending.
             break
         state = getattr(getattr(event, "status", None), "state", None)
         if state is not None:
