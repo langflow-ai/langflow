@@ -18,3 +18,4 @@ def test_published_images_enable_mcp_hardening(dockerfile: str) -> None:
 
     assert "ENV LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true" in content
     assert "ENV LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=true" in content
+    assert "ENV LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES=mcp-proxy,lfx" in content

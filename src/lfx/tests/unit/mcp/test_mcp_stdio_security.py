@@ -170,6 +170,24 @@ def test_docker_default_policy_is_lenient(args, should_block):
 
 
 @pytest.mark.parametrize(
+    ("wrapped_command", "docker_hardening"),
+    [
+        ("docker run -v /:/host alpine", True),
+        ("docker run --privileged alpine", False),
+    ],
+)
+def test_shell_wrapped_docker_uses_selected_policy(wrapped_command, docker_hardening):
+    with pytest.raises(MCPStdioSecurityError, match="Docker argument"):
+        validate_mcp_stdio_config(
+            "sh",
+            ["-c", wrapped_command],
+            {},
+            docker_hardening=docker_hardening,
+            interpreter_hardening=True,
+        )
+
+
+@pytest.mark.parametrize(
     ("command", "args", "env"),
     [
         ("uvx", ["mcp-server-fetch"], {}),
@@ -375,6 +393,24 @@ def test_interpreter_hardening_preserves_validated_shell_wrapper():
         allowed_packages={"mcp-proxy"},
         interpreter_hardening=True,
     )
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("sh", ["/tenant/evil.sh", "-c", "uvx mcp-proxy"]),
+        ("cmd", ["C:\\tenant\\evil.bat", "/c", "uvx", "mcp-proxy"]),
+    ],
+)
+def test_interpreter_hardening_rejects_late_shell_exec_flag(command, args):
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(
+            command,
+            args,
+            {},
+            allowed_packages={"mcp-proxy"},
+            interpreter_hardening=True,
+        )
 
 
 def test_interpreter_default_preserves_legacy_single_tenant_config():

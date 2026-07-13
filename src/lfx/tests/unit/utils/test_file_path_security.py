@@ -132,9 +132,13 @@ def test_symlink_inside_storage_pointing_inside_allowed(tmp_path):
 
 @pytest.mark.parametrize("name", ["secret_key", "private_key.pem", "public_key.pem"])
 def test_reserved_secret_file_blocked(tmp_path, name):
-    """The server-managed secret/key files in config_dir are denied even though they sit inside it."""
+    """The exact reserved-file check still denies secrets if scope containment widens."""
     (tmp_path / name).write_text("SENSITIVE")
-    with mock_settings(restricted=True, config_dir=str(tmp_path)), pytest.raises(LocalFileAccessError):
+    with (
+        mock_settings(restricted=True, config_dir=str(tmp_path)),
+        patch("lfx.utils.file_path_security._scope_roots", return_value=(tmp_path.resolve(),)),
+        pytest.raises(LocalFileAccessError, match="server-managed file"),
+    ):
         enforce_local_file_access(str(tmp_path / name), scope_ids=["flow-id"])
 
 
@@ -147,17 +151,22 @@ def test_reserved_secret_file_via_traversal_blocked(tmp_path):
     """
     (tmp_path / "secret_key").write_text("MASTER KEY")
     traversal = str(tmp_path / "some-flow" / ".." / "secret_key")
-    with mock_settings(restricted=True, config_dir=str(tmp_path)), pytest.raises(LocalFileAccessError):
+    with (
+        mock_settings(restricted=True, config_dir=str(tmp_path)),
+        patch("lfx.utils.file_path_security._scope_roots", return_value=(tmp_path.resolve(),)),
+        pytest.raises(LocalFileAccessError, match="server-managed file"),
+    ):
         enforce_local_file_access(traversal, scope_ids=["some-flow"])
 
 
 def test_reserved_db_file_blocked(tmp_path):
     """The SQLite DB under config_dir (save_db_in_config_dir) is denied."""
-    db = tmp_path / "langflow.db"
+    db = tmp_path / "flow-id" / "langflow.db"
+    db.parent.mkdir()
     db.write_text("db")
     with (
         mock_settings(restricted=True, config_dir=str(tmp_path), database_url=f"sqlite:///{db}"),
-        pytest.raises(LocalFileAccessError),
+        pytest.raises(LocalFileAccessError, match="server-managed file"),
     ):
         enforce_local_file_access(str(db), scope_ids=["flow-id"])
 
@@ -165,24 +174,26 @@ def test_reserved_db_file_blocked(tmp_path):
 @pytest.mark.parametrize("suffix", ["-wal", "-shm", "-journal"])
 def test_reserved_db_sidecar_blocked(tmp_path, suffix):
     """SQLite WAL/SHM/journal sidecars hold un-checkpointed DB pages and are denied too."""
-    db = tmp_path / "langflow.db"
-    sidecar = tmp_path / f"langflow.db{suffix}"
+    db = tmp_path / "flow-id" / "langflow.db"
+    db.parent.mkdir()
+    sidecar = tmp_path / "flow-id" / f"langflow.db{suffix}"
     sidecar.write_text("pages")
     with (
         mock_settings(restricted=True, config_dir=str(tmp_path), database_url=f"sqlite:///{db}"),
-        pytest.raises(LocalFileAccessError),
+        pytest.raises(LocalFileAccessError, match="server-managed file"),
     ):
         enforce_local_file_access(str(sidecar), scope_ids=["flow-id"])
 
 
 def test_reserved_db_with_async_driver_and_query_blocked(tmp_path):
     """An async sqlite URL with a query string still resolves to the protected DB file."""
-    db = tmp_path / "langflow.db"
+    db = tmp_path / "flow-id" / "langflow.db"
+    db.parent.mkdir()
     db.write_text("db")
     url = f"sqlite+aiosqlite:///{db}?check_same_thread=false"
     with (
         mock_settings(restricted=True, config_dir=str(tmp_path), database_url=url),
-        pytest.raises(LocalFileAccessError),
+        pytest.raises(LocalFileAccessError, match="server-managed file"),
     ):
         enforce_local_file_access(str(db), scope_ids=["flow-id"])
 

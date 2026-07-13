@@ -466,6 +466,49 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         assert "test_tool" in updated_config["tool"]["options"]
         assert "second_tool" in updated_config["tool"]["options"]
 
+    @pytest.mark.asyncio
+    async def test_unauthenticated_build_config_skips_shared_servers_cache(self, component_class, default_kwargs):
+        component = await self.component_setup(component_class, default_kwargs)
+        component._user_id = None
+        component._vertex = None
+        component.use_cache = True
+        assert component._mcp_cache_user_id() is None
+
+        server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
+        cached_tool = MagicMock()
+        cached_tool.name = "cached_tool"
+        cached_entry = {
+            "tools": [cached_tool],
+            "tool_names": [cached_tool.name],
+            "tool_cache": {cached_tool.name: cached_tool},
+            "config": {"command": "cached"},
+        }
+        servers_cache = {cache_key: cached_entry}
+        safe_cache_set(component._shared_component_cache, "servers", servers_cache)
+        safe_cache_set(component._shared_component_cache, "last_selected_server", "")
+
+        fresh_tool = MagicMock()
+        fresh_tool.name = "fresh_tool"
+        fresh_server = {"name": server_name, "config": {"command": "fresh"}}
+        build_config = {
+            "mcp_server": {"value": {"name": server_name}},
+            "tool": {"show": False, "options": [], "placeholder": ""},
+            "tool_placeholder": {"tool_mode": False},
+            "tools_metadata": {"show": False},
+        }
+
+        with patch.object(
+            component,
+            "update_tool_list",
+            AsyncMock(return_value=([fresh_tool], fresh_server)),
+        ) as update:
+            updated_config = await component.update_build_config(build_config, {"name": server_name}, "mcp_server")
+
+        update.assert_awaited_once_with(mcp_server_value={"name": server_name})
+        assert updated_config["tool"]["options"] == [fresh_tool.name]
+        assert safe_cache_get(component._shared_component_cache, "servers", {}) == servers_cache
+
     # ========================================
     # Integration Tests
     # ========================================

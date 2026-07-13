@@ -63,6 +63,33 @@ def _flow_payload() -> dict:
                                     "value": "https://owner:url-secret@example.com/api",  # pragma: allowlist secret
                                     "type": "str",
                                 },
+                                "absolute_query_url": {
+                                    "name": "base_url",
+                                    "password": False,
+                                    "value": "https://example.com/api?api_key=query-secret",  # pragma: allowlist secret
+                                    "type": "str",
+                                },
+                                "relative_query_url": {
+                                    "name": "base_url",
+                                    "password": False,
+                                    "value": "/api/models?api_key=relative-secret",  # pragma: allowlist secret
+                                    "type": "str",
+                                },
+                                "network_url": {
+                                    "name": "base_url",
+                                    "password": False,
+                                    "value": "//owner:network-secret@example.com/api",  # pragma: allowlist secret
+                                    "type": "str",
+                                },
+                                "fragment_url": {
+                                    "name": "base_url",
+                                    "password": False,
+                                    "value": (
+                                        "https://example.com/callback#"
+                                        "access_token=fragment-secret"  # pragma: allowlist secret
+                                    ),
+                                    "type": "str",
+                                },
                                 "headers": {
                                     "name": "headers",
                                     "password": False,
@@ -127,6 +154,10 @@ def test_strip_secret_field_values_nulls_all_password_fields():
     assert template["service_token"]["value"] is None
     assert template["database_url"]["value"] is None
     assert template["authenticated_url"]["value"] is None
+    for field_name in ("absolute_query_url", "relative_query_url", "network_url", "fragment_url"):
+        assert template[field_name]["value"] is None
+        assert template[field_name]["name"] == "base_url"
+        assert template[field_name]["type"] == "str"
     assert template["headers"]["value"] == [
         {"key": "Authorization", "value": None},
         {"name": "X-Api-Key", "value": None},
@@ -196,6 +227,10 @@ async def test_public_flow_read_strips_secrets(client: AsyncClient, logged_in_he
     assert template["service_token"]["value"] is None, "non-api-named secret leaked through public flow read"
     assert template["database_url"]["value"] is None, "database credentials leaked through public flow read"
     assert template["authenticated_url"]["value"] is None, "URL credentials leaked through public flow read"
+    for field_name in ("absolute_query_url", "relative_query_url", "network_url", "fragment_url"):
+        assert template[field_name]["value"] is None, f"URL credentials leaked from {field_name}"
+        assert template[field_name]["name"] == "base_url", f"field structure changed for {field_name}"
+        assert template[field_name]["type"] == "str", f"field structure changed for {field_name}"
     assert template["headers"]["value"][0]["value"] is None, "authorization header leaked"
     assert template["headers"]["value"][1]["value"] is None, "named API-key header leaked"
     assert template["headers"]["value"][2]["value"] == "acme", "non-secret header should be preserved"

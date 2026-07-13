@@ -163,16 +163,18 @@ def _is_secret_name(value: object) -> bool:
 
 
 def _contains_url_credentials(value: str) -> bool:
-    """Return whether a URL contains userinfo or a secret-named query parameter."""
-    if "://" not in value:
-        return False
+    """Return whether a URL reference contains userinfo or secret-named parameters."""
     try:
         parsed = urlsplit(value)
     except ValueError:
         return False
     if parsed.username is not None or parsed.password is not None:
         return True
-    return any(_is_secret_name(key) for key, _ in parse_qsl(parsed.query, keep_blank_values=True))
+    return any(
+        _is_secret_name(key)
+        for component in (parsed.query, parsed.fragment)
+        for key, _ in parse_qsl(component, keep_blank_values=True)
+    )
 
 
 def _strip_structured_secret_values(value: object) -> object:

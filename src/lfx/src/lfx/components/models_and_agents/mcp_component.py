@@ -688,6 +688,8 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # Get use_cache setting to determine if we should use cached data
                 use_cache = getattr(self, "use_cache", False)
+                has_shared_cache_scope = self._mcp_cache_user_id() is not None
+                use_shared_cache = use_cache and has_shared_cache_scope
 
                 # Fast path: if server didn't change and we already have options, keep them as-is
                 # BUT only if caching is enabled, we're in tool mode, or it's the initial load
@@ -709,7 +711,7 @@ class MCPToolsComponent(ComponentWithCache):
                     not is_refresh
                     and (_last_selected_server in (current_server_name, ""))
                     and build_config["tool"]["show"]
-                    and use_cache
+                    and use_shared_cache
                 ):
                     if current_server_name:
                         servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
@@ -726,7 +728,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # When cache is disabled, clear any cached data for this server
                 # This ensures we always fetch fresh data from the database
-                if (is_refresh or not use_cache) and current_server_name:
+                if (is_refresh or not use_cache) and current_server_name and has_shared_cache_scope:
                     servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                     if isinstance(servers_cache, dict) and servers_cache_key_ui in servers_cache:
                         servers_cache.pop(servers_cache_key_ui)
@@ -734,7 +736,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # Check if tools are already cached for this server before clearing
                 cached_tools = None
-                if current_server_name and use_cache and not is_refresh:
+                if current_server_name and use_shared_cache and not is_refresh:
                     servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                     if isinstance(servers_cache, dict):
                         cached = servers_cache.get(servers_cache_key_ui)

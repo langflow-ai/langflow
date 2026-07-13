@@ -205,6 +205,11 @@ def _is_shell_exec_flag(arg: str) -> bool:
     return arg_lower.startswith("-") and not arg_lower.startswith("--") and "c" in arg_lower[1:]
 
 
+def _has_leading_shell_exec_flag(args: list[str]) -> bool:
+    """Return whether a shell execution flag appears before every script operand."""
+    return bool(args) and _is_shell_exec_flag(args[0])
+
+
 class MCPStdioSecurityError(ValueError):
     """Raised when an MCP stdio server config fails security validation.
 
@@ -364,7 +369,7 @@ def _validate_interpreter_invocation(base_command: str, args: list[str], *, hard
     if not hardened:
         return
     if base_command in SHELL_WRAPPERS:
-        if any(_is_shell_exec_flag(arg) for arg in args):
+        if _has_leading_shell_exec_flag(args):
             return
         msg = (
             f"Shell command '{base_command}' must wrap an approved MCP command when "
@@ -479,6 +484,15 @@ def _validate_docker_args_hardened(args: list[str]) -> None:
                 _raise_docker_arg(arg)
 
 
+def _validate_docker_invocation(args: list[str], *, hardened: bool | None) -> None:
+    """Apply the selected Docker policy to top-level and shell-wrapped invocations."""
+    use_hardened_policy = _docker_hardening_enabled() if hardened is None else hardened
+    if use_hardened_policy:
+        _validate_docker_args_hardened(args)
+    else:
+        _validate_docker_args_lenient(args)
+
+
 def validate_mcp_stdio_config(
     command: str | None,
     args: list[str] | None,
@@ -555,13 +569,8 @@ def validate_mcp_stdio_config(
             raise MCPStdioSecurityError(msg)
 
         if base_command in SHELL_WRAPPERS:
-            wrapped_command = None
-            wrapped_args: list[str] = []
-            for i, arg in enumerate(args):
-                if _is_shell_exec_flag(arg) and i + 1 < len(args):
-                    wrapped_command = args[i + 1]
-                    wrapped_args = args[i + 2 :]
-                    break
+            wrapped_command = args[1] if _has_leading_shell_exec_flag(args) and len(args) > 1 else None
+            wrapped_args = args[2:] if wrapped_command else []
 
             if wrapped_command:
                 wrapped_base = extract_base_command(wrapped_command)
@@ -585,6 +594,8 @@ def validate_mcp_stdio_config(
                     nested_base = extract_base_command(nested_command)
                     _validate_package_runner(nested_base, nested_args, allowed_packages)
                     _validate_interpreter_invocation(nested_base, nested_args, hardened=interpreter_hardening)
+                    if nested_base == "docker":
+                        _validate_docker_invocation(nested_args, hardened=docker_hardening)
 
         _validate_package_runner(base_command, args, allowed_packages)
 
@@ -645,8 +656,4 @@ def validate_mcp_stdio_config(
     # behavior; the opt-in hardened policy adds host filesystem/device/namespace coverage. See
     # the DOCKER_* constants above for the rationale of each set.
     if command and args and extract_base_command(command) == "docker":
-        hardened = _docker_hardening_enabled() if docker_hardening is None else docker_hardening
-        if hardened:
-            _validate_docker_args_hardened(args)
-        else:
-            _validate_docker_args_lenient(args)
+        _validate_docker_invocation(args, hardened=docker_hardening)
