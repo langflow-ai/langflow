@@ -18,15 +18,11 @@ This page describes the components that are available in the **Oracle** bundle.
 
 ## Prerequisites
 
-- An Oracle Database reachable from the Langflow server/runtime.
-- The python-oracledb connection values, such as user, password, DSN, and optional wallet settings. See the official guide:
-  https://python-oracledb.readthedocs.io/en/latest/user_guide/connection_handling.html
+- An Oracle Database and its `python-oracledb` connection values. For more information, see [Connecting to Oracle Database](https://python-oracledb.readthedocs.io/en/latest/user_guide/connection_handling.html).
 
----
+## Oracle Vector Store
 
-## Oracle Vector Store (OracleVectorStoreComponent)
-
-The `OracleVectorStoreComponent` reads and writes to Oracle vector stores using an instance of [`OracleVS`](https://docs.langchain.com/oss/python/integrations/vectorstores/oracle) from `langchain_oracledb`. Use it to ingest documents and perform similarity/MMR searches.
+The **Oracle Vector Store** component reads and writes to Oracle vector stores using an instance of [`OracleVS`](https://docs.langchain.com/oss/python/integrations/vectorstores/oracle) from `langchain_oracledb`. Use it to ingest documents and perform similarity and MMR searches.
 
 <details>
 <summary>About vector store instances</summary>
@@ -41,7 +37,7 @@ The `OracleVectorStoreComponent` reads and writes to Oracle vector stores using 
 For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
 :::
 
-### Parameters
+### Oracle Vector Store parameters
 
 You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
 
@@ -49,81 +45,84 @@ You can inspect a vector store component's parameters to learn more about the in
 
 <PartialConditionalParams />
 
-| Name                 | Type      | Description                                                                                                                  |
-| -------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `user`               | Secret    | Optional. Oracle database user.                                                                                              |
-| `password`           | Secret    | Optional. Oracle database password.                                                                                          |
-| `dsn`                | Secret    | Required. Oracle DSN or connect string.                                                                                      |
-| `wallet_password`    | Secret    | Optional. Wallet password for wallet-based connections (advanced).                                                           |
-| `connection_params`  | Dict      | Optional non-secret python-oracledb connection options, such as `config_dir` and `wallet_location`.                           |
-| `table_name`         | String    | Required. Table name used by the vector store.                                                                               |
-| `ingest_data`        | Data      | Optional. Data to ingest (converted to `Document`).                                                                          |
-| `embedding`          | Embeddings| Required. Embedding function/provider to use.                                                                                |
-| `search_query`       | String    | Optional. Query text for search.                                                                                             |
-| `number_of_results`  | Integer   | Optional. Number of results to return (default: 4).                                                                          |
-| `search_type`        | Dropdown  | Optional. Search mode to use. Supported values are `Similarity` and `MMR (Max Marginal Relevance)` (default: `Similarity`). |
-| `distance_strategy`  | Dropdown  | Optional. One of `EUCLIDEAN`, `DOT`, `COSINE` (default: `COSINE`).                                                           |
-| `create_index`       | Boolean   | Optional. If true, will create a vector index after setup (default: true).                                                   |
-| `index_params`       | Dict      | Optional. Parameters for index creation (e.g., `idx_name`, `idx_type`, etc.).                                                |
-| `mutate_on_duplicate`| Boolean   | Optional. When supported by your `langchain_oracledb` version, control mutation behavior on duplicate inserts.               |
+For more information, see the [OracleVS documentation](https://docs.langchain.com/oss/python/integrations/vectorstores/oracle).
 
----
+| Name | Type | Description |
+|------|------|-------------|
+| user | SecretString | Input parameter. Oracle database user. Optional. |
+| password | SecretString | Input parameter. Oracle database password. Optional. |
+| dsn | SecretString | Input parameter. Oracle DSN or connect string. Required. |
+| wallet_password | SecretString | Input parameter. Wallet password for wallet-based connections. Optional. |
+| connection_params | Dictionary | Input parameter. Non-secret python-oracledb connection options, such as `config_dir` and `wallet_location`. Optional. |
+| table_name | String | Input parameter. Table name used by the vector store. Required. |
+| ingest_data | JSON | Input parameter. Data to ingest into the vector store. Optional. |
+| search_query | String | Input parameter. Query text for similarity search. Optional. |
+| embedding | Embeddings | Input parameter. Embedding function to use. Required. |
+| number_of_results | Integer | Input parameter. Number of results to return in search. Default: `4`. |
+| search_type | String | Input parameter. Search mode to use. Options are `Similarity` (default) and `MMR (Max Marginal Relevance)`. |
+| distance_strategy | String | Input parameter. Distance calculation strategy. Options are `EUCLIDEAN`, `DOT`, and `COSINE`. Default: `COSINE`. |
+| create_index | Boolean | Input parameter. If `true`, creates a vector index after setup. Default: `true`. |
+| index_params | Dictionary | Input parameter. Parameters for index creation, such as `idx_name` and `idx_type`. Optional. |
+| mutate_on_duplicate | Boolean | Input parameter. When supported by your `langchain_oracledb` version, controls mutation behavior on duplicate inserts. Default: `false`. |
 
-## Oracle Doc Loader (OracleDocLoaderComponent)
+## Oracle Doc Loader
 
-The `OracleDocLoaderComponent` reads documents from Oracle Database using `OracleDocLoader` from `langchain_oracledb.document_loaders`. It returns a list of `Data` objects converted from `Document`.
+The **Oracle Doc Loader** component reads documents from Oracle Database using [`OracleDocLoader`](https://docs.langchain.com/oss/python/integrations/document_loaders/oracleai) from `langchain_oracledb.document_loaders`. It returns a list of [`JSON`](/data-types#json) objects converted from `Document`.
 
-### Parameters
+### Oracle Doc Loader parameters
 
-| Name                | Type | Description                                                                                                                                                 |
-| ------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `user`              | Secret | Optional. Oracle database user.                                                                                                                          |
-| `password`          | Secret | Optional. Oracle database password.                                                                                                                      |
-| `dsn`               | Secret | Required. Oracle DSN or connect string.                                                                                                                   |
-| `wallet_password`   | Secret | Optional. Wallet password for wallet-based connections (advanced).                                                                                        |
-| `connection_params` | Dict | Optional non-secret python-oracledb connection options, such as `config_dir` and `wallet_location`.                                                        |
-| `params`            | Dict | Required. Loader-specific options passed to `OracleDocLoader` (for example, `owner`, `tablename`, `colname`, etc.). See Oracle AI docs.   |
+<PartialParams />
 
-Check [`Oracle AI Vector Search Document Processing`](https://docs.langchain.com/oss/python/integrations/document_loaders/oracleai) for more information.
----
+For information, see the [Oracle AI Vector Search Document Processing documentation](https://docs.langchain.com/oss/python/integrations/document_loaders/oracleai).
 
-## Oracle Autonomous Database Loader (OracleAutonomousDatabaseLoaderComponent)
+| Name | Type | Description |
+|------|------|-------------|
+| user | SecretString | Input parameter. Oracle database user. Optional. |
+| password | SecretString | Input parameter. Oracle database password. Optional. |
+| dsn | SecretString | Input parameter. Oracle DSN or connect string. Required. |
+| wallet_password | SecretString | Input parameter. Wallet password for wallet-based connections. Optional. |
+| connection_params | Dictionary | Input parameter. Non-secret python-oracledb connection options, such as `config_dir` and `wallet_location`. Optional. |
+| params | Dictionary | Input parameter. Loader-specific options passed to `OracleDocLoader`, such as `owner`, `tablename`, and `colname`. Required. |
 
-`OracleAutonomousDatabaseLoaderComponent` loads data from Oracle Autonomous Database (ADB) by running a SQL query and converting each row into a `Document`, then into `Data`.
+## Oracle Autonomous Database Loader
 
-### Parameters
+The **Oracle Autonomous Database Loader** component loads data from Oracle Autonomous Database (ADB) by running a SQL query and converting each row into a document, then into [`JSON`](/data-types#json).
 
-| Name                | Type   | Description                                                                                                 |
-| ------------------- | ------ | ----------------------------------------------------------------------------------------------------------- |
-| `query`             | String | Required. SQL query to execute. Each row in the result becomes a document.                                  |
-| `user`              | Secret | Optional. Oracle database user.                                                                            |
-| `password`          | Secret | Optional. Oracle database password.                                                                        |
-| `dsn`               | Secret | Required. Oracle DSN or connect string.                                                                    |
-| `wallet_password`   | Secret | Optional. Wallet password for wallet-based connections (advanced).                                         |
-| `connection_params` | Dict   | Optional non-secret Oracle options such as `schema`, `config_dir`, and `wallet_location`.                  |
-| `metadata`          | String | Optional. Comma-separated list of result columns to copy into document metadata.                            |
-| `parameter`         | Dict   | Optional. Bind parameters for the SQL query.                                                                |
+### Oracle Autonomous Database Loader parameters
 
-:::note
-This component is designed for Oracle ADB environments. Ensure your wallet and TLS configuration are set up if required by your environment, for example with `config_dir` and `wallet_location` in `connection_params`, and `wallet_password` in the dedicated secret field.
-:::
+<PartialParams />
 
-Check [`Oracle Autonomous Database`](https://docs.langchain.com/oss/python/integrations/document_loaders/oracleadb_loader) for more information.
+For more information, see the [Oracle Autonomous Database documentation](https://docs.langchain.com/oss/python/integrations/document_loaders/oracleadb_loader).
 
----
+| Name | Type | Description |
+|------|------|-------------|
+| query | String | Input parameter. SQL query to execute. Each row in the result becomes a document. Required. |
+| user | SecretString | Input parameter. Oracle database user. Optional. |
+| password | SecretString | Input parameter. Oracle database password. Optional. |
+| dsn | SecretString | Input parameter. Oracle DSN or connect string. Required. |
+| wallet_password | SecretString | Input parameter. Wallet password for wallet-based connections. Optional. |
+| connection_params | Dictionary | Input parameter. Non-secret Oracle options such as `schema`, `config_dir`, and `wallet_location`. Optional. |
+| metadata | String | Input parameter. Comma-separated list of result columns to copy into document metadata. Optional. |
+| parameter | Dictionary | Input parameter. Bind parameters for the SQL query. Optional. |
 
-## Oracle Embeddings (OracleEmbeddingsComponent)
+## Oracle Embeddings
 
-The `OracleEmbeddingsComponent` builds embeddings using Oracle AI Vector Search via `langchain_oracledb.OracleEmbeddings`. Use this component to create an embeddings function for the vector store or other downstream components.
+The **Oracle Embeddings** component generates embeddings using Oracle AI Vector Search via `langchain_oracledb.OracleEmbeddings`. Use this component to create an embeddings function for the vector store or other downstream components.
 
-### Parameters
+For more information, see [Embedding model components](/components-embedding-models).
 
-| Name                 | Type   | Description                                                                                                                                                 |
-| -------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `user`               | Secret | Optional. Oracle database user.                                                                                                                            |
-| `password`           | Secret | Optional. Oracle database password.                                                                                                                        |
-| `dsn`                | Secret | Required. Oracle DSN or connect string.                                                                                                                     |
-| `wallet_password`    | Secret | Optional. Wallet password for wallet-based connections (advanced).                                                                                          |
-| `connection_params`  | Dict   | Optional non-secret python-oracledb connection options, such as `config_dir` and `wallet_location`.                                                         |
-| `embedding_params`   | Dict   | Optional. Embedding parameters passed to `OracleEmbeddings` (for example, `provider`, `model`, etc.). See the Oracle embedding docs for accepted values.   |
-| `proxy`              | Secret | Optional. HTTP proxy to reach the embedding provider (advanced).                                                                                            |
+### Oracle Embeddings parameters
+
+<PartialParams />
+
+For more information, see the [Oracle embedding documentation](https://docs.oracle.com/en/database/oracle/oracle-database/23/vecse/utl_to_embedding-and-utl_to_embeddings-dbms_vector.html).
+
+| Name | Type | Description |
+|------|------|-------------|
+| user | SecretString | Input parameter. Oracle database user. Optional. |
+| password | SecretString | Input parameter. Oracle database password. Optional. |
+| dsn | SecretString | Input parameter. Oracle DSN or connect string. Required. |
+| wallet_password | SecretString | Input parameter. Wallet password for wallet-based connections. Optional. |
+| connection_params | Dictionary | Input parameter. Non-secret python-oracledb connection options, such as `config_dir` and `wallet_location`. Optional. |
+| embedding_params | Dictionary | Input parameter. Embedding parameters passed to `OracleEmbeddings`, such as `provider` and `model`. Optional. |
+| proxy | SecretString | Input parameter. HTTP proxy to reach the embedding provider. Optional. |

@@ -9,7 +9,7 @@ and exercise the *real* flow routes over HTTP, validating that:
 * the per-route guards (``ensure_flow_permission`` via the ``Authorized*Flow``
   dependencies) actually gate read/write/delete/create/execute by role,
 * cross-user denials are masked as 404 (not 403) on fetch routes, while
-  write denials on readable flows return an explicit 403,
+  write and delete denials on readable flows return an explicit 403,
 * the share-aware fetch + ``authz_share`` rows grant cross-user access, and
 * domain resolution (``_resolve_authz_domain``) scopes a domain-bound grant.
 
@@ -115,8 +115,10 @@ async def test_viewer_can_read_and_execute_but_not_write_delete_or_create(client
         patch = await client.patch(f"api/v1/flows/{flow_id}", headers=headers, json={"name": f"x_{uuid4().hex}"})
         assert patch.status_code == 403
         assert patch.json()["detail"] == "You don't have permission to edit this flow."
-        # delete -> denied, masked as 404
-        assert (await client.delete(f"api/v1/flows/{flow_id}", headers=headers)).status_code == 404
+        # delete -> denied, but the flow is readable so return a delete-permission 403.
+        delete = await client.delete(f"api/v1/flows/{flow_id}", headers=headers)
+        assert delete.status_code == 403
+        assert delete.json()["detail"] == "You don't have permission to delete this flow."
         # create -> denied; 403 is correct here (no existing resource UUID to protect)
         create = await client.post(
             "api/v1/flows/", headers=headers, json={"name": f"new_{uuid4().hex}", "data": {"nodes": [], "edges": []}}
@@ -140,8 +142,10 @@ async def test_developer_can_write_and_create_but_not_delete(client):
             "api/v1/flows/", headers=headers, json={"name": f"dev_{uuid4().hex}", "data": {"nodes": [], "edges": []}}
         )
         assert create.status_code == 201, create.text
-        # delete -> denied (developer lacks flow:delete) -> 404
-        assert (await client.delete(f"api/v1/flows/{flow_id}", headers=headers)).status_code == 404
+        # delete -> denied (developer lacks flow:delete) but readable -> 403
+        delete = await client.delete(f"api/v1/flows/{flow_id}", headers=headers)
+        assert delete.status_code == 403
+        assert delete.json()["detail"] == "You don't have permission to delete this flow."
 
 
 async def test_admin_has_full_flow_access(client):
@@ -184,6 +188,7 @@ async def test_share_grants_cross_user_access_and_absence_is_404(client):
         assert (
             await client.patch(f"api/v1/flows/{flow_id}", headers=bob_headers, json={"name": "x"})
         ).status_code == 404
+        assert (await client.delete(f"api/v1/flows/{flow_id}", headers=bob_headers)).status_code == 404
         assert (await client.post(f"api/v1/build/{flow_id}/flow", headers=bob_headers, json={})).status_code == 404
 
     # Alice grants Bob an admin-level share (read + write + execute).
@@ -231,6 +236,12 @@ async def test_read_only_share_allows_get_but_denies_write_and_execute(client):
         patch = await client.patch(f"api/v1/flows/{flow_id}", headers=bob_headers, json={"name": "nope"})
         assert patch.status_code == 403
         assert patch.json()["detail"] == "You don't have permission to edit this flow."
+        # delete is likewise denied on a readable flow -> delete-permission 403,
+        # matching the write behavior (LE-1738 B9: a flow the caller can GET must
+        # not flip to 404 on a denied DELETE).
+        delete = await client.delete(f"api/v1/flows/{flow_id}", headers=bob_headers)
+        assert delete.status_code == 403
+        assert delete.json()["detail"] == "You don't have permission to delete this flow."
         # execute is modeled independently from write — a read-level share must
         # not grant build either -> deny -> 404
         build = await client.post(f"api/v1/build/{flow_id}/flow", headers=bob_headers, json={})
