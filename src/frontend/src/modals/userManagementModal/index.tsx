@@ -174,6 +174,7 @@ export default function UserManagementModal({
                   </Form.Label>
                   <InputComponent
                     id="new-user-password"
+                    name="password"
                     isForm
                     password
                     value={password}
@@ -219,6 +220,7 @@ export default function UserManagementModal({
                   </Form.Label>
                   <InputComponent
                     id="new-user-confirm-password"
+                    name="confirmpassword"
                     isForm
                     password
                     value={confirmPassword}
