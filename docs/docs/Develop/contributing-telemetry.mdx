@@ -113,3 +113,25 @@ This telemetry event is sent for various lifecycle operations on deployment reso
 - **DeploymentSuccess**: Boolean value indicating whether the operation was successful.
 - **DeploymentErrorMessage**: Error message details if the operation was unsuccessful.
 - **WxoTenantId**: A unique identifier for the tenant, populated only for `watsonx-orchestrate` deployments, used to understand multi-tenant usage patterns without collecting personal information.
+
+### Component inputs
+
+This telemetry event transmits the inputs provided to components during flow execution.
+
+- **ComponentRunId**: A unique identifier for the component run.
+- **ComponentId**: A unique identifier for the component itself.
+- **ComponentName**: The name of the component.
+- **ComponentInputs**: A dictionary mapping input names to their configured input values.
+- **ChunkIndex**: The index of the split chunk (used if the payload is split to respect size limits).
+- **TotalChunks**: The total number of chunks.
+
+### Component index
+
+This telemetry event is sent to track the loading metrics of components.
+
+- **IndexSource**: The source of the component index, which can be "builtin", "cache", or "dynamic".
+- **NumModules**: The number of modules loaded.
+- **NumComponents**: The number of components indexed.
+- **DevMode**: Boolean indicating whether developer mode is active.
+- **FilteredModules**: Comma-separated list of filtered modules, if any.
+- **LoadTimeMs**: Time taken in milliseconds to load the component index.
