@@ -6,7 +6,6 @@ import remarkGfm from "remark-gfm";
 import { formatSeconds } from "@/components/core/playgroundComponent/chat-view/chat-messages/utils/format";
 import type {
   ContentBlockItem,
-  ContentType,
   InteractiveContent,
   JSONValue,
 } from "@/types/chat";
