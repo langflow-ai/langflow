@@ -59,7 +59,7 @@ EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
     "Ollama": "OllamaEmbeddings",
     "IBM WatsonX": "WatsonxEmbeddings",
     "IBM watsonx.ai": "WatsonxEmbeddings",  # Alias used by MODEL_PROVIDERS_DICT
-    # Foundry uses the OpenAI-compatible embeddings API; deployment name is ``model``.
+    # Foundry: OpenAI-compatible embeddings; deployment name is ``model``.
     "Azure AI Foundry": "OpenAIEmbeddings",
 }
 

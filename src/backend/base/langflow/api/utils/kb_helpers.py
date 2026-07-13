@@ -1140,21 +1140,7 @@ class KBIngestionHelper:
             },
         }
 
-        # Pass ``ollama_base_url=None`` explicitly so the component does NOT fall
-        # back to the input default (``http://localhost:11434``). When the
-        # component is built programmatically without this field,
-        # ``getattr(self, "ollama_base_url", None)`` returns that localhost
-        # default, which is truthy and short-circuits the ``OLLAMA_BASE_URL``
-        # global-variable / env resolution inside ``get_embeddings`` — so a KB
-        # configured against a remote Ollama server would silently try
-        # localhost and fail with "Failed to connect to Ollama". Forcing the
-        # value to ``None`` lets ``get_embeddings`` resolve the user's
-        # configured base URL (falling back to localhost only when nothing is
-        # configured). See https://github.com/langflow-ai/langflow/issues/13883.
-        #
-        # Same for ``api_base``: MessageTextInput defaults to ``""``, and an
-        # empty override used to wipe Azure AI Foundry's configured endpoint
-        # (openai_api_base='') during KB ingestion.
+        # Force None so input defaults (localhost Ollama / blank api_base) do not override globals.
         embedding_model = EmbeddingModelComponent(
             model=[selected_option],
             ollama_base_url=None,

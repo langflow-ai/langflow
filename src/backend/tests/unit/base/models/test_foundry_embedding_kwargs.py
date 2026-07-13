@@ -1,10 +1,4 @@
-"""Azure AI Foundry embedding kwargs must wire the configured endpoint.
-
-KB ingestion builds ``EmbeddingModelComponent`` with an empty MessageTextInput
-``api_base`` (``""``). That blank override must not wipe
-``AZURE_AI_FOUNDRY_ENDPOINT`` — otherwise OpenAIEmbeddings ships with
-``openai_api_base=''`` and POSTs to a relative ``/embeddings``.
-"""
+"""Regression: blank EmbeddingModelComponent api_base must not wipe Foundry endpoint."""
 
 from __future__ import annotations
 

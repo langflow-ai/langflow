@@ -210,11 +210,7 @@ async def list_models(
     configured_providers = {p for p, configured in provider_configured_status.items() if configured}
     replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
 
-    # Free-text / custom deployment names (e.g. Azure AI Foundry portal names)
-    # live only in the user's enabled-models variable — merge them into the
-    # catalog so Settings and the picker can list them. Honor the same filters
-    # as the static catalog query so ?model_name= / ?model_type= / metadata
-    # params do not suddenly return unmatched custom rows.
+    # Merge free-text custom deployments into the catalog (honors list_models filters).
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
     inject_custom_enabled_models(
         filtered_models,
@@ -493,8 +489,7 @@ def _build_model_default_flags(
             is_default = metadata.get("default", False)
             model_type = metadata.get("model_type", "llm")
             legacy_key = model_status_key(provider, model_name)
-            # Legacy name-level state spans every row with this identity, so
-            # keep its default behavior stable and order-independent.
+            # OR defaults across typed rows sharing a provider/name identity.
             is_default_model[legacy_key] = is_default_model.get(legacy_key, False) or is_default
             if model_type in {"llm", "embeddings"}:
                 is_default_model[model_status_key(provider, model_name, model_type)] = is_default
@@ -575,11 +570,7 @@ def _update_model_sets(
         legacy_key = model_status_key(update.provider, update.model_id)
 
         if update.model_type is not None:
-            # A legacy provider/name status applies to every catalog row with
-            # that identity. Expand it before applying a typed change so the
-            # legacy fallback cannot override the requested type while the
-            # other known type retains its previous state. Unknown custom
-            # deployments predate typed statuses as language models.
+            # Expand legacy name-level status to typed keys before a typed update.
             legacy_types = model_types_by_identity.get(legacy_key) or {"llm"}
             _expand_matching_legacy_status(
                 disabled_models,
@@ -595,8 +586,7 @@ def _update_model_sets(
             )
             status_key = model_status_key(update.provider, update.model_id, update.model_type)
         else:
-            # Old clients still write name-level state. Remove typed variants
-            # first so no stale per-type entry survives the legacy update.
+            # Clear typed variants before writing legacy name-level state.
             _discard_typed_status_variants(disabled_models, update.provider, update.model_id)
             _discard_typed_status_variants(explicitly_enabled_models, update.provider, update.model_id)
             status_key = legacy_key
@@ -606,8 +596,7 @@ def _update_model_sets(
         if update.enabled:
             # User wants to enable the model
             disabled_models.discard(status_key)
-            # Foundry catalog defaults are suggestions rather than callable
-            # deployment ids, so they must remain explicitly enabled.
+            # Foundry seed defaults are suggestions; keep them explicitly enabled.
             if update.provider in EXPLICIT_ENABLE_ONLY_PROVIDERS or not model_is_default:
                 explicitly_enabled_models.add(status_key)
             else:
@@ -734,9 +723,7 @@ async def get_enabled_models(
             if model_type not in {"llm", "embeddings"}:
                 model_type = "llm"
 
-            # Explicit-enable-only providers (Azure AI Foundry): seed defaults
-            # are suggestions for the Settings list, not auto-enabled models —
-            # the callable id must match a portal deployment the user enabled.
+            # Foundry requires explicit enable; seed defaults are not auto-on.
             requires_explicit = provider in EXPLICIT_ENABLE_ONLY_PROVIDERS
             explicitly_on = model_status_contains(
                 explicitly_enabled_models,
@@ -757,8 +744,7 @@ async def get_enabled_models(
                 and (explicitly_on if requires_explicit else (is_default or explicitly_on))
                 and not explicitly_off
             )
-            # Preserve exact per-type state while retaining the historical flat
-            # response as an OR across rows sharing a provider/name.
+            # Per-type map is exact; flat map ORs rows that share provider/name.
             models_for_type = enabled_models_by_type[provider].setdefault(model_type, {})
             models_for_type[model_name] = models_for_type.get(model_name, False) or is_enabled
             enabled_models[provider][model_name] = enabled_models[provider].get(model_name, False) or is_enabled

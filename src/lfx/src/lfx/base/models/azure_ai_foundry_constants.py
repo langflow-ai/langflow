@@ -1,11 +1,4 @@
-"""Azure AI Foundry model catalog primitives.
-
-Foundry's ``model`` parameter must match the **deployment name** in the portal
-(user-chosen, e.g. ``gpt-5-mini``), not a catalog model id. The OpenAI-
-compatible ``/models`` route returns the regional catalog and is not a
-deployment list, so Langflow keeps this small seed of common names and lets
-users add their real deployment names as free-text in Model Providers.
-"""
+"""Azure AI Foundry seed catalog; inference uses portal deployment names, not catalog IDs."""
 
 from .model_metadata import create_model_metadata
 

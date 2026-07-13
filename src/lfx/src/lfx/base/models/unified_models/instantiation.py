@@ -407,9 +407,7 @@ def _get_provider_catalog_models(
                 )
             _, explicitly_enabled_models = run_until_complete(_get_model_status(user_id))
 
-    # Include free-text Foundry deployments (and similar) that live only in
-    # the user's enabled-models variable — otherwise embedding runtime cannot
-    # resolve portal deployment names that are absent from the seed catalog.
+    # Include free-text custom deployments absent from the seed catalog.
     inject_custom_enabled_models(provider_models, explicitly_enabled_models)
 
     catalog_models: list[dict[str, Any]] = []
@@ -539,9 +537,7 @@ def _compose_embedding_kwargs(
 
     embedding_class = unified_models_module.get_embedding_class(embedding_class_name)
 
-    # Empty MessageTextInput defaults ("" ) must not count as an explicit override —
-    # otherwise they wipe provider endpoints (e.g. Azure AI Foundry) in the
-    # optional-params pass below and OpenAIEmbeddings ends up with openai_api_base=''.
+    # Treat blank MessageTextInput api_base as unset so it cannot wipe provider endpoints.
     api_base_value = _to_str(api_base) if provider == selected_provider else None
     if isinstance(api_base_value, str) and not api_base_value.strip():
         api_base_value = None
@@ -646,7 +642,7 @@ def _compose_embedding_kwargs(
     for param_name, param_value in optional_params.items():
         if param_value is None:
             continue
-        # Blank component api_base must not clobber a provider-resolved base URL.
+        # Skip blank api_base so it does not clobber a provider-resolved base URL.
         if param_name == "api_base" and isinstance(param_value, str) and not param_value.strip():
             continue
         if (
@@ -658,9 +654,7 @@ def _compose_embedding_kwargs(
         elif param_name in param_mapping:
             kwargs[param_mapping[param_name]] = param_value
 
-    # Foundry endpoint is required for OpenAIEmbeddings(base_url=...). Apply
-    # after optional params so an empty component api_base cannot wipe it
-    # (KB ingestion builds EmbeddingModelComponent with api_base="").
+    # Apply Foundry endpoint last so a blank component api_base cannot wipe it.
     if provider == "Azure AI Foundry" and "api_base" in param_mapping:
         foundry_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
         endpoint_value = (

@@ -606,8 +606,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             if not api_key or not endpoint:
                 return
             try:
-                # Validate the submitted connection without assuming the user
-                # deployed one of Langflow's seed model names.
+                # Validate connection without requiring a seed catalog model name.
                 request_azure_ai_foundry_model_entries(endpoint, api_key)
             except Exception as e:
                 msg = f"Could not validate Azure AI Foundry credentials: {e!s}"

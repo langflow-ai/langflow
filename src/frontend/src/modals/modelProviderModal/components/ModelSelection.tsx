@@ -220,10 +220,7 @@ const ModelSelection = ({
     [modelType],
   );
 
-  // Merge free-text deployments the user already enabled but that are not yet
-  // in the static/live catalog. Typed servers preserve the selected type. For
-  // a legacy flat-only response, catalog rows keep their declared type and an
-  // unknown custom deployment defaults to llm for backward compatibility.
+  // Merge enabled free-text deployments; typed API wins, legacy customs default to llm.
   const modelsWithCustomDeployments = useMemo(() => {
     if (!supportsCustomDeployments || !providerName) {
       return availableModels;

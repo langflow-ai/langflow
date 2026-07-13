@@ -216,10 +216,7 @@ def get_language_model_options(
             is_default = metadata.get("default", False)
             row_model_type = metadata.get("model_type") or "llm"
 
-            # Determine if model should be shown:
-            # - Explicit-enable-only providers (Azure AI Foundry): seed defaults
-            #   are suggestions; only user-enabled deployment names are callable.
-            # - Otherwise: show defaults or explicitly enabled; skip disabled.
+            # Foundry: only user-enabled deployment names; else defaults or explicit enables.
             if provider in EXPLICIT_ENABLE_ONLY_PROVIDERS:
                 if not model_status_contains(
                     explicitly_enabled_models,
@@ -351,9 +348,7 @@ def get_embedding_model_options(
             is_default = metadata.get("default", False)
             row_model_type = metadata.get("model_type") or "embeddings"
 
-            # Determine if model should be shown:
-            # - Explicit-enable-only providers: require a user-enabled entry
-            # - Otherwise: show defaults or explicitly enabled; skip disabled
+            # Foundry: require explicit enable; else defaults or explicit enables.
             if provider in EXPLICIT_ENABLE_ONLY_PROVIDERS:
                 if not model_status_contains(
                     explicitly_enabled_models,

@@ -490,12 +490,7 @@ AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
 
 
 def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str) -> list[dict]:
-    """Probe Foundry's OpenAI-compatible ``/models`` catalog for credential checks.
-
-    This returns the regional **model catalog**, not the user's deployments.
-    Prefer it only for connectivity/auth validation. Deployment names for
-    inference must come from the portal (or free-text enablement in Settings).
-    """
+    """Probe Foundry /models for credential validation (catalog, not deployments)."""
     response = requests.get(
         f"{endpoint.rstrip('/')}/models",
         headers={"api-key": api_key},
@@ -563,23 +558,7 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
 
 
 def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
-    """Return live Azure AI Foundry deployments for the unified picker.
-
-    Foundry's OpenAI-compatible ``model`` parameter must be the **deployment
-    name** chosen in the portal (for example ``gpt-5-mini``), not a catalog
-    model id. ``GET …/openai/v1/models`` returns the regional model catalog
-    (hundreds of versioned ids such as ``gpt-5-mini-2025-08-07``) and those
-    ids are not callable as deployments — using them as the picker list caused
-    404s at inference time.
-
-    Listing real deployments requires the Foundry project / Azure management
-    APIs (Entra ID), which are outside the endpoint + API-key credentials
-    users configure here. This conditional-live hook therefore returns ``[]``
-    so callers keep the seed catalog, and users add their portal deployment
-    names via free-text enablement in Model Providers.
-    """
-    # Credentials are still required for validation/inference; discovery does
-    # not call the catalog ``/models`` endpoint (see docstring).
+    """Foundry /models is a catalog, not deployments; return [] and use free-text enables."""
     _ = (user_id, model_type)
     return []
 
@@ -799,23 +778,7 @@ def inject_custom_enabled_models(
     model_type: str | None = None,
     metadata_filters: dict | None = None,
 ) -> None:
-    """Append explicitly enabled models that are missing from the catalog.
-
-    Providers such as Azure AI Foundry route inference by a user-chosen
-    deployment name that may never appear in a static or live catalog. Users
-    can still enable those names via free-text; this merges them into the
-    provider lists so Settings and the Agent/Language Model pickers can
-    surface them.
-
-    When *model_name*, *model_type*, or *metadata_filters* are set (same
-    semantics as ``get_unified_models_detailed`` / ``list_models``), only
-    matching custom entries are injected so filtered API responses stay
-    consistent.
-
-    Typed status entries are injected only under their persisted type. Legacy
-    provider-qualified entries predate embedding deployment support and retain
-    their original ``llm`` behavior.
-    """
+    """Append free-text enabled deployments missing from the catalog (e.g. Foundry)."""
     if not explicitly_enabled_models:
         return
 
@@ -824,8 +787,7 @@ def inject_custom_enabled_models(
     from lfx.base.models.unified_models.provider_queries import get_model_provider_metadata
 
     provider_meta = get_model_provider_metadata()
-    # Track (name, model_type) so the same deployment can exist as both llm
-    # and embeddings rows without colliding.
+    # Track (name, model_type) so llm and embeddings rows do not collide.
     known_by_provider: dict[str, set[tuple[str, str]]] = {}
     provider_dicts: dict[str, dict] = {}
     for provider_dict in provider_models:
@@ -842,7 +804,7 @@ def inject_custom_enabled_models(
             if isinstance(model.get("model_name"), str)
         }
 
-    # Stable order: set iteration is unordered across runs/processes.
+    # Stable order across processes (set iteration is unordered).
     for entry in sorted(explicitly_enabled_models):
         provider, custom_name, persisted_type = parse_model_status_key(entry)
         if provider not in EXPLICIT_ENABLE_ONLY_PROVIDERS:
@@ -868,8 +830,7 @@ def inject_custom_enabled_models(
 
         provider_dict = provider_dicts.get(provider)
         if provider_dict is None:
-            # Embeddings-only catalog queries omit Foundry entirely (seed is
-            # chat-only). Create a stub so free-text deployments still surface.
+            # Stub provider when embeddings filter omits chat-only Foundry seed.
             meta = provider_meta.get(provider, {})
             provider_dict = {
                 "provider": provider,
