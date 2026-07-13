@@ -2113,5 +2113,8 @@
   "paginator.pageLabel": "Page",
   "flow.flowSettings": "Flow settings",
   "files.actionsMenu": "{{name}} のファイル操作",
-  "mcp.servers.actionsMenu": "{{name}} の操作"
+  "mcp.servers.actionsMenu": "{{name}} の操作",
+  "assistant.modelNotice.fallback": "モデル {{failed}} が失敗しました（{{reason}}）。代わりに {{used}} を使用しました。",
+  "assistant.modelNotice.remediation": "モデル {{failed}} は実行のために調整が必要でした（{{reason}}）。",
+  "assistant.modelNotice.ariaLabel": "モデルの通知"
 }
