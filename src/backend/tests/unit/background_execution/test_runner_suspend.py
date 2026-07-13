@@ -91,6 +91,33 @@ async def test_suspend_records_pending_request_id(real_services_job_service) -> 
 
 @pytest.mark.real_services
 @pytest.mark.no_blockbuster
+async def test_suspend_records_pending_request_id_from_wrapped_wire_frame(real_services_job_service) -> None:
+    """The real build seam emits the pause wrapped in the adapter envelope.
+
+    The langflow adapter nests the request under ``data`` (AG-UI under ``value``);
+    the runner must still record ``pending_request_id`` or the resume staleness
+    guard never engages and any request_id — even another job's — is accepted.
+    """
+    job_service = real_services_job_service
+    job_id, flow_id = uuid4(), uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=uuid4())
+
+    request = {"reason": "human_input_required", "request_id": "req-wire", "options": ["approve"]}
+
+    async def _source(**_kwargs):
+        yield _frame("add_message", {"text": "working…"})
+        yield _frame(HUMAN_INPUT_REQUIRED_EVENT, request)
+
+    runner = _runner(job_service, job_id, _source)
+    await runner.run(job_id=job_id, source_kwargs={})
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.SUSPENDED
+    assert (job.job_metadata or {}).get("pending_request_id") == "req-wire"
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
 async def test_get_pending_human_request_returns_last_payload(real_services_job_service) -> None:
     job_service = real_services_job_service
     job_id, flow_id = uuid4(), uuid4()

@@ -241,8 +241,11 @@ class JobRunner:
         output_events: list[dict[str, Any]] = []
         async for frame_bytes, event_type in self._frame_source(**source_kwargs):
             if event_type == HUMAN_INPUT_REQUIRED_EVENT:
+                from langflow.services.jobs.service import _unwrap_pause_payload
+
                 payload = self._decode_payload(frame_bytes)
-                raise PauseRequested(payload=payload, request_id=payload.get("request_id"))
+                request = _unwrap_pause_payload(payload) or {}
+                raise PauseRequested(payload=payload, request_id=request.get("request_id"))
             if self._adapter.is_durable(event_type):
                 # Vertex/milestone-boundary cooperative cancel: a STOP written to
                 # the durable signal table flips the job at the next durable
