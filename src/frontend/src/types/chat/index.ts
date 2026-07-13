@@ -25,7 +25,7 @@ export type ChatMessageType = {
   icon?: string;
   category?: string;
   properties?: PropertiesType;
-  content_blocks?: ContentBlock[];
+  content_blocks?: ContentBlockItem[];
 };
 
 export type SourceType = {
@@ -85,11 +85,20 @@ export type FlowPoolObjectType = {
 // Base content type
 export interface BaseContent {
   type: string;
+  // Optional stable identity carried across re-emissions of the same logical
+  // block. Set by producers that have a natural id (e.g. LangChain
+  // tool_call_id). Consumers fall back to position-derived dedup when absent.
+  id?: string;
   duration?: number;
   header?: {
     title?: string;
     icon?: string;
   };
+  // Nested content. Leaf types leave this empty; container-shaped types
+  // (ContentBlock, multimodal ToolContent, multi-step ReasoningContent)
+  // populate it. Typed as ContentBlockItem so nested ContentBlock groups
+  // are allowed, matching the backend's discriminated union.
+  contents?: ContentBlockItem[];
 }
 
 // Individual content types
@@ -128,9 +137,67 @@ export interface CodeContent extends BaseContent {
 export interface ToolContent extends BaseContent {
   type: "tool_use";
   name?: string;
-  tool_input: Record<string, JSONValue>;
+  // The backend serializes this field as `tool_input` by default but
+  // emits it under the `input` alias when AG-UI / any other path runs
+  // model_dump with by_alias=True. Accept both shapes; renderers should
+  // prefer `tool_input` and fall back to `input`.
+  tool_input?: Record<string, JSONValue>;
+  input?: Record<string, JSONValue>;
   output?: JSONValue;
   error?: JSONValue | string;
+}
+
+export interface ImageContent extends BaseContent {
+  type: "image";
+  urls?: string[];
+  base64?: string;
+  mime_type?: string;
+  caption?: string;
+}
+
+export interface AudioContent extends BaseContent {
+  type: "audio";
+  urls?: string[];
+  base64?: string;
+  mime_type?: string;
+  duration?: number;
+  transcript?: string;
+}
+
+export interface VideoContent extends BaseContent {
+  type: "video";
+  urls?: string[];
+  base64?: string;
+  mime_type?: string;
+  duration?: number;
+}
+
+export interface FileContent extends BaseContent {
+  type: "file";
+  urls?: string[];
+  mime_type?: string;
+  filename?: string;
+}
+
+export interface ReasoningContent extends BaseContent {
+  type: "reasoning";
+  text: string;
+}
+
+export interface UsageContent extends BaseContent {
+  type: "usage";
+  input_tokens?: number;
+  output_tokens?: number;
+  model?: string;
+}
+
+export interface CitationContent extends BaseContent {
+  type: "citation";
+  url?: string;
+  title?: string;
+  cited_text?: string;
+  start_index?: number;
+  end_index?: number;
 }
 
 // Union type for all content types
@@ -140,15 +207,50 @@ export type ContentType =
   | MediaContent
   | JSONContent
   | CodeContent
-  | ToolContent;
+  | ToolContent
+  | ImageContent
+  | AudioContent
+  | VideoContent
+  | FileContent
+  | ReasoningContent
+  | UsageContent
+  | CitationContent;
 
-// Updated ContentBlock interface
-export interface ContentBlock {
+// A titled group of nested contents. Matches the backend's ContentBlock,
+// which is a member of the ContentType discriminated union with tag "group".
+// Extends BaseContent so it inherits id/header/duration alongside the
+// group-specific fields.
+export interface ContentBlock extends BaseContent {
+  type: "group";
   title: string;
-  contents: ContentType[];
-  allow_markdown: boolean;
+  contents: ContentBlockItem[];
+  // Optional to match the backend default (True) and to tolerate hand-built
+  // or legacy payloads that don't include the field.
+  allow_markdown?: boolean;
   media_url?: string[];
-  component: string;
+  // Legacy field kept for backwards compatibility with older callers.
+  component?: string;
+}
+
+// A content block item can be either a grouped ContentBlock or a flat ContentType
+export type ContentBlockItem = ContentType | ContentBlock;
+
+// Type guard for grouped ContentBlock items. Prefers the discriminator
+// `type === "group"` (new payloads). Falls back to a structural check ONLY
+// when `type` is absent, so legacy ContentBlock dicts persisted before the
+// discriminator existed (no `type`, only title + contents) are still
+// classified as groups. The fallback must not fire on flat ContentType
+// items that happen to carry a `title` (CodeContent, CitationContent) and
+// an empty inherited `contents: []` -- backend BaseContent serializes
+// contents on every item, so the type check is what keeps them out.
+export function isGroupedBlock(item: ContentBlockItem): item is ContentBlock {
+  if (item.type === "group") return true;
+  if (item.type) return false;
+  return (
+    "title" in item &&
+    "contents" in item &&
+    Array.isArray((item as { contents?: unknown }).contents)
+  );
 }
 
 export interface PlaygroundEvent {
@@ -158,7 +260,7 @@ export interface PlaygroundEvent {
   allow_markdown?: boolean;
   icon?: string | null;
   sender_name: string;
-  content_blocks?: ContentBlock[] | null;
+  content_blocks?: ContentBlockItem[] | null;
   files?: string[];
   text?: string;
   timestamp?: string;

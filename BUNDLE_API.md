@@ -69,7 +69,8 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | Symbol | Source |
 | --- | --- |
 | Manifest schema (`extension.json` / `[tool.langflow.extension]`) | `lfx.extension.manifest.ExtensionManifest` |
-| `BundleRef` (one entry in `bundles[]`) | `lfx.extension.manifest.BundleRef` |
+| `BundleRef` (one entry in `bundles[]`; `bundles[]` is optional, 0-or-1) | `lfx.extension.manifest.BundleRef` |
+| `ProviderManifestEntry` (one entry in the optional `providers[]`) | `lfx.extension.manifest.ProviderManifestEntry` |
 | `LfxCompat` (declared as `manifest.lfx`) | `lfx.extension.manifest.LfxCompat` |
 | `BUNDLE_API_VERSION` (the integer this lfx ships) | `lfx.extension.manifest` |
 | `EXTENSION_SCHEMA_URL` / `SCHEMA_VERSION` | `lfx.extension.manifest` |
@@ -476,3 +477,45 @@ the deserialize half is covered by
   `build`-or-`outputs` requirement.  Surfaced by the partner graduations
   (`lfx-datastax` et al.); previously-passing bundles are unaffected
   (strictly fewer false positives).
+- **Manifest `providers[]` — bundles can register model providers (additive).**
+  `ExtensionManifest` gains an optional `providers[]` list
+  (`ProviderManifestEntry`).  Each entry declares a model provider — name,
+  metadata (icon, credential variables, `mapping.model_class`), optional lazy
+  `model_class` / `embedding` import refs, `api_key_required`, `live` /
+  `conditional_live`, and dotted-path `live_discovery` / `validator` callables —
+  which the loader merges into lfx's unified model system at load time via
+  `lfx.base.models.provider_registry`.  Built-in providers always win on a name
+  collision.  `bundles[]` is now **0-or-1** rather than exactly one, so a
+  *provider-only* extension may ship providers with no component bundle; an
+  extension must declare at least one of `bundles` or `providers`.  Existing
+  single-bundle manifests are unaffected.  Discovery
+  (`discover_installed_extensions` / `discover_seed_extensions`) surfaces a
+  provider-only extension with `DiscoveredExtension.bundle_name = None`, and
+  `registry.Extension.bundle_name` is likewise now `str | None` (the
+  `lfx extension list` BUNDLE column shows `—` for such extensions).
+- **New typed error codes (additive): `provider-invalid`, `provider-skipped`.**
+  A malformed provider spec surfaces `provider-invalid`; a provider whose name
+  collides with a built-in or already-loaded provider surfaces
+  `provider-skipped`.  Both are warning-only — the rest of the extension still
+  loads — so adding them is backward-compatible (no `BUNDLE_API_VERSION` bump).
+- **`ExtensionError.ref_url` / CLI ``see:`` no longer carry per-code anchors.**
+  Auto-derived ``ref_url`` values (and the rendered ``see:`` line) now point
+  to the single extension-error guidance page
+  (``https://docs.langflow.org/extensions/errors``) instead of
+  ``…/extensions/errors#<code>``.  The ``code``, ``message``, ``location``,
+  ``content``, and ``hint`` fields are unchanged; only the docs link shape
+  changed.  Callers that deep-linked on ``ref_url`` suffix should read
+  ``code`` directly instead.
+- **`duplicate-distribution` detection resolves symlinks first.**
+  `load_installed_extensions` collapses manifest paths that are merely
+  different spellings of the same physical file (compared via
+  `Path.resolve()`; an `OSError` during resolution falls back to the raw
+  path) before the duplicate check.  RHEL-family (ubi) venvs symlink
+  `lib64 -> lib` and put both spellings on `sys.path`, so
+  `importlib.metadata.distributions()` yields every installed distribution
+  twice — previously each manifest-shipping bundle logged a false
+  `duplicate-distribution` error at Docker startup.  The
+  lexicographically-first unresolved spelling remains the winner, so error
+  messages and winner selection are unchanged, and two physically distinct
+  manifests for one canonical name still error.  No public symbol's name or
+  signature changed.

@@ -1,4 +1,5 @@
 import type {
+  CellKeyDownEvent,
   ColDef,
   NewValueParams,
   SelectionChangedEvent,
@@ -63,12 +64,27 @@ const FilesTab = ({
   };
 
   const handleOpenRename = (id: string, name: string) => {
-    if (tableRef.current) {
-      tableRef.current.api.startEditingCell({
-        rowIndex: files?.findIndex((file) => file.id === id) ?? 0,
-        colKey: "name",
-      });
-    }
+    const rowIndex = files?.findIndex((file) => file.id === id) ?? 0;
+    tableRef.current?.api.startEditingCell({ rowIndex, colKey: "name" });
+    // Rename is triggered from a Radix dropdown item; when that menu closes it
+    // restores focus to its trigger button once, asynchronously, stealing focus
+    // from the cell editor. Re-assert focus on the editor input across a few
+    // frames so it outlasts that restore and a keyboard user can type
+    // immediately (WCAG 2.4.3 Focus Order).
+    let frame = 0;
+    const focusEditor = () => {
+      const input = document.querySelector<HTMLInputElement>(
+        ".ag-cell-inline-editing .ag-input-field-input",
+      );
+      if (input && document.activeElement !== input) {
+        input.focus();
+        input.select();
+      }
+      if (frame++ < 6) {
+        requestAnimationFrame(focusEditor);
+      }
+    };
+    requestAnimationFrame(focusEditor);
   };
 
   const uploadFile = useUploadFile({ multiple: true });
@@ -119,6 +135,42 @@ const FilesTab = ({
     }
   };
 
+  // AG Grid navigates cell-by-cell and never focuses the action button inside a
+  // cell, so keyboard users can't open the row actions menu. Open it when
+  // Enter/Space is pressed while the actions cell is focused (WCAG 2.1.1).
+  const handleCellKeyDown = (event: CellKeyDownEvent<FileType>) => {
+    const keyboardEvent = event.event as KeyboardEvent | undefined;
+    if (keyboardEvent?.key !== "Enter" && keyboardEvent?.key !== " ") {
+      return;
+    }
+    if (event.column?.getColId() !== "actions") {
+      return;
+    }
+    const target = keyboardEvent.target as HTMLElement | null;
+    // The key was already re-dispatched onto the trigger button: let Radix's own
+    // keyboard handler open the menu and don't recurse.
+    if (target?.tagName === "BUTTON") {
+      return;
+    }
+    const actionsButton = target
+      ?.closest?.('[role="gridcell"]')
+      ?.querySelector<HTMLElement>("button");
+    if (!actionsButton) {
+      return;
+    }
+    // Move focus onto the (otherwise unreachable) trigger and replay the key so
+    // the dropdown opens through its native handler, matching a mouse click.
+    keyboardEvent.preventDefault();
+    actionsButton.focus();
+    actionsButton.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: keyboardEvent.key,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  };
+
   const colDefs: ColDef[] = [
     {
       headerName: t("files.columnName"),
@@ -166,8 +218,9 @@ const FilesTab = ({
             params.data.progress === -1 ? (
               <span className="text-xs text-primary">
                 {t("files.uploadFailed")}{" "}
-                <span
-                  className="cursor-pointer text-accent-pink-foreground underline"
+                <button
+                  type="button"
+                  className="cursor-pointer text-accent-pink-foreground underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (params.data.file) {
@@ -176,7 +229,7 @@ const FilesTab = ({
                   }}
                 >
                   {t("files.tryAgain")}
-                </span>
+                </button>
               </span>
             ) : (
               <></>
@@ -223,6 +276,12 @@ const FilesTab = ({
         "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
     },
     {
+      // Icon-only actions column: the header stays visually empty but keeps an
+      // accessible name (hidden via the `ag-sr-only-header` class) so the
+      // columnheader is not nameless (WCAG 4.1.2 / IBM aria_accessiblename_exists).
+      colId: "actions",
+      headerName: t("files.columnActions"),
+      headerClass: "ag-sr-only-header",
       maxWidth: 60,
       editable: false,
       resizable: false,
@@ -235,7 +294,14 @@ const FilesTab = ({
                 file={params.data}
                 handleRename={handleOpenRename}
               >
-                <Button variant="ghost" size="iconMd">
+                <Button
+                  variant="ghost"
+                  size="iconMd"
+                  aria-label={t("files.actionsMenu", {
+                    defaultValue: "File actions for {{name}}",
+                    name: params.data.name,
+                  })}
+                >
                   <ForwardedIconComponent name="EllipsisVertical" />
                 </Button>
               </FilesContextMenuComponent>
@@ -282,11 +348,23 @@ const FilesTab = ({
         <Button
           className="!px-3 md:!px-4 md:!pl-3.5"
           onClick={async (e) => {
-            e.currentTarget.blur();
+            const button = e.currentTarget;
+            // Keyboard-activated clicks report detail === 0. For mouse clicks
+            // we blur to dismiss the lingering tooltip (#13178); for keyboard
+            // we must return focus to the trigger after the native file picker
+            // closes so focus isn't dropped to <body> (WCAG 2.4.3).
+            const keyboardActivated = e.detail === 0;
+            if (!keyboardActivated) {
+              button.blur();
+            }
             await handleUpload();
+            if (keyboardActivated) {
+              button.focus();
+            }
           }}
           id="upload-file-btn"
           data-testid="upload-file-btn"
+          aria-label={t("files.uploadFiles")}
         >
           <ForwardedIconComponent
             name="Plus"
@@ -321,6 +399,7 @@ const FilesTab = ({
           <div className="flex items-center gap-2">
             {quantitySelected > 0 ? (
               <DeleteConfirmationModal
+                asChild
                 onConfirm={handleDelete}
                 description={"file" + (quantitySelected > 1 ? "s" : "")}
               >
@@ -329,6 +408,9 @@ const FilesTab = ({
                   className="flex items-center gap-2 !px-3 font-semibold md:!px-4 md:!pl-3.5"
                   loading={isDeleting}
                   data-testid="bulk-delete-btn"
+                  aria-label={t("files.deleteSelected", {
+                    count: quantitySelected,
+                  })}
                 >
                   <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
                   <span className="hidden whitespace-nowrap md:inline">
@@ -370,6 +452,7 @@ const FilesTab = ({
                 ]}
                 rowSelection="multiple"
                 onSelectionChanged={handleSelectionChanged}
+                onCellKeyDown={handleCellKeyDown}
                 columnDefs={colDefs}
                 rowData={files.sort((a, b) => {
                   return sortByDate(

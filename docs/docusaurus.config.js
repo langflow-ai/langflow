@@ -459,6 +459,10 @@ const config = {
               "/text-operations",
             ]
           },
+          {
+            to: "/api-keys-and-authentication",
+            from: "/jwt-authentication",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',

@@ -4,6 +4,8 @@ import { TEXTS } from "../utils/constants/texts";
 import { adjustScreenView } from "./adjust-screen-view";
 import { unselectNodes } from "./unselect-nodes";
 
+const OPENAI_PROVIDER = "OpenAI";
+
 const PREFERRED_OPENAI_MODELS = [
   "gpt-4o-mini",
   "gpt-4.1-mini",
@@ -11,9 +13,15 @@ const PREFERRED_OPENAI_MODELS = [
   "gpt-4.1",
 ];
 
+const getOpenAiModelOptionTestId = (modelName: string) =>
+  `${OPENAI_PROVIDER}-${modelName}-option`;
+
 const findPreferredOpenAiModelInDropdown = async (page: Page) => {
   for (const modelName of PREFERRED_OPENAI_MODELS) {
-    if ((await page.getByTestId(`${modelName}-option`).count()) > 0) {
+    if (
+      (await page.getByTestId(getOpenAiModelOptionTestId(modelName)).count()) >
+      0
+    ) {
       return modelName;
     }
   }
@@ -37,8 +45,22 @@ const openModelDropdown = async (page: Page, model: Locator) => {
   await page.waitForSelector('[role="listbox"]', { timeout: 10000 });
 };
 
+// The model dropdown footer buttons ("Manage providers", "Refresh list") render
+// inside the in-canvas popover, which is drawn without a portal
+// (PopoverContentWithoutPortal). When the language-model node sits low on the
+// canvas the footer can be clipped, or shift while the model list settles, so a
+// plain click() fails Playwright's "visible, enabled and stable" actionability
+// check and times out. Nudge the button into view and dispatch the click
+// directly — the same workaround already used for the model option below.
+const clickModelDropdownFooter = async (page: Page, testId: string) => {
+  const button = page.getByTestId(testId);
+  await button.waitFor({ state: "attached", timeout: 10000 });
+  await button.scrollIntoViewIfNeeded().catch(() => {});
+  await button.dispatchEvent("click");
+};
+
 const enablePreferredOpenAiModel = async (page: Page) => {
-  await page.getByTestId("manage-model-providers").click();
+  await clickModelDropdownFooter(page, "manage-model-providers");
   await page.waitForSelector("text=Model providers", { timeout: 30000 });
 
   await page.getByTestId("provider-item-OpenAI").click();
@@ -112,13 +134,19 @@ export const selectGptModel = async (page: Page) => {
     if (!modelName) {
       modelName = await enablePreferredOpenAiModel(page);
       await openModelDropdown(page, model);
-      if ((await page.getByTestId(`${modelName}-option`).count()) === 0) {
-        await page.getByTestId("refresh-model-list").click();
+      if (
+        (await page
+          .getByTestId(getOpenAiModelOptionTestId(modelName))
+          .count()) === 0
+      ) {
+        await clickModelDropdownFooter(page, "refresh-model-list");
         await openModelDropdown(page, model);
       }
     }
 
-    const selectedOption = page.getByTestId(`${modelName}-option`);
+    const selectedOption = page.getByTestId(
+      getOpenAiModelOptionTestId(modelName),
+    );
     await expect(selectedOption).toBeVisible({ timeout: 30000 });
     await selectedOption.dispatchEvent("click");
 

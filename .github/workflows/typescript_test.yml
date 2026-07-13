@@ -364,11 +364,14 @@ jobs:
         uses: nick-fields/retry@v3
         with:
           # Bumped from 12 → 18 minutes. The shard carrying the
-          # starter-projects-shardN tests iterates every starter template;
+          # starter-projects template sweep iterates every starter template;
           # under Linux CI load that work can run past 12 minutes once a
           # single iteration triggers a per-test Playwright retry.
           timeout_minutes: 18
           max_attempts: 2
+          # The command block is bash; without this the action falls back to
+          # the runner default and PowerShell fails to parse the if/grep.
+          shell: bash
           command: |
             cd src/frontend
             echo 'Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}'
@@ -376,7 +379,10 @@ jobs:
             printf '%s\n' "$TEST_LIST"
 
             WORKERS=2
-            if printf '%s\n' "$TEST_LIST" | grep -q 'starter-projects-shard'; then
+            # The sweep lives in starter-projects-outdated-components.spec.ts
+            # (renamed from starter-projects-shardN in #13844 — keep this
+            # pattern in sync or the one-worker mitigation silently no-ops).
+            if printf '%s\n' "$TEST_LIST" | grep -q 'starter-projects-outdated-components'; then
               echo "Detected starter project template sweep in this shard; running it with one worker to avoid shared backend contention."
               WORKERS=1
             fi
@@ -466,3 +472,48 @@ jobs:
           name: html-report--attempt-${{ github.run_attempt }}
           path: playwright-report
           retention-days: 14
+
+  flaky-report:
+    name: Flaky Test Report
+    needs: setup-and-test
+    # Runs on green too: flaky tests (failed -> passed on retry) only show up
+    # in runs that end green, which the merge-reports job above skips.
+    if: ${{ always() && needs.setup-and-test.result != 'skipped' && needs.setup-and-test.result != 'cancelled' }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    # Metrics only — must never turn CI red.
+    continue-on-error: true
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download blob reports from GitHub Actions Artifacts
+        # A single shard artifact failing its download (transient artifact
+        # storage errors, seen in practice) must not void the whole
+        # measurement — merge whatever did download.
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge into JSON report
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: flaky-report.json
+        # Pinned to the repo's Playwright version: blob format is
+        # version-sensitive and bare npx would fetch latest.
+        run: |
+          if ! ls ./all-blob-reports/*.zip >/dev/null 2>&1; then
+            echo "No blob reports downloaded; skipping flaky report."
+            exit 0
+          fi
+          npx playwright@1.60.0 merge-reports --reporter json ./all-blob-reports
+
+      - name: Upload flaky report
+        uses: actions/upload-artifact@v6
+        with:
+          name: flaky-report--attempt-${{ github.run_attempt }}
+          path: flaky-report.json
+          retention-days: 30

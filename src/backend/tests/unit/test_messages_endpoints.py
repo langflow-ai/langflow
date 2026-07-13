@@ -456,11 +456,10 @@ async def test_successfully_update_session_id(client, logged_in_headers, created
         timestamp_str = timestamp_to_str(timestamp)
         assert timestamp_str == response_timestamp
 
-    # Check if the messages ordered by timestamp are in the correct order
-    # User, User, AI
-    assert messages[0]["sender"] == "User"
+    # Messages ordered by timestamp DESC (newest first): AI, User, User
+    assert messages[0]["sender"] == "AI"
     assert messages[1]["sender"] == "User"
-    assert messages[2]["sender"] == "AI"
+    assert messages[2]["sender"] == "User"
 
 
 @pytest.mark.api_key_required
