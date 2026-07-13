@@ -50,7 +50,7 @@ A single canonical `lfx` then exists, so the stable bundles resolve cleanly — 
 - **Stop renaming the core.** `update_lfx_version.py`, `update_pyproject_combined.py`,
   `update_sdk_version.py` no longer rename to `*-nightly`; they only set the `.devN` version and
   re-pin inter-package deps to **exact canonical dev versions** (`langflow-base[complete]==<dev>`,
-  `langflow-services[database-sqlite,memory-base]==<dev>`, `lfx==<dev>`, `langflow-sdk==<dev>` —
+  `langflow-services[all]==<dev>`, `lfx==<dev>`, `langflow-sdk==<dev>` —
   via `update_uv_dependency.py` / `update_lf_base_dependency.py`). Stable releases keep
   `langflow-services` on the `1.x` axis with `langflow`/`lfx` while `langflow-base` stays on
   `0.x`; nightlies remap base onto the root axis so all three share one `.devN` tag.

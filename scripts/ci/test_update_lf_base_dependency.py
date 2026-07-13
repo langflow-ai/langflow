@@ -103,13 +103,13 @@ def test_pins_langflow_services_in_base(tmp_path: Path, monkeypatch: pytest.Monk
 def test_pins_langflow_services_preserves_extras(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path = tmp_path / "pyproject.toml"
     path.write_text(
-        '[project]\ndependencies = [\n    "langflow-services[database-sqlite,memory-base]~=1.11.0",\n]\n',
+        '[project]\ndependencies = [\n    "langflow-services[all]~=1.11.0",\n]\n',
         encoding="utf-8",
     )
     monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
     mod.update_langflow_services_dep_in_base(path.name, "1.11.0.dev3")
     result = path.read_text(encoding="utf-8")
-    assert '"langflow-services[database-sqlite,memory-base]==1.11.0.dev3"' in result
+    assert '"langflow-services[all]==1.11.0.dev3"' in result
     assert "~=" not in result
 
 

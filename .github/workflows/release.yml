@@ -1021,7 +1021,7 @@ jobs:
           MINOR=${MAJOR_MINOR#*.}
           NEXT_MINOR=$((MINOR + 1))
 
-          # Preserve extras (e.g. [database-sqlite,memory-base]) while widening the floor.
+          # Preserve extras (e.g. [all]) while widening the floor.
           EXTRAS=$(echo "$CURRENT_CONSTRAINT" | sed -nE 's/.*"langflow-services(\[[^]]*\])?.*/\1/p')
           NEW_CONSTRAINT="\"langflow-services${EXTRAS}>=$SERVICES_VERSION,<$MAJOR.$NEXT_MINOR.dev0\""
 

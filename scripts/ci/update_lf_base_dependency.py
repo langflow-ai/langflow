@@ -69,8 +69,8 @@ def update_lfx_dep_in_base(pyproject_path: str, lfx_version: str) -> None:
 def update_langflow_services_dep_in_base(pyproject_path: str, services_version: str) -> None:
     """Pin langflow-services in langflow-base to an exact nightly/dev version.
 
-    Preserves extras (e.g. ``[database-sqlite,memory-base]``) so the default
-    dialect / memory-base shells survive the exact ``==`` rewrite.
+    Preserves extras (e.g. ``[all]``) so the default
+    service aggregate survives the exact ``==`` rewrite.
     """
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")

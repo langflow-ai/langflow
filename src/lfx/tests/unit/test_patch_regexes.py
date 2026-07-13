@@ -127,14 +127,14 @@ name = "langflow-base"
 version = "0.10.0"
 dependencies = [
     "lfx~=1.10.0",
-    "langflow-services[database-sqlite,memory-base]~=1.10.0",
+    "langflow-services[all]~=1.10.0",
     "pydantic>=2.0.0",
 ]
 """
         result = _patch_langflow_base_pyproject(txt, "0.11.0", "1.11.0")
         assert 'version = "0.11.0"' in result
         assert '"lfx~=1.11.0"' in result
-        assert '"langflow-services[database-sqlite,memory-base]~=1.11.0"' in result
+        assert '"langflow-services[all]~=1.11.0"' in result
         assert '"pydantic>=2.0.0"' in result  # unrelated dep untouched
 
     def test_realistic_gte_range_form_fragment(self):
@@ -154,9 +154,9 @@ dependencies = [
 
     def test_services_pin_tracks_langflow_not_base(self):
         """langflow-services uses the 1.x axis; base stays on 0.x."""
-        txt = '    "langflow-services[database-sqlite,memory-base]~=1.10.0",'
+        txt = '    "langflow-services[all]~=1.10.0",'
         result = _patch_langflow_base_pyproject(txt, "0.11.0", "1.11.0")
-        assert '"langflow-services[database-sqlite,memory-base]~=1.11.0"' in result
+        assert '"langflow-services[all]~=1.11.0"' in result
         assert "0.11.0" not in result
 
 

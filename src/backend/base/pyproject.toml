@@ -18,9 +18,8 @@ maintainers = [
 
 dependencies = [
     "lfx~=1.11.0",
-    # Default DB dialect is SQLite; Postgres is opt-in via [postgresql].
-    # memory-base covers host KB helpers that still import chromadb/langchain_chroma.
-    "langflow-services[database-sqlite,memory-base]~=1.11.0",
+    # Full service shell + every selectable backend/provider.
+    "langflow-services[all]~=1.11.0",
     "fastapi>=0.135.0,<1.0.0",
     "slowapi>=0.1.9,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
@@ -425,8 +424,7 @@ ibm-watsonx-clients = ["langflow-services[deployment-watsonx-orchestrate]"]
 production = ["langflow-services[production]"]
 
 complete = [
-    # Concrete service implementations + selectable backends/providers.
-    "langflow-services[all]",
+    # langflow-services[all] is already a hard dependency of langflow-base.
     # Host-only extras not owned by langflow-services.
     # Document processing / OCR remain OPT-IN (torch) -- not in [complete].
     "langflow-base[mcp]",

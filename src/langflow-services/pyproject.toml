@@ -14,14 +14,10 @@ dependencies = [
     "alembic>=1.13.0,<2.0.0",
     "anyio>=4.0.0",
     "tenacity>=8.0.0",
-    "filelock>=3.20.1,<4.0.0",
     "orjson>=3.11.6,<4.0.0",
     "pydantic>=2.13.0,<3.0.0",
-    "email-validator>=2.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
-    "passlib>=1.7.4,<2.0.0",
-    "bcrypt==4.0.1",
     "PyJWT>=2.12.1",
     "cryptography>=48.0.1",
     "platformdirs>=4.2.0,<5.0.0",
@@ -31,8 +27,6 @@ dependencies = [
     "opentelemetry-sdk>=1.30.0,<2.0.0",
     "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
     "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
-    "prometheus-client>=0.20.0,<1.0.0",
-    "greenlet>=3.1.1,<4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -60,7 +54,10 @@ state = []
 storage = []
 store = []
 task = []
-telemetry = []
+telemetry = [
+    # EmailPayload uses pydantic.EmailStr.
+    "email-validator>=2.0.0",
+]
 telemetry-writer = []
 tracing = []
 transaction = []

@@ -52,10 +52,9 @@ pip install "langflow-services[all]"
   backend/provider (including `tracing-all`). `production` is a separate
   convenience aggregate and is not nested under `all`.
 
-`langflow-base` depends on `langflow-services[database-sqlite,memory-base]` by
-default and re-exports backend extras (`[postgresql]`, `[redis]`, `[aioboto3]`,
-`[production]`, tracing, `[ibm-watsonx-clients]` →
-`deployment-watsonx-orchestrate`, etc.).
+`langflow-base` depends on `langflow-services[all]` by default and re-exports
+backend extras (`[postgresql]`, `[redis]`, `[aioboto3]`, `[production]`, tracing,
+`[ibm-watsonx-clients]` → `deployment-watsonx-orchestrate`, etc.).
 
 ## Discovery and bootstrap
 
