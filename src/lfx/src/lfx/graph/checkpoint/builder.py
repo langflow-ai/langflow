@@ -63,7 +63,9 @@ def build_checkpoint(graph: Graph) -> GraphCheckpoint:
         vertices_layers=[list(layer) for layer in graph.vertices_layers],
         first_layer=list(graph._first_layer),  # noqa: SLF001
         inactivated_vertices={str(v) for v in graph.inactivated_vertices},
+        conditionally_excluded_vertices={str(v) for v in graph.conditionally_excluded_vertices},
         activated_vertices=list(graph.activated_vertices),
         vertex_results={vertex.id: _vertex_data(vertex) for vertex in graph.vertices},
         pause_context=graph.pause_info,
+        human_input_decisions=dict(getattr(graph, "human_input_decisions", {}) or {}),
     )

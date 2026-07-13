@@ -10,7 +10,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import get_current_active_superuser
+from langflow.services.auth.utils import get_current_active_superuser, get_current_user_optional
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_auth_service, get_settings_service
@@ -22,13 +22,31 @@ router = APIRouter(tags=["Users"], prefix="/users")
 async def add_user(
     user: UserCreate,
     session: DbSession,
+    current_user: Annotated[User | None, Depends(get_current_user_optional)],
 ) -> User:
     """Add a new user to the database.
 
-    This endpoint allows public user registration (sign up).
+    This endpoint backs two flows that share the same route:
+
+    * Public sign up (unauthenticated). Allowed only when public registration is
+      enabled for the deployment, i.e. AUTO_LOGIN is off (multi-user mode) and
+      ENABLE_SIGNUP is True.
+    * Admin "add user" (authenticated active superuser). Always allowed,
+      regardless of the sign up settings, so disabling public sign up does not
+      break superuser-driven user creation.
+
     User activation is controlled by the NEW_USER_IS_ACTIVE setting.
     """
     settings_service = get_settings_service()
+    auth_settings = settings_service.auth_settings
+    # An authenticated active superuser (the admin "add user" flow) may always
+    # create users. For every other caller this endpoint is effectively
+    # unauthenticated, so refuse it unless public sign up is intended for this
+    # deployment. get_current_user_optional returns None for credential-less
+    # requests, so the anonymous path can never be promoted to superuser.
+    is_superuser_caller = current_user is not None and current_user.is_active and current_user.is_superuser
+    if not is_superuser_caller and (auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP):
+        raise HTTPException(status_code=403, detail="Public user registration is disabled.")
 
     new_user = User.model_validate(user, from_attributes=True)
     try:

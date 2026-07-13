@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/contexts";
 import {
@@ -37,6 +38,7 @@ export function TraceHitlBar({
   onResolved?: () => void;
   onDecision?: (actionId: string) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const { mutate: resume, isPending } = useResumeWorkflow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [resuming, setResuming] = useState(false);
@@ -96,7 +98,10 @@ export function TraceHitlBar({
             return;
           }
           setResuming(false);
-          setErrorData({ title: "Resume failed", list: [err.message] });
+          setErrorData({
+            title: t("humanInput.resumeFailed"),
+            list: [err.message],
+          });
         },
       },
     );
@@ -110,17 +115,17 @@ export function TraceHitlBar({
       <div className="flex min-w-0 items-center gap-2">
         <PauseGlyph />
         <span className="text-sm font-medium text-accent-indigo-foreground">
-          Human In The Loop
+          {t("trace.hitlTitle")}
         </span>
         <span className="truncate text-sm text-muted-foreground">
-          Awaiting human decision…
+          {t("trace.awaitingDecision")}
         </span>
       </div>
 
       {resuming ? (
         <span className="flex items-center gap-2 text-sm text-accent-indigo-foreground">
           <span className="animate-pulse tracking-widest">•••</span>
-          Resuming flow…
+          {t("trace.resumingFlow")}
         </span>
       ) : (
         <div className="flex shrink-0 items-center gap-2">

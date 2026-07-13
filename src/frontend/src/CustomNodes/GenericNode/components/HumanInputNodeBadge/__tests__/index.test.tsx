@@ -18,9 +18,11 @@ jest.mock("@/components/ui/popover", () => ({
   PopoverAnchor: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),
-  PopoverContent: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
+  PopoverContentWithoutPortal: ({
+    children,
+  }: {
+    children: React.ReactNode;
+  }) => <div>{children}</div>,
 }));
 
 const _content: InteractiveContent = {

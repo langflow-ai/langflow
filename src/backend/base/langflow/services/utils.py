@@ -4,10 +4,14 @@ import asyncio
 from enum import Enum
 from importlib import import_module
 from pathlib import Path
+from secrets import token_urlsafe
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.constants import (
+    DEFAULT_SUPERUSER,
+    LEGACY_DEFAULT_SUPERUSER_PASSWORD,
+)
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
@@ -37,7 +41,58 @@ class SetupSuperuserResult(str, Enum):
     SUPERUSER_UNCHANGED = "superuser_unchanged"
 
 
-async def get_or_create_super_user(session: AsyncSession, username, password, is_default):
+def _secret_value(secret) -> str:
+    if not secret:
+        return ""
+    if hasattr(secret, "get_secret_value"):
+        return secret.get_secret_value()
+    return str(secret)
+
+
+def get_auto_login_superuser_password(auth_settings) -> str:
+    configured_password = _secret_value(auth_settings.SUPERUSER_PASSWORD)
+    legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    if configured_password and configured_password != legacy_password:
+        return configured_password
+    return token_urlsafe(32)
+
+
+async def _get_superuser_by_username(session: AsyncSession, username: str):
+    from langflow.services.database.models.user.model import User
+
+    stmt = select(User).where(
+        User.username == username,
+        User.is_superuser == True,  # noqa: E712
+    )
+    result = await session.exec(stmt)
+    return result.first()
+
+
+async def _rotate_legacy_default_superuser_password(session: AsyncSession, user, replacement_password: str) -> bool:
+    legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    if not legacy_password or not user.password:
+        return False
+
+    auth = get_auth_service()
+    if not auth.verify_password(legacy_password, user.password):
+        return False
+
+    user.password = auth.get_password_hash(replacement_password)
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    await logger.awarning("Rotated legacy default superuser password.")
+    return True
+
+
+async def get_or_create_super_user(
+    session: AsyncSession,
+    username,
+    password,
+    is_default,
+    *,
+    rotate_legacy_default_password: bool = False,
+):
     from langflow.services.database.models.user.model import User
 
     stmt = select(User).where(User.username == username)
@@ -46,6 +101,8 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
 
     auth = get_auth_service()
     if user and user.is_superuser:
+        if rotate_legacy_default_password:
+            await _rotate_legacy_default_superuser_password(session, user, password)
         return None  # Superuser already exists
 
     if user and is_default:
@@ -89,8 +146,14 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
 
         from filelock import FileLock
 
-        username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+        username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+        configured_password = _secret_value(settings_service.auth_settings.SUPERUSER_PASSWORD)
+        if configured_password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
+            await logger.awarning(
+                "Ignoring legacy default LANGFLOW_SUPERUSER_PASSWORD in AUTO_LOGIN mode; "
+                "generated a random bootstrap password instead."
+            )
+        password = get_auto_login_superuser_password(settings_service.auth_settings)
 
         # Use file lock similar to starter projects
         lock_file = Path(gettempdir()) / "langflow_auto_login_superuser.lock"
@@ -99,7 +162,13 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         try:
             with lock:
                 # Create user and initialize all related resources
-                super_user = await get_or_create_super_user(session, username, password, is_default=True)
+                super_user = await get_or_create_super_user(
+                    session,
+                    username,
+                    password,
+                    is_default=True,
+                    rotate_legacy_default_password=True,
+                )
                 if super_user:  # Only initialize if user was created
                     from langflow.initial_setup.setup import get_or_create_default_folder
                     from langflow.services.deps import get_variable_service
@@ -116,6 +185,11 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                     _ = await get_or_create_default_folder(session, super_user.id)
                     await logger.adebug("Auto-login superuser initialized successfully")
                     return SetupSuperuserResult.AUTO_LOGIN_INITIALIZED
+                existing_superuser = await _get_superuser_by_username(session, username)
+                if existing_superuser is None:
+                    msg = "AUTO_LOGIN is enabled but the configured bootstrap user is not a superuser."
+                    await logger.aerror(msg)
+                    raise RuntimeError(msg)
                 return SetupSuperuserResult.AUTO_LOGIN_ALREADY_SATISFIED
         except TimeoutError as exc:
             # Another worker may be handling it - but a stale/abandoned lock or dead holder
@@ -125,13 +199,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                 "(another worker may hold it, or the lock file may be stale). "
                 "Verifying whether the default superuser exists.",
             )
-            from langflow.services.database.models.user.model import User
-
-            stmt = select(User).where(
-                User.username == username,
-                User.is_superuser == True,  # noqa: E712
-            )
-            exists = (await session.exec(stmt)).first() is not None
+            exists = (await _get_superuser_by_username(session, username)) is not None
             if not exists:
                 msg = (
                     "AUTO_LOGIN is enabled but the default superuser was not initialized: "
@@ -141,12 +209,13 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                 await logger.aerror(msg)
                 raise RuntimeError(msg) from exc
             return SetupSuperuserResult.AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT
+        finally:
+            settings_service.auth_settings.reset_credentials()
     # Remove the default superuser if it exists
     await teardown_superuser(settings_service, session)
-    # If AUTO_LOGIN is disabled, attempt to use configured credentials
-    # or fall back to default credentials if none are provided.
+    # If AUTO_LOGIN is disabled, require configured credentials.
     username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
-    password = (settings_service.auth_settings.SUPERUSER_PASSWORD or DEFAULT_SUPERUSER_PASSWORD).get_secret_value()
+    password = _secret_value(settings_service.auth_settings.SUPERUSER_PASSWORD)
 
     await logger.adebug(f"Setup superuser: username={username}, has_password={bool(password)}")
 
@@ -155,12 +224,21 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         await logger.aerror(f"Missing credentials: username={username}, password={'set' if password else 'not set'}")
         raise ValueError(msg)
 
-    is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
+    if password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
+        msg = "LANGFLOW_SUPERUSER_PASSWORD cannot use the legacy default password"
+        await logger.aerror(msg)
+        raise ValueError(msg)
+
+    is_default = (username == DEFAULT_SUPERUSER) and (password == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
 
     try:
         await logger.adebug(f"Creating/getting superuser: username={username}, is_default={is_default}")
         user = await get_or_create_super_user(
-            session=session, username=username, password=password, is_default=is_default
+            session=session,
+            username=username,
+            password=password,
+            is_default=is_default,
+            rotate_legacy_default_password=True,
         )
         if user is not None:
             await logger.adebug("Superuser created successfully.")
@@ -487,6 +565,7 @@ def register_all_service_factories() -> None:
     from lfx.services.schema import ServiceType
 
     service_manager = get_service_manager()
+    from lfx.services.executor import factory as executor_factory
     from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.settings import factory as settings_factory
 
@@ -544,6 +623,7 @@ def register_all_service_factories() -> None:
     )
     service_manager.register_factory(authorization_factory.AuthorizationServiceFactory())
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
+    service_manager.register_factory(executor_factory.ExecutorServiceFactory())
     service_manager.set_factory_registered()
 
 
@@ -583,7 +663,7 @@ def register_builtin_deployment_mappers() -> None:
         logger.info("Skipping Watsonx Orchestrate deployment mapper registration: %s", exc)
 
 
-async def initialize_services(*, fix_migration: bool = False) -> None:
+async def initialize_services(*, fix_migration: bool = False, skip_superuser_setup: bool = False) -> None:
     """Initialize all the services needed."""
     from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
 
@@ -600,17 +680,35 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
         msg = "Cache service failed to connect to external database"
         raise ConnectionError(msg)
 
+    # Fail fast if the Redis-backed job queue is selected but Redis is unreachable.
+    # Otherwise Langflow boots "fine" and emits confusing connection errors only
+    # when a flow is executed. Only probes when the redis backend is selected, so
+    # the default asyncio backend is unaffected.
+    if get_settings_service().settings.job_queue_type == "redis":
+        from langflow.services.job_queue.factory import JobQueueServiceFactory
+        from langflow.services.job_queue.service import RedisJobQueueService
+
+        queue_service = get_service(ServiceType.JOB_QUEUE_SERVICE, default=JobQueueServiceFactory())
+        if isinstance(queue_service, RedisJobQueueService) and not (await queue_service.is_connected()):
+            msg = (
+                f"Job queue backend 'redis' is selected (LANGFLOW_JOB_QUEUE_TYPE=redis) but Redis is "
+                f"not reachable at {queue_service.connection_target}. Start Redis, fix the "
+                "LANGFLOW_REDIS_QUEUE_* settings, or set LANGFLOW_JOB_QUEUE_TYPE=asyncio."
+            )
+            raise ConnectionError(msg)
+
     # Setup the superuser
     await initialize_database(fix_migration=fix_migration)
     db_service = get_db_service()
     await db_service.initialize_alembic_log_file()
-    async with session_scope() as session:
-        settings_service = get_service(ServiceType.SETTINGS_SERVICE)
-        await setup_superuser(settings_service, session)
-    try:
-        await get_db_service().assign_orphaned_flows_to_superuser()
-    except sqlalchemy_exc.IntegrityError as exc:
-        await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
+    settings_service = get_service(ServiceType.SETTINGS_SERVICE)
+    if not skip_superuser_setup:
+        async with session_scope() as session:
+            await setup_superuser(settings_service, session)
+        try:
+            await get_db_service().assign_orphaned_flows_to_superuser()
+        except sqlalchemy_exc.IntegrityError as exc:
+            await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
 
     async with session_scope() as session:
         await clean_transactions(settings_service, session)

@@ -1,5 +1,6 @@
-import type { CellClickedEvent } from "ag-grid-community";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CellClickedEvent, CellKeyDownEvent } from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
@@ -67,6 +68,13 @@ export function FlowInsightsContent({
   const [tracePanelTraceId, setTracePanelTraceId] = useState<string | null>(
     null,
   );
+  const traceTableRef = useRef<AgGridReact<unknown> | null>(null);
+  const tracePanelOpenerRef = useRef<HTMLElement | null>(null);
+  const tracePanelFocusedCellRef = useRef<{
+    rowIndex: number;
+    columnId: string;
+    rowPinned?: "top" | "bottom" | null;
+  } | null>(null);
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -178,6 +186,8 @@ export function FlowInsightsContent({
 
   useEffect(() => {
     if (!initialTraceId) return;
+    tracePanelOpenerRef.current = null;
+    tracePanelFocusedCellRef.current = null;
     setTracePanelTraceId(initialTraceId);
     setTracePanelOpen(true);
   }, [initialTraceId]);
@@ -210,14 +220,75 @@ export function FlowInsightsContent({
     [],
   );
 
-  const handleCellClicked = useCallback((event: CellClickedEvent) => {
-    event.event?.preventDefault?.();
-    event.event?.stopPropagation?.();
+  const rememberTracePanelOpener = useCallback(
+    (event: CellClickedEvent | CellKeyDownEvent) => {
+      const eventTarget = event.event?.target;
+      tracePanelOpenerRef.current =
+        eventTarget instanceof HTMLElement ? eventTarget : null;
 
-    const rowData = event.data as TraceListItem | undefined;
-    setTracePanelTraceId(rowData?.id ?? null);
-    setTracePanelOpen(true);
+      if (event.node.rowIndex == null || !event.column) {
+        tracePanelFocusedCellRef.current = null;
+        return;
+      }
+
+      tracePanelFocusedCellRef.current = {
+        rowIndex: event.node.rowIndex,
+        columnId: event.column.getColId(),
+        rowPinned: event.node.rowPinned,
+      };
+    },
+    [],
+  );
+
+  const restoreTracePanelFocus = useCallback(() => {
+    const opener = tracePanelOpenerRef.current;
+    if (opener?.isConnected) {
+      opener.focus({ preventScroll: true });
+      return;
+    }
+
+    const focusedCell = tracePanelFocusedCellRef.current;
+    const gridApi = traceTableRef.current?.api;
+    if (!focusedCell || !gridApi || gridApi.isDestroyed()) return;
+
+    gridApi.ensureIndexVisible(focusedCell.rowIndex);
+    requestAnimationFrame(() => {
+      if (gridApi.isDestroyed()) return;
+      gridApi.setFocusedCell(
+        focusedCell.rowIndex,
+        focusedCell.columnId,
+        focusedCell.rowPinned,
+      );
+    });
   }, []);
+
+  const handleCellClicked = useCallback(
+    (event: CellClickedEvent) => {
+      event.event?.preventDefault?.();
+      event.event?.stopPropagation?.();
+      rememberTracePanelOpener(event);
+
+      const rowData = event.data as TraceListItem | undefined;
+      setTracePanelTraceId(rowData?.id ?? null);
+      setTracePanelOpen(true);
+    },
+    [rememberTracePanelOpener],
+  );
+
+  const handleCellKeyDown = useCallback(
+    (event: CellKeyDownEvent) => {
+      const keyboardEvent = event.event as KeyboardEvent | undefined;
+      if (keyboardEvent?.key === "Enter") {
+        keyboardEvent.preventDefault();
+        keyboardEvent.stopPropagation();
+        rememberTracePanelOpener(event);
+        const rowData = event.data as TraceListItem | undefined;
+        setTracePanelTraceId(rowData?.id ?? null);
+        setTracePanelOpen(true);
+      }
+    },
+    [rememberTracePanelOpener],
+  );
 
   const syntheticCount = useMemo(
     () => rows.filter((row) => row.isPending).length,
@@ -286,6 +357,7 @@ export function FlowInsightsContent({
               <TableComponent
                 key={`Executions-${sessionId}`}
                 readOnlyEdit
+                aria-label={`${t("trace.tableAriaLabel")} ${sessionId}`}
                 className="h-auto w-full"
                 domLayout="autoHeight"
                 pagination={false}
@@ -350,7 +422,10 @@ export function FlowInsightsContent({
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 w-[130px] [&>span]:truncate">
+              <SelectTrigger
+                className="h-8 w-[130px] [&>span]:truncate"
+                aria-label={t("trace.statusFilterLabel")}
+              >
                 <SelectValue placeholder={t("trace.allStatus")} />
               </SelectTrigger>
               <SelectContent>
@@ -449,8 +524,10 @@ export function FlowInsightsContent({
             })
           ) : (
             <TableComponent
+              ref={traceTableRef}
               key="Executions"
               readOnlyEdit
+              aria-label={t("trace.tableAriaLabel")}
               className="h-max-full h-full w-full"
               data-testid="flow-insights-trace-table"
               pagination={false}
@@ -459,6 +536,7 @@ export function FlowInsightsContent({
               rowData={rows}
               headerHeight={rows.length === 0 ? 0 : undefined}
               onCellClicked={handleCellClicked}
+              onCellKeyDown={handleCellKeyDown}
             />
           )}
         </div>
@@ -488,6 +566,16 @@ export function FlowInsightsContent({
           }
           closeButtonClassName="top-1"
           data-testid="flow-insights-trace-panel"
+          onCloseAutoFocus={(event) => {
+            if (
+              !tracePanelOpenerRef.current &&
+              !tracePanelFocusedCellRef.current
+            ) {
+              return;
+            }
+            event.preventDefault();
+            restoreTracePanelFocus();
+          }}
         >
           <div className="flex h-full flex-col overflow-hidden">
             <div className="flex-1 overflow-hidden">

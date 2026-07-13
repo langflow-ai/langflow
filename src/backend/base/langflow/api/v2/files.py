@@ -69,6 +69,38 @@ async def get_mcp_file(current_user: CurrentActiveUser, *, extension: bool = Fal
     return f"{MCP_SERVERS_FILE}_{current_user.id!s}" + (".json" if extension else "")
 
 
+async def _validate_uploaded_mcp_config(file: UploadFile) -> None:
+    """Validate an uploaded MCP servers config against MCPServerConfig.
+
+    Security: the uploaded bytes become the user's MCP servers config, whose
+    ``command``/``args`` are later spawned via the stdio transport. The structured
+    ``/api/v2/mcp/servers`` endpoints validate each entry with ``MCPServerConfig``
+    (command allow-list, arg/env checks); this file-upload path must apply the SAME
+    validation so it cannot be used to bypass the allow-list and run an arbitrary
+    command on the server. Rewinds the file so the subsequent save re-reads it.
+    """
+    import json
+
+    from pydantic import ValidationError
+
+    from langflow.api.v2.schemas import MCPServerConfig
+
+    raw = await file.read()
+    await file.seek(0)
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HTTPException(status_code=422, detail="Invalid MCP servers config: not valid JSON") from exc
+    servers = parsed.get("mcpServers") if isinstance(parsed, dict) else None
+    if not isinstance(servers, dict):
+        raise HTTPException(status_code=422, detail="Invalid MCP servers config: expected an 'mcpServers' object")
+    for name, cfg in servers.items():
+        try:
+            MCPServerConfig.model_validate(cfg)
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid MCP server '{name}': {exc}") from exc
+
+
 async def byte_stream_generator(file_input, chunk_size: int = 8192) -> AsyncGenerator[bytes, None]:
     """Convert bytes object or stream into an async generator that yields chunks."""
     if isinstance(file_input, bytes):
@@ -250,6 +282,24 @@ async def upload_user_file(
         existing_file = None
 
         if new_filename == mcp_file_ext:
+            # Honor the MCP-servers lock on this path too. The structured
+            # /api/v2/mcp/servers endpoints reject non-superuser writes when the lock
+            # is on, but this branch writes the same _mcp_servers_<uid>.json that
+            # get_server_list reads — so without the same guard a non-superuser could
+            # replace their MCP config via the file-upload path while it's locked.
+            from langflow.api.v2.mcp import is_mcp_servers_locked
+
+            if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
+                raise HTTPException(
+                    status_code=403,
+                    detail="MCP server configuration is locked. "
+                    "Contact an administrator to manage external MCP servers.",
+                )
+            # Validate the uploaded MCP servers config before storing it, so this
+            # path can't bypass the command allow-list enforced by the structured
+            # /api/v2/mcp/servers endpoints (otherwise an attacker-supplied command
+            # would later be spawned via the stdio transport -> RCE).
+            await _validate_uploaded_mcp_config(file)
             # Check if an existing record exists; if so, delete it to replace with the new one
             existing_mcp_file = await get_file_by_name(mcp_file, current_user, session)
             if existing_mcp_file:

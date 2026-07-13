@@ -6,7 +6,7 @@ import { skipIfMissing } from "../../utils/env/skip-if-missing";
 
 test(
   "user must be able to create a new flow clicking on New Flow button",
-  { tag: ["@release", "@mainpage"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     skipIfMissing.openAiKey();
     loadDotenvIfLocal(__dirname);

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -21,13 +22,19 @@ type SideBarButtonsComponentProps = {
 };
 
 const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const pathname = location.pathname;
 
   const isMobile = useIsMobile();
 
   return (
-    <Sidebar collapsible={isMobile ? "icon" : "none"} className="border-none">
+    <Sidebar
+      collapsible={isMobile ? "icon" : "none"}
+      className="border-none"
+      role="navigation"
+      aria-label={t("settings.nav.label")}
+    >
       <SidebarContent className="pr-6">
         <SidebarGroup>
           <SidebarGroupContent>

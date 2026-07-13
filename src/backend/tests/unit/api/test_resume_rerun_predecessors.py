@@ -68,9 +68,10 @@ def test_does_not_rerun_producer_whose_output_round_tripped():
     assert chat.built is True
 
 
-def test_walks_chain_and_reruns_only_dropped_links():
-    # chat(input) -> tool(dropped) -> mid(round-tripped) -> agent(paused). The walk must reach the
-    # dropped tool even though the intermediate mid stays built.
+def test_stops_at_built_roundtripped_link_and_does_not_rerun_producers_behind_it():
+    # chat(input) -> tool(dropped) -> mid(round-tripped) -> agent(paused). mid keeps its valid restored
+    # output, so agent reads mid, not tool — re-running tool is wasted work (and for a side-effecting
+    # producer, a re-bill / duplicate emit). The walk stops at the built mid.
     chat = _vertex("chat", is_input=True)
     tool = _vertex("tool")
     mid = _vertex("mid")
@@ -83,8 +84,27 @@ def test_walks_chain_and_reruns_only_dropped_links():
 
     _rerun_non_input_predecessors(graph, "agent")
 
-    assert tool.built is False  # dropped → re-run
-    assert mid.built is True  # round-tripped → reused, but the walk passed through it
+    assert tool.built is True  # behind a built, round-tripped consumer → not re-run
+    assert mid.built is True  # round-tripped → reused, blocks the walk
+    assert chat.built is True
+
+
+def test_reruns_dropped_producer_behind_an_unbuilt_link():
+    # chat(input) -> tool(dropped) -> mid(unbuilt) -> agent(paused). mid will re-run, so it needs a
+    # valid tool output: the walk passes through the unbuilt mid and frees the dropped tool.
+    chat = _vertex("chat", is_input=True)
+    tool = _vertex("tool")
+    mid = _vertex("mid", built=False)
+    agent = _vertex("agent")
+    graph = _graph(
+        [chat, mid, tool, agent],
+        {"agent": ["mid"], "mid": ["tool"], "tool": ["chat"], "chat": []},
+        dropped={"tool"},
+    )
+
+    _rerun_non_input_predecessors(graph, "agent")
+
+    assert tool.built is False  # an unbuilt consumer (mid) will read it → re-run
     assert chat.built is True
 
 

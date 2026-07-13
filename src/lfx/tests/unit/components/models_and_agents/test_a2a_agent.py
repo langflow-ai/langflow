@@ -12,13 +12,29 @@ SDK, so these tests drive that client directly against real localhost servers:
 - an internal/loopback ``agent_url`` is rejected by SSRF protection before any call.
 """
 
+import contextlib
+import ipaddress
 import json
+import socket
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from unittest.mock import patch
 
 import pytest
 from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent, _agent_base_url, build_a2a_client
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
+
+
+def _resolve_public(host, *_args, **_kwargs):
+    """socket.getaddrinfo stub: hostnames resolve to a public IP, literal IPs to themselves."""
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        ip = "93.184.216.34"  # hostname -> public IP (passes SSRF, not in any blocked range)
+    else:
+        ip = host  # literal IP -> itself
+    family = socket.AF_INET6 if ":" in ip else socket.AF_INET
+    return [(family, socket.SOCK_STREAM, 6, "", (ip, 0))]
 
 
 class _RecordingHandler(BaseHTTPRequestHandler):
@@ -115,6 +131,76 @@ async def test_off_origin_internal_target_blocked(monkeypatch):
             # block the metadata IP before any connection opens.
             with pytest.raises(SSRFProtectionError):
                 await client.post("http://169.254.169.254/rpc", json={"hello": "world"})
+
+
+async def test_off_origin_internal_target_blocked_with_ssrf_toggle_off(monkeypatch):
+    """A card-controlled off-origin internal target is blocked even with the SSRF toggle off.
+
+    validate_and_resolve_url returns [] with no enforcement when the toggle is off; the
+    toggle-independent floor still rejects non-allowlisted internal IPs, mirroring the webhook path.
+    """
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    agent_url = "http://127.0.0.1:9"  # discard port; only the off-origin hop matters here
+    _url, validated_ips = validate_and_resolve_url(agent_url)  # [] (toggle off)
+    client = build_a2a_client(agent_url, validated_ips, api_key="super-secret", timeout=2)
+    async with client:
+        with pytest.raises(SSRFProtectionError):
+            await client.post("http://169.254.169.254/rpc", json={"hello": "world"})
+
+
+async def test_off_origin_host_is_dns_pinned_to_validated_ip(monkeypatch):
+    """An off-origin hop pins the validated IP into the transport, closing the DNS-rebind window.
+
+    The hook validates the off-origin host and writes the cleared IPs into the transport's
+    pin map before httpx connects, so the connection can't be rebound to an internal target
+    between validation and connect. The connect to the (unreachable-in-test) public IP then
+    fails; the recorded pin is the security-relevant effect we assert.
+    """
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    # Allowlist loopback so the agent origin is trusted (validated_ips empty); the off-origin
+    # host is the one that must be validated + pinned.
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    agent_url = "http://127.0.0.1:9"  # discard port; only the off-origin hop matters here
+    _url, validated_ips = validate_and_resolve_url(agent_url)
+    client = build_a2a_client(agent_url, validated_ips, api_key="super-secret", timeout=2)
+
+    with patch("socket.getaddrinfo", side_effect=_resolve_public):
+        async with client:
+            with contextlib.suppress(Exception):
+                await client.post("http://remote-agent.example/rpc", json={"hello": "world"})
+
+    assert client._transport.pinned_ips.get("remote-agent.example") == ["93.184.216.34"]
+
+
+async def test_agent_url_idn_seeded_under_punycode_key():
+    """An IDN agent_url is seeded under the punycode raw_host the transport connects with.
+
+    httpcore connects to ``xn--exmple-cua.com``, not the unicode ``exämple.com``; keying the pin
+    by the unicode host would store it where the transport never looks, silently bypassing the pin.
+    """
+    async with build_a2a_client("http://exämple.com", ["93.184.216.34"], timeout=2) as client:
+        assert client._transport.pinned_ips == {"xn--exmple-cua.com": ["93.184.216.34"]}
+
+
+async def test_off_origin_idn_host_pinned_under_punycode_key(monkeypatch):
+    """An off-origin IDN hop pins under the punycode raw_host, so the pin matches the connect host."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    agent_url = "http://127.0.0.1:9"
+    _url, validated_ips = validate_and_resolve_url(agent_url)
+    client = build_a2a_client(agent_url, validated_ips, api_key="super-secret", timeout=2)
+
+    with patch("socket.getaddrinfo", side_effect=_resolve_public):
+        async with client:
+            with contextlib.suppress(Exception):
+                await client.post("http://exämple.com/rpc", json={"hello": "world"})
+
+    assert client._transport.pinned_ips.get("xn--exmple-cua.com") == ["93.184.216.34"]
+    assert "exämple.com" not in client._transport.pinned_ips
 
 
 async def test_loopback_agent_url_rejected_by_ssrf(monkeypatch):

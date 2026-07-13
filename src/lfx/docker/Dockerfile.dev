@@ -1,7 +1,11 @@
 # syntax=docker/dockerfile:1
 # Development Dockerfile for LFX
 
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:latest AS uv_installer
+FROM registry.access.redhat.com/ubi10/python-314-minimal
+USER root
+COPY --from=uv_installer /uv /usr/local/bin/uv
+COPY --from=uv_installer /uvx /usr/local/bin/uvx
 
 ENV TZ=UTC
 
@@ -13,15 +17,12 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install -y \
-    build-essential \
+RUN microdnf install -y tar xz \
+    gcc gcc-c++ make python3.14-devel \
     curl \
     git \
     vim \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && microdnf clean all
 
 # --- Copy only files that affect dependency resolution (best cache) ---
 # Workspace root metadata + lockfile
@@ -53,6 +54,9 @@ WORKDIR /app/src/lfx
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+ENV BASH_ENV="" \
+    ENV="" \
+    PROMPT_COMMAND=""
 
 # Expose any ports that might be needed for development
 EXPOSE 8000

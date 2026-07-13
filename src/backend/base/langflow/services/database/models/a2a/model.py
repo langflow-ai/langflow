@@ -1,8 +1,9 @@
 """Durable storage for A2A protocol tasks."""
 
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Column
+from sqlalchemy import JSON, Column, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -26,6 +27,16 @@ class A2ATask(SQLModel, table=True):  # type: ignore[call-arg]
     id: str = Field(primary_key=True)
     owner: str = Field(default="", primary_key=True)
     task: dict[str, Any] = Field(sa_column=Column(JsonVariant, nullable=False))
+    # Nothing prunes a2a_tasks yet, so the table grows unbounded. These let a retention reaper (or
+    # an operator) prune by age; the DB maintains both, so the store needs no timestamp code.
+    created_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=True),
+    )
+    updated_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=True),
+    )
 
 
 class A2ACheckpoint(SQLModel, table=True):  # type: ignore[call-arg]

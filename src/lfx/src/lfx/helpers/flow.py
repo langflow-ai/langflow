@@ -322,6 +322,11 @@ async def run_flow(
     # In lfx, we don't have settings service, so use False as default
     fallback_to_env_vars = False
 
+    from lfx.run.hitl import raise_if_nested_hitl_unsupported
+
+    # A nested run cannot pause: a Human Input in here would silently not pause. Fail loud instead.
+    raise_if_nested_hitl_unsupported(graph)
+
     return await graph.arun(
         inputs_list,
         outputs=outputs,

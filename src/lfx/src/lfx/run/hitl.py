@@ -20,6 +20,7 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
+from lfx.graph.checkpoint.resume import resume_graph_with_decision
 from lfx.graph.checkpoint.store import CheckpointStore, InMemoryCheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.schema import VertexBuildResult
@@ -46,16 +47,19 @@ def reroute_decision_on_timeout(pending: dict | None, decision: dict) -> dict:
     to an expired sentinel (no branch taken) otherwise. A timely answer is kept unchanged.
     """
     pending = pending or {}
-    timeout_s = pending.get("timeout_seconds") or 0
+    timeout_s = max(0, pending.get("timeout_seconds") or 0)
     fallback = pending.get("fallback_action")
     paused_at = pending.get("paused_at")
     if not (timeout_s and paused_at):
         return decision
     try:
         paused_dt = datetime.fromisoformat(paused_at)
+        if paused_dt.tzinfo is None:
+            paused_dt = paused_dt.replace(tzinfo=timezone.utc)
+        elapsed = (datetime.now(timezone.utc) - paused_dt).total_seconds()
     except (TypeError, ValueError):
         return decision
-    if (datetime.now(timezone.utc) - paused_dt).total_seconds() > timeout_s:
+    if elapsed > timeout_s:
         return {**(decision or {}), "action_id": fallback or EXPIRED_ACTION}
     return decision
 
@@ -75,7 +79,6 @@ async def run_graph_with_human_input(
     Returns the per-vertex results of the completed run (same shape ``async_start``
     yields) so the existing CLI output extractors work unchanged.
     """
-    from lfx.graph.graph.base import Graph as LfxGraph
     from lfx.schema.schema import INPUT_FIELD_NAME
 
     store = store or InMemoryCheckpointStore()
@@ -106,15 +109,8 @@ async def run_graph_with_human_input(
             if checkpoint is None:
                 msg = "Paused run has no recoverable checkpoint; cannot resume."
                 raise RuntimeError(msg) from exc
-            graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
-            graph.checkpointing_enabled = True
-            graph.checkpoint_store = store
-            request_id = request.get("request_id")
             decision = reroute_decision_on_timeout(request, decision)
-            graph.human_input_decisions = {request_id: decision}
-            for vertex in graph.vertices:
-                if f"{vertex.id}:{graph.run_id}" == request_id:
-                    vertex.built = False
+            graph = resume_graph_with_decision(checkpoint, store, request.get("request_id"), decision)
             continue
         break
 
@@ -148,6 +144,41 @@ def flow_has_pausing_node(graph: Graph) -> bool:
     """True when the graph contains a node that can request a human-input pause."""
     pausing_types = {"HumanInput"}
     return any((getattr(vertex, "data", None) or {}).get("type") in pausing_types for vertex in graph.vertices)
+
+
+NESTED_HITL_UNSUPPORTED = (
+    "This flow uses Human-in-the-Loop (a Human Input node or a tool that requires approval) and cannot "
+    "run as a nested flow (Run Flow / Sub Flow / flow-as-tool), because a nested run cannot pause for "
+    "a decision. Move the approval to the parent flow."
+)
+
+
+class NestedHITLUnsupportedError(ValueError):
+    """Deliberate user guidance — wrappers must surface it verbatim, not genericize it."""
+
+
+def flow_has_blocking_pausing_node(graph: Graph) -> bool:
+    """True when a non-pausable run of this graph would need to pause.
+
+    Mirrors the v1 API guard's two HITL shapes: a Human Input wired to a downstream consumer
+    (an isolated one skips at runtime, so it is not blocking), or an agent tool carrying a
+    non-empty ``approval_actions``.
+    """
+    for vertex in graph.vertices:
+        data = getattr(vertex, "data", None) or {}
+        if data.get("type") == "HumanInput" and graph.successor_map.get(vertex.id):
+            return True
+        template = ((data.get("node") or {}).get("template")) or {}
+        rows = (template.get("tools_metadata") or {}).get("value")
+        if isinstance(rows, list) and any(isinstance(row, dict) and row.get("approval_actions") for row in rows):
+            return True
+    return False
+
+
+def raise_if_nested_hitl_unsupported(graph: Graph) -> None:
+    """Reject a nested run of a pausing flow with a clear error instead of a silent non-pause."""
+    if flow_has_blocking_pausing_node(graph):
+        raise NestedHITLUnsupportedError(NESTED_HITL_UNSUPPORTED)
 
 
 def _collect_results(graph: Graph) -> list[VertexBuildResult]:
