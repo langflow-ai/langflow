@@ -274,7 +274,7 @@ export default function GlobalVariablesPage() {
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
       <div className="flex w-full items-start justify-between gap-6">
-        <div className="flex w-full flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <h2
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
@@ -289,7 +289,7 @@ export default function GlobalVariablesPage() {
             {t("globalVars.pageDescription")}
           </p>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-2 pr-1">
           <GlobalVariableModal asChild>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="w-4" />
