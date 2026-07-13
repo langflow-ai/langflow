@@ -24,8 +24,10 @@ def test_scaled_and_observability_modules_absent_on_this_branch():
 
 
 def test_redis_request_degrades_to_in_process_without_scaled_modules(monkeypatch):
-    """Constructing the facade with job_queue_type=redis must not raise: the scaled
-    modules are absent, so the backend stays None and the in-process executor owns runs.
+    """Constructing the facade with job_queue_type=redis must not raise.
+
+    The scaled modules are absent, so the backend stays None and the in-process
+    executor owns runs.
     """
     settings_service = get_settings_service()
     monkeypatch.setattr(settings_service.settings, "job_queue_type", "redis")
@@ -33,5 +35,5 @@ def test_redis_request_degrades_to_in_process_without_scaled_modules(monkeypatch
 
     service = BackgroundExecutionService(settings_service)
 
-    assert service._backend is None  # noqa: SLF001
-    assert service._scaled is False  # noqa: SLF001
+    assert service._backend is None
+    assert service._scaled is False
