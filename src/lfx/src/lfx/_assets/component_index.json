@@ -6893,7 +6893,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -7575,7 +7575,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -13501,7 +13501,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -14138,7 +14138,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -14146,7 +14146,7 @@
                 },
                 {
                   "name": "langchain",
-                  "version": "1.3.11"
+                  "version": "1.3.13"
                 }
               ],
               "total_dependencies": 3
@@ -14765,7 +14765,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -16555,7 +16555,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -16953,7 +16953,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -17206,7 +17206,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -17957,7 +17957,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -20134,7 +20134,7 @@
               "dependencies": [
                 {
                   "name": "langchain",
-                  "version": "1.3.11"
+                  "version": "1.3.13"
                 },
                 {
                   "name": "lfx",
@@ -20142,7 +20142,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 }
               ],
               "total_dependencies": 3
@@ -21556,7 +21556,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -23723,7 +23723,7 @@
                 },
                 {
                   "name": "jq",
-                  "version": "1.11.0"
+                  "version": "1.12.0"
                 }
               ],
               "total_dependencies": 3
@@ -25216,7 +25216,7 @@
                 },
                 {
                   "name": "jq",
-                  "version": "1.11.0"
+                  "version": "1.12.0"
                 }
               ],
               "total_dependencies": 4
@@ -26430,7 +26430,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -26881,7 +26881,7 @@
                 },
                 {
                   "name": "jq",
-                  "version": "1.11.0"
+                  "version": "1.12.0"
                 }
               ],
               "total_dependencies": 3
@@ -28984,7 +28984,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -29110,7 +29110,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "lfx",
@@ -29300,7 +29300,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -29516,7 +29516,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -29686,7 +29686,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -29869,7 +29869,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -30108,7 +30108,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -30318,7 +30318,7 @@
                 },
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -30659,7 +30659,7 @@
               "dependencies": [
                 {
                   "name": "langchain_core",
-                  "version": "1.4.8"
+                  "version": "1.4.9"
                 },
                 {
                   "name": "pydantic",
@@ -31267,6 +31267,6 @@
     "num_components": 129,
     "num_modules": 17
   },
-  "sha256": "29eeb3700118135229c425837c961ef653ff1285efa32b714749bfc500e5811c",
+  "sha256": "a0f73c741772af81cd645fa3e0fa79123c6d3f668acac3ec214c23b0208dfe6d",
   "version": "1.11.0"
 }
