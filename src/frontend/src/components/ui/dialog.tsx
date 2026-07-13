@@ -163,6 +163,41 @@ const DialogContent = React.forwardRef<
   },
 );
 
+const DialogOverlayPlain = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn(
+      "fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-overlayHide data-[state=open]:animate-overlayShow",
+      className,
+    )}
+    {...props}
+  />
+));
+DialogOverlayPlain.displayName = "DialogOverlayPlain";
+
+const DialogContentPlain = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPrimitive.Portal>
+    <DialogOverlayPlain />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-3 rounded-xl border bg-background p-3 shadow-lg duration-200 data-[state=closed]:animate-contentHide data-[state=open]:animate-contentShow",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Content>
+  </DialogPrimitive.Portal>
+));
+DialogContentPlain.displayName = "DialogContentPlain";
+
 const DialogHeader = ({
   className,
   ...props
@@ -218,6 +253,7 @@ DialogDescription.displayName = DialogPrimitive.Description.displayName;
 export {
   Dialog,
   DialogContent,
+  DialogContentPlain,
   DialogContentWithouFixed,
   DialogDescription,
   DialogFooter,
