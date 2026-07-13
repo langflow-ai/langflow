@@ -6,8 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ASSISTANT_MAX_SESSIONS,
-  ASSISTANT_SESSIONS_STORAGE_KEY,
   ASSISTANT_SESSION_PREVIEW_LENGTH,
+  ASSISTANT_SESSIONS_STORAGE_KEY,
 } from "../assistant-panel.constants";
 import type {
   AssistantMessage,

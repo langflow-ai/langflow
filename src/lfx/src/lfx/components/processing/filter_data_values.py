@@ -15,7 +15,9 @@ class DataFilterComponent(Component):
     beta = True
     name = "FilterDataValues"
     legacy = True
-    replacement = ["processing.DataOperations"]
+    # No direct successor: the equivalent "Filter Values" operation was removed
+    # from the Operations component rather than carried forward.
+    replacement = []
 
     inputs = [
         DataInput(name="input_data", display_name="Input Data", info="The list of data items to filter.", is_list=True),

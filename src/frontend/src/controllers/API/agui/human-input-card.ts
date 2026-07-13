@@ -7,6 +7,7 @@
 
 import { updateMessage } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import { queryClient } from "@/contexts";
+import i18n from "@/i18n";
 import useFlowStore from "@/stores/flowStore";
 import { useHitlStore } from "@/stores/hitlStore";
 import { useMessagesStore } from "@/stores/messagesStore";
@@ -95,6 +96,20 @@ function cardAlreadyAnswered(messageId: string): boolean {
 }
 
 /**
+ * Whether the pause in `payload` is one the user already answered (its card carries a
+ * submitted_action). A resume reattach replays the run from the start and re-emits the
+ * answered pause; the continuation may also carry a genuinely-new pause (a later
+ * HumanInput), which is NOT answered and must still surface its card.
+ */
+export function isHumanInputCardAnswered(
+  payload: Record<string, unknown>,
+  jobId: string,
+): boolean {
+  const content = toInteractiveContent(payload, jobId);
+  return cardAlreadyAnswered(`human-input-${content.request_id}`);
+}
+
+/**
  * Stamp the chosen action onto the card message in the react-query cache so the
  * selection is derived from a stable source — local React state is lost when the
  * resume reattach replays the stream and re-renders the message list.
@@ -149,7 +164,7 @@ export function injectHumanInputCard(
     return;
   }
   const block: ContentBlock = {
-    title: "Human input required",
+    title: i18n.t("humanInput.required"),
     contents: [content],
     allow_markdown: true,
     component: "HumanInput",

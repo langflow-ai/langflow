@@ -118,9 +118,14 @@ export default defineConfig({
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
         LANGFLOW_AUTO_LOGIN: "true",
+        LANGFLOW_SUPERUSER: "langflow",
+        LANGFLOW_SUPERUSER_PASSWORD: "test-superuser-password", // pragma: allowlist secret
         LANGFLOW_DEACTIVATE_TRACING: "true",
         LANGFLOW_LOG_LEVEL: "ERROR",
         DO_NOT_TRACK: "true",
+        // Serve the A2A discovery + JSON-RPC endpoints so the Agent tab tests
+        // can publish and exercise a live agent.
+        LANGFLOW_A2A_ENABLED: "true",
       },
       stdout: "ignore",
 

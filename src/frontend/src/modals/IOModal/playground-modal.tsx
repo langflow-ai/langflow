@@ -350,6 +350,7 @@ export default function IOModal({
       setOpen={setOpen}
       disable={disable}
       type={isPlayground ? "full-screen" : undefined}
+      ariaLabel="Playground"
       onSubmit={async () => await sendMessage({ repeat: 1 })}
       size="x-large"
       className="!rounded-[12px] p-0"

@@ -21,8 +21,8 @@ _dynamic_imports = {
     "LanguageModelComponent": "language_model",
     "MCPToolsComponent": "mcp_component",
     "MemoryComponent": "memory",
-    "PromptComponent": "prompt",
     "PoliciesComponent": "policies_component",
+    "PromptComponent": "prompt",
 }
 
 __all__ = [

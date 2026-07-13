@@ -3,6 +3,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_core.embeddings import Embeddings
 from lfx.base.vectorstores.chroma_security import (
     chroma_client_create_collection_kwargs,
     chroma_langchain_collection_kwargs,
@@ -11,6 +12,20 @@ from lfx.components.chroma import ChromaVectorStoreComponent
 from lfx.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
+
+class _KeywordEmbeddings(Embeddings):
+    _VOCAB = ("dog", "python", "programming", "machine", "learning", "fox", "cat", "quick", "test", "data")
+
+    def _embed(self, text: str) -> list[float]:
+        normalized_text = text.lower()
+        return [float(normalized_text.count(term)) for term in self._VOCAB] + [float(len(normalized_text) % 17) / 17.0]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._embed(text) for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed(text)
 
 
 def test_remote_chroma_server_uses_http_client() -> None:
@@ -64,7 +79,57 @@ def test_chroma_collection_security_kwargs_are_fresh_dicts() -> None:
     }
 
 
-@pytest.mark.api_key_required
+def test_local_chroma_collection_name_is_scoped_by_user(tmp_path: Path) -> None:
+    mock_chroma = MagicMock()
+    mock_chroma.get.return_value = {"ids": [], "documents": [], "metadatas": []}
+
+    with patch("langchain_chroma.Chroma", return_value=mock_chroma) as mock_chroma_class:
+        for user_id in ("owner-user", "attacker-user"):
+            component = ChromaVectorStoreComponent(_user_id=user_id).set(
+                collection_name="shared_collection",
+                persist_directory=str(tmp_path / "shared"),
+                embedding=None,
+                ingest_data=[],
+                limit=None,
+            )
+            component.build_vector_store()
+
+    collection_names = [call.kwargs["collection_name"] for call in mock_chroma_class.call_args_list]
+    assert len(collection_names) == 2
+    assert collection_names[0] != "shared_collection"
+    assert collection_names[1] != "shared_collection"
+    assert collection_names[0] != collection_names[1]
+
+
+def test_local_chroma_same_apparent_namespace_isolated_by_user(tmp_path: Path) -> None:
+    shared_dir = tmp_path / "shared_chroma"
+    embeddings = _KeywordEmbeddings()
+
+    owner_component = ChromaVectorStoreComponent(_user_id="owner-user").set(
+        collection_name="shared_collection",
+        persist_directory=str(shared_dir),
+        embedding=embeddings,
+        ingest_data=[Data(text="owner-only-vector-private-content")],
+        allow_duplicates=True,
+        limit=100,
+    )
+    owner_component.build_vector_store()
+
+    attacker_component = ChromaVectorStoreComponent(_user_id="attacker-user").set(
+        collection_name="shared_collection",
+        persist_directory=str(shared_dir),
+        embedding=embeddings,
+        ingest_data=[Data(text="attacker-vector-content")],
+        allow_duplicates=True,
+        limit=100,
+    )
+    attacker_store = attacker_component.build_vector_store()
+
+    documents = attacker_store.get(limit=100)["documents"]
+    assert "attacker-vector-content" in documents
+    assert "owner-only-vector-private-content" not in documents
+
+
 class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self) -> type[Any]:
@@ -74,17 +139,8 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self, tmp_path: Path) -> dict[str, Any]:
         """Return the default kwargs for the component."""
-        from lfx.components.openai.openai import OpenAIEmbeddingsComponent
-
-        from tests.api_keys import get_openai_api_key
-
-        try:
-            api_key = get_openai_api_key()
-        except ValueError:
-            pytest.skip("OPENAI_API_KEY is not set")
-
         return {
-            "embedding": OpenAIEmbeddingsComponent(openai_api_key=api_key).build_embeddings(),
+            "embedding": _KeywordEmbeddings(),
             "collection_name": "test_collection",
             "persist_directory": tmp_path,
         }

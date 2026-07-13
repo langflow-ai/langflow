@@ -11,11 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
+import { usePermissions } from "@/contexts/permissionsContext";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
-import A2AModal from "@/modals/a2aModal";
 import ApiModal from "@/modals/apiModal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import ExportModal from "@/modals/exportModal";
@@ -39,7 +39,6 @@ export default function PublishDropdown({
   const location = useHref("/");
   const domain = window.location.origin + location;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
-  const [openA2AModal, setOpenA2AModal] = useState(false);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flowId = currentFlow?.id;
   const flowName = currentFlow?.name;
@@ -52,6 +51,11 @@ export default function PublishDropdown({
   const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
+  const { can } = usePermissions();
+  // Publishing changes the flow's access settings → gate on write. Only the
+  // publish controls are gated; the rest of the menu (API access, export,
+  // MCP, embed) stays available to read-only users.
+  const canShare = can(flowId, "write");
   const [openExportModal, setOpenExportModal] = useState(false);
   const { t } = useTranslation();
 
@@ -147,14 +151,6 @@ export default function PublishDropdown({
               />
             </DropdownMenuItem>
           </CustomLink>
-          <DropdownMenuItem
-            className="deploy-dropdown-item group"
-            onClick={() => setOpenA2AModal(true)}
-            data-testid="a2a-agent-item"
-          >
-            <IconComponent name="Bot" className={`icon-size mr-2`} />
-            <span>{t("misc.a2aAgent")}</span>
-          </DropdownMenuItem>
           {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
@@ -168,7 +164,7 @@ export default function PublishDropdown({
           {ENABLE_PUBLISH && (
             <DropdownMenuItem
               className="deploy-dropdown-item group"
-              disabled={!hasIO}
+              disabled={!canShare || !hasIO}
               onClick={() => {}}
               data-testid="shareable-playground"
             >
@@ -214,7 +210,7 @@ export default function PublishDropdown({
                   data-testid="publish-switch"
                   className="scale-[85%]"
                   checked={isPublished}
-                  disabled={!hasIO}
+                  disabled={!canShare || !hasIO}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -239,7 +235,6 @@ export default function PublishDropdown({
         activeTweaks={false}
       ></EmbedModal>
       <ExportModal open={openExportModal} setOpen={setOpenExportModal} />
-      <A2AModal open={openA2AModal} setOpen={setOpenA2AModal} />
     </>
   );
 }

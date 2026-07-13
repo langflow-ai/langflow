@@ -37,6 +37,7 @@ Notes when using this skill:
 - **Code quality**: For any reviewed file, follow [references/code-quality.md](references/code-quality.md) to check styling conventions, TypeScript usage, Biome compliance, and component patterns.
 - **Performance**: If the review scope involves React components, hooks, Zustand stores, React Query usage, or @xyflow/react node rendering, follow [references/performance.md](references/performance.md) to check for re-render issues, memoization, and data flow patterns.
 - **Business logic**: If the review scope involves custom nodes (GenericNode), flow state, API calls, the component system, global variables, or the inspection panel, follow [references/business-logic.md](references/business-logic.md) to check for Langflow-specific correctness.
+- **i18n**: If the diff adds or changes user-facing text (labels, buttons, tooltips, modals, toasts, errors, placeholders, aria-labels), follow the [frontend-i18n skill](../frontend-i18n/SKILL.md): no hardcoded UI strings — everything through `t(...)` — and every new key present in **all** locale files (`src/frontend/src/locales/*.json`).
 
 ## General Review Rules
 
