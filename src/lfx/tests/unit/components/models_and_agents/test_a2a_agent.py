@@ -14,13 +14,14 @@ SDK, so these tests drive that client directly against real localhost servers:
 
 import contextlib
 import ipaddress
+import json
 import socket
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import patch
 
 import pytest
-from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent, build_a2a_client
+from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent, _agent_base_url, build_a2a_client
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
 
 
@@ -213,3 +214,229 @@ async def test_loopback_agent_url_rejected_by_ssrf(monkeypatch):
     )
     with pytest.raises(ValueError, match="SSRF"):
         await component.send_to_agent()
+
+
+# --- External mode: agent card preview -------------------------------------
+
+
+class _CardHandler(BaseHTTPRequestHandler):
+    """Serves a fixed agent card for any GET (the preview fetches /.well-known/agent-card.json)."""
+
+    _CARD = (
+        b'{"name":"Echo","version":"1.0.0","description":"Echoes messages.",'
+        b'"skills":[{"inputSchema":{"properties":{"input_value":{},"session_id":{}},"required":["input_value"]}}],'
+        b'"security":[{"apiKey":[]}]}'
+    )
+
+    def do_GET(self):
+        # Strict path: only the real well-known URL serves the card, so a double-appended
+        # ".../.well-known/agent-card.json/.well-known/agent-card.json" 404s and is caught.
+        if self.path != "/.well-known/agent-card.json":
+            self.send_response(404)
+            self.end_headers()
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(self._CARD)))
+        self.end_headers()
+        self.wfile.write(self._CARD)
+
+    def log_message(self, *args):
+        pass
+
+
+class _CardServer:
+    def __init__(self):
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), _CardHandler)
+        self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+    @property
+    def port(self):
+        return self.httpd.server_address[1]
+
+
+def test_card_payload_renders_sections():
+    """The card payload carries identity, the input contract (required marked), and the auth badge."""
+    card = {
+        "name": "Billing Agent",
+        "version": "1.2.0",
+        "description": "Handles refunds.",
+        "skills": [
+            {
+                "name": "refund",
+                "inputSchema": {"properties": {"input_value": {}, "session_id": {}}, "required": ["input_value"]},
+            }
+        ],
+        "security": [{"apiKey": []}],
+    }
+    payload = A2AAgentComponent._card_payload(card)
+    assert payload["title"] == "Billing Agent"
+    assert payload["version"] == "1.2.0"
+    blob = json.dumps(payload)
+    assert "Handles refunds." in blob
+    # input_value is a field marked required; session_id is a field that isn't.
+    assert "input_value" in blob
+    assert '"required": true' in blob
+    assert "session_id" in blob
+    # skill name renders as a card title; auth leads the quick-facts chips.
+    assert "refund" in blob
+    assert "Requires an API key" in blob
+
+
+def test_card_payload_tolerates_malformed_card():
+    """A card from a remote server may be malformed; the payload must degrade, not raise."""
+    card = {
+        "name": "Weird Agent",
+        "capabilities": ["not-a-dict"],
+        "skills": [1, 2, {"name": "ok", "inputSchema": {"properties": ["x"], "required": "nope"}}],
+    }
+    payload = A2AAgentComponent._card_payload(card)
+    assert payload["title"] == "Weird Agent"
+    assert isinstance(payload["sections"], list)
+    # Garbage skill entries are dropped; the one valid skill still surfaces.
+    assert "ok" in json.dumps(payload)
+
+
+async def test_external_card_preview_fetches_and_renders(monkeypatch):
+    """Entering a reachable agent URL fetches its card and loads the payload into agent_card."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    with _CardServer() as server:
+        url = f"http://127.0.0.1:{server.port}"
+        component = A2AAgentComponent(mode="External", agent_url=url, input_value="hi")
+        build_config = {"agent_card": {}}
+        await component._apply_external_card(build_config, url)
+
+    blob = json.dumps(build_config["agent_card"]["value"])
+    assert "Echo" in blob
+    assert "1.0.0" in blob
+    assert "Requires an API key" in blob
+    # A resolved card reveals the display field.
+    assert build_config["agent_card"]["show"] is True
+
+
+def test_agent_base_url_strips_card_suffix():
+    """The card URL the UI hands out normalizes back to the agent base (no double-append)."""
+    base = "http://host:7860/api/v1/a2a/abc"
+    assert _agent_base_url(base) == base
+    assert _agent_base_url(base + "/") == base
+    assert _agent_base_url(base + "/.well-known/agent-card.json") == base
+    assert _agent_base_url(base + "/.well-known/agent-card.json/") == base
+
+
+async def test_external_card_preview_accepts_card_url(monkeypatch):
+    """Pasting the /.well-known/agent-card.json URL (what the UI surfaces) still renders the card."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    with _CardServer() as server:
+        card_url = f"http://127.0.0.1:{server.port}/.well-known/agent-card.json"
+        component = A2AAgentComponent(mode="External", agent_url=card_url, input_value="hi")
+        build_config = {"agent_card": {}}
+        await component._apply_external_card(build_config, card_url)
+
+    assert "Echo" in json.dumps(build_config["agent_card"]["value"])
+
+
+async def test_external_card_preview_bad_url_no_crash(monkeypatch):
+    """A blocked/unreachable URL degrades to an empty card instead of raising in the editor."""
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    component = A2AAgentComponent(mode="External", agent_url="http://127.0.0.1:1/x", input_value="hi")
+    build_config = {"agent_card": {}}
+    await component._apply_external_card(build_config, "http://127.0.0.1:1/x")
+    assert build_config["agent_card"]["value"] == {}
+    # No card, so the display field stays hidden.
+    assert build_config["agent_card"]["show"] is False
+
+
+# --- The card fetch is bounded ----------------------------------------------
+
+
+class _OversizedCardHandler(BaseHTTPRequestHandler):
+    """Serves a card far past the fetch cap. Subclasses toggle whether the size is declared."""
+
+    declare_length = True
+
+    def do_GET(self):
+        if self.path != "/.well-known/agent-card.json":
+            self.send_response(404)
+            self.end_headers()
+            return
+        blob = b'{"name":"Huge","description":"' + b"a" * (600 * 1024) + b'"}'
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        if self.declare_length:
+            self.send_header("Content-Length", str(len(blob)))
+        self.end_headers()
+        self.wfile.write(blob)
+
+    def log_message(self, *args):
+        pass
+
+
+class _DeclaredOversizedHandler(_OversizedCardHandler):
+    declare_length = True
+
+
+class _UndeclaredOversizedHandler(_OversizedCardHandler):
+    """No Content-Length, so only the streaming byte cap can stop the read."""
+
+    declare_length = False
+
+
+class _HandlerServer:
+    def __init__(self, handler):
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+    @property
+    def port(self):
+        return self.httpd.server_address[1]
+
+
+@pytest.mark.parametrize("handler", [_DeclaredOversizedHandler, _UndeclaredOversizedHandler])
+async def test_external_card_preview_rejects_oversized_card(monkeypatch, handler):
+    """A card past the size cap degrades to no preview instead of being buffered and parsed.
+
+    Covers both guards: the declared Content-Length early-out, and the streaming byte cap for a
+    response that never declares its size.
+    """
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+
+    with _HandlerServer(handler) as server:
+        url = f"http://127.0.0.1:{server.port}"
+        component = A2AAgentComponent(mode="External", agent_url=url, input_value="hi")
+        build_config = {"agent_card": {}}
+        await component._apply_external_card(build_config, url)
+
+    assert build_config["agent_card"]["value"] == {}
+    assert build_config["agent_card"]["show"] is False
+
+
+def test_card_payload_clips_untrusted_strings():
+    """Card text is remote input, so it is bounded before it reaches build_config and the editor."""
+    card = {"name": "N" * 900, "description": "D" * 900}
+    payload = A2AAgentComponent._card_payload(card)
+
+    assert len(payload["title"]) <= 500
+    assert len(payload["sections"][0]["text"]) <= 500
