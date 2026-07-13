@@ -50,10 +50,12 @@ def main() -> None:
 
     if build_type == "base":
         update_pyproject_version("src/backend/base/pyproject.toml", new_version)
-        # langflow-services tracks the langflow-base version axis.
-        update_pyproject_version("src/langflow-services/pyproject.toml", new_version)
     elif build_type == "main":
         update_pyproject_version("pyproject.toml", new_version)
+        # langflow-services versions with langflow / lfx (1.x), not langflow-base (0.x).
+        update_pyproject_version("src/langflow-services/pyproject.toml", new_version)
+    elif build_type == "services":
+        update_pyproject_version("src/langflow-services/pyproject.toml", new_version)
     else:
         msg = f"Invalid build type: {build_type}"
         raise ValueError(msg)

@@ -45,7 +45,7 @@ COPY ./pyproject.toml /app/pyproject.toml
 COPY ./src/backend/base/README.md /app/src/backend/base/README.md
 COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 # Copy langflow-services metadata files since it's a workspace member
-COPY ./src/langflow-services/OWNERSHIP.md /app/src/langflow-services/OWNERSHIP.md
+COPY ./src/langflow-services/README.md /app/src/langflow-services/README.md
 COPY ./src/langflow-services/pyproject.toml /app/src/langflow-services/pyproject.toml
 # Copy lfx metadata files since it's a workspace member
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml

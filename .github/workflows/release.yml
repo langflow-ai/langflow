@@ -284,7 +284,7 @@ jobs:
             fetch_pypi_versions "langflow-base" "$tmp_dir/langflow-base-pypi.txt"
             consider_versions "PyPI langflow-base" "$version" "$tmp_dir/langflow-base-pypi.txt"
 
-            # langflow-services tracks the langflow-base version axis (0.11.x)
+            # langflow-services tracks the langflow / lfx version axis (1.x)
             version="$(read_pyproject_version src/langflow-services/pyproject.toml)"
             fetch_pypi_versions "langflow-services" "$tmp_dir/langflow-services-pypi.txt"
             consider_versions "PyPI langflow-services" "$version" "$tmp_dir/langflow-services-pypi.txt"
@@ -372,37 +372,87 @@ jobs:
           echo "Base version from pyproject.toml: $version"
 
           last_released_version=""
-          last_released_services=""
-          services_version="$version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
             rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
             version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
-            services_version="$version"
             echo "Shared release candidate number: rc$rc_number"
             echo "Base pre-release version to be released: $version"
           else
             last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases // {} | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1 || true)
             echo "Latest base release version: $last_released_version"
-            services_version=$(python3 -c "
-            import tomllib, pathlib
-            data = tomllib.loads(pathlib.Path('src/langflow-services/pyproject.toml').read_text())
-            print(data['project']['version'])
-            ")
-            last_released_services=$(curl -s "https://pypi.org/pypi/langflow-services/json" | jq -r '.releases // {} | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1 || true)
-            echo "Services version from pyproject.toml: $services_version"
-            echo "Latest services release version: $last_released_services"
           fi
 
           if [ "${{ inputs.release_package_base }}" = "true" ] && \
-             [ -n "$last_released_version" ] && [ "$version" = "$last_released_version" ] && \
-             [ -n "$last_released_services" ] && [ "$services_version" = "$last_released_services" ]; then
-            echo "Base ($version) and services ($services_version) are already released. Skipping release."
+             [ -n "$last_released_version" ] && [ "$version" = "$last_released_version" ]; then
+            echo "Base ($version) is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
             exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
             echo skipped=false >> $GITHUB_OUTPUT
+          fi
+
+  determine-services-version:
+    name: Determine Services Version
+    needs: [validate-tag, validate-dependencies, determine-rc-number]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skipped: ${{ steps.version.outputs.skipped }}
+      already_published: ${{ steps.version.outputs.already_published }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Install the project
+        run: uv sync
+
+      - name: Determine version
+        id: version
+        run: |
+          version=$(python3 -c "
+          import tomllib, pathlib
+          data = tomllib.loads(pathlib.Path('src/langflow-services/pyproject.toml').read_text())
+          print(data['project']['version'])
+          ")
+          echo "Services version from pyproject.toml: $version"
+
+          last_released_version=""
+
+          if [ ${{inputs.pre_release}} == "true" ]; then
+            rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
+            echo "Shared release candidate number: rc$rc_number"
+            echo "Services pre-release version to be released: $version"
+          else
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow-services/json" | jq -r '.releases // {} | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1 || true)
+            echo "Latest services release version: $last_released_version"
+          fi
+
+          if [ "${{ inputs.release_package_base }}" = "true" ] && \
+             [ -n "$last_released_version" ] && [ "$version" = "$last_released_version" ]; then
+            # Services is already on PyPI for this version. Still emit the version and
+            # succeed so build-services can rebuild the wheel artifact that build-base
+            # needs; publish-services already tolerates "already exists" on PyPI.
+            echo "Services ($version) is already released; will rebuild for base artifact."
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+            echo already_published=true >> $GITHUB_OUTPUT
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+            echo already_published=false >> $GITHUB_OUTPUT
           fi
 
   determine-main-version:
@@ -758,13 +808,13 @@ jobs:
 
   build-services:
     name: Build Langflow Services
-    needs: [build-lfx, build-sdk, determine-base-version, determine-lfx-version]
+    needs: [build-lfx, build-sdk, determine-services-version, determine-lfx-version]
     if: |
       always() &&
       !cancelled() &&
       inputs.release_package_base &&
-      needs.determine-base-version.result == 'success' &&
-      needs.determine-base-version.outputs.skipped == 'false' &&
+      needs.determine-services-version.result == 'success' &&
+      needs.determine-services-version.outputs.skipped == 'false' &&
       needs.build-lfx.result == 'success'
     runs-on: ubuntu-latest
     steps:
@@ -801,7 +851,7 @@ jobs:
       - name: Set version for pre-release
         if: ${{ inputs.pre_release }}
         run: |
-          VERSION="${{ needs.determine-base-version.outputs.version }}"
+          VERSION="${{ needs.determine-services-version.outputs.version }}"
           echo "Setting pre-release version to: $VERSION"
           cd src/langflow-services
 
@@ -839,7 +889,7 @@ jobs:
           uv build --wheel --out-dir dist
       - name: Verify built version
         run: |
-          EXPECTED_VERSION="${{ needs.determine-base-version.outputs.version }}"
+          EXPECTED_VERSION="${{ needs.determine-services-version.outputs.version }}"
           WHEEL_FILE=$(ls src/langflow-services/dist/*.whl)
           echo "Built wheel: $WHEEL_FILE"
 
@@ -862,7 +912,7 @@ jobs:
 
   build-base:
     name: Build Langflow Base
-    needs: [build-lfx, build-sdk, build-services, determine-base-version, determine-lfx-version]
+    needs: [build-lfx, build-sdk, build-services, determine-base-version, determine-services-version, determine-lfx-version]
     if: |
       always() &&
       !cancelled() &&
@@ -959,7 +1009,7 @@ jobs:
       - name: Update langflow-services dependency for pre-release
         if: ${{ inputs.pre_release }}
         run: |
-          SERVICES_VERSION="${{ needs.determine-base-version.outputs.version }}"
+          SERVICES_VERSION="${{ needs.determine-services-version.outputs.version }}"
           echo "Updating langflow-services dependency to allow pre-release version: $SERVICES_VERSION"
           cd src/backend/base
 
@@ -971,11 +1021,13 @@ jobs:
           MINOR=${MAJOR_MINOR#*.}
           NEXT_MINOR=$((MINOR + 1))
 
-          NEW_CONSTRAINT="\"langflow-services>=$SERVICES_VERSION,<$MAJOR.$NEXT_MINOR.dev0\""
+          # Preserve extras (e.g. [database-sqlite,memory-base]) while widening the floor.
+          EXTRAS=$(echo "$CURRENT_CONSTRAINT" | sed -nE 's/.*"langflow-services(\[[^]]*\])?.*/\1/p')
+          NEW_CONSTRAINT="\"langflow-services${EXTRAS}>=$SERVICES_VERSION,<$MAJOR.$NEXT_MINOR.dev0\""
 
           echo "New constraint: $NEW_CONSTRAINT"
 
-          sed -i.bak "s|\"langflow-services[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
+          sed -i.bak -E "s|\"langflow-services(\[[^]]*\])?[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
 
           echo "Updated langflow-services dependency:"
           grep "langflow-services" pyproject.toml
@@ -1298,10 +1350,11 @@ jobs:
       !cancelled() &&
       inputs.release_package_base &&
       needs.build-services.result == 'success' &&
+      needs.determine-services-version.outputs.already_published != 'true' &&
       needs.test-cross-platform.result == 'success' &&
       needs.ci.result == 'success' &&
       (needs.publish-lfx.result == 'success' || needs.publish-lfx.result == 'skipped')
-    needs: [build-services, test-cross-platform, ci, publish-lfx]
+    needs: [build-services, determine-services-version, test-cross-platform, ci, publish-lfx]
     runs-on: ubuntu-latest
     steps:
       - name: Download services artifact

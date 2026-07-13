@@ -1,10 +1,10 @@
 [project]
 name = "langflow-services"
-version = "0.11.0"
+version = "1.11.0"
 description = "Concrete Langflow service implementations for the LFX pluggable service layer"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
-readme = "OWNERSHIP.md"
+readme = "README.md"
 dependencies = [
     "lfx~=1.11.0",
     "cachetools>=6.0.0",
@@ -193,5 +193,5 @@ packages = ["src/langflow_services"]
 [tool.hatch.build.targets.sdist]
 include = [
     "/src/langflow_services",
-    "/OWNERSHIP.md",
+    "/README.md",
 ]

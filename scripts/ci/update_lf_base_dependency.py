@@ -7,7 +7,7 @@ from pathlib import Path
 import packaging.version
 
 BASE_DIR = Path(__file__).parent.parent.parent
-ARGUMENT_NUMBER = 3
+ARGUMENT_NUMBER = 4
 
 
 def update_base_dep(pyproject_path: str, new_version: str) -> None:
@@ -67,18 +67,25 @@ def update_lfx_dep_in_base(pyproject_path: str, lfx_version: str) -> None:
 
 
 def update_langflow_services_dep_in_base(pyproject_path: str, services_version: str) -> None:
-    """Pin langflow-services in langflow-base to an exact nightly/dev version."""
+    """Pin langflow-services in langflow-base to an exact nightly/dev version.
+
+    Preserves extras (e.g. ``[database-sqlite,memory-base]``) so the default
+    dialect / memory-base shells survive the exact ``==`` rewrite.
+    """
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")
 
     version_pattern = r"[0-9]+(?:\.[0-9]+)*(?:\.(?:post|dev|a|b|rc)\d+)*"
-    pattern = re.compile(rf'"langflow-services(?:~=|==|>=){version_pattern}"')
+    pattern = re.compile(rf'"langflow-services((?:\[[^\]]+\])?)(?:~=|==|>=){version_pattern}([^"]*)"')
 
     if not pattern.search(content):
         msg = f'langflow-services dependency not found in "{filepath}"'
         raise ValueError(msg)
 
-    content = pattern.sub(f'"langflow-services=={services_version}"', content)
+    content = pattern.sub(
+        lambda m: f'"langflow-services{m.group(1)}=={services_version}{m.group(2)}"',
+        content,
+    )
     filepath.write_text(content, encoding="utf-8")
 
 
@@ -108,17 +115,20 @@ def verify_pep440(version):
 
 def main() -> None:
     if len(sys.argv) != ARGUMENT_NUMBER:
-        msg = "Usage: update_lf_base_dependency.py <base_version> <lfx_version>"
+        msg = "Usage: update_lf_base_dependency.py <base_version> <lfx_version> <services_version>"
         raise ValueError(msg)
     base_version = sys.argv[1]
     lfx_version = sys.argv[2]
+    services_version = sys.argv[3]
 
     # Strip "v" prefix from versions if present
     base_version = base_version.removeprefix("v")
     lfx_version = lfx_version.removeprefix("v")
+    services_version = services_version.removeprefix("v")
 
     verify_pep440(base_version)
     verify_pep440(lfx_version)
+    verify_pep440(services_version)
 
     # Update langflow-base dependency in main project
     update_base_dep("pyproject.toml", base_version)
@@ -126,8 +136,8 @@ def main() -> None:
     # Update LFX dependency in langflow-base
     update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)
 
-    # Keep langflow-services in lockstep with langflow-base.
-    update_langflow_services_dep_in_base("src/backend/base/pyproject.toml", base_version)
+    # langflow-services versions with langflow/lfx (1.x), not langflow-base (0.x).
+    update_langflow_services_dep_in_base("src/backend/base/pyproject.toml", services_version)
     update_lfx_dep_in_services("src/langflow-services/pyproject.toml", lfx_version)
 
 

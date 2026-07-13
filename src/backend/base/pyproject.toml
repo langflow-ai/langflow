@@ -20,7 +20,7 @@ dependencies = [
     "lfx~=1.11.0",
     # Default DB dialect is SQLite; Postgres is opt-in via [postgresql].
     # memory-base covers host KB helpers that still import chromadb/langchain_chroma.
-    "langflow-services[database-sqlite,memory-base]~=0.11.0",
+    "langflow-services[database-sqlite,memory-base]~=1.11.0",
     "fastapi>=0.135.0,<1.0.0",
     "slowapi>=0.1.9,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",

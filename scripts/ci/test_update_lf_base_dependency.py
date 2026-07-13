@@ -90,14 +90,41 @@ def test_pattern_skips_unrelated_packages(pyproject: Path) -> None:
 def test_pins_langflow_services_in_base(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path = tmp_path / "pyproject.toml"
     path.write_text(
-        '[project]\ndependencies = [\n    "langflow-services~=0.11.0",\n]\n',
+        '[project]\ndependencies = [\n    "langflow-services~=1.11.0",\n]\n',
         encoding="utf-8",
     )
     monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
-    mod.update_langflow_services_dep_in_base(path.name, "0.11.0.dev3")
+    mod.update_langflow_services_dep_in_base(path.name, "1.11.0.dev3")
     result = path.read_text(encoding="utf-8")
-    assert '"langflow-services==0.11.0.dev3"' in result
+    assert '"langflow-services==1.11.0.dev3"' in result
     assert "~=" not in result
+
+
+def test_pins_langflow_services_preserves_extras(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        '[project]\ndependencies = [\n    "langflow-services[database-sqlite,memory-base]~=1.11.0",\n]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
+    mod.update_langflow_services_dep_in_base(path.name, "1.11.0.dev3")
+    result = path.read_text(encoding="utf-8")
+    assert '"langflow-services[database-sqlite,memory-base]==1.11.0.dev3"' in result
+    assert "~=" not in result
+
+
+def test_services_pin_uses_root_axis_not_base(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stable/nightly services pins are 1.x; they must not inherit base's 0.x remap."""
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        '[project]\ndependencies = [\n    "langflow-services~=1.11.0",\n]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "BASE_DIR", tmp_path)
+    mod.update_langflow_services_dep_in_base(path.name, "1.11.0.dev26")
+    result = path.read_text(encoding="utf-8")
+    assert '"langflow-services==1.11.0.dev26"' in result
+    assert "0.11.0" not in result
 
 
 def test_pins_lfx_in_services(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

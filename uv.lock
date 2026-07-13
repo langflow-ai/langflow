@@ -9048,7 +9048,7 @@ dev = [
 
 [[package]]
 name = "langflow-services"
-version = "0.11.0"
+version = "1.11.0"
 source = { editable = "src/langflow-services" }
 dependencies = [
     { name = "aiofiles" },

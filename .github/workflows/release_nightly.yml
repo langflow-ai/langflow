@@ -186,7 +186,9 @@ jobs:
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          # Services tracks the langflow-base version axis (nightly_tag_base).
+          # langflow-services versions with langflow / lfx (root axis). On nightlies
+          # release_tag and base_tag are identical (shared .devN), so either works;
+          # prefer nightly_tag_release to match the stable 1.x axis.
           name=$(uv tree --package langflow-services | head -n 1 | awk '{print $1}')
           version=$(uv tree --package langflow-services | head -n 1 | awk '{print $2}')
           name_without_extras=$(echo $name | sed 's/\[.*\]//')
@@ -194,8 +196,8 @@ jobs:
             echo "Name $name_without_extras does not match langflow-services. Exiting the workflow."
             exit 1
           fi
-          if [ "$version" != "${{ inputs.nightly_tag_base }}" ]; then
-            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
+          if [ "$version" != "${{ inputs.nightly_tag_release }}" ]; then
+            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_release }}. Exiting the workflow."
             exit 1
           fi
           version=$(echo $version | sed 's/^v//')

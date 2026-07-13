@@ -190,7 +190,8 @@ jobs:
             # canonical-prerelease nightly).
             # langflow-sdk has its own version line, so an explicit .dev0 floor marks it
             # pre-release-eligible while the lfx pin selects the exact version.
-            # langflow-services tracks the langflow-base version axis.
+            # Nightlies publish langflow / langflow-base / langflow-services / lfx
+            # at the same root-axis .devN (base is remapped off its stable 0.x line).
             if [[ "$VERSION" == "latest" ]]; then
               # Install latest nightly (canonical pre-release) from PyPI
               uv pip install --upgrade 'langflow[postgresql]>=0.0.0.dev0' 'langflow-base>=0.0.0.dev0' 'langflow-services>=0.0.0.dev0' 'lfx>=0.0.0.dev0' 'langflow-sdk>=0.0.0.dev0'
