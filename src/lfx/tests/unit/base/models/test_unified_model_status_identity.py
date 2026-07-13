@@ -38,7 +38,9 @@ def test_language_options_scope_status_to_provider():
         patch.object(
             model_catalog,
             "_get_model_status",
-            new=AsyncMock(return_value=({"OpenAI::gpt-4o"}, set())),
+            # OpenAI gpt-4o disabled; Foundry gpt-4o must be explicitly enabled
+            # (Foundry ignores seed defaults so deployment names never auto-select).
+            new=AsyncMock(return_value=({"OpenAI::gpt-4o"}, {"Azure AI Foundry::gpt-4o"})),
         ),
         patch.object(
             model_catalog,
@@ -50,6 +52,31 @@ def test_language_options_scope_status_to_provider():
         options = model_catalog.get_language_model_options(user_id="00000000-0000-0000-0000-000000000001")
 
     assert {(option["provider"], option["name"]) for option in options} == {("Azure AI Foundry", "gpt-4o")}
+
+
+def test_language_options_include_custom_foundry_deployment():
+    """Free-text Foundry deployments must appear in the Agent/Language Model picker."""
+    from lfx.base.models.unified_models import model_catalog
+
+    with (
+        patch.object(model_catalog, "get_unified_models_detailed", return_value=_shared_alias_catalog()),
+        patch.object(
+            model_catalog,
+            "_get_model_status",
+            new=AsyncMock(return_value=(set(), {"Azure AI Foundry::gpt-5-mini"})),
+        ),
+        patch.object(
+            model_catalog,
+            "_fetch_enabled_providers_for_user",
+            new=AsyncMock(return_value={"Azure AI Foundry"}),
+        ),
+        patch.object(model_catalog, "replace_with_live_models"),
+    ):
+        options = model_catalog.get_language_model_options(user_id="00000000-0000-0000-0000-000000000001")
+
+    assert {(option["provider"], option["name"]) for option in options} == {
+        ("Azure AI Foundry", "gpt-5-mini"),
+    }
 
 
 def test_legacy_name_normalization_preserves_first_provider():

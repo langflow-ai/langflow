@@ -15,7 +15,6 @@ AZURE_AI_FOUNDRY_MODELS_DETAILED = [
         name="gpt-4o",
         icon="Azure",
         tool_calling=True,
-        default=True,
     ),
     create_model_metadata(
         provider="Azure AI Foundry",

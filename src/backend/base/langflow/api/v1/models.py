@@ -4,7 +4,8 @@ import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from lfx.base.models.model_utils import replace_with_live_models
+from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS
+from lfx.base.models.model_utils import inject_custom_enabled_models, replace_with_live_models
 from lfx.base.models.unified_models import (
     get_live_only_providers,
     get_model_provider_metadata,
@@ -13,11 +14,7 @@ from lfx.base.models.unified_models import (
     get_provider_all_variables,
     get_unified_models_detailed,
 )
-from lfx.base.models.unified_models.credentials import (
-    MODEL_STATUS_KEY_SEPARATOR,
-    model_status_contains,
-    model_status_key,
-)
+from lfx.base.models.unified_models.credentials import model_status_contains, model_status_key
 from loguru import logger
 from pydantic import BaseModel, field_validator
 
@@ -39,63 +36,6 @@ DEFAULT_EMBEDDING_MODEL_VAR = "__default_embedding_model__"
 # Security limits
 MAX_STRING_LENGTH = 200  # Maximum length for model IDs and provider names
 MAX_BATCH_UPDATE_SIZE = 100  # Maximum number of models that can be updated at once
-
-
-def _inject_custom_enabled_models(
-    provider_models: list[dict],
-    explicitly_enabled_models: set[str],
-) -> None:
-    """Append explicitly enabled models that are missing from the catalog.
-
-    Providers such as Azure AI Foundry route inference by a user-chosen
-    deployment name that may never appear in a static or live catalog. Users
-    can still enable those names via free-text; this merges them into the
-    provider lists so Settings and the model picker can surface them.
-    """
-    if not explicitly_enabled_models:
-        return
-
-    provider_meta = get_model_provider_metadata()
-    known_by_provider: dict[str, set[str]] = {}
-    provider_dicts: dict[str, dict] = {}
-    for provider_dict in provider_models:
-        provider = provider_dict.get("provider")
-        if not isinstance(provider, str):
-            continue
-        provider_dicts[provider] = provider_dict
-        known_by_provider[provider] = {
-            model.get("model_name")
-            for model in provider_dict.get("models", [])
-            if isinstance(model.get("model_name"), str)
-        }
-
-    for entry in explicitly_enabled_models:
-        if MODEL_STATUS_KEY_SEPARATOR not in entry:
-            continue
-        provider, model_name = entry.split(MODEL_STATUS_KEY_SEPARATOR, 1)
-        model_name = model_name.strip()
-        if not provider or not model_name:
-            continue
-        provider_dict = provider_dicts.get(provider)
-        if provider_dict is None:
-            continue
-        known = known_by_provider.setdefault(provider, set())
-        if model_name in known:
-            continue
-        icon = provider_meta.get(provider, {}).get("icon", "Bot")
-        provider_dict.setdefault("models", []).append(
-            {
-                "model_name": model_name,
-                "metadata": {
-                    "icon": icon,
-                    "model_type": "llm",
-                    "tool_calling": True,
-                    "default": False,
-                },
-            }
-        )
-        provider_dict["num_models"] = len(provider_dict["models"])
-        known.add(model_name)
 
 
 def get_provider_from_variable_name(variable_name: str) -> str | None:
@@ -269,7 +209,7 @@ async def list_models(
     # live only in the user's enabled-models variable — merge them into the
     # catalog so Settings and the picker can list them.
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
-    _inject_custom_enabled_models(filtered_models, explicitly_enabled_models)
+    inject_custom_enabled_models(filtered_models, explicitly_enabled_models)
 
     # replace_with_live_models iterates every live-capable provider regardless of
     # the ?provider= filter, so it can append providers the caller excluded (e.g.
@@ -664,7 +604,7 @@ async def get_enabled_models(
     # Get disabled and explicitly enabled models lists
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
-    _inject_custom_enabled_models(all_models_by_provider, explicitly_enabled_models)
+    inject_custom_enabled_models(all_models_by_provider, explicitly_enabled_models)
 
     enabled_models: dict[str, dict[str, bool]] = {}
 
@@ -685,11 +625,16 @@ async def get_enabled_models(
             is_not_supported = metadata.get("not_supported", False)
             is_default = metadata.get("default", False)
 
+            # Explicit-enable-only providers (Azure AI Foundry): seed defaults
+            # are suggestions for the Settings list, not auto-enabled models —
+            # the callable id must match a portal deployment the user enabled.
+            requires_explicit = provider in EXPLICIT_ENABLE_ONLY_PROVIDERS
+            explicitly_on = model_status_contains(explicitly_enabled_models, provider, model_name)
             is_enabled = (
                 provider_status.get(provider, False)
                 and not is_deprecated
                 and not is_not_supported
-                and (is_default or model_status_contains(explicitly_enabled_models, provider, model_name))
+                and (explicitly_on if requires_explicit else (is_default or explicitly_on))
                 and not model_status_contains(disabled_models, provider, model_name)
             )
             # Store model status per provider (true/false)

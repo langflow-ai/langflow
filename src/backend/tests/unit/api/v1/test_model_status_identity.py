@@ -9,12 +9,12 @@ import pytest
 from langflow.api.v1.models import (
     ModelStatusUpdate,
     _build_model_default_flags,
-    _inject_custom_enabled_models,
     _update_model_sets,
     build_model_providers_by_name,
     normalize_model_status_entries,
 )
 from langflow.api.v1.variable import _cleanup_model_list_variable
+from lfx.base.models.model_utils import inject_custom_enabled_models
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -64,7 +64,7 @@ def test_inject_custom_enabled_models_appends_missing_deployments():
         }
     ]
 
-    _inject_custom_enabled_models(
+    inject_custom_enabled_models(
         provider_models,
         {"Azure AI Foundry::gpt-5-mini", "Azure AI Foundry::gpt-4o", "OpenAI::ignored"},
     )

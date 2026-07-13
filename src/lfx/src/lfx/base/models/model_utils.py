@@ -29,6 +29,8 @@ from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
 MIN_DEFAULT_MODELS = 5
+# Keep in sync with credentials.MODEL_STATUS_KEY_SEPARATOR (avoid circular import).
+_MODEL_STATUS_KEY_SEPARATOR = "::"
 
 # Ollama model lists are cached in-process for a short window so that:
 # (1) overlapping ``/api/v1/models`` requests don't all serialize through
@@ -788,6 +790,67 @@ def _live_models_to_catalog_shape(live_models: list[dict]) -> list[dict]:
         }
         for m in live_models
     ]
+
+
+def inject_custom_enabled_models(
+    provider_models: list[dict],
+    explicitly_enabled_models: set[str],
+) -> None:
+    """Append explicitly enabled models that are missing from the catalog.
+
+    Providers such as Azure AI Foundry route inference by a user-chosen
+    deployment name that may never appear in a static or live catalog. Users
+    can still enable those names via free-text; this merges them into the
+    provider lists so Settings and the Agent/Language Model pickers can
+    surface them.
+    """
+    if not explicitly_enabled_models:
+        return
+
+    # Lazy import: provider_queries pulls model constants that import model_utils.
+    from lfx.base.models.unified_models.provider_queries import get_model_provider_metadata
+
+    provider_meta = get_model_provider_metadata()
+    known_by_provider: dict[str, set[str]] = {}
+    provider_dicts: dict[str, dict] = {}
+    for provider_dict in provider_models:
+        provider = provider_dict.get("provider")
+        if not isinstance(provider, str):
+            continue
+        provider_dicts[provider] = provider_dict
+        known_by_provider[provider] = {
+            model.get("model_name")
+            for model in provider_dict.get("models", [])
+            if isinstance(model.get("model_name"), str)
+        }
+
+    for entry in explicitly_enabled_models:
+        if _MODEL_STATUS_KEY_SEPARATOR not in entry:
+            continue
+        provider, model_name = entry.split(_MODEL_STATUS_KEY_SEPARATOR, 1)
+        model_name = model_name.strip()
+        if not provider or not model_name:
+            continue
+        provider_dict = provider_dicts.get(provider)
+        if provider_dict is None:
+            continue
+        known = known_by_provider.setdefault(provider, set())
+        if model_name in known:
+            continue
+        icon = provider_meta.get(provider, {}).get("icon", "Bot")
+        provider_dict.setdefault("models", []).append(
+            {
+                "model_name": model_name,
+                "metadata": {
+                    "icon": icon,
+                    "model_type": "llm",
+                    "tool_calling": True,
+                    "default": False,
+                },
+            }
+        )
+        provider_dict["num_models"] = len(provider_dict["models"])
+        known.add(model_name)
 
 
 def replace_with_live_models(

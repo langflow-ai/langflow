@@ -60,6 +60,11 @@ LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
 # Live only with a custom endpoint configured; empty live fetch keeps the static catalog.
 CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI", "Azure AI Foundry"]
 
+# Providers whose catalog entries are suggestions only. Inference uses a
+# user-chosen deployment name, so models must be explicitly enabled (seed
+# ``default`` flags must not auto-select names that 404 at runtime).
+EXPLICIT_ENABLE_ONLY_PROVIDERS: frozenset[str] = frozenset({"Azure AI Foundry"})
+
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider
 #
