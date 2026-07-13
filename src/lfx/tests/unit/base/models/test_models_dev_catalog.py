@@ -454,6 +454,12 @@ def test_apply_overrides_preserves_static_deprecated_flag():
         {"provider": "OpenAI", "name": "gpt-4o", "tool_calling": True, "deprecated": False},
         {"provider": "OpenAI", "name": "gpt-3.5-turbo", "tool_calling": True, "deprecated": True},
         {"provider": "OpenAI", "name": "gpt-4.5-preview", "tool_calling": True, "deprecated": True},
+        {
+            "provider": "OpenAI",
+            "name": "text-embedding-legacy",
+            "model_type": "embeddings",
+            "deprecated": True,
+        },
     ]
     snapshot = {
         "openai": {
@@ -465,6 +471,11 @@ def test_apply_overrides_preserves_static_deprecated_flag():
                 # New model not in our static list — should default to
                 # non-deprecated unless dated-snapshot.
                 "gpt-6": {"id": "gpt-6", "tool_call": True},
+                "text-embedding-legacy": {
+                    "id": "text-embedding-legacy",
+                    "family": "text-embedding",
+                    "release_date": "2020-01-01",
+                },
             },
         }
     }
@@ -475,6 +486,7 @@ def test_apply_overrides_preserves_static_deprecated_flag():
     assert by_name["gpt-3.5-turbo"]["deprecated"] is True
     assert by_name["gpt-4.5-preview"]["deprecated"] is True
     assert by_name["gpt-6"]["deprecated"] is False
+    assert by_name["text-embedding-legacy"]["deprecated"] is True
 
 
 def test_apply_overrides_marks_embedding_family_as_embeddings_model_type():
@@ -517,37 +529,37 @@ def test_apply_overrides_marks_embedding_family_as_embeddings_model_type():
     assert by_name["voyage-3-embedding"]["model_type"] == "embeddings"
 
 
-def test_apply_overrides_auto_deprecates_stale_models():
-    """Models with last_updated older than ~30 months are auto-deprecated.
+def test_apply_overrides_auto_deprecates_stale_language_models_only():
+    """Language models older than ~30 months are auto-deprecated.
 
-    Catches gpt-4 / gpt-4-turbo / text-embedding-ada-002 today; leaves
-    gpt-4o / text-embedding-3-* / current Claudes active.
+    Embedding models remain active regardless of age unless the provider's
+    static catalog explicitly marks them deprecated.
     """
     from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
 
-    fixed_now = datetime(2026, 5, 18, tzinfo=timezone.utc)
+    fixed_now = datetime(2026, 7, 14, tzinfo=timezone.utc)
     snapshot = {
         "openai": {
             "id": "openai",
             "models": {
-                # 2023-11 → 924 days as of 2026-05-18 → deprecated
+                # 2023-11 → older than 900 days → deprecated
                 "gpt-4": {"id": "gpt-4", "release_date": "2023-11-06", "last_updated": "2024-04-09"},
                 "gpt-4-turbo": {"id": "gpt-4-turbo", "release_date": "2023-11-06", "last_updated": "2024-04-09"},
-                # 2022-12 → very old → deprecated
+                # 2022-12 → very old, but embeddings are exempt from the age heuristic
                 "text-embedding-ada-002": {
                     "id": "text-embedding-ada-002",
                     "family": "text-embedding",
                     "release_date": "2022-12-15",
                     "last_updated": "2022-12-15",
                 },
-                # 2024-01-25 → 844 days → still active under the 900d threshold
+                # 2024-01-25 → over 900 days, but still active because it is an embedding
                 "text-embedding-3-large": {
                     "id": "text-embedding-3-large",
                     "family": "text-embedding",
                     "release_date": "2024-01-25",
                     "last_updated": "2024-01-25",
                 },
-                # 2024-08 → 650 days → active
+                # 2024-05 → newer than 900 days → active
                 "gpt-4o": {"id": "gpt-4o", "release_date": "2024-05-13", "last_updated": "2024-08-06"},
                 # No date at all → not auto-deprecated (insufficient signal)
                 "gpt-future": {"id": "gpt-future"},
@@ -560,7 +572,7 @@ def test_apply_overrides_auto_deprecates_stale_models():
 
     assert by_name["gpt-4"]["deprecated"] is True
     assert by_name["gpt-4-turbo"]["deprecated"] is True
-    assert by_name["text-embedding-ada-002"]["deprecated"] is True
+    assert by_name["text-embedding-ada-002"]["deprecated"] is False
     assert by_name["text-embedding-3-large"]["deprecated"] is False
     assert by_name["gpt-4o"]["deprecated"] is False
     assert by_name["gpt-future"]["deprecated"] is False
