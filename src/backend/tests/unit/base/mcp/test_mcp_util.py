@@ -217,10 +217,14 @@ class TestMCPStdioShellFreeLaunch:
             "npx --registry=https://packages.example.invalid @example/mcp-server",
             "docker run -v /:/host mcp-server",
             "docker run --mount type=bind,source=/,target=/host mcp-server",
+            "docker run --volumes-from other mcp-server",
+            "docker run --device=/dev/example mcp-server",
+            "docker run --network host mcp-server",
+            "docker run --security-opt seccomp=unconfined mcp-server",
             "sh -c 'uvx --default-index https://packages.example.invalid/simple mcp-server'",
         ],
     )
-    async def test_source_args_and_host_mounts_are_rejected_before_any_spawn(self, command):
+    async def test_source_args_and_docker_host_access_are_rejected_before_any_spawn(self, command):
         client, get_session = self._client_with_mocked_session()
 
         with pytest.raises(ValueError, match="not allowed"):
@@ -240,6 +244,26 @@ class TestMCPStdioShellFreeLaunch:
         assert client._connection_params.command == "uvx"
         assert client._connection_params.args == ["--from", "lfx", "lfx-mcp"]
         assert client._connection_params.env["GITHUB_PERSONAL_ACCESS_TOKEN"] == "provider-token"  # noqa: S105
+
+    async def test_isolated_docker_args_are_preserved(self):
+        client, get_session = self._client_with_mocked_session()
+
+        await client._connect_to_server(
+            "docker run --rm -i --network bridge --security-opt no-new-privileges mcp-image"
+        )
+
+        get_session.assert_awaited_once()
+        assert client._connection_params.command == "docker"
+        assert client._connection_params.args == [
+            "run",
+            "--rm",
+            "-i",
+            "--network",
+            "bridge",
+            "--security-opt",
+            "no-new-privileges",
+            "mcp-image",
+        ]
 
     async def test_empty_command_is_rejected(self):
         """An empty/whitespace command string raises rather than spawning an empty argv."""

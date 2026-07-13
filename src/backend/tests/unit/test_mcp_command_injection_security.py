@@ -720,7 +720,7 @@ class TestMCPCommandInjectionSecurity:
         assert "not allowed" in error_msg.lower()
 
     @pytest.mark.parametrize(
-        "mount_args",
+        "host_access_args",
         [
             ["-v", "/:/host"],
             ["-iv", "/:/host"],
@@ -728,11 +728,23 @@ class TestMCPCommandInjectionSecurity:
             ["--volume=/var/run:/host/run"],
             ["--mount", "type=bind,source=/,target=/host"],
             ["--mount=type=bind,source=/,target=/host"],
+            ["--volumes-from", "other"],
+            ["--device", "/dev/example"],
+            ["--device=/dev/example"],
+            ["--device-cgroup-rule", "b 8:0 rwm"],
+            ["--pid", "host"],
+            ["--ipc=container:other"],
+            ["--uts", "host"],
+            ["--network", "host"],
+            ["--net=container:other"],
+            ["--security-opt", "seccomp=unconfined"],
+            ["--security-opt=apparmor=unconfined"],
+            ["--security-opt", "label:disable"],
         ],
     )
-    def test_docker_host_mounts_rejected(self, mount_args):
+    def test_docker_host_access_args_rejected(self, host_access_args):
         with pytest.raises(ValidationError, match="not allowed"):
-            MCPServerConfig(command="docker", args=["run", *mount_args, "mcp-image"])
+            MCPServerConfig(command="docker", args=["run", *host_access_args, "mcp-image"])
 
     @pytest.mark.parametrize(
         ("command", "args"),
@@ -756,15 +768,31 @@ class TestMCPCommandInjectionSecurity:
         config = MCPServerConfig(
             command="uvx",
             args=["--from", "lfx", "lfx-mcp"],
-            env={"LANGFLOW_SERVER_URL": "https://langflow.example.com", "LANGFLOW_API_KEY": "token"},
+            env={
+                "LANGFLOW_SERVER_URL": "https://langflow.example.com",
+                "LANGFLOW_API_KEY": "token",  # pragma: allowlist secret
+            },
         )
 
         assert config.args == ["--from", "lfx", "lfx-mcp"]
 
-    def test_docker_entrypoint_and_non_root_user_remain_accepted(self):
+    def test_isolated_docker_options_remain_accepted(self):
         config = MCPServerConfig(
             command="docker",
-            args=["run", "--rm", "-i", "--entrypoint", "mcp-server", "-u", "1000", "mcp-image"],
+            args=[
+                "run",
+                "--rm",
+                "-i",
+                "--entrypoint",
+                "mcp-server",
+                "-u",
+                "1000",
+                "--network",
+                "bridge",
+                "--security-opt",
+                "no-new-privileges",
+                "mcp-image",
+            ],
         )
 
         assert config.command == "docker"

@@ -37,6 +37,20 @@ def test_package_manager_configuration_namespaces_are_reserved(env_var):
         ("docker", ["run", "-iv", "/:/host", "mcp-server"]),
         ("docker", ["run", "--volume=/var/run:/host/run", "mcp-server"]),
         ("docker", ["run", "--mount", "type=bind,source=/,target=/host", "mcp-server"]),
+        ("docker", ["run", "--volumes-from=other", "mcp-server"]),
+        ("docker", ["run", "--device", "/dev/example", "mcp-server"]),
+        ("docker", ["run", "--device=/dev/example", "mcp-server"]),
+        ("docker", ["run", "--device-cgroup-rule", "b 8:0 rwm", "mcp-server"]),
+        ("docker", ["run", "--privileged", "mcp-server"]),
+        ("docker", ["run", "--cap-add", "SYS_ADMIN", "mcp-server"]),
+        ("docker", ["run", "--pid", "host", "mcp-server"]),
+        ("docker", ["run", "--ipc=container:other", "mcp-server"]),
+        ("docker", ["run", "--uts", "host", "mcp-server"]),
+        ("docker", ["run", "--network", "host", "mcp-server"]),
+        ("docker", ["run", "--net=container:other", "mcp-server"]),
+        ("docker", ["run", "--security-opt", "seccomp=unconfined", "mcp-server"]),
+        ("docker", ["run", "--security-opt=apparmor=unconfined", "mcp-server"]),
+        ("docker", ["run", "--security-opt", "label:disable", "mcp-server"]),
         ("sh", ["-c", "uvx --default-index https://packages.example.invalid/simple mcp-server"]),
         ("bash", ["-lc", "npx --registry=https://packages.example.invalid @example/mcp-server"]),
         ("cmd", ["/c", "docker", "run", "--mount", "type=bind,source=/,target=/host", "mcp-server"]),
@@ -44,7 +58,7 @@ def test_package_manager_configuration_namespaces_are_reserved(env_var):
         ("sh", ["-c", "exec uvx --index-url https://packages.example.invalid/simple mcp-server"]),
     ],
 )
-def test_source_redirects_and_host_mounts_are_rejected(command, args):
+def test_source_redirects_and_docker_host_access_are_rejected(command, args):
     with pytest.raises(ValueError, match="not allowed"):
         validate_mcp_stdio_source_policy(command, args)
 
@@ -59,10 +73,14 @@ def test_source_redirects_and_host_mounts_are_rejected(command, args):
         ("npx", ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]),
         ("npx", ["@example/mcp-server@1.2.3", "--endpoint", "https://mcp.example.com"]),
         ("docker", ["run", "--rm", "-i", "--entrypoint", "mcp-server", "-u", "1000", "mcp-image"]),
+        ("docker", ["run", "--rm", "-i", "--network", "bridge", "mcp-image"]),
+        ("docker", ["run", "--rm", "-i", "--network", "mcp-network", "mcp-image"]),
+        ("docker", ["run", "--rm", "-i", "--ipc", "private", "mcp-image"]),
+        ("docker", ["run", "--rm", "-i", "--security-opt", "no-new-privileges", "mcp-image"]),
         ("sh", ["-c", "uvx --from lfx lfx-mcp"]),
         ("bash", ["-c", "python -m mcp_server"]),
         ("cmd", ["/c", "npx", "@example/mcp-server", "--endpoint", "https://mcp.example.com"]),
     ],
 )
-def test_trusted_registry_packages_and_non_host_access_args_are_allowed(command, args):
+def test_trusted_registry_packages_and_isolated_docker_args_are_allowed(command, args):
     validate_mcp_stdio_source_policy(command, args)

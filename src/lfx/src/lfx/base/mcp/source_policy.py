@@ -1,4 +1,4 @@
-"""Package-source and Docker host-mount policy for MCP stdio servers.
+"""Package-source and Docker host-access policy for MCP stdio servers.
 
 Approved MCP launchers such as ``uvx`` and ``npx`` still install code before
 starting a server. Their registry/configuration controls therefore belong to
@@ -41,8 +41,21 @@ UVX_TRUSTED_PACKAGE_FLAGS = frozenset({"--from", "--with", "-w"})
 NPX_BLOCKED_SOURCE_FLAGS = frozenset({"--registry", "--userconfig", "--globalconfig"})
 NPX_TRUSTED_PACKAGE_FLAGS = frozenset({"--package"})
 
-DOCKER_HOST_MOUNT_FLAGS = frozenset({"-v", "--volume", "--mount"})
+DOCKER_BLOCKED_HOST_ACCESS_FLAGS = frozenset(
+    {
+        "--privileged",
+        "--cap-add",
+        "-v",
+        "--volume",
+        "--volumes-from",
+        "--mount",
+        "--device",
+        "--device-cgroup-rule",
+    }
+)
 DOCKER_CLUSTERABLE_SHORT_FLAGS = frozenset({"d", "i", "P", "q", "t"})
+DOCKER_NAMESPACE_FLAGS = frozenset({"--pid", "--ipc", "--uts", "--net", "--network"})
+DOCKER_DANGEROUS_SECURITY_OPT_SUBSTRINGS = ("unconfined", "disable")
 SHELL_WRAPPERS = frozenset({"sh", "bash", "cmd"})
 APPROVED_SHELL_PAYLOAD_COMMANDS = frozenset({"node", "python", "python3", "npx", "uvx", "docker"})
 SHELL_CONTROL_CHARS = frozenset({";", "|", "&", "$", "`", "<", ">", "\n", "\r"})
@@ -259,15 +272,24 @@ def _validate_npx_args(args: list[str]) -> None:
 
 
 def _validate_docker_args(args: list[str]) -> None:
-    for arg in args:
+    for index, arg in enumerate(args):
         flag = arg.split("=", 1)[0]
         short_flag_cluster = flag[1:] if flag.startswith("-") and not flag.startswith("--") else ""
         volume_index = short_flag_cluster.find("v")
         has_volume_short_flag = volume_index >= 0 and all(
             short_flag in DOCKER_CLUSTERABLE_SHORT_FLAGS for short_flag in short_flag_cluster[:volume_index]
         )
-        if flag in DOCKER_HOST_MOUNT_FLAGS or has_volume_short_flag:
+        if flag in DOCKER_BLOCKED_HOST_ACCESS_FLAGS or has_volume_short_flag:
             _raise_disallowed("docker", arg)
+        if flag in DOCKER_NAMESPACE_FLAGS:
+            value, _ = _option_value(args, index, "docker")
+            value = value.lower()
+            if value == "host" or value.startswith("container:"):
+                _raise_disallowed("docker", arg)
+        if flag == "--security-opt":
+            value, _ = _option_value(args, index, "docker")
+            if any(part in value.lower() for part in DOCKER_DANGEROUS_SECURITY_OPT_SUBSTRINGS):
+                _raise_disallowed("docker", arg)
 
 
 def _shell_wrapped_command(command: str, args: list[str]) -> tuple[str, list[str]] | None:
@@ -295,7 +317,7 @@ def _shell_wrapped_command(command: str, args: list[str]) -> tuple[str, list[str
 
 
 def validate_mcp_stdio_source_policy(command: str | None, args: list[str] | None) -> None:
-    """Reject package-source redirection and Docker host mounts.
+    """Reject package-source redirection and Docker host access.
 
     ``uvx --from`` and package-addition flags remain available only for plain
     package requirements resolved through the default trusted index. Direct

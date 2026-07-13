@@ -266,8 +266,8 @@ class MCPServerConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_package_sources_and_host_mounts(self) -> "MCPServerConfig":
-        """Apply the shared source/mount policy at configuration write time."""
+    def validate_package_sources_and_docker_host_access(self) -> "MCPServerConfig":
+        """Apply the shared source/host-access policy at configuration write time."""
         validate_mcp_stdio_source_policy(self.command, self.args)
         return self
 
