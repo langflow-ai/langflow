@@ -71,6 +71,10 @@ def _flow_payload() -> dict:
                                             "key": "Authorization",
                                             "value": "Bearer header-secret",
                                         },  # pragma: allowlist secret
+                                        {
+                                            "name": "X-Api-Key",
+                                            "value": "named-header-secret",
+                                        },  # pragma: allowlist secret
                                         {"key": "X-Tenant", "value": "acme"},
                                     ],
                                     "type": "dict",
@@ -125,6 +129,7 @@ def test_strip_secret_field_values_nulls_all_password_fields():
     assert template["authenticated_url"]["value"] is None
     assert template["headers"]["value"] == [
         {"key": "Authorization", "value": None},
+        {"name": "X-Api-Key", "value": None},
         {"key": "X-Tenant", "value": "acme"},
     ]
     assert template["mcp_server"]["value"] == {"name": "tenant-mcp"}
@@ -192,7 +197,8 @@ async def test_public_flow_read_strips_secrets(client: AsyncClient, logged_in_he
     assert template["database_url"]["value"] is None, "database credentials leaked through public flow read"
     assert template["authenticated_url"]["value"] is None, "URL credentials leaked through public flow read"
     assert template["headers"]["value"][0]["value"] is None, "authorization header leaked"
-    assert template["headers"]["value"][1]["value"] == "acme", "non-secret header should be preserved"
+    assert template["headers"]["value"][1]["value"] is None, "named API-key header leaked"
+    assert template["headers"]["value"][2]["value"] == "acme", "non-secret header should be preserved"
     assert template["mcp_server"]["value"] == {"name": "tenant-mcp"}, "MCP config leaked"
     assert template["base_url"]["value"] == "https://api.openai.com/v1", "non-secret field should be preserved"
     assert template["max_tokens"]["value"] == 512, "non-secret token-count field should be preserved"

@@ -179,11 +179,16 @@ def _strip_structured_secret_values(value: object) -> object:
     """Recursively null secret-named values in dict/list component inputs."""
     if isinstance(value, dict):
         scrubbed = copy.deepcopy(value)
-        # DictInput headers are commonly serialized as {"key": "Authorization", "value": "..."}.
-        if _is_secret_name(scrubbed.get("key")) and "value" in scrubbed:
+        # Key/value inputs use ``key``; other integrations commonly serialize the same pair
+        # with ``name`` or ``header``. Treat all three as secret-name discriminators.
+        discriminator = next(
+            (scrubbed.get(key) for key in ("key", "name", "header") if _is_secret_name(scrubbed.get(key))),
+            None,
+        )
+        if discriminator is not None and "value" in scrubbed:
             scrubbed["value"] = None
         for key, nested_value in scrubbed.items():
-            if key == "value" and _is_secret_name(scrubbed.get("key")):
+            if key == "value" and discriminator is not None:
                 continue
             scrubbed[key] = None if _is_secret_name(key) else _strip_structured_secret_values(nested_value)
         return scrubbed
