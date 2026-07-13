@@ -50,6 +50,8 @@
   "alerts.noChatOutput": "このフローには ChatOutput コンポーネントが含まれていません。",
   "alerts.noTemplateVariables": "このテンプレートには変数が含まれていません。",
   "alerts.notificationsTitle": "通知",
+  "alerts.clearNotifications": "通知をクリア",
+  "alerts.closeNotifications": "通知を閉じる",
   "apiKey.expirationDate": "有効期限",
   "apiKey.copy": "APIキーをコピー",
   "apiKey.generated": "生成されたAPIキー",
