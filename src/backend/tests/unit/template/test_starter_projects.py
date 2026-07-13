@@ -50,16 +50,24 @@ _OPTIONAL_BUNDLE_MODULES.update(
 )
 
 
-def _template_unavailable_bundle(template_data: dict) -> str | None:
-    """Return the missing distribution if the template needs an absent bundle, else None."""
+def _template_required_bundles(template_data: dict) -> set[str]:
+    """Return distributions required by optional-bundle nodes in a template."""
+    required = set()
     for node in template_data.get("data", {}).get("nodes", []):
         module_path = node.get("data", {}).get("node", {}).get("metadata", {}).get("module", "")
         for prefix, distribution in _OPTIONAL_BUNDLE_MODULES.items():
             if module_path.startswith(prefix):
-                try:
-                    import_module(distribution)
-                except ImportError:
-                    return distribution
+                required.add(distribution)
+    return required
+
+
+def _template_unavailable_bundle(template_data: dict) -> str | None:
+    """Return the missing distribution if the template needs an absent bundle, else None."""
+    for distribution in sorted(_template_required_bundles(template_data)):
+        try:
+            import_module(distribution)
+        except ImportError:
+            return distribution
     return None
 
 
@@ -116,6 +124,18 @@ class TestStarterProjects:
         if errors:
             error_msg = "\n".join(errors)
             pytest.fail(f"Template structure errors in {template_file.name}:\n{error_msg}")
+
+    @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
+    def test_lfx_bundle_templates_include_install_guidance(self, template_file):
+        """Default-shipped templates that need lfx-bundles must explain how to install it."""
+        with template_file.open(encoding="utf-8") as f:
+            template_data = json.load(f)
+
+        if "lfx_bundles" in _template_required_bundles(template_data):
+            assert "pip install lfx-bundles" in template_data.get("description", ""), (
+                f"{template_file.name} uses optional lfx-bundles components but its description "
+                "does not tell users how to install them"
+            )
 
     @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
     def test_template_can_build_flow(self, template_file):

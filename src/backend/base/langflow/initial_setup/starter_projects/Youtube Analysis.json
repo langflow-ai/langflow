@@ -2931,7 +2931,7 @@
       "zoom": 0.4406758093557343
     }
   },
-  "description": "The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.",
+  "description": "Requires lfx-bundles (install with: pip install lfx-bundles). The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.",
   "endpoint_name": null,
   "id": "c8731384-fc7e-4d9c-92d9-a9657a1f0593",
   "is_component": false,

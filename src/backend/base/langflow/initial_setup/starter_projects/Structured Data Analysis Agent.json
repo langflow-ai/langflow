@@ -5760,7 +5760,7 @@
       "zoom": 0.37308739340651753
     }
   },
-  "description": "A complete workflow for structured data analysis using the OpenDsStar agent. OpenDsStar is an open-source implementation of the DS-Star agent, with several deliberate design enhancements, and can be used effectively for structured data analysis tasks",
+  "description": "Requires lfx-bundles (install with: pip install lfx-bundles). A complete workflow for structured data analysis using the OpenDsStar agent. OpenDsStar is an open-source implementation of the DS-Star agent, with several deliberate design enhancements, and can be used effectively for structured data analysis tasks.",
   "endpoint_name": null,
   "id": "d7d2d5cd-e195-4328-ac1a-b8e7dbf03c9d",
   "is_component": false,
