@@ -41,21 +41,23 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
             <SidebarMenu>
               {items.map((item, index) => (
                 <SidebarMenuItem key={index}>
-                  <CustomLink to={item.href!} replace>
-                    <SidebarMenuButton
-                      size="md"
-                      isActive={
-                        item.href ? pathname.endsWith(item.href) : false
-                      }
+                  <SidebarMenuButton
+                    asChild
+                    size="md"
+                    isActive={item.href ? pathname.endsWith(item.href) : false}
+                    tooltip={item.title}
+                  >
+                    <CustomLink
+                      to={item.href!}
+                      replace
                       data-testid={`sidebar-nav-${item.title}`}
-                      tooltip={item.title}
                     >
                       {item.icon}
                       <span className="block max-w-full truncate">
                         {item.title}
                       </span>
-                    </SidebarMenuButton>
-                  </CustomLink>
+                    </CustomLink>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

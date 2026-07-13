@@ -11,7 +11,11 @@ import i18n from "@/i18n";
 import useFlowStore from "@/stores/flowStore";
 import { useHitlStore } from "@/stores/hitlStore";
 import { useMessagesStore } from "@/stores/messagesStore";
-import type { ContentBlock, InteractiveContent } from "@/types/chat";
+import type {
+  ContentBlock,
+  ContentBlockItem,
+  InteractiveContent,
+} from "@/types/chat";
 import type { Message } from "@/types/messages";
 import type { WorkflowRunOptions } from "./run-agent";
 
@@ -19,13 +23,21 @@ const MESSAGES_QUERY_KEY = "useGetMessagesQuery";
 
 /** Centralizes the content-block structure: find a human_input content in a message. */
 export function findHumanInputContent(
-  contentBlocks: ContentBlock[] | undefined,
+  contentBlocks: ContentBlockItem[] | undefined,
 ): InteractiveContent | undefined {
-  return contentBlocks
-    ?.flatMap((block) => block.contents ?? [])
-    .find((content) => content?.type === "human_input") as
-    | InteractiveContent
-    | undefined;
+  for (const item of contentBlocks ?? []) {
+    if (item.type === "human_input") return item as InteractiveContent;
+    // Shape-tolerant on purpose: cards persisted before the "group" discriminator
+    // (and title-less groups) still carry the pause inside ``contents``.
+    const contents = (item as ContentBlock).contents;
+    if (Array.isArray(contents)) {
+      const nested = contents.find(
+        (content) => content?.type === "human_input",
+      );
+      if (nested) return nested as InteractiveContent;
+    }
+  }
+  return undefined;
 }
 
 function toInteractiveContent(
@@ -119,13 +131,21 @@ export function markHumanInputSubmitted(
   actionId: string,
 ): void {
   const messageId = `human-input-${requestId}`;
-  const stampBlocks = (blocks: ContentBlock[] | undefined): ContentBlock[] =>
-    (blocks ?? []).map((block) => ({
-      ...block,
-      contents: (block.contents ?? []).map((c) =>
-        c?.type === "human_input" ? { ...c, submitted_action: actionId } : c,
-      ),
-    }));
+  const stampBlocks = (
+    blocks: ContentBlockItem[] | undefined,
+  ): ContentBlockItem[] =>
+    (blocks ?? []).map((block) => {
+      if (block.type === "human_input")
+        return { ...block, submitted_action: actionId };
+      const contents = (block as ContentBlock).contents;
+      if (!Array.isArray(contents)) return block;
+      return {
+        ...block,
+        contents: contents.map((c) =>
+          c?.type === "human_input" ? { ...c, submitted_action: actionId } : c,
+        ),
+      };
+    });
   forEachMessageCache((key, messages) => {
     if (!messages.some((m) => m.id === messageId)) return;
     queryClient.setQueryData(key, (old: Message[] = []) =>
@@ -164,6 +184,7 @@ export function injectHumanInputCard(
     return;
   }
   const block: ContentBlock = {
+    type: "group",
     title: i18n.t("humanInput.required"),
     contents: [content],
     allow_markdown: true,

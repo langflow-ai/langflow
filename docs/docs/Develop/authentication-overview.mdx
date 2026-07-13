@@ -1,0 +1,27 @@
+---
+title: Authentication and authorization overview
+slug: /authentication-overview
+---
+
+Langflow uses *authentication* to verify who a user is before granting access, and *authorization* to control what an authenticated user is allowed to do.
+
+Authentication and authorization are configured independently. Most deployments only require authentication. Authorization is an optional plugin that adds role-based access control (RBAC) to your server.
+
+To configure authentication and authorization for your Langflow server, pick your authentication path below and follow the corresponding documentation.
+
+* To secure a Langflow server with user accounts and API keys using Langflow's built-in authentication, see [API keys and authentication](./api-keys-and-authentication).
+Built-in authentication is always available and is the default setting. Users log in with a username and password, and Langflow issues a short-lived JWT session token and validates Langflow API keys against its own database.
+
+* To connect Langflow to your company's SSO, OIDC, or identify provider, see [SSO and external authentication](./external-authentication).
+External authentication lets an upstream identity provider, OIDC proxy, or corporate SSO gateway handle login. Langflow accepts the token the proxy forwards, validates it against the identity provider's JWKS endpoint, and provisions a local user automatically.
+
+* To configure RBAC on your Langflow server, see [Authorization](./authorization).
+After a user is authenticated by any of the authentication paths, the authorization layer decides what the user can do.
+RBAC enforcement requires a registered authorization plugin.
+
+When multiple credentials are present, Langflow tries each credential in the order of built-in JWT, external token, and then Langflow API key.
+
+## See also
+
+- [Environment variables](/environment-variables)
+- [Security](/security)
