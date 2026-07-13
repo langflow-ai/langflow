@@ -31,6 +31,7 @@ const PasswordFormComponent = ({
   return (
     <>
       <Form.Root
+        aria-label={t("settings.passwordTitle")}
         onSubmit={(event) => {
           handlePatchPassword(password, cnfPassword, handleInput);
           event.preventDefault();

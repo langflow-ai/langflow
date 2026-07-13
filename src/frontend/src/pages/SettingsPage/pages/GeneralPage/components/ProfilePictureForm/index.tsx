@@ -28,7 +28,6 @@ const ProfilePictureFormComponent = ({
   profilePicture,
   handleInput,
   handlePatchProfilePicture,
-  handleGetProfilePictures,
   userData,
 }: ProfilePictureFormComponentProps) => {
   const { t } = useTranslation();
@@ -36,6 +35,7 @@ const ProfilePictureFormComponent = ({
 
   return (
     <Form.Root
+      aria-label={t("settings.profilePictureTitle")}
       onSubmit={(event) => {
         handlePatchProfilePicture(profilePicture);
         event.preventDefault();
