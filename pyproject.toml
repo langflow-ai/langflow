@@ -301,6 +301,7 @@ directory = "coverage"
 target-version = "py310"
 exclude = [
     "src/backend/base/langflow/alembic/*",
+    "src/lfx/src/lfx/services/database/migrations/*",
     "src/frontend/tests/assets/*",
     "src/lfx/src/lfx/_assets/component_index.json",
     "docs/**/API-Reference/python-examples/**",

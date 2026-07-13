@@ -1,0 +1,22 @@
+# lfx production service wiring (Tier 1 + Tier 2)
+#
+# Drop this file at $LANGFLOW_CONFIG_DIR/lfx.toml (in Kubernetes, mount it from a
+# ConfigMap -- see k8s/configmap.yaml). At boot, lfx's service manager discovers
+# this file and selects these implementations; connection strings and secrets
+# come from the environment (never put them here).
+#
+# Precedence: this file > entry-point plugins > lfx built-in defaults.
+# With NO lfx.toml present, bare lfx stays ephemeral (NoopDatabaseService +
+# InMemoryMemoryService), which is what `lfx run` wants.
+#
+# Scope note: this PoC wires the two services that have been migrated into lfx --
+# the Tier 1 database and the Tier 2 DB-backed chat memory. Cache, storage,
+# queue, etc. will be added here as each is extracted in later PRs.
+
+[services]
+# Tier 1 -- pooled async engine + migration runner. Reads LANGFLOW_DATABASE_URL.
+database_service = "lfx.services.database.service:DatabaseService"
+
+# Tier 2 -- DB-backed chat memory. The manager injects the database_service
+# above (Option B) so writes/reads go through the Tier 1 engine.
+memory_service = "lfx.services.memory.database:DatabaseMemoryService"

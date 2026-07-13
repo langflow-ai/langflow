@@ -128,6 +128,61 @@ the builder and the production worker-plane; only the Tier 1 `DatabaseService` b
 changes. That is the target: **overriding is the exception (auth, RBAC, genuinely
 different backends), not how langflow consumes lfx.**
 
+### Reference example: the database (Tier 1) and its migration stream
+
+`lfx.services.database` is the Tier 1 worked example — the engine/session/migration
+core a bare `lfx serve` needs to persist in production without langflow:
+
+- `service.py` — `NoopDatabaseService` (the ephemeral default; `capabilities=()`) and the
+  real `DatabaseService` (`{PERSISTENT}`): a pooled async engine plus an alembic runner.
+- `migrations/` — lfx's **own** alembic lineage (version table `lfx_alembic_version`),
+  scoped by `include_name`/`include_object` to the execution-history tables lfx owns
+  (`message`, `transaction`, `vertex_build`).
+
+**How langflow consumes it:** langflow *does* subclass here — the allowed exception. Its
+`DatabaseService(lfx…DatabaseService)` keeps the inherited engine/session/migration
+mechanism and overrides only its migration-stream identity (version table
+`alembic_version`, `script_location` → `langflow/alembic`) plus domain bootstrap (superuser
+assignment, schema-health). The subclass is justified because langflow's migration lineage
+and domain policy genuinely differ from a bare `lfx serve`.
+
+#### Two-stream migration model (no divergence)
+
+lfx and langflow each own an **independent** alembic lineage against a **distinct** version
+table. A given physical database is provisioned by exactly one stream — the langflow editor
+DB by langflow's lineage (full schema), the scaled `lfx serve` DB by lfx's (execution
+tables only).
+
+This does **not** cause schema divergence, because the model classes are the single source
+of truth (they live once, in `lfx.services.database.models`, imported by both streams). The
+streams can only differ in *staleness*, which is mechanically caught: `lfx db check` (and
+langflow's equivalent) run alembic's autogenerate-diff per stream in CI and fail the moment
+a stream lags the model. The `NAMING_CONVENTION` is byte-identical across both env modules
+so shared tables get identically-named constraints. Isolation works via the `include_*`
+filters: a langflow-only model is invisible to lfx's stream; an lfx-core model change is
+visible to both and so needs a revision in each (almost always the case, since lfx is nested
+in langflow).
+
+The end-state (full lfx ownership) is then a non-breaking flip: langflow's env excludes the
+lfx-core tables and delegates them to lfx's stream. Today's separate-lineage model is a
+strict subset of that, so nothing is painted into a corner.
+
+#### Hydrating Tier 1 at boot
+
+*Which implementation* and *how it connects* are separate inputs:
+
+- **Wiring** — `lfx.toml` `[services]` maps each `ServiceType` to a class
+  (`database_service = "lfx.services.database.service:DatabaseService"`). Discovered from
+  `$LANGFLOW_CONFIG_DIR` at boot; precedence is **config file > entry points > defaults**.
+- **Connection** — environment (`LANGFLOW_DATABASE_URL`, pool sizes). Never in `lfx.toml`.
+
+With **no** `lfx.toml`, bare lfx stays ephemeral (`NoopDatabaseService` +
+`InMemoryMemoryService`) — what `lfx run` wants. Adding the wiring flips the same process to
+persistent Postgres + DB-backed memory with no code change: the editor↔production parity
+goal. Migrations are **explicit** (`lfx db upgrade`); `lfx serve` verifies the schema is at
+head and refuses to start otherwise. See [`deploy/`](deploy/) for ConfigMap/Secret/Knative
+stubs and the full hydration walkthrough.
+
 ## Adapter Registries (Service-Scoped Plugin Registries)
 
 LFX also supports **adapter registries** -- collections of swappable implementations that share the same protocol.

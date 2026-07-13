@@ -1,0 +1,42 @@
+# Non-secret hydration for an lfx deployment.
+#
+# Two things live here:
+#   1. lfx.toml   -- the service wiring (which Tier 1/Tier 2 impls to select).
+#   2. Plain env  -- non-secret tunables (pool sizes, log routing, config dir).
+#
+# Secrets (LANGFLOW_DATABASE_URL with credentials, API keys) go in a Secret --
+# see secret.example.yaml. Mount this ConfigMap's lfx.toml into
+# $LANGFLOW_CONFIG_DIR so the service manager discovers it at boot.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lfx-config
+  labels:
+    app: lfx
+data:
+  # Rendered to $LANGFLOW_CONFIG_DIR/lfx.toml via a volumeMount (see the
+  # knative-service.yaml example). Keep in sync with deploy/lfx.toml.
+  lfx.toml: |
+    [services]
+    database_service = "lfx.services.database.service:DatabaseService"
+    memory_service = "lfx.services.memory.database:DatabaseMemoryService"
+
+  # Where lfx looks for lfx.toml. The ConfigMap volume is mounted here.
+  LANGFLOW_CONFIG_DIR: "/config"
+
+  # Send alembic/migration output to stdout (container-friendly; the package
+  # dir is read-only under a non-root user).
+  LANGFLOW_ALEMBIC_LOG_TO_STDOUT: "true"
+
+  # --- Tier 1 database tunables (optional; shown with their defaults) ---
+  # Connection pool sizing for the async engine. Raise for higher concurrency.
+  # (The engine also honors the richer db_connection_settings dict in settings.)
+  # These are read by lfx.services.settings.groups.database.DatabaseSettings.
+  # LANGFLOW_POOL_SIZE: "20"
+  # LANGFLOW_MAX_OVERFLOW: "30"
+  # LANGFLOW_DB_CONNECT_TIMEOUT: "30"
+
+  # Advisory-lock namespace so concurrent workers coordinate migrations against
+  # a shared Postgres. Set to a per-deployment value when multiple deployments
+  # share one database.
+  # LANGFLOW_MIGRATION_LOCK_NAMESPACE: "lfx-prod"
