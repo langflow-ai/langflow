@@ -9289,9 +9289,11 @@ toolguard = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "aiosqlite" },
     { name = "asgi-lifespan" },
     { name = "blockbuster" },
     { name = "coverage" },
+    { name = "greenlet" },
     { name = "hypothesis" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -9367,9 +9369,11 @@ provides-extras = ["opendsstar", "cassandra", "toolguard", "bundles"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "aiosqlite", specifier = ">=0.20.0" },
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "blockbuster", specifier = ">=1.5.25" },
     { name = "coverage", specifier = ">=7.9.2" },
+    { name = "greenlet", specifier = ">=3.0.0" },
     { name = "hypothesis", specifier = ">=6.136.3" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", specifier = ">=0.26.0" },

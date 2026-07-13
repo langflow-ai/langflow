@@ -1,6 +1,11 @@
-"""Langflow's DB-backed chat-message memory service."""
+"""Langflow chat-message memory: the converged lfx Tier 2 service.
 
-from langflow.services.memory.factory import MemoryServiceFactory
-from langflow.services.memory.service import LangflowMemoryService
+Langflow no longer defines its own memory service class. It *selects* lfx's
+``DatabaseMemoryService`` and wires it over langflow's Tier 1 ``DatabaseService``
+(done in ``langflow.services.utils.register_all_service_factories``). This module
+re-exports the lfx class for any code that imported the langflow path.
+"""
 
-__all__ = ["LangflowMemoryService", "MemoryServiceFactory"]
+from lfx.services.memory.database import DatabaseMemoryService
+
+__all__ = ["DatabaseMemoryService"]

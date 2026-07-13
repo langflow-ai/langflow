@@ -122,6 +122,8 @@ markers = [
 
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.20.0",
+    "greenlet>=3.0.0",
     "asgi-lifespan>=2.1.0",
     "blockbuster>=1.5.25",
     "coverage>=7.9.2",

@@ -9,13 +9,14 @@ import time
 from contextlib import asynccontextmanager, contextmanager, nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import anyio
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from lfx.log.logger import logger
+from lfx.services.capabilities import Capability, Tier
 from lfx.services.deps import session_scope
 from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
@@ -254,6 +255,30 @@ def check_sqlite_database_path(database_url: str) -> None:
 
 class DatabaseService(Service):
     name = "database_service"
+
+    # Tier 1 infrastructure port. A real engine persists across restarts; SHARED
+    # (cross-process) is only true for Postgres, so the static class-level
+    # guarantee is the intersection: {PERSISTENT}. (A backend that wants to
+    # advertise SHARED can override per deployment.)
+    tier: ClassVar[Tier] = Tier.INFRASTRUCTURE
+    capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.PERSISTENT})
+
+    def session_scope(self):
+        """Async write session scope over this service (auto-commit/rollback).
+
+        Part of the Tier 1 database port (Option B): Tier 2 services call this on
+        their injected ``database_service``. Delegates to the shared helper so
+        semantics match the module-level ``lfx.services.deps.session_scope``.
+        """
+        from lfx.services.database.session import session_scope_for
+
+        return session_scope_for(self)
+
+    def session_scope_readonly(self):
+        """Read-only session scope over this service (no commit/rollback)."""
+        from lfx.services.database.session import session_scope_readonly_for
+
+        return session_scope_readonly_for(self)
 
     def __init__(self, settings_service: SettingsService):
         self._logged_pragma = False

@@ -8,10 +8,11 @@ with a ``NoopDatabaseService`` (no silent no-op inserts).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 from uuid import UUID
 
 from lfx.log.logger import logger
+from lfx.services.capabilities import Capability, Requires
 from lfx.services.memory.base import MemoryService
 
 if TYPE_CHECKING:
@@ -19,9 +20,18 @@ if TYPE_CHECKING:
 
 
 class InMemoryMemoryService(MemoryService):
-    """Round-tripping in-memory memory backend (no database, no dependencies)."""
+    """Round-tripping in-memory memory backend (no database, no dependencies).
+
+    The bare-lfx default. Store/read genuinely round-trips within the process, so
+    it is ``QUERYABLE`` but neither ``PERSISTENT`` nor ``SHARED`` — chat memory
+    works during an ``lfx run`` and is discarded when the process exits. It has no
+    Tier 1 dependency (``requires`` is empty).
+    """
 
     name = "memory_service"
+
+    capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.QUERYABLE})
+    requires: ClassVar[tuple[Requires, ...]] = ()
 
     def __init__(self) -> None:
         super().__init__()

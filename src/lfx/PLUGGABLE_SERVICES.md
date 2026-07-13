@@ -15,6 +15,119 @@ The pluggable services system supports **three** discovery mechanisms:
 2. Decorator registration
 3. Configuration files (highest priority)
 
+## Two-Tier Services, Capabilities, and Wiring Validation
+
+Services are organized into two tiers, and the service manager validates the whole
+dependency graph *before instantiating anything*. This is what keeps the "same engine
+code, different wiring" promise safe across bare `lfx run`, `lfx serve`, a Knative
+worker-plane, and langflow-with-lfx-inside.
+
+### Tiers
+
+- **Tier 1 — infrastructure** (`Tier.INFRASTRUCTURE`): integrates one external
+  component and speaks generic primitives (sessions, bytes, key/value, spans).
+  Examples: `database_service`, `cache_service`, `storage_service`, `job_queue_service`.
+- **Tier 2 — composed** (`Tier.COMPOSED`): owns domain *behavior* over lfx-owned models
+  and exposes a facade, but delegates the actual commit/read to Tier 1 services.
+  Examples: `memory_service`, `variable_service`, `transaction_service`.
+
+Declare the tier as a class attribute:
+
+```python
+from lfx.services.capabilities import Tier
+
+class MemoryService(Service):
+    tier = Tier.COMPOSED
+```
+
+**Layering invariant** (enforced): a Tier 1 service may depend only on `settings` or on
+other Tier 1 services. A Tier 1 service that declares a dependency on a Tier 2 service
+fails `validate_wiring()` with a `ServiceWiringError`.
+
+### Capabilities and `requires`
+
+A **capability** is a quality attribute an implementation guarantees — coarse and about
+behavior, never about which class provides it:
+
+- `PERSISTENT` — state survives a process restart.
+- `SHARED` — state is visible across processes/pods (safe for a multi-replica worker-plane).
+- `QUERYABLE` — supports filtered/ordered reads, not just fire-and-forget writes.
+
+A Tier 2 service declares what it needs from Tier 1 via `requires`. Each `Requires`
+optionally constrains the dependency's capabilities; an empty set means "must be present,
+but no capability demanded":
+
+```python
+from typing import ClassVar
+from lfx.services.capabilities import Capability, Requires
+from lfx.services.schema import ServiceType
+
+class DatabaseMemoryService(MemoryService):
+    capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.QUERYABLE, Capability.PERSISTENT})
+    # Presence-only: chat memory works over an ephemeral DB (bare lfx run) too.
+    requires: ClassVar[tuple[Requires, ...]] = (Requires(ServiceType.DATABASE_SERVICE),)
+
+    def __init__(self, database_service):  # injected by the manager (Option B)
+        self.database_service = database_service
+```
+
+The manager resolves `requires` **before** `__init__`, creates the dependency in
+topological order, injects it, and enforces the declared capabilities. Because
+`capabilities`/`requires`/`tier` are class attributes, the manager can reason about the
+entire graph without constructing anything.
+
+### Ports (registration validation)
+
+`lfx.services.ports.SERVICE_PORTS` maps a `ServiceType` to the abstract base every
+implementation must subclass. Registration through **any** source (decorator, config,
+entry point) rejects a class that is not a subclass of the declared port — so an
+unrelated class that happens to reuse a service key cannot silently replace a built-in
+service. Types absent from the map are not validated (back-compat).
+
+### Boot-time validation, manifest, and fingerprint
+
+- `get_service_manager().validate_wiring()` — eagerly walks every registered service's
+  `requires` edges and raises `ServiceWiringError` on the first unmet dependency,
+  capability shortfall, layering violation, or cycle. Call it at startup so a
+  misconfigured deployment fails before accepting traffic instead of mid-request.
+- `wiring_manifest()` — `{ServiceType: {impl_class, package, tier, capabilities}}`,
+  resolved without instantiation. Good for a `/health/services` endpoint.
+- `wiring_fingerprint()` — a stable hash of the per-type **capability sets** (class names
+  and packages are deliberately excluded). Two deployments whose services advertise the
+  same capabilities produce the same fingerprint even if the concrete classes differ.
+  This makes a builder-vs-production divergence check fire on *behavioral* difference, not
+  on the unavoidable fact that different packages own the classes.
+
+### Reference example: chat memory (Tier 2 over Tier 1)
+
+`lfx.services.memory` is the worked example:
+
+- `base.py` — the `MemoryService` port (abstract primitives + inherited helpers).
+- `service.py` — `InMemoryMemoryService`, the zero-dependency default for bare `lfx run`
+  (`{QUERYABLE}`, `requires=()`; ephemeral but real round-tripping memory).
+- `database.py` — `DatabaseMemoryService`, the Tier 2 service that requires
+  `database_service` and persists through it (`{QUERYABLE, PERSISTENT}`).
+- `contract.py` — `MemoryServiceContract`, an importable test mixin **both** backends
+  must pass. Semantics live in the contract; implementations may differ only in
+  capabilities, never in observable behavior.
+
+**How langflow consumes it (the registration answer):** langflow does *not* subclass the
+memory service. It selects the lfx `DatabaseMemoryService` and lets the manager inject
+langflow's Tier 1 `DatabaseService`:
+
+```python
+# langflow.services.utils.register_all_service_factories
+service_manager.register_service_class(
+    ServiceType.MEMORY_SERVICE, DatabaseMemoryService, override=True
+)
+```
+
+Registered as a *service class* (not a factory) so the manager performs the `requires`
+injection. This takes precedence over lfx's `InMemoryMemoryService` default. Same class in
+the builder and the production worker-plane; only the Tier 1 `DatabaseService` beneath it
+changes. That is the target: **overriding is the exception (auth, RBAC, genuinely
+different backends), not how langflow consumes lfx.**
+
 ## Adapter Registries (Service-Scoped Plugin Registries)
 
 LFX also supports **adapter registries** -- collections of swappable implementations that share the same protocol.

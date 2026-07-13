@@ -1,105 +1,72 @@
-"""Tests for langflow's MEMORY_SERVICE backend resolution.
+"""Tests for langflow's MEMORY_SERVICE wiring (converged on the lfx Tier 2 service).
 
-LangflowMemoryService resolves its backend once, on first use, from the registered
-database service: a real DB routes to ``langflow.memory`` (MessageTable), while a
-NoopDatabaseService falls back to lfx's round-tripping in-memory store (no silent
-no-op inserts). The decision is cached, not re-evaluated per call.
+Langflow no longer defines its own memory service or sniffs the database backend
+at call time. It *selects* lfx's ``DatabaseMemoryService`` and the service manager
+injects langflow's Tier 1 ``DatabaseService`` (Option B). These tests assert the
+registration/wiring; behavioral equivalence across backends is covered by the
+shared contract suite in lfx (``lfx.services.memory.contract``).
 """
 
 import pytest
-from langflow.services.memory.service import LangflowMemoryService
-from lfx.schema.message import Message
-from lfx.services.database.service import NoopDatabaseService
-from lfx.services.memory.service import InMemoryMemoryService
+from langflow.services.memory import DatabaseMemoryService
+from lfx.services.capabilities import Capability, ServiceWiringError, Tier
+from lfx.services.manager import get_service_manager
+from lfx.services.schema import ServiceType
 
 
-def _msg(text, session_id="s1"):
-    return Message(text=text, sender="AI", sender_name="Bot", session_id=session_id)
-
-
-@pytest.mark.asyncio
-async def test_noop_db_resolves_in_memory_not_silent_noop(monkeypatch):
-    """With a NoopDatabaseService, store/read round-trip via the in-memory fallback."""
-    monkeypatch.setattr("lfx.services.deps.get_db_service", lambda: NoopDatabaseService())
-
-    # Guard: if the fallback were wrong and it hit langflow.memory, fail loudly.
-    import langflow.memory as langflow_memory
-
-    def _boom(*_args, **_kwargs):
-        msg = "langflow.memory must not be used under a NoopDatabaseService"
-        raise AssertionError(msg)
-
-    monkeypatch.setattr(langflow_memory, "astore_message", _boom)
-
-    svc = LangflowMemoryService()
-    await svc.astore_message(_msg("hello", session_id="noop"))
-    got = await svc.aget_messages(session_id="noop")
-
-    assert isinstance(svc._backend_impl(), InMemoryMemoryService)
-    assert [m.text for m in got] == ["hello"]
-
-
-@pytest.mark.asyncio
-async def test_real_db_resolves_langflow_memory(monkeypatch):
-    """With a real (non-noop) DB, store/read route to langflow.memory."""
-
-    class _FakeRealDbService:
-        """Non-noop stand-in."""
-
-    monkeypatch.setattr("lfx.services.deps.get_db_service", lambda: _FakeRealDbService())
-
-    import langflow.memory as langflow_memory
-
-    calls = {}
-
-    async def _fake_store(message, flow_id=None, run_id=None):  # noqa: ARG001
-        calls["store"] = message
-        return [message]
-
-    async def _fake_get(**kwargs):
-        calls["get"] = kwargs
-        return ["sentinel"]
-
-    monkeypatch.setattr(langflow_memory, "astore_message", _fake_store)
-    monkeypatch.setattr(langflow_memory, "aget_messages", _fake_get)
-
-    svc = LangflowMemoryService()
-    msg = _msg("hi", session_id="real")
-    await svc.astore_message(msg)
-    got = await svc.aget_messages(session_id="real")
-
-    assert svc._backend_impl() is langflow_memory
-    assert calls["store"] is msg
-    assert got == ["sentinel"]
-
-
-@pytest.mark.asyncio
-async def test_backend_resolved_once_and_cached(monkeypatch):
-    """Once resolved, flipping the DB state does not change the backend."""
-    monkeypatch.setattr("lfx.services.deps.get_db_service", lambda: NoopDatabaseService())
-
-    svc = LangflowMemoryService()
-    # First use under noop DB -> in-memory.
-    await svc.astore_message(_msg("first", session_id="cache"))
-    assert isinstance(svc._backend_impl(), InMemoryMemoryService)
-
-    # Now a real DB appears; the cached backend must not switch.
-    class _FakeRealDbService:
-        pass
-
-    monkeypatch.setattr("lfx.services.deps.get_db_service", lambda: _FakeRealDbService())
-    assert isinstance(svc._backend_impl(), InMemoryMemoryService)
-
-    # And it still round-trips through the same in-memory backend.
-    got = await svc.aget_messages(session_id="cache")
-    assert [m.text for m in got] == ["first"]
-
-
-def test_get_memory_service_returns_langflow_service():
-    """In a langflow process the registered MEMORY_SERVICE is LangflowMemoryService."""
+def test_langflow_selects_lfx_database_memory_service():
+    """After registration, MEMORY_SERVICE resolves to the lfx DatabaseMemoryService class."""
     from langflow.services.utils import register_all_service_factories
-    from lfx.services.deps import get_memory_service
 
     register_all_service_factories()
-    svc = get_memory_service()
-    assert isinstance(svc, LangflowMemoryService)
+    manager = get_service_manager()
+
+    # The registered class (no instantiation needed) is the converged lfx impl —
+    # langflow authors no memory subclass of its own.
+    assert manager.service_classes[ServiceType.MEMORY_SERVICE] is DatabaseMemoryService
+
+
+def test_memory_is_tier2_requiring_database():
+    """DatabaseMemoryService is Tier 2 and declares a dependency on the database service."""
+    assert DatabaseMemoryService.tier == Tier.COMPOSED
+    assert Capability.PERSISTENT in DatabaseMemoryService.capabilities
+    required = {req.service for req in DatabaseMemoryService.requires}
+    assert ServiceType.DATABASE_SERVICE in required
+
+
+def test_memory_requires_database_presence_only():
+    """The requirement is presence, not a capability — so any DB backend satisfies it."""
+    db_reqs = [req for req in DatabaseMemoryService.requires if req.service is ServiceType.DATABASE_SERVICE]
+    assert db_reqs, "expected a database_service requirement"
+    # Empty capability set => presence-only (bare lfx run over an ephemeral DB is fine).
+    assert all(req.capabilities == frozenset() for req in db_reqs)
+
+
+def test_manifest_reports_langflow_wiring():
+    """The wiring manifest reports memory (Tier 2) and database (Tier 1) after registration."""
+    from langflow.services.utils import register_all_service_factories
+
+    register_all_service_factories()
+    manager = get_service_manager()
+    manifest = manager.wiring_manifest(discover=False)
+
+    memory_entry = manifest[ServiceType.MEMORY_SERVICE]
+    assert memory_entry.impl_class == "DatabaseMemoryService"
+    assert memory_entry.tier == int(Tier.COMPOSED)
+
+    db_entry = manifest[ServiceType.DATABASE_SERVICE]
+    assert db_entry.tier == int(Tier.INFRASTRUCTURE)
+    assert Capability.PERSISTENT in db_entry.capabilities
+
+
+def test_validate_wiring_passes_for_langflow_stack():
+    """The full langflow registration validates without raising (deps + capabilities satisfied)."""
+    from langflow.services.utils import register_all_service_factories
+
+    register_all_service_factories()
+    manager = get_service_manager()
+    # Should not raise: memory (Tier 2) requires database (Tier 1) presence, which is registered.
+    try:
+        manager.validate_wiring(discover=False)
+    except ServiceWiringError as exc:  # pragma: no cover - failure path
+        pytest.fail(f"langflow wiring failed validation: {exc}")

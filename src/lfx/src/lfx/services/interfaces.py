@@ -79,11 +79,25 @@ class AuthServiceProtocol(Protocol):
 
 
 class DatabaseServiceProtocol(Protocol):
-    """Protocol for database service."""
+    """Protocol for database service (Tier 1 infrastructure port)."""
 
     @abstractmethod
     def with_session(self) -> Any:
         """Get database session."""
+        ...
+
+    @abstractmethod
+    def session_scope(self) -> Any:
+        """Async write session scope (auto-commit/rollback).
+
+        Tier 2 services call this on their injected ``database_service`` to
+        persist/read the models they own.
+        """
+        ...
+
+    @abstractmethod
+    def session_scope_readonly(self) -> Any:
+        """Async read-only session scope (no commit/rollback)."""
         ...
 
 

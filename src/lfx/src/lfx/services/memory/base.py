@@ -14,9 +14,10 @@ executors (Postgres) registers through the same service manager.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from lfx.services.base import Service
+from lfx.services.capabilities import Tier
 from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
@@ -42,6 +43,11 @@ class MemoryService(Service):
     """
 
     name = "memory_service"
+
+    # Chat memory is a Tier 2 (composed) service: it owns behavior over the
+    # lfx-owned ``message`` model and delegates persistence to a Tier 1 service.
+    # Concrete backends declare their own ``capabilities`` and ``requires``.
+    tier: ClassVar[Tier] = Tier.COMPOSED
 
     # --- Abstract primitives -------------------------------------------------
 

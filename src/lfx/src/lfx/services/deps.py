@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import threading
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, cast
-
-from fastapi import HTTPException
 
 from lfx.log.logger import logger
 from lfx.services.config_discovery import resolve_config_dir
@@ -241,34 +239,13 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     Raises:
         Exception: If an error occurs during the session scope.
     """
-    db_service = get_db_service()
-    async with db_service._with_session() as session:  # noqa: SLF001
-        try:
-            yield session
-            await session.commit()
-        except HTTPException:
-            # HTTPExceptions are control flow in FastAPI (returning 4xx/5xx responses),
-            # not actual errors. Don't log them - FastAPI's exception handlers will
-            # take care of the HTTP response. Just rollback any uncommitted changes.
-            if session.is_active:
-                from sqlalchemy.exc import InvalidRequestError
+    # Delegates to the shared, db-service-parameterized helper (Option B). The
+    # DatabaseService port also exposes this as ``db_service.session_scope()``;
+    # both routes call the same ``session_scope_for`` so semantics never drift.
+    from lfx.services.database.session import session_scope_for
 
-                with suppress(InvalidRequestError):
-                    await session.rollback()
-            raise
-        except Exception as e:
-            # Actual application/database errors - log at error level
-            await logger.aexception("An error occurred during the session scope.", exception=e)
-
-            # Only rollback if session is still in a valid state
-            if session.is_active:
-                from sqlalchemy.exc import InvalidRequestError
-
-                with suppress(InvalidRequestError):
-                    # Session was already rolled back by SQLAlchemy
-                    await session.rollback()
-            raise
-        # No explicit close needed - _with_session() handles it
+    async with session_scope_for(get_db_service()) as session:
+        yield session
 
 
 async def injectable_session_scope_readonly():
@@ -286,9 +263,7 @@ async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:
     Yields:
         AsyncSession: The async session object.
     """
-    db_service = get_db_service()
-    async with db_service._with_session() as session:  # noqa: SLF001
+    from lfx.services.database.session import session_scope_readonly_for
+
+    async with session_scope_readonly_for(get_db_service()) as session:
         yield session
-        # No commit - read-only
-        # No clean up - client is responsible (plus, read only sessions are not committed)
-        # No explicit close needed - _with_session() handles it
