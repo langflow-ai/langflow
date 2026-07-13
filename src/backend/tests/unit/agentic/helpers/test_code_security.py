@@ -506,6 +506,50 @@ class TestScanCodeSecurityAliasAndWildcardBypass:
         assert result.is_safe is True
 
 
+class TestScanCodeSecurityRuntimeModuleBypass:
+    """Runtime module lookup and reflection must not bypass dangerous calls."""
+
+    def test_should_detect_sys_modules_attribute_call(self):
+        result = scan_code_security("sys.modules['os'].system('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_getattr_from_sys_modules(self):
+        result = scan_code_security("getattr(sys.modules['os'], 'system')('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_aliased_sys_modules_access(self):
+        result = scan_code_security("import sys as runtime\nruntime.modules['os'].system('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_imported_sys_modules_access(self):
+        result = scan_code_security("from sys import modules\nmodules['os'].system('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_reflective_dangerous_call(self):
+        result = scan_code_security("import os\ngetattr(os, 'system')('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_dynamic_reflective_module_access(self):
+        result = scan_code_security("import os\nvalue = getattr(os, self.method_name)")
+        assert result.is_safe is False
+
+    def test_should_detect_reflective_sys_modules_access(self):
+        result = scan_code_security("getattr(sys, 'modules')['os'].system('id')")
+        assert result.is_safe is False
+
+    def test_should_allow_safe_sys_attribute(self):
+        result = scan_code_security("import sys\nversion = sys.version_info")
+        assert result.is_safe is True
+
+    def test_should_allow_reflective_safe_module_attribute(self):
+        result = scan_code_security("import os\npath_module = getattr(os, 'path')")
+        assert result.is_safe is True
+
+    def test_should_allow_dynamic_getattr_on_ordinary_objects(self):
+        result = scan_code_security("field = 'value'\nvalue = getattr(self, field, None)")
+        assert result.is_safe is True
+
+
 class TestScanCodeSecurityDottedSubmoduleAccess:
     """Bare-package imports must not reach a blocked submodule via dotted access.
 
