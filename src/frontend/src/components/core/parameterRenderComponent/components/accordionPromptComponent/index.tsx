@@ -7,45 +7,17 @@ import {
   DisclosureContent,
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
-import { regexHighlight } from "@/constants/constants";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 import MustachePromptModal from "@/modals/mustachePromptModal";
 import PromptModal from "@/modals/promptModal";
 import { cn } from "@/utils/utils";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, PromptAreaComponentType } from "../../types";
+import { generateUniqueVariableName } from "./helpers/generate-unique-variable-name";
+import { getHighlightedHTML } from "./helpers/prompt-highlight";
 
-/**
- * Generates a unique variable name for the prompt template.
- * If "variable_name" doesn't exist, returns it.
- * Otherwise, returns "variable_name_1", "variable_name_2", etc.
- */
-export const generateUniqueVariableName = (
-  templateValue: string,
-  isDoubleBrackets: boolean = false,
-): string => {
-  // Match both single {var} and double {{var}} bracket patterns
-  const variableRegex = isDoubleBrackets
-    ? /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g
-    : /\{([^{}]+)\}/g;
-  const existingVariables = new Set<string>();
-  let match: RegExpExecArray | null = variableRegex.exec(templateValue);
-  while (match !== null) {
-    existingVariables.add(match[1]);
-    match = variableRegex.exec(templateValue);
-  }
-
-  let variableName = "variable_name";
-  if (existingVariables.has(variableName)) {
-    let counter = 1;
-    while (existingVariables.has(`variable_name_${counter}`)) {
-      counter++;
-    }
-    variableName = `variable_name_${counter}`;
-  }
-
-  return variableName;
-};
+/** @deprecated import from "./helpers/generate-unique-variable-name" */
+export { generateUniqueVariableName } from "./helpers/generate-unique-variable-name";
 
 export default function AccordionPromptComponent({
   field_name,
@@ -87,43 +59,6 @@ export default function AccordionPromptComponent({
     el.style.height = `${nextHeight}px`;
     el.style.overflowY = scrollHeight > maxHeightPx ? "auto" : "hidden";
     setIsScrollable(scrollHeight > nextHeight);
-  };
-
-  // Apply highlighting to the content
-  const getHighlightedHTML = (text: string) => {
-    if (isDoubleBrackets) {
-      return text
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match) => {
-          return `<span class="chat-message-highlight">${match}</span>`;
-        });
-    }
-    return text
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(
-        regexHighlight,
-        (match, codeFence, openRun, varName, closeRun) => {
-          if (codeFence) return match;
-
-          const lenOpen = openRun?.length ?? 0;
-          const lenClose = closeRun?.length ?? 0;
-          const isVariable = lenOpen === lenClose && lenOpen % 2 === 1;
-
-          if (!isVariable) return match;
-
-          const outerCount = Math.floor(lenOpen / 2);
-          const outerLeft = "{".repeat(outerCount);
-          const outerRight = "}".repeat(outerCount);
-
-          return (
-            `${outerLeft}` +
-            `<span class="chat-message-highlight">{${varName}}</span>` +
-            `${outerRight}`
-          );
-        },
-      );
   };
 
   const getCursorOffset = () => {
@@ -270,7 +205,7 @@ export default function AccordionPromptComponent({
       if (contentEditableRef.current) {
         saveCursorPosition();
         contentEditableRef.current.innerHTML = value
-          ? getHighlightedHTML(value)
+          ? getHighlightedHTML(value, isDoubleBrackets)
           : "";
         restoreCursorPosition();
         resizeToFit();
@@ -288,7 +223,7 @@ export default function AccordionPromptComponent({
     const currentText = contentEditableRef.current.innerText;
     if (currentText !== internalValue) {
       contentEditableRef.current.innerHTML = internalValue
-        ? getHighlightedHTML(internalValue)
+        ? getHighlightedHTML(internalValue, isDoubleBrackets)
         : "";
       resizeToFit();
     }
@@ -300,8 +235,10 @@ export default function AccordionPromptComponent({
       // Small delay to ensure the DOM is ready after disclosure animation
       requestAnimationFrame(() => {
         if (contentEditableRef.current) {
-          contentEditableRef.current.innerHTML =
-            getHighlightedHTML(internalValue);
+          contentEditableRef.current.innerHTML = getHighlightedHTML(
+            internalValue,
+            isDoubleBrackets,
+          );
           resizeToFit();
         }
       });
@@ -441,7 +378,7 @@ export default function AccordionPromptComponent({
     // Check if we need to update HTML for highlighting
     const currentHTML = contentEditableRef.current.innerHTML;
     const expectedHTML = normalizedValue
-      ? getHighlightedHTML(normalizedValue)
+      ? getHighlightedHTML(normalizedValue, isDoubleBrackets)
       : "";
 
     // Only update if the HTML actually needs to change (for highlighting)
@@ -539,7 +476,10 @@ export default function AccordionPromptComponent({
     handleOnNewValue({ value: newValue });
 
     // Update DOM with highlighting
-    contentEditableRef.current.innerHTML = getHighlightedHTML(newValue);
+    contentEditableRef.current.innerHTML = getHighlightedHTML(
+      newValue,
+      isDoubleBrackets,
+    );
     resizeToFit();
   };
 
@@ -548,7 +488,10 @@ export default function AccordionPromptComponent({
     setInternalValue(newValue);
     handleOnNewValue({ value: newValue });
     if (contentEditableRef.current) {
-      contentEditableRef.current.innerHTML = getHighlightedHTML(newValue);
+      contentEditableRef.current.innerHTML = getHighlightedHTML(
+        newValue,
+        isDoubleBrackets,
+      );
     }
   };
 
