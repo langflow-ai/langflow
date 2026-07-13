@@ -67,7 +67,7 @@ The pause probe is a no-op unless a component requests it, so normal flows are b
 #### Durable Run Aggregate
 - **Root Entity**: the background **Job** (`job_id`)
 - **Entities**: the **Graph** (with its `run_id`), the **Checkpoint**, the **Pending Human Request**
-- **Value Objects**: `JobStatus`, `Decision` (`action_id` + `values`), `request_id` (`{node_id}:{run_id}`)
+- **Value Objects**: `JobStatus`, `Decision` (`action_id` + `values`), `request_id` (`{node_id}:{run_id}`; agent tool approvals append the LangGraph interrupt id — `{node_id}:{run_id}:{interrupt_id}` — so each approval in one run is individually addressable and a stale resume for approval N is rejected during approval N+1)
 - **Invariants**:
   - A pause must persist a checkpoint before the run yields (no lost state).
   - Resume must be single-flight: a decision is applied **exactly once**.
@@ -232,7 +232,10 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
 
 ### 6.2 Resume (single-flight)
 - `POST /api/v2/workflows/{job_id}/resume` with `{request_id, decision}`.
+- The route re-enforces `FlowAction.EXECUTE` (`ensure_resume_execute_permission`) before applying the decision — job ownership alone is not enough once shared access has been revoked.
 - `claim_suspended_for_resume` performs the atomic status claim; failure → `NOT_RESUMABLE`.
+- The answered card is stamped via `mark_card_answered` using the `card_message_id` snapshotted **before** the continuation is enqueued, and only when the card's `request_id` matches — so a first decision can never resolve a second pause's card.
+- The gated vertex is located with `request_id_targets_vertex` (`lfx.run.hitl`), which accepts both the node shape and the nonce-suffixed tool-approval shape.
 - `build_resumed_graph_and_get_order` (`api/build.py`):
   ```python
   graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)

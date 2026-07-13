@@ -101,6 +101,40 @@ class TestValidateLambda(TestLambdaFilterComponent):
         assert result is True
 
 
+class TestParseLambdaSandbox(TestLambdaFilterComponent):
+    """The LLM-generated lambda is untrusted (prompt-injection) and must be sandboxed."""
+
+    def test_benign_lambda_still_works(self, component_class):
+        component = component_class()
+        fn = component._parse_lambda_from_response("lambda x: x + 1")
+        assert fn(41) == 42
+
+    def test_benign_lambda_can_use_safe_builtins(self, component_class):
+        component = component_class()
+        fn = component._parse_lambda_from_response("lambda x: len(x)")
+        assert fn([1, 2, 3]) == 3
+
+    def test_dunder_escape_gadget_is_rejected_at_parse(self, component_class):
+        """Dunder attribute traversal is rejected up front by the AST safety check."""
+        component = component_class()
+        with pytest.raises(ValueError, match="unsafe lambda"):
+            component._parse_lambda_from_response("lambda x: x.__class__.__bases__")
+
+    def test_import_builtin_is_unreachable_at_call(self, component_class):
+        """`__import__` is a builtin Name, so the curated builtins make it raise NameError when called."""
+        component = component_class()
+        fn = component._parse_lambda_from_response("lambda x: __import__('os').system('id')")
+        with pytest.raises(NameError):
+            fn("ignored")
+
+    def test_open_builtin_is_unreachable(self, component_class):
+        """`open` is absent from the curated builtins, so the lambda raises NameError at call time."""
+        component = component_class()
+        fn = component._parse_lambda_from_response("lambda x: open('/etc/passwd')")
+        with pytest.raises(NameError):
+            fn("ignored")
+
+
 class TestGetDataStructure(TestLambdaFilterComponent):
     """Tests for get_data_structure method."""
 

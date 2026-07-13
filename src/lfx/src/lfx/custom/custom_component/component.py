@@ -1937,12 +1937,18 @@ class Component(CustomComponent):
     async def _store_message(self, message: Message) -> Message:
         flow_id: str | None = None
         run_id: str | None = None
+        user_id: str | None = None
         session_metadata = dict(message.session_metadata or {})
         if hasattr(self, "graph"):
             # Convert UUID to str if needed
             flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
             graph_run_id = str(self.graph.run_id) if self.graph.run_id else None
             run_id = graph_run_id
+            # Stamp the executing user so chat-history retrieval can be scoped to its owner,
+            # closing cross-user disclosure via session_id collision. PlaceholderGraph stores
+            # user_id as ``str(...)``, so guard against the literal "None".
+            graph_user_id = self.graph.user_id
+            user_id = str(graph_user_id) if graph_user_id and str(graph_user_id) != "None" else None
             if self.tracing_service:
                 langfuse_tracer = self.tracing_service.get_tracer("langfuse")
                 langfuse_trace_id = getattr(langfuse_tracer, "langfuse_trace_id", None)
@@ -1954,7 +1960,7 @@ class Component(CustomComponent):
             message.session_metadata = session_metadata
         if run_id and not getattr(message, "run_id", None):
             message.run_id = run_id
-        stored_messages = await astore_message(message, flow_id=flow_id, run_id=run_id)
+        stored_messages = await astore_message(message, flow_id=flow_id, run_id=run_id, user_id=user_id)
         if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)

@@ -111,6 +111,8 @@ EXPECTED_FIELDS = {
     "cors_allow_headers",
     "ssrf_protection_enabled",
     "ssrf_allowed_hosts",
+    "connector_ssrf_validation_enabled",
+    "connector_ssrf_allow_loopback",
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
@@ -213,6 +215,9 @@ EXPECTED_FIELDS = {
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",
+    "block_code_interpreter_components",
+    "restrict_local_file_access",
+    "mcp_server_docker_hardening",
 }
 
 
@@ -243,7 +248,11 @@ def test_critical_defaults_unchanged():
     assert settings.cors_origins == "*"
     assert settings.cors_allow_credentials is True
     assert settings.ssrf_protection_enabled is True
+    assert settings.connector_ssrf_validation_enabled is True
     assert settings.allow_custom_components is True
+    assert settings.block_code_interpreter_components is False
+    assert settings.restrict_local_file_access is False
+    assert settings.mcp_server_docker_hardening is False
     assert settings.mcp_server_enabled is True
     assert settings.mcp_composer_enabled is True
     assert settings.do_not_track is False

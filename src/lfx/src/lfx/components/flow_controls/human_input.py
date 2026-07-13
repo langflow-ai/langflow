@@ -52,15 +52,16 @@ class HumanInput(Component):
         DurationInput(
             name="timeout",
             display_name="Timeout",
-            info="How long to wait for a human response before taking the fallback path (when enabled). "
-            "Set to 0 to wait indefinitely.",
+            info="A response received after this window is rerouted to the fallback path (when enabled) "
+            "instead of the chosen action. The run stays paused until a response arrives or the "
+            "server's suspended-run deadline expires it. Set to 0 to wait indefinitely.",
             options=["Minutes", "Hours", "Days"],
             value={"value": 3, "unit": "Days"},
         ),
         BoolInput(
             name="enable_fallback",
             display_name="Enable Fallback",
-            info="Add a 'fallback' output taken when no user action is answered (e.g. after the timeout).",
+            info="Add a 'fallback' output taken when the answer arrives after the timeout window.",
             value=False,
             advanced=True,
             real_time_refresh=True,

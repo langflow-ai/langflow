@@ -50,6 +50,8 @@
   "alerts.noChatOutput": "该流程中没有 ChatOutput 组件。",
   "alerts.noTemplateVariables": "您的模板中没有变量。",
   "alerts.notificationsTitle": "通知",
+  "alerts.clearNotifications": "清除通知",
+  "alerts.closeNotifications": "关闭通知",
   "apiKey.expirationDate": "到期日期",
   "apiKey.copy": "复制 API 密钥",
   "apiKey.generated": "已生成的 API 密钥",
@@ -1449,6 +1451,11 @@
   "modelProviders.loadingProviders": "正在加载服务提供商",
   "modelProviders.noModelsAvailable": "暂无可用型号",
   "modelProviders.noModelsMatch": "没有符合您搜索条件的模型。",
+  "modelProviders.searchOrAddDeployment": "搜索或添加部署名称…",
+  "modelProviders.customDeploymentHint": "请使用 Azure AI Foundry 门户中的部署名称（而非目录模型 ID）。搜索或输入名称即可添加。",
+  "modelProviders.addDeployment": "添加部署 \"{{name}}\"",
+  "modelProviders.addLanguageDeployment": "将部署“{{name}}”添加为语言模型",
+  "modelProviders.addEmbeddingDeployment": "将部署“{{name}}”添加为嵌入模型",
   "modelProviders.noProvidersMatch": "没有符合您搜索条件的供应商。",
   "modelProviders.ollamaNoModelsAll": "看来您尚未安装任何 Ollama 模型。 请选择您想要使用的模型。",
   "modelProviders.ollamaNoModelsEmbeddings": "看起来您尚未为 Ollama 安装任何嵌入式模型。 请选择您想要使用的模型。",
@@ -2129,5 +2136,8 @@
   "paginator.pageLabel": "Page",
   "flow.flowSettings": "Flow settings",
   "files.actionsMenu": "{{name}} 的文件操作",
-  "mcp.servers.actionsMenu": "{{name}} 的操作"
+  "mcp.servers.actionsMenu": "{{name}} 的操作",
+  "assistant.modelNotice.fallback": "模型 {{failed}} 失败（{{reason}}），改用 {{used}}。",
+  "assistant.modelNotice.remediation": "模型 {{failed}} 需要调整才能运行（{{reason}}）。",
+  "assistant.modelNotice.ariaLabel": "模型提示"
 }

@@ -118,8 +118,12 @@ def resume_graph_with_decision(
         request_id: decision,
     }
     for vertex in graph.vertices:
-        if f"{vertex.id}:{graph.run_id}" == request_id:
+        vertex_request_id = f"{vertex.id}:{graph.run_id}"
+        if request_id == vertex_request_id or request_id.startswith(vertex_request_id + ":"):
             vertex.built = False
+    # Re-run the fixpoint after un-building the paused vertex so any opaque-dropped
+    # producer it consumes is rebuilt instead of restoring a None value.
+    _unbuild_needed_dropped_producers(graph)
     return graph
 
 

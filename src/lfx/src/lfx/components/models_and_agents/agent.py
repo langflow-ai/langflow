@@ -26,7 +26,7 @@ from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware 
     SingleToolCallMiddleware,
 )
 from lfx.components.models_and_agents.agent_helpers.tool_approval import ToolApprovalMixin
-from lfx.components.models_and_agents.memory import MemoryComponent, aget_agent_chat_history
+from lfx.components.models_and_agents.memory import MemoryComponent, _safe_graph_user_id, aget_agent_chat_history
 
 if TYPE_CHECKING:
     from langchain_core.tools import Tool
@@ -382,6 +382,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             max_tokens=self._get_max_tokens_value(),
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
+            overrides=getattr(self, "_model_overrides", None),
         )
 
     async def get_agent_requirements(self):
@@ -654,13 +655,16 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if interrupts_enabled and thread_id and self._gated_interrupt_on():
             agent_config["configurable"] = {"thread_id": thread_id}
             get_pending_interrupt = self._pending_interrupt_getter(agent, agent_config)
-            decision = self._injected_agent_decision(thread_id)
-            if decision is not None:
-                # Resume the interrupted thread with the human pick rather than re-running
-                # from the original input; the checkpointer reloads the paused state.
-                value = await self._read_pending_interrupt_value(agent, agent_config)
-                action_requests = (value or {}).get("action_requests") or []
-                stream_input = Command(resume={"decisions": self._build_resume_decisions(decision, action_requests)})
+            if self._has_candidate_decision(thread_id):
+                # The injected decision must match the pending interrupt's nonce, so read
+                # the interrupt first; a matched decision resumes the checkpointed thread.
+                value, interrupt_id = await self._read_pending_interrupt(agent, agent_config)
+                decision = self._injected_agent_decision(thread_id, interrupt_id)
+                if decision is not None:
+                    action_requests = (value or {}).get("action_requests") or []
+                    stream_input = Command(
+                        resume={"decisions": self._build_resume_decisions(decision, action_requests)}
+                    )
         stream = adapt_graph_events_to_executor_shape(
             agent.astream_events(stream_input, config=agent_config, version="v2")
         )
@@ -729,35 +733,57 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             session_id=session_id or uuid.uuid4(),
         )
 
-    async def message_response(self) -> Message:
+    def _selected_provider_and_model(self) -> tuple[str | None, str | None]:
+        """Provider/name of the selected model, for error-driven remediation."""
         try:
-            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
-            # Set up and run agent
-            self.set(
-                llm=llm_model,
-                tools=self.tools or [],
-                chat_history=self.chat_history,
-                input_value=self.input_value,
-                system_prompt=self._inject_dynamic_prompt_values(self.system_prompt),
-            )
-            agent = self.create_agent_runnable()
-            result = await self.run_agent(agent)
+            selected = self._resolve_selected_model()
+            if isinstance(selected, list) and selected and isinstance(selected[0], dict):
+                return selected[0].get("provider"), selected[0].get("name")
+        except (AttributeError, TypeError, KeyError, ImportError):
+            pass
+        return None, None
 
-            # Store result for potential JSON output
-            self._agent_result = result
+    async def message_response(self) -> Message:
+        from lfx.base.models.model_remediation import find_remediation, remember
 
-        except (ValueError, TypeError, KeyError) as e:
-            await logger.aerror(f"{type(e).__name__}: {e!s}")
-            raise
-        except ExceptionWithMessageError as e:
-            await logger.aerror(f"ExceptionWithMessageError occurred: {e}")
-            raise
-        # Avoid catching blind Exception; let truly unexpected exceptions propagate
-        except Exception as e:
-            await logger.aerror(f"Unexpected error: {e!s}")
-            raise
-        else:
-            return result
+        provider, model_name = self._selected_provider_and_model()
+        applied: set[str] = set()
+        while True:
+            try:
+                llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+                # Set up and run agent
+                self.set(
+                    llm=llm_model,
+                    tools=self.tools or [],
+                    chat_history=self.chat_history,
+                    input_value=self.input_value,
+                    system_prompt=self._inject_dynamic_prompt_values(self.system_prompt),
+                )
+                agent = self.create_agent_runnable()
+                result = await self.run_agent(agent)
+                self._agent_result = result
+            except (ValueError, TypeError, KeyError) as e:
+                await logger.aerror(f"{type(e).__name__}: {e!s}")
+                raise
+            except Exception as e:
+                # Error-driven remediation (see model_remediation): run_agent wraps
+                # the provider error in ExceptionWithMessageError, so match the chain.
+                error_text = f"{e} {getattr(e, '__cause__', '') or ''}"
+                remediation = find_remediation(error_text, provider, already_applied=applied)
+                if remediation is None:
+                    label = type(e).__name__
+                    await logger.aerror(f"{label}: {e!s}")
+                    raise
+                applied.add(remediation.name)
+                self._model_overrides = {**(getattr(self, "_model_overrides", None) or {}), **remediation.overrides}
+                await logger.awarning(
+                    f"model.remediation.applied name={remediation.name} provider={provider} model={model_name}"
+                )
+                continue
+            else:
+                if getattr(self, "_model_overrides", None):
+                    remember(provider, model_name, self._model_overrides)
+                return result
 
     async def json_response(self) -> Data:
         """Produce structured Data via native LLM structured output, with prompt-based fallback.
@@ -825,6 +851,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             flow_id=getattr(self.graph, "flow_id", None),
             context_id=self.context_id,
             n_messages=self.n_messages,
+            user_id=_safe_graph_user_id(self),
         )
         return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)

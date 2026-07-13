@@ -1254,8 +1254,8 @@ name = "boto3-stubs"
 version = "1.43.42"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "botocore-stubs" },
-    { name = "types-s3transfer" },
+    { name = "botocore-stubs", marker = "python_full_version < '3.14'" },
+    { name = "types-s3transfer", marker = "python_full_version < '3.14'" },
     { name = "typing-extensions", marker = "python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4b/76/c9af2a465321d657e9f5009d8f667f5856089226db25239b228ed5d6cc3f/boto3_stubs-1.43.42.tar.gz", hash = "sha256:f517678562387bc54f872006e29bc7f4472f196229f188b4298122e2ee23fcb7", size = 103237, upload-time = "2026-07-07T21:10:13.802Z" }
@@ -1265,7 +1265,7 @@ wheels = [
 
 [package.optional-dependencies]
 bedrock-runtime = [
-    { name = "mypy-boto3-bedrock-runtime" },
+    { name = "mypy-boto3-bedrock-runtime", marker = "python_full_version < '3.14'" },
 ]
 
 [[package]]
@@ -1287,7 +1287,7 @@ name = "botocore-stubs"
 version = "1.43.14"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "types-awscrt" },
+    { name = "types-awscrt", marker = "python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7f/81/79693e833291c00dc89ee610e5e915381b6f08233912e28df50106840780/botocore_stubs-1.43.14.tar.gz", hash = "sha256:9e3bc1fdd51da7473f0df726c82747a1b0ae913449d629659765c247fecc2039", size = 42738, upload-time = "2026-05-25T06:06:37.484Z" }
 wheels = [
@@ -8433,7 +8433,7 @@ all = [
     { name = "mcp" },
     { name = "openinference-instrumentation-langchain" },
     { name = "openlayer" },
-    { name = "opik" },
+    { name = "opik", marker = "python_full_version < '3.14'" },
     { name = "pydantic" },
     { name = "redis" },
     { name = "traceloop-sdk" },
@@ -8500,7 +8500,7 @@ complete = [
     { name = "mcp" },
     { name = "openinference-instrumentation-langchain" },
     { name = "openlayer" },
-    { name = "opik" },
+    { name = "opik", marker = "python_full_version < '3.14'" },
     { name = "pydantic" },
     { name = "redis" },
     { name = "traceloop-sdk" },
@@ -8701,7 +8701,7 @@ opensearch = [
     { name = "opensearch-py" },
 ]
 opik = [
-    { name = "opik" },
+    { name = "opik", marker = "python_full_version < '3.14'" },
 ]
 pgvector = [
     { name = "pgvector" },
@@ -8878,7 +8878,7 @@ requires-dist = [
     { name = "faiss-cpu", marker = "python_full_version >= '3.14' and extra == 'faiss'", specifier = ">=1.13.2" },
     { name = "faiss-cpu", marker = "python_full_version < '3.14' and extra == 'faiss'", specifier = "==1.9.0.post1" },
     { name = "fake-useragent", marker = "extra == 'fake-useragent'", specifier = ">=2.0.0" },
-    { name = "fastapi", specifier = ">=0.135.0,<1.0.0" },
+    { name = "fastapi", specifier = ">=0.139.0,<1.0.0" },
     { name = "fastapi-pagination", specifier = ">=0.13.1,<1.0.0" },
     { name = "fastavro", marker = "python_full_version >= '3.13' and extra == 'fastavro'", specifier = ">=1.9.8,<2.0.0" },
     { name = "fastavro", marker = "python_full_version < '3.13' and extra == 'fastavro'", specifier = "==1.9.7" },
@@ -8965,7 +8965,7 @@ requires-dist = [
     { name = "lfx", marker = "extra == 'beautifulsoup'", editable = "src/lfx" },
     { name = "lfx", extras = ["cassandra"], marker = "extra == 'cassandra'", editable = "src/lfx" },
     { name = "lfx", extras = ["toolguard"], marker = "python_full_version < '3.14' and extra == 'toolguard'", editable = "src/lfx" },
-    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.85.1,<2.0.0" },
+    { name = "litellm", marker = "python_full_version < '3.14' and extra == 'litellm'", specifier = ">=1.85.1,<2.0.0" },
     { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
     { name = "markdown", marker = "extra == 'markdown'", specifier = ">=3.8.0" },
     { name = "markupsafe", marker = "extra == 'markup'", specifier = "==3.0.2" },
@@ -8995,7 +8995,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-requests", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-instrumentation-urllib3", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.30.0,<2.0.0" },
-    { name = "opik", marker = "extra == 'opik'", specifier = ">=2.0.0,<3.0.0" },
+    { name = "opik", marker = "python_full_version < '3.14' and extra == 'opik'", specifier = ">=2.0.0,<3.0.0" },
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
@@ -13794,25 +13794,25 @@ name = "opik"
 version = "2.1.19"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "boto3-stubs", extra = ["bedrock-runtime"] },
-    { name = "click" },
-    { name = "httpx" },
-    { name = "jinja2" },
+    { name = "boto3-stubs", extra = ["bedrock-runtime"], marker = "python_full_version < '3.14'" },
+    { name = "click", marker = "python_full_version < '3.14'" },
+    { name = "httpx", marker = "python_full_version < '3.14'" },
+    { name = "jinja2", marker = "python_full_version < '3.14'" },
     { name = "litellm", marker = "python_full_version < '3.14'" },
-    { name = "openai" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "pytest" },
-    { name = "rapidfuzz" },
-    { name = "rich" },
-    { name = "sentry-sdk" },
-    { name = "tenacity" },
-    { name = "tqdm" },
-    { name = "tree-sitter", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
-    { name = "tree-sitter-javascript", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
-    { name = "tree-sitter-typescript", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
-    { name = "uuid6" },
-    { name = "watchfiles" },
+    { name = "openai", marker = "python_full_version < '3.14'" },
+    { name = "pydantic", marker = "python_full_version < '3.14'" },
+    { name = "pydantic-settings", marker = "python_full_version < '3.14'" },
+    { name = "pytest", marker = "python_full_version < '3.14'" },
+    { name = "rapidfuzz", marker = "python_full_version < '3.14'" },
+    { name = "rich", marker = "python_full_version < '3.14'" },
+    { name = "sentry-sdk", marker = "python_full_version < '3.14'" },
+    { name = "tenacity", marker = "python_full_version < '3.14'" },
+    { name = "tqdm", marker = "python_full_version < '3.14'" },
+    { name = "tree-sitter", marker = "(python_full_version < '3.14' and platform_machine != 'aarch64') or (python_full_version < '3.14' and sys_platform != 'linux')" },
+    { name = "tree-sitter-javascript", marker = "(python_full_version < '3.14' and platform_machine != 'aarch64') or (python_full_version < '3.14' and sys_platform != 'linux')" },
+    { name = "tree-sitter-typescript", marker = "(python_full_version < '3.14' and platform_machine != 'aarch64') or (python_full_version < '3.14' and sys_platform != 'linux')" },
+    { name = "uuid6", marker = "python_full_version < '3.14'" },
+    { name = "watchfiles", marker = "python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2f/02/1f73c8c9e969e54631b5ecef53b542e25682b0cbe31bc076c07ac6da8ecf/opik-2.1.19.tar.gz", hash = "sha256:d1a5a35624890bf005bb88da9cf137160df9fe1f0cf82a8b06c6702373724dd0", size = 1141091, upload-time = "2026-07-07T11:27:48.172Z" }
 wheels = [
