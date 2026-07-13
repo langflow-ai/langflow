@@ -2,6 +2,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty-state";
 import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal/KnowledgeBaseUploadModal";
 import useAlertStore from "@/stores/alertStore";
 import { useOptimisticKnowledgeBase } from "../hooks/useOptimisticKnowledgeBase";
@@ -17,16 +24,16 @@ const KnowledgeBaseEmptyState = ({
   const { captureSubmit, applyOptimisticUpdate } = useOptimisticKnowledgeBase();
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
-      <div className="flex flex-col items-center gap-2">
-        <h3 className="text-2xl font-semibold">
+    <Empty className="h-full w-full gap-8 pb-8">
+      <EmptyHeader className="gap-2">
+        <EmptyTitle className="text-2xl">
           {t("knowledge.noKnowledgeBases")}
-        </h3>
-        <p className="text-lg text-secondary-foreground">
+        </EmptyTitle>
+        <EmptyDescription className="text-lg text-secondary-foreground">
           {t("knowledge.emptyDescription")}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent className="gap-2">
         <Button
           className="flex items-center gap-2 font-semibold"
           onClick={() => setIsUploadModalOpen(true)}
@@ -34,7 +41,7 @@ const KnowledgeBaseEmptyState = ({
           <ForwardedIconComponent name="Plus" className="h-4 w-4" />
           {t("knowledge.addKnowledge")}
         </Button>
-      </div>
+      </EmptyContent>
 
       <KnowledgeBaseUploadModal
         open={isUploadModalOpen}
@@ -51,7 +58,7 @@ const KnowledgeBaseEmptyState = ({
           });
         }}
       />
-    </div>
+    </Empty>
   );
 };
 
