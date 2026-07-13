@@ -1,6 +1,6 @@
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from lfx.components.files_and_knowledge.directory import DirectoryComponent
@@ -88,6 +88,39 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             max_concurrency=max_concurrency,
             silent_errors=silent_errors,
         )
+
+    def test_directory_blocked_outside_storage_when_restricted(self, tmp_path):
+        """Restricted mode blocks reading directories outside the storage dir; inside still works."""
+        settings_mock = MagicMock()
+        settings_mock.settings.restrict_local_file_access = True
+        settings_mock.settings.config_dir = str(tmp_path)
+        outside = tmp_path.parent / f"{tmp_path.name}-outside"
+        outside.mkdir()
+        settings_mock.settings.directory_component_allowed_roots = [str(tmp_path), str(outside)]
+
+        # A directory inside the storage dir is allowed.
+        inside = tmp_path / "flow-id"
+        inside.mkdir()
+        (inside / "ok.txt").write_text("ok", encoding="utf-8")
+
+        with (
+            patch("lfx.components.files_and_knowledge.directory.get_settings_service", return_value=settings_mock),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_mock),
+        ):
+            allowed = DirectoryComponent()
+            allowed.set_attributes(
+                {"path": str(inside), "use_multithreading": False, "silent_errors": False, "types": ["txt"]}
+            )
+            results = allowed.load_directory()
+            assert len(results) == 1
+
+            # A configured/allowed root outside the storage dir is still blocked in restricted mode.
+            blocked = DirectoryComponent()
+            blocked.set_attributes(
+                {"path": str(outside), "use_multithreading": False, "silent_errors": False, "types": ["txt"]}
+            )
+            with pytest.raises(ValueError, match="outside the storage directory"):
+                blocked.load_directory()
 
     def test_directory_without_mocks(self, monkeypatch):
         directory_component = DirectoryComponent()

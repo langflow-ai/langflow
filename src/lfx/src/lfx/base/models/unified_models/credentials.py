@@ -13,7 +13,9 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.env_var_security import safe_getenv
 from lfx.utils.secrets import secret_value_to_str
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
@@ -114,7 +116,10 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
         # Honor the request's no-env-fallback contract: skip os.environ when disabled so a
         # served flow stays isolated from process-wide credentials (matches VariableService).
         if not is_env_fallback_disabled():
-            env_value = os.environ.get(var_name)
+            # safe_getenv denies reserved names (LANGFLOW_SECRET_KEY, DATABASE_URL, ...) so a
+            # tenant-supplied api_key field cannot exfiltrate the server's own secrets via the
+            # env fallback (the resolved value is otherwise used as a live provider key).
+            env_value = safe_getenv(var_name)
             if env_value and env_value.strip():
                 return env_value.strip()
         return None
@@ -171,7 +176,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
 
     if is_env_fallback_disabled():
         return None
-    return os.getenv(variable_name)
+    env_value = safe_getenv(variable_name)
+    return env_value.strip() if env_value and env_value.strip() else None
 
 
 def _env_value_for(var_key: str) -> str | None:
@@ -512,7 +518,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             if base_url:
                 from lfx.utils.util import transform_localhost_url
 
-                llm_kwargs["base_url"] = transform_localhost_url(base_url)
+                transformed_base_url = transform_localhost_url(base_url)
+                validate_connector_url_for_ssrf(transformed_base_url)
+                llm_kwargs["base_url"] = transformed_base_url
             llm = ChatOpenAI(**llm_kwargs)
             llm.invoke("test")
 
@@ -542,6 +550,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             url = variables.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
             if not api_key or not project_id:
                 return
+            validate_connector_url_for_ssrf(url)
             llm = ChatWatsonx(
                 apikey=api_key,
                 url=url,
@@ -623,7 +632,10 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 raise ValueError(msg)
 
             base_url = base_url.rstrip("/")
-            response = requests.get(f"{base_url}/api/tags", timeout=5)
+            tags_url = f"{base_url}/api/tags"
+            # OLLAMA_BASE_URL is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+            validate_connector_url_for_ssrf(tags_url)
+            response = requests.get(tags_url, timeout=5, allow_redirects=False)
             response.raise_for_status()
 
             data = response.json()
