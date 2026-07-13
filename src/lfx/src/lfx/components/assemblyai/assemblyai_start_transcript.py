@@ -6,6 +6,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, FileInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+from lfx.services.deps import get_storage_service
 
 
 class AssemblyAITranscriptionJobCreator(Component):
@@ -133,6 +134,25 @@ class AssemblyAITranscriptionJobCreator(Component):
         Output(display_name="Transcript ID", name="transcript_id", method="create_transcription_job"),
     ]
 
+    def _resolve_uploaded_audio_file(self) -> str | None:
+        """Return the canonical path only for audio in the current flow or user's storage namespace."""
+        storage_service = get_storage_service()
+        namespace_ids = {str(namespace_id) for namespace_id in (self.flow_id, self.user_id) if namespace_id}
+        if storage_service is None or not namespace_ids:
+            return None
+
+        try:
+            trusted_roots = [
+                Path(storage_service.build_full_path(namespace_id, "")).resolve() for namespace_id in namespace_ids
+            ]
+            audio_path = Path(self.audio_file).resolve(strict=True)
+        except (OSError, RuntimeError, TypeError, ValueError):
+            return None
+
+        if not audio_path.is_file() or not any(audio_path.is_relative_to(root) for root in trusted_roots):
+            return None
+        return str(audio_path)
+
     def create_transcription_job(self) -> Data:
         aai.settings.api_key = self.api_key
 
@@ -162,11 +182,10 @@ class AssemblyAITranscriptionJobCreator(Component):
             if self.audio_file_url:
                 logger.warning("Both an audio file an audio URL were specified. The audio URL was ignored.")
 
-            # Check if the file exists
-            if not Path(self.audio_file).exists():
+            audio = self._resolve_uploaded_audio_file()
+            if audio is None:
                 self.status = "Error: Audio file not found"
                 return Data(data={"error": "Error: Audio file not found"})
-            audio = self.audio_file
         elif self.audio_file_url:
             audio = self.audio_file_url
         else:
