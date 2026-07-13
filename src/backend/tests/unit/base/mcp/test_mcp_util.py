@@ -9,6 +9,7 @@ This test suite validates the MCP utility functions including:
 import asyncio
 import os
 import re
+import shlex
 import shutil
 import sys
 from contextlib import suppress
@@ -1076,43 +1077,49 @@ class TestUpdateToolsStdioHeaders:
         assert full_command == "uvx mcp-proxy --transport streamablehttp http://localhost/streamable"
 
     @pytest.mark.asyncio
-    async def test_stdio_multiword_command_with_empty_args(self):
-        """A multi-word command string (e.g. 'uvx mcp-server-fetch') with empty args should be split correctly.
-
-        Regression test: shlex.join(["uvx mcp-server-fetch"]) used to produce
-        a single-quoted token that bash treated as one binary name, causing
-        'exec: uvx mcp-server-fetch: not found'.
-        """
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx mcp-server-fetch",
+            "node -e",
+            "npx\t-y\t@modelcontextprotocol/server-fetch",
+            "/usr/bin/node --version",
+            "C:\\Program Files\\nodejs\\node.exe --version",
+        ],
+    )
+    async def test_stdio_rejects_arguments_embedded_in_command(self, command):
+        """Runtime-loaded configs enforce the same single-executable command boundary."""
         mock_stdio = AsyncMock(spec=MCPStdioClient)
         mock_stdio.connect_to_server.return_value = []
         mock_stdio._connected = True
 
         server_config = {
-            "command": "uvx mcp-server-fetch",
+            "command": command,
             "args": [],
         }
 
-        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+        with pytest.raises(ValueError, match="single executable"):
+            await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
 
-        full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx mcp-server-fetch"
+        mock_stdio.connect_to_server.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_stdio_multiword_command_with_args(self):
-        """A multi-word command string combined with additional args should produce correct tokens."""
+    async def test_stdio_preserves_executable_path_with_spaces(self):
+        """A platform path stays one argv entry while args remain separate."""
         mock_stdio = AsyncMock(spec=MCPStdioClient)
         mock_stdio.connect_to_server.return_value = []
         mock_stdio._connected = True
+        command = "C:\\Program Files\\nodejs\\node.exe"
 
         server_config = {
-            "command": "uvx mcp-server-fetch",
-            "args": ["--timeout", "30"],
+            "command": command,
+            "args": ["server.js", "--timeout", "30"],
         }
 
         await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
 
         full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "uvx mcp-server-fetch --timeout 30"
+        assert shlex.split(full_command) == [command, "server.js", "--timeout", "30"]
 
     @pytest.mark.asyncio
     async def test_stdio_headers_appended_when_all_args_are_flags(self):
@@ -2109,7 +2116,7 @@ class TestMCPUtilityFunctions:
     async def test_validate_connection_params(self):
         """Test connection parameter validation."""
         # Valid parameters
-        await util._validate_connection_params("Stdio", command="echo test")
+        await util._validate_connection_params("Stdio", command="echo")
         await util._validate_connection_params("SSE", url="http://test")
 
         # Invalid parameters

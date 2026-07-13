@@ -33,9 +33,17 @@ class TestMCPCommandInjectionSecurity:
         config = MCPServerConfig(command="/usr/bin/node", args=["server.js"])
         assert config.command == "/usr/bin/node"
 
+        # Unix-style path with spaces in a parent directory
+        config = MCPServerConfig(command="/opt/Node Tools/node", args=["server.js"])
+        assert config.command == "/opt/Node Tools/node"
+
         # Windows-style path
         config = MCPServerConfig(command="C:\\Program Files\\nodejs\\node.exe", args=["server.js"])
         assert config.command == "C:\\Program Files\\nodejs\\node.exe"
+
+        # Windows-style path using forward slashes
+        config = MCPServerConfig(command="C:/Program Files/nodejs/node.exe", args=["server.js"])
+        assert config.command == "C:/Program Files/nodejs/node.exe"
 
     def test_dangerous_command_rejected(self):
         """Test that dangerous commands are rejected."""
@@ -107,22 +115,23 @@ class TestMCPCommandInjectionSecurity:
             error_msg = str(exc_info.value)
             assert "-c" in error_msg.lower() or "/c" in error_msg.lower()
 
-    def test_command_with_arguments_in_string_accepted(self):
-        """Test that commands with arguments in a single string are accepted (frontend compatibility).
-
-        Frontend tests pass commands like "uvx mcp-server-fetch" as a single string.
-        The validation should extract only the base command (uvx) for allowlist checking.
-        """
-        # This is how the frontend test passes the command
-        config = MCPServerConfig(command="uvx mcp-server-fetch", args=None)
-        assert config.command == "uvx mcp-server-fetch"
-
-        # Other examples
-        config = MCPServerConfig(command="npx @modelcontextprotocol/server-fetch", args=None)
-        assert config.command == "npx @modelcontextprotocol/server-fetch"
-
-        config = MCPServerConfig(command="python -m mcp_server", args=None)
-        assert config.command == "python -m mcp_server"
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx mcp-server-fetch",
+            "npx -y @modelcontextprotocol/server-fetch",
+            "python -m mcp_server",
+            "node\t--version",
+            " node",
+            "node ",
+            "/usr/bin/node --version",
+            "C:\\Program Files\\nodejs\\node.exe --version",
+        ],
+    )
+    def test_command_with_embedded_arguments_rejected(self, command):
+        """The command field is one executable; all options belong in validated args."""
+        with pytest.raises(ValidationError, match="single executable"):
+            MCPServerConfig(command=command, args=[])
 
     def test_command_injection_via_semicolon_rejected(self):
         """Test that command injection via semicolon is rejected."""

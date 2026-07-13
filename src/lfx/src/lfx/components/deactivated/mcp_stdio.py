@@ -4,6 +4,7 @@ from langchain_core.tools import StructuredTool
 from mcp import types
 
 from lfx.base.mcp.security import validate_mcp_stdio_config
+from lfx.base.mcp.source_policy import split_mcp_stdio_command
 from lfx.base.mcp.util import (
     MCPStdioClient,
     create_input_schema_from_json_schema,
@@ -33,7 +34,7 @@ class MCPStdio(Component):
             name="command",
             display_name="mcp command",
             info="mcp command",
-            value="uvx mcp-sse-shim@latest",
+            value="uvx mcp-sse-shim",
             tool_mode=True,
         ),
     ]
@@ -45,8 +46,13 @@ class MCPStdio(Component):
     async def build_output(self) -> list[Tool]:
         if self.client.session is None:
             # This legacy component bypasses update_tools and reads its command directly from
-            # the saved flow, so it needs the same source-independent execution policy.
-            validate_mcp_stdio_config(self.command, None, None)
+            # the saved flow. Normalize its historical packed-string input before applying the
+            # same shared executable/argv policy used by current structured configurations.
+            command, args = split_mcp_stdio_command(self.command, None)
+            if not command:
+                msg = "MCP stdio command is empty"
+                raise ValueError(msg)
+            validate_mcp_stdio_config(command, args, None)
             self.tools = await self.client.connect_to_server(self.command)
 
         tool_list = []

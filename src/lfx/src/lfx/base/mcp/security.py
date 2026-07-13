@@ -10,7 +10,6 @@ from pathlib import Path
 from lfx.base.mcp.source_policy import (
     is_package_manager_config_env_var,
     parse_mcp_shell_wrapper,
-    split_mcp_stdio_command,
     validate_mcp_stdio_source_policy,
 )
 
@@ -106,20 +105,8 @@ def is_dangerous_mcp_env_var(key: str) -> bool:
 
 
 def extract_base_command(command: str) -> str:
-    r"""Extract an executable name from a bare command or platform-specific path.
-
-    Existing configurations may include arguments in ``command``. This helper deliberately
-    preserves the release branch's current behavior of checking only the first token; stricter
-    command-field shape validation is handled separately.
-    """
-    drive_letter_len = 3
-    is_file_path = (
-        command.startswith(("/", "./", "../"))
-        or "\\" in command
-        or (len(command) >= drive_letter_len and command[1:3] == ":\\")
-    )
-    command_only = command.split()[0] if not is_file_path and command.strip() else command
-    base_command = Path(command_only.replace("\\", "/")).name
+    r"""Extract an executable name from a validated platform-specific path."""
+    base_command = Path(command.replace("\\", "/")).name
     return base_command[:-4] if base_command.lower().endswith(".exe") else base_command
 
 
@@ -137,6 +124,28 @@ def validate_mcp_stdio_config(
         MCPStdioSecurityError: If the config violates the command, argument, environment,
             shell-wrapper, or Docker policy.
     """
+    if command:
+        # The command field is exactly one executable. Options belong in the structured args
+        # list so every policy layer sees the same argv. Parent-directory spaces remain valid
+        # for paths such as ``C:\Program Files\node.exe`` and ``/opt/Node Tools/node``.
+        normalized = command.replace("\\", "/")
+        executable_name = normalized.rsplit("/", 1)[-1]
+        first_space = command.find(" ")
+        first_separator = min((index for index, char in enumerate(command) if char in "/\\"), default=-1)
+        invalid_whitespace = command != command.strip() or any(char.isspace() and char != " " for char in command)
+        space_without_path_prefix = first_space >= 0 and not 0 <= first_separator < first_space
+        if (
+            not executable_name
+            or invalid_whitespace
+            or space_without_path_prefix
+            or any(char.isspace() for char in executable_name)
+        ):
+            msg = (
+                "MCP stdio command must be a single executable name or path; "
+                "put options and arguments in the 'args' field"
+            )
+            raise MCPStdioSecurityError(msg)
+
     _validate_mcp_stdio_config(command, args, env, depth=0, seen=frozenset())
 
 
@@ -151,7 +160,6 @@ def _validate_mcp_stdio_config(
     executable = command
     combined_args = list(args or [])
     if command:
-        executable, combined_args = split_mcp_stdio_command(command, args)
         signature = (executable, tuple(combined_args))
         if signature in seen:
             msg = "MCP stdio shell wrapper recursion is not allowed"
