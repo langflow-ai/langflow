@@ -24,6 +24,11 @@ _MODEL_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
     ),
     # AzureChatOpenAI ships in langchain_openai (already a dependency).
     "AzureChatOpenAI": ("langchain_openai", "AzureChatOpenAI", None),
+    "AzureAIOpenAIApiChatModel": (
+        "langchain_azure_ai.chat_models",
+        "AzureAIOpenAIApiChatModel",
+        "langchain-azure-ai",
+    ),
     # ChatGroq needs the optional langchain-groq package — keep the install
     # hint so an unconfigured environment gets an actionable error instead of
     # an opaque "Unknown model class: ChatGroq". Both class names appear in
