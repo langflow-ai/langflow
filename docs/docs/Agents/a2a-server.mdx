@@ -78,8 +78,8 @@ The **Agent** tab also shows the card's **Input contract**, the fields a caller 
 
 Whether the JSON-RPC endpoint requires a key depends on the [authentication settings of the flow's project](/mcp-server#authentication):
 
-* **API key**: The agent card advertises an `apiKey` security scheme, and `message/send` and `message/stream` require a valid owner API key in the `x-api-key` header. Requests without a valid key return `401`.
-* **None** or **OAuth**: The endpoint is public, and the card advertises no security scheme.
+* **API key** or **OAuth**: The agent card advertises an `apiKey` security scheme, and `message/send` and `message/stream` require a valid owner API key in the `x-api-key` header. Requests without a valid key return `401`. An OAuth project is fronted by an external broker, but the A2A transport itself still takes an owner-scoped API key, the same way the MCP transport does.
+* **None**: The endpoint is public, and the card advertises no security scheme.
 
 The agent card itself is always public, so clients can always discover the agent. Only the JSON-RPC surface enforces the key.
 
