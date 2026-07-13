@@ -31,9 +31,9 @@ import {
 import useAlertStore from "@/stores/alertStore";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
+import { BooleanFieldRow } from "./components/BooleanFieldRow";
 import { ProviderListItem } from "./components/ProviderListItem";
-
-const MASKED_VALUE = "••••••••";
+import { TextFieldRow } from "./components/TextFieldRow";
 
 type ApiError = {
   response?: {
@@ -688,110 +688,6 @@ function ProviderConfigurationPanel({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function TextFieldRow({
-  field,
-  value,
-  hasNewValue,
-  isEditingSecret,
-  existingValue,
-  isSecretConfigured,
-  disabled,
-  onChange,
-  onFocus,
-  onBlur,
-}: {
-  field: DBProviderTextField;
-  value: string;
-  hasNewValue: boolean;
-  isEditingSecret: boolean;
-  existingValue: string | undefined;
-  isSecretConfigured?: boolean;
-  disabled: boolean;
-  onChange: (value: string) => void;
-  onFocus: () => void;
-  onBlur: () => void;
-}) {
-  // Show redacted dots when a secret is configured (variable exists) and
-  // the user is neither actively editing nor has typed a new value this
-  // session. Use ``isSecretConfigured`` (variable existence) rather than
-  // ``existingValue`` (returned API value) because credential-type
-  // variables are not exposed in the global-variables API response.
-  const { t } = useTranslation();
-  const shouldMask =
-    field.isSecret &&
-    (isSecretConfigured ?? !!existingValue) &&
-    !hasNewValue &&
-    !isEditingSecret;
-  const inputValue = shouldMask ? MASKED_VALUE : value;
-
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[12px] font-medium text-muted-foreground">
-        {t(`settings.dbProviders.fields.${field.variableKey}.label`, {
-          defaultValue: field.label,
-        })}
-        {field.required && <span className="ml-1 text-destructive">*</span>}
-      </span>
-      <Input
-        placeholder={field.placeholder}
-        value={inputValue}
-        type={field.isSecret ? "password" : "text"}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        onFocus={onFocus}
-        onBlur={onBlur}
-      />
-      <span className="text-[11px] text-muted-foreground">
-        {t("settings.dbProviders.savedAsGlobalVariable")}{" "}
-        <span className="font-mono">{field.variableKey}</span>
-      </span>
-    </label>
-  );
-}
-
-function BooleanFieldRow({
-  field,
-  value,
-  disabled,
-  onChange,
-}: {
-  field: DBProviderBooleanField;
-  value: boolean;
-  disabled: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-muted/20 px-3 py-2">
-      <div className="flex min-w-0 flex-col">
-        <span className="text-[12px] font-medium">
-          {t(`settings.dbProviders.fields.${field.variableKey}.label`, {
-            defaultValue: field.label,
-          })}
-        </span>
-        {field.helperText && (
-          <span className="pt-0.5 text-[11px] text-muted-foreground">
-            {t(`settings.dbProviders.fields.${field.variableKey}.helperText`, {
-              defaultValue: field.helperText,
-            })}
-          </span>
-        )}
-        <span className="pt-1 text-[11px] text-muted-foreground">
-          {t("settings.dbProviders.savedAsGlobalVariable")}{" "}
-          <span className="font-mono">{field.variableKey}</span>
-        </span>
-      </div>
-      <Switch
-        checked={value}
-        onCheckedChange={onChange}
-        disabled={disabled}
-        aria-label={field.label}
-        data-testid={`db-provider-toggle-${field.variableKey}`}
-      />
     </div>
   );
 }
