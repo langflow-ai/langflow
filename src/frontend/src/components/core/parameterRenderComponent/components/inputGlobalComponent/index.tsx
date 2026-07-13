@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
-import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
+import GlobalVariableDeleteConfirmation from "@/components/core/globalVariableDeleteConfirmation";
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
@@ -146,7 +146,7 @@ export default function InputGlobalComponent({
 
   // Render delete button for each option
   const renderDeleteButton = (option: string) => (
-    <GeneralDeleteConfirmationModal
+    <GlobalVariableDeleteConfirmation
       option={option}
       onConfirmDelete={() => handlers.handleVariableDelete(option)}
     />

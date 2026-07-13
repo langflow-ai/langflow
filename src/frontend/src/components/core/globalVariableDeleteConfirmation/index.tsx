@@ -8,15 +8,15 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 
-interface GeneralDeleteConfirmationModalProps {
+interface GlobalVariableDeleteConfirmationProps {
   option: string;
   onConfirmDelete: () => void;
 }
 
-const GeneralDeleteConfirmationModal = ({
+const GlobalVariableDeleteConfirmation = ({
   option,
   onConfirmDelete,
-}: GeneralDeleteConfirmationModalProps) => {
+}: GlobalVariableDeleteConfirmationProps) => {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
@@ -78,4 +78,4 @@ const GeneralDeleteConfirmationModal = ({
   );
 };
 
-export default GeneralDeleteConfirmationModal;
+export default GlobalVariableDeleteConfirmation;
