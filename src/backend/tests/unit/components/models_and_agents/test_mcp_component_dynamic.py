@@ -87,6 +87,22 @@ class TestCacheKey:
 
         assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
 
+    def test_different_users_produce_different_keys(self) -> None:
+        a = MCPToolsComponent()
+        a._user_id = "tenant-a"
+        b = MCPToolsComponent()
+        b._user_id = "tenant-b"
+
+        assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
+
+    def test_same_user_produces_identical_keys(self) -> None:
+        a = MCPToolsComponent()
+        a._user_id = "tenant-a"
+        b = MCPToolsComponent()
+        b._user_id = "tenant-a"
+
+        assert a._mcp_servers_cache_key("srv") == b._mcp_servers_cache_key("srv")
+
     def test_same_headers_produce_identical_keys(self) -> None:
         a = MCPToolsComponent()
         a.headers = [{"key": "Authorization", "value": "Bearer same"}]

@@ -435,9 +435,13 @@ uv run lfx serve my-flow.json --upgrade-flow=safe
 | `--no-env-fallback` / `--env-fallback` | Disable process-environment fallback for credential resolution. Use with per-request `LANGFLOW_REQUEST_VARIABLES`. Default: `--env-fallback`. |
 | `--port`, `-p` | Port to bind the server to. Default: `8000`. |
 | `--stdin` | Read JSON flow content from `stdin`. Example: `cat flow.json | uv run lfx serve --stdin`. |
+| `--max-requests` | Recycle each worker after N requests to bound memory (gunicorn, Unix, `--workers > 1`). Default: every ~1000 (10% jitter); `0` disables; `1` = every request. Worker hygiene, **not** per-request isolation. Not applied on Windows. |
+| `--reset-environ` / `--no-reset-environ` | Snapshot/restore `os.environ` around each flow run so one request's env mutations or request-scoped credentials can't leak into the next on a warm worker. **A strict per-request isolation mechanism** (any worker, any platform). Default: `--no-reset-environ` (off). |
+| `--use-sync-workers` / `--use-async-workers` | Multi-worker only (`--workers > 1`, Unix). gunicorn's blocking `sync` worker serves one request at a time per worker, so the kernel routes each to an idle worker. With `--max-requests 1` it is **the other strict per-request isolation mechanism** (each request gets a fresh process). Uses the `a2wsgi` bridge, which ships with lfx on Unix. Default: `--use-async-workers`. |
+| `--timeout` | Worker timeout in seconds (gunicorn, Unix, `--workers > 1`): a worker that doesn't finish a request in this many seconds is killed and restarted. Raise it for long flows, especially with `--use-sync-workers`. Default: `120`. No effect on Windows. |
 | `--upgrade-flow` | Compatibility mode: `check` reports issues and fails, `safe` applies safe upgrades in memory. |
 | `--verbose`, `-v` | Show diagnostic output and execution details. |
-| `--workers`, `-w` | Number of uvicorn worker processes. Default: `1`. Use with `--flow-dir` for multi-worker flow sharing. |
+| `--workers`, `-w` | Number of worker processes. Use with `--flow-dir` for multi-worker flow sharing. Default: `1`. |
 
 ## Run the simple agent flow with `lfx run`
 
