@@ -50,6 +50,8 @@
   "alerts.noChatOutput": "Não há nenhum componente \" ChatOutput \" no fluxo.",
   "alerts.noTemplateVariables": "Seu modelo não contém nenhuma variável.",
   "alerts.notificationsTitle": "Notificações",
+  "alerts.clearNotifications": "Limpar notificações",
+  "alerts.closeNotifications": "Fechar notificações",
   "apiKey.expirationDate": "data de expiração",
   "apiKey.copy": "Copiar chave de API",
   "apiKey.generated": "Chave de API gerada",
