@@ -580,7 +580,12 @@ class TestMCPCommandInjectionSecurity:
         assert "not allowed" in error_msg.lower()
 
     def test_shellopts_ps4_trace_env_rejected(self):
-        """Test that SHELLOPTS/PS4 env vars are rejected (bash xtrace prompt command substitution)."""
+        """Test that SHELLOPTS/PS4 env vars are rejected (bash xtrace prompt command substitution).
+
+        SHELLOPTS/BASHOPTS can enable bash xtrace mode where PS4 is evaluated as a command,
+        allowing arbitrary code execution via $(command) substitution in the prompt.
+        For example: PS4='$(malicious_command)' enables command injection when xtrace is active.
+        """
         with pytest.raises(ValidationError) as exc_info:
             MCPServerConfig(
                 command="python3",

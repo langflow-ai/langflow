@@ -294,7 +294,9 @@ lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
 huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
-metaphor = ["metaphor-python==0.1.23"]
+# Backwards-compatible alias: the Exa Search component moved to the lfx-exa
+# bundle and now uses exa-py; metaphor-python is deprecated and unused.
+metaphor = ["exa-py>=1.14,<3"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
 # Deliberately retained after the lfx-amazon graduation: boto3 also backs
@@ -417,8 +419,8 @@ gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 # SDKs for IBM watsonx Orchestrate deployment adapter.
 ibm-watsonx-clients = [
     "ibm-cloud-sdk-core~=3.24.4",
-    "ibm-watsonx-orchestrate-core~=2.8.0; python_version >= '3.11' and python_version < '3.14'",
-    "ibm-watsonx-orchestrate-clients~=2.8.0; python_version >= '3.11' and python_version < '3.14'",
+    "ibm-watsonx-orchestrate-core~=2.12.0; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-clients~=2.12.0; python_version >= '3.11'",
 ]
 
 complete = [
@@ -426,10 +428,11 @@ complete = [
     # langflow-base's OWN code imports -- service backends (cache, knowledge
     # base), the tracing/observability backends in langflow.services.tracing.*,
     # MCP, and deployment adapters. Provider *component* dependencies now live in
-    # the lfx-* bundles (installed via langflow's "lfx-bundles[all]" dependency),
-    # so they are intentionally NOT re-declared here -- doing so re-pulled large,
-    # already-bundled stacks (and torch) into every install. When adding a base
-    # extra, only list it here if langflow-base itself imports it.
+    # the lfx-* bundles (installed via langflow's "lfx-bundles[all-no-torch]"
+    # default plus explicit bundle deps), so they are intentionally NOT
+    # re-declared here -- doing so re-pulled large, already-bundled stacks (and
+    # torch) into every install. When adding a base extra, only list it here if
+    # langflow-base itself imports it.
 
     # Cache / state
     "langflow-base[redis]",
@@ -444,6 +447,11 @@ complete = [
     "langflow-base[opik]",
     "langflow-base[traceloop]",
     "langflow-base[openlayer]",
+    # Document processing / OCR: docling and easyocr are now OPT-IN -- both pull
+    # torch, which is no longer shipped by default. The File component's docling
+    # path degrades gracefully and is enabled with: pip install "langflow[docling]".
+    # Both extra definitions remain, so langflow-base[docling] / [easyocr] still
+    # install on demand.
     # MCP
     "langflow-base[mcp]",
     # Orchestration / deployment adapters
@@ -459,10 +467,7 @@ complete = [
     #   litellm -- langfuse logging via litellm.proxy.proxy_server (#12228);
     #              the lfx-bundles litellm component uses the langchain-openai
     #              client and does not import the litellm package.
-    #   docling -- the File component's optional docling path; this also gates
-    #              torch and is made opt-in by the separate torch change.
     "langflow-base[litellm]",
-    "langflow-base[docling]",
 ]
 
 all = [

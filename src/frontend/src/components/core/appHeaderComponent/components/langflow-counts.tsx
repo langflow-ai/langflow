@@ -26,7 +26,6 @@ export const LangflowCounts = () => {
           unstyled
           onClick={() => window.open(GITHUB_URL, "_blank")}
           className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
-          aria-label={`GitHub ${formattedStars}`.trim()}
         >
           <span className="sr-only">{t("header.goToGithub")}</span>
           <div className="relative items-center rounded-md px-2 py-1 flex">
@@ -49,7 +48,6 @@ export const LangflowCounts = () => {
           unstyled
           onClick={() => window.open(DISCORD_URL, "_blank")}
           className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
-          aria-label={`Discord ${formattedDiscordCount}`.trim()}
         >
           <span className="sr-only">{t("header.goToDiscord")}</span>
           <div className="relative items-center rounded-md px-2 py-1 flex">
