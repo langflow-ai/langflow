@@ -180,7 +180,7 @@ def get_language_model_options(
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:
         replace_with_live_models(all_models, user_id, enabled_providers, "llm", model_provider_metadata)
-    inject_custom_enabled_models(all_models, explicitly_enabled_models)
+    inject_custom_enabled_models(all_models, explicitly_enabled_models, model_type="llm")
 
     options = []
 
@@ -298,7 +298,7 @@ def get_embedding_model_options(
             "embeddings",
             model_provider_metadata,
         )
-    inject_custom_enabled_models(all_models, explicitly_enabled_models)
+    inject_custom_enabled_models(all_models, explicitly_enabled_models, model_type="embeddings")
 
     options = []
 

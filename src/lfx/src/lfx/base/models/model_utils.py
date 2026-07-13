@@ -795,6 +795,10 @@ def _live_models_to_catalog_shape(live_models: list[dict]) -> list[dict]:
 def inject_custom_enabled_models(
     provider_models: list[dict],
     explicitly_enabled_models: set[str],
+    *,
+    model_name: str | None = None,
+    model_type: str | None = None,
+    metadata_filters: dict | None = None,
 ) -> None:
     """Append explicitly enabled models that are missing from the catalog.
 
@@ -803,6 +807,11 @@ def inject_custom_enabled_models(
     can still enable those names via free-text; this merges them into the
     provider lists so Settings and the Agent/Language Model pickers can
     surface them.
+
+    When *model_name*, *model_type*, or *metadata_filters* are set (same
+    semantics as ``get_unified_models_detailed`` / ``list_models``), only
+    matching custom entries are injected so filtered API responses stay
+    consistent.
     """
     if not explicitly_enabled_models:
         return
@@ -824,33 +833,44 @@ def inject_custom_enabled_models(
             if isinstance(model.get("model_name"), str)
         }
 
-    for entry in explicitly_enabled_models:
+    # Stable order: set iteration is unordered across runs/processes.
+    for entry in sorted(explicitly_enabled_models):
         if _MODEL_STATUS_KEY_SEPARATOR not in entry:
             continue
-        provider, model_name = entry.split(_MODEL_STATUS_KEY_SEPARATOR, 1)
-        model_name = model_name.strip()
-        if not provider or not model_name:
+        provider, custom_name = entry.split(_MODEL_STATUS_KEY_SEPARATOR, 1)
+        custom_name = custom_name.strip()
+        if not provider or not custom_name:
+            continue
+        if model_name is not None and custom_name != model_name:
             continue
         provider_dict = provider_dicts.get(provider)
         if provider_dict is None:
             continue
         known = known_by_provider.setdefault(provider, set())
-        if model_name in known:
+        if custom_name in known:
             continue
+
+        # Prefer the request's model_type; default to llm for unfiltered lists
+        # (Settings "all" / enabled_models), matching chat deployment usage.
+        resolved_type = model_type or "llm"
         icon = provider_meta.get(provider, {}).get("icon", "Bot")
+        metadata = {
+            "icon": icon,
+            "model_type": resolved_type,
+            "tool_calling": resolved_type == "llm",
+            "default": False,
+        }
+        if metadata_filters and any(metadata.get(k) != v for k, v in metadata_filters.items()):
+            continue
+
         provider_dict.setdefault("models", []).append(
             {
-                "model_name": model_name,
-                "metadata": {
-                    "icon": icon,
-                    "model_type": "llm",
-                    "tool_calling": True,
-                    "default": False,
-                },
+                "model_name": custom_name,
+                "metadata": metadata,
             }
         )
         provider_dict["num_models"] = len(provider_dict["models"])
-        known.add(model_name)
+        known.add(custom_name)
 
 
 def replace_with_live_models(

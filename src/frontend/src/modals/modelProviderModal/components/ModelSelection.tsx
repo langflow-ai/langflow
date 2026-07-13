@@ -196,9 +196,15 @@ const ModelSelection = ({
   const supportsCustomDeployments =
     !!providerName && CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName);
 
+  // Free-text deployments are typed for the current Settings view so they
+  // appear under Language models vs Embeddings. "all" defaults to llm
+  // (Foundry chat deployments); embeddings view tags as embeddings.
+  const customDeploymentModelType: "llm" | "embeddings" =
+    modelType === "embeddings" ? "embeddings" : "llm";
+
   // Merge free-text deployments the user already enabled but that are not yet
   // in the static/live catalog (e.g. Azure AI Foundry portal names). Prefer the
-  // catalog row when both exist.
+  // catalog row when both exist for the same model_type.
   const modelsWithCustomDeployments = useMemo(() => {
     if (!supportsCustomDeployments || !providerName) {
       return availableModels;
@@ -206,16 +212,20 @@ const ModelSelection = ({
     const enabledForProvider =
       enabledModelsData?.enabled_models?.[providerName] ?? {};
     const knownNames = new Set(
-      availableModels.map((model) => model.model_name),
+      availableModels
+        .filter(
+          (model) => model.metadata?.model_type === customDeploymentModelType,
+        )
+        .map((model) => model.model_name),
     );
     const customModels: Model[] = Object.entries(enabledForProvider)
       .filter(([name, enabled]) => enabled && !knownNames.has(name))
       .map(([name]) => ({
         model_name: name,
         metadata: {
-          model_type: "llm",
+          model_type: customDeploymentModelType,
           icon: "Azure",
-          tool_calling: true,
+          tool_calling: customDeploymentModelType === "llm",
         },
       }));
     return customModels.length > 0
@@ -223,6 +233,7 @@ const ModelSelection = ({
       : availableModels;
   }, [
     availableModels,
+    customDeploymentModelType,
     enabledModelsData?.enabled_models,
     providerName,
     supportsCustomDeployments,
@@ -362,6 +373,14 @@ const ModelSelection = ({
     supportsCustomDeployments ||
     (!noModelsAvailable && modelsWithCustomDeployments.length > 0);
 
+  const searchInputLabel = supportsCustomDeployments
+    ? t("modelProviders.searchOrAddDeployment", {
+        defaultValue: "Search or add a deployment name…",
+      })
+    : t("modelProviders.searchModels", {
+        defaultValue: "Search models…",
+      });
+
   return (
     <div data-testid="model-provider-selection" className="flex flex-col gap-6">
       {supportsCustomDeployments ? (
@@ -380,24 +399,8 @@ const ModelSelection = ({
           icon="Search"
           value={modelQuery}
           onChange={(event) => setModelQuery(event.target.value)}
-          placeholder={
-            supportsCustomDeployments
-              ? t("modelProviders.searchOrAddDeployment", {
-                  defaultValue: "Search or add a deployment name…",
-                })
-              : t("modelProviders.searchModels", {
-                  defaultValue: "Search models…",
-                })
-          }
-          aria-label={
-            supportsCustomDeployments
-              ? t("modelProviders.searchOrAddDeployment", {
-                  defaultValue: "Search or add a deployment name…",
-                })
-              : t("modelProviders.searchModels", {
-                  defaultValue: "Search models…",
-                })
-          }
+          placeholder={searchInputLabel}
+          aria-label={searchInputLabel}
           data-testid="model-search-input"
         />
       )}

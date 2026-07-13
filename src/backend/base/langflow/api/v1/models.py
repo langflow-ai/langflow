@@ -207,9 +207,17 @@ async def list_models(
 
     # Free-text / custom deployment names (e.g. Azure AI Foundry portal names)
     # live only in the user's enabled-models variable — merge them into the
-    # catalog so Settings and the picker can list them.
+    # catalog so Settings and the picker can list them. Honor the same filters
+    # as the static catalog query so ?model_name= / ?model_type= / metadata
+    # params do not suddenly return unmatched custom rows.
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
-    inject_custom_enabled_models(filtered_models, explicitly_enabled_models)
+    inject_custom_enabled_models(
+        filtered_models,
+        explicitly_enabled_models,
+        model_name=model_name,
+        model_type=model_type,
+        metadata_filters=metadata_filters or None,
+    )
 
     # replace_with_live_models iterates every live-capable provider regardless of
     # the ?provider= filter, so it can append providers the caller excluded (e.g.

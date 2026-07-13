@@ -77,6 +77,61 @@ def test_inject_custom_enabled_models_appends_missing_deployments():
     assert custom["metadata"]["tool_calling"] is True
 
 
+def test_inject_custom_enabled_models_respects_filters_and_stable_order():
+    provider_models = [
+        {
+            "provider": "Azure AI Foundry",
+            "models": [],
+            "num_models": 0,
+        }
+    ]
+    enabled = {
+        "Azure AI Foundry::zeta-deploy",
+        "Azure AI Foundry::alpha-deploy",
+        "Azure AI Foundry::beta-deploy",
+    }
+
+    inject_custom_enabled_models(
+        provider_models,
+        enabled,
+        model_type="llm",
+        metadata_filters={"tool_calling": True},
+    )
+    names = [model["model_name"] for model in provider_models[0]["models"]]
+    assert names == ["alpha-deploy", "beta-deploy", "zeta-deploy"]
+
+    # model_name filter keeps a single match
+    provider_models[0]["models"] = []
+    inject_custom_enabled_models(
+        provider_models,
+        enabled,
+        model_name="beta-deploy",
+        model_type="llm",
+    )
+    assert [m["model_name"] for m in provider_models[0]["models"]] == ["beta-deploy"]
+
+    # embeddings type + tool_calling=True must not inject (custom embeddings are not tools)
+    provider_models[0]["models"] = []
+    inject_custom_enabled_models(
+        provider_models,
+        enabled,
+        model_type="embeddings",
+        metadata_filters={"tool_calling": True},
+    )
+    assert provider_models[0]["models"] == []
+
+    provider_models[0]["models"] = []
+    inject_custom_enabled_models(
+        provider_models,
+        {"Azure AI Foundry::text-embed"},
+        model_type="embeddings",
+    )
+    custom = provider_models[0]["models"][0]
+    assert custom["model_name"] == "text-embed"
+    assert custom["metadata"]["model_type"] == "embeddings"
+    assert custom["metadata"]["tool_calling"] is False
+
+
 async def test_provider_cleanup_migrates_legacy_entries_before_removing_target_provider():
     variable_id = uuid4()
     variable_service = SimpleNamespace(

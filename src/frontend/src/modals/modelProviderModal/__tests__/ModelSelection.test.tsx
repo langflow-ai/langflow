@@ -352,6 +352,32 @@ describe("ModelSelection", () => {
         screen.queryByTestId("add-custom-deployment-button"),
       ).not.toBeInTheDocument();
     });
+
+    it("surfaces enabled customs as embeddings in the embeddings view", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="embeddings"
+          providerName="Azure AI Foundry"
+          availableModels={[
+            {
+              model_name: "text-embedding-3-small",
+              metadata: { model_type: "embeddings", icon: "Azure" },
+            },
+          ]}
+        />,
+      );
+
+      // gpt-5-mini is enabled but only present in the API as an llm seed /
+      // injected row elsewhere — embeddings view still merges it as embeddings.
+      expect(screen.getByText("gpt-5-mini")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("embeddings-models-section"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("llm-models-section"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("Deprecated disclosure", () => {
