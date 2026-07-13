@@ -1,5 +1,5 @@
 ---
-title: Operations
+title: Data Operations
 slug: /operations
 ---
 
@@ -12,26 +12,26 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 Prior to Langflow 1.11.0, text, JSON, and table processing were handled by separate **Text Operations**, **JSON Operations**, and **Table Operations** components.
 :::
 
-The **Operations** component performs operations on [`Message`](/data-types#message), [`JSON`](/data-types#json), or [`Table`](/data-types#table) inputs.
+The **Data Operations** component performs operations on [`Message`](/data-types#message), [`JSON`](/data-types#json), or [`Table`](/data-types#table) inputs.
 Set **Input Type** to choose which operation set is available.
 The output type depends on the selected operation and input type.
 
-## Use the Operations component in a flow
+## Use the Data Operations component in a flow
 
-This example demonstrates a complete data transformation pipeline using multiple **Operations** components with different input types.
+This example demonstrates a complete data transformation pipeline using multiple **Data Operations** components with different input types.
 
 Send a sample JSON message to the webhook, and the pipeline extracts the `products` array, filters products with stock greater than zero, sorts them by price, and displays the filtered results.
 
-![A data transformation flow using Operations component with Webhook, Type Convert, and Chat Output components](/img/component-operations.png)
+![A data transformation flow using Data Operations component with Webhook, Type Convert, and Chat Output components](/img/component-operations.png)
 
 1. Add a [**Webhook** component](/webhook) to receive JSON data.
-2. Add an **Operations** component to select keys.
+2. Add a **Data Operations** component to select keys.
     Set **Input Type** to `JSON`, **Operation** to **Select Keys**, and enter the key `products` to extract the products array.
 3. Add a [**Type Convert** component](/type-convert) to convert `JSON` to `Table`.
     Set **Input Type** to `JSON` and **Output Type** to `Table`.
-4. Add another **Operations** component to filter rows.
+4. Add another **Data Operations** component to filter rows.
     Set **Input Type** to `Table`, **Operation** to **Filter**, **Column Name** to `stock`, **Filter Operator** to `greater than`, and **Filter Value** to `0`.
-5. Add another **Operations** component to sort the results.
+5. Add another **Data Operations** component to sort the results.
     Set **Input Type** to `Table`, **Operation** to **Sort**, **Column Name** to `price`, and enable **Sort Ascending**.
 6. Add a **Chat Output** component to display the results.
 7. To test your flow, send the following JSON to your webhook endpoint.
@@ -79,7 +79,7 @@ Send a sample JSON message to the webhook, and the pipeline extracts the `produc
     ```
 
 The result should be a `Table` of in-stock products sorted by price in the **Playground**.
-To inspect each **Operations** component's transformation step in the pipeline, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output**.
+To inspect each **Data Operations** component's transformation step in the pipeline, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output**.
 
 ## Examples
 
@@ -88,9 +88,9 @@ To inspect each **Operations** component's transformation step in the pipeline, 
 
 ### Clean text from a language model
 
-The following example demonstrates how to use an **Operations** component to clean text output from a language model before passing it to another component:
+The following example demonstrates how to use a **Data Operations** component to clean text output from a language model before passing it to another component:
 
-1. Create a flow with a **Language Model** component and an **Operations** component, and then connect the **Language Model** component's **Message** output to the **Operations** component's **Text Input**.
+1. Create a flow with a **Language Model** component and a **Data Operations** component, and then connect the **Language Model** component's **Message** output to the **Data Operations** component's **Text Input**.
 
     All text operations require a text string as input.
     If the preceding component doesn't produce `Message` or text output, you can use the [**Type Convert** component](/type-convert) to reformat the data first.
@@ -99,33 +99,33 @@ The following example demonstrates how to use an **Operations** component to cle
 
     :::tip
     You can select only one operation.
-    If you need to perform multiple operations, chain multiple **Operations** components together to execute each operation in sequence.
+    If you need to perform multiple operations, chain multiple **Data Operations** components together to execute each operation in sequence.
     :::
 
 3. Enable **Remove Extra Spaces** and **Remove Empty Lines** to normalize the model's output.
 
 4. Optional: Connect the output to a **Chat Output** component to view the result in the **Playground**.
 
-5. Click <Icon name="Play" aria-hidden="true" /> **Run component** on the **Operations** component, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the result.
+5. Click <Icon name="Play" aria-hidden="true" /> **Run component** on the **Data Operations** component, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the result.
 
 </TabItem>
 <TabItem value="json" label="JSON">
 
 ### Select keys from a webhook payload
 
-The following example demonstrates how to use an **Operations** component in a flow using data from a webhook payload:
+The following example demonstrates how to use a **Data Operations** component in a flow using data from a webhook payload:
 
-1. Create a flow with a **Webhook** component and an **Operations** component, and then connect the **Webhook** component's output to the **Operations** component's **JSON** input.
+1. Create a flow with a **Webhook** component and a **Data Operations** component, and then connect the **Webhook** component's output to the **Data Operations** component's **JSON** input.
 
     All JSON operations require at least one `JSON` input from another component.
-    If the preceding component doesn't produce `JSON` output, you can use another component, such as the [**Type Convert** component](/type-convert), to reformat the data before passing it to the **Operations** component.
-    Alternatively, you could consider using a component that is designed to process the original data type, such as the [**Parser** component](/parser) or another **Operations** component with **Input Type** set to `Table`.
+    If the preceding component doesn't produce `JSON` output, you can use another component, such as the [**Type Convert** component](/type-convert), to reformat the data before passing it to the **Data Operations** component.
+    Alternatively, you could consider using a component that is designed to process the original data type, such as the [**Parser** component](/parser) or another **Data Operations** component with **Input Type** set to `Table`.
 
 2. Set **Input Type** to `JSON`, and then select **Select Keys** in the **Operation** field.
 
     :::tip
     You can select only one operation.
-    If you need to perform multiple operations on the data, you can chain multiple **Operations** components together to execute each operation in sequence.
+    If you need to perform multiple operations on the data, you can chain multiple **Data Operations** components together to execute each operation in sequence.
     For more complex multi-step operations, consider using a component like the [**Smart Transform** component](/smart-transform).
     :::
 
@@ -135,9 +135,9 @@ The following example demonstrates how to use an **Operations** component in a f
     For this example, assume that the webhook will receive consistent payloads that always contain `name`, `username`, and `email` keys.
     The **Select Keys** operation extracts the value of these keys from each incoming payload.
 
-4. Optional: If you want to view the output in the **Playground**, connect the **Operations** component's output to a **Chat Output** component.
+4. Optional: If you want to view the output in the **Playground**, connect the **Data Operations** component's output to a **Chat Output** component.
 
-    ![A flow with Webhook, JSON Operations, and Chat Output components](/img/component-data-operations-select-key.png)
+    ![A flow with Webhook, Data Operations, and Chat Output components](/img/component-data-operations-select-key.png)
 
 5. To test the flow, send the following request to your flow's webhook endpoint.
     For more information about the webhook endpoint, see [Trigger flows with webhooks](/webhook).
@@ -174,7 +174,7 @@ The following example demonstrates how to use an **Operations** component in a f
 6. To view the `JSON` resulting from the **Select Keys** operation, do one of the following:
 
    * If you attached a **Chat Output** component, open the **Playground** to see the result as a chat message.
-   * Click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on the **Operations** component.
+   * Click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on the **Data Operations** component.
 
 ### Path Selection operation
 
@@ -206,7 +206,7 @@ Use the **Path Selection** operation to extract values from nested JSON structur
 Use the **JQ Expression** operation to use the [jq](https://jqlang.org/) query language to perform more advanced JSON filtering.
 
 1. Set **Input Type** to `JSON`, and then select **JQ Expression** in the **Operation** field.
-2. In the **JQ Expression** field, enter a `jq` filter to query against the **Operations** component's **JSON** input.
+2. In the **JQ Expression** field, enter a `jq` filter to query against the **Data Operations** component's **JSON** input.
 
     For this example JSON structure, enter expressions like `.user.profile.name` to extract "John Doe", `.user.profile | {name, email}` to project fields to a new object, or `.user.profile | tostring` to convert the field to a string.
     ```json
@@ -228,13 +228,13 @@ Use the **JQ Expression** operation to use the [jq](https://jqlang.org/) query l
 
 ### Extract and process an API response
 
-The following example flow uses five components to extract `JSON` from an API response, transform it to a `Table`, and then perform further processing on tabular data using an **Operations** component.
+The following example flow uses five components to extract `JSON` from an API response, transform it to a `Table`, and then perform further processing on tabular data using a **Data Operations** component.
 The sixth component, **Chat Output**, is optional in this example.
 It only serves as a convenient way for you to view the final output in the **Playground**, rather than inspecting the component logs.
 
-![A flow that ingests an API response, extracts it to a Table with a Smart Transform component, and then processes it through a Table Operations component](/img/component-dataframe-operations.png)
+![A flow that ingests an API response, extracts it to a Table with a Smart Transform component, and then processes it through a Data Operations component](/img/component-dataframe-operations.png)
 
-If you want to use this example to test the **Operations** component, do the following:
+If you want to use this example to test the **Data Operations** component, do the following:
 
 1. Create a flow with the following components:
 
@@ -257,15 +257,15 @@ If you want to use this example to test the **Operations** component, do the fol
     1. Connect the **Filtered Data** output to the **Type Convert** component's **JSON** input.
     2. Set the **Type Convert** component's **Output Type** to **Table**.
 
-4. Add an **Operations** component to the flow, set **Input Type** to `Table`, and then connect `Table` output from the **Type Convert** component to the **Table** input.
+4. Add a **Data Operations** component to the flow, set **Input Type** to `Table`, and then connect `Table` output from the **Type Convert** component to the **Table** input.
 
 5. In the **Operation** field, select the operation you want to perform on the incoming `Table`.
     For example, the **Filter** operation filters the rows based on a specified column and value.
 
     :::tip
     You can select only one operation.
-    If you need to perform multiple operations on the data, you can chain multiple **Operations** components together to execute each operation in sequence.
-    For more complex multi-step operations, like dramatic schema changes or pivots, consider using an LLM-powered component, like the [**Structured Output** component](/structured-output) or [**Smart Transform** component](/smart-transform), as a replacement or preparation for the **Operations** component.
+    If you need to perform multiple operations on the data, you can chain multiple **Data Operations** components together to execute each operation in sequence.
+    For more complex multi-step operations, like dramatic schema changes or pivots, consider using an LLM-powered component, like the [**Structured Output** component](/structured-output) or [**Smart Transform** component](/smart-transform), as a replacement or preparation for the **Data Operations** component.
     :::
 
     If you're following along with the example flow, select any operation that you want to apply to the data that was extracted by the **Smart Transform** component.
@@ -278,16 +278,16 @@ If you want to use this example to test the **Operations** component, do the fol
     For example, if you select the **Filter** operation, you must define a filter condition using the **Column Name**, **Filter Value**, and **Filter Operator** parameters.
     For more information, see [Table operations](#table-operations).
 
-7. To test the flow, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **Operations** component, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the new `Table` created from the operation.
+7. To test the flow, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **Data Operations** component, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the new `Table` created from the operation.
 
-   If you want to view the output in the **Playground**, connect the **Operations** component's output to a **Chat Output** component, rerun the **Operations** component, and then click **Playground**.
+   If you want to view the output in the **Playground**, connect the **Data Operations** component's output to a **Chat Output** component, rerun the **Data Operations** component, and then click **Playground**.
 
 For another example, see [Conditional looping](/loop#conditional-looping).
 
 </TabItem>
 </Tabs>
 
-## Operations parameters
+## Data Operations parameters
 
 Many parameters are conditional based on the selected **Input Type** and **Operation**.
 
@@ -346,7 +346,7 @@ Available when **Input Type** is set to `JSON`.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | JSON | Input parameter. The `JSON` object to operate on. Must be provided as `JSON` data type input generated by another component. If the preceding component doesn't produce `JSON` output, use the [**Type Convert** component](/type-convert) to reformat the data before passing it to the **Operations** component. |
+| data | JSON | Input parameter. The `JSON` object to operate on. Must be provided as `JSON` data type input generated by another component. If the preceding component doesn't produce `JSON` output, use the [**Type Convert** component](/type-convert) to reformat the data before passing it to the **Data Operations** component. |
 | operation | Operation | Input parameter. The operation to perform on the data. See [Available JSON operations](#available-json-operations). |
 | select_keys_input | Select Keys | Input parameter. A list of keys to select from the data. |
 | filter_key | Filter Key | Input parameter. The key to filter by. |
@@ -380,7 +380,7 @@ Available when **Input Type** is set to `Table`.
 
 Most **Table** parameters are conditional because they only apply to specific operations.
 The only permanent parameters are **Table** (`df`), which is the `Table` input, and **Operation** (`operation`), which is the operation to perform on the `Table`.
-Once you select an operation, the conditional parameters for that operation appear on the **Operations** component.
+Once you select an operation, the conditional parameters for that operation appear on the **Data Operations** component.
 
 #### Table operations {#table-operations}
 
