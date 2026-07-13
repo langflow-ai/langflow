@@ -11,7 +11,7 @@ from time import perf_counter
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
-from lfx.base.models.model_remediation import find_remediation, remember
+from lfx.base.models.model_remediation import cached_overrides, find_remediation, remember, restore_overrides
 from lfx.graph.flow_builder.flow import flow_to_spec_summary
 from lfx.log.logger import logger
 from lfx.mcp.flow_builder_tools import (
@@ -552,6 +552,17 @@ async def execute_flow_with_validation_streaming(
     # Non-fatal model errors this turn recovered from (swap or remediation). Attached to
     # the terminal ``complete`` event so a silent background fix is visible, not invisible.
     recovered_notices: list[dict[str, str]] = []
+    # Remediation overrides written to the PROCESS-GLOBAL cache on the bet that the retry
+    # they enable will succeed. Keyed by the model they were written for, valued with that
+    # model's pre-write state, so a turn that still fails can put the cache back instead of
+    # poisoning every later request for that model.
+    provisional_remediations: dict[tuple[str | None, str | None], dict] = {}
+
+    def _rollback_provisional_remediations() -> None:
+        for (prov, mdl), snapshot in provisional_remediations.items():
+            restore_overrides(prov, mdl, snapshot)
+        provisional_remediations.clear()
+
     # The step budget rides to load_and_prepare_flow inside global_variables.
     if iterations_limit is not None:
         global_variables = {**global_variables, "ITERATIONS_LIMIT": str(iterations_limit)}
@@ -996,6 +1007,11 @@ async def execute_flow_with_validation_streaming(
                         )
                         if remediation is not None:
                             applied_remediations.add(remediation.name)
+                            # Provisional: snapshot the pre-write state so an unsuccessful
+                            # retry can undo it (the cache outlives this request).
+                            provisional_remediations.setdefault(
+                                (provider, model_name), cached_overrides(provider, model_name)
+                            )
                             remember(provider, model_name, remediation.overrides)
                             logger.info(
                                 "assistant.model_remediation applied=%s provider=%s model=%s",
@@ -1070,6 +1086,7 @@ async def execute_flow_with_validation_streaming(
                             message="The model produced a malformed tool call — retrying...",
                         )
                         continue
+                    _rollback_provisional_remediations()
                     yield format_error_event(execution_error)
                     return
 
@@ -1082,6 +1099,7 @@ async def execute_flow_with_validation_streaming(
                     yield event
 
                 if attempt >= total_attempts - 1:
+                    _rollback_provisional_remediations()
                     return  # complete event already emitted by the helper
                 current_input = EXECUTION_RETRY_TEMPLATE.format(
                     error=execution_error,
@@ -1091,8 +1109,13 @@ async def execute_flow_with_validation_streaming(
 
             if result is None:
                 logger.error("Flow execution returned no result")
+                _rollback_provisional_remediations()
                 yield format_error_event("Flow execution returned no result")
                 return
+
+            # The flow executed: any remediation applied on the way here is proven, so it
+            # graduates from provisional to remembered. Every success path runs through this.
+            provisional_remediations.clear()
 
             # Step 2: Generation complete
             yield format_progress_event(

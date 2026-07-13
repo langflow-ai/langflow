@@ -168,6 +168,9 @@ export interface AgenticAssistRequest {
   provider?: string;
   max_retries?: number;
   session_id?: string;
+  /** Agent step budget for this turn (`/iterations N`); the backend clamps to
+   * 1–200 and falls back to the flow default when absent. */
+  iterations_limit?: number;
 }
 
 export interface AgenticProgressState {
