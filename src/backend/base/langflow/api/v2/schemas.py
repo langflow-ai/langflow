@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from lfx.base.mcp.source_policy import validate_mcp_stdio_source_policy
 from lfx.base.mcp.util import DANGEROUS_MCP_ENV_VARS, is_dangerous_mcp_env_var
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -262,6 +263,12 @@ class MCPServerConfig(BaseModel):
                 logger.warning("MCP Docker argument rejected: '{}'", arg)
                 raise ValueError(msg)
 
+        return self
+
+    @model_validator(mode="after")
+    def validate_package_sources_and_host_mounts(self) -> "MCPServerConfig":
+        """Apply the shared source/mount policy at configuration write time."""
+        validate_mcp_stdio_source_policy(self.command, self.args)
         return self
 
 

@@ -192,6 +192,55 @@ class TestMCPStdioShellFreeLaunch:
 
         get_session.assert_not_awaited()
 
+    @pytest.mark.parametrize(
+        "dangerous_env",
+        [
+            {"NPM_CONFIG_REGISTRY": "https://packages.example.invalid"},
+            {"UV_DEFAULT_INDEX": "https://packages.example.invalid/simple"},
+            {"UV_INDEX_URL": "https://packages.example.invalid/simple"},
+            {"PIP_INDEX_URL": "https://packages.example.invalid/simple"},
+        ],
+    )
+    async def test_package_source_env_is_rejected_before_any_spawn(self, dangerous_env):
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server("uvx mcp-server", env=dangerous_env)
+
+        get_session.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "uvx --default-index https://packages.example.invalid/simple mcp-server",
+            "uvx --from git+https://code.example.invalid/server.git mcp-server",
+            "npx --registry=https://packages.example.invalid @example/mcp-server",
+            "docker run -v /:/host mcp-server",
+            "docker run --mount type=bind,source=/,target=/host mcp-server",
+            "sh -c 'uvx --default-index https://packages.example.invalid/simple mcp-server'",
+        ],
+    )
+    async def test_source_args_and_host_mounts_are_rejected_before_any_spawn(self, command):
+        client, get_session = self._client_with_mocked_session()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            await client._connect_to_server(command)
+
+        get_session.assert_not_awaited()
+
+    async def test_trusted_uvx_from_and_provider_token_are_preserved(self):
+        client, get_session = self._client_with_mocked_session()
+
+        await client._connect_to_server(
+            "uvx --from lfx lfx-mcp",
+            env={"GITHUB_PERSONAL_ACCESS_TOKEN": "provider-token"},  # pragma: allowlist secret
+        )
+
+        get_session.assert_awaited_once()
+        assert client._connection_params.command == "uvx"
+        assert client._connection_params.args == ["--from", "lfx", "lfx-mcp"]
+        assert client._connection_params.env["GITHUB_PERSONAL_ACCESS_TOKEN"] == "provider-token"  # noqa: S105
+
     async def test_empty_command_is_rejected(self):
         """An empty/whitespace command string raises rather than spawning an empty argv."""
         client, get_session = self._client_with_mocked_session()

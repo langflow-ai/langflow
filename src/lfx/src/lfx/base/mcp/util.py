@@ -23,6 +23,7 @@ from mcp.shared.exceptions import McpError
 from pydantic import BaseModel
 
 from lfx.base.agents.utils import maybe_unflatten_dict
+from lfx.base.mcp.source_policy import is_package_manager_config_env_var, validate_mcp_stdio_source_policy
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
@@ -104,7 +105,11 @@ _mcp_settings_cache: dict[str, Any] = {}
 
 def is_dangerous_mcp_env_var(key: str) -> bool:
     lower_key = key.lower()
-    return lower_key in DANGEROUS_MCP_ENV_VARS or lower_key.startswith("bash_func_")
+    return (
+        lower_key in DANGEROUS_MCP_ENV_VARS
+        or lower_key.startswith("bash_func_")
+        or is_package_manager_config_env_var(lower_key)
+    )
 
 
 def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
@@ -1680,6 +1685,7 @@ class MCPStdioClient:
             msg = "MCP stdio command is empty"
             raise ValueError(msg)
 
+        validate_mcp_stdio_source_policy(command_parts[0], command_parts[1:])
         safe_env = _validate_mcp_stdio_env(env)
         env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **safe_env}
 
