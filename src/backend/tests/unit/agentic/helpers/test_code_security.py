@@ -7,6 +7,7 @@ Tests cover:
 - Edge cases (syntax errors, empty code)
 """
 
+import pytest
 from langflow.agentic.helpers.code_security import scan_code_security
 
 
@@ -185,6 +186,31 @@ class TestScanCodeSecurityDangerousImports:
         code = "import ctypes"
         result = scan_code_security(code)
         assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import _ctypes",
+            "from _ctypes import dlopen",
+            "import cffi",
+            "from cffi import FFI",
+            "import cffi.api",
+            "import _cffi_backend",
+        ],
+        ids=[
+            "ctypes-backend",
+            "ctypes-backend-from",
+            "cffi",
+            "cffi-from",
+            "cffi-submodule",
+            "cffi-backend",
+        ],
+    )
+    def test_should_detect_native_ffi_imports(self, code):
+        """Native FFI entry points can load arbitrary shared libraries."""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("forbidden" in violation for violation in result.violations)
 
     def test_should_detect_from_subprocess_import(self):
         """From subprocess import run should be detected."""
@@ -506,6 +532,91 @@ class TestScanCodeSecurityAliasAndWildcardBypass:
         assert result.is_safe is True
 
 
+class TestScanCodeSecurityAssignmentAliasBypass:
+    """Assignment aliases of imported modules must retain their security policy."""
+
+    def test_should_detect_os_assignment_alias_call(self):
+        result = scan_code_security("import os\nmodule = os\nmodule.system('id')")
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_transitive_assignment_alias_call(self):
+        result = scan_code_security("import os as imported\nfirst = imported\nsecond = first\nsecond.getenv('SECRET')")
+        assert result.is_safe is False
+        assert any("os.getenv()" in violation for violation in result.violations)
+
+    def test_should_detect_chained_assignment_alias_call(self):
+        result = scan_code_security("import os\nfirst = second = os\nsecond.putenv('KEY', 'value')")
+        assert result.is_safe is False
+        assert any("os.putenv()" in violation for violation in result.violations)
+
+    def test_should_detect_annotated_assignment_alias_read(self):
+        result = scan_code_security("import os\nmodule: object = os\nsecret = module.environ['SECRET']")
+        assert result.is_safe is False
+        assert any("os.environ" in violation for violation in result.violations)
+
+    def test_should_detect_destructured_assignment_alias_call(self):
+        result = scan_code_security("import os\n(module,) = (os,)\nmodule.system('id')")
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_named_expression_alias_call(self):
+        result = scan_code_security("import os\nif module := os:\n    module.system('id')")
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_detect_assignment_alias_dotted_submodule(self):
+        result = scan_code_security("import urllib\nmodule = urllib\nmodule.request.urlopen('http://x')")
+        assert result.is_safe is False
+        assert any("urllib.request" in violation for violation in result.violations)
+
+    def test_should_allow_assignment_alias_of_safe_module(self):
+        result = scan_code_security("import requests\nclient = requests\nclient.get('https://api.example.com')")
+        assert result.is_safe is True
+
+    def test_should_allow_assignment_of_safe_module_attribute(self):
+        result = scan_code_security("import os\npath_module = os.path\npath_module.join('a', 'b')")
+        assert result.is_safe is True
+
+    def test_should_allow_alias_rebound_to_safe_value(self):
+        code = "import os\nmodule = os\nmodule = object()\nmodule.system('not the os module')"
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
+    def test_should_not_leak_safe_local_shadow_into_later_function(self):
+        code = """
+import os
+
+def safe_function():
+    os = object()
+    return os
+
+def dangerous_function():
+    os.system('id')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    def test_should_not_leak_local_module_alias_into_outer_scope(self):
+        code = """
+import os
+module = object()
+
+def bind_locally():
+    module = os
+    return module
+
+module.system('not the os module')
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
+    def test_should_allow_parameter_shadowing_module_name(self):
+        result = scan_code_security("import os\ndef use_safe_object(os):\n    os.system('not the os module')")
+        assert result.is_safe is True
+
+
 class TestScanCodeSecurityRuntimeModuleBypass:
     """Runtime module lookup and reflection must not bypass dangerous calls."""
 
@@ -547,6 +658,19 @@ class TestScanCodeSecurityRuntimeModuleBypass:
 
     def test_should_allow_dynamic_getattr_on_ordinary_objects(self):
         result = scan_code_security("field = 'value'\nvalue = getattr(self, field, None)")
+        assert result.is_safe is True
+
+    def test_should_detect_reflective_call_through_assignment_alias(self):
+        result = scan_code_security("import os\nmodule = os\ngetattr(module, 'system')('id')")
+        assert result.is_safe is False
+
+    def test_should_detect_dynamic_getattr_through_assignment_alias(self):
+        result = scan_code_security("import os\nmodule = os\nvalue = getattr(module, self.method_name)")
+        assert result.is_safe is False
+
+    def test_should_allow_getattr_after_alias_is_rebound_to_safe_value(self):
+        code = "import os\nmodule = os\nmodule = object()\nvalue = getattr(module, 'system', None)"
+        result = scan_code_security(code)
         assert result.is_safe is True
 
 

@@ -79,7 +79,12 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
 DANGEROUS_IMPORTS: set[str] = {
     "subprocess",
     "shutil",
+    # Native FFI modules can load arbitrary shared libraries. Include the
+    # lower-level backends so blocking only the public frontends is not bypassable.
     "ctypes",
+    "_ctypes",
+    "cffi",
+    "_cffi_backend",
     "pickle",
     "shelve",
     "marshal",
@@ -185,6 +190,8 @@ def _build_dangerous_members() -> tuple[dict[str, set[str]], dict[str, set[str]]
 
 _DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
 
+_AliasState = tuple[dict[str, frozenset[str]], set[str]]
+
 
 def _collect_imports(tree: ast.AST) -> tuple[dict[str, str], set[str]]:
     """Map local binding names to canonical modules; collect ``import *`` modules.
@@ -221,17 +228,88 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def __init__(self, module_aliases: dict[str, str] | None = None, wildcard_modules: set[str] | None = None):
         self.violations: list[str] = []
-        # local-name -> canonical module (e.g. {"o": "os"}); falls back to the
-        # name itself so unaliased ``os.system()`` still matches.
-        self.module_aliases: dict[str, str] = module_aliases or {}
+        # local-name -> possible canonical module values. A set is needed when
+        # control-flow branches bind the same name differently.
+        self.module_aliases: dict[str, frozenset[str]] = {
+            name: frozenset({module}) for name, module in (module_aliases or {}).items()
+        }
+        # Names explicitly rebound to non-module values must not fall back to
+        # their spelling (e.g. ``os = object(); os.system()`` is not os.system).
+        self.shadowed_aliases: set[str] = set()
         # modules pulled in via ``from <mod> import *``.
         self.wildcard_modules: set[str] = wildcard_modules or set()
+
+    def _resolved_names(self, name: str) -> frozenset[str]:
+        """Return possible canonical values for a local name."""
+        if name in self.shadowed_aliases:
+            return frozenset()
+        return self.module_aliases.get(name, frozenset({name}))
+
+    def _resolved_assignment_value(self, node: ast.AST) -> frozenset[str]:
+        """Resolve a simple Name/Attribute RHS without executing it."""
+        if isinstance(node, ast.Name):
+            return self._resolved_names(node.id)
+        parts = _dotted_parts(node)
+        if not parts:
+            return frozenset()
+        return frozenset(".".join([root, *parts[1:]]) for root in self._resolved_names(parts[0]))
+
+    def _bind_name(self, name: str, values: frozenset[str]) -> None:
+        if values:
+            self.module_aliases[name] = values
+            self.shadowed_aliases.discard(name)
+        else:
+            self.module_aliases.pop(name, None)
+            self.shadowed_aliases.add(name)
+
+    def _bind_assignment_target(self, target: ast.AST, value: ast.AST) -> None:
+        """Apply assignment aliasing, including matching tuple/list unpacking."""
+        if isinstance(target, ast.Name):
+            self._bind_name(target.id, self._resolved_assignment_value(value))
+        elif isinstance(target, ast.Starred):
+            self._bind_assignment_target(target.value, value)
+        elif isinstance(target, (ast.Tuple, ast.List)):
+            if isinstance(value, (ast.Tuple, ast.List)) and len(target.elts) == len(value.elts):
+                for target_element, value_element in zip(target.elts, value.elts, strict=True):
+                    self._bind_assignment_target(target_element, value_element)
+            else:
+                for target_element in target.elts:
+                    self._bind_assignment_target(target_element, value)
+
+    def _snapshot_alias_state(self) -> _AliasState:
+        return self.module_aliases.copy(), self.shadowed_aliases.copy()
+
+    def _restore_alias_state(self, state: _AliasState) -> None:
+        aliases, shadowed = state
+        self.module_aliases = aliases.copy()
+        self.shadowed_aliases = shadowed.copy()
+
+    def _merge_alias_states(self, states: list[_AliasState]) -> None:
+        """Conservatively retain every module value reachable from a branch."""
+        names = set().union(*(set(aliases) | shadowed for aliases, shadowed in states))
+        merged_aliases: dict[str, frozenset[str]] = {}
+        merged_shadowed: set[str] = set()
+        for name in names:
+            possible_values: set[str] = set()
+            for aliases, shadowed in states:
+                if name in aliases:
+                    possible_values.update(aliases[name])
+                elif name not in shadowed:
+                    possible_values.add(name)
+            if possible_values:
+                merged_aliases[name] = frozenset(possible_values)
+            else:
+                merged_shadowed.add(name)
+        self.module_aliases = merged_aliases
+        self.shadowed_aliases = merged_shadowed
 
     def visit_Import(self, node: ast.Import):
         for alias in node.names:
             module = alias.name.split(".")[0]
             if module in DANGEROUS_IMPORTS or _is_dangerous_submodule(alias.name):
                 self.violations.append(f"Import of '{alias.name}' is forbidden in components")
+            binding = alias.asname or module
+            self._bind_name(binding, frozenset({module}))
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):
@@ -254,37 +332,141 @@ class _SecurityChecker(ast.NodeVisitor):
                 if _is_dangerous_submodule(f"{node.module}.{alias.name}"):
                     self.violations.append(f"Import of '{node.module}.{alias.name}' is forbidden in components")
 
+        for alias in node.names:
+            if alias.name != "*":
+                binding = alias.asname or alias.name
+                self._bind_name(binding, frozenset({f"{node.module}.{alias.name}"}))
+
         return self.generic_visit(node)
+
+    def visit_Assign(self, node: ast.Assign):
+        self.visit(node.value)
+        for target in node.targets:
+            self.visit(target)
+            self._bind_assignment_target(target, node.value)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign):
+        self.visit(node.annotation)
+        if node.value is not None:
+            self.visit(node.value)
+            self.visit(node.target)
+            self._bind_assignment_target(node.target, node.value)
+
+    def visit_NamedExpr(self, node: ast.NamedExpr):
+        self.visit(node.value)
+        self.visit(node.target)
+        self._bind_assignment_target(node.target, node.value)
+
+    def visit_AugAssign(self, node: ast.AugAssign):
+        self.visit(node.target)
+        self.visit(node.value)
+        if isinstance(node.target, ast.Name):
+            self._bind_name(node.target.id, frozenset())
+
+    def visit_If(self, node: ast.If):
+        """Merge aliases from both possible branches instead of trusting visit order."""
+        self.visit(node.test)
+        before_branches = self._snapshot_alias_state()
+        branch_states: list[_AliasState] = []
+        for branch in (node.body, node.orelse):
+            self._restore_alias_state(before_branches)
+            for statement in branch:
+                self.visit(statement)
+            branch_states.append(self._snapshot_alias_state())
+        self._merge_alias_states(branch_states)
+
+    def _shadow_arguments(self, arguments: ast.arguments) -> None:
+        positional = [*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs]
+        for argument in positional:
+            self._bind_name(argument.arg, frozenset())
+        if arguments.vararg:
+            self._bind_name(arguments.vararg.arg, frozenset())
+        if arguments.kwarg:
+            self._bind_name(arguments.kwarg.arg, frozenset())
+
+    def _visit_function_definition(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        # Decorators, defaults, and annotations are evaluated in the enclosing
+        # scope; the function body receives an isolated alias state.
+        for decorator in node.decorator_list:
+            self.visit(decorator)
+        self.visit(node.args)
+        if node.returns:
+            self.visit(node.returns)
+        for type_parameter in getattr(node, "type_params", ()):
+            self.visit(type_parameter)
+
+        enclosing_state = self._snapshot_alias_state()
+        self._bind_name(node.name, frozenset())
+        self._shadow_arguments(node.args)
+        for statement in node.body:
+            self.visit(statement)
+        self._restore_alias_state(enclosing_state)
+        self._bind_name(node.name, frozenset())
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        self._visit_function_definition(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+        self._visit_function_definition(node)
+
+    def visit_Lambda(self, node: ast.Lambda):
+        self.visit(node.args)
+        enclosing_state = self._snapshot_alias_state()
+        self._shadow_arguments(node.args)
+        self.visit(node.body)
+        self._restore_alias_state(enclosing_state)
+
+    def visit_ClassDef(self, node: ast.ClassDef):
+        for decorator in node.decorator_list:
+            self.visit(decorator)
+        for base in node.bases:
+            self.visit(base)
+        for keyword in node.keywords:
+            self.visit(keyword)
+        for type_parameter in getattr(node, "type_params", ()):
+            self.visit(type_parameter)
+
+        enclosing_state = self._snapshot_alias_state()
+        for statement in node.body:
+            self.visit(statement)
+        self._restore_alias_state(enclosing_state)
+        self._bind_name(node.name, frozenset())
 
     def visit_Attribute(self, node: ast.Attribute):
         """Check attribute access: dunder escapes, os.environ, urllib.request, ..."""
         if node.attr in DANGEROUS_DUNDER_ATTRS:
             self.violations.append(f"Access to '{node.attr}' is forbidden in components (sandbox escape)")
         elif isinstance(node.value, ast.Name):
-            module_name = self.module_aliases.get(node.value.id, node.value.id)
-            for mod, attr, message in DANGEROUS_ATTRIBUTE_READS:
-                if module_name == mod and node.attr == attr:
-                    self.violations.append(message)
+            for module_name in self._resolved_names(node.value.id):
+                violation = next(
+                    (
+                        message
+                        for mod, attr, message in DANGEROUS_ATTRIBUTE_READS
+                        if module_name == mod and node.attr == attr
+                    ),
+                    None,
+                )
+                if violation:
+                    self.violations.append(violation)
                     break
         # Dotted access to a blocked submodule (``urllib.request`` / ``http.client``),
         # which a bare ``import urllib`` / ``import http`` makes reachable at runtime
         # without an explicit submodule import. Alias-resolved on the root name.
-        if self._is_dangerous_submodule_access(node):
-            dotted = self._resolved_dotted(node)
+        if dotted := self._dangerous_submodule_access(node):
             self.violations.append(f"Access to '{dotted}' is forbidden in components")
         self.generic_visit(node)
 
-    def _resolved_dotted(self, node: ast.Attribute) -> str | None:
-        """Dotted name of an attribute chain, with the root name alias-resolved."""
+    def _resolved_dotted(self, node: ast.Attribute) -> frozenset[str]:
+        """Possible dotted names of an attribute chain, with its root alias-resolved."""
         parts = _dotted_parts(node)
         if not parts:
-            return None
-        return ".".join([self.module_aliases.get(parts[0], parts[0]), *parts[1:]])
+            return frozenset()
+        return frozenset(".".join([root, *parts[1:]]) for root in self._resolved_names(parts[0]))
 
-    def _is_dangerous_submodule_access(self, node: ast.Attribute) -> bool:
+    def _dangerous_submodule_access(self, node: ast.Attribute) -> str | None:
         # Exact match (not prefix): the ``urllib.request`` node itself is visited
         # within ``urllib.request.urlopen``, so matching exactly avoids double-flagging.
-        return self._resolved_dotted(node) in DANGEROUS_SUBMODULES
+        return next((name for name in sorted(self._resolved_dotted(node)) if name in DANGEROUS_SUBMODULES), None)
 
     def visit_Name(self, node: ast.Name):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
@@ -327,13 +509,13 @@ class _SecurityChecker(ast.NodeVisitor):
         if not isinstance(node.func.value, ast.Name):
             return
 
-        module_name = self.module_aliases.get(node.func.value.id, node.func.value.id)
         method_name = node.func.attr
 
-        for mod, method, message in DANGEROUS_ATTR_CALLS:
-            if module_name == mod and method_name == method:
-                self.violations.append(message)
-                return
+        for module_name in self._resolved_names(node.func.value.id):
+            for mod, method, message in DANGEROUS_ATTR_CALLS:
+                if module_name == mod and method_name == method:
+                    self.violations.append(message)
+                    return
 
     def _check_getattr_access(self, node: ast.Call):
         """Check reflective access to restricted module members.
@@ -351,23 +533,30 @@ class _SecurityChecker(ast.NodeVisitor):
         ):
             return
 
-        module_name = self.module_aliases.get(node.args[0].id, node.args[0].id)
+        module_names = self._resolved_names(node.args[0].id)
         try:
             attr_node = node.args[1]
         except IndexError:
             return
         if not (isinstance(attr_node, ast.Constant) and isinstance(attr_node.value, str)):
-            if module_name in _DANGEROUS_CALL_MEMBERS or module_name in _DANGEROUS_READ_MEMBERS:
-                self.violations.append(f"Dynamic getattr() access on module '{module_name}' is forbidden in components")
+            dangerous_modules = sorted(
+                module_name
+                for module_name in module_names
+                if module_name in _DANGEROUS_CALL_MEMBERS or module_name in _DANGEROUS_READ_MEMBERS
+            )
+            if dangerous_modules:
+                self.violations.append(
+                    f"Dynamic getattr() access on module '{dangerous_modules[0]}' is forbidden in components"
+                )
             return
 
         attr_name = attr_node.value
         for mod, attr, message in DANGEROUS_ATTRIBUTE_READS:
-            if module_name == mod and attr_name == attr:
+            if mod in module_names and attr_name == attr:
                 self.violations.append(message)
                 return
         for mod, method, message in DANGEROUS_ATTR_CALLS:
-            if module_name == mod and attr_name == method:
+            if mod in module_names and attr_name == method:
                 self.violations.append(message)
                 return
 
