@@ -23,16 +23,54 @@ from .provider_queries import (
 )
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
+MODEL_STATUS_TYPES = ("llm", "embeddings")
 
 
-def model_status_key(provider: str, model_name: str) -> str:
+def model_status_key(provider: str, model_name: str, model_type: str | None = None) -> str:
     """Return the stable identity used in persisted model-status variables."""
+    if model_type is not None:
+        if model_type not in MODEL_STATUS_TYPES:
+            msg = f"Unsupported model status type: {model_type}"
+            raise ValueError(msg)
+        return f"{provider}{MODEL_STATUS_KEY_SEPARATOR}{model_type}{MODEL_STATUS_KEY_SEPARATOR}{model_name}"
     return f"{provider}{MODEL_STATUS_KEY_SEPARATOR}{model_name}"
 
 
-def model_status_contains(entries: set[str], provider: str, model_name: str) -> bool:
-    """Check provider-scoped status while honoring pre-upgrade bare-name entries."""
-    return model_status_key(provider, model_name) in entries or model_name in entries
+def parse_model_status_key(entry: str) -> tuple[str | None, str, str | None]:
+    """Parse a bare, provider-qualified, or typed model-status identity.
+
+    The split is deliberately bounded so deployment names containing ``::``
+    survive intact. Legacy provider-qualified entries have no type; only the
+    canonical ``llm`` and ``embeddings`` second segments identify typed keys.
+    """
+    parts = entry.split(MODEL_STATUS_KEY_SEPARATOR, 2)
+    match parts:
+        case [bare_name]:
+            return None, bare_name, None
+        case [provider, model_name]:
+            return provider, model_name, None
+        case [provider, possible_type, remainder]:
+            if possible_type in MODEL_STATUS_TYPES:
+                return provider, remainder, possible_type
+            return provider, f"{possible_type}{MODEL_STATUS_KEY_SEPARATOR}{remainder}", None
+    msg = "Model status key could not be parsed"
+    raise ValueError(msg)
+
+
+def model_status_contains(
+    entries: set[str],
+    provider: str,
+    model_name: str,
+    model_type: str | None = None,
+) -> bool:
+    """Check typed status while honoring provider-qualified and bare legacy entries."""
+    if model_status_key(provider, model_name) in entries or model_name in entries:
+        return True
+    if model_type is not None:
+        return model_status_key(provider, model_name, model_type) in entries
+    return any(
+        model_status_key(provider, model_name, candidate_type) in entries for candidate_type in MODEL_STATUS_TYPES
+    )
 
 
 def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
@@ -577,8 +615,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             if not api_key or not endpoint:
                 return
             try:
-                # Validate the submitted connection without assuming the user
-                # deployed one of Langflow's seed model names.
+                # Validate connection without requiring a seed catalog model name.
                 request_azure_ai_foundry_model_entries(endpoint, api_key)
             except Exception as e:
                 msg = f"Could not validate Azure AI Foundry credentials: {e!s}"
