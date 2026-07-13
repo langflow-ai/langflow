@@ -833,10 +833,32 @@ async def update_enabled_models(
     disabled_models = normalize_model_status_entries(disabled_models, providers_by_name)
     explicitly_enabled_models = normalize_model_status_entries(explicitly_enabled_models, providers_by_name)
 
+    unavailable_models: dict[tuple[str, str], str] = {}
+    for provider_dict in all_models_by_provider:
+        provider = provider_dict.get("provider")
+        if not isinstance(provider, str):
+            continue
+        for model in provider_dict.get("models", []):
+            model_name = model.get("model_name")
+            if not isinstance(model_name, str):
+                continue
+            metadata = model.get("metadata", {})
+            if metadata.get("deprecated", False):
+                unavailable_models[(provider, model_name)] = "deprecated"
+            elif metadata.get("not_supported", False):
+                unavailable_models[(provider, model_name)] = "not supported"
+
     # Update model sets based on user requests
     # For any model being enabled, validate the provider credentials
     for update in updates:
         if update.enabled:
+            unavailable_reason = unavailable_models.get((update.provider, update.model_id))
+            if unavailable_reason:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot enable {unavailable_reason} model: {update.model_id}",
+                )
+
             from lfx.base.models.unified_models import get_all_variables_for_provider, validate_model_provider_key
 
             # Get variables from DB or environment
