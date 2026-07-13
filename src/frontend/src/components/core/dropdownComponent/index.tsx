@@ -5,10 +5,7 @@ import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
-import {
-  convertStringToHTML,
-  getStatusColor,
-} from "@/utils/stringManipulation";
+import { getStatusColor } from "@/utils/stringManipulation";
 import type { DropDownComponent } from "../../../types/components";
 import { cn, filterNullOptions, formatName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
@@ -25,9 +22,10 @@ import {
   Popover,
   PopoverContent,
   PopoverContentWithoutPortal,
-  PopoverTrigger,
 } from "../../ui/popover";
 import type { BaseInputProps } from "../parameterRenderComponent/types";
+import { DropdownSearchInput } from "./components/DropdownSearchInput";
+import { DropdownTrigger } from "./components/DropdownTrigger";
 import {
   filterMetadataKeys,
   formatTooltipContent,
@@ -145,119 +143,6 @@ export default function Dropdown({
     >
       <LoadingTextComponent text={t("dropdown.loadingOptions")} />
     </Button>
-  );
-
-  const renderSelectedIcon = () => {
-    const selectedIndex = filteredOptions.findIndex(
-      (option) => option === value,
-    );
-    const iconMetadata =
-      selectedIndex >= 0 ? filteredMetadata?.[selectedIndex]?.icon : undefined;
-
-    return iconMetadata ? (
-      <ForwardedIconComponent
-        name={iconMetadata}
-        className="h-4 w-4 flex-shrink-0"
-      />
-    ) : null;
-  };
-
-  const renderTriggerButton = () => (
-    <div className="flex w-full flex-col">
-      <PopoverTrigger asChild>
-        <Button
-          disabled={
-            disabled ||
-            (Object.keys(validOptions).length === 0 &&
-              !combobox &&
-              !sourceOptions?.fields?.data?.node?.template &&
-              !hasRefreshButton &&
-              !sourceOptions?.fields)
-          }
-          variant="primary"
-          size="xs"
-          role="combobox"
-          ref={refButton}
-          aria-expanded={open}
-          data-testid={id}
-          className={cn(
-            editNode
-              ? "dropdown-component-outline input-edit-node"
-              : "dropdown-component-false-outline py-2",
-            "focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
-          )}
-        >
-          <span
-            className="flex w-full items-center gap-2 overflow-hidden"
-            data-testid={`value-dropdown-${id}`}
-          >
-            {value && <>{renderSelectedIcon()}</>}
-            <span className="truncate">
-              {disabled ? (
-                t("component.receivingInput")
-              ) : (
-                <>
-                  {
-                    options?.includes(value) ? (
-                      value
-                    ) : // this logic is used for the agents component, if you update make sure to test the agent component
-                    sourceOptions?.fields?.data?.node?.name ===
-                      "connect_other_models" ? (
-                      <span className="text-muted-foreground">
-                        <LoadingTextComponent
-                          text={placeholder || t("component.selectOption")}
-                        />
-                      </span>
-                    ) : (
-                      placeholder || t("component.selectOption")
-                    )
-                    // ) : (
-                    //   <span className="text-muted-foreground">
-                    //     <LoadingTextComponent
-                    //       text={placeholder || t("component.selectOption")}
-                    //     />
-                    //   </span>
-                    // )}
-                  }
-                </>
-              )}
-            </span>
-          </span>
-
-          <ForwardedIconComponent
-            name={disabled ? "Lock" : "ChevronsUpDown"}
-            className={cn(
-              "ml-2 h-4 w-4 shrink-0 text-foreground",
-              disabled
-                ? "text-placeholder-foreground hover:text-placeholder-foreground"
-                : "hover:text-foreground",
-            )}
-          />
-        </Button>
-      </PopoverTrigger>
-      {helperText && (
-        <span className="pt-2 text-xs text-muted-foreground">
-          {convertStringToHTML(helperText)}
-        </span>
-      )}
-    </div>
-  );
-
-  const renderSearchInput = () => (
-    <div className="flex items-center border-b px-2.5">
-      <ForwardedIconComponent
-        name="search"
-        className="mr-2 h-4 w-4 shrink-0 opacity-50"
-      />
-      <input
-        onChange={searchRoleByTerm}
-        onKeyDown={handleInputKeyDown}
-        placeholder={t("input.searchOptions")}
-        className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-        autoComplete="off"
-        data-testid="dropdown_search_input"
-      />
-    </div>
   );
 
   const renderOptionsList = () => (
@@ -461,7 +346,12 @@ export default function Dropdown({
       }
     >
       <Command className="flex flex-col">
-        {options?.length > 0 && renderSearchInput()}
+        {options?.length > 0 && (
+          <DropdownSearchInput
+            onSearch={searchRoleByTerm}
+            onKeyDown={handleInputKeyDown}
+          />
+        )}
         {renderOptionsList()}
         {!sourceOptions?.fields && hasRefreshButton && (
           <div className="border-t bg-background">
@@ -519,7 +409,25 @@ export default function Dropdown({
           <span className="truncate text-sm">{value}</span>
         </div>
       ) : (
-        <div className="w-full truncate">{renderTriggerButton()}</div>
+        <div className="w-full truncate">
+          <DropdownTrigger
+            disabled={disabled}
+            validOptions={validOptions}
+            combobox={combobox}
+            sourceOptions={sourceOptions}
+            hasRefreshButton={hasRefreshButton}
+            editNode={editNode}
+            open={open}
+            refButton={refButton}
+            id={id}
+            value={value}
+            options={options}
+            placeholder={placeholder}
+            helperText={helperText}
+            filteredOptions={filteredOptions}
+            filteredMetadata={filteredMetadata}
+          />
+        </div>
       )}
       {renderPopoverContent()}
     </Popover>
