@@ -249,7 +249,7 @@
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.3.11"
+                    "version": "1.3.13"
                   },
                   {
                     "name": "lfx",
@@ -257,7 +257,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.4.8"
+                    "version": "1.4.9"
                   }
                 ],
                 "total_dependencies": 3
@@ -988,7 +988,7 @@
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.3.11"
+                    "version": "1.3.13"
                   },
                   {
                     "name": "lfx",
@@ -996,7 +996,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.4.8"
+                    "version": "1.4.9"
                   }
                 ],
                 "total_dependencies": 3
@@ -2209,7 +2209,7 @@
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.3.11"
+                    "version": "1.3.13"
                   },
                   {
                     "name": "lfx",
@@ -2217,7 +2217,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.4.8"
+                    "version": "1.4.9"
                   }
                 ],
                 "total_dependencies": 3
