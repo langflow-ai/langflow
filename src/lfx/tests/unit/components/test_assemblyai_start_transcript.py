@@ -1,12 +1,25 @@
 from __future__ import annotations
 
+import sys
+from importlib import import_module
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 import pytest
-from lfx.components.assemblyai import assemblyai_start_transcript
-from lfx.components.assemblyai.assemblyai_start_transcript import AssemblyAITranscriptionJobCreator
 from lfx.services.storage.local import LocalStorageService
+
+_previous_assemblyai = sys.modules.get("assemblyai")
+sys.modules["assemblyai"] = MagicMock()
+try:
+    assemblyai_start_transcript = import_module("lfx.components.assemblyai.assemblyai_start_transcript")
+finally:
+    if _previous_assemblyai is None:
+        sys.modules.pop("assemblyai", None)
+    else:
+        sys.modules["assemblyai"] = _previous_assemblyai
+
+AssemblyAITranscriptionJobCreator = assemblyai_start_transcript.AssemblyAITranscriptionJobCreator
 
 if TYPE_CHECKING:
     from collections.abc import Callable
