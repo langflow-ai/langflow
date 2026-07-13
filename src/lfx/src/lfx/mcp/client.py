@@ -105,6 +105,11 @@ class LangflowClient:
                 line = raw_line.strip()
                 if not line:
                     continue
+                # Some endpoints frame lines as SSE (``data: {...}``) rather than
+                # bare NDJSON; strip the prefix so both wire shapes parse.
+                line = line.removeprefix("data:").strip()
+                if not line:
+                    continue
                 try:
                     yield json.loads(line)
                 except json.JSONDecodeError:

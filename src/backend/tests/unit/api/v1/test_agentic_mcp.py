@@ -1,19 +1,18 @@
-"""The agentic MCP server must be reachable over HTTP, not only stdio.
+"""The Langflow MCP toolkit must be reachable over HTTP, not only stdio.
 
 Community ask: call the Langflow Assistant from external MCP clients
 (Cursor, Claude, Codex) against a RUNNING Langflow server, without spawning
-a local ``python -m langflow.agentic.mcp`` process.
+a local stdio process.
 
 These tests pin the ``/api/v1/agentic/mcp`` streamable-http endpoint:
 gated on ``agentic_experience`` (404 when off), authenticated with the same
-dependency as the other MCP HTTP endpoints, and the authenticated user is
-always injected as ``user_id`` so a caller can never impersonate another
-user (the stdio tools trust the caller-supplied ``user_id``; HTTP must not).
+dependency as the other MCP HTTP endpoints, and delegating to the single
+lfx toolkit (``lfx.mcp.server``) with the caller's own credentials bound to
+the loopback REST client — so authorization happens at the API on every tool
+call, and ``login`` (a credential-forwarding surface) is not exposed.
 """
 
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
 from fastapi import status
@@ -98,53 +97,66 @@ class TestAgenticMcpTransportDispatch:
 
 
 class TestAgenticMcpToolDelegation:
-    async def test_should_list_the_agentic_tools_without_user_id_in_any_schema(self):
+    async def test_should_list_the_lfx_toolkit_including_run_assistant(self):
         from langflow.api.v1.agentic_mcp import handle_list_tools
 
         tools = await handle_list_tools()
         tool_names = {tool.name for tool in tools}
 
         assert "run_assistant" in tool_names
+        assert "create_flow" in tool_names
+        assert "connect_components" in tool_names
         for tool in tools:
             properties = (tool.inputSchema or {}).get("properties", {})
             assert "user_id" not in properties, f"{tool.name} must not expose user_id over HTTP"
-            assert "user_id" not in (tool.inputSchema or {}).get("required", [])
 
-    async def test_should_override_caller_supplied_user_id_with_the_authenticated_user(self):
+    async def test_should_not_expose_login_over_http(self):
         from langflow.api.v1 import agentic_mcp
 
-        authenticated_user = SimpleNamespace(id=uuid4())
-        token = agentic_mcp.current_agentic_mcp_user_ctx.set(authenticated_user)
+        tools = await agentic_mcp.handle_list_tools()
+        assert "login" not in {tool.name for tool in tools}
+
+        with pytest.raises(ValueError, match="not available over HTTP"):
+            await agentic_mcp.handle_call_tool("login", {"username": "u", "password": "p"})
+
+    async def test_should_delegate_with_the_callers_loopback_client_bound(self):
+        from langflow.api.v1 import agentic_mcp
+        from lfx.mcp import server as lfx_server
+
+        loopback = AsyncMock()
+        seen: dict[str, object] = {}
+
+        async def spy_call_tool(name, arguments):
+            seen["client"] = lfx_server._get_client()
+            seen["name"] = name
+            seen["arguments"] = arguments
+            return []
+
+        token = agentic_mcp.current_loopback_client_ctx.set(loopback)
         try:
-            with patch.object(
-                agentic_mcp.agentic_mcp, "call_tool", new_callable=AsyncMock, return_value=[]
-            ) as call_tool:
-                await agentic_mcp.handle_call_tool(
-                    "run_assistant",
-                    {"instruction": "build a flow", "user_id": str(uuid4())},
-                )
+            with patch.object(agentic_mcp.lfx_mcp, "call_tool", side_effect=spy_call_tool):
+                await agentic_mcp.handle_call_tool("list_flows", {"query": "x"})
         finally:
-            agentic_mcp.current_agentic_mcp_user_ctx.reset(token)
+            agentic_mcp.current_loopback_client_ctx.reset(token)
 
-        forwarded = call_tool.await_args.args[1]
-        assert forwarded["user_id"] == str(authenticated_user.id)
+        assert seen["client"] is loopback
+        assert seen["name"] == "list_flows"
+        assert seen["arguments"] == {"query": "x"}
 
-    async def test_should_not_add_user_id_to_tools_that_do_not_accept_it(self):
+    async def test_should_fail_when_no_client_is_in_context(self):
         from langflow.api.v1 import agentic_mcp
 
-        token = agentic_mcp.current_agentic_mcp_user_ctx.set(SimpleNamespace(id=uuid4()))
-        try:
-            with patch.object(
-                agentic_mcp.agentic_mcp, "call_tool", new_callable=AsyncMock, return_value=[]
-            ) as call_tool:
-                await agentic_mcp.handle_call_tool("list_all_tags", {})
-        finally:
-            agentic_mcp.current_agentic_mcp_user_ctx.reset(token)
+        with pytest.raises(ValueError, match="Authenticated client"):
+            await agentic_mcp.handle_call_tool("list_flows", {})
 
-        assert "user_id" not in call_tool.await_args.args[1]
+    async def test_loopback_client_carries_the_callers_headers(self):
+        from langflow.api.v1.agentic_mcp import _loopback_client
 
-    async def test_should_fail_when_no_authenticated_user_is_in_context(self):
-        from langflow.api.v1 import agentic_mcp
+        class FakeRequest:
+            base_url = "http://localhost:7860/"
+            headers = {"Authorization": "Bearer tok-123", "x-api-key": "key-456"}
 
-        with pytest.raises(ValueError, match="Authenticated user"):
-            await agentic_mcp.handle_call_tool("run_assistant", {"instruction": "hi"})
+        client = _loopback_client(FakeRequest())
+        assert client.server_url == "http://localhost:7860"
+        assert client.access_token == "tok-123"  # noqa: S105
+        assert client.api_key == "key-456"

@@ -1,38 +1,44 @@
-"""Streamable-HTTP transport for the ``langflow-agentic`` FastMCP server.
+"""Streamable-HTTP transport for the ``langflow-mcp`` (lfx) FastMCP server.
 
-Exposes the agentic tools (templates, components, flow inspection, and
-``run_assistant``) at ``/api/v1/agentic/mcp`` so external MCP clients can
+Exposes the single Langflow MCP toolkit — flow authoring, execution, and
+``run_assistant`` — at ``/api/v1/agentic/mcp`` so external MCP clients can
 reach the running Langflow server without spawning a local stdio process.
 
-Every request is authenticated with the same dependency the other MCP HTTP
-endpoints use (API key or bearer token), and any tool argument named
-``user_id`` is overridden with the authenticated user so a caller can never
-act on another user's behalf. The whole surface is gated on the
-``agentic_experience`` setting (404 when disabled).
+The mounted server is ``lfx.mcp.server``: the same tool definitions the local
+``lfx-mcp`` stdio bridge ships, so there is exactly one MCP toolkit. Every tool
+call goes through the REST API in loopback with the caller's own credentials
+(taken from the request headers), so authorization is enforced by the API on
+every operation and no tool ever touches the database directly. The ``login``
+tool is excluded over HTTP: the caller is already authenticated, and accepting
+credentials/server URLs from tool arguments would be a credential-forwarding
+surface. The whole endpoint is gated on the ``agentic_experience`` setting
+(404 when disabled).
 """
 
-import copy
 from contextvars import ContextVar
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from lfx.log.logger import logger
+from lfx.mcp.client import LangflowClient
+from lfx.mcp.server import client_scope
+from lfx.mcp.server import mcp as lfx_mcp
 from mcp import types
 from mcp.server import Server
 
-from langflow.agentic.mcp.server import mcp as agentic_mcp
 from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.mcp import ResponseNoOp, StreamableHTTP
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 
 router = APIRouter(prefix="/agentic/mcp", tags=["agentic-mcp"], include_in_schema=False)
 
-current_agentic_mcp_user_ctx: ContextVar[User | None] = ContextVar("current_agentic_mcp_user_ctx", default=None)
+# login() would accept credentials and an arbitrary server_url from tool
+# arguments; the route already authenticates the caller, so keep it stdio-only.
+_HTTP_EXCLUDED_TOOLS = frozenset({"login"})
 
-server: Server = Server("langflow-agentic")
+current_loopback_client_ctx: ContextVar[LangflowClient | None] = ContextVar("current_loopback_client_ctx", default=None)
 
-_user_scoped_tool_names: set[str] | None = None
+server: Server = Server("langflow-mcp")
 
 
 def enforce_agentic_experience() -> None:
@@ -40,26 +46,20 @@ def enforce_agentic_experience() -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This endpoint is not available")
 
 
-async def _tools_accepting_user_id() -> set[str]:
-    global _user_scoped_tool_names  # noqa: PLW0603
-    if _user_scoped_tool_names is None:
-        tools = await agentic_mcp.list_tools()
-        _user_scoped_tool_names = {
-            tool.name for tool in tools if "user_id" in (tool.inputSchema or {}).get("properties", {})
-        }
-    return _user_scoped_tool_names
+def _loopback_client(request: Request) -> LangflowClient:
+    """Build a REST client for this server bound to the caller's own credentials.
 
-
-def _without_user_id(tool: types.Tool) -> types.Tool:
-    """Hide ``user_id`` from the advertised schema — HTTP resolves it from the authenticated caller."""
-    schema: dict[str, Any] = copy.deepcopy(tool.inputSchema or {})
-    properties = schema.get("properties", {})
-    if "user_id" not in properties:
-        return tool
-    properties.pop("user_id")
-    if "required" in schema:
-        schema["required"] = [name for name in schema["required"] if name != "user_id"]
-    return tool.model_copy(update={"inputSchema": schema})
+    The raw auth headers are forwarded verbatim, so the loopback calls carry
+    exactly the identity the route authenticated — no key minting, no
+    impersonation surface.
+    """
+    authorization = request.headers.get("Authorization", "")
+    access_token = authorization.removeprefix("Bearer ").strip() or None
+    return LangflowClient(
+        server_url=str(request.base_url).rstrip("/"),
+        api_key=request.headers.get("x-api-key"),
+        access_token=access_token,
+    )
 
 
 @server.list_prompts()
@@ -74,26 +74,27 @@ async def handle_list_resources() -> list[types.Resource]:
 
 @server.list_tools()
 async def handle_list_tools() -> list[types.Tool]:
-    return [_without_user_id(tool) for tool in await agentic_mcp.list_tools()]
+    return [tool for tool in await lfx_mcp.list_tools() if tool.name not in _HTTP_EXCLUDED_TOOLS]
 
 
 @server.call_tool(validate_input=False)
 async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Any:
-    """Delegate to the FastMCP agentic server with the authenticated user injected.
+    """Delegate to the lfx FastMCP server with the caller's loopback client bound.
 
-    ``validate_input=False`` mirrors FastMCP's own transport registration: the
-    advertised schema omits ``user_id`` while the underlying tool requires it,
-    and FastMCP still validates the final arguments via pydantic. The shared
+    ``validate_input=False`` mirrors FastMCP's own transport registration;
+    FastMCP still validates the final arguments via pydantic. The shared
     lowlevel ``request_ctx`` contextvar makes FastMCP's Context (progress/log
     notifications) work through this delegation unchanged.
     """
-    user = current_agentic_mcp_user_ctx.get()
-    if user is None:
-        msg = "Authenticated user is unavailable for this MCP request"
+    if name in _HTTP_EXCLUDED_TOOLS:
+        msg = f"Tool '{name}' is not available over HTTP"
         raise ValueError(msg)
-    if name in await _tools_accepting_user_id():
-        arguments = {**arguments, "user_id": str(user.id)}
-    return await agentic_mcp.call_tool(name, arguments)
+    client = current_loopback_client_ctx.get()
+    if client is None:
+        msg = "Authenticated client is unavailable for this MCP request"
+        raise ValueError(msg)
+    with client_scope(client):
+        return await lfx_mcp.call_tool(name, arguments)
 
 
 _streamable_http = StreamableHTTP(server)
@@ -117,10 +118,13 @@ async def agentic_mcp_health() -> Response:
 @router.api_route("", dependencies=[Depends(enforce_agentic_experience)], **streamable_http_route_config)
 @router.api_route("/", dependencies=[Depends(enforce_agentic_experience)], **streamable_http_route_config)
 async def handle_agentic_streamable_http(request: Request, current_user: CurrentActiveMCPUser) -> Response:
+    # current_user enforces authentication; the loopback client then carries the
+    # caller's own headers so every tool call re-authenticates at the REST API.
+    del current_user
     # Started lazily so the session manager only runs when the endpoint is used
     # (start() is idempotent and cheap once running).
     await _streamable_http.start()
-    context_token = current_agentic_mcp_user_ctx.set(current_user)
+    context_token = current_loopback_client_ctx.set(_loopback_client(request))
     try:
         manager = _streamable_http.get_manager()
         await manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
@@ -130,5 +134,5 @@ async def handle_agentic_streamable_http(request: Request, current_user: Current
         await logger.aexception(f"Error handling agentic MCP Streamable HTTP request: {exc!s}")
         raise HTTPException(status_code=500, detail="Internal server error in agentic MCP transport") from exc
     finally:
-        current_agentic_mcp_user_ctx.reset(context_token)
+        current_loopback_client_ctx.reset(context_token)
     return ResponseNoOp()

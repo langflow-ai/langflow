@@ -42,6 +42,20 @@ class AssistantRequest(BaseModel):
     iterations_limit: int | None = Field(None, ge=1, le=200)
 
 
+class HeadlessAssistantRequest(BaseModel):
+    """Request model for the headless (auto-apply) assistant route.
+
+    Unlike ``AssistantRequest`` the flow is optional (one is created when absent)
+    and the caller is not a UI, so there is no component/field review context.
+    """
+
+    instruction: str = Field(..., max_length=2000)
+    flow_id: str | None = None
+    provider: str | None = None
+    model_name: str | None = None
+    session_id: str | None = None
+
+
 class ValidationResult(BaseModel):
     """Result of component code validation."""
 

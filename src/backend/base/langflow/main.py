@@ -383,25 +383,6 @@ def get_lifespan(*, fix_migration=False, version=None):
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
             )
 
-            # Gate: Auto-configure agentic MCP server (when agentic_experience enabled)
-            if get_settings_service().settings.agentic_experience:
-                if is_step_complete(PreloadStep.AGENTIC_MCP):
-                    await logger.adebug(
-                        "Skipping agentic MCP server config: master already completed it during preload"
-                    )
-                else:
-                    from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
-
-                    current_time = asyncio.get_event_loop().time()
-                    await logger.ainfo("Configuring Agentic MCP server...")
-                    try:
-                        async with session_scope() as session:
-                            await auto_configure_agentic_mcp_server(session)
-                        elapsed = asyncio.get_event_loop().time() - current_time
-                        await logger.adebug(f"Agentic MCP server configured in {elapsed:.2f}s")
-                    except Exception as e:  # noqa: BLE001
-                        await logger.awarning(f"Failed to configure agentic MCP server: {e}")
-
             # Backfill MCP servers from the legacy per-user JSON file into the
             # mcp_server table (idempotent + multi-replica-safe; existing file-based
             # users are migrated to the DB store automatically on upgrade).

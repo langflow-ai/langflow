@@ -1,6 +1,14 @@
 """FastMCP server for Langflow Agentic tools.
 
 This module exposes template search and creation functions as MCP tools using FastMCP decorators.
+
+DEPRECATED as the external MCP surface: the HTTP mount at ``/api/v1/agentic/mcp``
+serves the single lfx toolkit (``lfx.mcp.server``, which includes
+``run_assistant``), where every tool call goes through the REST API with the
+caller's credentials. The per-user auto-configuration that used to register
+this stdio server was removed; the module remains only so previously
+configured entries keep working. Do not add new tools here — add them to
+``lfx.mcp.server`` so both transports pick them up.
 """
 
 import asyncio

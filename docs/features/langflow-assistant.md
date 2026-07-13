@@ -1909,6 +1909,29 @@ Event: `cancelled`
 
 ---
 
+#### POST /api/v1/agentic/assist/run
+
+**Purpose**: **Headless** assist — canvas changes are **applied**, not proposed.
+
+`/assist/stream` deliberately leaves a canvas change as a *proposal* the user approves in a UI card. A non-interactive caller (the MCP `run_assistant` tool) has no card, so its edits would be silently dropped. This route runs the assistant through `run_assistant_and_persist` (`apply_edits_immediately`), writes the canvas, and streams the same `progress` events, ending in `complete` (or `error`).
+
+**Request** (`HeadlessAssistantRequest`):
+```json
+{
+  "instruction": "string - required, max 2000 chars",
+  "flow_id": "string - optional; a flow is created when omitted",
+  "provider": "string - optional",
+  "model_name": "string - optional",
+  "session_id": "string - optional, for multi-turn context"
+}
+```
+
+**Response**: SSE. `progress` events (re-emitted verbatim from the assistant), then a terminal `complete` event whose `data` carries `flow_id`, `link`, `result`, `flow_changed`, `session_id`, `provider`, `model_name`. Failures surface as a terminal `error` event.
+
+**Known gap**: `run_assistant_and_persist` applies `flow.name` only when it created the flow, so renaming an *existing* flow reports `flow_changed: true` without persisting the new name.
+
+---
+
 #### POST /api/v1/agentic/assist
 
 **Purpose**: Non-streaming version of assist (prefer streaming for better UX)

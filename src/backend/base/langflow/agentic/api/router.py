@@ -4,7 +4,10 @@ This module provides the HTTP endpoints for the Langflow Assistant.
 All business logic is delegated to service modules.
 """
 
+import asyncio
+import json
 import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -19,7 +22,8 @@ from lfx.base.models.unified_models import (
 from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from langflow.agentic.api.schemas import AssistantRequest
+from langflow.agentic.api.schemas import AssistantRequest, HeadlessAssistantRequest
+from langflow.agentic.helpers.sse import format_complete_event, format_error_event
 from langflow.agentic.services.assistant_service import (
     execute_flow_with_validation,
     execute_flow_with_validation_streaming,
@@ -345,4 +349,69 @@ async def assist_stream(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
         },
+    )
+
+
+@router.post("/assist/run")
+async def assist_headless(
+    request: HeadlessAssistantRequest,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+) -> StreamingResponse:
+    """Run the assistant headlessly: canvas changes are applied, not proposed.
+
+    ``/assist/stream`` leaves a canvas change as a proposal the user approves in
+    a UI card. A headless caller (the MCP ``run_assistant`` tool) has no card, so
+    its edits would be silently dropped — this route persists them through
+    ``run_assistant_and_persist`` and streams the same ``progress`` events,
+    ending in ``complete`` (or ``error``).
+    """
+    # Local import: assistant_runner imports this module's helpers, so a top-level
+    # import here would close the cycle at startup.
+    from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+    if request.flow_id:
+        await _validate_flow_access(request.flow_id, current_user.id, session)
+
+    async def _stream() -> AsyncIterator[str]:
+        queue: asyncio.Queue[dict | None] = asyncio.Queue()
+
+        async def on_progress(event: dict) -> None:
+            await queue.put(event)
+
+        async def _drive() -> dict:
+            try:
+                return await run_assistant_and_persist(
+                    session=session,
+                    user_id=current_user.id,
+                    instruction=request.instruction,
+                    flow_id=request.flow_id,
+                    provider=request.provider,
+                    model_name=request.model_name,
+                    session_id=request.session_id,
+                    on_progress=on_progress,
+                )
+            finally:
+                await queue.put(None)
+
+        task = asyncio.create_task(_drive())
+        while True:
+            event = await queue.get()
+            if event is None:
+                break
+            # Re-emit the assistant's own progress event verbatim: it already carries
+            # the step/attempt shape the SSE formatter would rebuild.
+            yield f"data: {json.dumps(event)}\n\n"
+        try:
+            result = await task
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Headless assistant run failed")
+            yield format_error_event(str(exc))
+            return
+        yield format_complete_event(result)
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )
