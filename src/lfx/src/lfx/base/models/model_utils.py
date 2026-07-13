@@ -9,6 +9,7 @@ import requests
 
 from lfx.base.models.model_metadata import (
     CONDITIONAL_LIVE_MODEL_PROVIDERS,
+    EXPLICIT_ENABLE_ONLY_PROVIDERS,
     LIVE_MODEL_PROVIDERS,
     create_model_metadata,
 )
@@ -507,20 +508,7 @@ AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
 
 
 def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str) -> list[dict]:
-    """Request model entries from a Foundry OpenAI-compatible endpoint.
-
-    Args:
-        endpoint: Configured Foundry OpenAI-compatible endpoint.
-        api_key: Foundry resource API key.
-
-    Returns:
-        Raw model entries from the response's ``data`` field.
-
-    Raises:
-        requests.RequestException: If the endpoint cannot be reached or returns an HTTP error.
-        TypeError: If the endpoint returns a malformed payload.
-        ValueError: If the endpoint returns invalid JSON.
-    """
+    """Probe Foundry /models for credential validation (catalog, not deployments)."""
     response = requests.get(
         f"{endpoint.rstrip('/')}/models",
         headers={"api-key": api_key},
@@ -588,71 +576,9 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
 
 
 def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
-    """Fetch deployment IDs from the configured Foundry OpenAI-compatible endpoint.
-
-    Foundry's ``model`` parameter is the user-defined deployment name, which can
-    differ from the underlying catalog model. Querying ``/models`` lets those
-    deployment IDs appear in the unified picker. This provider is conditional
-    live: any missing credential, request failure, empty result, or malformed
-    payload returns ``[]`` so callers retain the bundled seed catalog.
-    """
-    from lfx.base.models.azure_ai_foundry_constants import AZURE_AI_FOUNDRY_MODELS_DETAILED
-
-    if model_type != "llm":
-        return []
-
-    endpoint = get_provider_variable_value(user_id, "AZURE_AI_FOUNDRY_ENDPOINT")
-    api_key = get_provider_variable_value(user_id, "AZURE_AI_FOUNDRY_API_KEY")
-    if not endpoint or not api_key:
-        return []
-
-    try:
-        # Why: Foundry's OpenAI-compatible surface accepts API keys via the
-        # ``api-key`` header (Microsoft Foundry REST / Azure OpenAI docs).
-        # ``Authorization: Bearer`` is for Entra ID tokens, not resource keys.
-        # allow_redirects=False keeps the api-key header from following an
-        # off-origin redirect (SSRF/header-smuggling posture; host allowlisting
-        # remains a shared follow-up with other OpenAI-compatible fetchers).
-        raw_models = request_azure_ai_foundry_model_entries(endpoint, api_key)
-    except (requests.RequestException, TypeError, ValueError) as exc:
-        status_code = getattr(getattr(exc, "response", None), "status_code", None)
-        logger.warning("Could not fetch Azure AI Foundry deployments (status=%s): %s", status_code, exc)
-        return []
-
-    known_by_name = {model["name"]: model for model in AZURE_AI_FOUNDRY_MODELS_DETAILED}
-    by_id: dict[str, int] = {}
-    for raw_model in raw_models:
-        if not isinstance(raw_model, dict):
-            continue
-        model_id = raw_model.get("id")
-        if not isinstance(model_id, str) or not (model_id := model_id.strip()):
-            continue
-        created_raw = raw_model.get("created")
-        try:
-            created = int(created_raw) if created_raw is not None else 0
-        except (TypeError, ValueError):
-            created = 0
-        by_id.setdefault(model_id, max(created, 0))
-
-    if not by_id:
-        return []
-
-    sorted_ids = sorted(by_id)
-    seed_ids = known_by_name.keys() & by_id.keys()
-    default_ids = seed_ids or set(sorted_ids[:MIN_DEFAULT_MODELS])
-
-    return [
-        create_model_metadata(
-            provider="Azure AI Foundry",
-            name=model_id,
-            icon="Azure",
-            tool_calling=known_by_name.get(model_id, {}).get("tool_calling", True),
-            reasoning=known_by_name.get(model_id, {}).get("reasoning", False),
-            default=model_id in default_ids,
-            created=by_id[model_id],
-        )
-        for model_id in sorted_ids
-    ]
+    """Foundry /models is a catalog, not deployments; return [] and use free-text enables."""
+    _ = (user_id, model_type)
+    return []
 
 
 def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -860,6 +786,91 @@ def _live_models_to_catalog_shape(live_models: list[dict]) -> list[dict]:
         }
         for m in live_models
     ]
+
+
+def inject_custom_enabled_models(
+    provider_models: list[dict],
+    explicitly_enabled_models: set[str],
+    *,
+    model_name: str | None = None,
+    model_type: str | None = None,
+    metadata_filters: dict | None = None,
+) -> None:
+    """Append free-text enabled deployments missing from the catalog (e.g. Foundry)."""
+    if not explicitly_enabled_models:
+        return
+
+    # Lazy imports: provider_queries pulls model constants that import model_utils.
+    from lfx.base.models.unified_models.credentials import parse_model_status_key
+    from lfx.base.models.unified_models.provider_queries import get_model_provider_metadata
+
+    provider_meta = get_model_provider_metadata()
+    # Track (name, model_type) so llm and embeddings rows do not collide.
+    known_by_provider: dict[str, set[tuple[str, str]]] = {}
+    provider_dicts: dict[str, dict] = {}
+    for provider_dict in provider_models:
+        provider = provider_dict.get("provider")
+        if not isinstance(provider, str):
+            continue
+        provider_dicts[provider] = provider_dict
+        known_by_provider[provider] = {
+            (
+                model.get("model_name"),
+                (model.get("metadata") or {}).get("model_type") or "llm",
+            )
+            for model in provider_dict.get("models", [])
+            if isinstance(model.get("model_name"), str)
+        }
+
+    # Stable order across processes (set iteration is unordered).
+    for entry in sorted(explicitly_enabled_models):
+        provider, custom_name, persisted_type = parse_model_status_key(entry)
+        if provider not in EXPLICIT_ENABLE_ONLY_PROVIDERS:
+            continue
+        custom_name = custom_name.strip()
+        if not provider or not custom_name:
+            continue
+        resolved_type = persisted_type or "llm"
+        if model_type is not None and resolved_type != model_type:
+            continue
+        if model_name is not None and custom_name != model_name:
+            continue
+
+        icon = provider_meta.get(provider, {}).get("icon", "Bot")
+        metadata = {
+            "icon": icon,
+            "model_type": resolved_type,
+            "tool_calling": resolved_type == "llm",
+            "default": False,
+        }
+        if metadata_filters and any(metadata.get(k) != v for k, v in metadata_filters.items()):
+            continue
+
+        provider_dict = provider_dicts.get(provider)
+        if provider_dict is None:
+            # Stub provider when embeddings filter omits chat-only Foundry seed.
+            meta = provider_meta.get(provider, {})
+            provider_dict = {
+                "provider": provider,
+                "models": [],
+                "num_models": 0,
+                **meta,
+            }
+            provider_models.append(provider_dict)
+            provider_dicts[provider] = provider_dict
+            known_by_provider[provider] = set()
+
+        known = known_by_provider.setdefault(provider, set())
+        if (custom_name, resolved_type) in known:
+            continue
+        provider_dict.setdefault("models", []).append(
+            {
+                "model_name": custom_name,
+                "metadata": metadata,
+            }
+        )
+        provider_dict["num_models"] = len(provider_dict["models"])
+        known.add((custom_name, resolved_type))
 
 
 def replace_with_live_models(

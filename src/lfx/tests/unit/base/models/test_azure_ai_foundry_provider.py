@@ -83,27 +83,32 @@ def test_azure_ai_foundry_resolves_to_langchain_azure_ai():
     assert "langchain-azure-ai" in result
 
 
-def test_fetch_live_azure_ai_foundry_models_discovers_deployment_ids():
+def test_fetch_live_azure_ai_foundry_models_does_not_use_catalog_as_deployments():
+    """Foundry /models is a catalog, not deployments — never treat it as live ids."""
+    from lfx.base.models import model_utils
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", return_value="unused"),
+        patch.object(model_utils.requests, "get") as mock_get,
+    ):
+        models = model_utils.fetch_live_azure_ai_foundry_models("user-1")
+
+    mock_get.assert_not_called()
+    assert models == []
+
+
+def test_request_azure_ai_foundry_model_entries_returns_catalog_data():
+    """Credential validation still probes /models for connectivity."""
     from lfx.base.models import model_utils
 
     response = MagicMock()
-    response.json.return_value = {
-        "data": [
-            {"id": "team-production-chat", "created": "123"},
-            {"id": "o3-mini", "created": 456},
-            {"id": "  "},
-        ]
-    }
-    variables = {
-        "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
-        "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1/",
-    }
+    response.json.return_value = {"data": [{"id": "gpt-5-mini-2025-08-07"}]}
 
-    with (
-        patch.object(model_utils, "get_provider_variable_value", side_effect=lambda _user_id, key: variables[key]),
-        patch.object(model_utils.requests, "get", return_value=response) as mock_get,
-    ):
-        models = model_utils.fetch_live_azure_ai_foundry_models("user-1")
+    with patch.object(model_utils.requests, "get", return_value=response) as mock_get:
+        entries = model_utils.request_azure_ai_foundry_model_entries(
+            "https://example.services.ai.azure.com/openai/v1/",
+            "test-key",  # pragma: allowlist secret
+        )
 
     mock_get.assert_called_once_with(
         "https://example.services.ai.azure.com/openai/v1/models",
@@ -111,55 +116,23 @@ def test_fetch_live_azure_ai_foundry_models_discovers_deployment_ids():
         timeout=model_utils.AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
         allow_redirects=False,
     )
-    assert [model["name"] for model in models] == ["o3-mini", "team-production-chat"]
-    assert models[0]["reasoning"] is True
-    assert models[0]["created"] == 456
-    assert models[1]["tool_calling"] is True
-    assert models[1]["created"] == 123
+    assert entries == [{"id": "gpt-5-mini-2025-08-07"}]
 
 
-def test_fetch_live_azure_ai_foundry_models_requires_endpoint_and_key():
-    from lfx.base.models import model_utils
-
-    with (
-        patch.object(model_utils, "get_provider_variable_value", return_value=None),
-        patch.object(model_utils.requests, "get") as mock_get,
-    ):
-        assert model_utils.fetch_live_azure_ai_foundry_models("user-1") == []
-
-    mock_get.assert_not_called()
-
-
-@pytest.mark.parametrize(
-    ("payload", "side_effect"),
-    [
-        ({"data": []}, None),
-        ({"data": "not-a-list"}, None),
-        (None, ValueError("malformed JSON")),
-        (None, OSError("network down")),
-    ],
-)
-def test_fetch_live_azure_ai_foundry_models_safely_falls_back(payload, side_effect):
+def test_request_azure_ai_foundry_model_entries_rejects_malformed_payload():
     from lfx.base.models import model_utils
 
     response = MagicMock()
-    if side_effect is not None:
-        if isinstance(side_effect, OSError):
-            response.raise_for_status.side_effect = requests.ConnectionError(str(side_effect))
-        else:
-            response.json.side_effect = side_effect
-    else:
-        response.json.return_value = payload
+    response.json.return_value = {"data": "not-a-list"}
 
-    variables = {
-        "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
-        "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1",
-    }
     with (
-        patch.object(model_utils, "get_provider_variable_value", side_effect=lambda _user_id, key: variables[key]),
         patch.object(model_utils.requests, "get", return_value=response),
+        pytest.raises(TypeError, match="Unexpected Azure AI Foundry /models payload"),
     ):
-        assert model_utils.fetch_live_azure_ai_foundry_models("user-1") == []
+        model_utils.request_azure_ai_foundry_model_entries(
+            "https://example.services.ai.azure.com/openai/v1",
+            "test-key",  # pragma: allowlist secret
+        )
 
 
 def test_foundry_empty_live_discovery_keeps_static_catalog():
