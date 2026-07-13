@@ -347,8 +347,18 @@ def _validate_package_runner(
 
 
 def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
-    """Reject tenant-selected Python/Node code while preserving Langflow's bound MCP server."""
-    if not hardened or base_command not in {"node", "python", "python3"}:
+    """Reject tenant-selected interpreter code while preserving validated wrappers/internal code."""
+    if not hardened:
+        return
+    if base_command in SHELL_WRAPPERS:
+        if any(_is_shell_exec_flag(arg) for arg in args):
+            return
+        msg = (
+            f"Shell command '{base_command}' must wrap an approved MCP command when "
+            "LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=true. Direct shell scripts are not allowed."
+        )
+        raise MCPStdioSecurityError(msg)
+    if base_command not in {"node", "python", "python3"}:
         return
     if (
         base_command in {"python", "python3"}

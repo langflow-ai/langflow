@@ -333,6 +333,8 @@ def test_package_runner_allowlist_preserves_approved_packages(command, args, all
         ("python", ["/app/langflow/attacker/upload.py"]),
         ("python3", ["-m", "attacker_module"]),
         ("node", ["/app/langflow/attacker/server.js"]),
+        ("bash", ["/app/langflow/attacker/server.sh"]),
+        ("cmd", ["C:\\Users\\attacker\\server.bat"]),
         ("sh", ["-c", "python /app/langflow/attacker/upload.py"]),
         ("cmd", ["/c", "node", "C:\\Users\\attacker\\server.js"]),
     ],
@@ -345,6 +347,16 @@ def test_interpreter_hardening_blocks_tenant_code(command, args):
 @pytest.mark.parametrize("module", ["langflow.agentic.mcp", "langflow.agentic.mcp.server"])
 def test_interpreter_hardening_preserves_bound_internal_server(module):
     validate_mcp_stdio_config("python", ["-m", module], {}, interpreter_hardening=True)
+
+
+def test_interpreter_hardening_preserves_validated_shell_wrapper():
+    validate_mcp_stdio_config(
+        "sh",
+        ["-c", "uvx mcp-proxy"],
+        {},
+        allowed_packages={"mcp-proxy"},
+        interpreter_hardening=True,
+    )
 
 
 def test_interpreter_default_preserves_legacy_single_tenant_config():
