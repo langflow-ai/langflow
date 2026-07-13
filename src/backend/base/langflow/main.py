@@ -42,6 +42,7 @@ from langflow.plugin_routes import load_plugin_routes
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
+    get_background_execution_service,
     get_queue_service,
     get_service,
     get_settings_service,
@@ -236,6 +237,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"writes will use the legacy direct-write path: {exc}"
                 )
 
+            # Start the periodic authz audit-log retention sweep. No-op unless
+            # AUTHZ_AUDIT_ENABLED and AUTHZ_AUDIT_RETENTION_DAYS > 0. The startup
+            # sweep in initialize_services() already pruned at boot; this keeps a
+            # long-running instance bounded between restarts.
+            try:
+                from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
+
+                await audit_log_cleanup_worker.start()
+            except Exception as exc:  # noqa: BLE001 — never block startup on cleanup scheduling
+                await logger.awarning(f"Failed to start authz audit-log cleanup worker: {exc}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
@@ -411,6 +423,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
+            # Backfill MCP servers from the legacy per-user JSON file into the
+            # mcp_server table (idempotent + multi-replica-safe; existing file-based
+            # users are migrated to the DB store automatically on upgrade).
+            try:
+                from langflow.api.utils.mcp.backfill import backfill_mcp_servers_from_files
+
+                async with session_scope() as session:
+                    await backfill_mcp_servers_from_files(session)
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Failed to backfill MCP servers from legacy files: {e}")
+
             # Gate: Load flows from directory
             current_time = asyncio.get_event_loop().time()
             if is_step_complete(PreloadStep.FLOWS):
@@ -426,6 +449,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             queue_service = get_queue_service()
             if not queue_service.is_started():
                 queue_service.start()
+
+            # Reconcile background-execution jobs left behind by a crashed worker:
+            # fail orphaned IN_PROGRESS rows, re-enqueue QUEUED rows. Best-effort
+            # so a reconcile hiccup never blocks boot.
+            with suppress(Exception):
+                await get_background_execution_service().sweep_orphans_on_startup()
 
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
@@ -452,7 +481,10 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
-            mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
+            if get_settings_service().settings.skip_mcp_auto_init:
+                await logger.adebug("Skipping MCP server auto-initialization (skip_mcp_auto_init=True)")
+            else:
+                mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
             async def refresh_models_dev_periodically() -> None:
                 """Hydrate the models.dev catalog at startup and refresh daily.
@@ -575,6 +607,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await stop_streamable_http_manager()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Stop the authz audit-log retention worker (best-effort;
+                    # no-op when it was never scheduled).
+                    try:
+                        from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
+
+                        await audit_log_cleanup_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop authz audit-log cleanup worker: {e}")
+
                     # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:

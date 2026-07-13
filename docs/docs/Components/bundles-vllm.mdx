@@ -5,6 +5,9 @@ slug: /bundles-vllm
 
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="vllm" />
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
@@ -56,8 +59,19 @@ To use the vLLM component, you need to have a vLLM server running. Here are the 
 
 For more detailed setup instructions, see the [vLLM documentation](https://docs.vllm.ai/en/latest/getting_started/quickstart.html).
 
+## vLLM multi-vector embeddings
+
+For multi-vector ColBERT or ColPali-style retrieval with vLLM, use the **vLLM Multivector Embeddings** component.
+
+The **vLLM Multivector Embeddings** component ships with the **NextPlaid** bundle (`lfx-nextplaid`), since it is purpose-built to feed that vector store.
+
+For more information on using the component in a flow, see [vLLM Multi-vector Embeddings](./bundles-nextplaid#vllm-multivector-embeddings).
+
+For more information on multi-vector embeddings, see the [langchain-plaid repository](https://github.com/meetdoshi90/langchain-plaid).
+
 ## See also
 
 * [**Agent** component](/components-agents)
 * [**Language Model** component](/components-models)
+* [**NextPlaid** bundle](./bundles-nextplaid)
 * [vLLM GitHub repository](https://github.com/vllm-project/vllm)

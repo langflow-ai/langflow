@@ -168,6 +168,13 @@ unit_tests: ## run unit tests
 unit_tests_looponfail:
 	@make unit_tests args="-f"
 
+real_services_tests: ## run tests that need real service instances (needs LANGFLOW_TEST_DATABASE_URI + LANGFLOW_TEST_REDIS_URL)
+	@uv sync --frozen
+	uv run pytest src/backend/tests/unit \
+	--ignore=src/backend/tests/integration \
+	--ignore=src/backend/tests/unit/template \
+	-m real_services -ra $(args)
+
 lfx_tests: ## run lfx package unit tests
 	@echo 'Running LFX Package Tests...'
 	@cd src/lfx && \

@@ -49,7 +49,6 @@ from langflow.services.database.models.folder.constants import (
 )
 from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
 from langflow.services.deps import (
-    get_auth_service,
     get_settings_service,
     get_storage_service,
     get_variable_service,
@@ -59,6 +58,33 @@ from langflow.services.deps import (
 # In the folder ./starter_projects we have a few JSON files that represent
 # starter projects. We want to load these into the database so that users
 # can use them as a starting point for their own projects.
+
+# Extension components are loaded under the runtime-only ``_lfx_ext.*``
+# sys.modules namespace, so the live template's ``metadata.module`` is not an
+# importable path outside a running extension loader. Persisted starter
+# projects must keep the stable legacy path (``lfx.components.<provider>...``,
+# importable via the bundle shims) -- it is what the migration table and the
+# template tests resolve.
+_RUNTIME_EXT_MODULE_PREFIX = "_lfx_ext."
+
+
+def _merge_node_metadata(current_metadata, latest_metadata):
+    """Return the latest metadata, preserving a stored importable ``module`` path.
+
+    When the live template carries a runtime ``_lfx_ext.*`` module (an ext
+    component) and the node already has a module value, keep the node's --
+    otherwise persisting the runtime namespace breaks every consumer that
+    imports the path.
+    """
+    if not isinstance(latest_metadata, dict):
+        return latest_metadata
+    latest_module = latest_metadata.get("module")
+    current_module = current_metadata.get("module") if isinstance(current_metadata, dict) else None
+    if isinstance(latest_module, str) and latest_module.startswith(_RUNTIME_EXT_MODULE_PREFIX) and current_module:
+        merged = deepcopy(latest_metadata)
+        merged["module"] = current_module
+        return merged
+    return latest_metadata
 
 
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
@@ -152,6 +178,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 for attr in NODE_FORMAT_ATTRIBUTES:
                     latest_attr_value = latest_node.get(attr)
                     current_attr_value = node_data.get(attr)
+
+                    if attr == "metadata":
+                        latest_attr_value = _merge_node_metadata(current_attr_value, latest_attr_value)
 
                     if (
                         attr in latest_node
@@ -1318,15 +1347,29 @@ async def initialize_auto_login_default_superuser() -> None:
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return
-    # In AUTO_LOGIN mode, always use the default credentials for initial bootstrapping
-    # without persisting the password in memory after setup.
-    from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+    # In AUTO_LOGIN mode, bootstrap with a configured password if the operator
+    # provided one; otherwise generate an unknown password for the default user.
+    from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
-    username = DEFAULT_SUPERUSER
-    password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    from langflow.services.database.models.user.crud import get_user_by_username
+    from langflow.services.utils import get_auto_login_superuser_password, get_or_create_super_user
+
+    username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+    password = get_auto_login_superuser_password(settings_service.auth_settings)
 
     async with session_scope() as async_session:
-        super_user = await get_auth_service().create_super_user(username, password, db=async_session)
+        super_user = await get_or_create_super_user(
+            async_session,
+            username,
+            password,
+            is_default=True,
+            rotate_legacy_default_password=True,
+        )
+        if super_user is None:
+            super_user = await get_user_by_username(async_session, username)
+        if super_user is None or not super_user.is_superuser:
+            msg = "Auto-login superuser was not initialized."
+            raise RuntimeError(msg)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables

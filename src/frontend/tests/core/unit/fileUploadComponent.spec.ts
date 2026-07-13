@@ -1013,9 +1013,7 @@ test(
     await expect(page.getByText(fileContent1)).toBeVisible();
     await expect(page.getByText(fileContent2)).toBeVisible();
 
-    await page
-      .getByRole("button", { name: TEXTS.playground, exact: true })
-      .click({ force: true });
+    await page.getByTestId("playground-close-button").click();
 
     // Test Case 2: Single File (clear second input, use only first)
     await textInputs.last().fill("");

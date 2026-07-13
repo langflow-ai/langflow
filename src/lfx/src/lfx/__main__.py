@@ -6,6 +6,7 @@ import typer
 
 from lfx.cli._authoring_commands import register as _register_authoring
 from lfx.cli._extension_commands import register as _register_extension
+from lfx.cli._prewarm_commands import register as _register_prewarm
 from lfx.cli._remote_commands import register as _register_remote
 from lfx.cli._running_commands import register as _register_running
 from lfx.cli._setup_commands import register as _register_setup
@@ -41,6 +42,7 @@ def _app_callback(
 
 # Register command groups (order determines help-panel ordering)
 _register_setup(app)
+_register_prewarm(app)
 _register_authoring(app)
 _register_upgrade(app)
 _register_extension(app)

@@ -405,27 +405,30 @@ async def test_aupdate_message_with_content_blocks(created_message):
     assert updated[0].text == "Message with content blocks"
     assert len(updated[0].content_blocks) == 1
 
-    # Verify the content block structure
+    # MessageRead renders content_blocks as the legacy v1 shape: plain dicts,
+    # a single group {title, contents, allow_markdown, media_url} whose leaves
+    # carry no id/contents. The setter-appended top-level text is carried by
+    # ``text`` (dropped from content_blocks, since the group is not "Agent Steps").
     updated_block = updated[0].content_blocks[0]
-    assert updated_block.title == "Test Block"
+    assert updated_block["title"] == "Test Block"
     expected_len = 2
-    assert len(updated_block.contents) == expected_len
+    assert len(updated_block["contents"]) == expected_len
 
     # Verify text content
-    text_content = updated_block.contents[0]
-    assert text_content.type == "text"
-    assert text_content.text == "Test content"
+    text_content = updated_block["contents"][0]
+    assert text_content["type"] == "text"
+    assert text_content["text"] == "Test content"
     duration = 5
-    assert text_content.duration == duration
-    assert text_content.header["title"] == "Test Header"
+    assert text_content["duration"] == duration
+    assert text_content["header"]["title"] == "Test Header"
 
     # Verify tool content
-    tool_content = updated_block.contents[1]
-    assert tool_content.type == "tool_use"
-    assert tool_content.name == "test_tool"
-    assert tool_content.tool_input == {"param": "value"}
+    tool_content = updated_block["contents"][1]
+    assert tool_content["type"] == "tool_use"
+    assert tool_content["name"] == "test_tool"
+    assert tool_content["tool_input"] == {"param": "value"}
     duration = 10
-    assert tool_content.duration == duration
+    assert tool_content["duration"] == duration
 
 
 @pytest.mark.usefixtures("client")
@@ -509,9 +512,12 @@ async def test_aupdate_message_with_dataframe_in_tool_output(created_message):
     assert updated[0].text == "Agent response after Memory Base retrieval"
     assert len(updated[0].content_blocks) == 1
 
-    stored_tool = updated[0].content_blocks[0].contents[0]
-    assert stored_tool.type == "tool_use"
-    assert stored_tool.name == "MemoryBase"
+    # MessageRead renders the legacy v1 shape (plain dicts). For an "Agent Steps"
+    # group the answer is folded back in as a trailing Output leaf, so the tool
+    # stays at contents[0].
+    stored_tool = updated[0].content_blocks[0]["contents"][0]
+    assert stored_tool["type"] == "tool_use"
+    assert stored_tool["name"] == "MemoryBase"
 
     # The output must be free of pandas / numpy types and fully JSON-encodable.
     def _assert_json_native(value):
@@ -525,14 +531,57 @@ async def test_aupdate_message_with_dataframe_in_tool_output(created_message):
             assert not isinstance(value, np.generic), f"numpy scalar leaked: {value!r}"
             assert not isinstance(value, pd.DataFrame), "DataFrame leaked into persisted output"
 
-    _assert_json_native(stored_tool.output)
+    _assert_json_native(stored_tool["output"])
     # Strict JSON dump must succeed without a fallback encoder.
-    json.dumps(stored_tool.output, allow_nan=False)
+    json.dumps(stored_tool["output"], allow_nan=False)
 
 
 # =============================================================================
 # Tests for MessageBase.from_message file path handling
 # =============================================================================
+
+
+class TestMessageBaseFromMessageAgentInit:
+    """Regression: in-flight agent Message must survive the no_content check.
+
+    The agent now initializes with flat ``content_blocks=[]`` (the wrapping
+    ``ContentBlock('Agent Steps', ...)`` is gone) and uses ``text=""`` as
+    the "intentionally created, content will arrive" sentinel. If either
+    side regresses, the build dies with "The message does not have the
+    required fields (text, sender, sender_name)." before any agent event
+    can populate the content_blocks list.
+    """
+
+    def test_from_message_accepts_in_flight_agent_message(self):
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Mirrors what AgentComponent / LCToolsAgentComponent / altk build.
+        message = Message(
+            text="",
+            sender="Machine",
+            sender_name="Agent",
+            content_blocks=[],
+            session_id="test-session",
+            properties={"icon": "Bot", "state": "partial"},
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.sender == "Machine"
+        assert result.sender_name == "Agent"
+        assert result.text == ""
+
+    def test_from_message_rejects_truly_empty_message(self):
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Explicit text=None with no stream and no content_blocks is the
+        # genuinely-empty signal that must be rejected. (A bare message with no
+        # text argument seeds data["text"]="" -- the intentional-empty ChatInput
+        # convention -- and is accepted, like an in-flight agent message.)
+        message = Message(sender="Machine", sender_name="Agent", text=None, content_blocks=[])
+
+        with pytest.raises(ValueError, match="required fields"):
+            MessageTable.from_message(message, flow_id=uuid4())
 
 
 class TestMessageBaseFromMessageFilePaths:

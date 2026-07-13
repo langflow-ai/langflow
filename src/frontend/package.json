@@ -1,6 +1,6 @@
 {
   "name": "langflow",
-  "version": "1.10.1",
+  "version": "1.11.0",
   "private": true,
   "engines": {
     "node": ">=20.19.0"
@@ -21,7 +21,7 @@
     "jest-junit": {
       "uuid": "^11.1.0"
     },
-    "playwright": "^1.59.1",
+    "playwright": "1.60.0",
     "brace-expansion": "^5.0.5",
     "handlebars": "^4.7.9",
     "minimatch": "^10.2.5",
@@ -31,6 +31,7 @@
     "form-data": "^4.0.6"
   },
   "dependencies": {
+    "@ag-ui/client": "0.0.53",
     "@chakra-ui/number-input": "^2.1.2",
     "@chakra-ui/system": "^2.6.2",
     "@emotion/react": "^11.14.0",
@@ -70,6 +71,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "date-fns": "^4.4.0",
     "dompurify": "^3.2.4",
     "dotenv": "^16.4.5",
     "elkjs": "^0.9.3",
@@ -93,6 +95,7 @@
     "react": "^19.2.1",
     "react-ace": "^14.0.1",
     "react-cookie": "^7.1.4",
+    "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.1",
     "react-error-boundary": "^4.0.13",
     "react-hook-form": "^7.52.0",
@@ -130,6 +133,9 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
+    "a11y:report": "node tests/utils/aggregate-a11y-reports.mjs",
+    "a11y:html-report": "node tests/utils/build-a11y-html-report.mjs",
+    "a11y:job-summary": "node tests/utils/build-a11y-job-summary.mjs",
     "serve": "vite preview",
     "format": "npx @biomejs/biome format --write",
     "lint": "npx @biomejs/biome lint",
@@ -161,7 +167,7 @@
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
     "@modelcontextprotocol/server-everything": "^2026.1.14",
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "1.60.0",
     "@storybook/addon-docs": "^10.1.0",
     "@storybook/addon-links": "^10.1.0",
     "@storybook/react": "^10.1.0",
@@ -175,6 +181,7 @@
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.5.2",
     "@types/jest": "^29.5.12",
+    "@types/jest-axe": "^3.5.9",
     "@types/lodash": "^4.17.5",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.7",
@@ -182,8 +189,10 @@
     "@types/sortablejs": "^1.15.8",
     "@types/uuid": "^9.0.8",
     "@vitejs/plugin-react-swc": "^4.2.2",
+    "accessibility-checker": "^4.0.26",
     "autoprefixer": "^10.4.19",
     "jest": "^30.0.3",
+    "jest-axe": "^10.0.0",
     "jest-environment-jsdom": "^30.0.2",
     "jest-junit": "^16.0.0",
     "nyc": "^18.0.0",

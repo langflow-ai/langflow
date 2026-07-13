@@ -144,16 +144,6 @@ jobs:
                 TAGS+=("@database")
                 echo "Added database suite"
               fi
-              if [[ "${{ steps.filter.outputs.mainpage }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq -c '. += ["mainpage"]')
-                TAGS+=("@mainpage")
-                echo "Added mainpage suite"
-              fi
-              if [[ "${{ steps.filter.outputs.development }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq -c '. += ["development"]')
-                TAGS+=("@development")
-                echo "Added development suite"
-              fi
 
               # Create grep pattern if we have tags
               if [ ${#TAGS[@]} -gt 0 ]; then
@@ -173,9 +163,7 @@ jobs:
               if ! echo "$SUITES" | jq -e . > /dev/null 2>&1; then
                 echo "Warning: Input suites is not valid JSON, attempting to fix"
                 # Try to fix common issues like missing quotes
-                if [[ "$SUITES" == "[development]" ]]; then
-                  SUITES='["development"]'
-                elif [[ "$SUITES" =~ ^\[(.*)\]$ ]]; then
+                if [[ "$SUITES" =~ ^\[(.*)\]$ ]]; then
                   # Extract items and add quotes
                   ITEMS="${BASH_REMATCH[1]}"
                   QUOTED_ITEMS=$(echo "$ITEMS" | sed 's/\([^,]*\)/"\1"/g')
@@ -199,9 +187,6 @@ jobs:
               fi
               if echo "$SUITES" | jq -e 'contains(["database"])' > /dev/null; then
                 TAGS+=("@database")
-              fi
-              if echo "$SUITES" | jq -e 'contains(["development"])' > /dev/null; then
-                TAGS+=("@development")
               fi
 
               if [ ${#TAGS[@]} -gt 0 ]; then
@@ -378,21 +363,34 @@ jobs:
       - name: Execute Playwright Tests
         uses: nick-fields/retry@v3
         with:
-          # Bumped from 12 → 18 minutes. Shard 38 carries all four
-          # starter-projects-shardN tests + the sentiment streaming test;
-          # iterating 8 templates per test under Linux nightly load
-          # consistently runs past 12 minutes once a single iteration
-          # triggers a per-test Playwright retry.
+          # Bumped from 12 → 18 minutes. The shard carrying the
+          # starter-projects template sweep iterates every starter template;
+          # under Linux CI load that work can run past 12 minutes once a
+          # single iteration triggers a per-test Playwright retry.
           timeout_minutes: 18
           max_attempts: 2
+          # The command block is bash; without this the action falls back to
+          # the runner default and PowerShell fails to parse the if/grep.
+          shell: bash
           command: |
             cd src/frontend
             echo 'Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}'
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list --retries=3
-            # echo command before running
-            echo "npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2 --retries=3"
+            TEST_LIST="$(npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list --retries=3)"
+            printf '%s\n' "$TEST_LIST"
 
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2 --retries=3
+            WORKERS=2
+            # The sweep lives in starter-projects-outdated-components.spec.ts
+            # (renamed from starter-projects-shardN in #13844 — keep this
+            # pattern in sync or the one-worker mitigation silently no-ops).
+            if printf '%s\n' "$TEST_LIST" | grep -q 'starter-projects-outdated-components'; then
+              echo "Detected starter project template sweep in this shard; running it with one worker to avoid shared backend contention."
+              WORKERS=1
+            fi
+
+            # echo command before running
+            echo "npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers $WORKERS --retries=3"
+
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers "$WORKERS" --retries=3
 
       - name: Upload Test Results
         if: always()
@@ -474,3 +472,48 @@ jobs:
           name: html-report--attempt-${{ github.run_attempt }}
           path: playwright-report
           retention-days: 14
+
+  flaky-report:
+    name: Flaky Test Report
+    needs: setup-and-test
+    # Runs on green too: flaky tests (failed -> passed on retry) only show up
+    # in runs that end green, which the merge-reports job above skips.
+    if: ${{ always() && needs.setup-and-test.result != 'skipped' && needs.setup-and-test.result != 'cancelled' }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    # Metrics only — must never turn CI red.
+    continue-on-error: true
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download blob reports from GitHub Actions Artifacts
+        # A single shard artifact failing its download (transient artifact
+        # storage errors, seen in practice) must not void the whole
+        # measurement — merge whatever did download.
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge into JSON report
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: flaky-report.json
+        # Pinned to the repo's Playwright version: blob format is
+        # version-sensitive and bare npx would fetch latest.
+        run: |
+          if ! ls ./all-blob-reports/*.zip >/dev/null 2>&1; then
+            echo "No blob reports downloaded; skipping flaky report."
+            exit 0
+          fi
+          npx playwright@1.60.0 merge-reports --reporter json ./all-blob-reports
+
+      - name: Upload flaky report
+        uses: actions/upload-artifact@v6
+        with:
+          name: flaky-report--attempt-${{ github.run_attempt }}
+          path: flaky-report.json
+          retention-days: 30

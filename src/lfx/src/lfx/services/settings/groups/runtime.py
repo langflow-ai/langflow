@@ -57,11 +57,48 @@ class RuntimeSettings(BaseModel):
     The watchdog only checks jobs this worker owns (entries in self._queues).
     Must be > 0 so the scan loop makes progress."""
 
+    # Background execution (v2 workflows background mode)
+    background_max_concurrency: int = Field(default=5, gt=0)
+    """Max number of background workflow jobs the in-process executor runs
+    concurrently. Jobs beyond this queue and start as workers free up. Kept
+    small by default so background runs cannot starve the request event loop;
+    raise it for dedicated worker processes. The redis backend ignores this in
+    favor of its own worker-process pool. Must be > 0."""
+    background_job_timeout: float | None = None
+    """Wall-clock seconds a single background job may run before it is marked
+    TIMED_OUT. ``None`` (default) means no timeout. Applies per job, enforced by
+    the runner via ``asyncio.wait_for`` around the build loop."""
+    background_lease_ttl_s: float = Field(default=45.0, gt=0)
+    """Liveness lease window for a running background job. The running owner
+    refreshes a heartbeat on the job row; a reconciler (startup sweep / scaled
+    watchdog) only fails or requeues an IN_PROGRESS job whose heartbeat is older
+    than this TTL (or never recorded). Must comfortably exceed
+    ``background_heartbeat_interval_s`` so a healthy owner never looks stale."""
+    background_heartbeat_interval_s: float = Field(default=15.0, gt=0)
+    """How often a running background job refreshes its liveness heartbeat. Kept
+    well below ``background_lease_ttl_s`` so a brief stall does not trip the
+    reconciler. Must be > 0."""
+    background_watchdog_interval_s: float = Field(default=15.0, gt=0)
+    """How often the scaled worker's periodic watchdog scans for orphaned leases
+    (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
+    restart. Must be > 0."""
+    test_redis_url: str | None = Field(default=None)
+    """Redis URL used by tests that exercise the scaled background backend.
+
+    Mirrors LANGFLOW_TEST_DATABASE_URI: when set, lease/watchdog/Streams/pubsub
+    timing tests run against this real Redis; when unset they skip. Read from
+    the LANGFLOW_TEST_REDIS_URL environment variable via the env_prefix."""
+
     event_delivery: Literal["polling", "streaming", "direct"] = "streaming"
     """How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'."""
 
     worker_timeout: int = 300
     """Timeout for the API calls in seconds."""
+
+    workflow_execution_timeout: int = 300
+    """Wall-clock ceiling in seconds for a single v2 workflow run, applied to every
+    execution mode. Sync runs raise a 408; stream, background, and public runs emit
+    the protocol's terminal-error event and (for background) mark the job failed."""
 
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
     """The interval in seconds at which public temporary flows will be cleaned up.
@@ -84,6 +121,14 @@ class RuntimeSettings(BaseModel):
     max_ingestion_timeout_secs: int = 600
 
     celery_enabled: bool = False
+
+    executor_kind: str = "in-process"
+    """The default executor kind used by the execution coordinator.
+
+    Must match the `kind` of an Executor registered with the executor service. The built-in
+    `in-process` executor runs graphs in the current process; third-party executors registered
+    via the `lfx.executors` entry-point group can be selected by setting this to their kind.
+    """
 
     @field_validator("event_delivery", mode="before")
     @classmethod
@@ -109,3 +154,14 @@ class RuntimeSettings(BaseModel):
                 )
             return "direct"
         return value
+
+    @property
+    def background_backend_is_scaled(self) -> bool:
+        """True when the background executor should use the redis-backed queue.
+
+        Backend selection follows the existing job_queue_type/redis settings:
+        a redis job queue means a separate `langflow worker` process drains
+        jobs, so the scaled background backend is used. Otherwise the default
+        in-process executor runs jobs inside the API process.
+        """
+        return self.job_queue_type == "redis"

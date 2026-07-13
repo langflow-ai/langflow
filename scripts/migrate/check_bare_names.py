@@ -55,6 +55,16 @@ DEFAULT_COMPONENT_ROOTS = (
 # A class is "ambiguous" if it lives in this many or more bundle folders.
 _AMBIGUITY_THRESHOLD = 2
 
+# Bare-name entries are append-only once published, even if a later release
+# removes the component class. Keep those retired names here so the guard still
+# catches accidental misspellings and untracked removals.
+RETIRED_BARE_CLASS_NAMES = {
+    # vLLM graduated to a provider-only bundle; the old component classes no
+    # longer ship from lfx-bundles.
+    "VllmComponent",
+    "VllmEmbeddingsComponent",
+}
+
 
 def _iter_component_files(roots: Iterable[Path]) -> Iterable[Path]:
     """Yield every ``.py`` file under each root, skipping caches and dunders."""
@@ -157,6 +167,8 @@ def find_violations(
         name = entry["bare_class_name"]
         bundles = class_to_bundles.get(name, set())
         if not bundles:
+            if name in RETIRED_BARE_CLASS_NAMES:
+                continue
             violations.append(
                 f"bare_class_name {name!r} -> {entry.get('target')!r}: "
                 f"no class named {name} found in any bundle folder.  Either "
