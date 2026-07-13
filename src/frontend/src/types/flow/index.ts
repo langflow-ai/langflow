@@ -34,7 +34,18 @@ export type FlowType = {
   public?: boolean;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
   mcp_enabled?: boolean;
+  flow_type?: "workflow" | "agent";
+  a2a_enabled?: boolean;
+  a2a_card_overrides?: A2ACardOverrides | null;
   name_key?: string | null;
+};
+
+export type A2ACardOverrides = {
+  name?: string;
+  description?: string;
+  version?: string;
+  tags?: string[];
+  examples?: string[];
 };
 
 export type GenericNodeType = Node<NodeDataType, "genericNode">;
