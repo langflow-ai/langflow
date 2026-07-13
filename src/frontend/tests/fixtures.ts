@@ -13,6 +13,8 @@ import {
 } from "./utils/accessibility-checker";
 import type { A11yScanOptions, LangflowPage } from "./utils/types";
 
+export type { LangflowPage };
+
 const RUN_A11Y = process.env.RUN_A11Y === "true";
 const RUN_A11Y_ASSERT = process.env.RUN_A11Y_ASSERT === "true";
 

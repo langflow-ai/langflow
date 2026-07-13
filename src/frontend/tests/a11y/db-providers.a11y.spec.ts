@@ -362,7 +362,9 @@ test.describe("DB providers route accessibility", () => {
 
       writeBehavior.delayMs = 1500;
       await useChromaButton.click();
-      await expect(useChromaButton).toBeDisabled();
+      // Busy uses aria-disabled (not native disabled) so focus is retained.
+      await expect(useChromaButton).toHaveAttribute("aria-busy", "true");
+      await expect(useChromaButton).toHaveAttribute("aria-disabled", "true");
 
       await page.runA11yScan("db-providers-save-pending");
     },
@@ -418,12 +420,49 @@ test.describe("DB providers route accessibility", () => {
       await openDbProvidersRoute(page, openSearchConfiguredVariables);
       await mockTestConnection(page, testConnectionBehavior);
 
-      await page.getByTestId("db-provider-test-connection").click();
-      await expect(
-        page.getByTestId("db-provider-test-connection"),
-      ).toBeDisabled();
+      const testConnectionButton = page.getByTestId(
+        "db-provider-test-connection",
+      );
+      await testConnectionButton.focus();
+      await testConnectionButton.press("Enter");
+      // Busy uses aria-disabled (not native disabled) so focus is retained.
+      await expect(testConnectionButton).toHaveAttribute("aria-busy", "true");
+      await expect(testConnectionButton).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+      await expect(testConnectionButton).toBeFocused();
 
       await page.runA11yScan("db-providers-test-connection-pending");
+    },
+  );
+
+  test(
+    "retains keyboard focus on test-connection after loading completes",
+    { tag: ["@release", "@api"] },
+    async ({ page }) => {
+      const testConnectionBehavior: TestConnectionBehavior = {
+        delayMs: 400,
+        response: { ok: false, message: "Authentication failed." },
+      };
+      await openDbProvidersRoute(page, openSearchConfiguredVariables);
+      await mockTestConnection(page, testConnectionBehavior);
+
+      const testConnectionButton = page.getByTestId(
+        "db-provider-test-connection",
+      );
+      await testConnectionButton.focus();
+      await expect(testConnectionButton).toBeFocused();
+      await testConnectionButton.press("Enter");
+
+      await expect(testConnectionButton).toHaveAttribute("aria-busy", "true");
+      await expect(testConnectionButton).toBeFocused();
+
+      await expect(page.getByText("Connection failed")).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+      await expect(testConnectionButton).not.toHaveAttribute("aria-busy");
+      await expect(testConnectionButton).toBeFocused();
     },
   );
 
