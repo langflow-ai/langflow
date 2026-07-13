@@ -22,6 +22,18 @@ from .provider_queries import (
     get_provider_all_variables,
 )
 
+MODEL_STATUS_KEY_SEPARATOR = "::"
+
+
+def model_status_key(provider: str, model_name: str) -> str:
+    """Return the stable identity used in persisted model-status variables."""
+    return f"{provider}{MODEL_STATUS_KEY_SEPARATOR}{model_name}"
+
+
+def model_status_contains(entries: set[str], provider: str, model_name: str) -> bool:
+    """Check provider-scoped status while honoring pre-upgrade bare-name entries."""
+    return model_status_key(provider, model_name) in entries or model_name in entries
+
 
 def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
     """Get API key from component input or global variables.
@@ -406,16 +418,23 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         return
 
     first_model = None
+    provider_models: list[dict[str, Any]] = []
     try:
         from .model_catalog import get_unified_models_detailed
 
         models = get_unified_models_detailed(providers=[provider])
         if models and models[0].get("models"):
-            first_model = models[0]["models"][0]["model_name"]
+            provider_models = models[0]["models"]
+            first_model = provider_models[0]["model_name"]
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
     validation_model = model_name or first_model
+    validation_metadata = next(
+        (model.get("metadata", {}) for model in provider_models if model.get("model_name") == validation_model),
+        {},
+    )
+    is_reasoning_model = validation_metadata.get("reasoning", False) is True
 
     # Providers contributed by extension bundles validate through their own
     # callable (registered via provider_registry; imported lazily to avoid an
@@ -454,7 +473,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("OPENAI_API_KEY")
             if not api_key:
                 return
-            llm_kwargs = {"api_key": api_key, "model_name": validation_model, "max_tokens": 1}
+            llm_kwargs = {"api_key": api_key, "model_name": validation_model}
+            if not is_reasoning_model:
+                llm_kwargs["max_tokens"] = 1
             base_url = variables.get("OPENAI_BASE_URL")
             if base_url:
                 from lfx.utils.util import transform_localhost_url
@@ -532,6 +553,35 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 # the variable API returns a user-facing 400 instead of an
                 # unhandled 500 (api/v1/variable.py only catches ValueError).
                 msg = f"Could not reach OpenRouter to validate the API key: {e}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
+
+        elif provider == "Azure AI Foundry":
+            try:
+                from langchain_azure_ai.chat_models import AzureAIOpenAIApiChatModel
+            except ImportError as e:
+                msg = (
+                    "Azure AI Foundry credential validation requires the "
+                    "'langchain-azure-ai' package, but it is not installed."
+                )
+                raise ValueError(msg) from e
+
+            if AzureAIOpenAIApiChatModel is None:
+                msg = "Azure AI Foundry model support is unavailable."
+                raise ValueError(msg)
+
+            from lfx.base.models.model_utils import request_azure_ai_foundry_model_entries
+
+            api_key = variables.get("AZURE_AI_FOUNDRY_API_KEY")
+            endpoint = variables.get("AZURE_AI_FOUNDRY_ENDPOINT")
+            if not api_key or not endpoint:
+                return
+            try:
+                # Validate the submitted connection without assuming the user
+                # deployed one of Langflow's seed model names.
+                request_azure_ai_foundry_model_entries(endpoint, api_key)
+            except Exception as e:
+                msg = f"Could not validate Azure AI Foundry credentials: {e!s}"
                 logger.warning(msg)
                 raise ValueError(msg) from e
 

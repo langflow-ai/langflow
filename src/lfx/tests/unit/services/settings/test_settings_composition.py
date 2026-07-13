@@ -202,6 +202,13 @@ EXPECTED_FIELDS = {
     "telemetry_writer_size_strategy",
     "telemetry_writer_batch_size_bytes",
     "telemetry_writer_max_queue_bytes",
+    # Background execution
+    "background_max_concurrency",
+    "background_job_timeout",
+    "background_lease_ttl_s",
+    "background_heartbeat_interval_s",
+    "background_watchdog_interval_s",
+    "test_redis_url",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",

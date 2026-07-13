@@ -11,5 +11,5 @@ outputFormat:
   - html
   - json
 outputFilenameTimestamp: false
-baselineFolder: tests/baselines
+baselineFolder: tests/a11y/baselines
 outputFolder: coverage/accessibility-reports
