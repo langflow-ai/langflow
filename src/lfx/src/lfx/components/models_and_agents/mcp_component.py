@@ -521,6 +521,7 @@ class MCPToolsComponent(ComponentWithCache):
                     mcp_streamable_http_client=self.streamable_http_client,
                     request_variables=request_variables,
                     tool_execution_timeout=timeout,
+                    current_user_id=self.user_id,
                 )
 
                 self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]

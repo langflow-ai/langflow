@@ -1451,6 +1451,11 @@
   "modelProviders.loadingProviders": "Cargando proveedores",
   "modelProviders.noModelsAvailable": "No hay modelos disponibles",
   "modelProviders.noModelsMatch": "No hay modelos que coincidan con tu búsqueda.",
+  "modelProviders.searchOrAddDeployment": "Buscar o agregar un nombre de implementación…",
+  "modelProviders.customDeploymentHint": "Use los nombres de implementación de Azure AI Foundry del portal (no los ID del catálogo). Busque o escriba un nombre para agregar uno.",
+  "modelProviders.addDeployment": "Agregar implementación \"{{name}}\"",
+  "modelProviders.addLanguageDeployment": "Agregar la implementación \"{{name}}\" como modelo de lenguaje",
+  "modelProviders.addEmbeddingDeployment": "Agregar la implementación \"{{name}}\" como modelo de embeddings",
   "modelProviders.noProvidersMatch": "No se han encontrado proveedores que coincidan con tu búsqueda.",
   "modelProviders.ollamaNoModelsAll": "Parece que no tienes ningún modelo instalado para Ollama. Selecciona los modelos que quieras utilizar.",
   "modelProviders.ollamaNoModelsEmbeddings": "Parece que no tienes ningún modelo de integración instalado para Ollama. Selecciona los modelos que quieras utilizar.",
@@ -2108,5 +2113,8 @@
   "paginator.pageLabel": "Page",
   "flow.flowSettings": "Flow settings",
   "files.actionsMenu": "Acciones de archivo para {{name}}",
-  "mcp.servers.actionsMenu": "Acciones para {{name}}"
+  "mcp.servers.actionsMenu": "Acciones para {{name}}",
+  "assistant.modelNotice.fallback": "El modelo {{failed}} falló ({{reason}}); se usó {{used}} en su lugar.",
+  "assistant.modelNotice.remediation": "El modelo {{failed}} necesitó un ajuste para ejecutarse ({{reason}}).",
+  "assistant.modelNotice.ariaLabel": "Aviso del modelo"
 }
