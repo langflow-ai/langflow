@@ -610,9 +610,9 @@ class FileComponent(BaseFileComponent):
 
             # Security: confine tool-mode reads to the storage dir in restricted (multi-tenant)
             # mode so a tenant cannot read arbitrary server files via file_path_str.
-            from lfx.utils.file_path_security import enforce_local_file_access
+            from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
-            resolved_path = enforce_local_file_access(resolved_path)
+            resolved_path = enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self))
 
             if not resolved_path.exists():
                 msg = f"File or directory not found: {file_path_str}"

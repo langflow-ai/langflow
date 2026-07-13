@@ -15,7 +15,7 @@ from lfx.io import BoolInput, DropdownInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
-from lfx.utils.file_path_security import enforce_local_file_access
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 
@@ -640,11 +640,15 @@ class SaveToFileComponent(Component):
 
         # Prepare file path. file_name is tenant-controlled and this writes to local disk.
         settings = get_settings_service().settings
+        scope_ids = component_file_access_scopes(self)
         file_path = Path(self._get_safe_local_file_name()).expanduser()
         if settings.restrict_local_file_access and not file_path.is_absolute():
-            file_path = Path(settings.config_dir) / file_path
+            # New files belong to the authenticated user's storage namespace. If no
+            # user/flow scope exists, ``enforce_local_file_access`` below fails closed.
+            scope_root = Path(scope_ids[0]) if scope_ids else Path()
+            file_path = Path(settings.config_dir) / scope_root / file_path
         file_path = self._adjust_file_path_with_format(file_path, file_format)
-        file_path = enforce_local_file_access(file_path)
+        file_path = enforce_local_file_access(file_path, scope_ids=scope_ids)
         if not file_path.parent.exists():
             file_path.parent.mkdir(parents=True, exist_ok=True)
 

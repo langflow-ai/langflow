@@ -373,8 +373,7 @@ class MCPToolsComponent(ComponentWithCache):
         use_shared_cache = use_cache and self._mcp_cache_user_id() is not None
         header_keys = sorted(self._normalized_headers_for_cache().keys())
         await logger.adebug(
-            "MCP update_tool_list: start server=%r use_cache=%s use_shared_cache=%s shared_cache_key=%r "
-            "header_keys=%s",
+            "MCP update_tool_list: start server=%r use_cache=%s use_shared_cache=%s shared_cache_key=%r header_keys=%s",
             server_name,
             use_cache,
             use_shared_cache,
