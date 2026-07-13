@@ -59,6 +59,8 @@ EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
     "Ollama": "OllamaEmbeddings",
     "IBM WatsonX": "WatsonxEmbeddings",
     "IBM watsonx.ai": "WatsonxEmbeddings",  # Alias used by MODEL_PROVIDERS_DICT
+    # Foundry uses the OpenAI-compatible embeddings API; deployment name is ``model``.
+    "Azure AI Foundry": "OpenAIEmbeddings",
 }
 
 # Provider → param-name mapping for embedding-model instantiation.
@@ -101,6 +103,15 @@ EMBEDDING_PARAM_MAPPINGS: dict[str, dict[str, str]] = {
         "project_id": "project_id",
         "space_id": "space_id",
         "request_timeout": "request_timeout",
+    },
+    "Azure AI Foundry": {
+        "model": "model",
+        "api_key": "api_key",
+        "api_base": "base_url",
+        "dimensions": "dimensions",
+        "chunk_size": "chunk_size",
+        "request_timeout": "timeout",
+        "max_retries": "max_retries",
     },
 }
 

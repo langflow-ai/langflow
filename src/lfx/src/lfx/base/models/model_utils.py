@@ -812,6 +812,12 @@ def inject_custom_enabled_models(
     semantics as ``get_unified_models_detailed`` / ``list_models``), only
     matching custom entries are injected so filtered API responses stay
     consistent.
+
+    When *model_type* is ``None`` (Settings "all" / unfiltered lists), each
+    custom name is injected once as ``llm`` and once as ``embeddings`` so
+    Foundry deployments can appear under either section — Foundry's seed
+    catalog is chat-only, so embeddings-filtered queries would otherwise
+    drop the provider entirely.
     """
     if not explicitly_enabled_models:
         return
@@ -820,7 +826,9 @@ def inject_custom_enabled_models(
     from lfx.base.models.unified_models.provider_queries import get_model_provider_metadata
 
     provider_meta = get_model_provider_metadata()
-    known_by_provider: dict[str, set[str]] = {}
+    # Track (name, model_type) so the same deployment can exist as both llm
+    # and embeddings rows without colliding.
+    known_by_provider: dict[str, set[tuple[str, str]]] = {}
     provider_dicts: dict[str, dict] = {}
     for provider_dict in provider_models:
         provider = provider_dict.get("provider")
@@ -828,10 +836,15 @@ def inject_custom_enabled_models(
             continue
         provider_dicts[provider] = provider_dict
         known_by_provider[provider] = {
-            model.get("model_name")
+            (
+                model.get("model_name"),
+                (model.get("metadata") or {}).get("model_type") or "llm",
+            )
             for model in provider_dict.get("models", [])
             if isinstance(model.get("model_name"), str)
         }
+
+    types_to_inject: tuple[str, ...] = (model_type,) if model_type else ("llm", "embeddings")
 
     # Stable order: set iteration is unordered across runs/processes.
     for entry in sorted(explicitly_enabled_models):
@@ -843,34 +856,45 @@ def inject_custom_enabled_models(
             continue
         if model_name is not None and custom_name != model_name:
             continue
+
         provider_dict = provider_dicts.get(provider)
         if provider_dict is None:
-            continue
-        known = known_by_provider.setdefault(provider, set())
-        if custom_name in known:
-            continue
-
-        # Prefer the request's model_type; default to llm for unfiltered lists
-        # (Settings "all" / enabled_models), matching chat deployment usage.
-        resolved_type = model_type or "llm"
-        icon = provider_meta.get(provider, {}).get("icon", "Bot")
-        metadata = {
-            "icon": icon,
-            "model_type": resolved_type,
-            "tool_calling": resolved_type == "llm",
-            "default": False,
-        }
-        if metadata_filters and any(metadata.get(k) != v for k, v in metadata_filters.items()):
-            continue
-
-        provider_dict.setdefault("models", []).append(
-            {
-                "model_name": custom_name,
-                "metadata": metadata,
+            # Embeddings-only catalog queries omit Foundry entirely (seed is
+            # chat-only). Create a stub so free-text deployments still surface.
+            meta = provider_meta.get(provider, {})
+            provider_dict = {
+                "provider": provider,
+                "models": [],
+                "num_models": 0,
+                **meta,
             }
-        )
-        provider_dict["num_models"] = len(provider_dict["models"])
-        known.add(custom_name)
+            provider_models.append(provider_dict)
+            provider_dicts[provider] = provider_dict
+            known_by_provider[provider] = set()
+
+        known = known_by_provider.setdefault(provider, set())
+        icon = provider_meta.get(provider, {}).get("icon", "Bot")
+
+        for resolved_type in types_to_inject:
+            if (custom_name, resolved_type) in known:
+                continue
+            metadata = {
+                "icon": icon,
+                "model_type": resolved_type,
+                "tool_calling": resolved_type == "llm",
+                "default": False,
+            }
+            if metadata_filters and any(metadata.get(k) != v for k, v in metadata_filters.items()):
+                continue
+
+            provider_dict.setdefault("models", []).append(
+                {
+                    "model_name": custom_name,
+                    "metadata": metadata,
+                }
+            )
+            provider_dict["num_models"] = len(provider_dict["models"])
+            known.add((custom_name, resolved_type))
 
 
 def replace_with_live_models(

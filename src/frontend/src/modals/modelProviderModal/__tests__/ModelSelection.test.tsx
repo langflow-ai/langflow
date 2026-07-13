@@ -325,7 +325,9 @@ describe("ModelSelection", () => {
       );
 
       expect(screen.getByTestId("custom-deployment-hint")).toBeInTheDocument();
-      expect(screen.getByText("gpt-5-mini")).toBeInTheDocument();
+      expect(screen.getAllByText("gpt-5-mini").length).toBeGreaterThanOrEqual(
+        1,
+      );
 
       const input = screen.getByTestId("model-search-input");
       await user.clear(input);
@@ -351,6 +353,24 @@ describe("ModelSelection", () => {
       expect(
         screen.queryByTestId("add-custom-deployment-button"),
       ).not.toBeInTheDocument();
+    });
+
+    it("surfaces enabled customs under Embeddings in the all view", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="all"
+          providerName="Azure AI Foundry"
+          availableModels={foundryModels}
+        />,
+      );
+
+      expect(screen.getByTestId("llm-models-section")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("embeddings-models-section"),
+      ).toBeInTheDocument();
+      // Same custom name appears in both sections (Foundry seed is chat-only).
+      expect(screen.getAllByText("gpt-5-mini")).toHaveLength(2);
     });
 
     it("surfaces enabled customs as embeddings in the embeddings view", () => {

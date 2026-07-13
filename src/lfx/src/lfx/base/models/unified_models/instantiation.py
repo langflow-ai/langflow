@@ -7,7 +7,7 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
-from lfx.base.models.model_utils import _to_str, replace_with_live_models
+from lfx.base.models.model_utils import _to_str, inject_custom_enabled_models, replace_with_live_models
 from lfx.log.logger import logger
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
@@ -393,6 +393,7 @@ def _get_provider_catalog_models(
         include_unsupported=False,
     )
 
+    explicitly_enabled_models: set[str] = set()
     if user_id:
         with contextlib.suppress(Exception):
             enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
@@ -404,6 +405,12 @@ def _get_provider_catalog_models(
                     None,
                     model_provider_metadata,
                 )
+            _, explicitly_enabled_models = run_until_complete(_get_model_status(user_id))
+
+    # Include free-text Foundry deployments (and similar) that live only in
+    # the user's enabled-models variable — otherwise embedding runtime cannot
+    # resolve portal deployment names that are absent from the seed catalog.
+    inject_custom_enabled_models(provider_models, explicitly_enabled_models)
 
     catalog_models: list[dict[str, Any]] = []
     for provider_data in provider_models:
@@ -632,6 +639,23 @@ def _compose_embedding_kwargs(
             or "http://localhost:11434"
         )
         kwargs[param_mapping["base_url"]] = base_url_value
+
+    if provider == "Azure AI Foundry" and "api_base" in param_mapping:
+        foundry_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        endpoint_value = (
+            (api_base_value if use_component_overrides else None)
+            or _to_str(foundry_vars.get("AZURE_AI_FOUNDRY_ENDPOINT"))
+            or _to_str(_env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT"))
+        )
+        if not endpoint_value:
+            if use_component_overrides:
+                msg = (
+                    "Azure AI Foundry endpoint is required. Configure AZURE_AI_FOUNDRY_ENDPOINT "
+                    "in Settings → Model Providers or set the environment variable."
+                )
+                raise ValueError(msg)
+            return None
+        kwargs[param_mapping["api_base"]] = endpoint_value
 
     # Bundle-contributed provider: apply its declared connection variables
     # (e.g. an OpenAI-compatible base_url) generically from its metadata. Runs

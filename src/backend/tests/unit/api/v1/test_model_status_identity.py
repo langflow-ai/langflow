@@ -59,7 +59,12 @@ def test_inject_custom_enabled_models_appends_missing_deployments():
     provider_models = [
         {
             "provider": "Azure AI Foundry",
-            "models": [{"model_name": "gpt-4o", "metadata": {"default": True}}],
+            "models": [
+                {
+                    "model_name": "gpt-4o",
+                    "metadata": {"default": True, "model_type": "llm"},
+                }
+            ],
             "num_models": 1,
         }
     ]
@@ -67,6 +72,7 @@ def test_inject_custom_enabled_models_appends_missing_deployments():
     inject_custom_enabled_models(
         provider_models,
         {"Azure AI Foundry::gpt-5-mini", "Azure AI Foundry::gpt-4o", "OpenAI::ignored"},
+        model_type="llm",
     )
 
     names = [model["model_name"] for model in provider_models[0]["models"]]
@@ -130,6 +136,41 @@ def test_inject_custom_enabled_models_respects_filters_and_stable_order():
     assert custom["model_name"] == "text-embed"
     assert custom["metadata"]["model_type"] == "embeddings"
     assert custom["metadata"]["tool_calling"] is False
+
+
+def test_inject_custom_enabled_models_creates_provider_stub_for_embeddings():
+    """Foundry has no seed embeddings; inject must still create a provider row."""
+    provider_models: list[dict] = []
+    inject_custom_enabled_models(
+        provider_models,
+        {"Azure AI Foundry::my-embed-deploy"},
+        model_type="embeddings",
+    )
+
+    assert len(provider_models) == 1
+    assert provider_models[0]["provider"] == "Azure AI Foundry"
+    models = provider_models[0]["models"]
+    assert len(models) == 1
+    assert models[0]["model_name"] == "my-embed-deploy"
+    assert models[0]["metadata"]["model_type"] == "embeddings"
+
+
+def test_inject_custom_enabled_models_dual_types_when_unfiltered():
+    provider_models = [
+        {
+            "provider": "Azure AI Foundry",
+            "models": [],
+            "num_models": 0,
+        }
+    ]
+    inject_custom_enabled_models(
+        provider_models,
+        {"Azure AI Foundry::portal-deploy"},
+    )
+    types = {m["metadata"]["model_type"] for m in provider_models[0]["models"]}
+    names = [m["model_name"] for m in provider_models[0]["models"]]
+    assert names == ["portal-deploy", "portal-deploy"]
+    assert types == {"llm", "embeddings"}
 
 
 async def test_provider_cleanup_migrates_legacy_entries_before_removing_target_provider():

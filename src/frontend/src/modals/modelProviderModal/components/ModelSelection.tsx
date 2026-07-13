@@ -196,45 +196,47 @@ const ModelSelection = ({
   const supportsCustomDeployments =
     !!providerName && CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName);
 
-  // Free-text deployments are typed for the current Settings view so they
-  // appear under Language models vs Embeddings. "all" defaults to llm
-  // (Foundry chat deployments); embeddings view tags as embeddings.
-  const customDeploymentModelType: "llm" | "embeddings" =
-    modelType === "embeddings" ? "embeddings" : "llm";
-
   // Merge free-text deployments the user already enabled but that are not yet
   // in the static/live catalog (e.g. Azure AI Foundry portal names). Prefer the
-  // catalog row when both exist for the same model_type.
+  // catalog row when both exist for the same model_type. In Settings "all",
+  // surface each custom under both Language models and Embeddings (Foundry's
+  // seed catalog is chat-only).
   const modelsWithCustomDeployments = useMemo(() => {
     if (!supportsCustomDeployments || !providerName) {
       return availableModels;
     }
+    const deploymentTypes: Array<"llm" | "embeddings"> =
+      modelType === "all"
+        ? ["llm", "embeddings"]
+        : [modelType === "embeddings" ? "embeddings" : "llm"];
     const enabledForProvider =
       enabledModelsData?.enabled_models?.[providerName] ?? {};
-    const knownNames = new Set(
-      availableModels
-        .filter(
-          (model) => model.metadata?.model_type === customDeploymentModelType,
-        )
-        .map((model) => model.model_name),
-    );
-    const customModels: Model[] = Object.entries(enabledForProvider)
-      .filter(([name, enabled]) => enabled && !knownNames.has(name))
-      .map(([name]) => ({
-        model_name: name,
-        metadata: {
-          model_type: customDeploymentModelType,
-          icon: "Azure",
-          tool_calling: customDeploymentModelType === "llm",
-        },
-      }));
+    const customModels: Model[] = [];
+    for (const deploymentType of deploymentTypes) {
+      const knownNames = new Set(
+        availableModels
+          .filter((model) => model.metadata?.model_type === deploymentType)
+          .map((model) => model.model_name),
+      );
+      for (const [name, enabled] of Object.entries(enabledForProvider)) {
+        if (!enabled || knownNames.has(name)) continue;
+        customModels.push({
+          model_name: name,
+          metadata: {
+            model_type: deploymentType,
+            icon: "Azure",
+            tool_calling: deploymentType === "llm",
+          },
+        });
+      }
+    }
     return customModels.length > 0
       ? [...availableModels, ...customModels]
       : availableModels;
   }, [
     availableModels,
-    customDeploymentModelType,
     enabledModelsData?.enabled_models,
+    modelType,
     providerName,
     supportsCustomDeployments,
   ]);
