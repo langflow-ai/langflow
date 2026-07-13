@@ -7,6 +7,7 @@ Tests cover:
 - Edge cases (syntax errors, empty code)
 """
 
+import pytest
 from langflow.agentic.helpers.code_security import scan_code_security
 
 
@@ -185,6 +186,31 @@ class TestScanCodeSecurityDangerousImports:
         code = "import ctypes"
         result = scan_code_security(code)
         assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import _ctypes",
+            "from _ctypes import dlopen",
+            "import cffi",
+            "from cffi import FFI",
+            "import cffi.api",
+            "import _cffi_backend",
+        ],
+        ids=[
+            "ctypes-backend",
+            "ctypes-backend-from",
+            "cffi",
+            "cffi-from",
+            "cffi-submodule",
+            "cffi-backend",
+        ],
+    )
+    def test_should_detect_native_ffi_imports(self, code):
+        """Native FFI entry points can load arbitrary shared libraries."""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("forbidden" in violation for violation in result.violations)
 
     def test_should_detect_from_subprocess_import(self):
         """From subprocess import run should be detected."""
